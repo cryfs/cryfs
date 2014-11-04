@@ -97,8 +97,8 @@ int fusepp_flush(const char *path, fuse_file_info *fileinfo) {
   return FUSE_OBJ->flush(bf::path(path), fileinfo);
 }
 
-int fusepp_fsync(const char *path, int flags, fuse_file_info *fileinfo) {
-  return FUSE_OBJ->fsync(bf::path(path), flags, fileinfo);
+int fusepp_fsync(const char *path, int datasync, fuse_file_info *fileinfo) {
+  return FUSE_OBJ->fsync(bf::path(path), datasync, fileinfo);
 }
 
 //int fusepp_setxattr(const char*, const char*, const char*, size_t, int)

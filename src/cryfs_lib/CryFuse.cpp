@@ -1,6 +1,7 @@
 #include "CryFuse.h"
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <dirent.h>
 #include <cassert>
 
@@ -9,6 +10,15 @@
 using fusepp::path;
 
 namespace cryfs {
+
+namespace {
+  int errcode_map(int exit_status) {
+    if (exit_status < 0) {
+      return -errno;
+    }
+    return 0;
+  }
+}
 
 CryFuse::CryFuse(CryDevice *device)
   :_device(device) {
@@ -19,17 +29,22 @@ int CryFuse::getattr(const path &path, struct stat *stbuf) {
   printf("getattr(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
   int retstat = lstat(real_path.c_str(), stbuf);
-  if (retstat != 0) {
-    return -errno;
-  }
-  return 0;
+  return errcode_map(retstat);
 }
 
 int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
-  UNUSED(stbuf);
-  UNUSED(fileinfo);
-  printf("Called non-implemented fgetattr(%s, _, _)\n", path.c_str());
-  return 0;
+  printf("fgetattr(%s, _, _)\n", path.c_str());
+
+  // On FreeBSD, trying to do anything with the mountpoint ends up
+  // opening it, and then using the FD for an fgetattr.  So in the
+  // special case of a path of "/", I need to do a getattr on the
+  // underlying root directory instead of doing the fgetattr().
+  if (path.native() == "/") {
+    return getattr(path, stbuf);
+  }
+
+  int retstat = fstat(fileinfo->fh, stbuf);
+  return errcode_map(retstat);
 }
 
 int CryFuse::readlink(const path &path, char *buf, size_t size) {
@@ -54,104 +69,139 @@ int CryFuse::mknod(const path &path, mode_t mode, dev_t rdev) {
 }
 
 int CryFuse::mkdir(const path &path, mode_t mode) {
-  printf("Called non-implemented mkdir(%s, %d)\n", path.c_str(), mode);
-  return 0;
+  printf("mkdir(%s, %d)\n", path.c_str(), mode);
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::mkdir(real_path.c_str(), mode);
+  return errcode_map(retstat);
 }
 
 int CryFuse::unlink(const path &path) {
-  printf("Called non-implemented unlink(%s)\n", path.c_str());
-  return 0;
+  printf("unlink(%s)\n", path.c_str());
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::unlink(real_path.c_str());
+  return errcode_map(retstat);
 }
 
 int CryFuse::rmdir(const path &path) {
-  printf("Called non-implemented rmdir(%s)\n", path.c_str());
-  return 0;
+  printf("rmdir(%s)\n", path.c_str());
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::rmdir(real_path.c_str());
+  return errcode_map(retstat);
 }
 
 int CryFuse::symlink(const path &from, const path &to) {
-  printf("Called non-implemented symlink(%s, %s)\n", from.c_str(), to.c_str());
-  return 0;
+  printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
+  auto real_from = _device->RootDir() / from;
+  auto real_to = _device->RootDir() / to;
+  int retstat = ::symlink(real_from.c_str(), real_to.c_str());
+  return errcode_map(retstat);
 }
 
 int CryFuse::rename(const path &from, const path &to) {
-  printf("Called non-implemented rename(%s, %s)\n", from.c_str(), to.c_str());
-  return 0;
+  printf("rename(%s, %s)\n", from.c_str(), to.c_str());
+  auto real_from = _device->RootDir() / from;
+  auto real_to = _device->RootDir() / to;
+  int retstat = ::rename(real_from.c_str(), real_to.c_str());
+  return errcode_map(retstat);
 }
 
 int CryFuse::link(const path &from, const path &to) {
-  printf("Called non-implemented link(%s, %s)\n", from.c_str(), to.c_str());
-  return 0;
+  printf("link(%s, %s)\n", from.c_str(), to.c_str());
+  auto real_from = _device->RootDir() / from;
+  auto real_to = _device->RootDir() / to;
+  int retstat = ::link(real_from.c_str(), real_to.c_str());
+  return errcode_map(retstat);
 }
 
 int CryFuse::chmod(const path &path, mode_t mode) {
-  printf("Called non-implemented chmod(%s, %d)\n", path.c_str(), mode);
-  return 0;
+  printf("chmod(%s, %d)\n", path.c_str(), mode);
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::chmod(real_path.c_str(), mode);
+  return errcode_map(retstat);
 }
 
 int CryFuse::chown(const path &path, uid_t uid, gid_t gid) {
-  printf("Called non-implemented chown(%s, %d, %d)\n", path.c_str(), uid, gid);
-  return 0;
+  printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::chown(real_path.c_str(), uid, gid);
+  return errcode_map(retstat);
 }
 
 int CryFuse::truncate(const path &path, off_t size) {
-  printf("Called non-implemented truncate(%s, %zu)\n", path.c_str(), size);
-  return 0;
+  printf("truncate(%s, %zu)\n", path.c_str(), size);
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::truncate(real_path.c_str(), size);
+  return errcode_map(retstat);
 }
 
 int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented ftruncate(%s, %zu, _)\n", path.c_str(), size);
-  return 0;
+  printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
+  int retstat = ::ftruncate(fileinfo->fh, size);
+  return errcode_map(retstat);
 }
 
 int CryFuse::utimens(const path &path, const timespec times[2]) {
-  UNUSED(times);
-  printf("Called non-implemented utimens(%s, _)\n", path.c_str());
-  return 0;
+  printf("utimens(%s, _)\n", path.c_str());
+  auto real_path = _device->RootDir() / path;
+  struct timeval tv[2];
+  tv[0].tv_sec = times[0].tv_sec;
+  tv[0].tv_usec = times[0].tv_nsec / 1000;
+  tv[1].tv_sec = times[1].tv_sec;
+  tv[1].tv_usec = times[1].tv_nsec / 1000;
+  int retstat = ::lutimes(real_path.c_str(), tv);
+  return errcode_map(retstat);
 }
 
 int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented open(%s, _)\n", path.c_str());
+  printf("open(%s, _)\n", path.c_str());
+  auto real_path = _device->RootDir() / path;
+  int fd = ::open(real_path.c_str(), fileinfo->flags);
+  if (fd < 0) {
+    return -errno;
+  }
+  fileinfo->fh = fd;
   return 0;
 }
 
 int CryFuse::release(const path &path, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented release(%s, _)\n", path.c_str());
-  return 0;
+  printf("release(%s, _)\n", path.c_str());
+  int retstat = ::close(fileinfo->fh);
+  return errcode_map(retstat);
 }
 
 int CryFuse::read(const path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
-  UNUSED(buf);
-  UNUSED(fileinfo);
-  printf("Called non-implemented read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
-  return 0;
+  printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  int retstat = ::pread(fileinfo->fh, buf, size, offset);
+  return errcode_map(retstat);
 }
 
 int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
-  UNUSED(buf);
-  UNUSED(fileinfo);
-  printf("Called non-implemented write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
-  return 0;
+  printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  int retstat = ::pwrite(fileinfo->fh, buf, size, offset);
+  return errcode_map(retstat);
 }
 
 int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
-  UNUSED(fsstat);
-  printf("Called non-implemented statfs(%s, _)\n", path.c_str());
-  return 0;
+  printf("statfs(%s, _)\n", path.c_str());
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::statvfs(real_path.c_str(), fsstat);
+  return errcode_map(retstat);
 }
 
 int CryFuse::flush(const path &path, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
   printf("Called non-implemented flush(%s, _)\n", path.c_str());
   return 0;
 }
 
-int CryFuse::fsync(const path &path, int flags, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented fsync(%s, %d, _)\n", path.c_str(), flags);
-  return 0;
+int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
+  printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
+  int retstat = 0;
+  if (datasync) {
+    retstat = ::fdatasync(fileinfo->fh);
+  } else {
+    retstat = ::fsync(fileinfo->fh);
+  }
+  return errcode_map(retstat);
 }
 
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
@@ -187,10 +237,7 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
   printf("releasedir(%s, _)\n", path.c_str());
   int retstat = closedir((DIR*)(uintptr_t)fileinfo->fh);
-  if (retstat != 0) {
-    return -errno;
-  }
-  return 0;
+  return errcode_map(retstat);
 }
 
 int CryFuse::fsyncdir(const path &path, int datasync, fuse_file_info *fileinfo) {
@@ -209,13 +256,20 @@ void CryFuse::destroy() {
 }
 
 int CryFuse::access(const path &path, int mask) {
-  printf("Called non-implemented access(%s, %d)\n", path.c_str(), mask);
-  return 0;
+  printf("access(%s, %d)\n", path.c_str(), mask);
+  auto real_path = _device->RootDir() / path;
+  int retstat = ::access(real_path.c_str(), mask);
+  return errcode_map(retstat);
 }
 
 int CryFuse::create(const path &path, mode_t mode, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented create(%s, %d, _)\n", path.c_str(), mode);
+  printf("create(%s, %d, _)\n", path.c_str(), mode);
+  auto real_path = _device->RootDir() / path;
+  int fd = ::creat(real_path.c_str(), mode);
+  if (fd < 0) {
+    return -errno;
+  }
+  fileinfo->fh = fd;
   return 0;
 }
 

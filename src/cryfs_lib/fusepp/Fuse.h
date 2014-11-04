@@ -43,7 +43,7 @@ public:
 	virtual int write(const path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) = 0;
 	virtual int statfs(const path &path, struct statvfs *fsstat) = 0;
 	virtual int flush(const path &path, fuse_file_info *fileinfo) = 0;
-	virtual int fsync(const path &path, int flags, fuse_file_info *fileinfo) = 0;
+	virtual int fsync(const path &path, int datasync, fuse_file_info *fileinfo) = 0;
 	virtual int opendir(const path &path, fuse_file_info *fileinfo) = 0;
 	virtual int readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) = 0;
 	virtual int releasedir(const path &path, fuse_file_info *fileinfo) = 0;
