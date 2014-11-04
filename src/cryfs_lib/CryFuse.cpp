@@ -156,14 +156,12 @@ int CryFuse::fsyncdir(const char *path, int datasync, fuse_file_info *fileinfo) 
   return 0;
 }
 
-void* CryFuse::init(fuse_conn_info *conn) {
+void CryFuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
   printf("Called non-implemented init()\n");
-  return this;
 }
 
-void CryFuse::destroy(void *userdata) {
-  UNUSED(userdata);
+void CryFuse::destroy() {
   printf("Called non-implemented destroy()\n");
 }
 

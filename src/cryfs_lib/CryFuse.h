@@ -34,8 +34,8 @@ public:
   int readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) override;
   int releasedir(const char *path, fuse_file_info *fileinfo) override;
   int fsyncdir(const char *path, int datasync, fuse_file_info *fileinfo) override;
-  void* init(fuse_conn_info *conn) override;
-  void destroy(void *userdata) override;
+  void init(fuse_conn_info *conn) override;
+  void destroy() override;
   int access(const char *path, int mask) override;
   int create(const char *path, mode_t mode, fuse_file_info *fileinfo) override;
 };

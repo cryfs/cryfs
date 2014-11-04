@@ -44,8 +44,8 @@ public:
 	virtual int readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) = 0;
 	virtual int releasedir(const char *path, fuse_file_info *fileinfo) = 0;
 	virtual int fsyncdir(const char *path, int datasync, fuse_file_info *fileinfo) = 0;
-	virtual void* init(fuse_conn_info *conn) = 0;
-	virtual void destroy(void *userdata) = 0;
+	virtual void init(fuse_conn_info *conn) = 0;
+	virtual void destroy() = 0;
 	virtual int access(const char *path, int mask) = 0;
 	virtual int create(const char *path, mode_t mode, fuse_file_info *fileinfo) = 0;
 };

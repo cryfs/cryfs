@@ -1,5 +1,6 @@
 #include "../fusepp/Fuse.h"
 #include <memory>
+#include <cassert>
 
 using std::unique_ptr;
 using std::make_unique;
@@ -120,11 +121,15 @@ int fsyncdir(const char *path, int datasync, fuse_file_info *fileinfo) {
 }
 
 void* init(fuse_conn_info *conn) {
-  return FUSE_OBJ->init(conn);
+  auto f = FUSE_OBJ;
+  f->init(conn);
+  return f;
 }
 
 void destroy(void *userdata) {
-  return FUSE_OBJ->destroy(userdata);
+  auto f = FUSE_OBJ;
+  assert(userdata == f);
+  f->destroy();
 }
 
 int access(const char *path, int mask) {
