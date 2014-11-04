@@ -4,11 +4,9 @@
 
 using namespace cryfs;
 
-CryDevice::CryDevice() {
-	std::cout << "Created CryDevice\n";
-
+CryDevice::CryDevice(const fusepp::path &rootdir)
+  :_rootdir(rootdir) {
 }
 
 CryDevice::~CryDevice() {
 }
-

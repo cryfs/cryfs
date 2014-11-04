@@ -9,7 +9,8 @@
 int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  cryfs::CryFuse fuse;
+  cryfs::CryDevice device(fusepp::path("/"));
+  cryfs::CryFuse fuse(&device);
   fuse.run(argc, argv);
   return 0;
 }

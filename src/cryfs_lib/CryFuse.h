@@ -3,11 +3,15 @@
 #define CRYFS_LIB_CRYFUSE_H_
 
 #include "fusepp/Fuse.h"
+#include "CryDevice.h"
+#include "utils/macros.h"
 
 namespace cryfs {
 
 class CryFuse: public fusepp::Fuse {
 public:
+  CryFuse(CryDevice *device);
+
   int getattr(const fusepp::path &path, struct stat *stbuf) override;
   int fgetattr(const fusepp::path &path, struct stat *stbuf, fuse_file_info *fileinfo) override;
   int readlink(const fusepp::path &path, char *buf, size_t size) override;
@@ -38,6 +42,11 @@ public:
   void destroy() override;
   int access(const fusepp::path &path, int mask) override;
   int create(const fusepp::path &path, mode_t mode, fuse_file_info *fileinfo) override;
+
+private:
+  CryDevice *_device;
+
+  DISALLOW_COPY_AND_ASSIGN(CryFuse);
 };
 
 } /* namespace cryfs */

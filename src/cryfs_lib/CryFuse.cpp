@@ -10,9 +10,14 @@ using fusepp::path;
 
 namespace cryfs {
 
+CryFuse::CryFuse(CryDevice *device)
+  :_device(device) {
+}
+
 int CryFuse::getattr(const path &path, struct stat *stbuf) {
   UNUSED(stbuf);
-  int retstat = lstat(path.c_str(), stbuf);
+  auto real_path = _device->RootDir() / path;
+  int retstat = lstat(real_path.c_str(), stbuf);
   if (retstat != 0) {
     retstat = -errno;
   }
@@ -140,7 +145,8 @@ int CryFuse::fsync(const path &path, int flags, fuse_file_info *fileinfo) {
 }
 
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
-  DIR *dp = ::opendir(path.c_str());
+  auto real_path = _device->RootDir() / path;
+  DIR *dp = ::opendir(real_path.c_str());
   int retstat = 0;
   if (dp == nullptr) {
     retstat = -errno;
