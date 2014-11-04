@@ -4,12 +4,12 @@
 #include <cstdlib>
 #include "buildconfig/BuildConfig.h"
 
-#include "cryfs_lib/CryDevice.h"
+#include "cryfs_lib/CryFuse.h"
 
 int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  Fuse fuse;
+  cryfs::CryFuse fuse;
   fuse.run(argc, argv);
   return 0;
 }

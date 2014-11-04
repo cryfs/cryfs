@@ -1,10 +1,11 @@
-#include "Fuse.h"
-
+#include "../fusepp/Fuse.h"
 #include <memory>
 
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
+
+using namespace fusepp;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 

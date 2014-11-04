@@ -1,5 +1,5 @@
-add_subdirectory(fuse)
+add_subdirectory(fusepp)
 
 add_library(cryfs_lib CryDevice.cpp)
 
-target_link_libraries(cryfs_lib cryfs_fuse)
+target_link_libraries(cryfs_lib fusepp)
