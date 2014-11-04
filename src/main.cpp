@@ -4,9 +4,12 @@
 #include <cstdlib>
 #include "buildconfig/BuildConfig.h"
 
+#include "cryfs_lib/CryDevice.h"
+
 int main ()
 {
-  printf("Version: %d", buildconfig::VERSION::MAJOR);
+  printf("Version: %d\n", buildconfig::VERSION::MAJOR);
+  cryfs::CryDevice device;
   #ifdef NDEBUG
   printf("Release build");
   #else
