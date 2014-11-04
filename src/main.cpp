@@ -6,14 +6,10 @@
 
 #include "cryfs_lib/CryDevice.h"
 
-int main ()
+int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  cryfs::CryDevice device;
-  #ifdef NDEBUG
-  printf("Release build");
-  #else
-  printf("Debug build");
-  #endif
+  Fuse fuse;
+  fuse.run(argc, argv);
   return 0;
 }
