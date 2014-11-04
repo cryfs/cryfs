@@ -3,8 +3,8 @@
 #define CRYFS_LIB_CRYFUSE_H_
 
 #include "fusepp/Fuse.h"
-#include "CryDevice.h"
-#include "utils/macros.h"
+#include "cryfs_lib/CryDevice.h"
+#include "cryfs_lib/utils/macros.h"
 
 namespace cryfs {
 

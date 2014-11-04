@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "buildconfig/BuildConfig.h"
 
-#include "cryfs_lib/CryFuse.h"
+#include "CryFuse.h"
 
 int main (int argc, char *argv[])
 {
