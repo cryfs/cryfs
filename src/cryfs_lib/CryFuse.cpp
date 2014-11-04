@@ -16,12 +16,13 @@ CryFuse::CryFuse(CryDevice *device)
 
 int CryFuse::getattr(const path &path, struct stat *stbuf) {
   UNUSED(stbuf);
+  printf("getattr(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
   int retstat = lstat(real_path.c_str(), stbuf);
   if (retstat != 0) {
-    retstat = -errno;
+    return -errno;
   }
-  return retstat;
+  return 0;
 }
 
 int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
@@ -32,8 +33,17 @@ int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *file
 }
 
 int CryFuse::readlink(const path &path, char *buf, size_t size) {
-  UNUSED(buf);
-  printf("Called non-implemented readlink(%s, _, %zu)\n", path.c_str(), size);
+  printf("readlink(%s, _, %zu)\n", path.c_str(), size);
+  auto real_path = _device->RootDir() / path;
+  //size-1, because the fuse readlink() function includes the null terminating byte in the buffer size,
+  //but the posix version does not and also doesn't append one.
+  int real_size = ::readlink(real_path.c_str(), buf, size-1);
+  if (real_size < 0) {
+    return -errno;
+  }
+  //Terminate the string
+  buf[real_size] = '\0';
+
   return 0;
 }
 
@@ -145,28 +155,41 @@ int CryFuse::fsync(const path &path, int flags, fuse_file_info *fileinfo) {
 }
 
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
+  printf("opendir(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
   DIR *dp = ::opendir(real_path.c_str());
-  int retstat = 0;
   if (dp == nullptr) {
-    retstat = -errno;
+    return -errno;
   }
   fileinfo->fh = (intptr_t)dp;
-  printf("opendir(%s, _)\n", path.c_str());
-  return retstat;
+  return 0;
 }
 
 int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
-  UNUSED(buf);
-  UNUSED(filler);
-  UNUSED(fileinfo);
-  printf("Called non-implemented readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
+  printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
+  auto real_path = _device->RootDir() / path;
+
+  DIR *dp = (DIR*)(uintptr_t)fileinfo->fh;
+  struct dirent *de = ::readdir(dp);
+  if (de == nullptr) {
+    return -errno;
+  }
+
+  do {
+    if (filler(buf, de->d_name, nullptr, 0) != 0) {
+      return -ENOMEM;
+    }
+  } while ((de = ::readdir(dp)) != nullptr);
+
   return 0;
 }
 
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
-  UNUSED(fileinfo);
-  printf("Called non-implemented releasedir(%s, _)\n", path.c_str());
+  printf("releasedir(%s, _)\n", path.c_str());
+  int retstat = closedir((DIR*)(uintptr_t)fileinfo->fh);
+  if (retstat != 0) {
+    return -errno;
+  }
   return 0;
 }
 
