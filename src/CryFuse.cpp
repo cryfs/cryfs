@@ -5,6 +5,9 @@
 #include <dirent.h>
 #include <cassert>
 
+#include "cryfs_lib/CryNode.h"
+#include "cryfs_lib/CryErrnoException.h"
+
 #define UNUSED(expr) (void)(expr)
 
 using fusepp::path;
@@ -25,11 +28,12 @@ CryFuse::CryFuse(CryDevice *device)
 }
 
 int CryFuse::getattr(const path &path, struct stat *stbuf) {
-  UNUSED(stbuf);
-  //printf("getattr(%s, _)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  int retstat = lstat(real_path.c_str(), stbuf);
-  return errcode_map(retstat);
+  try {
+    _device->LoadFromPath(path)->stat(stbuf);
+    return 0;
+  } catch(cryfs::CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
