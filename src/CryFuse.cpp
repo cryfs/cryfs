@@ -68,7 +68,9 @@ int CryFuse::readlink(const path &path, char *buf, size_t size) {
 
 int CryFuse::mknod(const path &path, mode_t mode, dev_t rdev) {
   UNUSED(rdev);
-  //printf("Called non-implemented mknod(%s, %d, _)\n", path.c_str(), mode);
+  UNUSED(mode);
+  UNUSED(path);
+  printf("Called non-implemented mknod(%s, %d, _)\n", path.c_str(), mode);
   return 0;
 }
 
@@ -140,6 +142,7 @@ int CryFuse::truncate(const path &path, off_t size) {
 
 int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
   //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
+	UNUSED(path);
   int retstat = ::ftruncate(fileinfo->fh, size);
   return errcode_map(retstat);
 }
@@ -169,18 +172,21 @@ int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
 
 int CryFuse::release(const path &path, fuse_file_info *fileinfo) {
   //printf("release(%s, _)\n", path.c_str());
+  UNUSED(path);
   int retstat = ::close(fileinfo->fh);
   return errcode_map(retstat);
 }
 
 int CryFuse::read(const path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
   //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  UNUSED(path);
   int retstat = ::pread(fileinfo->fh, buf, size, offset);
   return errcode_map(retstat);
 }
 
 int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
   //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  UNUSED(path);
   int retstat = ::pwrite(fileinfo->fh, buf, size, offset);
   return errcode_map(retstat);
 }
@@ -194,11 +200,14 @@ int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
 
 int CryFuse::flush(const path &path, fuse_file_info *fileinfo) {
   //printf("Called non-implemented flush(%s, _)\n", path.c_str());
+  UNUSED(path);
+  UNUSED(fileinfo);
   return 0;
 }
 
 int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
   //printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
+  UNUSED(path);
   int retstat = 0;
   if (datasync) {
     retstat = ::fdatasync(fileinfo->fh);
@@ -221,6 +230,7 @@ int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
 
 int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
+  UNUSED(offset);
   auto real_path = _device->RootDir() / path;
 
   DIR *dp = (DIR*)(uintptr_t)fileinfo->fh;
@@ -240,12 +250,15 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
 
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
   //printf("releasedir(%s, _)\n", path.c_str());
+  UNUSED(path);
   int retstat = closedir((DIR*)(uintptr_t)fileinfo->fh);
   return errcode_map(retstat);
 }
 
 int CryFuse::fsyncdir(const path &path, int datasync, fuse_file_info *fileinfo) {
   UNUSED(fileinfo);
+  UNUSED(datasync);
+  UNUSED(path);
   //printf("Called non-implemented fsyncdir(%s, %d, _)\n", path.c_str(), datasync);
   return 0;
 }
