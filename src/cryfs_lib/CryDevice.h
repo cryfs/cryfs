@@ -33,7 +33,7 @@ public:
 	void fsync(int descriptor);
 	void fdatasync(int descriptor);
 	void access(const bf::path &path, int mask);
-	int createFile(const bf::path &path, mode_t mode);
+	int createAndOpenFile(const bf::path &path, mode_t mode);
 
 	const bf::path &RootDir() const;
 private:

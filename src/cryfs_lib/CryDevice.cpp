@@ -94,7 +94,7 @@ void CryDevice::access(const bf::path &path, int mask) {
   Load(path)->access(mask);
 }
 
-int CryDevice::createFile(const bf::path &path, mode_t mode) {
+int CryDevice::createAndOpenFile(const bf::path &path, mode_t mode) {
   //TODO Creating the file opens and closes it. We then reopen it afterwards.
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
