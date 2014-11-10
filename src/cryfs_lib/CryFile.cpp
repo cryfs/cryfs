@@ -1,6 +1,8 @@
 #include "CryFile.h"
 #include "CryOpenFile.h"
 
+#include "CryErrnoException.h"
+
 using std::unique_ptr;
 using std::make_unique;
 
@@ -15,6 +17,11 @@ CryFile::~CryFile() {
 
 std::unique_ptr<CryOpenFile> CryFile::open(int flags) const {
   return make_unique<CryOpenFile>(base_path(), flags);
+}
+
+void CryFile::truncate(off_t size) const {
+  int retval = ::truncate(base_path().c_str(), size);
+  CHECK_RETVAL(retval);
 }
 
 } /* namespace cryfs */

@@ -17,6 +17,7 @@ public:
   virtual ~CryFile();
 
   std::unique_ptr<CryOpenFile> open(int flags) const;
+  void truncate(off_t size) const;
 private:
   DISALLOW_COPY_AND_ASSIGN(CryFile);
 };

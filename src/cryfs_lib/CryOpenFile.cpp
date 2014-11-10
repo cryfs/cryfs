@@ -22,3 +22,27 @@ void CryOpenFile::stat(struct ::stat *result) const {
   CHECK_RETVAL(retval);
 }
 
+void CryOpenFile::truncate(off_t size) const {
+  int retval = ::ftruncate(_descriptor, size);
+  CHECK_RETVAL(retval);
+}
+
+void CryOpenFile::read(void *buf, size_t count, off_t offset) {
+  int retval = ::pread(_descriptor, buf, count, offset);
+  CHECK_RETVAL(retval);
+}
+
+void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
+  int retval = ::pwrite(_descriptor, buf, count, offset);
+  CHECK_RETVAL(retval);
+}
+
+void CryOpenFile::fsync() {
+  int retval = ::fsync(_descriptor);
+  CHECK_RETVAL(retval);
+}
+
+void CryOpenFile::fdatasync() {
+  int retval = ::fdatasync(_descriptor);
+  CHECK_RETVAL(retval);
+}

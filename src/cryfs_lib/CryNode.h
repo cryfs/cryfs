@@ -18,6 +18,7 @@ public:
   virtual ~CryNode();
 
   void stat(struct ::stat *result) const;
+  void access(int mask) const;
 
 protected:
   bf::path base_path() const;

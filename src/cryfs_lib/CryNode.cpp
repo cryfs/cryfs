@@ -17,4 +17,9 @@ void CryNode::stat(struct ::stat *result) const {
   CHECK_RETVAL(retval);
 }
 
+void CryNode::access(int mask) const {
+  int retval = ::access(base_path().c_str(), mask);
+  CHECK_RETVAL(retval);
+}
+
 } /* namespace cryfs */

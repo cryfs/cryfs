@@ -31,18 +31,31 @@ unique_ptr<CryNode> CryDevice::Load(const bf::path &path) {
   throw CryErrnoException(ENOENT);
 }
 
-std::unique_ptr<CryFile> CryDevice::LoadFile(const bf::path &path) {
+unique_ptr<CryFile> CryDevice::LoadFile(const bf::path &path) {
   auto node = Load(path);
   auto file = dynamic_pointer_move<CryFile>(node);
   if (!file) {
-	throw CryErrnoException(EISDIR);
+	  throw CryErrnoException(EISDIR);
   }
   return file;
 }
 
-int CryDevice::OpenFile(const bf::path &path, int flags) {
+unique_ptr<CryDir> CryDevice::LoadDir(const bf::path &path) {
+  auto node = Load(path);
+  auto dir = dynamic_pointer_move<CryDir>(node);
+  if (!dir) {
+    throw CryErrnoException(ENOTDIR);
+  }
+  return dir;
+}
+
+int CryDevice::openFile(const bf::path &path, int flags) {
   auto file = LoadFile(path);
   return _open_files.open(*file, flags);
+}
+
+void CryDevice::closeFile(int descriptor) {
+  _open_files.close(descriptor);
 }
 
 void CryDevice::lstat(const bf::path &path, struct ::stat *stbuf) {
@@ -51,4 +64,40 @@ void CryDevice::lstat(const bf::path &path, struct ::stat *stbuf) {
 
 void CryDevice::fstat(int descriptor, struct ::stat *stbuf) {
   _open_files.get(descriptor)->stat(stbuf);
+}
+
+void CryDevice::truncate(const bf::path &path, off_t size) {
+  LoadFile(path)->truncate(size);
+}
+
+void CryDevice::ftruncate(int descriptor, off_t size) {
+  _open_files.get(descriptor)->truncate(size);
+}
+
+void CryDevice::read(int descriptor, void *buf, size_t count, off_t offset) {
+  _open_files.get(descriptor)->read(buf, count, offset);
+}
+
+void CryDevice::write(int descriptor, const void *buf, size_t count, off_t offset) {
+  _open_files.get(descriptor)->write(buf, count, offset);
+}
+
+void CryDevice::fsync(int descriptor) {
+  _open_files.get(descriptor)->fsync();
+}
+
+void CryDevice::fdatasync(int descriptor) {
+  _open_files.get(descriptor)->fdatasync();
+}
+
+void CryDevice::access(const bf::path &path, int mask) {
+  Load(path)->access(mask);
+}
+
+int CryDevice::createFile(const bf::path &path, mode_t mode) {
+  //TODO Creating the file opens and closes it. We then reopen it afterwards.
+  //     This is slow. Improve!
+  auto dir = LoadDir(path.parent_path());
+  dir->createFile(path.filename().native(), mode);
+  return openFile(path, mode);
 }
