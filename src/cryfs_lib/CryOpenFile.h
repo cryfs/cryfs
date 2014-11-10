@@ -17,7 +17,7 @@ public:
 
   void stat(struct ::stat *result) const;
   void truncate(off_t size) const;
-  void read(void *buf, size_t count, off_t offset);
+  int read(void *buf, size_t count, off_t offset);
   void write(const void *buf, size_t count, off_t offset);
   void fsync();
   void fdatasync();

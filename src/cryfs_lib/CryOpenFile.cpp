@@ -27,14 +27,21 @@ void CryOpenFile::truncate(off_t size) const {
   CHECK_RETVAL(retval);
 }
 
-void CryOpenFile::read(void *buf, size_t count, off_t offset) {
+int CryOpenFile::read(void *buf, size_t count, off_t offset) {
+  //printf("Reading from real descriptor %d (%d, %d)\n", _descriptor, offset, count);
+  //fflush(stdout);
   int retval = ::pread(_descriptor, buf, count, offset);
   CHECK_RETVAL(retval);
+  //printf("retval: %d, count: %d\n", retval, count);
+  //fflush(stdout);
+  assert(retval <= count);
+  return retval;
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
   int retval = ::pwrite(_descriptor, buf, count, offset);
   CHECK_RETVAL(retval);
+  assert(retval == count);
 }
 
 void CryOpenFile::fsync() {

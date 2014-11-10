@@ -74,8 +74,8 @@ void CryDevice::ftruncate(int descriptor, off_t size) {
   _open_files.get(descriptor)->truncate(size);
 }
 
-void CryDevice::read(int descriptor, void *buf, size_t count, off_t offset) {
-  _open_files.get(descriptor)->read(buf, count, offset);
+int CryDevice::read(int descriptor, void *buf, size_t count, off_t offset) {
+  return _open_files.get(descriptor)->read(buf, count, offset);
 }
 
 void CryDevice::write(int descriptor, const void *buf, size_t count, off_t offset) {

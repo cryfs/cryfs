@@ -28,7 +28,7 @@ public:
 	void fstat(int descriptor, struct ::stat *stbuf);
 	void truncate(const bf::path &path, off_t size);
 	void ftruncate(int descriptor, off_t size);
-	void read(int descriptor, void *buf, size_t count, off_t offset);
+	int read(int descriptor, void *buf, size_t count, off_t offset);
 	void write(int descriptor, const void *buf, size_t count, off_t offset);
 	void fsync(int descriptor);
 	void fdatasync(int descriptor);
