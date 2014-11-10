@@ -206,8 +206,9 @@ int CryFuse::read(const path &path, char *buf, size_t size, off_t offset, fuse_f
   //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
   try {
-    _device->read(fileinfo->fh, buf, size, offset);
-    return 0;
+    //printf("Reading from file %d\n", fileinfo->fh);
+    //fflush(stdout);
+    return _device->read(fileinfo->fh, buf, size, offset);
   } catch (CryErrnoException &e) {
     return -e.getErrno();
   }
@@ -218,7 +219,7 @@ int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset,
   UNUSED(path);
   try {
     _device->write(fileinfo->fh, buf, size, offset);
-    return 0;
+    return size;
   } catch (CryErrnoException &e) {
     return -e.getErrno();
   }
