@@ -29,7 +29,7 @@ CryFuse::CryFuse(CryDevice *device)
 
 int CryFuse::getattr(const path &path, struct stat *stbuf) {
   try {
-    _device->LoadFromPath(path)->stat(stbuf);
+    _device->lstat(path, stbuf);
     return 0;
   } catch(cryfs::CryErrnoException &e) {
     return -e.getErrno();
@@ -47,8 +47,12 @@ int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *file
     return getattr(path, stbuf);
   }
 
-  int retstat = fstat(fileinfo->fh, stbuf);
-  return errcode_map(retstat);
+  try {
+	_device->fstat(fileinfo->fh, stbuf);
+	return 0;
+  } catch(cryfs::CryErrnoException &e) {
+	  return -e.getErrno();
+  }
 }
 
 int CryFuse::readlink(const path &path, char *buf, size_t size) {
