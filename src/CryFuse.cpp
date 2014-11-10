@@ -43,6 +43,7 @@ int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *file
   // opening it, and then using the FD for an fgetattr.  So in the
   // special case of a path of "/", I need to do a getattr on the
   // underlying root directory instead of doing the fgetattr().
+  // TODO Check if necessary
   if (path.native() == "/") {
     return getattr(path, stbuf);
   }
@@ -55,6 +56,7 @@ int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *file
   }
 }
 
+//TODO
 int CryFuse::readlink(const path &path, char *buf, size_t size) {
   //printf("readlink(%s, _, %zu)\n", path.c_str(), size);
   auto real_path = _device->RootDir() / path;
@@ -78,6 +80,7 @@ int CryFuse::mknod(const path &path, mode_t mode, dev_t rdev) {
   return 0;
 }
 
+//TODO
 int CryFuse::mkdir(const path &path, mode_t mode) {
   //printf("mkdir(%s, %d)\n", path.c_str(), mode);
   auto real_path = _device->RootDir() / path;
@@ -85,6 +88,7 @@ int CryFuse::mkdir(const path &path, mode_t mode) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::unlink(const path &path) {
   //printf("unlink(%s)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
@@ -92,6 +96,7 @@ int CryFuse::unlink(const path &path) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::rmdir(const path &path) {
   //printf("rmdir(%s)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
@@ -99,6 +104,7 @@ int CryFuse::rmdir(const path &path) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::symlink(const path &from, const path &to) {
   //printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
   auto real_from = _device->RootDir() / from;
@@ -107,6 +113,7 @@ int CryFuse::symlink(const path &from, const path &to) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::rename(const path &from, const path &to) {
   //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
   auto real_from = _device->RootDir() / from;
@@ -115,6 +122,7 @@ int CryFuse::rename(const path &from, const path &to) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::link(const path &from, const path &to) {
   //printf("link(%s, %s)\n", from.c_str(), to.c_str());
   auto real_from = _device->RootDir() / from;
@@ -123,6 +131,7 @@ int CryFuse::link(const path &from, const path &to) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::chmod(const path &path, mode_t mode) {
   //printf("chmod(%s, %d)\n", path.c_str(), mode);
   auto real_path = _device->RootDir() / path;
@@ -130,6 +139,7 @@ int CryFuse::chmod(const path &path, mode_t mode) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::chown(const path &path, uid_t uid, gid_t gid) {
   //printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
   auto real_path = _device->RootDir() / path;
@@ -139,18 +149,26 @@ int CryFuse::chown(const path &path, uid_t uid, gid_t gid) {
 
 int CryFuse::truncate(const path &path, off_t size) {
   //printf("truncate(%s, %zu)\n", path.c_str(), size);
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::truncate(real_path.c_str(), size);
-  return errcode_map(retstat);
+  try {
+    _device->truncate(path, size);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
   //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
 	UNUSED(path);
-  int retstat = ::ftruncate(fileinfo->fh, size);
-  return errcode_map(retstat);
+  try {
+    _device->ftruncate(fileinfo->fh, size);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
+//TODO
 int CryFuse::utimens(const path &path, const timespec times[2]) {
   //printf("utimens(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
@@ -165,36 +183,48 @@ int CryFuse::utimens(const path &path, const timespec times[2]) {
 
 int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
   //printf("open(%s, _)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  int fd = ::open(real_path.c_str(), fileinfo->flags);
-  if (fd < 0) {
-    return -errno;
+  try {
+	  fileinfo->fh = _device->openFile(path, fileinfo->flags);
+	  return 0;
+  } catch (CryErrnoException &e) {
+	  return -e.getErrno();
   }
-  fileinfo->fh = fd;
-  return 0;
 }
 
 int CryFuse::release(const path &path, fuse_file_info *fileinfo) {
   //printf("release(%s, _)\n", path.c_str());
   UNUSED(path);
-  int retstat = ::close(fileinfo->fh);
-  return errcode_map(retstat);
+  try {
+	  _device->closeFile(fileinfo->fh);
+	  return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::read(const path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
   //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
-  int retstat = ::pread(fileinfo->fh, buf, size, offset);
-  return errcode_map(retstat);
+  try {
+    _device->read(fileinfo->fh, buf, size, offset);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
   //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
-  int retstat = ::pwrite(fileinfo->fh, buf, size, offset);
-  return errcode_map(retstat);
+  try {
+    _device->write(fileinfo->fh, buf, size, offset);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
+//TODO
 int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
   //printf("statfs(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
@@ -202,6 +232,7 @@ int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::flush(const path &path, fuse_file_info *fileinfo) {
   //printf("Called non-implemented flush(%s, _)\n", path.c_str());
   UNUSED(path);
@@ -212,15 +243,19 @@ int CryFuse::flush(const path &path, fuse_file_info *fileinfo) {
 int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
   //printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
   UNUSED(path);
-  int retstat = 0;
-  if (datasync) {
-    retstat = ::fdatasync(fileinfo->fh);
-  } else {
-    retstat = ::fsync(fileinfo->fh);
+  try {
+    if (datasync) {
+      _device->fdatasync(fileinfo->fh);
+    } else {
+      _device->fsync(fileinfo->fh);
+    }
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
   }
-  return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
   //printf("opendir(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
@@ -232,6 +267,7 @@ int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
   return 0;
 }
 
+//TODO
 int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
@@ -252,6 +288,7 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
   return 0;
 }
 
+//TODO
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
   //printf("releasedir(%s, _)\n", path.c_str());
   UNUSED(path);
@@ -259,6 +296,7 @@ int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
   return errcode_map(retstat);
 }
 
+//TODO
 int CryFuse::fsyncdir(const path &path, int datasync, fuse_file_info *fileinfo) {
   UNUSED(fileinfo);
   UNUSED(datasync);
@@ -278,20 +316,22 @@ void CryFuse::destroy() {
 
 int CryFuse::access(const path &path, int mask) {
   //printf("access(%s, %d)\n", path.c_str(), mask);
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::access(real_path.c_str(), mask);
-  return errcode_map(retstat);
+  try {
+    _device->access(path, mask);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::create(const path &path, mode_t mode, fuse_file_info *fileinfo) {
   //printf("create(%s, %d, _)\n", path.c_str(), mode);
-  auto real_path = _device->RootDir() / path;
-  int fd = ::creat(real_path.c_str(), mode);
-  if (fd < 0) {
-    return -errno;
+  try {
+    fileinfo->fh = _device->createFile(path, mode);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
   }
-  fileinfo->fh = fd;
-  return 0;
 }
 
 } /* namespace cryfs */
