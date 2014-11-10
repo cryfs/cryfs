@@ -1,6 +1,7 @@
 #include "../cryfs_lib/CryDevice.h"
 
 #include <memory>
+#include <fcntl.h>
 
 #include "CryDir.h"
 #include "CryFile.h"
@@ -99,5 +100,5 @@ int CryDevice::createAndOpenFile(const bf::path &path, mode_t mode) {
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
   dir->createFile(path.filename().native(), mode);
-  return openFile(path, mode);
+  return openFile(path, O_CREAT | O_WRONLY | O_TRUNC);
 }
