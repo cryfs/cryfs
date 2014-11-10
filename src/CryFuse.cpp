@@ -327,7 +327,7 @@ int CryFuse::access(const path &path, int mask) {
 int CryFuse::create(const path &path, mode_t mode, fuse_file_info *fileinfo) {
   //printf("create(%s, %d, _)\n", path.c_str(), mode);
   try {
-    fileinfo->fh = _device->createFile(path, mode);
+    fileinfo->fh = _device->createAndOpenFile(path, mode);
     return 0;
   } catch (CryErrnoException &e) {
     return -e.getErrno();
