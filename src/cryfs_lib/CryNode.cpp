@@ -12,7 +12,7 @@ CryNode::CryNode(CryDevice *device, const bf::path &path)
 CryNode::~CryNode() {
 }
 
-void CryNode::stat(struct stat *result) const {
+void CryNode::stat(struct ::stat *result) const {
   int retval = ::lstat(base_path().c_str(), result);
   CHECK_RETVAL(retval);
 }

@@ -17,11 +17,10 @@ public:
   CryNode(CryDevice *device, const bf::path &path);
   virtual ~CryNode();
 
-  void stat(struct stat *result) const;
+  void stat(struct ::stat *result) const;
 
 protected:
   bf::path base_path() const;
-  CryDevice *device();
 
 private:
   CryDevice *const _device;
