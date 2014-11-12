@@ -148,3 +148,8 @@ void CryDevice::utimens(const bf::path &path, const timespec times[2]) {
   auto node = Load(path);
   node->utimens(times);
 }
+
+void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+  int retval = ::statvfs(path.c_str(), fsstat);
+  CHECK_RETVAL(retval);
+}

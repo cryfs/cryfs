@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <memory>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 
 #include "utils/macros.h"
 #include "CryOpenFileList.h"
@@ -43,6 +44,7 @@ public:
 	std::unique_ptr<std::vector<std::string>> readDir(int descriptor);
 	void closeDir(int descriptor);
 	void utimens(const bf::path &path, const timespec times[2]);
+	void statfs(const bf::path &path, struct statvfs *fsstat);
 
 	const bf::path &RootDir() const;
 private:

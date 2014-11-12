@@ -14,15 +14,6 @@ using fusepp::path;
 
 namespace cryfs {
 
-namespace {
-  int errcode_map(int exit_status) {
-    if (exit_status < 0) {
-      return -errno;
-    }
-    return exit_status;
-  }
-}
-
 CryFuse::CryFuse(CryDevice *device)
   :_device(device) {
 }
@@ -235,10 +226,13 @@ int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset,
 
 //TODO
 int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
-  printf("HALF-IMPLEMENTED: statfs(%s, _)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::statvfs(real_path.c_str(), fsstat);
-  return errcode_map(retstat);
+  //printf("statfs(%s, _)\n", path.c_str());
+  try {
+    _device->statfs(path, fsstat);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
