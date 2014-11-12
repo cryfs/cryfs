@@ -144,3 +144,7 @@ void CryDevice::closeDir(int descriptor) {
   _open_dirs.close(descriptor);
 }
 
+void CryDevice::utimens(const bf::path &path, const timespec times[2]) {
+  auto node = Load(path);
+  node->utimens(times);
+}

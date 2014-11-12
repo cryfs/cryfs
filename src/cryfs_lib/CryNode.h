@@ -20,6 +20,7 @@ public:
   void stat(struct ::stat *result) const;
   void access(int mask) const;
   void rename(const bf::path &to);
+  void utimens(const timespec times[2]);
 
 protected:
   bf::path base_path() const;

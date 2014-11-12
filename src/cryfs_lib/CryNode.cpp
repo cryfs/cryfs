@@ -1,5 +1,7 @@
 #include "CryNode.h"
 
+#include <sys/time.h>
+
 #include "CryDevice.h"
 #include "CryErrnoException.h"
 
@@ -27,6 +29,13 @@ void CryNode::rename(const bf::path &to) {
   int retval = ::rename(base_path().c_str(), new_base_path.c_str());
   CHECK_RETVAL(retval);
   _path = to;
+}
+
+void CryNode::utimens(const timespec times[2]) {
+  struct timeval timevals[2];
+  TIMESPEC_TO_TIMEVAL(&timevals[0], &times[0]);
+  TIMESPEC_TO_TIMEVAL(&timevals[1], &times[1]);
+  ::lutimes(base_path().c_str(), timevals);
 }
 
 } /* namespace cryfs */

@@ -180,17 +180,13 @@ int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
 
 //TODO
 int CryFuse::utimens(const path &path, const timespec times[2]) {
-  UNUSED(times);
-  printf("NOT IMPLEMENTED: utimens(%s, _)\n", path.c_str());
-  //auto real_path = _device->RootDir() / path;
-  //struct timeval tv[2];
-  //tv[0].tv_sec = times[0].tv_sec;
-  //tv[0].tv_usec = times[0].tv_nsec / 1000;
-  //tv[1].tv_sec = times[1].tv_sec;
-  //tv[1].tv_usec = times[1].tv_nsec / 1000;
-  //int retstat = ::lutimes(real_path.c_str(), tv);
-  //return errcode_map(retstat);
-  return 0;
+  //printf("utimens(%s, _)\n", path.c_str());
+  try {
+    _device->utimens(path, times);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int CryFuse::open(const path &path, fuse_file_info *fileinfo) {

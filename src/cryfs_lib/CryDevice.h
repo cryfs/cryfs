@@ -39,10 +39,10 @@ public:
 	void rmdir(const bf::path &path);
 	void unlink(const bf::path &path);
 	void rename(const bf::path &from, const bf::path &to);
-
 	int openDir(const bf::path &path);
 	std::unique_ptr<std::vector<std::string>> readDir(int descriptor);
 	void closeDir(int descriptor);
+	void utimens(const bf::path &path, const timespec times[2]);
 
 	const bf::path &RootDir() const;
 private:
