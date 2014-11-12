@@ -19,6 +19,7 @@ CryFuse::CryFuse(CryDevice *device)
 }
 
 int CryFuse::getattr(const path &path, struct stat *stbuf) {
+  //printf("getattr(%s, _, _)\n", path.c_str());
   try {
     _device->lstat(path, stbuf);
     return 0;
@@ -275,6 +276,9 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
   try {
     auto entries = _device->readDir(fileinfo->fh);
     for (const auto &entry : *entries) {
+      //We could pass file metadata to filler() in its third parameter,
+      //but it doesn't help performance since fuse seems to ignore it.
+      //It does getattr() calls on all entries nevertheless.
       if (filler(buf, entry.c_str(), nullptr, 0) != 0) {
         return -ENOMEM;
       }
