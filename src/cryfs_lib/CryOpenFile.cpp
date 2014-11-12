@@ -34,14 +34,14 @@ int CryOpenFile::read(void *buf, size_t count, off_t offset) {
   CHECK_RETVAL(retval);
   //printf("retval: %d, count: %d\n", retval, count);
   //fflush(stdout);
-  assert(retval <= count);
+  assert(static_cast<unsigned int>(retval) <= count);
   return retval;
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
   int retval = ::pwrite(_descriptor, buf, count, offset);
   CHECK_RETVAL(retval);
-  assert(retval == count);
+  assert(static_cast<unsigned int>(retval) == count);
 }
 
 void CryOpenFile::fsync() {
