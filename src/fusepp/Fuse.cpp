@@ -11,6 +11,7 @@ namespace bf = boost::filesystem;
 using namespace fusepp;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
+#define UNUSED(obj) (void)obj
 
 namespace {
 int fusepp_getattr(const char *path, struct stat *stbuf) {
@@ -131,6 +132,7 @@ void* fusepp_init(fuse_conn_info *conn) {
 void fusepp_destroy(void *userdata) {
   auto f = FUSE_OBJ;
   assert(userdata == f);
+  UNUSED(userdata); //In the Release build, the assert doesn't run
   f->destroy();
 }
 
