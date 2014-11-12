@@ -260,21 +260,19 @@ int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
 }
 
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
+  UNUSED(path);
+  UNUSED(fileinfo);
   //printf("opendir(%s, _)\n", path.c_str());
-  try {
-    fileinfo->fh = _device->openDir(path);
-    return 0;
-  } catch(CryErrnoException &e) {
-    return -e.getErrno();
-  }
+  //We don't need opendir, because readdir works directly on the path
+  return 0;
 }
 
 int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
-  UNUSED(path);
+  UNUSED(fileinfo);
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
   try {
-    auto entries = _device->readDir(fileinfo->fh);
+    auto entries = _device->readDir(path);
     for (const auto &entry : *entries) {
       //We could pass file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse seems to ignore it.
@@ -290,14 +288,11 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
 }
 
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
-  //printf("releasedir(%s, _)\n", path.c_str());
   UNUSED(path);
-  try {
-    _device->closeDir(fileinfo->fh);
-    return 0;
-  } catch (CryErrnoException &e) {
-    return -e.getErrno();
-  }
+  UNUSED(fileinfo);
+  //printf("releasedir(%s, _)\n", path.c_str());
+  //We don't need releasedir, because readdir works directly on the path
+  return 0;
 }
 
 //TODO
