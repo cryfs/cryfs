@@ -7,12 +7,13 @@
 #include "utils/macros.h"
 
 namespace cryfs {
+class CryDevice;
 
 namespace bf = boost::filesystem;
 
 class CryOpenFile {
 public:
-  CryOpenFile(const bf::path &path, int flags);
+  CryOpenFile(const CryDevice *device, const bf::path &path, int flags);
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const;

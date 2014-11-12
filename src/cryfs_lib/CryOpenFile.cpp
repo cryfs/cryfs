@@ -4,11 +4,12 @@
 #include <fcntl.h>
 
 #include "CryErrnoException.h"
+#include "CryDevice.h"
 
 using namespace cryfs;
 
-CryOpenFile::CryOpenFile(const bf::path &path, int flags)
-  :_descriptor(::open(path.c_str(), flags)) {
+CryOpenFile::CryOpenFile(const CryDevice *device, const bf::path &path, int flags)
+  :_descriptor(::open((device->RootDir() / path).c_str(), flags)) {
   CHECK_RETVAL(_descriptor);
 }
 

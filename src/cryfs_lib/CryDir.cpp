@@ -5,6 +5,7 @@
 #include <fcntl.h>
 
 #include "CryDevice.h"
+#include "CryOpenDir.h"
 #include "CryFile.h"
 #include "CryErrnoException.h"
 
@@ -42,6 +43,10 @@ unique_ptr<CryDir> CryDir::createDir(const string &name, mode_t mode) {
 void CryDir::rmdir() {
   int retval = ::rmdir(base_path().c_str());
   CHECK_RETVAL(retval);
+}
+
+unique_ptr<CryOpenDir> CryDir::opendir() {
+  return make_unique<CryOpenDir>(device(), path());
 }
 
 } /* namespace cryfs */

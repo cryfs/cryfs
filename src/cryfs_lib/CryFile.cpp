@@ -17,7 +17,7 @@ CryFile::~CryFile() {
 }
 
 std::unique_ptr<CryOpenFile> CryFile::open(int flags) const {
-  return make_unique<CryOpenFile>(base_path(), flags);
+  return make_unique<CryOpenFile>(device(), path(), flags);
 }
 
 void CryFile::truncate(off_t size) const {
