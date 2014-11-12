@@ -3,15 +3,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 
 #include "CryDevice.h"
-#include "CryOpenDir.h"
 #include "CryFile.h"
 #include "CryErrnoException.h"
 
 using std::string;
 using std::unique_ptr;
 using std::make_unique;
+using std::vector;
 
 namespace cryfs {
 
@@ -45,8 +46,31 @@ void CryDir::rmdir() {
   CHECK_RETVAL(retval);
 }
 
-unique_ptr<CryOpenDir> CryDir::opendir() const {
-  return make_unique<CryOpenDir>(device(), path());
+unique_ptr<vector<string>> CryDir::children() const {
+  DIR *dir = ::opendir(base_path().c_str());
+  if (dir == nullptr) {
+    throw CryErrnoException(errno);
+  }
+
+  // Set errno=0 so we can detect whether it changed later
+  errno = 0;
+
+  auto result = make_unique<vector<string>>();
+
+  struct dirent *entry = ::readdir(dir);
+  while(entry != nullptr) {
+    result->push_back(entry->d_name);
+    entry = ::readdir(dir);
+  }
+  //On error, ::readdir returns nullptr and sets errno.
+  if (errno != 0) {
+    int readdir_errno = errno;
+    ::closedir(dir);
+    throw CryErrnoException(readdir_errno);
+  }
+  int retval = ::closedir(dir);
+  CHECK_RETVAL(retval);
+  return result;
 }
 
 } /* namespace cryfs */

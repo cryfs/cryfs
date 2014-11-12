@@ -21,7 +21,8 @@ public:
   std::unique_ptr<CryDir> createDir(const std::string &name, mode_t mode);
   void rmdir();
 
-  std::unique_ptr<CryOpenDir> opendir() const;
+  std::unique_ptr<std::vector<std::string>> children() const;
+
 private:
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };
