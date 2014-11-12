@@ -8,6 +8,7 @@
 
 #include "utils/macros.h"
 #include "CryOpenFileList.h"
+#include "CryOpenDirList.h"
 
 namespace cryfs {
 class CryNode;
@@ -39,6 +40,10 @@ public:
 	void unlink(const bf::path &path);
 	void rename(const bf::path &from, const bf::path &to);
 
+	int openDir(const bf::path &path);
+	std::unique_ptr<std::vector<std::string>> readDir(int descriptor);
+	void closeDir(int descriptor);
+
 	const bf::path &RootDir() const;
 private:
 	std::unique_ptr<CryNode> Load(const bf::path &path);
@@ -47,6 +52,7 @@ private:
 	int openFile(const CryFile &file, int flags);
 	const bf::path _rootdir;
 	CryOpenFileList _open_files;
+	CryOpenDirList _open_dirs;
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };

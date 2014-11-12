@@ -45,7 +45,7 @@ void CryDir::rmdir() {
   CHECK_RETVAL(retval);
 }
 
-unique_ptr<CryOpenDir> CryDir::opendir() {
+unique_ptr<CryOpenDir> CryDir::opendir() const {
   return make_unique<CryOpenDir>(device(), path());
 }
 

@@ -1,8 +1,6 @@
 #ifndef CRYFS_LIB_CRYOPENFILELIST_H_
 #define CRYFS_LIB_CRYOPENFILELIST_H_
 
-#include <map>
-#include <memory>
 #include "utils/macros.h"
 #include "IdList.h"
 

@@ -9,13 +9,17 @@
 #include "CryErrnoException.h"
 #include "utils/pointer.h"
 
+#include "CryOpenDir.h"
+
 using namespace cryfs;
 
 using std::unique_ptr;
 using std::make_unique;
+using std::vector;
+using std::string;
 
 CryDevice::CryDevice(const bf::path &rootdir)
-  :_rootdir(rootdir), _open_files() {
+  :_rootdir(rootdir), _open_files(), _open_dirs() {
 }
 
 CryDevice::~CryDevice() {
@@ -126,3 +130,17 @@ void CryDevice::rename(const bf::path &from, const bf::path &to) {
   auto node = Load(from);
   node->rename(to);
 }
+
+int CryDevice::openDir(const bf::path &path) {
+  auto dir = LoadDir(path);
+  return _open_dirs.open(*dir);
+}
+
+unique_ptr<vector<string>> CryDevice::readDir(int descriptor) {
+  return _open_dirs.get(descriptor)->readdir();
+}
+
+void CryDevice::closeDir(int descriptor) {
+  _open_dirs.close(descriptor);
+}
+

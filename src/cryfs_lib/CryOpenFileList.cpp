@@ -20,6 +20,6 @@ CryOpenFile *CryOpenFileList::get(int descriptor) {
 }
 
 void CryOpenFileList::close(int descriptor) {
-  //The destructor of the stored CryFile::OpenFile closes the file
+  //The destructor of the stored CryOpenFile closes the file
   _open_files.remove(descriptor);
 }
