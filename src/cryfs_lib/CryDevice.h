@@ -3,11 +3,11 @@
 #define CRYFS_LIB_CRYDEVICE_H_
 
 #include <boost/filesystem.hpp>
-#include <cryfs_lib/CryOpenFileList.h>
 #include <memory>
 #include <sys/stat.h>
 
 #include "utils/macros.h"
+#include "CryOpenFileList.h"
 
 namespace cryfs {
 class CryNode;

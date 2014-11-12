@@ -4,10 +4,11 @@
 #include <map>
 #include <memory>
 #include "utils/macros.h"
+#include "IdList.h"
 
 namespace cryfs {
-class CryFile;
 class CryOpenFile;
+class CryFile;
 
 class CryOpenFileList {
 public:
@@ -19,7 +20,7 @@ public:
   void close(int descriptor);
 
 private:
-  std::map<int, std::unique_ptr<CryOpenFile>> _open_files;
+  IdList<CryOpenFile> _open_files;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFileList);
 };

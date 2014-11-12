@@ -25,6 +25,7 @@ protected:
   bf::path base_path() const;
   const bf::path &path() const;
   CryDevice *device();
+  const CryDevice *device() const;
 
 private:
   CryDevice *const _device;
@@ -42,6 +43,10 @@ inline const bf::path &CryNode::path() const {
 }
 
 inline CryDevice *CryNode::device() {
+  return const_cast<CryDevice*>(const_cast<const CryNode*>(this)->device());
+}
+
+inline const CryDevice *CryNode::device() const {
   return _device;
 }
 

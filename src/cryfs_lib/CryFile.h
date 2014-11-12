@@ -4,11 +4,11 @@
 
 #include <memory>
 
-#include "CryDevice.h"
 #include "CryNode.h"
 #include "utils/macros.h"
 
 namespace cryfs {
+class CryDevice;
 class CryOpenFile;
 
 class CryFile: public CryNode {

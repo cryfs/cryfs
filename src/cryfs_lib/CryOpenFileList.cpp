@@ -4,25 +4,22 @@
 
 using namespace cryfs;
 
+CryOpenFileList::~CryOpenFileList() {
+}
+
 CryOpenFileList::CryOpenFileList()
   :_open_files() {
 }
 
-CryOpenFileList::~CryOpenFileList() {
-}
-
 int CryOpenFileList::open(const CryFile &file, int flags) {
-  //TODO Reuse descriptors
-  int desc = _open_files.size();
-  _open_files[desc] = file.open(flags);
-  return desc;
+  return _open_files.add(file.open(flags));
 }
 
 CryOpenFile *CryOpenFileList::get(int descriptor) {
-  return _open_files.at(descriptor).get();
+  return _open_files.get(descriptor);
 }
 
 void CryOpenFileList::close(int descriptor) {
   //The destructor of the stored CryFile::OpenFile closes the file
-  _open_files.erase(descriptor);
+  _open_files.remove(descriptor);
 }
