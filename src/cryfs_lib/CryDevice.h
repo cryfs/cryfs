@@ -35,6 +35,7 @@ public:
 	void access(const bf::path &path, int mask);
 	int createAndOpenFile(const bf::path &path, mode_t mode);
 	void mkdir(const bf::path &path, mode_t mode);
+	void rmdir(const bf::path &path);
 	void unlink(const bf::path &path);
 
 	const bf::path &RootDir() const;

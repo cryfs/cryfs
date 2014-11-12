@@ -18,6 +18,7 @@ public:
 
   std::unique_ptr<CryFile> createFile(const std::string &name, mode_t mode);
   std::unique_ptr<CryDir> createDir(const std::string &name, mode_t mode);
+  void rmdir();
 private:
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

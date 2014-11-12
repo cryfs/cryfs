@@ -39,4 +39,9 @@ unique_ptr<CryDir> CryDir::createDir(const string &name, mode_t mode) {
   return make_unique<CryDir>(device(), path() / name);
 }
 
+void CryDir::rmdir() {
+  int retval = ::rmdir(base_path().c_str());
+  CHECK_RETVAL(retval);
+}
+
 } /* namespace cryfs */
