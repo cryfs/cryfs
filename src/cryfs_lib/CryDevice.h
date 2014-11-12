@@ -34,12 +34,14 @@ public:
 	void fdatasync(int descriptor);
 	void access(const bf::path &path, int mask);
 	int createAndOpenFile(const bf::path &path, mode_t mode);
+	void mkdir(const bf::path &path, mode_t mode);
 
 	const bf::path &RootDir() const;
 private:
 	std::unique_ptr<CryNode> Load(const bf::path &path);
 	std::unique_ptr<CryFile> LoadFile(const bf::path &path);
 	std::unique_ptr<CryDir> LoadDir(const bf::path &path);
+	int openFile(const CryFile &file, int flags);
 	const bf::path _rootdir;
 	CryOpenFileList _open_files;
 

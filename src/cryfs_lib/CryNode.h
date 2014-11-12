@@ -22,6 +22,8 @@ public:
 
 protected:
   bf::path base_path() const;
+  const bf::path &path() const;
+  CryDevice *device();
 
 private:
   CryDevice *const _device;
@@ -32,6 +34,14 @@ private:
 
 inline bf::path CryNode::base_path() const {
   return _device->RootDir() / _path;
+}
+
+inline const bf::path &CryNode::path() const {
+  return _path;
+}
+
+inline CryDevice *CryNode::device() {
+  return _device;
 }
 
 } /* namespace cryfs */

@@ -16,7 +16,8 @@ public:
   CryDir(CryDevice *device, const bf::path &path);
   virtual ~CryDir();
 
-  void createFile(const std::string &name, mode_t mode);
+  std::unique_ptr<CryFile> createFile(const std::string &name, mode_t mode);
+  std::unique_ptr<CryDir> createDir(const std::string &name, mode_t mode);
 private:
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

@@ -10,6 +10,7 @@ namespace cryfs {
 
 CryFile::CryFile(CryDevice *device, const bf::path &path)
   :CryNode(device, path) {
+  assert(bf::is_regular_file(base_path()));
 }
 
 CryFile::~CryFile() {

@@ -52,7 +52,11 @@ unique_ptr<CryDir> CryDevice::LoadDir(const bf::path &path) {
 
 int CryDevice::openFile(const bf::path &path, int flags) {
   auto file = LoadFile(path);
-  return _open_files.open(*file, flags);
+  return openFile(*file, flags);
+}
+
+int CryDevice::openFile(const CryFile &file, int flags) {
+  return _open_files.open(file, flags);
 }
 
 void CryDevice::closeFile(int descriptor) {
@@ -99,6 +103,11 @@ int CryDevice::createAndOpenFile(const bf::path &path, mode_t mode) {
   //TODO Creating the file opens and closes it. We then reopen it afterwards.
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
-  dir->createFile(path.filename().native(), mode);
-  return openFile(path, O_CREAT | O_WRONLY | O_TRUNC);
+  auto file = dir->createFile(path.filename().native(), mode);
+  return openFile(*file, O_CREAT | O_WRONLY | O_TRUNC);
+}
+
+void CryDevice::mkdir(const bf::path &path, mode_t mode) {
+  auto dir = LoadDir(path.parent_path());
+  dir->createDir(path.filename().native(), mode);
 }
