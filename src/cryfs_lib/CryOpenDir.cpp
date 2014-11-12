@@ -24,6 +24,8 @@ CryOpenDir::~CryOpenDir() {
 
 unique_ptr<vector<string>> CryOpenDir::readdir() const {
   ::rewinddir(_dir);
+  // Set errno=0 so we can detect whether it changed later
+  errno = 0;
 
   auto result = make_unique<vector<string>>();
 
