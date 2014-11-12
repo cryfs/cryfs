@@ -121,3 +121,8 @@ void CryDevice::unlink(const bf::path &path) {
   auto file = LoadFile(path);
   file->unlink();
 }
+
+void CryDevice::rename(const bf::path &from, const bf::path &to) {
+  auto node = Load(from);
+  node->rename(to);
+}

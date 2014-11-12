@@ -37,6 +37,7 @@ public:
 	void mkdir(const bf::path &path, mode_t mode);
 	void rmdir(const bf::path &path);
 	void unlink(const bf::path &path);
+	void rename(const bf::path &from, const bf::path &to);
 
 	const bf::path &RootDir() const;
 private:

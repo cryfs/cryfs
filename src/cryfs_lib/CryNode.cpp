@@ -22,4 +22,11 @@ void CryNode::access(int mask) const {
   CHECK_RETVAL(retval);
 }
 
+void CryNode::rename(const bf::path &to) {
+  auto new_base_path = device()->RootDir() / to;
+  int retval = ::rename(base_path().c_str(), new_base_path.c_str());
+  CHECK_RETVAL(retval);
+  _path = to;
+}
+
 } /* namespace cryfs */

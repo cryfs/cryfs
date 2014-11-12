@@ -19,6 +19,7 @@ public:
 
   void stat(struct ::stat *result) const;
   void access(int mask) const;
+  void rename(const bf::path &to);
 
 protected:
   bf::path base_path() const;
@@ -27,7 +28,7 @@ protected:
 
 private:
   CryDevice *const _device;
-  const bf::path _path;
+  bf::path _path;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);
 };
