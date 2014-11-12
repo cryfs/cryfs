@@ -108,7 +108,7 @@ int CryDevice::createAndOpenFile(const bf::path &path, mode_t mode) {
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
   auto file = dir->createFile(path.filename().native(), mode);
-  return openFile(*file, O_CREAT | O_WRONLY | O_TRUNC);
+  return openFile(*file, O_WRONLY | O_TRUNC);
 }
 
 void CryDevice::mkdir(const bf::path &path, mode_t mode) {
