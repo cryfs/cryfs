@@ -190,7 +190,7 @@ int CryFuse::utimens(const path &path, const timespec times[2]) {
   //tv[1].tv_usec = times[1].tv_nsec / 1000;
   //int retstat = ::lutimes(real_path.c_str(), tv);
   //return errcode_map(retstat);
-  return ENOSYS;
+  return 0;
 }
 
 int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
