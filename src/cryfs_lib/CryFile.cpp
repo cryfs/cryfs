@@ -25,4 +25,9 @@ void CryFile::truncate(off_t size) const {
   CHECK_RETVAL(retval);
 }
 
+void CryFile::unlink() {
+  int retval = ::unlink(base_path().c_str());
+  CHECK_RETVAL(retval);
+}
+
 } /* namespace cryfs */

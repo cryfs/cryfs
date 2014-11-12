@@ -111,3 +111,8 @@ void CryDevice::mkdir(const bf::path &path, mode_t mode) {
   auto dir = LoadDir(path.parent_path());
   dir->createDir(path.filename().native(), mode);
 }
+
+void CryDevice::unlink(const bf::path &path) {
+  auto file = LoadFile(path);
+  file->unlink();
+}

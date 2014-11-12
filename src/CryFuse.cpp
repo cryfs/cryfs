@@ -90,12 +90,14 @@ int CryFuse::mkdir(const path &path, mode_t mode) {
   }
 }
 
-//TODO
 int CryFuse::unlink(const path &path) {
   //printf("unlink(%s)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::unlink(real_path.c_str());
-  return errcode_map(retstat);
+  try {
+    _device->unlink(path);
+    return 0;
+  } catch(cryfs::CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
