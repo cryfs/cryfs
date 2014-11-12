@@ -116,7 +116,7 @@ int CryFuse::symlink(const path &from, const path &to) {
   //auto real_to = _device->RootDir() / to;
   //int retstat = ::symlink(real_from.c_str(), real_to.c_str());
   //return errcode_map(retstat);
-  return EIO; //TODO Correct return value
+  return ENOSYS;
 }
 
 int CryFuse::rename(const path &from, const path &to) {
@@ -131,27 +131,30 @@ int CryFuse::rename(const path &from, const path &to) {
 
 //TODO
 int CryFuse::link(const path &from, const path &to) {
-  //printf("link(%s, %s)\n", from.c_str(), to.c_str());
-  auto real_from = _device->RootDir() / from;
-  auto real_to = _device->RootDir() / to;
-  int retstat = ::link(real_from.c_str(), real_to.c_str());
-  return errcode_map(retstat);
+  printf("NOT IMPLEMENTED: link(%s, %s)\n", from.c_str(), to.c_str());
+  //auto real_from = _device->RootDir() / from;
+  //auto real_to = _device->RootDir() / to;
+  //int retstat = ::link(real_from.c_str(), real_to.c_str());
+  //return errcode_map(retstat);
+  return ENOSYS;
 }
 
 //TODO
 int CryFuse::chmod(const path &path, mode_t mode) {
-  //printf("chmod(%s, %d)\n", path.c_str(), mode);
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::chmod(real_path.c_str(), mode);
-  return errcode_map(retstat);
+  printf("NOT IMPLEMENTED: chmod(%s, %d)\n", path.c_str(), mode);
+  //auto real_path = _device->RootDir() / path;
+  //int retstat = ::chmod(real_path.c_str(), mode);
+  //return errcode_map(retstat);
+  return ENOSYS;
 }
 
 //TODO
 int CryFuse::chown(const path &path, uid_t uid, gid_t gid) {
-  //printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::chown(real_path.c_str(), uid, gid);
-  return errcode_map(retstat);
+  printf("NOT IMPLEMENTED: chown(%s, %d, %d)\n", path.c_str(), uid, gid);
+  //auto real_path = _device->RootDir() / path;
+  //int retstat = ::chown(real_path.c_str(), uid, gid);
+  //return errcode_map(retstat);
+  return ENOSYS;
 }
 
 int CryFuse::truncate(const path &path, off_t size) {
@@ -177,15 +180,17 @@ int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
 
 //TODO
 int CryFuse::utimens(const path &path, const timespec times[2]) {
-  //printf("utimens(%s, _)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  struct timeval tv[2];
-  tv[0].tv_sec = times[0].tv_sec;
-  tv[0].tv_usec = times[0].tv_nsec / 1000;
-  tv[1].tv_sec = times[1].tv_sec;
-  tv[1].tv_usec = times[1].tv_nsec / 1000;
-  int retstat = ::lutimes(real_path.c_str(), tv);
-  return errcode_map(retstat);
+  UNUSED(times);
+  printf("NOT IMPLEMENTED: utimens(%s, _)\n", path.c_str());
+  //auto real_path = _device->RootDir() / path;
+  //struct timeval tv[2];
+  //tv[0].tv_sec = times[0].tv_sec;
+  //tv[0].tv_usec = times[0].tv_nsec / 1000;
+  //tv[1].tv_sec = times[1].tv_sec;
+  //tv[1].tv_usec = times[1].tv_nsec / 1000;
+  //int retstat = ::lutimes(real_path.c_str(), tv);
+  //return errcode_map(retstat);
+  return ENOSYS;
 }
 
 int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
@@ -234,7 +239,7 @@ int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset,
 
 //TODO
 int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
-  //printf("statfs(%s, _)\n", path.c_str());
+  printf("HALF-IMPLEMENTED: statfs(%s, _)\n", path.c_str());
   auto real_path = _device->RootDir() / path;
   int retstat = ::statvfs(real_path.c_str(), fsstat);
   return errcode_map(retstat);
