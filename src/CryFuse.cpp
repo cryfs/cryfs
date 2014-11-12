@@ -68,7 +68,7 @@ int CryFuse::mknod(const path &path, mode_t mode, dev_t rdev) {
   UNUSED(mode);
   UNUSED(path);
   printf("Called non-implemented mknod(%s, %d, _)\n", path.c_str(), mode);
-  return 0;
+  return ENOSYS;
 }
 
 int CryFuse::mkdir(const path &path, mode_t mode) {
