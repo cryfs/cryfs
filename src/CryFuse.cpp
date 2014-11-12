@@ -100,12 +100,13 @@ int CryFuse::unlink(const path &path) {
   }
 }
 
-//TODO
 int CryFuse::rmdir(const path &path) {
-  //printf("rmdir(%s)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::rmdir(real_path.c_str());
-  return errcode_map(retstat);
+  try {
+    _device->rmdir(path);
+    return 0;
+  } catch(cryfs::CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
