@@ -275,7 +275,6 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
   try {
     auto entries = _device->readDir(fileinfo->fh);
     for (const auto &entry : *entries) {
-      //TODO Also give file attributes (third param of filler)
       if (filler(buf, entry.c_str(), nullptr, 0) != 0) {
         return -ENOMEM;
       }
