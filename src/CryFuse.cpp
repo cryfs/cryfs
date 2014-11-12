@@ -111,20 +111,22 @@ int CryFuse::rmdir(const path &path) {
 
 //TODO
 int CryFuse::symlink(const path &from, const path &to) {
-  //printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
-  auto real_from = _device->RootDir() / from;
-  auto real_to = _device->RootDir() / to;
-  int retstat = ::symlink(real_from.c_str(), real_to.c_str());
-  return errcode_map(retstat);
+  printf("NOT IMPLEMENTED: symlink(%s, %s)\n", from.c_str(), to.c_str());
+  //auto real_from = _device->RootDir() / from;
+  //auto real_to = _device->RootDir() / to;
+  //int retstat = ::symlink(real_from.c_str(), real_to.c_str());
+  //return errcode_map(retstat);
+  return EIO; //TODO Correct return value
 }
 
-//TODO
 int CryFuse::rename(const path &from, const path &to) {
   //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
-  auto real_from = _device->RootDir() / from;
-  auto real_to = _device->RootDir() / to;
-  int retstat = ::rename(real_from.c_str(), real_to.c_str());
-  return errcode_map(retstat);
+  try {
+    _device->rename(from, to);
+    return 0;
+  } catch(cryfs::CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
