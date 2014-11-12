@@ -80,12 +80,14 @@ int CryFuse::mknod(const path &path, mode_t mode, dev_t rdev) {
   return 0;
 }
 
-//TODO
 int CryFuse::mkdir(const path &path, mode_t mode) {
   //printf("mkdir(%s, %d)\n", path.c_str(), mode);
-  auto real_path = _device->RootDir() / path;
-  int retstat = ::mkdir(real_path.c_str(), mode);
-  return errcode_map(retstat);
+  try {
+    _device->mkdir(path, mode);
+    return 0;
+  } catch(cryfs::CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
