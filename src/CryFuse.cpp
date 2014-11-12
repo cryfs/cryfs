@@ -268,45 +268,43 @@ int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
   }
 }
 
-//TODO
 int CryFuse::opendir(const path &path, fuse_file_info *fileinfo) {
   //printf("opendir(%s, _)\n", path.c_str());
-  auto real_path = _device->RootDir() / path;
-  DIR *dp = ::opendir(real_path.c_str());
-  if (dp == nullptr) {
-    return -errno;
+  try {
+    fileinfo->fh = _device->openDir(path);
+    return 0;
+  } catch(CryErrnoException &e) {
+    return -e.getErrno();
   }
-  fileinfo->fh = (intptr_t)dp;
-  return 0;
 }
 
-//TODO
 int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
+  UNUSED(path);
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
-  auto real_path = _device->RootDir() / path;
-
-  DIR *dp = (DIR*)(uintptr_t)fileinfo->fh;
-  struct dirent *de = ::readdir(dp);
-  if (de == nullptr) {
-    return -errno;
-  }
-
-  do {
-    if (filler(buf, de->d_name, nullptr, 0) != 0) {
-      return -ENOMEM;
+  try {
+    auto entries = _device->readDir(fileinfo->fh);
+    for (const auto &entry : *entries) {
+      //TODO Also give file attributes (third param of filler)
+      if (filler(buf, entry.c_str(), nullptr, 0) != 0) {
+        return -ENOMEM;
+      }
     }
-  } while ((de = ::readdir(dp)) != nullptr);
-
-  return 0;
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
-//TODO
 int CryFuse::releasedir(const path &path, fuse_file_info *fileinfo) {
   //printf("releasedir(%s, _)\n", path.c_str());
   UNUSED(path);
-  int retstat = closedir((DIR*)(uintptr_t)fileinfo->fh);
-  return errcode_map(retstat);
+  try {
+    _device->closeDir(fileinfo->fh);
+    return 0;
+  } catch (CryErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 //TODO
