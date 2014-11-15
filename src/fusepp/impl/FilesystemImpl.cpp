@@ -2,11 +2,11 @@
 
 #include <memory>
 #include <fcntl.h>
+#include <fusepp/fs_interface/Device.h>
+#include <fusepp/fs_interface/Dir.h>
 
-#include "fusepp/fs_interface/FuseDevice.h"
-#include "fusepp/fs_interface/FuseDir.h"
 #include "FuseErrnoException.h"
-#include "fusepp/fs_interface/FuseFile.h"
+#include "fusepp/fs_interface/File.h"
 
 
 #include "fusepp/utils/pointer.h"
@@ -20,25 +20,25 @@ using std::string;
 
 namespace bf = boost::filesystem;
 
-FilesystemImpl::FilesystemImpl(FuseDevice *device)
+FilesystemImpl::FilesystemImpl(Device *device)
   :_device(device), _open_files() {
 }
 
 FilesystemImpl::~FilesystemImpl() {
 }
 
-unique_ptr<FuseFile> FilesystemImpl::LoadFile(const bf::path &path) {
+unique_ptr<File> FilesystemImpl::LoadFile(const bf::path &path) {
   auto node = _device->Load(path);
-  auto file = dynamic_pointer_move<FuseFile>(node);
+  auto file = dynamic_pointer_move<File>(node);
   if (!file) {
 	  throw FuseErrnoException(EISDIR);
   }
   return file;
 }
 
-unique_ptr<FuseDir> FilesystemImpl::LoadDir(const bf::path &path) {
+unique_ptr<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   auto node = _device->Load(path);
-  auto dir = dynamic_pointer_move<FuseDir>(node);
+  auto dir = dynamic_pointer_move<Dir>(node);
   if (!dir) {
     throw FuseErrnoException(ENOTDIR);
   }
@@ -50,7 +50,7 @@ int FilesystemImpl::openFile(const bf::path &path, int flags) {
   return openFile(*file, flags);
 }
 
-int FilesystemImpl::openFile(const FuseFile &file, int flags) {
+int FilesystemImpl::openFile(const File &file, int flags) {
   return _open_files.open(file, flags);
 }
 

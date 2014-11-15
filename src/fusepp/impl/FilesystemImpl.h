@@ -11,14 +11,14 @@
 #include "fusepp/utils/macros.h"
 
 namespace fusepp {
-class FuseNode;
-class FuseFile;
-class FuseOpenFile;
-class FuseDir;
+class Node;
+class File;
+class OpenFile;
+class Dir;
 
 class FilesystemImpl {
 public:
-  FilesystemImpl(FuseDevice *device);
+  FilesystemImpl(Device *device);
 	virtual ~FilesystemImpl();
 
 	int openFile(const boost::filesystem::path &path, int flags);
@@ -42,11 +42,11 @@ public:
 	void statfs(const boost::filesystem::path &path, struct statvfs *fsstat);
 
 private:
-	std::unique_ptr<FuseFile> LoadFile(const boost::filesystem::path &path);
-	std::unique_ptr<FuseDir> LoadDir(const boost::filesystem::path &path);
-	int openFile(const FuseFile &file, int flags);
+	std::unique_ptr<File> LoadFile(const boost::filesystem::path &path);
+	std::unique_ptr<Dir> LoadDir(const boost::filesystem::path &path);
+	int openFile(const File &file, int flags);
 
-	FuseDevice *_device;
+	Device *_device;
 	FuseOpenFileList _open_files;
 
   DISALLOW_COPY_AND_ASSIGN(FilesystemImpl);

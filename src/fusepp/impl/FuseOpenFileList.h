@@ -2,10 +2,10 @@
 #ifndef FUSEPP_FUSEOPENFILELIST_H_
 #define FUSEPP_FUSEOPENFILELIST_H_
 
+#include <fusepp/fs_interface/File.h>
+#include <fusepp/fs_interface/OpenFile.h>
 #include "fusepp/utils/macros.h"
 #include "IdList.h"
-#include "fusepp/fs_interface/FuseFile.h"
-#include "fusepp/fs_interface/FuseOpenFile.h"
 
 namespace fusepp {
 
@@ -14,12 +14,12 @@ public:
   FuseOpenFileList();
   virtual ~FuseOpenFileList();
 
-  int open(const FuseFile &rhs, int flags);
-  FuseOpenFile *get(int descriptor);
+  int open(const File &rhs, int flags);
+  OpenFile *get(int descriptor);
   void close(int descriptor);
 
 private:
-  IdList<FuseOpenFile> _open_files;
+  IdList<OpenFile> _open_files;
 
   DISALLOW_COPY_AND_ASSIGN(FuseOpenFileList);
 };
@@ -28,11 +28,11 @@ inline FuseOpenFileList::FuseOpenFileList()
   :_open_files() {
 }
 
-inline int FuseOpenFileList::open(const FuseFile &file, int flags) {
+inline int FuseOpenFileList::open(const File &file, int flags) {
   return _open_files.add(file.open(flags));
 }
 
-inline FuseOpenFile *FuseOpenFileList::get(int descriptor) {
+inline OpenFile *FuseOpenFileList::get(int descriptor) {
   return _open_files.get(descriptor);
 }
 

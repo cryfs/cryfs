@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FUSEPP_FUSENODE_H_
-#define FUSEPP_FUSENODE_H_
+#ifndef FUSEPP_NODE_H_
+#define FUSEPP_NODE_H_
 
 #include <boost/filesystem.hpp>
 
@@ -8,9 +8,9 @@
 
 namespace fusepp {
 
-class FuseNode {
+class Node {
 public:
-  virtual ~FuseNode() {}
+  virtual ~Node() {}
 
   virtual void stat(struct ::stat *result) const = 0;
   virtual void access(int mask) const = 0;
@@ -20,4 +20,4 @@ public:
 
 } /* namespace fusepp */
 
-#endif /* FUSEPP_FUSENODE_H_ */
+#endif /* FUSEPP_NODE_H_ */
