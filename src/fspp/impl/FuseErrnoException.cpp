@@ -21,4 +21,4 @@ int FuseErrnoException::getErrno() const {
   return _errno;
 }
 
-} /* namespace fusepp */
+} /* namespace fspp */

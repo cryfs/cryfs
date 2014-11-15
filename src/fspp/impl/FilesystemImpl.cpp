@@ -2,14 +2,14 @@
 
 #include <memory>
 #include <fcntl.h>
-#include <fusepp/fs_interface/Device.h>
-#include <fusepp/fs_interface/Dir.h>
+#include <fspp/fs_interface/Device.h>
+#include <fspp/fs_interface/Dir.h>
 
 #include "FuseErrnoException.h"
-#include "fusepp/fs_interface/File.h"
+#include "fspp/fs_interface/File.h"
 
 
-#include "fusepp/utils/pointer.h"
+#include "fspp/utils/pointer.h"
 
 using namespace fspp;
 

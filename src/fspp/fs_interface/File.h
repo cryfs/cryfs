@@ -2,7 +2,7 @@
 #ifndef FSPP_FILE_H_
 #define FSPP_FILE_H_
 
-#include <fusepp/fs_interface/Node.h>
+#include "Node.h"
 #include <memory>
 
 namespace fspp {

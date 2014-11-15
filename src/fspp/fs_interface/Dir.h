@@ -2,7 +2,7 @@
 #ifndef FSPP_DIR_H_
 #define FSPP_DIR_H_
 
-#include <fusepp/fs_interface/Node.h>
+#include <fspp/fs_interface/Node.h>
 #include <memory>
 #include <string>
 

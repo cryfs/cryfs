@@ -2,9 +2,9 @@
 #ifndef FSPP_IMPL_FUSEOPENFILELIST_H_
 #define FSPP_IMPL_FUSEOPENFILELIST_H_
 
-#include <fusepp/fs_interface/File.h>
-#include <fusepp/fs_interface/OpenFile.h>
-#include "fusepp/utils/macros.h"
+#include <fspp/fs_interface/File.h>
+#include <fspp/fs_interface/OpenFile.h>
+#include "fspp/utils/macros.h"
 #include "IdList.h"
 
 namespace fspp {

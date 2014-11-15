@@ -5,7 +5,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include "fusepp/utils/macros.h"
+#include "fspp/utils/macros.h"
 
 namespace fspp {
 
@@ -63,6 +63,6 @@ void IdList<Entry>::remove(int id) {
   _entries.erase(id);
 }
 
-} /* namespace fusepp */
+} /* namespace fspp */
 
 #endif /* FSPP_FUSE_IDLIST_H_ */

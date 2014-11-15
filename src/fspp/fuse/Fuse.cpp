@@ -2,8 +2,8 @@
 #include <memory>
 #include <cassert>
 
-#include "fusepp/impl/FuseErrnoException.h"
-#include "fusepp/impl/FilesystemImpl.h"
+#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/impl/FilesystemImpl.h"
 
 using std::unique_ptr;
 using std::make_unique;

@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
-#include "fusepp/utils/macros.h"
+#include "fspp/utils/macros.h"
 
 namespace fspp {
 class Node;
