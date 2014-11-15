@@ -6,4 +6,6 @@
   Class(const Class &rhs) = delete;            \
   Class &operator=(const Class &rhs) = delete;
 
+#define UNUSED(expr) (void)(expr)
+
 #endif /* FUSEPP_UTILS_MACROS_H_ */

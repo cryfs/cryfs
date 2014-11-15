@@ -3,13 +3,16 @@
 #include <cstdlib>
 #include "buildconfig/BuildConfig.h"
 
-#include "CryFuse.h"
+#include "fusepp/Fuse.h"
+#include "cryfs_lib/CryDevice.h"
+
+namespace bf = boost::filesystem;
 
 int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  fusepp::FuseDevice device(fusepp::path("/home/heinzi/cryfstest/root"));
-  fusepp::CryFuse fuse(&device);
+  cryfs::CryDevice device(bf::path("/home/heinzi/cryfstest/root"));
+  fusepp::Fuse fuse(&device);
   fuse.run(argc, argv);
   return 0;
 }

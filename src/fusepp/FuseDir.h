@@ -2,28 +2,23 @@
 #ifndef FUSEPP_FUSEDIR_H_
 #define FUSEPP_FUSEDIR_H_
 
-#include <fusepp/FuseNode.h>
+#include "FuseNode.h"
 #include <memory>
 #include <string>
 
-#include "utils/macros.h"
-
 namespace fusepp {
 class FuseDevice;
+class FuseFile;
 
-class FuseDir: public FuseNode {
+class FuseDir: public virtual FuseNode {
 public:
-  FuseDir(FuseDevice *device, const bf::path &path);
-  virtual ~FuseDir();
+  virtual ~FuseDir() {}
 
-  std::unique_ptr<FuseFile> createFile(const std::string &name, mode_t mode);
-  std::unique_ptr<FuseDir> createDir(const std::string &name, mode_t mode);
-  void rmdir();
+  virtual std::unique_ptr<FuseFile> createFile(const std::string &name, mode_t mode) = 0;
+  virtual std::unique_ptr<FuseDir> createDir(const std::string &name, mode_t mode) = 0;
+  virtual void rmdir() = 0;
 
-  std::unique_ptr<std::vector<std::string>> children() const;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(FuseDir);
+  virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
 };
 
 } /* namespace fusepp */

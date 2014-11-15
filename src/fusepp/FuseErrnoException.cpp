@@ -1,4 +1,5 @@
-#include <fusepp/FuseErrnoException.h>
+#include "FuseErrnoException.h"
+
 #include <cstring>
 #include <cassert>
 #include <string>

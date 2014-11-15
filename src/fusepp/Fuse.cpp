@@ -1,6 +1,9 @@
-#include "../fusepp/Fuse.h"
+#include "Fuse.h"
 #include <memory>
 #include <cassert>
+
+#include "FuseDevice.h"
+#include "FuseErrnoException.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -11,7 +14,6 @@ namespace bf = boost::filesystem;
 using namespace fusepp;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
-#define UNUSED(obj) (void)obj
 
 namespace {
 int fusepp_getattr(const char *path, struct stat *stbuf) {
@@ -203,6 +205,318 @@ fuse_operations *operations() {
 Fuse::~Fuse() {
 }
 
+Fuse::Fuse(FuseDevice *device)
+  :_device(device) {
+}
+
 void Fuse::run(int argc, char **argv) {
   fuse_main(argc, argv, operations(), (void*)this);
+}
+
+int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
+  //printf("getattr(%s, _, _)\n", path.c_str());
+  try {
+    _device->lstat(path, stbuf);
+    return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
+  //printf("fgetattr(%s, _, _)\n", path.c_str());
+
+  // On FreeBSD, trying to do anything with the mountpoint ends up
+  // opening it, and then using the FD for an fgetattr.  So in the
+  // special case of a path of "/", I need to do a getattr on the
+  // underlying root directory instead of doing the fgetattr().
+  // TODO Check if necessary
+  if (path.native() == "/") {
+    return getattr(path, stbuf);
+  }
+
+  try {
+  _device->fstat(fileinfo->fh, stbuf);
+  return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
+  UNUSED(path);
+  UNUSED(buf);
+  UNUSED(size);
+  printf("Called non-implemented readlink(%s, _, %zu)\n", path.c_str(), size);
+  return ENOSYS;
+}
+
+int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
+  UNUSED(rdev);
+  UNUSED(mode);
+  UNUSED(path);
+  printf("Called non-implemented mknod(%s, %d, _)\n", path.c_str(), mode);
+  return ENOSYS;
+}
+
+int Fuse::mkdir(const bf::path &path, mode_t mode) {
+  //printf("mkdir(%s, %d)\n", path.c_str(), mode);
+  try {
+    _device->mkdir(path, mode);
+    return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::unlink(const bf::path &path) {
+  //printf("unlink(%s)\n", path.c_str());
+  try {
+    _device->unlink(path);
+    return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::rmdir(const bf::path &path) {
+  try {
+    _device->rmdir(path);
+    return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::symlink(const bf::path &from, const bf::path &to) {
+  printf("NOT IMPLEMENTED: symlink(%s, %s)\n", from.c_str(), to.c_str());
+  //auto real_from = _device->RootDir() / from;
+  //auto real_to = _device->RootDir() / to;
+  //int retstat = ::symlink(real_from.c_str(), real_to.c_str());
+  //return errcode_map(retstat);
+  return ENOSYS;
+}
+
+int Fuse::rename(const bf::path &from, const bf::path &to) {
+  //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
+  try {
+    _device->rename(from, to);
+    return 0;
+  } catch(fusepp::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::link(const bf::path &from, const bf::path &to) {
+  printf("NOT IMPLEMENTED: link(%s, %s)\n", from.c_str(), to.c_str());
+  //auto real_from = _device->RootDir() / from;
+  //auto real_to = _device->RootDir() / to;
+  //int retstat = ::link(real_from.c_str(), real_to.c_str());
+  //return errcode_map(retstat);
+  return ENOSYS;
+}
+
+//TODO
+int Fuse::chmod(const bf::path &path, mode_t mode) {
+  printf("NOT IMPLEMENTED: chmod(%s, %d)\n", path.c_str(), mode);
+  //auto real_path = _device->RootDir() / path;
+  //int retstat = ::chmod(real_path.c_str(), mode);
+  //return errcode_map(retstat);
+  return ENOSYS;
+}
+
+//TODO
+int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
+  printf("NOT IMPLEMENTED: chown(%s, %d, %d)\n", path.c_str(), uid, gid);
+  //auto real_path = _device->RootDir() / path;
+  //int retstat = ::chown(real_path.c_str(), uid, gid);
+  //return errcode_map(retstat);
+  return ENOSYS;
+}
+
+int Fuse::truncate(const bf::path &path, off_t size) {
+  //printf("truncate(%s, %zu)\n", path.c_str(), size);
+  try {
+    _device->truncate(path, size);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) {
+  //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
+  UNUSED(path);
+  try {
+    _device->ftruncate(fileinfo->fh, size);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::utimens(const bf::path &path, const timespec times[2]) {
+  //printf("utimens(%s, _)\n", path.c_str());
+  try {
+    _device->utimens(path, times);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
+  //printf("open(%s, _)\n", path.c_str());
+  try {
+    fileinfo->fh = _device->openFile(path, fileinfo->flags);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
+  //printf("release(%s, _)\n", path.c_str());
+  UNUSED(path);
+  try {
+    _device->closeFile(fileinfo->fh);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+  //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  UNUSED(path);
+  try {
+    //printf("Reading from file %d\n", fileinfo->fh);
+    //fflush(stdout);
+    return _device->read(fileinfo->fh, buf, size, offset);
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+  //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+  UNUSED(path);
+  try {
+    _device->write(fileinfo->fh, buf, size, offset);
+    return size;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
+  //printf("statfs(%s, _)\n", path.c_str());
+  try {
+    _device->statfs(path, fsstat);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+//TODO
+int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
+  //printf("Called non-implemented flush(%s, _)\n", path.c_str());
+  UNUSED(path);
+  UNUSED(fileinfo);
+  return 0;
+}
+
+int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
+  //printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
+  UNUSED(path);
+  try {
+    if (datasync) {
+      _device->fdatasync(fileinfo->fh);
+    } else {
+      _device->fsync(fileinfo->fh);
+    }
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
+  UNUSED(path);
+  UNUSED(fileinfo);
+  //printf("opendir(%s, _)\n", path.c_str());
+  //We don't need opendir, because readdir works directly on the path
+  return 0;
+}
+
+int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
+  UNUSED(fileinfo);
+  //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
+  UNUSED(offset);
+  try {
+    auto entries = _device->readDir(path);
+    for (const auto &entry : *entries) {
+      //We could pass file metadata to filler() in its third parameter,
+      //but it doesn't help performance since fuse seems to ignore it.
+      //It does getattr() calls on all entries nevertheless.
+      if (filler(buf, entry.c_str(), nullptr, 0) != 0) {
+        return -ENOMEM;
+      }
+    }
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::releasedir(const bf::path &path, fuse_file_info *fileinfo) {
+  UNUSED(path);
+  UNUSED(fileinfo);
+  //printf("releasedir(%s, _)\n", path.c_str());
+  //We don't need releasedir, because readdir works directly on the path
+  return 0;
+}
+
+//TODO
+int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
+  UNUSED(fileinfo);
+  UNUSED(datasync);
+  UNUSED(path);
+  //printf("Called non-implemented fsyncdir(%s, %d, _)\n", path.c_str(), datasync);
+  return 0;
+}
+
+void Fuse::init(fuse_conn_info *conn) {
+  UNUSED(conn);
+  //printf("init()\n");
+}
+
+void Fuse::destroy() {
+  //printf("destroy()\n");
+}
+
+int Fuse::access(const bf::path &path, int mask) {
+  //printf("access(%s, %d)\n", path.c_str(), mask);
+  try {
+    _device->access(path, mask);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
+}
+
+int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
+  //printf("create(%s, %d, _)\n", path.c_str(), mode);
+  try {
+    fileinfo->fh = _device->createAndOpenFile(path, mode);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
 }

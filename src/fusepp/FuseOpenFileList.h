@@ -4,10 +4,10 @@
 
 #include "utils/macros.h"
 #include "IdList.h"
+#include "FuseFile.h"
+#include "FuseOpenFile.h"
 
 namespace fusepp {
-class FuseOpenFile;
-class FuseFile;
 
 class FuseOpenFileList {
 public:
@@ -23,6 +23,23 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(FuseOpenFileList);
 };
+
+inline FuseOpenFileList::FuseOpenFileList()
+  :_open_files() {
+}
+
+inline int FuseOpenFileList::open(const FuseFile &file, int flags) {
+  return _open_files.add(file.open(flags));
+}
+
+inline FuseOpenFile *FuseOpenFileList::get(int descriptor) {
+  return _open_files.get(descriptor);
+}
+
+inline void FuseOpenFileList::close(int descriptor) {
+  //The destructor of the stored FuseOpenFile closes the file
+  _open_files.remove(descriptor);
+}
 
 }
 

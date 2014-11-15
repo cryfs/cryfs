@@ -5,28 +5,19 @@
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
-#include "utils/macros.h"
-
 namespace fusepp {
 class FuseDevice;
 
-namespace bf = boost::filesystem;
-
 class FuseOpenFile {
 public:
-  FuseOpenFile(const FuseDevice *device, const bf::path &path, int flags);
-  virtual ~FuseOpenFile();
+  virtual ~FuseOpenFile() {}
 
-  void stat(struct ::stat *result) const;
-  void truncate(off_t size) const;
-  int read(void *buf, size_t count, off_t offset);
-  void write(const void *buf, size_t count, off_t offset);
-  void fsync();
-  void fdatasync();
-private:
-  int _descriptor;
-
-  DISALLOW_COPY_AND_ASSIGN(FuseOpenFile);
+  virtual void stat(struct ::stat *result) const = 0;
+  virtual void truncate(off_t size) const = 0;
+  virtual int read(void *buf, size_t count, off_t offset) = 0;
+  virtual void write(const void *buf, size_t count, off_t offset) = 0;
+  virtual void fsync() = 0;
+  virtual void fdatasync() = 0;
 };
 
 }

@@ -2,25 +2,20 @@
 #ifndef FUSEPP_FUSEFILE_H_
 #define FUSEPP_FUSEFILE_H_
 
-#include <fusepp/FuseNode.h>
+#include "FuseNode.h"
 #include <memory>
-
-#include "utils/macros.h"
 
 namespace fusepp {
 class FuseDevice;
 class FuseOpenFile;
 
-class FuseFile: public FuseNode {
+class FuseFile: public virtual FuseNode {
 public:
-  FuseFile(FuseDevice *device, const bf::path &path);
-  virtual ~FuseFile();
+  virtual ~FuseFile() {}
 
-  std::unique_ptr<FuseOpenFile> open(int flags) const;
-  void truncate(off_t size) const;
-  void unlink();
-private:
-  DISALLOW_COPY_AND_ASSIGN(FuseFile);
+  virtual std::unique_ptr<FuseOpenFile> open(int flags) const = 0;
+  virtual void truncate(off_t size) const = 0;
+  virtual void unlink() = 0;
 };
 
 } /* namespace fusepp */
