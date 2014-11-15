@@ -9,7 +9,7 @@
 
 namespace cryfs {
 
-class CryNode: public virtual fusepp::Node {
+class CryNode: public virtual fspp::Node {
 public:
   CryNode(CryDevice *device, const boost::filesystem::path &path);
   virtual ~CryNode();

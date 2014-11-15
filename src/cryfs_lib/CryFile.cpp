@@ -7,7 +7,7 @@
 namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fusepp::CHECK_RETVAL;
+using fspp::CHECK_RETVAL;
 
 using std::unique_ptr;
 using std::make_unique;
@@ -22,7 +22,7 @@ CryFile::CryFile(CryDevice *device, const bf::path &path)
 CryFile::~CryFile() {
 }
 
-unique_ptr<fusepp::OpenFile> CryFile::open(int flags) const {
+unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
   return make_unique<CryOpenFile>(device(), path(), flags);
 }
 

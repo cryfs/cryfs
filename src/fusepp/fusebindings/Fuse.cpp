@@ -11,7 +11,7 @@ using std::string;
 
 namespace bf = boost::filesystem;
 
-using namespace fusepp::fusebindings;
+using namespace fspp::fuse;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 
@@ -218,7 +218,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   try {
     _impl->lstat(path, stbuf);
     return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -238,7 +238,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   try {
   _impl->fstat(fileinfo->fh, stbuf);
   return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -265,7 +265,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
   try {
     _impl->mkdir(path, mode);
     return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -275,7 +275,7 @@ int Fuse::unlink(const bf::path &path) {
   try {
     _impl->unlink(path);
     return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -284,7 +284,7 @@ int Fuse::rmdir(const bf::path &path) {
   try {
     _impl->rmdir(path);
     return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -304,7 +304,7 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   try {
     _impl->rename(from, to);
     return 0;
-  } catch(fusepp::FuseErrnoException &e) {
+  } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }

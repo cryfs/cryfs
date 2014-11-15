@@ -13,8 +13,8 @@ int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
   cryfs::CryDevice device(bf::path("/home/heinzi/cryfstest/root"));
-  fusepp::FilesystemImpl fsimpl(&device);
-  fusepp::fusebindings::Fuse fuse(&fsimpl);
+  fspp::FilesystemImpl fsimpl(&device);
+  fspp::fuse::Fuse fuse(&fsimpl);
   fuse.run(argc, argv);
   return 0;
 }

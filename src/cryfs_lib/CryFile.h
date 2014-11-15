@@ -7,12 +7,12 @@
 
 namespace cryfs {
 
-class CryFile: public fusepp::File, CryNode {
+class CryFile: public fspp::File, CryNode {
 public:
   CryFile(CryDevice *device, const boost::filesystem::path &path);
   virtual ~CryFile();
 
-  std::unique_ptr<fusepp::OpenFile> open(int flags) const override;
+  std::unique_ptr<fspp::OpenFile> open(int flags) const override;
   void truncate(off_t size) const override;
   void unlink() override;
 

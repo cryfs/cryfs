@@ -1,13 +1,13 @@
 #pragma once
-#ifndef FUSEPP_FUSEOPENFILELIST_H_
-#define FUSEPP_FUSEOPENFILELIST_H_
+#ifndef FSPP_IMPL_FUSEOPENFILELIST_H_
+#define FSPP_IMPL_FUSEOPENFILELIST_H_
 
 #include <fusepp/fs_interface/File.h>
 #include <fusepp/fs_interface/OpenFile.h>
 #include "fusepp/utils/macros.h"
 #include "IdList.h"
 
-namespace fusepp {
+namespace fspp {
 
 class FuseOpenFileList {
 public:
@@ -43,4 +43,4 @@ inline void FuseOpenFileList::close(int descriptor) {
 
 }
 
-#endif /* FUSEPP_FUSEOPENFILELIST_H_ */
+#endif /* FSPP_IMPL_FUSEOPENFILELIST_H_ */

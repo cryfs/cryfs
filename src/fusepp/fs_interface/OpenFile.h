@@ -1,11 +1,11 @@
 #pragma once
-#ifndef FUSEPP_OPENFILE_H_
-#define FUSEPP_OPENFILE_H_
+#ifndef FSPP_OPENFILE_H_
+#define FSPP_OPENFILE_H_
 
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
-namespace fusepp {
+namespace fspp {
 class Device;
 
 class OpenFile {
@@ -22,4 +22,4 @@ public:
 
 }
 
-#endif /* FUSEPP_OPENFILE_H_ */
+#endif /* FSPP_OPENFILE_H_ */

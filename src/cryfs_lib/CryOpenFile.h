@@ -8,7 +8,7 @@
 namespace cryfs {
 class CryDevice;
 
-class CryOpenFile: public fusepp::OpenFile {
+class CryOpenFile: public fspp::OpenFile {
 public:
   CryOpenFile(const CryDevice *device, const boost::filesystem::path &path, int flags);
   virtual ~CryOpenFile();

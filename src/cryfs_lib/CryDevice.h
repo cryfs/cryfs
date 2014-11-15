@@ -11,7 +11,7 @@ namespace cryfs {
 
 namespace bf = boost::filesystem;
 
-class CryDevice: public fusepp::Device {
+class CryDevice: public fspp::Device {
 public:
   CryDevice(const bf::path &rootdir);
   virtual ~CryDevice();
@@ -20,7 +20,7 @@ public:
 
   const bf::path &RootDir() const;
 private:
-  std::unique_ptr<fusepp::Node> Load(const bf::path &path) override;
+  std::unique_ptr<fspp::Node> Load(const bf::path &path) override;
 
   const bf::path _root_path;
 

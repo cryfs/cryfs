@@ -1,12 +1,12 @@
 #pragma once
-#ifndef FUSEPP_DEVICE_H_
-#define FUSEPP_DEVICE_H_
+#ifndef FSPP_DEVICE_H_
+#define FSPP_DEVICE_H_
 
 #include <boost/filesystem.hpp>
 #include <memory>
 #include <sys/statvfs.h>
 
-namespace fusepp {
+namespace fspp {
 class Node;
 
 class Device {
@@ -19,4 +19,4 @@ public:
 
 }
 
-#endif /* FUSEPP_DEVICE_H_ */
+#endif /* FSPP_DEVICE_H_ */

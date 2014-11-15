@@ -9,7 +9,7 @@
 namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of a exception hierarchy
-using fusepp::CHECK_RETVAL;
+using fspp::CHECK_RETVAL;
 
 namespace cryfs {
 

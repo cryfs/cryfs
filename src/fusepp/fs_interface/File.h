@@ -1,11 +1,11 @@
 #pragma once
-#ifndef FUSEPP_FILE_H_
-#define FUSEPP_FILE_H_
+#ifndef FSPP_FILE_H_
+#define FSPP_FILE_H_
 
 #include <fusepp/fs_interface/Node.h>
 #include <memory>
 
-namespace fusepp {
+namespace fspp {
 class Device;
 class OpenFile;
 
@@ -18,6 +18,6 @@ public:
   virtual void unlink() = 0;
 };
 
-} /* namespace fusepp */
+} /* namespace fspp */
 
-#endif /* FUSEPP_FILE_H_ */
+#endif /* FSPP_FILE_H_ */

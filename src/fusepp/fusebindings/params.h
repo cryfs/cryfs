@@ -1,7 +1,8 @@
 #pragma once
-#ifndef FUSEPP_PARAMS_H_
-#define FUSEPP_PARAMS_H_
+#ifndef FSPP_FUSE_PARAMS_H_
+#define FSPP_FUSE_PARAMS_H_
 
 #define FUSE_USE_VERSION 26
+#include <fuse.h>
 
-#endif /* FUSEPP_PARAMS_H_ */
+#endif /* FSPP_FUSE_PARAMS_H_ */

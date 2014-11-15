@@ -1,20 +1,19 @@
 #pragma once
-#ifndef FUSEPP_FUSE_H_
-#define FUSEPP_FUSE_H_
+#ifndef FSPP_FUSE_FUSE_H_
+#define FSPP_FUSE_FUSE_H_
 
 #include "params.h"
-#include <fuse.h>
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
 #include "../utils/macros.h"
 
-namespace fusepp {
+namespace fspp {
 class Device;
 class FilesystemImpl;
 
-namespace fusebindings {
+namespace fuse {
 
 class Fuse {
 public:
@@ -62,4 +61,4 @@ private:
 }
 }
 
-#endif /* FUSEPP_FUSE_H_ */
+#endif /* FSPP_FUSE_FUSE_H_ */
