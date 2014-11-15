@@ -2,44 +2,41 @@
 #ifndef CRYFS_LIB_CRYNODE_H_
 #define CRYFS_LIB_CRYNODE_H_
 
-#include <boost/filesystem.hpp>
+#include "fusepp/fs_interface/FuseNode.h"
+#include "fusepp/utils/macros.h"
 
-#include "utils/macros.h"
 #include "CryDevice.h"
-#include <sys/stat.h>
 
 namespace cryfs {
 
-namespace bf = boost::filesystem;
-
-class CryNode {
+class CryNode: public virtual fusepp::FuseNode {
 public:
-  CryNode(CryDevice *device, const bf::path &path);
+  CryNode(CryDevice *device, const boost::filesystem::path &path);
   virtual ~CryNode();
 
-  void stat(struct ::stat *result) const;
-  void access(int mask) const;
-  void rename(const bf::path &to);
-  void utimens(const timespec times[2]);
+  void stat(struct ::stat *result) const override;
+  void access(int mask) const override;
+  void rename(const boost::filesystem::path &to) override;
+  void utimens(const timespec times[2]) override;
 
 protected:
-  bf::path base_path() const;
-  const bf::path &path() const;
+  boost::filesystem::path base_path() const;
+  const boost::filesystem::path &path() const;
   CryDevice *device();
   const CryDevice *device() const;
 
 private:
   CryDevice *const _device;
-  bf::path _path;
+  boost::filesystem::path _path;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);
 };
 
-inline bf::path CryNode::base_path() const {
+inline boost::filesystem::path CryNode::base_path() const {
   return _device->RootDir() / _path;
 }
 
-inline const bf::path &CryNode::path() const {
+inline const boost::filesystem::path &CryNode::path() const {
   return _path;
 }
 
@@ -53,4 +50,4 @@ inline const CryDevice *CryNode::device() const {
 
 } /* namespace cryfs */
 
-#endif /* CRYFS_LIB_CRYNODE_H_ */
+#endif

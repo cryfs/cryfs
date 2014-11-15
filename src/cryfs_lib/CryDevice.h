@@ -3,62 +3,34 @@
 #define CRYFS_LIB_CRYDEVICE_H_
 
 #include <boost/filesystem.hpp>
-#include <memory>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
 
-#include "utils/macros.h"
-#include "CryOpenFileList.h"
+#include "fusepp/fs_interface/FuseDevice.h"
+#include "fusepp/utils/macros.h"
 
 namespace cryfs {
-class CryNode;
-class CryFile;
-class CryOpenFile;
-class CryDir;
 
 namespace bf = boost::filesystem;
 
-class CryDevice {
+class CryDevice: public fusepp::FuseDevice {
 public:
-	CryDevice(const bf::path &rootdir);
-	virtual ~CryDevice();
+  CryDevice(const bf::path &rootdir);
+  virtual ~CryDevice();
 
-	int openFile(const bf::path &path, int flags);
-	void closeFile(int descriptor);
-	void lstat(const bf::path &path, struct ::stat *stbuf);
-	void fstat(int descriptor, struct ::stat *stbuf);
-	void truncate(const bf::path &path, off_t size);
-	void ftruncate(int descriptor, off_t size);
-	int read(int descriptor, void *buf, size_t count, off_t offset);
-	void write(int descriptor, const void *buf, size_t count, off_t offset);
-	void fsync(int descriptor);
-	void fdatasync(int descriptor);
-	void access(const bf::path &path, int mask);
-	int createAndOpenFile(const bf::path &path, mode_t mode);
-	void mkdir(const bf::path &path, mode_t mode);
-	void rmdir(const bf::path &path);
-	void unlink(const bf::path &path);
-	void rename(const bf::path &from, const bf::path &to);
-	std::unique_ptr<std::vector<std::string>> readDir(const bf::path &path);
-	void utimens(const bf::path &path, const timespec times[2]);
-	void statfs(const bf::path &path, struct statvfs *fsstat);
+  void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-	const bf::path &RootDir() const;
+  const bf::path &RootDir() const;
 private:
-	std::unique_ptr<CryNode> Load(const bf::path &path);
-	std::unique_ptr<CryFile> LoadFile(const bf::path &path);
-	std::unique_ptr<CryDir> LoadDir(const bf::path &path);
-	int openFile(const CryFile &file, int flags);
-	const bf::path _rootdir;
-	CryOpenFileList _open_files;
+  std::unique_ptr<fusepp::FuseNode> Load(const bf::path &path) override;
+
+  const bf::path _root_path;
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };
 
 inline const bf::path &CryDevice::RootDir() const {
-  return _rootdir;
+  return _root_path;
 }
 
-}
+} /* namespace cryfs */
 
 #endif /* CRYFS_LIB_CRYDEVICE_H_ */

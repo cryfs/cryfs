@@ -1,12 +1,17 @@
-#include <cryfs_lib/CryOpenFile.h>
+#include "CryOpenFile.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
 
-#include "CryErrnoException.h"
 #include "CryDevice.h"
+#include "fusepp/impl/FuseErrnoException.h"
 
-using namespace cryfs;
+namespace bf = boost::filesystem;
+
+//TODO Get rid of this in favor of a exception hierarchy
+using fusepp::CHECK_RETVAL;
+
+namespace cryfs {
 
 CryOpenFile::CryOpenFile(const CryDevice *device, const bf::path &path, int flags)
   :_descriptor(::open((device->RootDir() / path).c_str(), flags)) {
@@ -54,3 +59,5 @@ void CryOpenFile::fdatasync() {
   int retval = ::fdatasync(_descriptor);
   CHECK_RETVAL(retval);
 }
+
+} /* namespace cryfs */

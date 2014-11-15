@@ -2,26 +2,22 @@
 #ifndef CRYFS_LIB_CRYDIR_H_
 #define CRYFS_LIB_CRYDIR_H_
 
-#include <memory>
-#include <string>
-
+#include "fusepp/fs_interface/FuseDir.h"
 #include "CryNode.h"
-#include "utils/macros.h"
 
 namespace cryfs {
-class CryDevice;
-class CryOpenDir;
 
-class CryDir: public CryNode {
+class CryDir: public fusepp::FuseDir, CryNode {
 public:
   CryDir(CryDevice *device, const bf::path &path);
   virtual ~CryDir();
 
-  std::unique_ptr<CryFile> createFile(const std::string &name, mode_t mode);
-  std::unique_ptr<CryDir> createDir(const std::string &name, mode_t mode);
-  void rmdir();
+  //TODO return type variance to CryFile/CryDir?
+  std::unique_ptr<fusepp::FuseFile> createFile(const std::string &name, mode_t mode) override;
+  std::unique_ptr<fusepp::FuseDir> createDir(const std::string &name, mode_t mode) override;
+  void rmdir() override;
 
-  std::unique_ptr<std::vector<std::string>> children() const;
+  std::unique_ptr<std::vector<std::string>> children() const override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(CryDir);
@@ -29,4 +25,4 @@ private:
 
 } /* namespace cryfs */
 
-#endif /* CRYFS_LIB_CRYDIR_H_ */
+#endif

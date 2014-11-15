@@ -1,7 +1,13 @@
 #include "CryFile.h"
-#include "CryOpenFile.h"
 
-#include "CryErrnoException.h"
+#include "CryDevice.h"
+#include "CryOpenFile.h"
+#include "fusepp/impl/FuseErrnoException.h"
+
+namespace bf = boost::filesystem;
+
+//TODO Get rid of this in favor of exception hierarchy
+using fusepp::CHECK_RETVAL;
 
 using std::unique_ptr;
 using std::make_unique;
@@ -16,7 +22,7 @@ CryFile::CryFile(CryDevice *device, const bf::path &path)
 CryFile::~CryFile() {
 }
 
-std::unique_ptr<CryOpenFile> CryFile::open(int flags) const {
+unique_ptr<fusepp::FuseOpenFile> CryFile::open(int flags) const {
   return make_unique<CryOpenFile>(device(), path(), flags);
 }
 

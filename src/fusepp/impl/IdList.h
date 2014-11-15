@@ -1,12 +1,13 @@
-#ifndef CRYFS_LIB_IDLIST_H_
-#define CRYFS_LIB_IDLIST_H_
+#pragma once
+#ifndef FUSEPP_IDLIST_H_
+#define FUSEPP_IDLIST_H_
 
 #include <map>
 #include <memory>
 #include <mutex>
-#include "utils/macros.h"
+#include "fusepp/utils/macros.h"
 
-namespace cryfs {
+namespace fusepp {
 
 template<class Entry>
 class IdList {
@@ -62,6 +63,6 @@ void IdList<Entry>::remove(int id) {
   _entries.erase(id);
 }
 
-} /* namespace cryfs */
+} /* namespace fusepp */
 
-#endif /* CRYFS_LIB_IDLIST_H_ */
+#endif /* FUSEPP_IDLIST_H_ */

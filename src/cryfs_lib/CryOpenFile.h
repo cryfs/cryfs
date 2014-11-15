@@ -1,33 +1,31 @@
+#pragma once
 #ifndef CRYFS_LIB_CRYOPENFILE_H_
 #define CRYFS_LIB_CRYOPENFILE_H_
 
-#include <boost/filesystem.hpp>
-#include <sys/stat.h>
-
-#include "utils/macros.h"
+#include "fusepp/fs_interface/FuseOpenFile.h"
+#include "fusepp/utils/macros.h"
 
 namespace cryfs {
 class CryDevice;
 
-namespace bf = boost::filesystem;
-
-class CryOpenFile {
+class CryOpenFile: public fusepp::FuseOpenFile {
 public:
-  CryOpenFile(const CryDevice *device, const bf::path &path, int flags);
+  CryOpenFile(const CryDevice *device, const boost::filesystem::path &path, int flags);
   virtual ~CryOpenFile();
 
-  void stat(struct ::stat *result) const;
-  void truncate(off_t size) const;
-  int read(void *buf, size_t count, off_t offset);
-  void write(const void *buf, size_t count, off_t offset);
-  void fsync();
-  void fdatasync();
+  void stat(struct ::stat *result) const override;
+  void truncate(off_t size) const override;
+  int read(void *buf, size_t count, off_t offset) override;
+  void write(const void *buf, size_t count, off_t offset) override;
+  void fsync() override;
+  void fdatasync() override;
+
 private:
   int _descriptor;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };
 
-}
+} /* namespace cryfs */
 
-#endif /* CRYFS_LIB_CRYOPENFILE_H_ */
+#endif

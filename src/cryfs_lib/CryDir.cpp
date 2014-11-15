@@ -5,13 +5,18 @@
 #include <fcntl.h>
 #include <dirent.h>
 
+#include "fusepp/impl/FuseErrnoException.h"
 #include "CryDevice.h"
 #include "CryFile.h"
-#include "CryErrnoException.h"
 
-using std::string;
+//TODO Get rid of this in favor of exception hierarchy
+using fusepp::CHECK_RETVAL;
+
+namespace bf = boost::filesystem;
+
 using std::unique_ptr;
 using std::make_unique;
+using std::string;
 using std::vector;
 
 namespace cryfs {
@@ -24,7 +29,7 @@ CryDir::CryDir(CryDevice *device, const bf::path &path)
 CryDir::~CryDir() {
 }
 
-unique_ptr<CryFile> CryDir::createFile(const string &name, mode_t mode) {
+unique_ptr<fusepp::FuseFile> CryDir::createFile(const string &name, mode_t mode) {
   auto file_path = base_path() / name;
   //Create file
   int fd = ::creat(file_path.c_str(), mode);
@@ -33,7 +38,7 @@ unique_ptr<CryFile> CryDir::createFile(const string &name, mode_t mode) {
   return make_unique<CryFile>(device(), path() / name);
 }
 
-unique_ptr<CryDir> CryDir::createDir(const string &name, mode_t mode) {
+unique_ptr<fusepp::FuseDir> CryDir::createDir(const string &name, mode_t mode) {
   auto dir_path = base_path() / name;
   //Create dir
   int retval = ::mkdir(dir_path.c_str(), mode);
@@ -49,7 +54,7 @@ void CryDir::rmdir() {
 unique_ptr<vector<string>> CryDir::children() const {
   DIR *dir = ::opendir(base_path().c_str());
   if (dir == nullptr) {
-    throw CryErrnoException(errno);
+    throw fusepp::FuseErrnoException(errno);
   }
 
   // Set errno=0 so we can detect whether it changed later
@@ -66,7 +71,7 @@ unique_ptr<vector<string>> CryDir::children() const {
   if (errno != 0) {
     int readdir_errno = errno;
     ::closedir(dir);
-    throw CryErrnoException(readdir_errno);
+    throw fusepp::FuseErrnoException(readdir_errno);
   }
   int retval = ::closedir(dir);
   CHECK_RETVAL(retval);
