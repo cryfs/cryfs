@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_CRYOPENFILE_H_
 #define CRYFS_LIB_CRYOPENFILE_H_
 
-#include "fusepp/FuseOpenFile.h"
+#include "fusepp/fs_interface/FuseOpenFile.h"
 #include "fusepp/utils/macros.h"
 
 namespace cryfs {

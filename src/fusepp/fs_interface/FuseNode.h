@@ -4,7 +4,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include "utils/macros.h"
 #include <sys/stat.h>
 
 namespace fusepp {

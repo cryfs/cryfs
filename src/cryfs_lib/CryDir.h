@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_CRYDIR_H_
 #define CRYFS_LIB_CRYDIR_H_
 
-#include "fusepp/FuseDir.h"
+#include "fusepp/fs_interface/FuseDir.h"
 #include "CryNode.h"
 
 namespace cryfs {

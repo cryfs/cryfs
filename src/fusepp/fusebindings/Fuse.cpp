@@ -2,8 +2,8 @@
 #include <memory>
 #include <cassert>
 
-#include "FuseDevice.h"
-#include "FuseErrnoException.h"
+#include "fusepp/impl/FuseErrnoException.h"
+#include "fusepp/impl/FilesystemImpl.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -11,7 +11,7 @@ using std::string;
 
 namespace bf = boost::filesystem;
 
-using namespace fusepp;
+using namespace fusepp::fusebindings;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 
@@ -205,8 +205,8 @@ fuse_operations *operations() {
 Fuse::~Fuse() {
 }
 
-Fuse::Fuse(FuseDevice *device)
-  :_device(device) {
+Fuse::Fuse(FilesystemImpl *impl)
+  :_impl(impl) {
 }
 
 void Fuse::run(int argc, char **argv) {
@@ -216,7 +216,7 @@ void Fuse::run(int argc, char **argv) {
 int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   //printf("getattr(%s, _, _)\n", path.c_str());
   try {
-    _device->lstat(path, stbuf);
+    _impl->lstat(path, stbuf);
     return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -236,7 +236,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   }
 
   try {
-  _device->fstat(fileinfo->fh, stbuf);
+  _impl->fstat(fileinfo->fh, stbuf);
   return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -263,7 +263,7 @@ int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
 int Fuse::mkdir(const bf::path &path, mode_t mode) {
   //printf("mkdir(%s, %d)\n", path.c_str(), mode);
   try {
-    _device->mkdir(path, mode);
+    _impl->mkdir(path, mode);
     return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -273,7 +273,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
 int Fuse::unlink(const bf::path &path) {
   //printf("unlink(%s)\n", path.c_str());
   try {
-    _device->unlink(path);
+    _impl->unlink(path);
     return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -282,7 +282,7 @@ int Fuse::unlink(const bf::path &path) {
 
 int Fuse::rmdir(const bf::path &path) {
   try {
-    _device->rmdir(path);
+    _impl->rmdir(path);
     return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -292,8 +292,8 @@ int Fuse::rmdir(const bf::path &path) {
 //TODO
 int Fuse::symlink(const bf::path &from, const bf::path &to) {
   printf("NOT IMPLEMENTED: symlink(%s, %s)\n", from.c_str(), to.c_str());
-  //auto real_from = _device->RootDir() / from;
-  //auto real_to = _device->RootDir() / to;
+  //auto real_from = _impl->RootDir() / from;
+  //auto real_to = _impl->RootDir() / to;
   //int retstat = ::symlink(real_from.c_str(), real_to.c_str());
   //return errcode_map(retstat);
   return ENOSYS;
@@ -302,7 +302,7 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
 int Fuse::rename(const bf::path &from, const bf::path &to) {
   //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
   try {
-    _device->rename(from, to);
+    _impl->rename(from, to);
     return 0;
   } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -312,8 +312,8 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
 //TODO
 int Fuse::link(const bf::path &from, const bf::path &to) {
   printf("NOT IMPLEMENTED: link(%s, %s)\n", from.c_str(), to.c_str());
-  //auto real_from = _device->RootDir() / from;
-  //auto real_to = _device->RootDir() / to;
+  //auto real_from = _impl->RootDir() / from;
+  //auto real_to = _impl->RootDir() / to;
   //int retstat = ::link(real_from.c_str(), real_to.c_str());
   //return errcode_map(retstat);
   return ENOSYS;
@@ -322,7 +322,7 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
 //TODO
 int Fuse::chmod(const bf::path &path, mode_t mode) {
   printf("NOT IMPLEMENTED: chmod(%s, %d)\n", path.c_str(), mode);
-  //auto real_path = _device->RootDir() / path;
+  //auto real_path = _impl->RootDir() / path;
   //int retstat = ::chmod(real_path.c_str(), mode);
   //return errcode_map(retstat);
   return ENOSYS;
@@ -331,7 +331,7 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
 //TODO
 int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
   printf("NOT IMPLEMENTED: chown(%s, %d, %d)\n", path.c_str(), uid, gid);
-  //auto real_path = _device->RootDir() / path;
+  //auto real_path = _impl->RootDir() / path;
   //int retstat = ::chown(real_path.c_str(), uid, gid);
   //return errcode_map(retstat);
   return ENOSYS;
@@ -340,7 +340,7 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
 int Fuse::truncate(const bf::path &path, off_t size) {
   //printf("truncate(%s, %zu)\n", path.c_str(), size);
   try {
-    _device->truncate(path, size);
+    _impl->truncate(path, size);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -351,7 +351,7 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
   //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
   UNUSED(path);
   try {
-    _device->ftruncate(fileinfo->fh, size);
+    _impl->ftruncate(fileinfo->fh, size);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -362,7 +362,7 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
 int Fuse::utimens(const bf::path &path, const timespec times[2]) {
   //printf("utimens(%s, _)\n", path.c_str());
   try {
-    _device->utimens(path, times);
+    _impl->utimens(path, times);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -372,7 +372,7 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
 int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
   //printf("open(%s, _)\n", path.c_str());
   try {
-    fileinfo->fh = _device->openFile(path, fileinfo->flags);
+    fileinfo->fh = _impl->openFile(path, fileinfo->flags);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -383,7 +383,7 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
   //printf("release(%s, _)\n", path.c_str());
   UNUSED(path);
   try {
-    _device->closeFile(fileinfo->fh);
+    _impl->closeFile(fileinfo->fh);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -396,7 +396,7 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   try {
     //printf("Reading from file %d\n", fileinfo->fh);
     //fflush(stdout);
-    return _device->read(fileinfo->fh, buf, size, offset);
+    return _impl->read(fileinfo->fh, buf, size, offset);
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -406,7 +406,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
   //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
   try {
-    _device->write(fileinfo->fh, buf, size, offset);
+    _impl->write(fileinfo->fh, buf, size, offset);
     return size;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -417,7 +417,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
 int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
   //printf("statfs(%s, _)\n", path.c_str());
   try {
-    _device->statfs(path, fsstat);
+    _impl->statfs(path, fsstat);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -437,9 +437,9 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
   UNUSED(path);
   try {
     if (datasync) {
-      _device->fdatasync(fileinfo->fh);
+      _impl->fdatasync(fileinfo->fh);
     } else {
-      _device->fsync(fileinfo->fh);
+      _impl->fsync(fileinfo->fh);
     }
     return 0;
   } catch (FuseErrnoException &e) {
@@ -460,7 +460,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
   try {
-    auto entries = _device->readDir(path);
+    auto entries = _impl->readDir(path);
     for (const auto &entry : *entries) {
       //We could pass file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse seems to ignore it.
@@ -504,7 +504,7 @@ void Fuse::destroy() {
 int Fuse::access(const bf::path &path, int mask) {
   //printf("access(%s, %d)\n", path.c_str(), mask);
   try {
-    _device->access(path, mask);
+    _impl->access(path, mask);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -514,7 +514,7 @@ int Fuse::access(const bf::path &path, int mask) {
 int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
   //printf("create(%s, %d, _)\n", path.c_str(), mode);
   try {
-    fileinfo->fh = _device->createAndOpenFile(path, mode);
+    fileinfo->fh = _impl->createAndOpenFile(path, mode);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();

@@ -8,14 +8,17 @@
 #include <string>
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
-#include "utils/macros.h"
+#include "../utils/macros.h"
 
 namespace fusepp {
 class FuseDevice;
+class FilesystemImpl;
+
+namespace fusebindings {
 
 class Fuse {
 public:
-  Fuse(FuseDevice *device);
+  Fuse(FilesystemImpl *implementation);
 	virtual ~Fuse();
 
 	void run(int argc, char **argv);
@@ -52,10 +55,11 @@ public:
   int create(const boost::filesystem::path &path, mode_t mode, fuse_file_info *fileinfo);
 
 private:
-  FuseDevice *_device;
+  FilesystemImpl *_impl;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };
+}
 }
 
 #endif /* FUSEPP_FUSE_H_ */

@@ -3,7 +3,7 @@
 #define CRYFS_LIB_CRYFILE_H_
 
 #include "CryNode.h"
-#include "fusepp/FuseFile.h"
+#include "fusepp/fs_interface/FuseFile.h"
 
 namespace cryfs {
 

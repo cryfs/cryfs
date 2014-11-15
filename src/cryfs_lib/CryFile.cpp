@@ -2,7 +2,7 @@
 
 #include "CryDevice.h"
 #include "CryOpenFile.h"
-#include "fusepp/FuseErrnoException.h"
+#include "fusepp/impl/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
 

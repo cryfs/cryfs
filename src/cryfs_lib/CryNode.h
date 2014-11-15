@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_CRYNODE_H_
 #define CRYFS_LIB_CRYNODE_H_
 
-#include "fusepp/FuseNode.h"
+#include "fusepp/fs_interface/FuseNode.h"
 #include "fusepp/utils/macros.h"
 
 #include "CryDevice.h"

@@ -3,7 +3,7 @@
 #include <sys/time.h>
 
 #include "CryDevice.h"
-#include "fusepp/FuseErrnoException.h"
+#include "fusepp/impl/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
 

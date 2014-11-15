@@ -4,7 +4,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include "fusepp/FuseDevice.h"
+#include "fusepp/fs_interface/FuseDevice.h"
+#include "fusepp/utils/macros.h"
 
 namespace cryfs {
 
@@ -15,7 +16,7 @@ public:
   CryDevice(const bf::path &rootdir);
   virtual ~CryDevice();
 
-  void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) override;
+  void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
   const bf::path &RootDir() const;
 private:
