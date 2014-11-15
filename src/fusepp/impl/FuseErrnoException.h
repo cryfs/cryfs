@@ -1,11 +1,11 @@
 #pragma once
-#ifndef FUSEPP_FUSEERRNOEXCEPTION_H_
-#define FUSEPP_FUSEERRNOEXCEPTION_H_
+#ifndef FSPP_FUSE_FUSEERRNOEXCEPTION_H_
+#define FSPP_FUSE_FUSEERRNOEXCEPTION_H_
 
 #include <stdexcept>
 #include <errno.h>
 
-namespace fusepp {
+namespace fspp {
 
 class FuseErrnoException: public std::runtime_error {
 public:
@@ -23,6 +23,6 @@ inline void CHECK_RETVAL(int retval) {
   }
 }
 
-} /* namespace fusepp */
+} /* namespace fspp */
 
-#endif /* FUSEPP_FUSEERRNOEXCEPTION_H_ */
+#endif /* FSPP_FUSE_FUSEERRNOEXCEPTION_H_ */

@@ -1,13 +1,13 @@
 #pragma once
-#ifndef FUSEPP_IDLIST_H_
-#define FUSEPP_IDLIST_H_
+#ifndef FSPP_FUSE_IDLIST_H_
+#define FSPP_FUSE_IDLIST_H_
 
 #include <map>
 #include <memory>
 #include <mutex>
 #include "fusepp/utils/macros.h"
 
-namespace fusepp {
+namespace fspp {
 
 template<class Entry>
 class IdList {
@@ -65,4 +65,4 @@ void IdList<Entry>::remove(int id) {
 
 } /* namespace fusepp */
 
-#endif /* FUSEPP_IDLIST_H_ */
+#endif /* FSPP_FUSE_IDLIST_H_ */

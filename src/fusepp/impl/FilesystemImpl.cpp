@@ -11,7 +11,7 @@
 
 #include "fusepp/utils/pointer.h"
 
-using namespace fusepp;
+using namespace fspp;
 
 using std::unique_ptr;
 using std::make_unique;

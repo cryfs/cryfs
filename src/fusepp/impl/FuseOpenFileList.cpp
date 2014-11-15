@@ -1,6 +1,6 @@
 #include "FuseOpenFileList.h"
 
-using namespace fusepp;
+using namespace fspp;
 
 FuseOpenFileList::~FuseOpenFileList() {
 }

@@ -1,12 +1,12 @@
 #pragma once
-#ifndef FUSEPP_DIR_H_
-#define FUSEPP_DIR_H_
+#ifndef FSPP_DIR_H_
+#define FSPP_DIR_H_
 
 #include <fusepp/fs_interface/Node.h>
 #include <memory>
 #include <string>
 
-namespace fusepp {
+namespace fspp {
 class Device;
 class File;
 
@@ -21,6 +21,6 @@ public:
   virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
 };
 
-} /* namespace fusepp */
+} /* namespace fspp */
 
-#endif /* FUSEPP_DIR_H_ */
+#endif /* FSPP_DIR_H_ */

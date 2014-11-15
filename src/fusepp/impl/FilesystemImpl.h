@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FUSEPP_FILESYSTEMIMPL_H_
-#define FUSEPP_FILESYSTEMIMPL_H_
+#ifndef FSPP_IMPL_FILESYSTEMIMPL_H_
+#define FSPP_IMPL_FILESYSTEMIMPL_H_
 
 #include <boost/filesystem.hpp>
 #include "FuseOpenFileList.h"
@@ -10,7 +10,7 @@
 
 #include "fusepp/utils/macros.h"
 
-namespace fusepp {
+namespace fspp {
 class Node;
 class File;
 class OpenFile;
@@ -54,4 +54,4 @@ private:
 
 }
 
-#endif /* FUSEPP_FILESYSTEMIMPL_H_ */
+#endif /* FSPP_IMPL_FILESYSTEMIMPL_H_ */

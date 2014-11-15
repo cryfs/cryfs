@@ -7,7 +7,7 @@
 using std::string;
 using std::runtime_error;
 
-namespace fusepp {
+namespace fspp {
 
 FuseErrnoException::FuseErrnoException(int errno_)
   :runtime_error(strerror(errno_)), _errno(errno_) {

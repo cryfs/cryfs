@@ -1,12 +1,12 @@
 #pragma once
-#ifndef FUSEPP_NODE_H_
-#define FUSEPP_NODE_H_
+#ifndef FSPP_NODE_H_
+#define FSPP_NODE_H_
 
 #include <boost/filesystem.hpp>
 
 #include <sys/stat.h>
 
-namespace fusepp {
+namespace fspp {
 
 class Node {
 public:
@@ -18,6 +18,6 @@ public:
   virtual void utimens(const timespec times[2]) = 0;
 };
 
-} /* namespace fusepp */
+} /* namespace fspp */
 
-#endif /* FUSEPP_NODE_H_ */
+#endif /* FSPP_NODE_H_ */

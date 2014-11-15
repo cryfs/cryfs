@@ -1,10 +1,10 @@
 #pragma once
-#ifndef FUSEPP_UTILS_POINTER_H_
-#define FUSEPP_UTILS_POINTER_H_
+#ifndef FSPP_UTILS_POINTER_H_
+#define FSPP_UTILS_POINTER_H_
 
 #include <memory>
 
-namespace fusepp {
+namespace fspp {
 
   template<typename DST, typename SRC>
   inline std::unique_ptr<DST> dynamic_pointer_move(std::unique_ptr<SRC> &source) {
