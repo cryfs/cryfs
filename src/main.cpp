@@ -8,8 +8,8 @@
 int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  cryfs::CryDevice device(fusepp::path("/home/heinzi/cryfstest/root"));
-  cryfs::CryFuse fuse(&device);
+  fusepp::FuseDevice device(fusepp::path("/home/heinzi/cryfstest/root"));
+  fusepp::CryFuse fuse(&device);
   fuse.run(argc, argv);
   return 0;
 }

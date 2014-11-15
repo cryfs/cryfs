@@ -1,20 +1,21 @@
-#ifndef CRYFS_LIB_CRYOPENFILE_H_
-#define CRYFS_LIB_CRYOPENFILE_H_
+#pragma once
+#ifndef FUSEPP_FUSEOPENFILE_H_
+#define FUSEPP_FUSEOPENFILE_H_
 
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 
 #include "utils/macros.h"
 
-namespace cryfs {
-class CryDevice;
+namespace fusepp {
+class FuseDevice;
 
 namespace bf = boost::filesystem;
 
-class CryOpenFile {
+class FuseOpenFile {
 public:
-  CryOpenFile(const CryDevice *device, const bf::path &path, int flags);
-  virtual ~CryOpenFile();
+  FuseOpenFile(const FuseDevice *device, const bf::path &path, int flags);
+  virtual ~FuseOpenFile();
 
   void stat(struct ::stat *result) const;
   void truncate(off_t size) const;
@@ -25,9 +26,9 @@ public:
 private:
   int _descriptor;
 
-  DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
+  DISALLOW_COPY_AND_ASSIGN(FuseOpenFile);
 };
 
 }
 
-#endif /* CRYFS_LIB_CRYOPENFILE_H_ */
+#endif /* FUSEPP_FUSEOPENFILE_H_ */

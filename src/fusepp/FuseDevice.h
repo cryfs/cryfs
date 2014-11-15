@@ -1,27 +1,27 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYDEVICE_H_
-#define CRYFS_LIB_CRYDEVICE_H_
+#ifndef FUSEPP_FUSEDEVICE_H_
+#define FUSEPP_FUSEDEVICE_H_
 
 #include <boost/filesystem.hpp>
+#include <fusepp/FuseOpenFileList.h>
 #include <memory>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
 #include "utils/macros.h"
-#include "CryOpenFileList.h"
 
-namespace cryfs {
-class CryNode;
-class CryFile;
-class CryOpenFile;
-class CryDir;
+namespace fusepp {
+class FuseNode;
+class FuseFile;
+class FuseOpenFile;
+class FuseDir;
 
 namespace bf = boost::filesystem;
 
-class CryDevice {
+class FuseDevice {
 public:
-	CryDevice(const bf::path &rootdir);
-	virtual ~CryDevice();
+	FuseDevice(const bf::path &rootdir);
+	virtual ~FuseDevice();
 
 	int openFile(const bf::path &path, int flags);
 	void closeFile(int descriptor);
@@ -45,20 +45,20 @@ public:
 
 	const bf::path &RootDir() const;
 private:
-	std::unique_ptr<CryNode> Load(const bf::path &path);
-	std::unique_ptr<CryFile> LoadFile(const bf::path &path);
-	std::unique_ptr<CryDir> LoadDir(const bf::path &path);
-	int openFile(const CryFile &file, int flags);
+	std::unique_ptr<FuseNode> Load(const bf::path &path);
+	std::unique_ptr<FuseFile> LoadFile(const bf::path &path);
+	std::unique_ptr<FuseDir> LoadDir(const bf::path &path);
+	int openFile(const FuseFile &file, int flags);
 	const bf::path _rootdir;
-	CryOpenFileList _open_files;
+	FuseOpenFileList _open_files;
 
-  DISALLOW_COPY_AND_ASSIGN(CryDevice);
+  DISALLOW_COPY_AND_ASSIGN(FuseDevice);
 };
 
-inline const bf::path &CryDevice::RootDir() const {
+inline const bf::path &FuseDevice::RootDir() const {
   return _rootdir;
 }
 
 }
 
-#endif /* CRYFS_LIB_CRYDEVICE_H_ */
+#endif /* FUSEPP_FUSEDEVICE_H_ */
