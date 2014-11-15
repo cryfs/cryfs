@@ -2,8 +2,8 @@
 #ifndef CRYFS_LIB_CRYOPENFILE_H_
 #define CRYFS_LIB_CRYOPENFILE_H_
 
-#include <fusepp/fs_interface/OpenFile.h>
-#include "fusepp/utils/macros.h"
+#include "fspp/fs_interface/OpenFile.h"
+#include "fspp/utils/macros.h"
 
 namespace cryfs {
 class CryDevice;

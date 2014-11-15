@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 #include "CryDevice.h"
-#include "fusepp/impl/FuseErrnoException.h"
+#include "fspp/impl/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
 

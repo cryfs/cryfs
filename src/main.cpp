@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include "buildconfig/BuildConfig.h"
 
-#include "fusepp/fusebindings/Fuse.h"
-#include "fusepp/impl/FilesystemImpl.h"
+#include "fspp/fuse/Fuse.h"
+#include "fspp/impl/FilesystemImpl.h"
 #include "cryfs_lib/CryDevice.h"
 
 namespace bf = boost::filesystem;

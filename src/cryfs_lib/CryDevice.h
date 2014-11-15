@@ -3,9 +3,9 @@
 #define CRYFS_LIB_CRYDEVICE_H_
 
 #include <boost/filesystem.hpp>
-#include <fusepp/fs_interface/Device.h>
+#include <fspp/fs_interface/Device.h>
 
-#include "fusepp/utils/macros.h"
+#include "fspp/utils/macros.h"
 
 namespace cryfs {
 

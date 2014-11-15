@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_CRYFILE_H_
 #define CRYFS_LIB_CRYFILE_H_
 
-#include <fusepp/fs_interface/File.h>
+#include <fspp/fs_interface/File.h>
 #include "CryNode.h"
 
 namespace cryfs {
