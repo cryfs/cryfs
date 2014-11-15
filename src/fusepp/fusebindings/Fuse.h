@@ -11,7 +11,7 @@
 #include "../utils/macros.h"
 
 namespace fusepp {
-class FuseDevice;
+class Device;
 class FilesystemImpl;
 
 namespace fusebindings {

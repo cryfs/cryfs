@@ -21,7 +21,7 @@ CryDevice::CryDevice(const bf::path &root_path): _root_path(root_path) {
 CryDevice::~CryDevice() {
 }
 
-unique_ptr<fusepp::FuseNode> CryDevice::Load(const bf::path &path) {
+unique_ptr<fusepp::Node> CryDevice::Load(const bf::path &path) {
   auto real_path = RootDir() / path;
   if(bf::is_directory(real_path)) {
     return make_unique<CryDir>(this, path);

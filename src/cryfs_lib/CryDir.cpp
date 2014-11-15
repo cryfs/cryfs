@@ -29,7 +29,7 @@ CryDir::CryDir(CryDevice *device, const bf::path &path)
 CryDir::~CryDir() {
 }
 
-unique_ptr<fusepp::FuseFile> CryDir::createFile(const string &name, mode_t mode) {
+unique_ptr<fusepp::File> CryDir::createFile(const string &name, mode_t mode) {
   auto file_path = base_path() / name;
   //Create file
   int fd = ::creat(file_path.c_str(), mode);
@@ -38,7 +38,7 @@ unique_ptr<fusepp::FuseFile> CryDir::createFile(const string &name, mode_t mode)
   return make_unique<CryFile>(device(), path() / name);
 }
 
-unique_ptr<fusepp::FuseDir> CryDir::createDir(const string &name, mode_t mode) {
+unique_ptr<fusepp::Dir> CryDir::createDir(const string &name, mode_t mode) {
   auto dir_path = base_path() / name;
   //Create dir
   int retval = ::mkdir(dir_path.c_str(), mode);

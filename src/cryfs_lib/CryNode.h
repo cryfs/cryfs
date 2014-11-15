@@ -2,14 +2,14 @@
 #ifndef CRYFS_LIB_CRYNODE_H_
 #define CRYFS_LIB_CRYNODE_H_
 
-#include "fusepp/fs_interface/FuseNode.h"
+#include <fusepp/fs_interface/Node.h>
 #include "fusepp/utils/macros.h"
 
 #include "CryDevice.h"
 
 namespace cryfs {
 
-class CryNode: public virtual fusepp::FuseNode {
+class CryNode: public virtual fusepp::Node {
 public:
   CryNode(CryDevice *device, const boost::filesystem::path &path);
   virtual ~CryNode();

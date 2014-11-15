@@ -2,13 +2,13 @@
 #ifndef CRYFS_LIB_CRYOPENFILE_H_
 #define CRYFS_LIB_CRYOPENFILE_H_
 
-#include "fusepp/fs_interface/FuseOpenFile.h"
+#include <fusepp/fs_interface/OpenFile.h>
 #include "fusepp/utils/macros.h"
 
 namespace cryfs {
 class CryDevice;
 
-class CryOpenFile: public fusepp::FuseOpenFile {
+class CryOpenFile: public fusepp::OpenFile {
 public:
   CryOpenFile(const CryDevice *device, const boost::filesystem::path &path, int flags);
   virtual ~CryOpenFile();

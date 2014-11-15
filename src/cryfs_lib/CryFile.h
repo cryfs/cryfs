@@ -2,17 +2,17 @@
 #ifndef CRYFS_LIB_CRYFILE_H_
 #define CRYFS_LIB_CRYFILE_H_
 
+#include <fusepp/fs_interface/File.h>
 #include "CryNode.h"
-#include "fusepp/fs_interface/FuseFile.h"
 
 namespace cryfs {
 
-class CryFile: public fusepp::FuseFile, CryNode {
+class CryFile: public fusepp::File, CryNode {
 public:
   CryFile(CryDevice *device, const boost::filesystem::path &path);
   virtual ~CryFile();
 
-  std::unique_ptr<fusepp::FuseOpenFile> open(int flags) const override;
+  std::unique_ptr<fusepp::OpenFile> open(int flags) const override;
   void truncate(off_t size) const override;
   void unlink() override;
 

@@ -22,7 +22,7 @@ CryFile::CryFile(CryDevice *device, const bf::path &path)
 CryFile::~CryFile() {
 }
 
-unique_ptr<fusepp::FuseOpenFile> CryFile::open(int flags) const {
+unique_ptr<fusepp::OpenFile> CryFile::open(int flags) const {
   return make_unique<CryOpenFile>(device(), path(), flags);
 }
 

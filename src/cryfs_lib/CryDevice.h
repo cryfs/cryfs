@@ -3,15 +3,15 @@
 #define CRYFS_LIB_CRYDEVICE_H_
 
 #include <boost/filesystem.hpp>
+#include <fusepp/fs_interface/Device.h>
 
-#include "fusepp/fs_interface/FuseDevice.h"
 #include "fusepp/utils/macros.h"
 
 namespace cryfs {
 
 namespace bf = boost::filesystem;
 
-class CryDevice: public fusepp::FuseDevice {
+class CryDevice: public fusepp::Device {
 public:
   CryDevice(const bf::path &rootdir);
   virtual ~CryDevice();
@@ -20,7 +20,7 @@ public:
 
   const bf::path &RootDir() const;
 private:
-  std::unique_ptr<fusepp::FuseNode> Load(const bf::path &path) override;
+  std::unique_ptr<fusepp::Node> Load(const bf::path &path) override;
 
   const bf::path _root_path;
 
