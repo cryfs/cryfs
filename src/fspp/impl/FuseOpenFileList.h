@@ -28,6 +28,9 @@ inline FuseOpenFileList::FuseOpenFileList()
   :_open_files() {
 }
 
+inline FuseOpenFileList::~FuseOpenFileList() {
+}
+
 inline int FuseOpenFileList::open(const File &file, int flags) {
   return _open_files.add(file.open(flags));
 }
