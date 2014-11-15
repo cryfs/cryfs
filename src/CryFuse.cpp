@@ -3,18 +3,18 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <dirent.h>
+#include <fusepp/FuseErrnoException.h>
+#include <fusepp/FuseNode.h>
 #include <cassert>
 
-#include "cryfs_lib/CryNode.h"
-#include "cryfs_lib/CryErrnoException.h"
 
 #define UNUSED(expr) (void)(expr)
 
 using fusepp::path;
 
-namespace cryfs {
+namespace fusepp {
 
-CryFuse::CryFuse(CryDevice *device)
+CryFuse::CryFuse(FuseDevice *device)
   :_device(device) {
 }
 
@@ -23,7 +23,7 @@ int CryFuse::getattr(const path &path, struct stat *stbuf) {
   try {
     _device->lstat(path, stbuf);
     return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -43,7 +43,7 @@ int CryFuse::fgetattr(const path &path, struct stat *stbuf, fuse_file_info *file
   try {
 	_device->fstat(fileinfo->fh, stbuf);
 	return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
 	  return -e.getErrno();
   }
 }
@@ -77,7 +77,7 @@ int CryFuse::mkdir(const path &path, mode_t mode) {
   try {
     _device->mkdir(path, mode);
     return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -87,7 +87,7 @@ int CryFuse::unlink(const path &path) {
   try {
     _device->unlink(path);
     return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -96,7 +96,7 @@ int CryFuse::rmdir(const path &path) {
   try {
     _device->rmdir(path);
     return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -116,7 +116,7 @@ int CryFuse::rename(const path &from, const path &to) {
   try {
     _device->rename(from, to);
     return 0;
-  } catch(cryfs::CryErrnoException &e) {
+  } catch(fusepp::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -154,7 +154,7 @@ int CryFuse::truncate(const path &path, off_t size) {
   try {
     _device->truncate(path, size);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -165,7 +165,7 @@ int CryFuse::ftruncate(const path &path, off_t size, fuse_file_info *fileinfo) {
   try {
     _device->ftruncate(fileinfo->fh, size);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -176,7 +176,7 @@ int CryFuse::utimens(const path &path, const timespec times[2]) {
   try {
     _device->utimens(path, times);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -186,7 +186,7 @@ int CryFuse::open(const path &path, fuse_file_info *fileinfo) {
   try {
 	  fileinfo->fh = _device->openFile(path, fileinfo->flags);
 	  return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
 	  return -e.getErrno();
   }
 }
@@ -197,7 +197,7 @@ int CryFuse::release(const path &path, fuse_file_info *fileinfo) {
   try {
 	  _device->closeFile(fileinfo->fh);
 	  return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -209,7 +209,7 @@ int CryFuse::read(const path &path, char *buf, size_t size, off_t offset, fuse_f
     //printf("Reading from file %d\n", fileinfo->fh);
     //fflush(stdout);
     return _device->read(fileinfo->fh, buf, size, offset);
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -220,7 +220,7 @@ int CryFuse::write(const path &path, const char *buf, size_t size, off_t offset,
   try {
     _device->write(fileinfo->fh, buf, size, offset);
     return size;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -231,7 +231,7 @@ int CryFuse::statfs(const path &path, struct statvfs *fsstat) {
   try {
     _device->statfs(path, fsstat);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -254,7 +254,7 @@ int CryFuse::fsync(const path &path, int datasync, fuse_file_info *fileinfo) {
       _device->fsync(fileinfo->fh);
     }
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -282,7 +282,7 @@ int CryFuse::readdir(const path &path, void *buf, fuse_fill_dir_t filler, off_t 
       }
     }
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -318,7 +318,7 @@ int CryFuse::access(const path &path, int mask) {
   try {
     _device->access(path, mask);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -328,7 +328,7 @@ int CryFuse::create(const path &path, mode_t mode, fuse_file_info *fileinfo) {
   try {
     fileinfo->fh = _device->createAndOpenFile(path, mode);
     return 0;
-  } catch (CryErrnoException &e) {
+  } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
 }

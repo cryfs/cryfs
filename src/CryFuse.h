@@ -3,14 +3,14 @@
 #define CRYFS_LIB_CRYFUSE_H_
 
 #include "fusepp/Fuse.h"
-#include "cryfs_lib/CryDevice.h"
-#include "cryfs_lib/utils/macros.h"
+#include "fusepp/FuseDevice.h"
+#include "fusepp/utils/macros.h"
 
-namespace cryfs {
+namespace fusepp {
 
 class CryFuse: public fusepp::Fuse {
 public:
-  CryFuse(CryDevice *device);
+  CryFuse(FuseDevice *device);
 
   int getattr(const fusepp::path &path, struct stat *stbuf) override;
   int fgetattr(const fusepp::path &path, struct stat *stbuf, fuse_file_info *fileinfo) override;
@@ -44,7 +44,7 @@ public:
   int create(const fusepp::path &path, mode_t mode, fuse_file_info *fileinfo) override;
 
 private:
-  CryDevice *_device;
+  FuseDevice *_device;
 
   DISALLOW_COPY_AND_ASSIGN(CryFuse);
 };

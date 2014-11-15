@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_FUSEPP_FUSE_H_
-#define CRYFS_LIB_FUSEPP_FUSE_H_
+#ifndef FUSEPP_FUSE_H_
+#define FUSEPP_FUSE_H_
 
 #include "params.h"
 #include <fuse.h>
@@ -55,4 +55,4 @@ public:
 };
 }
 
-#endif /* CRYFS_LIB_FUSEPP_FUSE_H_ */
+#endif /* FUSEPP_FUSE_H_ */
