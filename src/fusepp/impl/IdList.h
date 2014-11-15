@@ -5,7 +5,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include "utils/macros.h"
+#include "fusepp/utils/macros.h"
 
 namespace fusepp {
 

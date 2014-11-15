@@ -2,10 +2,10 @@
 #ifndef FUSEPP_FUSEOPENFILELIST_H_
 #define FUSEPP_FUSEOPENFILELIST_H_
 
-#include "utils/macros.h"
+#include "fusepp/utils/macros.h"
 #include "IdList.h"
-#include "FuseFile.h"
-#include "FuseOpenFile.h"
+#include "fusepp/fs_interface/FuseFile.h"
+#include "fusepp/fs_interface/FuseOpenFile.h"
 
 namespace fusepp {
 

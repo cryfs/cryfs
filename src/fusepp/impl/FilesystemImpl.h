@@ -1,14 +1,14 @@
 #pragma once
-#ifndef FUSEPP_FUSEDEVICE_H_
-#define FUSEPP_FUSEDEVICE_H_
+#ifndef FUSEPP_FILESYSTEMIMPL_H_
+#define FUSEPP_FILESYSTEMIMPL_H_
 
 #include <boost/filesystem.hpp>
-#include <fusepp/FuseOpenFileList.h>
+#include "FuseOpenFileList.h"
 #include <memory>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
-#include "utils/macros.h"
+#include "fusepp/utils/macros.h"
 
 namespace fusepp {
 class FuseNode;
@@ -16,10 +16,10 @@ class FuseFile;
 class FuseOpenFile;
 class FuseDir;
 
-class FuseDevice {
+class FilesystemImpl {
 public:
-	FuseDevice();
-	virtual ~FuseDevice();
+  FilesystemImpl(FuseDevice *device);
+	virtual ~FilesystemImpl();
 
 	int openFile(const boost::filesystem::path &path, int flags);
 	void closeFile(int descriptor);
@@ -39,18 +39,19 @@ public:
 	void rename(const boost::filesystem::path &from, const boost::filesystem::path &to);
 	std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path);
 	void utimens(const boost::filesystem::path &path, const timespec times[2]);
-	virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
+	void statfs(const boost::filesystem::path &path, struct statvfs *fsstat);
 
 private:
-	virtual std::unique_ptr<FuseNode> Load(const boost::filesystem::path &path) = 0;
 	std::unique_ptr<FuseFile> LoadFile(const boost::filesystem::path &path);
 	std::unique_ptr<FuseDir> LoadDir(const boost::filesystem::path &path);
 	int openFile(const FuseFile &file, int flags);
+
+	FuseDevice *_device;
 	FuseOpenFileList _open_files;
 
-  DISALLOW_COPY_AND_ASSIGN(FuseDevice);
+  DISALLOW_COPY_AND_ASSIGN(FilesystemImpl);
 };
 
 }
 
-#endif /* FUSEPP_FUSEDEVICE_H_ */
+#endif /* FUSEPP_FILESYSTEMIMPL_H_ */
