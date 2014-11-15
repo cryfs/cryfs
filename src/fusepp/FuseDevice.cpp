@@ -2,10 +2,11 @@
 
 #include <memory>
 #include <fcntl.h>
-#include <fusepp/FuseDir.h>
-#include <fusepp/FuseErrnoException.h>
-#include <fusepp/FuseFile.h>
-#include <fusepp/FuseOpenFile.h>
+
+#include "FuseDir.h"
+#include "FuseErrnoException.h"
+#include "FuseFile.h"
+
 
 #include "utils/pointer.h"
 
@@ -16,22 +17,13 @@ using std::make_unique;
 using std::vector;
 using std::string;
 
-FuseDevice::FuseDevice(const bf::path &rootdir)
-  :_rootdir(rootdir), _open_files() {
+namespace bf = boost::filesystem;
+
+FuseDevice::FuseDevice()
+  :_open_files() {
 }
 
 FuseDevice::~FuseDevice() {
-}
-
-unique_ptr<FuseNode> FuseDevice::Load(const bf::path &path) {
-  auto real_path = RootDir() / path;
-  if(bf::is_directory(real_path)) {
-    return make_unique<FuseDir>(this, path);
-  } else if(bf::is_regular_file(real_path)) {
-    return make_unique<FuseFile>(this, path);
-  }
-
-  throw FuseErrnoException(ENOENT);
 }
 
 unique_ptr<FuseFile> FuseDevice::LoadFile(const bf::path &path) {
@@ -137,9 +129,4 @@ unique_ptr<vector<string>> FuseDevice::readDir(const bf::path &path) {
 void FuseDevice::utimens(const bf::path &path, const timespec times[2]) {
   auto node = Load(path);
   node->utimens(times);
-}
-
-void FuseDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
-  int retval = ::statvfs(path.c_str(), fsstat);
-  CHECK_RETVAL(retval);
 }
