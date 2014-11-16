@@ -42,56 +42,7 @@ public:
   MOCK_METHOD1(utimens, void(const timespec[2]));
 };
 
-TEST(FuseOpenFileListTest, EmptyList1) {
-  FuseOpenFileList list;
-  ASSERT_THROW(list.get(0), std::out_of_range);
-}
-
-TEST(FuseOpenFileListTest, EmptyList2) {
-  FuseOpenFileList list;
-  ASSERT_THROW(list.get(3), std::out_of_range);
-}
-
-TEST(FuseOpenFileListTest, InvalidId) {
-  FuseOpenFileList list;
-  int valid_id = list.open(MockFile(3), 2);
-  int invalid_id = valid_id + 1;
-  ASSERT_THROW(list.get(invalid_id), std::out_of_range);
-}
-
-TEST(FuseOpenFileListTest, Open1AndGet) {
-  const int FILEID = 4;
-  const int FLAGS = 5;
-
-  FuseOpenFileList list;
-  int id = list.open(MockFile(FILEID), FLAGS);
-
-  MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(list.get(id));
-
-  EXPECT_EQ(FILEID, openFile->fileid);
-  EXPECT_EQ(FLAGS, openFile->flags);
-}
-
-TEST(FuseOpenFileListTest, Open2AndGet) {
-  const int FILEID1 = 4;
-  const int FLAGS1 = 5;
-  const int FILEID2 = 6;
-  const int FLAGS2 = 7;
-
-  FuseOpenFileList list;
-  int id1 = list.open(MockFile(FILEID1), FLAGS1);
-  int id2 = list.open(MockFile(FILEID2), FLAGS2);
-
-  MockOpenFile *openFile1 = dynamic_cast<MockOpenFile*>(list.get(id1));
-  MockOpenFile *openFile2 = dynamic_cast<MockOpenFile*>(list.get(id2));
-
-  EXPECT_EQ(FILEID1, openFile1->fileid);
-  EXPECT_EQ(FLAGS1, openFile1->flags);
-  EXPECT_EQ(FILEID2, openFile2->fileid);
-  EXPECT_EQ(FLAGS2, openFile2->flags);
-}
-
-TEST(FuseOpenFileListTest, Open3AndGet) {
+struct FuseOpenFileListTest: public ::testing::Test {
   const int FILEID1 = 4;
   const int FLAGS1 = 5;
   const int FILEID2 = 6;
@@ -100,25 +51,58 @@ TEST(FuseOpenFileListTest, Open3AndGet) {
   const int FLAGS3 = 9;
 
   FuseOpenFileList list;
-  int id1 = list.open(MockFile(FILEID1), FLAGS1);
-  int id2 = list.open(MockFile(FILEID2), FLAGS2);
-  int id3 = list.open(MockFile(FILEID3), FLAGS3);
+  int open(int fileid, int flags) {
+    return list.open(MockFile(fileid), flags);
+  }
+  int open() {
+    return open(FILEID1, FILEID2);
+  }
+  void check(int id, int fileid, int flags) {
+    MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(list.get(id));
+    EXPECT_EQ(fileid, openFile->fileid);
+    EXPECT_EQ(flags, openFile->flags);
+  }
+};
 
-  MockOpenFile *openFile1 = dynamic_cast<MockOpenFile*>(list.get(id1));
-  MockOpenFile *openFile3 = dynamic_cast<MockOpenFile*>(list.get(id3));
-  MockOpenFile *openFile2 = dynamic_cast<MockOpenFile*>(list.get(id2));
-
-  EXPECT_EQ(FILEID1, openFile1->fileid);
-  EXPECT_EQ(FLAGS1, openFile1->flags);
-  EXPECT_EQ(FILEID2, openFile2->fileid);
-  EXPECT_EQ(FLAGS2, openFile2->flags);
-  EXPECT_EQ(FILEID3, openFile3->fileid);
-  EXPECT_EQ(FLAGS3, openFile3->flags);
+TEST_F(FuseOpenFileListTest, EmptyList1) {
+  ASSERT_THROW(list.get(0), std::out_of_range);
 }
 
-TEST(FuseOpenFileListTest, DestructOnClose) {
-  FuseOpenFileList list;
-  int id = list.open(MockFile(3), 4);
+TEST_F(FuseOpenFileListTest, EmptyList2) {
+  ASSERT_THROW(list.get(3), std::out_of_range);
+}
+
+TEST_F(FuseOpenFileListTest, InvalidId) {
+  int valid_id = open();
+  int invalid_id = valid_id + 1;
+  ASSERT_THROW(list.get(invalid_id), std::out_of_range);
+}
+
+TEST_F(FuseOpenFileListTest, Open1AndGet) {
+  int id = open(FILEID1, FLAGS1);
+  check(id, FILEID1, FLAGS1);
+}
+
+TEST_F(FuseOpenFileListTest, Open2AndGet) {
+  int id1 = open(FILEID1, FLAGS1);
+  int id2 = open(FILEID2, FLAGS2);
+
+  check(id1, FILEID1, FLAGS1);
+  check(id2, FILEID2, FLAGS2);
+}
+
+TEST_F(FuseOpenFileListTest, Open3AndGet) {
+  int id1 = open(FILEID1, FLAGS1);
+  int id2 = open(FILEID2, FLAGS2);
+  int id3 = open(FILEID3, FLAGS3);
+
+  check(id1, FILEID1, FLAGS1);
+  check(id3, FILEID3, FLAGS3);
+  check(id2, FILEID2, FLAGS2);
+}
+
+TEST_F(FuseOpenFileListTest, DestructOnClose) {
+  int id = open();
 
   MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(list.get(id));
 
@@ -127,38 +111,33 @@ TEST(FuseOpenFileListTest, DestructOnClose) {
   EXPECT_TRUE(openFile->destructed);
 }
 
-TEST(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
-  FuseOpenFileList list;
-  int id = list.open(MockFile(3), 4);
+TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
+  int id = open();
 
   ASSERT_NO_THROW(list.get(id));
   list.close(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
-TEST(FuseOpenFileListTest, GetClosedItemOnNonEmptyList) {
-  FuseOpenFileList list;
-  int id = list.open(MockFile(3), 4);
-  list.open(MockFile(5), 4);
+TEST_F(FuseOpenFileListTest, GetClosedItemOnNonEmptyList) {
+  int id = open();
+  open();
 
   ASSERT_NO_THROW(list.get(id));
   list.close(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
-TEST(FuseOpenFileListTest, CloseOnEmptyList1) {
-  FuseOpenFileList list;
+TEST_F(FuseOpenFileListTest, CloseOnEmptyList1) {
   ASSERT_THROW(list.close(0), std::out_of_range);
 }
 
-TEST(FuseOpenFileListTest, CloseOnEmptyList2) {
-  FuseOpenFileList list;
+TEST_F(FuseOpenFileListTest, CloseOnEmptyList2) {
   ASSERT_THROW(list.close(4), std::out_of_range);
 }
 
-TEST(FuseOpenFileListTest, RemoveInvalidId) {
-  FuseOpenFileList list;
-  int valid_id = list.open(MockFile(3), 4);
+TEST_F(FuseOpenFileListTest, RemoveInvalidId) {
+  int valid_id = open();
   int invalid_id = valid_id + 1;
   ASSERT_THROW(list.close(invalid_id), std::out_of_range);
 }

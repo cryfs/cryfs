@@ -13,86 +13,94 @@ public:
   int val;
 };
 
-TEST(IdListTest, EmptyList1) {
+struct IdListTest: public ::testing::Test {
+  const int OBJ1 = 3;
+  const int OBJ2 = 10;
+  const int OBJ3 = 8;
+
   IdList<MyObj> list;
+  int add(int num) {
+    return list.add(make_unique<MyObj>(num));
+  }
+  int add() {
+    return add(OBJ1);
+  }
+  void check(int id, int num) {
+    EXPECT_EQ(num, list.get(id)->val);
+  }
+  void checkConst(int id, int num) {
+    const IdList<MyObj> &constList = list;
+    EXPECT_EQ(num, constList.get(id)->val);
+  }
+};
+
+TEST_F(IdListTest, EmptyList1) {
   ASSERT_THROW(list.get(0), std::out_of_range);
 }
 
-TEST(IdListTest, EmptyList2) {
-  IdList<MyObj> list;
+TEST_F(IdListTest, EmptyList2) {
   ASSERT_THROW(list.get(3), std::out_of_range);
 }
 
-TEST(IdListTest, InvalidId) {
-  IdList<MyObj> list;
-  int valid_id = list.add(make_unique<MyObj>(6));
+TEST_F(IdListTest, InvalidId) {
+  int valid_id = add();
   int invalid_id = valid_id + 1;
   ASSERT_THROW(list.get(invalid_id), std::out_of_range);
 }
 
-TEST(IdListTest, GetRemovedItemOnEmptyList) {
-  IdList<MyObj> list;
-  int id = list.add(make_unique<MyObj>(6));
+TEST_F(IdListTest, GetRemovedItemOnEmptyList) {
+  int id = add();
   list.remove(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
-TEST(IdListTest, GetRemovedItemOnNonEmptyList) {
-  IdList<MyObj> list;
-  int id = list.add(make_unique<MyObj>(6));
-  list.add(make_unique<MyObj>(5));
+TEST_F(IdListTest, GetRemovedItemOnNonEmptyList) {
+  int id = add();
+  add();
   list.remove(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
-TEST(IdListTest, RemoveOnEmptyList1) {
-  IdList<MyObj> list;
+TEST_F(IdListTest, RemoveOnEmptyList1) {
   ASSERT_THROW(list.remove(0), std::out_of_range);
 }
 
-TEST(IdListTest, RemoveOnEmptyList2) {
-  IdList<MyObj> list;
+TEST_F(IdListTest, RemoveOnEmptyList2) {
   ASSERT_THROW(list.remove(4), std::out_of_range);
 }
 
-TEST(IdListTest, RemoveInvalidId) {
-  IdList<MyObj> list;
-  int valid_id = list.add(make_unique<MyObj>(6));
+TEST_F(IdListTest, RemoveInvalidId) {
+  int valid_id = add();
   int invalid_id = valid_id + 1;
   ASSERT_THROW(list.remove(invalid_id), std::out_of_range);
 }
 
-TEST(IdListTest, Add1AndGet) {
-  IdList<MyObj> list;
-  int id6 = list.add(make_unique<MyObj>(6));
-  EXPECT_EQ(6, list.get(id6)->val);
+TEST_F(IdListTest, Add1AndGet) {
+  int id = add(OBJ1);
+  check(id, OBJ1);
 }
 
-TEST(IdListTest, Add2AndGet) {
-  IdList<MyObj> list;
-  int id4 = list.add(make_unique<MyObj>(4));
-  int id5 = list.add(make_unique<MyObj>(5));
-  EXPECT_EQ(4, list.get(id4)->val);
-  EXPECT_EQ(5, list.get(id5)->val);
+TEST_F(IdListTest, Add2AndGet) {
+  int id1 = add(OBJ1);
+  int id2 = add(OBJ2);
+  check(id1, OBJ1);
+  check(id2, OBJ2);
 }
 
-TEST(IdListTest, Add3AndGet) {
-  IdList<MyObj> list;
-  int id4 = list.add(make_unique<MyObj>(4));
-  int id10 = list.add(make_unique<MyObj>(10));
-  int id1 = list.add(make_unique<MyObj>(1));
-  EXPECT_EQ(10, list.get(id10)->val);
-  EXPECT_EQ(4, list.get(id4)->val);
-  EXPECT_EQ(1, list.get(id1)->val);
+TEST_F(IdListTest, Add3AndGet) {
+  int id1 = add(OBJ1);
+  int id2 = add(OBJ2);
+  int id3 = add(OBJ3);
+  check(id1, OBJ1);
+  check(id3, OBJ3);
+  check(id2, OBJ2);
 }
 
-TEST(IdListTest, Add3AndConstGet) {
-  IdList<MyObj> list;
-  int id4 = list.add(make_unique<MyObj>(4));
-  int id10 = list.add(make_unique<MyObj>(10));
-  int id1 = list.add(make_unique<MyObj>(1));
-  const IdList<MyObj> &const_list = list;
-  EXPECT_EQ(10, const_list.get(id10)->val);
-  EXPECT_EQ(4, const_list.get(id4)->val);
-  EXPECT_EQ(1, const_list.get(id1)->val);
+TEST_F(IdListTest, Add3AndConstGet) {
+  int id1 = add(OBJ1);
+  int id2 = add(OBJ2);
+  int id3 = add(OBJ3);
+  checkConst(id1, OBJ1);
+  checkConst(id3, OBJ3);
+  checkConst(id2, OBJ2);
 }
