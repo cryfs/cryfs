@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include "fspp/utils/macros.h"
 
 namespace fspp {
@@ -60,7 +61,11 @@ const Entry *IdList<Entry>::get(int id) const {
 template<class Entry>
 void IdList<Entry>::remove(int id) {
   std::lock_guard<std::mutex> lock(_mutex);
-  _entries.erase(id);
+  auto found_iter = _entries.find(id);
+  if (found_iter == _entries.end()) {
+    throw std::out_of_range("Called IdList::remove() with an invalid ID");
+  }
+  _entries.erase(found_iter);
 }
 
 } /* namespace fspp */

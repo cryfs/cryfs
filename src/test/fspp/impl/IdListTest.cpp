@@ -45,6 +45,23 @@ TEST(IdListTest, GetRemovedItemOnNonEmptyList) {
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
+TEST(IdListTest, RemoveOnEmptyList1) {
+  IdList<MyObj> list;
+  ASSERT_THROW(list.remove(0), std::out_of_range);
+}
+
+TEST(IdListTest, RemoveOnEmptyList2) {
+  IdList<MyObj> list;
+  ASSERT_THROW(list.remove(4), std::out_of_range);
+}
+
+TEST(IdListTest, RemoveInvalidId) {
+  IdList<MyObj> list;
+  int valid_id = list.add(make_unique<MyObj>(6));
+  int invalid_id = valid_id + 1;
+  ASSERT_THROW(list.remove(invalid_id), std::out_of_range);
+}
+
 TEST(IdListTest, Add1AndGet) {
   IdList<MyObj> list;
   int id6 = list.add(make_unique<MyObj>(6));
