@@ -5,10 +5,12 @@
 #include <thread>
 #include <csignal>
 
+#include "cryfs_lib/CryDevice.h"
+#include "test/testutils/FuseThread.h"
+
 #include "fspp/fuse/Fuse.h"
 #include "fspp/impl/FilesystemImpl.h"
 #include "test/testutils/TempDir.h"
-#include "test/testutils/Daemon.h"
 
 using namespace fspp;
 using namespace fspp::fuse;
@@ -46,23 +48,24 @@ public:
 };
 
 struct FuseTest: public ::testing::Test {
-  FuseTest(): _fuse_process([](){}), fsimpl(), fuse(&fsimpl), mountDir() {
-    _fuse_process = Daemon([this] () {
-      string dirpath = mountDir.path().native();
-      int argc = 3;
-      const char *argv[] = {"test", "-f", dirpath.c_str()};
-      fuse.run(argc, const_cast<char**>(argv));
-    });
-    _fuse_process.start();
-  }
-  ~FuseTest() {
-    _fuse_process.stop();
+  FuseTest(): crydevice(bf::path("/home/heinzi/cryfstest/root")), fsimpl(&crydevice), mountDir(), fuse(&fsimpl), fuse_thread(&fuse) {
+    string dirpath = mountDir.path().native();
+    int argc = 3;
+    const char *argv[] = {"test", "-f", dirpath.c_str()};
+
+    fuse_thread.start(argc, const_cast<char**>(argv));
   }
 
-  Daemon _fuse_process;
-  MockFilesystemImpl fsimpl;
-  Fuse fuse;
+  ~FuseTest() {
+    fuse_thread.stop();
+  }
+
+  //MockFilesystemImpl fsimpl;
+    cryfs::CryDevice crydevice;
+    FilesystemImpl fsimpl;
   TempDir mountDir;
+  Fuse fuse;
+  FuseThread fuse_thread;
 };
 
 TEST_F(FuseTest, setupAndTearDown) {
@@ -72,8 +75,14 @@ TEST_F(FuseTest, setupAndTearDown) {
 
 TEST_F(FuseTest, openFile) {
   const bf::path filename("/myfile");
-  EXPECT_CALL(fsimpl, openFile(filename, O_RDWR))
-      .WillOnce(Return(1));
-
-  ::open((mountDir.path() / filename).c_str(), O_RDWR);
+  //EXPECT_CALL(fsimpl, openFile(filename, O_RDWR))
+  //    .WillOnce(Return(1));
+  auto realpath = mountDir.path() / filename;
+  printf("Opening %s\n", realpath.c_str());
+  fflush(stdout);
+  sleep(10);
+  int fd = ::open(realpath.c_str(), O_RDWR);
+  printf("Descriptor: %d, errno: %d\n", fd, errno);
+  fflush(stdout);
+  sleep(10);
 }

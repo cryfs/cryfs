@@ -206,11 +206,15 @@ Fuse::~Fuse() {
 }
 
 Fuse::Fuse(FilesystemImpl *impl)
-  :_impl(impl) {
+  :_impl(impl), _running(false) {
 }
 
 void Fuse::run(int argc, char **argv) {
   fuse_main(argc, argv, operations(), (void*)this);
+}
+
+bool Fuse::running() const {
+  return _running;
 }
 
 int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
@@ -494,10 +498,12 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
 
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
+  _running = true;
   //printf("init()\n");
 }
 
 void Fuse::destroy() {
+  _running = false;
   //printf("destroy()\n");
 }
 

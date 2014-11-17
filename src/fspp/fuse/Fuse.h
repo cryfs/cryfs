@@ -21,6 +21,7 @@ public:
 	virtual ~Fuse();
 
 	void run(int argc, char **argv);
+	bool running() const;
 
   int getattr(const boost::filesystem::path &path, struct stat *stbuf);
   int fgetattr(const boost::filesystem::path &path, struct stat *stbuf, fuse_file_info *fileinfo);
@@ -55,6 +56,7 @@ public:
 
 private:
   FilesystemImpl *_impl;
+  bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };
