@@ -15,7 +15,7 @@ using namespace fspp::fuse;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using std::thread;
+using ::testing::Return;
 
 class MockFilesystemImpl: public FilesystemImpl {
 public:
@@ -46,7 +46,7 @@ public:
 };
 
 struct FuseTest: public ::testing::Test {
-  FuseTest(): _fuse_process([](){}), fsimpl(), fuse(&fsimpl), mountDir(){
+  FuseTest(): _fuse_process([](){}), fsimpl(), fuse(&fsimpl), mountDir() {
     _fuse_process = Daemon([this] () {
       string dirpath = mountDir.path().native();
       int argc = 3;
@@ -65,6 +65,15 @@ struct FuseTest: public ::testing::Test {
   TempDir mountDir;
 };
 
-TEST_F(FuseTest, testDir) {
-  sleep(10);
+TEST_F(FuseTest, setupAndTearDown) {
+  //This test case simply checks whether a filesystem can be setup and teardown without crashing.
+  //Since this is done in the fixture, we don't need any additional test code here.
+}
+
+TEST_F(FuseTest, openFile) {
+  const bf::path filename("/myfile");
+  EXPECT_CALL(fsimpl, openFile(filename, O_RDWR))
+      .WillOnce(Return(1));
+
+  ::open((mountDir.path() / filename).c_str(), O_RDWR);
 }
