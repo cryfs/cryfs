@@ -35,9 +35,7 @@ TEST_F(FuseTest, setupAndTearDown) {
 
 TEST_F(FuseTest, openFile) {
   const char *filename = "/myfile";
-  EXPECT_CALL(fsimpl, lstat(StrEq(filename), _)).WillOnce(Invoke([](const char*, struct ::stat* result) {
-    result->st_mode = S_IFREG;
-  }));
+  EXPECT_CALL(fsimpl, lstat(StrEq(filename), _)).WillOnce(ReturnIsFileStat);
   EXPECT_CALL(fsimpl, openFile(StrEq(filename), OpenFlagsEq(O_RDWR)))
     .Times(1);
 
