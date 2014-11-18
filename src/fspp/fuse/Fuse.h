@@ -11,13 +11,13 @@
 
 namespace fspp {
 class Device;
-class FilesystemImpl;
+class Filesystem;
 
 namespace fuse {
 
 class Fuse {
 public:
-  Fuse(FilesystemImpl *implementation);
+  Fuse(Filesystem *fs);
 	virtual ~Fuse();
 
 	void run(int argc, char **argv);
@@ -55,7 +55,7 @@ public:
   int create(const boost::filesystem::path &path, mode_t mode, fuse_file_info *fileinfo);
 
 private:
-  FilesystemImpl *_impl;
+  Filesystem *_fs;
   bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);

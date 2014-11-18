@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "fspp/impl/FuseErrnoException.h"
-#include "fspp/impl/FilesystemImpl.h"
+#include "fspp/impl/Filesystem.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -205,8 +205,8 @@ fuse_operations *operations() {
 Fuse::~Fuse() {
 }
 
-Fuse::Fuse(FilesystemImpl *impl)
-  :_impl(impl), _running(false) {
+Fuse::Fuse(Filesystem *fs)
+  :_fs(fs), _running(false) {
 }
 
 void Fuse::run(int argc, char **argv) {
@@ -220,7 +220,7 @@ bool Fuse::running() const {
 int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   //printf("getattr(%s, _, _)\n", path.c_str());
   try {
-    _impl->lstat(path, stbuf);
+    _fs->lstat(path, stbuf);
     return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -240,7 +240,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   }
 
   try {
-  _impl->fstat(fileinfo->fh, stbuf);
+  _fs->fstat(fileinfo->fh, stbuf);
   return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -267,7 +267,7 @@ int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
 int Fuse::mkdir(const bf::path &path, mode_t mode) {
   //printf("mkdir(%s, %d)\n", path.c_str(), mode);
   try {
-    _impl->mkdir(path, mode);
+    _fs->mkdir(path, mode);
     return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -277,7 +277,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
 int Fuse::unlink(const bf::path &path) {
   //printf("unlink(%s)\n", path.c_str());
   try {
-    _impl->unlink(path);
+    _fs->unlink(path);
     return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -286,7 +286,7 @@ int Fuse::unlink(const bf::path &path) {
 
 int Fuse::rmdir(const bf::path &path) {
   try {
-    _impl->rmdir(path);
+    _fs->rmdir(path);
     return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -306,7 +306,7 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
 int Fuse::rename(const bf::path &from, const bf::path &to) {
   //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
   try {
-    _impl->rename(from, to);
+    _fs->rename(from, to);
     return 0;
   } catch(fspp::FuseErrnoException &e) {
     return -e.getErrno();
@@ -344,7 +344,7 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
 int Fuse::truncate(const bf::path &path, off_t size) {
   //printf("truncate(%s, %zu)\n", path.c_str(), size);
   try {
-    _impl->truncate(path, size);
+    _fs->truncate(path, size);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -355,7 +355,7 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
   //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
   UNUSED(path);
   try {
-    _impl->ftruncate(fileinfo->fh, size);
+    _fs->ftruncate(fileinfo->fh, size);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -366,7 +366,7 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
 int Fuse::utimens(const bf::path &path, const timespec times[2]) {
   //printf("utimens(%s, _)\n", path.c_str());
   try {
-    _impl->utimens(path, times);
+    _fs->utimens(path, times);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -376,7 +376,7 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
 int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
   //printf("open(%s, _)\n", path.c_str());
   try {
-    fileinfo->fh = _impl->openFile(path, fileinfo->flags);
+    fileinfo->fh = _fs->openFile(path, fileinfo->flags);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -387,7 +387,7 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
   //printf("release(%s, _)\n", path.c_str());
   UNUSED(path);
   try {
-    _impl->closeFile(fileinfo->fh);
+    _fs->closeFile(fileinfo->fh);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -400,7 +400,7 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   try {
     //printf("Reading from file %d\n", fileinfo->fh);
     //fflush(stdout);
-    return _impl->read(fileinfo->fh, buf, size, offset);
+    return _fs->read(fileinfo->fh, buf, size, offset);
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -410,7 +410,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
   //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
   try {
-    _impl->write(fileinfo->fh, buf, size, offset);
+    _fs->write(fileinfo->fh, buf, size, offset);
     return size;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -421,7 +421,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
 int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
   //printf("statfs(%s, _)\n", path.c_str());
   try {
-    _impl->statfs(path, fsstat);
+    _fs->statfs(path, fsstat);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -441,9 +441,9 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
   UNUSED(path);
   try {
     if (datasync) {
-      _impl->fdatasync(fileinfo->fh);
+      _fs->fdatasync(fileinfo->fh);
     } else {
-      _impl->fsync(fileinfo->fh);
+      _fs->fsync(fileinfo->fh);
     }
     return 0;
   } catch (FuseErrnoException &e) {
@@ -464,7 +464,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
   //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
   try {
-    auto entries = _impl->readDir(path);
+    auto entries = _fs->readDir(path);
     for (const auto &entry : *entries) {
       //We could pass file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse seems to ignore it.
@@ -510,7 +510,7 @@ void Fuse::destroy() {
 int Fuse::access(const bf::path &path, int mask) {
   //printf("access(%s, %d)\n", path.c_str(), mask);
   try {
-    _impl->access(path, mask);
+    _fs->access(path, mask);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -520,7 +520,7 @@ int Fuse::access(const bf::path &path, int mask) {
 int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
   //printf("create(%s, %d, _)\n", path.c_str(), mode);
   try {
-    fileinfo->fh = _impl->createAndOpenFile(path, mode);
+    fileinfo->fh = _fs->createAndOpenFile(path, mode);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
