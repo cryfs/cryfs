@@ -11,6 +11,7 @@
 #include <boost/filesystem.hpp>
 
 #include "TempDir.h"
+#include "FuseThread.h"
 
 #define MOCK_PATH_METHOD1(NAME, RETURNTYPE)                        \
   RETURNTYPE NAME(const boost::filesystem::path &path) override {                 \
