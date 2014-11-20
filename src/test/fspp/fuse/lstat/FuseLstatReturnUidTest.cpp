@@ -1,6 +1,6 @@
-#include "FuseLstatReturnTest.h"
+#include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnPropertyUidTest: public FuseLstatReturnPropertyTest<uid_t> {
+class FuseLstatReturnUidTest: public FuseLstatReturnTest<uid_t> {
 public:
   const uid_t UID1 = 0;
   const uid_t UID2 = 10;
@@ -10,22 +10,22 @@ private:
   }
 };
 
-TEST_F(FuseLstatReturnPropertyUidTest, ReturnedFileUidIsCorrect1) {
+TEST_F(FuseLstatReturnUidTest, ReturnedFileUidIsCorrect1) {
   struct ::stat result = CallFileLstatWithValue(UID1);
   EXPECT_EQ(UID1, result.st_uid);
 }
 
-TEST_F(FuseLstatReturnPropertyUidTest, ReturnedFileUidIsCorrect2) {
+TEST_F(FuseLstatReturnUidTest, ReturnedFileUidIsCorrect2) {
   struct ::stat result = CallFileLstatWithValue(UID2);
   EXPECT_EQ(UID2, result.st_uid);
 }
 
-TEST_F(FuseLstatReturnPropertyUidTest, ReturnedDirUidIsCorrect1) {
+TEST_F(FuseLstatReturnUidTest, ReturnedDirUidIsCorrect1) {
   struct ::stat result = CallDirLstatWithValue(UID1);
   EXPECT_EQ(UID1, result.st_uid);
 }
 
-TEST_F(FuseLstatReturnPropertyUidTest, ReturnedDirUidIsCorrect2) {
+TEST_F(FuseLstatReturnUidTest, ReturnedDirUidIsCorrect2) {
   struct ::stat result = CallDirLstatWithValue(UID2);
   EXPECT_EQ(UID2, result.st_uid);
 }

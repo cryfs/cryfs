@@ -1,6 +1,6 @@
-#include "FuseLstatReturnTest.h"
+#include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnPropertySizeTest: public FuseLstatReturnPropertyTest<off_t> {
+class FuseLstatReturnSizeTest: public FuseLstatReturnTest<off_t> {
 public:
   const off_t SIZE1 = 0;
   const off_t SIZE2 = 4096;
@@ -11,32 +11,32 @@ private:
   }
 };
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedFileSizeIsCorrect1) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect1) {
   struct ::stat result = CallDirLstatWithValue(SIZE1);
   EXPECT_EQ(SIZE1, result.st_size);
 }
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedFileSizeIsCorrect2) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect2) {
   struct ::stat result = CallDirLstatWithValue(SIZE2);
   EXPECT_EQ(SIZE2, result.st_size);
 }
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedFileSizeIsCorrect3) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect3) {
   struct ::stat result = CallDirLstatWithValue(SIZE3);
   EXPECT_EQ(SIZE3, result.st_size);
 }
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedDirSizeIsCorrect1) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect1) {
   struct ::stat result = CallDirLstatWithValue(SIZE1);
   EXPECT_EQ(SIZE1, result.st_size);
 }
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedDirSizeIsCorrect2) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect2) {
   struct ::stat result = CallDirLstatWithValue(SIZE2);
   EXPECT_EQ(SIZE2, result.st_size);
 }
 
-TEST_F(FuseLstatReturnPropertySizeTest, ReturnedDirSizeIsCorrect3) {
+TEST_F(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect3) {
   struct ::stat result = CallDirLstatWithValue(SIZE3);
   EXPECT_EQ(SIZE3, result.st_size);
 }

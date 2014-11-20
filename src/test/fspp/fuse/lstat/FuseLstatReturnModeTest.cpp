@@ -1,6 +1,6 @@
-#include "FuseLstatReturnTest.h"
+#include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnPropertyModeTest: public FuseLstatTest {
+class FuseLstatReturnModeTest: public FuseLstatTest {
 public:
   const mode_t MODE1 = S_IFREG | S_IRUSR | S_IWGRP | S_IXOTH;
   const mode_t MODE2 = S_IFDIR | S_IWUSR | S_IXGRP | S_IROTH;
@@ -12,12 +12,12 @@ public:
   }
 };
 
-TEST_F(FuseLstatReturnPropertyModeTest, ReturnedModeIsCorrect1) {
+TEST_F(FuseLstatReturnModeTest, ReturnedModeIsCorrect1) {
   struct ::stat result = CallLstatWithValue(MODE1);
   EXPECT_EQ(MODE1, result.st_mode);
 }
 
-TEST_F(FuseLstatReturnPropertyModeTest, ReturnedModeIsCorrect2) {
+TEST_F(FuseLstatReturnModeTest, ReturnedModeIsCorrect2) {
   struct ::stat result = CallLstatWithValue(MODE2);
   EXPECT_EQ(MODE2, result.st_mode);
 }

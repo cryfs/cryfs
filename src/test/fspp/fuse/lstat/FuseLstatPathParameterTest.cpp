@@ -1,4 +1,4 @@
-#include "FuseLstatTest.h"
+#include "testutils/FuseLstatTest.h"
 
 using ::testing::_;
 using ::testing::StrEq;

@@ -1,6 +1,6 @@
-#include "FuseLstatReturnTest.h"
+#include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnPropertyNlinkTest: public FuseLstatReturnPropertyTest<nlink_t> {
+class FuseLstatReturnNlinkTest: public FuseLstatReturnTest<nlink_t> {
 public:
   const nlink_t NLINK1 = 1;
   const nlink_t NLINK2 = 5;
@@ -10,22 +10,22 @@ private:
   }
 };
 
-TEST_F(FuseLstatReturnPropertyNlinkTest, ReturnedFileNlinkIsCorrect1) {
+TEST_F(FuseLstatReturnNlinkTest, ReturnedFileNlinkIsCorrect1) {
   struct ::stat result = CallDirLstatWithValue(NLINK1);
   EXPECT_EQ(NLINK1, result.st_nlink);
 }
 
-TEST_F(FuseLstatReturnPropertyNlinkTest, ReturnedFileNlinkIsCorrect2) {
+TEST_F(FuseLstatReturnNlinkTest, ReturnedFileNlinkIsCorrect2) {
   struct ::stat result = CallDirLstatWithValue(NLINK2);
   EXPECT_EQ(NLINK2, result.st_nlink);
 }
 
-TEST_F(FuseLstatReturnPropertyNlinkTest, ReturnedDirNlinkIsCorrect1) {
+TEST_F(FuseLstatReturnNlinkTest, ReturnedDirNlinkIsCorrect1) {
   struct ::stat result = CallDirLstatWithValue(NLINK1);
   EXPECT_EQ(NLINK1, result.st_nlink);
 }
 
-TEST_F(FuseLstatReturnPropertyNlinkTest, ReturnedDirNlinkIsCorrect2) {
+TEST_F(FuseLstatReturnNlinkTest, ReturnedDirNlinkIsCorrect2) {
   struct ::stat result = CallDirLstatWithValue(NLINK2);
   EXPECT_EQ(NLINK2, result.st_nlink);
 }
