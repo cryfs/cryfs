@@ -30,16 +30,17 @@ public:
   const off_t SIZE2 = 4096;
   const off_t SIZE3 = 1024*1024*1024;
 
-  int LstatPath(const string &path) {
+  void LstatPath(const string &path) {
     struct stat dummy;
-    return LstatPath(path, &dummy);
+    LstatPath(path, &dummy);
   }
 
-  int LstatPath(const string &path, struct stat *result) {
+  void LstatPath(const string &path, struct stat *result) {
     auto fs = TestFS();
 
     auto realpath = fs->mountDir() / path;
-    return ::lstat(realpath.c_str(), result);
+    int retval = ::lstat(realpath.c_str(), result);
+    EXPECT_EQ(0, retval) << "lstat syscall failed. errno: " << errno;
   }
 
   struct stat CallLstatWithMode(mode_t mode) {
@@ -110,8 +111,7 @@ private:
     }));
 
     struct stat result;
-    int retval = LstatPath(FILENAME, &result);
-    EXPECT_EQ(0, retval) << "lstat syscall failed. errno: " << errno;
+    LstatPath(FILENAME, &result);
 
     return result;
   }
@@ -119,31 +119,31 @@ private:
 
 
 TEST_F(FuseLstatTest, PathParameterIsCorrectRoot) {
-  EXPECT_CALL(fsimpl, lstat(StrEq("/"), _)).Times(1);
+  EXPECT_CALL(fsimpl, lstat(StrEq("/"), _)).Times(1).WillOnce(ReturnIsDir);
   LstatPath("/");
 }
 
 TEST_F(FuseLstatTest, PathParameterIsCorrectSimpleFile) {
-  EXPECT_CALL(fsimpl, lstat(StrEq("/myfile"), _)).Times(1);
+  EXPECT_CALL(fsimpl, lstat(StrEq("/myfile"), _)).Times(1).WillOnce(ReturnIsFile);
   LstatPath("/myfile");
 }
 
 TEST_F(FuseLstatTest, PathParameterIsCorrectSimpleDir) {
-  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir"), _)).Times(1);
+  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir"), _)).Times(1).WillOnce(ReturnIsDir);
   LstatPath("/mydir/");
 }
 
 TEST_F(FuseLstatTest, PathParameterIsCorrectNestedFile) {
   ReturnIsDirOnLstat("/mydir");
   ReturnIsDirOnLstat("/mydir/mydir2");
-  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir/mydir2/myfile"), _)).Times(1);
+  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir/mydir2/myfile"), _)).Times(1).WillOnce(ReturnIsFile);
   LstatPath("/mydir/mydir2/myfile");
 }
 
 TEST_F(FuseLstatTest, PathParameterIsCorrectNestedDir) {
   ReturnIsDirOnLstat("/mydir");
   ReturnIsDirOnLstat("/mydir/mydir2");
-  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir/mydir2/mydir3"), _)).Times(1);
+  EXPECT_CALL(fsimpl, lstat(StrEq("/mydir/mydir2/mydir3"), _)).Times(1).WillOnce(ReturnIsDir);
   LstatPath("/mydir/mydir2/mydir3/");
 }
 
@@ -231,3 +231,4 @@ TEST_F(FuseLstatTest, ReturnedDirSizeIsCorrect3) {
 //TODO st_atim
 //TODO st_mtim
 //TODO st_ctim
+//TODO Error cases

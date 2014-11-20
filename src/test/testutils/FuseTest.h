@@ -121,20 +121,24 @@ public:
 
   MockFilesystem fsimpl;
 
+  ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile =
+    ::testing::Invoke([](const char*, struct ::stat* result) {
+      result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+      result->st_nlink = 1;
+    });
+
+  ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir =
+    ::testing::Invoke([](const char*, struct ::stat* result) {
+      result->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
+      result->st_nlink = 1;
+    });
+
   void ReturnIsFileOnLstat(const bf::path &path) {
-    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(
-      ::testing::Invoke([](const char*, struct ::stat* result) {
-        result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-        result->st_nlink = 1;
-      }));
+    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsFile);
   }
 
   void ReturnIsDirOnLstat(const bf::path &path) {
-    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(
-      ::testing::Invoke([](const char*, struct ::stat* result) {
-        result->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-        result->st_nlink = 1;
-      }));
+    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsDir);
   }
 };
 
