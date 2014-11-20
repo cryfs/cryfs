@@ -1,23 +1,24 @@
 #include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnModeTest: public FuseLstatTest {
-public:
-  const mode_t MODE1 = S_IFREG | S_IRUSR | S_IWGRP | S_IXOTH;
-  const mode_t MODE2 = S_IFDIR | S_IWUSR | S_IXGRP | S_IROTH;
+using ::testing::WithParamInterface;
+using ::testing::Values;
 
+class FuseLstatReturnModeTest: public FuseLstatTest, public WithParamInterface<mode_t> {
+public:
   struct stat CallLstatWithValue(mode_t mode) {
     return CallLstatWithImpl([mode] (struct stat *stat) {
       stat->st_mode = mode;
     });
   }
 };
+INSTANTIATE_TEST_CASE_P(FuseLstatReturnModeTest, FuseLstatReturnModeTest, Values(
+    S_IFREG,
+    S_IFDIR,
+    S_IFREG | S_IRUSR | S_IWGRP | S_IXOTH, // a file with some access bits set
+    S_IFDIR | S_IWUSR | S_IXGRP | S_IROTH  // a dir with some access bits set
+));
 
-TEST_F(FuseLstatReturnModeTest, ReturnedModeIsCorrect1) {
-  struct ::stat result = CallLstatWithValue(MODE1);
-  EXPECT_EQ(MODE1, result.st_mode);
-}
-
-TEST_F(FuseLstatReturnModeTest, ReturnedModeIsCorrect2) {
-  struct ::stat result = CallLstatWithValue(MODE2);
-  EXPECT_EQ(MODE2, result.st_mode);
+TEST_P(FuseLstatReturnModeTest, ReturnedModeIsCorrect) {
+  struct ::stat result = CallLstatWithValue(GetParam());
+  EXPECT_EQ(GetParam(), result.st_mode);
 }

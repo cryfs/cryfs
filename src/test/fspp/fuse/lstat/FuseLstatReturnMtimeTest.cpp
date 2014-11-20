@@ -1,33 +1,27 @@
 #include "testutils/FuseLstatReturnTest.h"
 
-class FuseLstatReturnMtimeTest: public FuseLstatReturnTest<time_t> {
-public:
-  const time_t MTIME1 = 0;
-  const time_t MTIME2 = 100;
-  const time_t MTIME3 = 1416496809; // current timestamp as of writing the test
-  const time_t MTIME4 = 32503680000; // needs a 64bit timestamp
+using ::testing::WithParamInterface;
+using ::testing::Values;
+
+class FuseLstatReturnMtimeTest: public FuseLstatReturnTest<time_t>, public WithParamInterface<time_t> {
 private:
   void set(struct stat *stat, time_t value) override {
     stat->st_mtime = value;
   }
 };
+INSTANTIATE_TEST_CASE_P(FuseLstatReturnMtimeTest, FuseLstatReturnMtimeTest, Values(
+    0,
+    100,
+    1416496809, // current timestamp as of writing the test
+    32503680000 // needs a 64bit timestamp
+));
 
-TEST_F(FuseLstatReturnMtimeTest, ReturnedFileMtimeIsCorrect1) {
-  struct ::stat result = CallFileLstatWithValue(MTIME1);
-  EXPECT_EQ(MTIME1, result.st_mtime);
+TEST_P(FuseLstatReturnMtimeTest, ReturnedFileMtimeIsCorrect) {
+  struct ::stat result = CallFileLstatWithValue(GetParam());
+  EXPECT_EQ(GetParam(), result.st_mtime);
 }
 
-TEST_F(FuseLstatReturnMtimeTest, ReturnedFileMtimeIsCorrect2) {
-  struct ::stat result = CallFileLstatWithValue(MTIME2);
-  EXPECT_EQ(MTIME2, result.st_mtime);
-}
-
-TEST_F(FuseLstatReturnMtimeTest, ReturnedFileMtimeIsCorrect3) {
-  struct ::stat result = CallFileLstatWithValue(MTIME3);
-  EXPECT_EQ(MTIME3, result.st_mtime);
-}
-
-TEST_F(FuseLstatReturnMtimeTest, ReturnedFileMtimeIsCorrect4) {
-  struct ::stat result = CallFileLstatWithValue(MTIME4);
-  EXPECT_EQ(MTIME4, result.st_mtime);
+TEST_P(FuseLstatReturnMtimeTest, ReturnedDirMtimeIsCorrect) {
+  struct ::stat result = CallDirLstatWithValue(GetParam());
+  EXPECT_EQ(GetParam(), result.st_mtime);
 }
