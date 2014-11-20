@@ -29,6 +29,8 @@ public:
   const off_t SIZE1 = 0;
   const off_t SIZE2 = 4096;
   const off_t SIZE3 = 1024*1024*1024;
+  const nlink_t NLINK1 = 1;
+  const nlink_t NLINK2 = 5;
 
   void LstatPath(const string &path) {
     struct stat dummy;
@@ -70,6 +72,14 @@ public:
   struct stat CallDirLstatWithSize(off_t size) {
     return CallDirLstatWithImpl(LstatSizeImpl(size));
   }
+
+  struct stat CallFileLstatWithNlink(nlink_t nlink) {
+    return CallFileLstatWithImpl(LstatNlinkImpl(nlink));
+  }
+
+  struct stat CallDirLstatWithNlink(nlink_t nlink) {
+    return CallDirLstatWithImpl(LstatNlinkImpl(nlink));
+  }
 private:
 
   static function<void(struct stat*)> LstatUidImpl(uid_t uid) {
@@ -87,6 +97,12 @@ private:
   static function<void(struct stat*)> LstatSizeImpl(off_t size) {
     return [size] (struct stat *stat) {
       stat->st_size = size;
+    };
+  }
+
+  static function<void(struct stat*)> LstatNlinkImpl(nlink_t nlink) {
+    return [nlink] (struct stat *stat) {
+      stat->st_nlink = nlink;
     };
   }
 
@@ -227,7 +243,26 @@ TEST_F(FuseLstatTest, ReturnedDirSizeIsCorrect3) {
   EXPECT_EQ(SIZE3, result.st_size);
 }
 
-//TODO st_nlink?
+TEST_F(FuseLstatTest, ReturnedFileNlinkIsCorrect1) {
+  struct ::stat result = CallFileLstatWithNlink(NLINK1);
+  EXPECT_EQ(NLINK1, result.st_nlink);
+}
+
+TEST_F(FuseLstatTest, ReturnedFileNlinkIsCorrect2) {
+  struct ::stat result = CallFileLstatWithNlink(NLINK2);
+  EXPECT_EQ(NLINK2, result.st_nlink);
+}
+
+TEST_F(FuseLstatTest, ReturnedDirNlinkIsCorrect1) {
+  struct ::stat result = CallDirLstatWithNlink(NLINK1);
+  EXPECT_EQ(NLINK1, result.st_nlink);
+}
+
+TEST_F(FuseLstatTest, ReturnedDirNlinkIsCorrect2) {
+  struct ::stat result = CallDirLstatWithNlink(NLINK2);
+  EXPECT_EQ(NLINK2, result.st_nlink);
+}
+
 //TODO st_atim
 //TODO st_mtim
 //TODO st_ctim
