@@ -16,6 +16,8 @@ public:
 
   void LstatPath(const std::string &path);
   void LstatPath(const std::string &path, struct stat *result);
+  int LstatPathAllowErrors(const std::string &path);
+  int LstatPathAllowErrors(const std::string &path, struct stat *result);
 
 protected:
   struct stat CallFileLstatWithImpl(std::function<void(struct stat*)> implementation);

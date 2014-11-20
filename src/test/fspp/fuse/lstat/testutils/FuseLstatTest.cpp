@@ -10,12 +10,21 @@ void FuseLstatTest::LstatPath(const std::string &path) {
   LstatPath(path, &dummy);
 }
 
+int FuseLstatTest::LstatPathAllowErrors(const std::string &path) {
+  struct stat dummy;
+  return LstatPathAllowErrors(path, &dummy);
+}
+
 void FuseLstatTest::LstatPath(const std::string &path, struct stat *result) {
+  int retval = LstatPathAllowErrors(path, result);
+  EXPECT_EQ(0, retval) << "lstat syscall failed. errno: " << errno;
+}
+
+int FuseLstatTest::LstatPathAllowErrors(const std::string &path, struct stat *result) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::lstat(realpath.c_str(), result);
-  EXPECT_EQ(0, retval) << "lstat syscall failed. errno: " << errno;
+  return ::lstat(realpath.c_str(), result);
 }
 
 struct stat FuseLstatTest::CallFileLstatWithImpl(function<void(struct stat*)> implementation) {
