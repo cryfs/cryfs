@@ -17,7 +17,9 @@ INSTANTIATE_TEST_CASE_P(LstatErrorCodes, FuseLstatErrorTest, Values(EACCES, EBAD
 
 TEST_F(FuseLstatErrorTest, ReturnNoError) {
   EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).Times(1).WillOnce(ReturnIsFile);
+  errno = 0;
   int retval = LstatPathAllowErrors(FILENAME);
+  EXPECT_EQ(errno, 0);
   EXPECT_EQ(retval, 0);
 }
 

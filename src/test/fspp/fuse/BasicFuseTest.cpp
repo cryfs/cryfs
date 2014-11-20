@@ -11,7 +11,7 @@ using ::testing::StrEq;
 
 typedef FuseTest BasicFuseTest;
 
+//This test case simply checks whether a filesystem can be setup and teardown without crashing.
 TEST_F(BasicFuseTest, setupAndTearDown) {
-  //This test case simply checks whether a filesystem can be setup and teardown without crashing.
   auto fs = TestFS();
 }
