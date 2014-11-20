@@ -17,7 +17,8 @@ using namespace fspp::fuse;
 
 namespace {
 int fusepp_getattr(const char *path, struct stat *stbuf) {
-  return FUSE_OBJ->getattr(bf::path(path), stbuf);
+  int rs = FUSE_OBJ->getattr(bf::path(path), stbuf);
+  return rs;
 }
 
 int fusepp_fgetattr(const char *path, struct stat *stbuf, fuse_file_info *fileinfo) {
