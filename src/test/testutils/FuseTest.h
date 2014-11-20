@@ -142,8 +142,4 @@ public:
   }
 };
 
-MATCHER_P(OpenFlagsEq, expectedFlags, "") {
-  return expectedFlags == (O_ACCMODE & arg);
-}
-
 #endif
