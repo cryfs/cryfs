@@ -120,7 +120,7 @@ public:
     return std::make_unique<TempTestFS>(&fsimpl);
   }
 
-  MockFilesystem fsimpl;
+  ::testing::StrictMock<MockFilesystem> fsimpl;
 
   ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile =
     ::testing::Invoke([](const char*, struct ::stat* result) {
