@@ -35,5 +35,3 @@ TEST_P(FuseFlushFileDescriptorTest, FlushOnCloseFile) {
 
   OpenAndCloseFile(FILENAME);
 }
-
-

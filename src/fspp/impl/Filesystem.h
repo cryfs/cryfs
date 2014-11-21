@@ -16,6 +16,7 @@ public:
   virtual void flush(int descriptor) = 0;
   virtual void closeFile(int descriptor) = 0;
   virtual void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) = 0;
+  //TODO Unit-Tests for all functions below
   virtual void fstat(int descriptor, struct ::stat *stbuf) = 0;
   virtual void truncate(const boost::filesystem::path &path, off_t size) = 0;
   virtual void ftruncate(int descriptor, off_t size) = 0;
@@ -35,7 +36,5 @@ public:
 };
 
 }
-
-
 
 #endif
