@@ -42,6 +42,7 @@ public:
   MOCK_METHOD2(ftruncate, void(int, off_t));
   MOCK_METHOD4(read, int(int, void*, size_t, off_t));
   MOCK_METHOD4(write, void(int, const void*, size_t, off_t));
+  MOCK_METHOD1(flush, void(int));
   MOCK_METHOD1(fsync, void(int));
   MOCK_METHOD1(fdatasync, void(int));
   MOCK_PATH_METHOD2(access, void, int);

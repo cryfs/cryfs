@@ -54,6 +54,10 @@ int FilesystemImpl::openFile(const File &file, int flags) {
   return _open_files.open(file, flags);
 }
 
+void FilesystemImpl::flush(int descriptor) {
+  _open_files.get(descriptor)->flush();
+}
+
 void FilesystemImpl::closeFile(int descriptor) {
   _open_files.close(descriptor);
 }

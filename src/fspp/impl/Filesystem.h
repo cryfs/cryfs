@@ -13,6 +13,7 @@ public:
   virtual ~Filesystem() {}
 
   virtual int openFile(const boost::filesystem::path &path, int flags) = 0;
+  virtual void flush(int descriptor) = 0;
   virtual void closeFile(int descriptor) = 0;
   virtual void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) = 0;
   virtual void fstat(int descriptor, struct ::stat *stbuf) = 0;

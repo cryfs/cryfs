@@ -22,6 +22,7 @@ public:
   MOCK_CONST_METHOD1(truncate, void(off_t));
   MOCK_METHOD3(read, int(void*, size_t, off_t));
   MOCK_METHOD3(write, void(const void*, size_t, off_t));
+  MOCK_METHOD0(flush, void());
   MOCK_METHOD0(fsync, void());
   MOCK_METHOD0(fdatasync, void());
 };

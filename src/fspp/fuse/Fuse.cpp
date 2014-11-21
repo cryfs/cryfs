@@ -431,10 +431,14 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
 
 //TODO
 int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
-  //printf("Called non-implemented flush(%s, _)\n", path.c_str());
   UNUSED(path);
-  UNUSED(fileinfo);
-  return 0;
+  //printf("Called non-implemented flush(%s, _)\n", path.c_str());
+  try {
+    _fs->flush(fileinfo->fh);
+    return 0;
+  } catch (FuseErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {

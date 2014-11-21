@@ -19,6 +19,7 @@ public:
 	virtual ~FilesystemImpl();
 
 	int openFile(const boost::filesystem::path &path, int flags) override;
+	void flush(int descriptor) override;
 	void closeFile(int descriptor) override;
 	void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) override;
 	void fstat(int descriptor, struct ::stat *stbuf) override;
