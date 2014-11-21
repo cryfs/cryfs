@@ -19,8 +19,11 @@ CryOpenFile::CryOpenFile(const CryDevice *device, const bf::path &path, int flag
 }
 
 CryOpenFile::~CryOpenFile() {
-  int retval = close(_descriptor);
+  int retval = ::close(_descriptor);
   CHECK_RETVAL(retval);
+}
+
+void CryOpenFile::flush() {
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {

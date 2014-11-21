@@ -17,6 +17,7 @@ public:
   void truncate(off_t size) const override;
   int read(void *buf, size_t count, off_t offset) override;
   void write(const void *buf, size_t count, off_t offset) override;
+  void flush() override;
   void fsync() override;
   void fdatasync() override;
 
