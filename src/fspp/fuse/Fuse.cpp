@@ -102,6 +102,7 @@ int fusepp_flush(const char *path, fuse_file_info *fileinfo) {
 }
 
 int fusepp_fsync(const char *path, int datasync, fuse_file_info *fileinfo) {
+  printf("Fsync\n");fflush(stdout);
   return FUSE_OBJ->fsync(bf::path(path), datasync, fileinfo);
 }
 

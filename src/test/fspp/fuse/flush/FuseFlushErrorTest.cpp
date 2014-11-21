@@ -1,0 +1,34 @@
+#include "testutils/FuseFlushTest.h"
+
+#include "fspp/impl/FuseErrnoException.h"
+
+using ::testing::WithParamInterface;
+using ::testing::StrEq;
+using ::testing::Eq;
+using ::testing::Return;
+using ::testing::Throw;
+using ::testing::AtLeast;
+using ::testing::Values;
+using ::testing::_;
+
+using fspp::FuseErrnoException;
+
+class FuseFlushErrorTest: public FuseFlushTest, public WithParamInterface<int> {
+};
+INSTANTIATE_TEST_CASE_P(FuseFlushErrorTest, FuseFlushErrorTest, Values(EBADF, EINTR, EIO));
+
+TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
+  ReturnIsFileOnLstat(FILENAME);
+
+  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
+  // Allow calls to closeFile(), but don't enforce them
+  EXPECT_CALL(fsimpl, closeFile(Eq(GetParam()))).Times(AtLeast(0));
+
+  auto fs = TestFS();
+  int fd = OpenFile(fs.get(), FILENAME);
+
+  int close_result = ::close(fd);
+  EXPECT_EQ(-1, close_result);
+  EXPECT_EQ(GetParam(), errno);
+}
