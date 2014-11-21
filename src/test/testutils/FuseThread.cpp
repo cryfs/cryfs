@@ -26,4 +26,6 @@ void FuseThread::start(int argc, char *argv[]) {
 void FuseThread::stop() {
   pthread_kill(_child.native_handle(), SIGINT);
   _child.join();
+  //Wait until it is properly shutdown (busy waiting is simple and doesn't hurt much here)
+  while (_fuse->running()) {}
 }
