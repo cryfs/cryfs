@@ -6,7 +6,7 @@ using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Return;
 
-class FuseCreateAndOpenFlagsTest: public FuseCreateAndOpenTest, public WithParamInterface<unsigned int> {
+class FuseCreateAndOpenFlagsTest: public FuseCreateAndOpenTest, public WithParamInterface<mode_t> {
 };
 INSTANTIATE_TEST_CASE_P(FuseCreateAndOpenFlagsTest, FuseCreateAndOpenFlagsTest, Values(O_RDWR, O_RDONLY, O_WRONLY));
 
