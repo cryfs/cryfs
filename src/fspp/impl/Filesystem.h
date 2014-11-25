@@ -12,6 +12,7 @@ class Filesystem {
 public:
   virtual ~Filesystem() {}
 
+  virtual int createAndOpenFile(const boost::filesystem::path &path, mode_t mode) = 0;
   virtual int openFile(const boost::filesystem::path &path, int flags) = 0;
   virtual void flush(int descriptor) = 0;
   virtual void closeFile(int descriptor) = 0;
@@ -25,7 +26,6 @@ public:
   virtual void fsync(int descriptor) = 0;
   virtual void fdatasync(int descriptor) = 0;
   virtual void access(const boost::filesystem::path &path, int mask) = 0;
-  virtual int createAndOpenFile(const boost::filesystem::path &path, mode_t mode) = 0;
   virtual void mkdir(const boost::filesystem::path &path, mode_t mode) = 0;
   virtual void rmdir(const boost::filesystem::path &path) = 0;
   virtual void unlink(const boost::filesystem::path &path) = 0;
