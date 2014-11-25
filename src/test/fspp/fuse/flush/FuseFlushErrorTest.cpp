@@ -22,8 +22,6 @@ TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
 
   EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
   EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
-  // Allow calls to closeFile(), but don't enforce them
-  EXPECT_CALL(fsimpl, closeFile(Eq(GetParam()))).Times(AtLeast(0));
 
   auto fs = TestFS();
   int fd = OpenFile(fs.get(), FILENAME);

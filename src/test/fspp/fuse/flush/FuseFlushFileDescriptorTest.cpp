@@ -30,8 +30,6 @@ TEST_P(FuseFlushFileDescriptorTest, FlushOnCloseFile) {
 
   EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
   EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1);
-  // Allow calls to closeFile(), but don't enforce them
-  EXPECT_CALL(fsimpl, closeFile(Eq(GetParam()))).Times(AtLeast(0));
 
   OpenAndCloseFile(FILENAME);
 }
