@@ -34,6 +34,9 @@
 
 class MockFilesystem: public fspp::Filesystem {
 public:
+  MockFilesystem();
+  virtual ~MockFilesystem();
+
   MOCK_PATH_METHOD2(openFile, int, int);
   MOCK_METHOD1(closeFile, void(int));
   MOCK_PATH_METHOD2(lstat, void, struct ::stat*);
