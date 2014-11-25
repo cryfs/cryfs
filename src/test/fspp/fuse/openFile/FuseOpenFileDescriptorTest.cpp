@@ -36,7 +36,7 @@ TEST_P(FuseOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnIsFileOnLstat(FILENAME);
   EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _))
     .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1);
+  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(0));
 
   OpenAndReadFile(FILENAME);
 }

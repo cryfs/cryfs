@@ -68,29 +68,26 @@ public:
 class FuseTest: public ::testing::Test {
 public:
   FuseTest(): fsimpl() {
-    /*auto defaultAction = Throw(fspp::FuseErrnoException(EIO));
-    ON_CALL(fsimpl, openFile(_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, closeFile(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, lstat(_,_)).WillByDefault(Invoke([](const char *path, struct ::stat *) {
-      printf("LSTAT\n");fflush(stdout);
-      throw fspp::FuseErrnoException(EIO);
-    }));
-    ON_CALL(fsimpl, fstat(_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, truncate(_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, ftruncate(_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, read(_,_,_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, write(_,_,_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, fsync(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, fdatasync(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, access(_, _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, createAndOpenFile(_,_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, mkdir(_, _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, rmdir(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, unlink(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, rename(_, _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, readDir(_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, utimens(_, _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, statfs(_, _)).WillByDefault(defaultAction);*/
+    auto defaultAction = ::testing::Throw(fspp::FuseErrnoException(EIO));
+    ON_CALL(fsimpl, openFile(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, closeFile(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, lstat(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, fstat(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, truncate(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, ftruncate(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, read(::testing::_,::testing::_,::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, write(::testing::_,::testing::_,::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, fsync(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, fdatasync(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, access(::testing::_,::testing:: _)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, createAndOpenFile(::testing::_,::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, mkdir(::testing::_, ::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, rmdir(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, unlink(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, rename(::testing::_,::testing:: _)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, readDir(::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, utimens(::testing::_, ::testing::_)).WillByDefault(defaultAction);
+    ON_CALL(fsimpl, statfs(::testing::_, ::testing::_)).WillByDefault(defaultAction);
   }
 
   class TempTestFS {
@@ -120,7 +117,7 @@ public:
     return std::make_unique<TempTestFS>(&fsimpl);
   }
 
-  ::testing::StrictMock<MockFilesystem> fsimpl;
+  MockFilesystem fsimpl;
 
   ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile =
     ::testing::Invoke([](const char*, struct ::stat* result) {
