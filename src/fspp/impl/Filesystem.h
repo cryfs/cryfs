@@ -19,8 +19,8 @@ public:
   virtual void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) = 0;
   virtual void fstat(int descriptor, struct ::stat *stbuf) = 0;
   virtual void truncate(const boost::filesystem::path &path, off_t size) = 0;
-  //TODO Unit-Tests for all functions below
   virtual void ftruncate(int descriptor, off_t size) = 0;
+  //TODO Unit-Tests for all functions below
   virtual int read(int descriptor, void *buf, size_t count, off_t offset) = 0;
   virtual void write(int descriptor, const void *buf, size_t count, off_t offset) = 0;
   virtual void fsync(int descriptor) = 0;
