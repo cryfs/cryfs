@@ -26,7 +26,7 @@ public:
 };
 INSTANTIATE_TEST_CASE_P(FuseFstatErrorTest, FuseFstatErrorTest, Values(EACCES, EBADF, EFAULT, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EOVERFLOW));
 
-TEST_P(FuseFstatErrorTest, Error) {
+TEST_P(FuseFstatErrorTest, ReturnedErrorCodeIsCorrect) {
   ReturnDoesntExistOnLstat(FILENAME);
   EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _)).Times(1).WillOnce(Return(0));
 
