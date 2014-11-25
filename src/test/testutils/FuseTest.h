@@ -67,6 +67,8 @@ public:
 
 class FuseTest: public ::testing::Test {
 public:
+  const char* FILENAME = "/myfile";
+
   FuseTest(): fsimpl() {
     auto defaultAction = ::testing::Throw(fspp::FuseErrnoException(EIO));
     ON_CALL(fsimpl, openFile(::testing::_,::testing::_)).WillByDefault(defaultAction);
@@ -119,8 +121,15 @@ public:
 
   MockFilesystem fsimpl;
 
+  //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
   ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile =
     ::testing::Invoke([](const char*, struct ::stat* result) {
+      result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+      result->st_nlink = 1;
+    });
+
+  ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat =
+    ::testing::Invoke([](int, struct ::stat* result) {
       result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
       result->st_nlink = 1;
     });
@@ -131,12 +140,18 @@ public:
       result->st_nlink = 1;
     });
 
+  ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist = ::testing::Throw(fspp::FuseErrnoException(ENOENT));
+
   void ReturnIsFileOnLstat(const bf::path &path) {
     EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsFile);
   }
 
   void ReturnIsDirOnLstat(const bf::path &path) {
     EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsDir);
+  }
+
+  void ReturnDoesntExistOnLstat(const bf::path &path) {
+    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnDoesntExist);
   }
 };
 
