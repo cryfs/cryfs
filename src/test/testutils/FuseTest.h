@@ -145,17 +145,11 @@ public:
 
   ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist = ::testing::Throw(fspp::FuseErrnoException(ENOENT));
 
-  void ReturnIsFileOnLstat(const bf::path &path) {
-    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsFile);
-  }
-
-  void ReturnIsDirOnLstat(const bf::path &path) {
-    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsDir);
-  }
-
-  void ReturnDoesntExistOnLstat(const bf::path &path) {
-    EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnDoesntExist);
-  }
+  void ReturnIsFileOnLstat(const bf::path &path);
+  void ReturnIsDirOnLstat(const bf::path &path);
+  void ReturnDoesntExistOnLstat(const bf::path &path);
+  void OnOpenReturnFileDescriptor(const char *filename, int descriptor);
+  void ReturnIsFileOnFstat(int descriptor);
 };
 
 #endif

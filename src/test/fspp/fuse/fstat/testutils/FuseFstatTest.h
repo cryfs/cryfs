@@ -6,15 +6,9 @@
 
 class FuseFstatTest: public FuseTest {
 public:
-  int CreateFile(const TempTestFS *fs, const std::string &filename) {
-    int fd = CreateFileAllowErrors(fs, filename);
-    EXPECT_GE(fd, 0) << "Opening file failed";
-    return fd;
-  }
-  int CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
-    auto real_path = fs->mountDir() / filename;
-    return ::open(real_path.c_str(), O_RDWR | O_CREAT);
-  }
+  int CreateFile(const TempTestFS *fs, const std::string &filename);
+  int CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename);
+  void OnCreateAndOpenReturnFileDescriptor(const char *filename, int descriptor);
 };
 
 

@@ -28,7 +28,7 @@ INSTANTIATE_TEST_CASE_P(FuseFstatErrorTest, FuseFstatErrorTest, Values(EACCES, E
 
 TEST_P(FuseFstatErrorTest, ReturnedErrorCodeIsCorrect) {
   ReturnDoesntExistOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _)).Times(1).WillOnce(Return(0));
+  OnCreateAndOpenReturnFileDescriptor(FILENAME, 0);
 
   EXPECT_CALL(fsimpl, fstat(Eq(0), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
