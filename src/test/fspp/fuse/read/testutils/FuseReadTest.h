@@ -16,7 +16,6 @@ public:
       return count;
     });
 
-  // This read() mock implementation reads from the stored random data.
   ::testing::Action<int(int, void*, size_t, off_t)> ReturnSuccessfulReadRegardingSize(size_t filesize) {
     return ::testing::Invoke([filesize](int, void *, size_t count, off_t offset) {
       size_t ableToReadCount = std::min(count, filesize - offset);

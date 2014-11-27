@@ -1,5 +1,7 @@
 #include "testutils/FuseReadTest.h"
 
+#include "test/testutils/VirtualTestFile.h"
+
 #include "fspp/impl/FuseErrnoException.h"
 
 #include <tuple>
@@ -18,6 +20,8 @@ using ::testing::Action;
 using std::tuple;
 using std::get;
 using std::min;
+using std::unique_ptr;
+using std::make_unique;
 
 using namespace fspp;
 
@@ -41,12 +45,12 @@ struct TestData {
 // memory region and check methods to check for data equality of a region.
 class FuseReadReturnedDataTest: public FuseReadTest, public WithParamInterface<tuple<size_t, off_t, size_t>> {
 public:
-  char *fileData;
+  unique_ptr<VirtualTestFile> testFile;
   TestData testData;
 
-  void SetUp() override {
+  FuseReadReturnedDataTest() {
     testData = GetParam();
-    setupFileData();
+    testFile = make_unique<VirtualTestFile>(testData.fileSize());
 
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
@@ -54,35 +58,10 @@ public:
       .WillRepeatedly(ReadFromFile);
   }
 
-  void TearDown() override {
-    delete[] fileData;
-  }
-
-  // Return true, iff the given data is equal to the data of the file at the given offset.
-  bool fileContentCorrect(char *content, size_t count, off_t offset) {
-    return 0 == memcmp(content, fileData + offset, count);
-  }
-
-  // This read() mock implementation reads from the stored random data.
+  // This read() mock implementation reads from the stored virtual file.
   Action<int(int, void*, size_t, off_t)> ReadFromFile = Invoke([this](int, void *buf, size_t count, off_t offset) {
-    size_t realCount = min(count, testData.fileSize() - offset);
-    memcpy(buf, fileData+offset, realCount);
-    return realCount;
+    return testFile->read(buf, count, offset);
   });
-private:
-  void setupFileData() {
-    fileData = new char[testData.fileSize()];
-    fillFileWithRandomData();
-  }
-  void fillFileWithRandomData() {
-    long long int val = 1;
-    for(unsigned int i=0; i<testData.fileSize()/sizeof(long long int); ++i) {
-      //MMIX linear congruential generator
-      val *= 6364136223846793005L;
-      val += 1442695040888963407;
-      reinterpret_cast<long long int*>(fileData)[i] = val;
-    }
-  }
 };
 INSTANTIATE_TEST_CASE_P(FuseReadReturnedDataTest, FuseReadReturnedDataTest, Combine(Values(0,1,10,1000,1024, 10*1024*1024), Values(0, 1, 10, 1024, 10*1024*1024), Values(0, 1, 10, 1024, 10*1024*1024)));
 
@@ -90,6 +69,6 @@ INSTANTIATE_TEST_CASE_P(FuseReadReturnedDataTest, FuseReadReturnedDataTest, Comb
 TEST_P(FuseReadReturnedDataTest, ReturnedDataRangeIsCorrect) {
   char *buf = new char[testData.count];
   ReadFile(FILENAME, buf, testData.count, testData.offset);
-  EXPECT_TRUE(fileContentCorrect(buf, testData.count, testData.offset));
+  EXPECT_TRUE(testFile->fileContentEqual(buf, testData.count, testData.offset));
   delete[] buf;
 }
