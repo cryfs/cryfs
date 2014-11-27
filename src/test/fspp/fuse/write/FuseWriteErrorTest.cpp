@@ -20,7 +20,7 @@ public:
   size_t WRITECOUNT = 512*1024*1024;
 
   void SetUp() override {
-    //Make the file size big enough that fuse should issue at least two reads
+    //Make the file size big enough that fuse should issue at least two writes
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
   }
