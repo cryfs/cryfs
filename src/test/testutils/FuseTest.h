@@ -15,22 +15,22 @@
 #include "FuseThread.h"
 
 #define MOCK_PATH_METHOD1(NAME, RETURNTYPE)                        \
-  RETURNTYPE NAME(const boost::filesystem::path &path) override {                 \
+  RETURNTYPE NAME(const boost::filesystem::path &path) override {  \
     return NAME(path.c_str());                                     \
   }                                                                \
   MOCK_METHOD1(NAME, RETURNTYPE(const char*));                     \
 
-#define MOCK_PATH_METHOD2(NAME, RETURNTYPE, PARAM1)                \
+#define MOCK_PATH_METHOD2(NAME, RETURNTYPE, PARAM1)                               \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 param1) override {  \
-    return NAME(path.c_str(), param1);                             \
-  }                                                                \
-  MOCK_METHOD2(NAME, RETURNTYPE(const char*, PARAM1));             \
+    return NAME(path.c_str(), param1);                                            \
+  }                                                                               \
+  MOCK_METHOD2(NAME, RETURNTYPE(const char*, PARAM1));                            \
 
-#define MOCK_PATH_METHOD4(NAME, RETURNTYPE, PARAM1, PARAM2, PARAM3)                  \
+#define MOCK_PATH_METHOD4(NAME, RETURNTYPE, PARAM1, PARAM2, PARAM3)                                 \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 p1, PARAM2 p2, PARAM3 p3) override {  \
-    return NAME(path.c_str(), p1, p2, p3);                                           \
-  }                                                                                  \
-  MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3));               \
+    return NAME(path.c_str(), p1, p2, p3);                                                          \
+  }                                                                                                 \
+  MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3));                              \
 
 class MockFilesystem: public fspp::Filesystem {
 public:
@@ -72,82 +72,31 @@ class FuseTest: public ::testing::Test {
 public:
   const char* FILENAME = "/myfile";
 
-  FuseTest(): fsimpl() {
-    auto defaultAction = ::testing::Throw(fspp::FuseErrnoException(EIO));
-    ON_CALL(fsimpl, openFile(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, closeFile(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, lstat(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, fstat(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, truncate(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, ftruncate(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, read(::testing::_,::testing::_,::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, write(::testing::_,::testing::_,::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, fsync(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, fdatasync(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, access(::testing::_,::testing:: _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, createAndOpenFile(::testing::_,::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, mkdir(::testing::_, ::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, rmdir(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, unlink(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, rename(::testing::_,::testing:: _)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, readDir(::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, utimens(::testing::_, ::testing::_)).WillByDefault(defaultAction);
-    ON_CALL(fsimpl, statfs(::testing::_, ::testing::_)).WillByDefault(defaultAction);
-  }
+  FuseTest();
 
   class TempTestFS {
   public:
-    TempTestFS(MockFilesystem *fsimpl): _mountDir(), _fuse(fsimpl), _fuse_thread(&_fuse) {
-      std::string dirpath = _mountDir.path().native();
-      int argc = 3;
-      const char *argv[] = {"test", "-f", dirpath.c_str()};
-
-      _fuse_thread.start(argc, const_cast<char**>(argv));
-    }
-
-    ~TempTestFS() {
-      _fuse_thread.stop();
-    }
+    TempTestFS(MockFilesystem *fsimpl);
+    virtual ~TempTestFS();
   public:
-    const boost::filesystem::path &mountDir() const {
-      return _mountDir.path();
-    }
+    const boost::filesystem::path &mountDir() const;
   private:
     TempDir _mountDir;
     fspp::fuse::Fuse _fuse;
     FuseThread _fuse_thread;
   };
 
-  std::unique_ptr<TempTestFS> TestFS() {
-    return std::make_unique<TempTestFS>(&fsimpl);
-  }
+  std::unique_ptr<TempTestFS> TestFS();
 
   MockFilesystem fsimpl;
 
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(size_t size);
+
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
-  ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile = ReturnIsFileWithSize(0);
-
-  ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(size_t size) {
-    return ::testing::Invoke([size](const char*, struct ::stat* result) {
-      result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-      result->st_nlink = 1;
-      result->st_size = size;
-    });
-  }
-
-  ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat =
-    ::testing::Invoke([](int, struct ::stat* result) {
-      result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-      result->st_nlink = 1;
-    });
-
-  ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir =
-    ::testing::Invoke([](const char*, struct ::stat* result) {
-      result->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-      result->st_nlink = 1;
-    });
-
-  ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist = ::testing::Throw(fspp::FuseErrnoException(ENOENT));
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile;
+  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat;
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir;
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist;
 
   void ReturnIsFileOnLstat(const bf::path &path);
   void ReturnIsFileOnLstatWithSize(const bf::path &path, const size_t size);
