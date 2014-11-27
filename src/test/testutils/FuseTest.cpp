@@ -15,6 +15,10 @@ void FuseTest::ReturnIsFileOnLstat(const bf::path &path) {
   EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsFile);
 }
 
+void FuseTest::ReturnIsFileOnLstatWithSize(const bf::path &path, const size_t size) {
+  EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsFileWithSize(size));
+}
+
 void FuseTest::ReturnIsDirOnLstat(const bf::path &path) {
   EXPECT_CALL(fsimpl, lstat(::testing::StrEq(path.c_str()), ::testing::_)).WillRepeatedly(ReturnIsDir);
 }

@@ -399,8 +399,6 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
   UNUSED(path);
   try {
-    //printf("Reading from file %d\n", fileinfo->fh);
-    //fflush(stdout);
     return _fs->read(fileinfo->fh, buf, size, offset);
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
