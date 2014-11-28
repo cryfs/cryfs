@@ -2,12 +2,12 @@
 
 #include "CryDevice.h"
 #include "CryOpenFile.h"
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::CHECK_RETVAL;
+using fspp::fuse::CHECK_RETVAL;
 
 using std::unique_ptr;
 using std::make_unique;

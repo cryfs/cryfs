@@ -3,7 +3,7 @@
 #include "CryDir.h"
 #include "CryFile.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using std::unique_ptr;
 
@@ -11,7 +11,7 @@ using std::unique_ptr;
 using std::make_unique;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::CHECK_RETVAL;
+using fspp::fuse::CHECK_RETVAL;
 
 namespace cryfs {
 
@@ -29,7 +29,7 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
     return make_unique<CryFile>(this, path);
   }
 
-  throw fspp::FuseErrnoException(ENOENT);
+  throw fspp::fuse::FuseErrnoException(ENOENT);
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {

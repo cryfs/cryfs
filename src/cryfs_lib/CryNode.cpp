@@ -3,12 +3,12 @@
 #include <sys/time.h>
 
 #include "CryDevice.h"
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of an exception hierarchy
-using fspp::CHECK_RETVAL;
+using fspp::fuse::CHECK_RETVAL;
 
 namespace cryfs {
 

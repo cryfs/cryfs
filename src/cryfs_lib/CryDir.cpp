@@ -5,12 +5,12 @@
 #include <fcntl.h>
 #include <dirent.h>
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 #include "CryDevice.h"
 #include "CryFile.h"
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::CHECK_RETVAL;
+using fspp::fuse::CHECK_RETVAL;
 
 namespace bf = boost::filesystem;
 
@@ -54,7 +54,7 @@ void CryDir::rmdir() {
 unique_ptr<vector<string>> CryDir::children() const {
   DIR *dir = ::opendir(base_path().c_str());
   if (dir == nullptr) {
-    throw fspp::FuseErrnoException(errno);
+    throw fspp::fuse::FuseErrnoException(errno);
   }
 
   // Set errno=0 so we can detect whether it changed later
@@ -71,7 +71,7 @@ unique_ptr<vector<string>> CryDir::children() const {
   if (errno != 0) {
     int readdir_errno = errno;
     ::closedir(dir);
-    throw fspp::FuseErrnoException(readdir_errno);
+    throw fspp::fuse::FuseErrnoException(readdir_errno);
   }
   int retval = ::closedir(dir);
   CHECK_RETVAL(retval);
