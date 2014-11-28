@@ -31,9 +31,9 @@ public:
   virtual void unlink(const boost::filesystem::path &path) = 0;
   virtual void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) = 0;
   virtual void utimens(const boost::filesystem::path &path, const timespec times[2]) = 0;
+  virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
   //TODO Unit-Tests for all functions below
   virtual std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path) = 0;
-  virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
 };
 
 //TODO Test error cases handled by libfuse (e.g. mkdir: Already exists, rmdir: Doesn't exist, ...)
