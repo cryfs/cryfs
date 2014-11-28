@@ -25,5 +25,5 @@ TEST_P(FuseFTruncateFileDescriptorTest, FileDescriptorIsCorrect) {
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(GetParam());
 
-  FTruncateFile(FILENAME, GetParam());
+  FTruncateFile(FILENAME, 0);
 }
