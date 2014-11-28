@@ -24,8 +24,8 @@ public:
   virtual void write(int descriptor, const void *buf, size_t count, off_t offset) = 0;
   virtual void fsync(int descriptor) = 0;
   virtual void fdatasync(int descriptor) = 0;
-  //TODO Unit-Tests for all functions below
   virtual void access(const boost::filesystem::path &path, int mask) = 0;
+  //TODO Unit-Tests for all functions below
   virtual void mkdir(const boost::filesystem::path &path, mode_t mode) = 0;
   virtual void rmdir(const boost::filesystem::path &path) = 0;
   virtual void unlink(const boost::filesystem::path &path) = 0;
