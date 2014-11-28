@@ -7,7 +7,7 @@
 class FuseUtimensTest: public FuseTest {
 public:
   const char *FILENAME = "/myfile";
-  struct timespec TIMEVALUES[2];
+  struct timespec TIMEVALUES[2] = {makeTimespec(0,0), makeTimespec(0,0)};
 
   void Utimens(const char *filename, const timespec times[2]);
   int UtimensAllowError(const char *filename, const timespec times[2]);
