@@ -1,6 +1,6 @@
 #include "testutils/FuseFstatTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -10,7 +10,7 @@ using ::testing::Eq;
 using ::testing::Return;
 using ::testing::Throw;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 // Cite from FUSE documentation on the fgetattr function:
 // "Currently this is only called after the create() method if that is implemented (see above).

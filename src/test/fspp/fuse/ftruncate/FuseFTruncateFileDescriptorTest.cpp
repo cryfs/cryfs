@@ -1,6 +1,6 @@
 #include "testutils/FuseFTruncateTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -10,7 +10,7 @@ using ::testing::Eq;
 using ::testing::Return;
 using ::testing::Throw;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseFTruncateFileDescriptorTest: public FuseFTruncateTest, public WithParamInterface<int> {
 };

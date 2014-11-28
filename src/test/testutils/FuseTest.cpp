@@ -12,7 +12,7 @@ using std::make_unique;
 
 namespace bf = boost::filesystem;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 MockFilesystem::MockFilesystem() {}
 MockFilesystem::~MockFilesystem() {}
@@ -83,7 +83,7 @@ Action<void(const char*, struct ::stat*)> FuseTest::ReturnIsDir =
     result->st_nlink = 1;
   });
 
-Action<void(const char*, struct ::stat*)> FuseTest::ReturnDoesntExist = Throw(fspp::FuseErrnoException(ENOENT));
+Action<void(const char*, struct ::stat*)> FuseTest::ReturnDoesntExist = Throw(fspp::fuse::FuseErrnoException(ENOENT));
 
 void FuseTest::OnOpenReturnFileDescriptor(const char *filename, int descriptor) {
   EXPECT_CALL(fsimpl, openFile(StrEq(filename), _)).Times(1).WillOnce(Return(descriptor));

@@ -1,6 +1,6 @@
 #include "testutils/FuseWriteTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -11,7 +11,7 @@ using ::testing::Return;
 using ::testing::Invoke;
 using ::testing::Throw;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseWriteFileDescriptorTest: public FuseWriteTest, public WithParamInterface<int> {
 };

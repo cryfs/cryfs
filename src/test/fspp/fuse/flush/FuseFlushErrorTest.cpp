@@ -1,6 +1,6 @@
 #include "testutils/FuseFlushTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::WithParamInterface;
 using ::testing::StrEq;
@@ -11,7 +11,7 @@ using ::testing::AtLeast;
 using ::testing::Values;
 using ::testing::_;
 
-using fspp::FuseErrnoException;
+using fspp::fuse::FuseErrnoException;
 
 class FuseFlushErrorTest: public FuseFlushTest, public WithParamInterface<int> {
 };

@@ -5,8 +5,8 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "fspp/impl/Filesystem.h"
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/Filesystem.h"
+#include "fspp/fuse/FuseErrnoException.h"
 #include "fspp/fuse/Fuse.h"
 
 #include <boost/filesystem.hpp>
@@ -32,7 +32,7 @@
   }                                                                                                 \
   MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3));                              \
 
-class MockFilesystem: public fspp::Filesystem {
+class MockFilesystem: public fspp::fuse::Filesystem {
 public:
   MockFilesystem();
   virtual ~MockFilesystem();

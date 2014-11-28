@@ -2,8 +2,8 @@
 #include <memory>
 #include <cassert>
 
-#include "fspp/impl/FuseErrnoException.h"
-#include "fspp/impl/Filesystem.h"
+#include "fspp/fuse/FuseErrnoException.h"
+#include "Filesystem.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -223,7 +223,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   try {
     _fs->lstat(path, stbuf);
     return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -243,7 +243,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   try {
   _fs->fstat(fileinfo->fh, stbuf);
   return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -270,7 +270,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
   try {
     _fs->mkdir(path, mode);
     return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -280,7 +280,7 @@ int Fuse::unlink(const bf::path &path) {
   try {
     _fs->unlink(path);
     return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -289,7 +289,7 @@ int Fuse::rmdir(const bf::path &path) {
   try {
     _fs->rmdir(path);
     return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }
@@ -309,7 +309,7 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   try {
     _fs->rename(from, to);
     return 0;
-  } catch(fspp::FuseErrnoException &e) {
+  } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
 }

@@ -6,6 +6,7 @@
 #include <errno.h>
 
 namespace fspp {
+namespace fuse{
 
 class FuseErrnoException: public std::runtime_error {
 public:
@@ -35,6 +36,7 @@ inline int FuseErrnoException::getErrno() const {
   return _errno;
 }
 
-} /* namespace fspp */
+}
+}
 
 #endif /* FSPP_FUSE_FUSEERRNOEXCEPTION_H_ */

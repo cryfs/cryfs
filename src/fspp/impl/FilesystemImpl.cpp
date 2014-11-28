@@ -5,7 +5,7 @@
 #include <fspp/fs_interface/Device.h>
 #include <fspp/fs_interface/Dir.h>
 
-#include "FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 #include "fspp/fs_interface/File.h"
 
 
@@ -31,7 +31,7 @@ unique_ptr<File> FilesystemImpl::LoadFile(const bf::path &path) {
   auto node = _device->Load(path);
   auto file = dynamic_pointer_move<File>(node);
   if (!file) {
-	  throw FuseErrnoException(EISDIR);
+	  throw fuse::FuseErrnoException(EISDIR);
   }
   return file;
 }
@@ -40,7 +40,7 @@ unique_ptr<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   auto node = _device->Load(path);
   auto dir = dynamic_pointer_move<Dir>(node);
   if (!dir) {
-    throw FuseErrnoException(ENOTDIR);
+    throw fuse::FuseErrnoException(ENOTDIR);
   }
   return dir;
 }

@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -10,7 +10,7 @@ using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseFTruncateErrorTest: public FuseFTruncateTest, public WithParamInterface<int> {
 };

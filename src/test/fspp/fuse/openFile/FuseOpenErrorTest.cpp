@@ -1,6 +1,6 @@
 #include "testutils/FuseOpenTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -9,7 +9,7 @@ using ::testing::Throw;
 using ::testing::StrEq;
 using ::testing::_;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseOpenErrorTest: public FuseOpenTest, public WithParamInterface<int> {
 };

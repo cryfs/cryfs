@@ -8,6 +8,7 @@
 #include <sys/statvfs.h>
 
 namespace fspp {
+namespace fuse {
 class Filesystem {
 public:
   virtual ~Filesystem() {}
@@ -35,6 +36,7 @@ public:
   virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
 };
 
+}
 }
 
 #endif

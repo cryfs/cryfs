@@ -11,9 +11,9 @@
 
 namespace fspp {
 class Device;
-class Filesystem;
 
 namespace fuse {
+class Filesystem;
 
 class Fuse {
 public:

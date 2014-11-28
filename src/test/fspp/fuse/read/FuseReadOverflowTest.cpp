@@ -1,6 +1,6 @@
 #include "testutils/FuseReadTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -11,7 +11,7 @@ using ::testing::Action;
 
 using std::min;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseReadOverflowTest: public FuseReadTest {
 public:

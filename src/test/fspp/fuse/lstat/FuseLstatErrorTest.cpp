@@ -1,6 +1,6 @@
 #include "testutils/FuseLstatTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::StrEq;
 using ::testing::_;
@@ -8,7 +8,7 @@ using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using fspp::FuseErrnoException;
+using fspp::fuse::FuseErrnoException;
 
 class FuseLstatErrorTest: public FuseLstatTest, public WithParamInterface<int> {
 public:

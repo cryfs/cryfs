@@ -3,7 +3,7 @@
 
 #include "test/testutils/FuseTest.h"
 
-using namespace fspp;
+using namespace fspp::fuse;
 using namespace fspp::fuse;
 
 using ::testing::_;

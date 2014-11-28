@@ -2,7 +2,7 @@
 
 #include "test/testutils/VirtualTestFile.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 #include <tuple>
 #include <cstdlib>
@@ -23,7 +23,7 @@ using std::min;
 using std::unique_ptr;
 using std::make_unique;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 // We can't test the count or size parameter directly, because fuse doesn't pass them 1:1.
 // It usually asks to read bigger blocks (probably does some caching).

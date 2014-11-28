@@ -1,6 +1,6 @@
 #include "testutils/FuseReadTest.h"
 
-#include "fspp/impl/FuseErrnoException.h"
+#include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
@@ -12,7 +12,7 @@ using ::testing::Return;
 using ::testing::Invoke;
 using ::testing::Throw;
 
-using namespace fspp;
+using namespace fspp::fuse;
 
 class FuseReadErrorTest: public FuseReadTest, public WithParamInterface<int> {
 public:

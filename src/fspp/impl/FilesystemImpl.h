@@ -3,7 +3,7 @@
 #define FSPP_IMPL_FILESYSTEMIMPL_H_
 
 #include "FuseOpenFileList.h"
-#include "Filesystem.h"
+#include "fspp/fuse/Filesystem.h"
 
 #include "fspp/utils/macros.h"
 
@@ -13,7 +13,7 @@ class File;
 class OpenFile;
 class Dir;
 
-class FilesystemImpl: public Filesystem {
+class FilesystemImpl: public fuse::Filesystem {
 public:
   FilesystemImpl(Device *device);
 	virtual ~FilesystemImpl();
