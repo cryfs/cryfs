@@ -16,7 +16,7 @@ int FuseMkdirTest::MkdirAllowError(const char *dirname, mode_t mode) {
 }
 
 Action<void(const char*, mode_t)> FuseMkdirTest::FromNowOnReturnIsDirOnLstat() {
-  return Invoke([this](const char *filename, mode_t) {
-    ReturnIsDirOnLstat(filename);
+  return Invoke([this](const char *dirname, mode_t) {
+    ReturnIsDirOnLstat(dirname);
   });
 }
