@@ -26,8 +26,8 @@ public:
   virtual void fsync(int descriptor) = 0;
   virtual void fdatasync(int descriptor) = 0;
   virtual void access(const boost::filesystem::path &path, int mask) = 0;
-  //TODO Unit-Tests for all functions below
   virtual void mkdir(const boost::filesystem::path &path, mode_t mode) = 0;
+  //TODO Unit-Tests for all functions below
   virtual void rmdir(const boost::filesystem::path &path) = 0;
   virtual void unlink(const boost::filesystem::path &path) = 0;
   virtual void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) = 0;
