@@ -22,8 +22,8 @@ public:
   virtual void ftruncate(int descriptor, off_t size) = 0;
   virtual int read(int descriptor, void *buf, size_t count, off_t offset) = 0;
   virtual void write(int descriptor, const void *buf, size_t count, off_t offset) = 0;
-  //TODO Unit-Tests for all functions below
   virtual void fsync(int descriptor) = 0;
+  //TODO Unit-Tests for all functions below
   virtual void fdatasync(int descriptor) = 0;
   virtual void access(const boost::filesystem::path &path, int mask) = 0;
   virtual void mkdir(const boost::filesystem::path &path, mode_t mode) = 0;
