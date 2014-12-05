@@ -1,13 +1,21 @@
 #include "gtest/gtest.h"
 
 #include "blobstore/implementations/ondisk/Data.h"
+#include "blobstore/implementations/ondisk/FileDoesntExistException.h"
+
 #include "test/testutils/VirtualTestFile.h"
+#include "test/testutils/TempFile.h"
+
+#include <fstream>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using blobstore::ondisk::Data;
+using std::ifstream;
+using std::ofstream;
+
+using namespace blobstore::ondisk;
 
 class DataTest: public Test {
 public:
@@ -25,9 +33,9 @@ public:
     std::memcpy(data->data(), fillData.data(), fillData.size());
   }
 
-  void CheckData(const VirtualTestFile &expectedData, const Data *data) {
-    ASSERT_EQ(expectedData.size(), data->size());
-    EXPECT_EQ(0, std::memcmp(expectedData.data(), data->data(), expectedData.size()));
+  void EXPECT_DATA_CORRECT(const VirtualTestFile &expectedData, const Data &data) {
+    ASSERT_EQ(expectedData.size(), data.size());
+    EXPECT_EQ(0, std::memcmp(expectedData.data(), data.data(), expectedData.size()));
   }
 };
 
@@ -41,11 +49,28 @@ public:
     DataTest::FillData(randomData, data);
   }
 
-  void CheckData(const Data *data) {
-    DataTest::CheckData(randomData, data);
+  void StoreData(const bf::path &filepath) {
+    ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
+    file.write(randomData.data(), randomData.size());
+  }
+
+  void EXPECT_STORED_FILE_DATA_CORRECT(const bf::path &filepath) {
+    EXPECT_EQ(randomData.size(), bf::file_size(filepath));
+
+    ifstream file(filepath.c_str(), std::ios::binary);
+    char *read_data = new char[randomData.size()];
+    file.read(read_data, randomData.size());
+
+    EXPECT_EQ(0, std::memcmp(randomData.data(), read_data, randomData.size()));
+    delete[] read_data;
+  }
+
+  void EXPECT_DATA_CORRECT(const Data &data) {
+    DataTest::EXPECT_DATA_CORRECT(randomData, data);
   }
 };
-INSTANTIATE_TEST_CASE_P(DataTestWithSizeParam, DataTestWithSizeParam, Values(0, 1, 1024, 4096, 10*1024*1024));
+
+INSTANTIATE_TEST_CASE_P(DataTestWithSizeParam, DataTestWithSizeParam, Values(0, 1, 2, 1024, 4096, 10*1024*1024));
 
 // Working on a large data area without a crash is a good indicator that we
 // are actually working on memory that was validly allocated for us.
@@ -53,12 +78,52 @@ TEST_P(DataTestWithSizeParam, WriteAndCheck) {
   Data data(GetParam());
 
   FillData(&data);
-  CheckData(&data);
+  EXPECT_DATA_CORRECT(data);
 }
 
 TEST_P(DataTestWithSizeParam, Size) {
   Data data(GetParam());
   EXPECT_EQ(GetParam(), data.size());
+}
+
+TEST_P(DataTestWithSizeParam, CheckStoredFile) {
+  Data data(GetParam());
+  FillData(&data);
+
+  TempFile file;
+  data.StoreToFile(file.path());
+
+  EXPECT_STORED_FILE_DATA_CORRECT(file.path());
+}
+
+TEST_P(DataTestWithSizeParam, CheckLoadedData) {
+  TempFile file;
+  StoreData(file.path());
+
+  Data data = Data::LoadFromFile(file.path());
+
+  EXPECT_DATA_CORRECT(data);
+}
+
+TEST_P(DataTestWithSizeParam, StoreDoesntChangeData) {
+  Data data(GetParam());
+  FillData(&data);
+
+  TempFile file;
+  data.StoreToFile(file.path());
+
+  EXPECT_DATA_CORRECT(data);
+}
+
+TEST_P(DataTestWithSizeParam, StoreAndLoad) {
+  Data data(GetParam());
+  FillData(&data);
+
+  TempFile file;
+  data.StoreToFile(file.path());
+  Data loaded_data = Data::LoadFromFile(file.path());
+
+  EXPECT_DATA_CORRECT(loaded_data);
 }
 
 TEST_F(DataTest, InitializeWithZeroes) {
@@ -98,4 +163,10 @@ TEST_F(DataTest, InaccessibleAfterDeletion) {
   );
 }
 
-//TODO Test cases for storing/loading
+TEST_F(DataTest, LoadingNonexistingFile) {
+  TempFile file(false); // Pass false to constructor, so the tempfile is not created
+  EXPECT_THROW(
+    Data::LoadFromFile(file.path()),
+    FileDoesntExistException
+  );
+}
