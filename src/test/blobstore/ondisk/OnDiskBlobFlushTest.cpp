@@ -86,7 +86,7 @@ TEST_P(OnDiskBlobFlushTest, AfterLoad_FlushingWritesCorrectData) {
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
 
-TEST_P(OnDiskBlobFlushTest, AfterCreate_DestructorFlushes) {
+TEST_P(OnDiskBlobFlushTest, AfterCreate_FlushesWhenDestructed) {
   {
     auto blob = CreateBlob();
     WriteDataToBlob(blob);
@@ -94,7 +94,7 @@ TEST_P(OnDiskBlobFlushTest, AfterCreate_DestructorFlushes) {
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
 
-TEST_P(OnDiskBlobFlushTest, AfterLoad_DestructorFlushes) {
+TEST_P(OnDiskBlobFlushTest, AfterLoad_FlushesWhenDestructed) {
   {
     auto blob = CreateBlobAndLoadItFromDisk();
     WriteDataToBlob(blob);
