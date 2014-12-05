@@ -5,7 +5,6 @@
 #include "blobstore/interface/BlobStore.h"
 
 #include <boost/filesystem/path.hpp>
-#include <iostream>
 
 namespace blobstore {
 namespace ondisk {
@@ -20,10 +19,6 @@ public:
 
 private:
   const boost::filesystem::path _rootdir;
-
-  void _storeBlobData(const std::string &key, const OnDiskBlob *blob);
-  std::unique_ptr<Blob> _createBlobFromStream(std::istream &stream);
-  size_t _getStreamSize(std::istream &stream);
 };
 
 } /* namespace ondisk */
