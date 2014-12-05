@@ -35,8 +35,6 @@ public:
   virtual std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path) = 0;
 };
 
-//TODO Test error cases handled by libfuse (e.g. mkdir: Already exists, rmdir: Doesn't exist, ...)
-
 }
 }
 
