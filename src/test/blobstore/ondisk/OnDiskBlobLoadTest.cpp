@@ -25,8 +25,7 @@ public:
 
   void SetFileSize(size_t size) {
     Data data(size);
-    ofstream writer(file.path().c_str(), ios::trunc | ios::binary);
-    writer.write((char*)data.data(), size);
+    data.StoreToFile(file.path());
   }
 };
 

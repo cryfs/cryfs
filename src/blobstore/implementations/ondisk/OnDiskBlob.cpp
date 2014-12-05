@@ -84,12 +84,7 @@ void OnDiskBlob::_fillDataWithZeroes() {
 }
 
 void OnDiskBlob::_storeToDisk() const {
-  ofstream file(_filepath.c_str(), ios::binary | ios::trunc);
-  _storeDataToStream(file);
-}
-
-void OnDiskBlob::_storeDataToStream(ostream &stream) const {
-  stream.write((const char*)_data.data(), _size);
+  _data.StoreToFile(_filepath);
 }
 
 } /* namespace ondisk */

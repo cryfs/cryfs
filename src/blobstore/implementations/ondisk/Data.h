@@ -6,6 +6,8 @@
 //TODO Move this to a more generic utils
 #include "fspp/utils/macros.h"
 
+#include <boost/filesystem/path.hpp>
+
 namespace blobstore {
 namespace ondisk {
 
@@ -17,12 +19,16 @@ public:
   void *data();
   const void *data() const;
 
+  size_t size() const;
+
+  void StoreToFile(const boost::filesystem::path &filepath) const;
+
 private:
+  size_t _size;
   void *_data;
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
-
 
 } /* namespace ondisk */
 } /* namespace blobstore */
