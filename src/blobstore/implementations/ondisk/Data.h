@@ -7,6 +7,7 @@
 #include "fspp/utils/macros.h"
 
 #include <boost/filesystem/path.hpp>
+#include <memory>
 
 namespace blobstore {
 namespace ondisk {
@@ -14,6 +15,7 @@ namespace ondisk {
 class Data {
 public:
   Data(size_t size);
+  Data(Data &&rhs); // move constructor
   virtual ~Data();
 
   void *data();
@@ -21,11 +23,17 @@ public:
 
   size_t size() const;
 
+  void FillWithZeroes();
+
   void StoreToFile(const boost::filesystem::path &filepath) const;
+  static std::unique_ptr<Data> LoadFromFile(const boost::filesystem::path &filepath);
 
 private:
   size_t _size;
   void *_data;
+
+  static size_t _getStreamSize(std::istream &stream);
+  void _readFromStream(std::istream &stream);
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };

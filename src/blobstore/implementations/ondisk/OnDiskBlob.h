@@ -14,7 +14,6 @@ class OnDiskBlobStore;
 
 class OnDiskBlob: public Blob {
 public:
-  OnDiskBlob(const boost::filesystem::path &filepath, size_t size);
   virtual ~OnDiskBlob();
 
   static std::unique_ptr<OnDiskBlob> LoadFromDisk(const boost::filesystem::path &filepath);
@@ -27,13 +26,12 @@ public:
 
 private:
   const boost::filesystem::path _filepath;
-  size_t _size;
   Data _data;
 
+  OnDiskBlob(const boost::filesystem::path &filepath, size_t size);
+  OnDiskBlob(const boost::filesystem::path &filepath, Data &&data);
+
   static void _assertFileDoesntExist(const boost::filesystem::path &filepath);
-  static size_t _getStreamSize(std::istream &stream);
-  void _loadDataFromStream(std::istream &stream);
-  void _storeDataToStream(std::ostream &stream) const;
   void _fillDataWithZeroes();
   void _storeToDisk() const;
 };

@@ -21,7 +21,11 @@ namespace blobstore {
 namespace ondisk {
 
 OnDiskBlob::OnDiskBlob(const bf::path &filepath, size_t size)
- : _filepath(filepath), _size(size), _data(size) {
+ : _filepath(filepath), _data(size) {
+}
+
+OnDiskBlob::OnDiskBlob(const bf::path &filepath, Data &&data)
+ : _filepath(filepath), _data(std::move(data)) {
 }
 
 OnDiskBlob::~OnDiskBlob() {
@@ -36,41 +40,21 @@ const void *OnDiskBlob::data() const {
 }
 
 size_t OnDiskBlob::size() const {
-  return _size;
+  return _data.size();
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::LoadFromDisk(const bf::path &filepath) {
-  ifstream file(filepath.c_str(), ios::binary);
-  size_t size = _getStreamSize(file);
+  auto data = Data::LoadFromFile(filepath);
 
-  auto blob = make_unique<OnDiskBlob>(filepath, size);
-  blob->_loadDataFromStream(file);
-  return blob;
-}
-
-size_t OnDiskBlob::_getStreamSize(istream &stream) {
-  auto current_pos = stream.tellg();
-
-  //Retrieve length
-  stream.seekg(0, stream.end);
-  auto endpos = stream.tellg();
-
-  //Restore old position
-  stream.seekg(current_pos, stream.beg);
-
-  return endpos - current_pos;
-}
-
-void OnDiskBlob::_loadDataFromStream(istream &stream) {
-  stream.read((char*)_data.data(), _size);
+  return unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, std::move(*data.get())));
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::CreateOnDisk(const bf::path &filepath, size_t size) {
   _assertFileDoesntExist(filepath);
-  auto blob = make_unique<OnDiskBlob>(filepath, size);
+  auto blob = unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, size));
   blob->_fillDataWithZeroes();
   blob->_storeToDisk();
-  return std::move(blob);
+  return blob;
 }
 
 void OnDiskBlob::_assertFileDoesntExist(const bf::path &filepath) {
@@ -80,7 +64,7 @@ void OnDiskBlob::_assertFileDoesntExist(const bf::path &filepath) {
 }
 
 void OnDiskBlob::_fillDataWithZeroes() {
-  std::memset(_data.data(), 0, _size);
+  _data.FillWithZeroes();
 }
 
 void OnDiskBlob::_storeToDisk() const {
