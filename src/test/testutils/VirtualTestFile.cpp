@@ -23,7 +23,7 @@ void VirtualTestFile::fillFileWithRandomData(long long int IV) {
   }
 }
 
-const char *VirtualTestFile::data() {
+const char *VirtualTestFile::data() const {
   return _fileData;
 }
 
@@ -33,7 +33,7 @@ int VirtualTestFile::read(void *buf, size_t count, off_t offset) {
   return realCount;
 }
 
-size_t VirtualTestFile::size() {
+size_t VirtualTestFile::size() const {
   return _size;
 }
 
