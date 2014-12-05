@@ -14,9 +14,9 @@ public:
   // Return true, iff the given data is equal to the data of the file at the given offset.
   bool fileContentEqual(const char *content, size_t count, off_t offset);
 
-  const char *data();
+  const char *data() const;
 
-  size_t size();
+  size_t size() const;
 
 protected:
   char *_fileData;
