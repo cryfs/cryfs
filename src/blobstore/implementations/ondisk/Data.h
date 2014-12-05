@@ -32,6 +32,7 @@ private:
   size_t _size;
   void *_data;
 
+  static void _assertFileExists(const std::ifstream &file, const boost::filesystem::path &filepath);
   static size_t _getStreamSize(std::istream &stream);
   void _readFromStream(std::istream &stream);
 

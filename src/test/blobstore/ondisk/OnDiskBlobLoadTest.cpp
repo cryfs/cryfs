@@ -5,6 +5,7 @@
 
 #include "blobstore/implementations/ondisk/OnDiskBlob.h"
 #include "blobstore/implementations/ondisk/Data.h"
+#include "blobstore/implementations/ondisk/FileDoesntExistException.h"
 
 #include <fstream>
 
@@ -64,4 +65,10 @@ TEST_P(OnDiskBlobLoadTest, LoadedDataIsCorrect) {
   EXPECT_BLOB_DATA_EQ(randomData, *blob);
 }
 
-//TODO Test file doesn't exist
+TEST_F(OnDiskBlobLoadTest, LoadNotExistingBlob) {
+  TempFile file2(false); // Pass false, so the file isn't created.
+  EXPECT_THROW(
+      OnDiskBlob::LoadFromDisk(file2.path()),
+      FileDoesntExistException
+  );
+}

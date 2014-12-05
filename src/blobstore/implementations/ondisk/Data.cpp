@@ -1,4 +1,6 @@
-#include <blobstore/implementations/ondisk/Data.h>
+#include "Data.h"
+
+#include "FileDoesntExistException.h"
 
 #include <stdexcept>
 #include <fstream>
@@ -56,11 +58,18 @@ void Data::StoreToFile(const bf::path &filepath) const {
 
 Data Data::LoadFromFile(const bf::path &filepath) {
   ifstream file(filepath.c_str(), ios::binary);
+  _assertFileExists(file, filepath);
   size_t size = _getStreamSize(file);
 
   Data result(size);
   result._readFromStream(file);
   return result;
+}
+
+void Data::_assertFileExists(const ifstream &file, const bf::path &filepath) {
+  if (!file.good()) {
+    throw FileDoesntExistException(filepath);
+  }
 }
 
 size_t Data::_getStreamSize(istream &stream) {
