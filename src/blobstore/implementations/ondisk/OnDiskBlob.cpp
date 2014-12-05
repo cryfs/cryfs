@@ -29,6 +29,7 @@ OnDiskBlob::OnDiskBlob(const bf::path &filepath, Data &&data)
 }
 
 OnDiskBlob::~OnDiskBlob() {
+  _storeToDisk();
 }
 
 void *OnDiskBlob::data() {
@@ -69,6 +70,10 @@ void OnDiskBlob::_fillDataWithZeroes() {
 
 void OnDiskBlob::_storeToDisk() const {
   _data.StoreToFile(_filepath);
+}
+
+void OnDiskBlob::flush() {
+  _storeToDisk();
 }
 
 } /* namespace ondisk */

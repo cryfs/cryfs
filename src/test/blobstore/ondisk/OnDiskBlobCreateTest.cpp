@@ -53,3 +53,5 @@ TEST_P(OnDiskBlobCreateSizeTest, InMemorySizeIsCorrect) {
   EXPECT_EQ(GetParam(), blob->size());
 }
 
+//TODO Test File is zeroed out
+//TODO Test in-memory is zeroed out

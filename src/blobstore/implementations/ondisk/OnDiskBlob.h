@@ -24,6 +24,8 @@ public:
   void *data() override;
   const void *data() const override;
 
+  void flush() override;
+
   size_t size() const override;
 
 private:

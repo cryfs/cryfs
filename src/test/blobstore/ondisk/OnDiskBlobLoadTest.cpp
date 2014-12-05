@@ -39,3 +39,7 @@ TEST_P(OnDiskBlobLoadSizeTest, FileSizeIsCorrect) {
 
   EXPECT_EQ(GetParam(), blob->size());
 }
+
+//TODO Load and compare actual data
+//TODO Test file doesn't exist
+
