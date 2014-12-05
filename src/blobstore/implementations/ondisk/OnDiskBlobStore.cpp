@@ -10,9 +10,11 @@ namespace ondisk {
 OnDiskBlobStore::OnDiskBlobStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
-unique_ptr<Blob> OnDiskBlobStore::create(const std::string &key, size_t size) {
+BlobStore::BlobWithKey OnDiskBlobStore::create(const std::string &key, size_t size) {
   auto file_path = _rootdir / key;
-  return OnDiskBlob::CreateOnDisk(file_path, size);
+  auto blob = OnDiskBlob::CreateOnDisk(file_path, size);
+
+  return BlobStore::BlobWithKey(key, std::move(blob));
 }
 
 unique_ptr<Blob> OnDiskBlobStore::load(const std::string &key) {

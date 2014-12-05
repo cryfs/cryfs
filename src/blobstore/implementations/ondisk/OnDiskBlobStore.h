@@ -16,7 +16,7 @@ class OnDiskBlobStore: public BlobStore {
 public:
   OnDiskBlobStore(const boost::filesystem::path &rootdir);
 
-  std::unique_ptr<Blob> create(const std::string &key, size_t size) override;
+  BlobWithKey create(const std::string &key, size_t size) override;
   std::unique_ptr<Blob> load(const std::string &key) override;
 
 private:
