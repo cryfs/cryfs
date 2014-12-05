@@ -61,3 +61,7 @@ TEST_F(DataTest, InaccessibleAfterDeletion) {
       ""
   );
 }
+
+//TODO Test cases for storing/loading
+//TODO Test case for FillWithZeroes
+//TODO Test case for size()

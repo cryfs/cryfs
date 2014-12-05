@@ -38,20 +38,34 @@ TEST_F(OnDiskBlobCreateTest, CreatingExistingBlobThrowsException) {
   EXPECT_THROW(OnDiskBlob::CreateOnDisk(file.path(), 0), FileAlreadyExistsException);
 }
 
-class OnDiskBlobCreateSizeTest: public OnDiskBlobCreateTest, public WithParamInterface<size_t> {};
+class OnDiskBlobCreateSizeTest: public OnDiskBlobCreateTest, public WithParamInterface<size_t> {
+public:
+  unique_ptr<OnDiskBlob> blob;
+  Data ZEROES;
+
+  OnDiskBlobCreateSizeTest():
+    blob(OnDiskBlob::CreateOnDisk(file.path(), GetParam())),
+    ZEROES(blob->size())
+  {
+    ZEROES.FillWithZeroes();
+  }
+};
 INSTANTIATE_TEST_CASE_P(OnDiskBlobCreateSizeTest, OnDiskBlobCreateSizeTest, Values(0, 1, 5, 1024, 10*1024*1024));
 
-TEST_P(OnDiskBlobCreateSizeTest, FileSizeIsCorrect) {
-  auto blob = OnDiskBlob::CreateOnDisk(file.path(), GetParam());
-
-  EXPECT_EQ(GetParam(), bf::file_size(file.path()));
+TEST_P(OnDiskBlobCreateSizeTest, OnDiskSizeIsCorrect) {
+  Data fileContent = Data::LoadFromFile(file.path());
+  EXPECT_EQ(GetParam(), fileContent.size());
 }
 
 TEST_P(OnDiskBlobCreateSizeTest, InMemorySizeIsCorrect) {
-  auto blob = OnDiskBlob::CreateOnDisk(file.path(), GetParam());
-
   EXPECT_EQ(GetParam(), blob->size());
 }
 
-//TODO Test File is zeroed out
-//TODO Test in-memory is zeroed out
+TEST_P(OnDiskBlobCreateSizeTest, InMemoryBlobIsZeroedOut) {
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), blob->data(), blob->size()));
+}
+
+TEST_P(OnDiskBlobCreateSizeTest, OnDiskBlobIsZeroedOut) {
+  Data fileContent = Data::LoadFromFile(file.path());
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), fileContent.data(), fileContent.size()));
+}

@@ -42,4 +42,3 @@ TEST_P(OnDiskBlobLoadSizeTest, FileSizeIsCorrect) {
 
 //TODO Load and compare actual data
 //TODO Test file doesn't exist
-
