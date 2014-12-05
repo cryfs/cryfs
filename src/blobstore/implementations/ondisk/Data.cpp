@@ -54,13 +54,13 @@ void Data::StoreToFile(const bf::path &filepath) const {
   file.write((const char*)_data, _size);
 }
 
-unique_ptr<Data> Data::LoadFromFile(const bf::path &filepath) {
+Data Data::LoadFromFile(const bf::path &filepath) {
   ifstream file(filepath.c_str(), ios::binary);
   size_t size = _getStreamSize(file);
 
-  auto blob = make_unique<Data>(size);
-  blob->_readFromStream(file);
-  return blob;
+  Data result(size);
+  result._readFromStream(file);
+  return result;
 }
 
 size_t Data::_getStreamSize(istream &stream) {

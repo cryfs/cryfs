@@ -44,9 +44,9 @@ size_t OnDiskBlob::size() const {
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::LoadFromDisk(const bf::path &filepath) {
-  auto data = Data::LoadFromFile(filepath);
+  Data data = Data::LoadFromFile(filepath);
 
-  return unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, std::move(*data.get())));
+  return unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, std::move(data)));
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::CreateOnDisk(const bf::path &filepath, size_t size) {

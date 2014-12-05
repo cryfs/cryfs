@@ -6,6 +6,8 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "fspp/utils/macros.h"
+
 namespace blobstore {
 namespace ondisk {
 class OnDiskBlob;
@@ -19,6 +21,8 @@ public:
 
 private:
   const boost::filesystem::path _rootdir;
+
+  DISALLOW_COPY_AND_ASSIGN(OnDiskBlobStore);
 };
 
 } /* namespace ondisk */

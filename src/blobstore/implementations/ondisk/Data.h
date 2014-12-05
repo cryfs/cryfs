@@ -26,7 +26,7 @@ public:
   void FillWithZeroes();
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
-  static std::unique_ptr<Data> LoadFromFile(const boost::filesystem::path &filepath);
+  static Data LoadFromFile(const boost::filesystem::path &filepath);
 
 private:
   size_t _size;

@@ -8,6 +8,8 @@
 #include <boost/filesystem/path.hpp>
 #include <iostream>
 
+#include "fspp/utils/macros.h"
+
 namespace blobstore {
 namespace ondisk {
 class OnDiskBlobStore;
@@ -34,6 +36,8 @@ private:
   static void _assertFileDoesntExist(const boost::filesystem::path &filepath);
   void _fillDataWithZeroes();
   void _storeToDisk() const;
+
+  DISALLOW_COPY_AND_ASSIGN(OnDiskBlob);
 };
 
 } /* namespace ondisk */
