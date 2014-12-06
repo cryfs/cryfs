@@ -55,6 +55,8 @@ public:
 };
 INSTANTIATE_TEST_CASE_P(OnDiskBlobFlushTest, OnDiskBlobFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));
 
+// This test is also tested by OnDiskBlobStoreTest, but there the blob is created using the BlobStore interface.
+// Here, we create it using OnDiskBlob::CreateOnDisk()
 TEST_P(OnDiskBlobFlushTest, AfterCreate_FlushingDoesntChangeBlob) {
   auto blob =  CreateBlob();
   WriteDataToBlob(blob);
@@ -63,6 +65,8 @@ TEST_P(OnDiskBlobFlushTest, AfterCreate_FlushingDoesntChangeBlob) {
   EXPECT_BLOB_DATA_CORRECT(blob);
 }
 
+// This test is also tested by OnDiskBlobStoreTest, but there the blob is created using the BlobStore interface.
+// Here, we create it using OnDiskBlob::CreateOnDisk() / OnDiskBlob::LoadFromDisk()
 TEST_P(OnDiskBlobFlushTest, AfterLoad_FlushingDoesntChangeBlob) {
   auto blob =  CreateBlobAndLoadItFromDisk();
   WriteDataToBlob(blob);
@@ -87,6 +91,8 @@ TEST_P(OnDiskBlobFlushTest, AfterLoad_FlushingWritesCorrectData) {
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
 
+// This test is also tested by OnDiskBlobStoreTest, but there it can only checks blob content by loading it again.
+// Here, we check the content on disk.
 TEST_P(OnDiskBlobFlushTest, AfterCreate_FlushesWhenDestructed) {
   {
     auto blob = CreateBlob();
@@ -95,6 +101,8 @@ TEST_P(OnDiskBlobFlushTest, AfterCreate_FlushesWhenDestructed) {
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
 
+// This test is also tested by OnDiskBlobStoreTest, but there it can only checks blob content by loading it again.
+// Here, we check the content on disk.
 TEST_P(OnDiskBlobFlushTest, AfterLoad_FlushesWhenDestructed) {
   {
     auto blob = CreateBlobAndLoadItFromDisk();

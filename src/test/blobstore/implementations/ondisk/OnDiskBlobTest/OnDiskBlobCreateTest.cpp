@@ -58,15 +58,19 @@ TEST_P(OnDiskBlobCreateSizeTest, OnDiskSizeIsCorrect) {
   EXPECT_EQ(GetParam(), fileContent.size());
 }
 
+TEST_P(OnDiskBlobCreateSizeTest, OnDiskBlobIsZeroedOut) {
+  Data fileContent = Data::LoadFromFile(file.path());
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), fileContent.data(), fileContent.size()));
+}
+
+// This test is also tested by OnDiskBlobStoreTest, but there the blob is created using the BlobStore interface.
+// Here, we create it using OnDiskBlob::CreateOnDisk()
 TEST_P(OnDiskBlobCreateSizeTest, InMemorySizeIsCorrect) {
   EXPECT_EQ(GetParam(), blob->size());
 }
 
+// This test is also tested by OnDiskBlobStoreTest, but there the blob is created using the BlobStore interface.
+// Here, we create it using OnDiskBlob::CreateOnDisk()
 TEST_P(OnDiskBlobCreateSizeTest, InMemoryBlobIsZeroedOut) {
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), blob->data(), blob->size()));
-}
-
-TEST_P(OnDiskBlobCreateSizeTest, OnDiskBlobIsZeroedOut) {
-  Data fileContent = Data::LoadFromFile(file.path());
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), fileContent.data(), fileContent.size()));
 }

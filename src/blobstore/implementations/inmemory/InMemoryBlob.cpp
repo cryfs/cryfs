@@ -17,6 +17,7 @@ namespace inmemory {
 
 InMemoryBlob::InMemoryBlob(size_t size)
  : _data(make_shared<Data>(size)) {
+  _data->FillWithZeroes();
 }
 
 InMemoryBlob::InMemoryBlob(const InMemoryBlob &rhs)
