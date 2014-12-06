@@ -2,6 +2,7 @@
 
 #include "OnDiskBlobStore.h"
 #include "blobstore/implementations/ondisk/FileAlreadyExistsException.h"
+#include "blobstore/utils/FileDoesntExistException.h"
 
 #include <cstring>
 #include <fstream>
@@ -45,9 +46,18 @@ size_t OnDiskBlob::size() const {
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::LoadFromDisk(const bf::path &filepath) {
-  Data data = Data::LoadFromFile(filepath);
-
-  return unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, std::move(data)));
+  try {
+    //If it isn't a file, Data::LoadFromFile() would usually also crash. We still need this extra check
+    //upfront, because Data::LoadFromFile() doesn't crash if we give it the path of a directory
+    //instead the path of a file.
+    if(!bf::is_regular_file(filepath)) {
+      return nullptr;
+    }
+    Data data = Data::LoadFromFile(filepath);
+    return unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, std::move(data)));
+  } catch (const FileDoesntExistException &e) {
+    return nullptr;
+  }
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::CreateOnDisk(const bf::path &filepath, size_t size) {

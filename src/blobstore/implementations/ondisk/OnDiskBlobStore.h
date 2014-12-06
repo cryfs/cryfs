@@ -17,7 +17,6 @@ class OnDiskBlobStore: public BlobStoreWithRandomKeys {
 public:
   OnDiskBlobStore(const boost::filesystem::path &rootdir);
 
-  bool exists(const std::string &key) override;
   std::unique_ptr<BlobWithKey> create(const std::string &key, size_t size) override;
   std::unique_ptr<Blob> load(const std::string &key) override;
 

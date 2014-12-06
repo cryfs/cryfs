@@ -25,13 +25,13 @@ unique_ptr<BlobWithKey> InMemoryBlobStore::create(const std::string &key, size_t
   return make_unique<BlobWithKey>(key, make_unique<InMemoryBlob>(insert_result.first->second));
 }
 
-bool InMemoryBlobStore::exists(const std::string &key) {
-  return _blobs.count(key) > 0;
-}
-
 unique_ptr<Blob> InMemoryBlobStore::load(const string &key) {
   //Return a copy of the stored InMemoryBlob
-  return make_unique<InMemoryBlob>(_blobs.at(key));
+  try {
+    return make_unique<InMemoryBlob>(_blobs.at(key));
+  } catch (const std::out_of_range &e) {
+    return nullptr;
+  }
 }
 
 } /* namespace ondisk */

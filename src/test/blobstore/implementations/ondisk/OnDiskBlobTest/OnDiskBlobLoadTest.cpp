@@ -68,8 +68,7 @@ TEST_P(OnDiskBlobLoadTest, LoadedDataIsCorrect) {
 
 TEST_F(OnDiskBlobLoadTest, LoadNotExistingBlob) {
   TempFile file2(false); // Pass false, so the file isn't created.
-  EXPECT_THROW(
-      OnDiskBlob::LoadFromDisk(file2.path()),
-      FileDoesntExistException
+  EXPECT_FALSE(
+      (bool)OnDiskBlob::LoadFromDisk(file2.path())
   );
 }

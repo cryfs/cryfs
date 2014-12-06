@@ -27,11 +27,6 @@ unique_ptr<BlobWithKey> OnDiskBlobStore::create(const std::string &key, size_t s
   return make_unique<BlobWithKey>(key, std::move(blob));
 }
 
-bool OnDiskBlobStore::exists(const std::string &key) {
-  auto file_path = _rootdir / key;
-  return bf::exists(file_path);
-}
-
 unique_ptr<Blob> OnDiskBlobStore::load(const string &key) {
   auto file_path = _rootdir / key;
   return OnDiskBlob::LoadFromDisk(file_path);

@@ -19,7 +19,6 @@ public:
   virtual BlobWithKey create(size_t size) = 0;
   // Return nullptr if blob with this key doesn't exists
   virtual std::unique_ptr<Blob> load(const std::string &key) = 0;
-  virtual bool exists(const std::string &key) = 0;
   //TODO Needed for performance? Or is deleting loaded blobs enough?
   //virtual void remove(const std::string &key) = 0;
 };

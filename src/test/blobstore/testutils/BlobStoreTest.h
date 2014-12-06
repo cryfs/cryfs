@@ -109,23 +109,20 @@ public:
   }
 
   void TestLoadNonExistingBlobWithDefinitelyValidKey() {
-    //TODO Specify loading error behavior more precise and test for concrete exception (or whatever behavior we choose)
-    EXPECT_ANY_THROW(
-        blobStore->load(blobstore::RandomKeyGenerator::singleton().create());
+    EXPECT_FALSE(
+        (bool)blobStore->load(blobstore::RandomKeyGenerator::singleton().create())
     );
   }
 
   void TestLoadNonExistingBlobWithMaybeInvalidKey() {
-    //TODO Specify loading error behavior more precise and test for concrete exception (or whatever behavior we choose)
-    EXPECT_ANY_THROW(
-        blobStore->load("not-existing-key");
+    EXPECT_FALSE(
+        (bool)blobStore->load("not-existing-key")
     );
   }
 
   void TestLoadNonExistingBlobWithEmptyKey() {
-    //TODO Specify loading error behavior more precise and test for concrete exception (or whatever behavior we choose)
-    EXPECT_ANY_THROW(
-        blobStore->load("");
+    EXPECT_FALSE(
+        (bool)blobStore->load("")
     );
   }
 
