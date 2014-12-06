@@ -34,9 +34,11 @@ TEST_F(OnDiskBlobCreateTest, CreatingBlobCreatesFile) {
   EXPECT_TRUE(bf::is_regular_file(file.path()));
 }
 
-TEST_F(OnDiskBlobCreateTest, CreatingExistingBlobThrowsException) {
+TEST_F(OnDiskBlobCreateTest, CreatingExistingBlobReturnsNull) {
   auto blob1 = OnDiskBlob::CreateOnDisk(file.path(), 0);
-  EXPECT_THROW(OnDiskBlob::CreateOnDisk(file.path(), 0), FileAlreadyExistsException);
+  auto blob2 = OnDiskBlob::CreateOnDisk(file.path(), 0);
+  EXPECT_TRUE((bool)blob1);
+  EXPECT_FALSE((bool)blob2);
 }
 
 class OnDiskBlobCreateSizeTest: public OnDiskBlobCreateTest, public WithParamInterface<size_t> {

@@ -35,7 +35,6 @@ private:
   OnDiskBlob(const boost::filesystem::path &filepath, size_t size);
   OnDiskBlob(const boost::filesystem::path &filepath, Data &&data);
 
-  static void _assertFileDoesntExist(const boost::filesystem::path &filepath);
   void _fillDataWithZeroes();
   void _storeToDisk() const;
 

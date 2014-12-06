@@ -17,11 +17,9 @@ class InMemoryBlobStore: public BlobStoreWithRandomKeys {
 public:
   InMemoryBlobStore();
 
+  std::unique_ptr<BlobWithKey> create(const std::string &key, size_t size) override;
   bool exists(const std::string &key) override;
   std::unique_ptr<Blob> load(const std::string &key) override;
-
-protected:
-  BlobWithKey create(const std::string &key, size_t size) override;
 
 private:
   std::map<std::string, InMemoryBlob> _blobs;

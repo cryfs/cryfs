@@ -51,17 +51,14 @@ unique_ptr<OnDiskBlob> OnDiskBlob::LoadFromDisk(const bf::path &filepath) {
 }
 
 unique_ptr<OnDiskBlob> OnDiskBlob::CreateOnDisk(const bf::path &filepath, size_t size) {
-  _assertFileDoesntExist(filepath);
+  if (bf::exists(filepath)) {
+    return nullptr;
+  }
+
   auto blob = unique_ptr<OnDiskBlob>(new OnDiskBlob(filepath, size));
   blob->_fillDataWithZeroes();
   blob->_storeToDisk();
   return blob;
-}
-
-void OnDiskBlob::_assertFileDoesntExist(const bf::path &filepath) {
-  if (bf::exists(filepath)) {
-    throw FileAlreadyExistsException(filepath);
-  }
 }
 
 void OnDiskBlob::_fillDataWithZeroes() {

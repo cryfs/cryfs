@@ -4,6 +4,7 @@
 #include "blobstore/utils/RandomKeyGenerator.h"
 
 using std::unique_ptr;
+using std::make_unique;
 using std::string;
 using std::mutex;
 using std::lock_guard;
@@ -16,11 +17,14 @@ namespace ondisk {
 OnDiskBlobStore::OnDiskBlobStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
-BlobWithKey OnDiskBlobStore::create(const std::string &key, size_t size) {
+unique_ptr<BlobWithKey> OnDiskBlobStore::create(const std::string &key, size_t size) {
   auto file_path = _rootdir / key;
   auto blob = OnDiskBlob::CreateOnDisk(file_path, size);
 
-  return BlobWithKey(key, std::move(blob));
+  if (!blob) {
+    return nullptr;
+  }
+  return make_unique<BlobWithKey>(key, std::move(blob));
 }
 
 bool OnDiskBlobStore::exists(const std::string &key) {

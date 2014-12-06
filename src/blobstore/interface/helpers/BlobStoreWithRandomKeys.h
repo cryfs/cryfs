@@ -2,30 +2,23 @@
 #ifndef FSPP_BLOBSTORE_BLOBSTOREWITHRANDOMKEYS_H_
 #define FSPP_BLOBSTORE_BLOBSTOREWITHRANDOMKEYS_H_
 
-#include <mutex>
-
 #include "blobstore/interface/Blob.h"
 #include "blobstore/interface/BlobStore.h"
 
 namespace blobstore {
 
+// This is an implementation helpers for BlobStores that use random blob keys.
+// You should never give this static type to the client. The client should always
+// work with the BlobStore interface instead.
 class BlobStoreWithRandomKeys: public BlobStore {
 public:
-  BlobStoreWithRandomKeys();
-  virtual ~BlobStoreWithRandomKeys() {}
+  // Return nullptr if key already exists
+  virtual std::unique_ptr<BlobWithKey> create(const std::string &key, size_t size) = 0;
 
-  BlobWithKey create(size_t size) override;
-
-  virtual std::unique_ptr<Blob> load(const std::string &key) = 0;
-
-protected:
-  virtual BlobWithKey create(const std::string &key, size_t size) = 0;
+  BlobWithKey create(size_t size) final;
 
 private:
-  std::string _generateKey();
   std::string _generateRandomKey();
-
-  std::mutex _generate_key_mutex;
 };
 
 }

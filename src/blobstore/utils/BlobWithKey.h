@@ -5,6 +5,7 @@
 #include "blobstore/interface/Blob.h"
 
 #include <memory>
+#include "fspp/utils/macros.h"
 
 namespace blobstore {
 

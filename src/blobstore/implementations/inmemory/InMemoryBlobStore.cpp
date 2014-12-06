@@ -14,12 +14,15 @@ namespace inmemory {
 InMemoryBlobStore::InMemoryBlobStore()
  : _blobs() {}
 
-BlobWithKey InMemoryBlobStore::create(const std::string &key, size_t size) {
-  InMemoryBlob blob(size);
-  _blobs.insert(make_pair(key, blob));
+unique_ptr<BlobWithKey> InMemoryBlobStore::create(const std::string &key, size_t size) {
+  auto insert_result = _blobs.emplace(key, size);
+
+  if (!insert_result.second) {
+    return nullptr;
+  }
 
   //Return a copy of the stored InMemoryBlob
-  return BlobWithKey(key, make_unique<InMemoryBlob>(blob));
+  return make_unique<BlobWithKey>(key, make_unique<InMemoryBlob>(insert_result.first->second));
 }
 
 bool InMemoryBlobStore::exists(const std::string &key) {
