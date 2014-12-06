@@ -13,7 +13,6 @@ using CryptoPP::HexEncoder;
 using std::make_unique;
 
 namespace blobstore {
-namespace ondisk {
 
 constexpr unsigned int RandomKeyGenerator::KEYLENGTH_ENTROPY;
 constexpr unsigned int RandomKeyGenerator::KEYLENGTH;
@@ -51,5 +50,4 @@ string encodeKeyToHex(const byte *data) {
 }
 }
 
-} /* namespace ondisk */
 } /* namespace blobstore */

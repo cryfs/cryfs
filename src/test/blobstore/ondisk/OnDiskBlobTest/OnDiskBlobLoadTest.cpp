@@ -17,6 +17,7 @@ using std::ofstream;
 using std::unique_ptr;
 using std::ios;
 
+using namespace blobstore;
 using namespace blobstore::ondisk;
 
 namespace bf = boost::filesystem;

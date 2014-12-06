@@ -15,7 +15,7 @@ using ::testing::Values;
 using std::ifstream;
 using std::ofstream;
 
-using namespace blobstore::ondisk;
+using namespace blobstore;
 
 class DataTest: public Test {
 public:

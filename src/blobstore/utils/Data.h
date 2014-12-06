@@ -10,7 +10,6 @@
 #include <memory>
 
 namespace blobstore {
-namespace ondisk {
 
 class Data {
 public:
@@ -39,7 +38,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
 
-} /* namespace ondisk */
 } /* namespace blobstore */
 
 #endif

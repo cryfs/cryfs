@@ -7,7 +7,6 @@
 #include <stdexcept>
 
 namespace blobstore {
-namespace ondisk {
 
 class FileDoesntExistException: public std::runtime_error {
 public:
@@ -15,7 +14,6 @@ public:
   virtual ~FileDoesntExistException();
 };
 
-} /* namespace ondisk */
 } /* namespace blobstore */
 
 #endif

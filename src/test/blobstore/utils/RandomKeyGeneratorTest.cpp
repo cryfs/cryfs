@@ -6,7 +6,7 @@ using ::testing::Test;
 
 using std::string;
 
-using namespace blobstore::ondisk;
+using namespace blobstore;
 
 class RandomKeyGeneratorTest: public Test {};
 

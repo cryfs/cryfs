@@ -12,6 +12,7 @@ using ::testing::Values;
 
 using std::unique_ptr;
 
+using namespace blobstore;
 using namespace blobstore::ondisk;
 
 namespace bf = boost::filesystem;

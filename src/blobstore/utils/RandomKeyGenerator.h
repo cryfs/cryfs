@@ -10,7 +10,6 @@ class AutoSeededRandomPool;
 }
 
 namespace blobstore {
-namespace ondisk {
 
 // Creates random keys for use as block access handles.
 // A key here is NOT a key for encryption, but a key as used in key->value mappings ("access handle for a block").
@@ -33,7 +32,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RandomKeyGenerator);
 };
 
-} /* namespace ondisk */
 } /* namespace blobstore */
 
 #endif

@@ -15,7 +15,6 @@ using std::make_unique;
 namespace bf = boost::filesystem;
 
 namespace blobstore {
-namespace ondisk {
 
 Data::Data(size_t size)
 : _size(size), _data(std::malloc(size)) {
@@ -89,5 +88,4 @@ void Data::_readFromStream(istream &stream) {
   stream.read((char*)_data, _size);
 }
 
-} /* namespace ondisk */
 } /* namespace blobstore */

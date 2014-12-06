@@ -1,21 +1,21 @@
 #pragma once
-#ifndef BLOBSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOBSTORE_H_
-#define BLOBSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOBSTORE_H_
+#ifndef BLOBSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOBSTORE_H_
+#define BLOBSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOBSTORE_H_
 
 #include "blobstore/interface/BlobStore.h"
-
-#include <boost/filesystem.hpp>
 
 #include "fspp/utils/macros.h"
 
 #include <mutex>
+#include <map>
 
 namespace blobstore {
-namespace ondisk {
+namespace inmemory {
+class InMemoryBlob;
 
-class OnDiskBlobStore: public BlobStore {
+class InMemoryBlobStore: public BlobStore {
 public:
-  OnDiskBlobStore(const boost::filesystem::path &rootdir);
+  InMemoryBlobStore();
 
   BlobWithKey create(size_t size) override;
   std::unique_ptr<Blob> load(const std::string &key) override;
@@ -23,14 +23,14 @@ public:
 private:
   std::string _generateKey();
   std::string _generateRandomKey();
-  const boost::filesystem::path _rootdir;
 
+  std::map<std::string, InMemoryBlob> _blobs;
   std::mutex _generate_key_mutex;
 
-  DISALLOW_COPY_AND_ASSIGN(OnDiskBlobStore);
+  DISALLOW_COPY_AND_ASSIGN(InMemoryBlobStore);
 };
 
-} /* namespace ondisk */
+} /* namespace inmemory */
 } /* namespace blobstore */
 
 #endif
