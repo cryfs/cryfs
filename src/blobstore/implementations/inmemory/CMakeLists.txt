@@ -1,3 +1,3 @@
 add_library(blobstore_inmemory InMemoryBlob.cpp InMemoryBlobStore.cpp)
 
-target_link_libraries(blobstore_inmemory blobstore_utils)
+target_link_libraries(blobstore_inmemory blobstore_interface blobstore_utils)

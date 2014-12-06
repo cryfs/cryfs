@@ -2,7 +2,7 @@
 #ifndef BLOBSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOBSTORE_H_
 #define BLOBSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOBSTORE_H_
 
-#include "blobstore/interface/BlobStore.h"
+#include "blobstore/interface/helpers/BlobStoreWithRandomKeys.h"
 
 #include <boost/filesystem.hpp>
 
@@ -13,19 +13,18 @@
 namespace blobstore {
 namespace ondisk {
 
-class OnDiskBlobStore: public BlobStore {
+class OnDiskBlobStore: public BlobStoreWithRandomKeys {
 public:
   OnDiskBlobStore(const boost::filesystem::path &rootdir);
 
-  BlobWithKey create(size_t size) override;
+  bool exists(const std::string &key) override;
   std::unique_ptr<Blob> load(const std::string &key) override;
 
-private:
-  std::string _generateKey();
-  std::string _generateRandomKey();
-  const boost::filesystem::path _rootdir;
+protected:
+  BlobWithKey create(const std::string &key, size_t size) override;
 
-  std::mutex _generate_key_mutex;
+private:
+  const boost::filesystem::path _rootdir;
 
   DISALLOW_COPY_AND_ASSIGN(OnDiskBlobStore);
 };

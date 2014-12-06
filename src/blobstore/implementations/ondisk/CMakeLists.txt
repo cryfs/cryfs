@@ -1,3 +1,3 @@
 add_library(blobstore_ondisk OnDiskBlob.cpp OnDiskBlobStore.cpp FileAlreadyExistsException.cpp)
 
-target_link_libraries(blobstore_ondisk blobstore_utils boost_filesystem boost_system)
+target_link_libraries(blobstore_ondisk blobstore_interface blobstore_utils boost_filesystem boost_system)

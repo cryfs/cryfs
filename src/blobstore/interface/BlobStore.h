@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "Blob.h"
+#include "blobstore/utils/BlobWithKey.h"
 
 namespace blobstore {
 
@@ -15,15 +16,9 @@ class BlobStore {
 public:
   virtual ~BlobStore() {}
 
-  struct BlobWithKey {
-    BlobWithKey(const std::string &key_, std::unique_ptr<Blob> &&blob_): key(key_), blob(std::move(blob_)) {}
-
-    std::string key;
-    std::unique_ptr<Blob> blob;
-  };
-
   virtual BlobWithKey create(size_t size) = 0;
   virtual std::unique_ptr<Blob> load(const std::string &key) = 0;
+  virtual bool exists(const std::string &key) = 0;
   //TODO Needed for performance? Or is deleting loaded blobs enough?
   //virtual void remove(const std::string &key) = 0;
 };

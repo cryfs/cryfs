@@ -14,29 +14,18 @@ namespace blobstore {
 namespace ondisk {
 
 OnDiskBlobStore::OnDiskBlobStore(const boost::filesystem::path &rootdir)
- : _rootdir(rootdir), _generate_key_mutex() {}
+ : _rootdir(rootdir) {}
 
-BlobStore::BlobWithKey OnDiskBlobStore::create(size_t size) {
-  std::string key = _generateKey();
+BlobWithKey OnDiskBlobStore::create(const std::string &key, size_t size) {
   auto file_path = _rootdir / key;
   auto blob = OnDiskBlob::CreateOnDisk(file_path, size);
 
-  return BlobStore::BlobWithKey(key, std::move(blob));
+  return BlobWithKey(key, std::move(blob));
 }
 
-string OnDiskBlobStore::_generateKey() {
-  lock_guard<mutex> lock(_generate_key_mutex);
-
-  string key;
-  do {
-    key = _generateRandomKey();
-  } while (bf::exists(_rootdir / key));
-
-  return key;
-}
-
-string OnDiskBlobStore::_generateRandomKey() {
-  return RandomKeyGenerator::singleton().create();
+bool OnDiskBlobStore::exists(const std::string &key) {
+  auto file_path = _rootdir / key;
+  return bf::exists(file_path);
 }
 
 unique_ptr<Blob> OnDiskBlobStore::load(const string &key) {

@@ -12,10 +12,9 @@ namespace blobstore {
 namespace inmemory {
 
 InMemoryBlobStore::InMemoryBlobStore()
- : _blobs(), _generate_key_mutex() {}
+ : _blobs() {}
 
-BlobStore::BlobWithKey InMemoryBlobStore::create(size_t size) {
-  std::string key = _generateKey();
+BlobWithKey InMemoryBlobStore::create(const std::string &key, size_t size) {
   InMemoryBlob blob(size);
   _blobs.insert(make_pair(key, blob));
 
@@ -23,19 +22,8 @@ BlobStore::BlobWithKey InMemoryBlobStore::create(size_t size) {
   return BlobWithKey(key, make_unique<InMemoryBlob>(blob));
 }
 
-string InMemoryBlobStore::_generateKey() {
-  lock_guard<mutex> lock(_generate_key_mutex);
-
-  string key;
-  do {
-    key = _generateRandomKey();
-  } while (_blobs.count(key) > 0);
-
-  return key;
-}
-
-string InMemoryBlobStore::_generateRandomKey() {
-  return RandomKeyGenerator::singleton().create();
+bool InMemoryBlobStore::exists(const std::string &key) {
+  return _blobs.count(key) > 0;
 }
 
 unique_ptr<Blob> InMemoryBlobStore::load(const string &key) {

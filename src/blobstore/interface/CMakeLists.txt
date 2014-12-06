@@ -1,0 +1,1 @@
+add_library(blobstore_interface helpers/BlobStoreWithRandomKeys.cpp)
