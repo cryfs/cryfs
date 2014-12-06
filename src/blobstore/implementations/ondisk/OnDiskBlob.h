@@ -3,7 +3,7 @@
 #define BLOBSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOB_H_
 
 #include "blobstore/interface/Blob.h"
-#include "Data.h"
+#include "blobstore/utils/Data.h"
 
 #include <boost/filesystem/path.hpp>
 #include <iostream>

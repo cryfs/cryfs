@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "blobstore/implementations/ondisk/Data.h"
-#include "blobstore/implementations/ondisk/FileDoesntExistException.h"
+#include "blobstore/utils/Data.h"
+#include "blobstore/utils/FileDoesntExistException.h"
 
 #include "test/testutils/VirtualTestFile.h"
 #include "test/testutils/TempFile.h"

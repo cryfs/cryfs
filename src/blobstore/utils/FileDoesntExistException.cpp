@@ -1,4 +1,4 @@
-#include <blobstore/implementations/ondisk/FileDoesntExistException.h>
+#include "FileDoesntExistException.h"
 
 namespace bf = boost::filesystem;
 

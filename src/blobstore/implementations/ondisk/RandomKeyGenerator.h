@@ -2,8 +2,6 @@
 #ifndef BLOBSTORE_IMPLEMENTATIONS_ONDISK_RANDOMKEYGENERATOR_H_
 #define BLOBSTORE_IMPLEMENTATIONS_ONDISK_RANDOMKEYGENERATOR_H_
 
-#include "Data.h"
-
 #include "fspp/utils/macros.h"
 #include <memory>
 

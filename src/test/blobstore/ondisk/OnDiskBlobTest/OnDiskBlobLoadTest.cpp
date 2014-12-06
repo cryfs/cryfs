@@ -4,8 +4,8 @@
 #include "test/testutils/VirtualTestFile.h"
 
 #include "blobstore/implementations/ondisk/OnDiskBlob.h"
-#include "blobstore/implementations/ondisk/Data.h"
-#include "blobstore/implementations/ondisk/FileDoesntExistException.h"
+#include "blobstore/utils/FileDoesntExistException.h"
+#include "blobstore/utils/Data.h"
 
 #include <fstream>
 
