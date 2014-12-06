@@ -10,21 +10,26 @@ void FuseStatfsTest::Statfs(const std::string &path) {
   Statfs(path, &dummy);
 }
 
-int FuseStatfsTest::StatfsAllowErrors(const std::string &path) {
+int FuseStatfsTest::StatfsReturnError(const std::string &path) {
   struct ::statvfs dummy;
-  return StatfsAllowErrors(path, &dummy);
+  return StatfsReturnError(path, &dummy);
 }
 
 void FuseStatfsTest::Statfs(const std::string &path, struct ::statvfs *result) {
-  int retval = StatfsAllowErrors(path, result);
-  EXPECT_EQ(0, retval) << "lstat syscall failed. errno: " << errno;
+  int error = StatfsReturnError(path, result);
+  EXPECT_EQ(0, error) << "lstat syscall failed. errno: " << errno;
 }
 
-int FuseStatfsTest::StatfsAllowErrors(const std::string &path, struct ::statvfs *result) {
+int FuseStatfsTest::StatfsReturnError(const std::string &path, struct ::statvfs *result) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  return ::statvfs(realpath.c_str(), result);
+  int retval = ::statvfs(realpath.c_str(), result);
+  if (retval == 0) {
+    return 0;
+  } else {
+    return errno;
+  }
 }
 
 struct ::statvfs FuseStatfsTest::CallStatfsWithImpl(function<void(struct ::statvfs*)> implementation) {

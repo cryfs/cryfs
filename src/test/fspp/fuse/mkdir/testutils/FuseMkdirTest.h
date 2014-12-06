@@ -9,7 +9,7 @@ public:
   const char *DIRNAME = "/mydir";
 
   void Mkdir(const char *dirname, mode_t mode);
-  int MkdirAllowError(const char *dirname, mode_t mode);
+  int MkdirReturnError(const char *dirname, mode_t mode);
 
   ::testing::Action<void(const char*, mode_t)> FromNowOnReturnIsDirOnLstat();
 };

@@ -22,9 +22,9 @@ protected:
   void LstatPath(const std::string &path, struct stat *result);
 
   // These two functions are the same as LstatPath above, but they don't fail the test when the lstat syscall
-  // crashes. Instead, they return the result value of the lstat syscall.
-  int LstatPathAllowErrors(const std::string &path);
-  int LstatPathAllowErrors(const std::string &path, struct stat *result);
+  // crashes. Instead, they return the value of errno after calling ::lstat.
+  int LstatPathReturnError(const std::string &path);
+  int LstatPathReturnError(const std::string &path, struct stat *result);
 
   // You can specify an implementation, which can modify the (struct stat *) result,
   // our fuse mock filesystem implementation will then return this to fuse on an lstat call.

@@ -27,6 +27,6 @@ TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   int fd = OpenFile(fs.get(), FILENAME);
 
   int close_result = ::close(fd);
-  EXPECT_EQ(-1, close_result);
   EXPECT_EQ(GetParam(), errno);
+  EXPECT_EQ(-1, close_result);
 }

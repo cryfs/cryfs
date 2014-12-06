@@ -9,7 +9,7 @@ public:
   const char *FILENAME = "/myfile";
 
   void AccessFile(const char *filename, int mode);
-  int AccessFileAllowError(const char *filename, int mode);
+  int AccessFileReturnError(const char *filename, int mode);
 };
 
 #endif

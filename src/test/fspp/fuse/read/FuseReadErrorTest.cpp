@@ -33,10 +33,8 @@ TEST_P(FuseReadErrorTest, ReturnErrorOnFirstReadCall) {
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[READCOUNT];
-  errno = 0;
-  int retval = ReadFileAllowError(FILENAME, buf, READCOUNT, 0);
-  EXPECT_EQ(GetParam(), errno);
-  EXPECT_EQ(-1, retval);
+  auto retval = ReadFileReturnError(FILENAME, buf, READCOUNT, 0);
+  EXPECT_EQ(GetParam(), retval.error);
   delete[] buf;
 }
 
@@ -56,9 +54,8 @@ TEST_P(FuseReadErrorTest, ReturnErrorOnSecondReadCall) {
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[READCOUNT];
-  errno = 0;
-  size_t retval = ReadFileAllowError(FILENAME, buf, READCOUNT, 0);
-  EXPECT_EQ(0, errno);
-  EXPECT_EQ(successfullyReadBytes, retval); // Check that we're getting the number of successfully read bytes (the first read call) returned
+  auto retval = ReadFileReturnError(FILENAME, buf, READCOUNT, 0);
+  EXPECT_EQ(0, retval.error);
+  EXPECT_EQ(successfullyReadBytes, retval.read_bytes); // Check that we're getting the number of successfully read bytes (the first read call) returned
   delete[] buf;
 }

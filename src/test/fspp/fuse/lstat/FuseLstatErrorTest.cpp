@@ -18,14 +18,12 @@ INSTANTIATE_TEST_CASE_P(LstatErrorCodes, FuseLstatErrorTest, Values(EACCES, EBAD
 TEST_F(FuseLstatErrorTest, ReturnNoError) {
   EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).Times(1).WillOnce(ReturnIsFile);
   errno = 0;
-  int retval = LstatPathAllowErrors(FILENAME);
-  EXPECT_EQ(errno, 0);
-  EXPECT_EQ(retval, 0);
+  int error = LstatPathReturnError(FILENAME);
+  EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseLstatErrorTest, ReturnError) {
   EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
-  int retval = LstatPathAllowErrors(FILENAME);
-  EXPECT_EQ(retval, -1);
-  EXPECT_EQ(GetParam(), errno);
+  int error = LstatPathReturnError(FILENAME);
+  EXPECT_EQ(GetParam(), error);
 }

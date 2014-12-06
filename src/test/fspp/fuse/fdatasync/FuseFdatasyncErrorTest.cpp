@@ -22,7 +22,6 @@ TEST_P(FuseFdatasyncErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(fsimpl, fdatasync(0))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int retval = FdatasyncFileAllowError(FILENAME);
-  EXPECT_EQ(GetParam(), errno);
-  EXPECT_EQ(-1, retval);
+  int error = FdatasyncFileReturnError(FILENAME);
+  EXPECT_EQ(GetParam(), error);
 }

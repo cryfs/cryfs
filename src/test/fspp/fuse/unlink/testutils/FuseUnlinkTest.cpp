@@ -4,15 +4,20 @@ using ::testing::Action;
 using ::testing::Invoke;
 
 void FuseUnlinkTest::Unlink(const char *filename) {
-  int retval = UnlinkAllowError(filename);
-  EXPECT_EQ(0, retval);
+  int error = UnlinkReturnError(filename);
+  EXPECT_EQ(0, error);
 }
 
-int FuseUnlinkTest::UnlinkAllowError(const char *filename) {
+int FuseUnlinkTest::UnlinkReturnError(const char *filename) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / filename;
-  return ::unlink(realpath.c_str());
+  int retval = ::unlink(realpath.c_str());
+  if (0 == retval) {
+    return 0;
+  } else {
+    return errno;
+  }
 }
 
 Action<void(const char*)> FuseUnlinkTest::FromNowOnReturnDoesntExistOnLstat() {

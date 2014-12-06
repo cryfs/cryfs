@@ -8,8 +8,13 @@ class FuseWriteTest: public FuseTest {
 public:
   const char *FILENAME = "/myfile";
 
+  struct WriteError {
+    int error;
+    size_t written_bytes;
+  };
+
   void WriteFile(const char *filename, const void *buf, size_t count, off_t offset);
-  size_t WriteFileAllowError(const char *filename, const void *buf, size_t count, off_t offset);
+  WriteError WriteFileReturnError(const char *filename, const void *buf, size_t count, off_t offset);
 
 private:
   int OpenFile(const TempTestFS *fs, const char *filename);

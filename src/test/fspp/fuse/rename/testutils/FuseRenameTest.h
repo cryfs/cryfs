@@ -10,7 +10,7 @@ public:
   const char *FILENAME2 = "/myfile2";
 
   void Rename(const char *from, const char *to);
-  int RenameAllowError(const char *from, const char *to);
+  int RenameReturnError(const char *from, const char *to);
 };
 
 #endif

@@ -1,15 +1,21 @@
 #include "FuseWriteTest.h"
 
 void FuseWriteTest::WriteFile(const char *filename, const void *buf, size_t count, off_t offset) {
-  size_t retval = WriteFileAllowError(filename, buf, count, offset);
-  EXPECT_EQ(count, retval);
+  auto retval = WriteFileReturnError(filename, buf, count, offset);
+  EXPECT_EQ(0, retval.error);
+  EXPECT_EQ(count, retval.written_bytes);
 }
 
-size_t FuseWriteTest::WriteFileAllowError(const char *filename, const void *buf, size_t count, off_t offset) {
+FuseWriteTest::WriteError FuseWriteTest::WriteFileReturnError(const char *filename, const void *buf, size_t count, off_t offset) {
   auto fs = TestFS();
 
   int fd = OpenFile(fs.get(), filename);
-  return ::pwrite(fd, buf, count, offset);
+
+  WriteError result;
+  errno = 0;
+  result.written_bytes = ::pwrite(fd, buf, count, offset);
+  result.error = errno;
+  return result;
 }
 
 int FuseWriteTest::OpenFile(const TempTestFS *fs, const char *filename) {

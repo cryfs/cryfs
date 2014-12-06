@@ -21,17 +21,14 @@ TEST_F(FuseCreateAndOpenErrorTest, ReturnNoError) {
   //For the syscall to succeed, we also need to give an fstat implementation.
   ReturnIsFileOnFstat(1);
 
-  errno = 0;
-  int retval = CreateAndOpenFileAllowError(FILENAME, O_RDONLY);
-  EXPECT_EQ(errno, 0);
-  EXPECT_GE(retval, 0);
+  int error = CreateAndOpenFileReturnError(FILENAME, O_RDONLY);
+  EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseCreateAndOpenErrorTest, ReturnError) {
   ReturnDoesntExistOnLstat(FILENAME);
   EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int retval = CreateAndOpenFileAllowError(FILENAME, O_RDONLY);
-  EXPECT_EQ(retval, -1);
-  EXPECT_EQ(GetParam(), errno);
+  int error = CreateAndOpenFileReturnError(FILENAME, O_RDONLY);
+  EXPECT_EQ(GetParam(), error);
 }

@@ -4,15 +4,20 @@ using ::testing::Action;
 using ::testing::Invoke;
 
 void FuseRmdirTest::Rmdir(const char *dirname) {
-  int retval = RmdirAllowError(dirname);
-  EXPECT_EQ(0, retval);
+  int error = RmdirReturnError(dirname);
+  EXPECT_EQ(0, error);
 }
 
-int FuseRmdirTest::RmdirAllowError(const char *dirname) {
+int FuseRmdirTest::RmdirReturnError(const char *dirname) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / dirname;
-  return ::rmdir(realpath.c_str());
+  int retval = ::rmdir(realpath.c_str());
+  if (retval == 0) {
+    return 0;
+  } else {
+    return errno;
+  }
 }
 
 Action<void(const char*)> FuseRmdirTest::FromNowOnReturnDoesntExistOnLstat() {

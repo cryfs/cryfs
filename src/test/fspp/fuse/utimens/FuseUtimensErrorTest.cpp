@@ -21,7 +21,6 @@ TEST_P(FuseUtimensErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(fsimpl, utimens(StrEq(FILENAME), _))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int retval = UtimensAllowError(FILENAME, TIMEVALUES);
-  EXPECT_EQ(GetParam(), errno);
-  EXPECT_EQ(-1, retval);
+  int error = UtimensReturnError(FILENAME, TIMEVALUES);
+  EXPECT_EQ(GetParam(), error);
 }

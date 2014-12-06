@@ -24,7 +24,6 @@ TEST_P(FuseFTruncateErrorTest, ReturnedErrorIsCorrect) {
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(0);
 
-  int retval = FTruncateFileAllowError(FILENAME, 0);
-  EXPECT_EQ(GetParam(), errno);
-  EXPECT_EQ(-1, retval);
+  int error = FTruncateFileReturnError(FILENAME, 0);
+  EXPECT_EQ(GetParam(), error);
 }

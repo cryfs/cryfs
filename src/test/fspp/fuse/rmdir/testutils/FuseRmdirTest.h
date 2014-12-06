@@ -9,7 +9,7 @@ public:
   const char *DIRNAME = "/mydir";
 
   void Rmdir(const char *dirname);
-  int RmdirAllowError(const char *dirname);
+  int RmdirReturnError(const char *dirname);
 
   ::testing::Action<void(const char*)> FromNowOnReturnDoesntExistOnLstat();
 };

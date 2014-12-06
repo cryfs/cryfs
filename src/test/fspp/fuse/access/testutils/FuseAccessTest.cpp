@@ -1,13 +1,18 @@
 #include "FuseAccessTest.h"
 
 void FuseAccessTest::AccessFile(const char *filename, int mode) {
-  int retval = AccessFileAllowError(filename, mode);
-  EXPECT_EQ(0, retval);
+  int error = AccessFileReturnError(filename, mode);
+  EXPECT_EQ(0, error);
 }
 
-int FuseAccessTest::AccessFileAllowError(const char *filename, int mode) {
+int FuseAccessTest::AccessFileReturnError(const char *filename, int mode) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / filename;
-  return ::access(realpath.c_str(), mode);
+  int retval = ::access(realpath.c_str(), mode);
+  if (retval == 0) {
+    return 0;
+  } else {
+    return errno;
+  }
 }

@@ -10,7 +10,7 @@ public:
   struct timespec TIMEVALUES[2] = {makeTimespec(0,0), makeTimespec(0,0)};
 
   void Utimens(const char *filename, const timespec times[2]);
-  int UtimensAllowError(const char *filename, const timespec times[2]);
+  int UtimensReturnError(const char *filename, const timespec times[2]);
 
   static struct timespec makeTimespec(time_t tv_sec, long tv_nsec);
 };

@@ -9,7 +9,7 @@ public:
   const char *FILENAME = "/myfile";
 
   void FsyncFile(const char *filename);
-  int FsyncFileAllowError(const char *filename);
+  int FsyncFileReturnError(const char *filename);
 
 private:
   int OpenFile(const TempTestFS *fs, const char *filename);

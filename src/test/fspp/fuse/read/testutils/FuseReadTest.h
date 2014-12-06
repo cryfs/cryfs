@@ -8,8 +8,13 @@ class FuseReadTest: public FuseTest {
 public:
   const char *FILENAME = "/myfile";
 
+  struct ReadError {
+    int error;
+    size_t read_bytes;
+  };
+
   void ReadFile(const char *filename, void *buf, size_t count, off_t offset);
-  size_t ReadFileAllowError(const char *filename, void *buf, size_t count, off_t offset);
+  ReadError ReadFileReturnError(const char *filename, void *buf, size_t count, off_t offset);
 
   ::testing::Action<int(int, void*, size_t, off_t)> ReturnSuccessfulRead =
     ::testing::Invoke([](int, void *, size_t count, off_t) {

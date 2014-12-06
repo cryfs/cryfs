@@ -33,10 +33,8 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnFirstWriteCall) {
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT];
-  errno = 0;
-  int retval = WriteFileAllowError(FILENAME, buf, WRITECOUNT, 0);
-  EXPECT_EQ(GetParam(), errno);
-  EXPECT_EQ(-1, retval);
+  auto retval = WriteFileReturnError(FILENAME, buf, WRITECOUNT, 0);
+  EXPECT_EQ(GetParam(), retval.error);
   delete[] buf;
 }
 
@@ -55,10 +53,9 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnSecondWriteCall) {
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT];
-  errno = 0;
-  size_t retval = WriteFileAllowError(FILENAME, buf, WRITECOUNT, 0);
-  EXPECT_EQ(0, errno);
-  EXPECT_EQ(successfullyWrittenBytes, retval); // Check that we're getting the number of successfully written bytes (the first write call) returned
+  auto retval = WriteFileReturnError(FILENAME, buf, WRITECOUNT, 0);
+  EXPECT_EQ(0, retval.error);
+  EXPECT_EQ(successfullyWrittenBytes, retval.written_bytes); // Check that we're getting the number of successfully written bytes (the first write call) returned
   delete[] buf;
 }
 

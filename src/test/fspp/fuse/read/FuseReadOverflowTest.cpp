@@ -29,12 +29,12 @@ public:
 
 TEST_F(FuseReadOverflowTest, ReadMoreThanFileSizeFromBeginning) {
   char buf[READSIZE];
-  size_t read_bytes = ReadFileAllowError(FILENAME, buf, READSIZE, 0);
-  EXPECT_EQ(FILESIZE, read_bytes);
+  auto retval = ReadFileReturnError(FILENAME, buf, READSIZE, 0);
+  EXPECT_EQ(FILESIZE, retval.read_bytes);
 }
 
 TEST_F(FuseReadOverflowTest, ReadMoreThanFileSizeFromMiddle) {
   char buf[READSIZE];
-  size_t read_bytes = ReadFileAllowError(FILENAME, buf, READSIZE, OFFSET);
-  EXPECT_EQ(FILESIZE-OFFSET, read_bytes);
+  auto retval = ReadFileReturnError(FILENAME, buf, READSIZE, OFFSET);
+  EXPECT_EQ(FILESIZE-OFFSET, retval.read_bytes);
 }

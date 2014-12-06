@@ -9,7 +9,7 @@ public:
   const char *FILENAME = "/myfile";
 
   void Unlink(const char *filename);
-  int UnlinkAllowError(const char *filename);
+  int UnlinkReturnError(const char *filename);
 
   ::testing::Action<void(const char*)> FromNowOnReturnDoesntExistOnLstat();
 };

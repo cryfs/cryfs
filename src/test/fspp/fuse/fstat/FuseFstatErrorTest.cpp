@@ -34,7 +34,6 @@ TEST_P(FuseFstatErrorTest, ReturnedErrorCodeIsCorrect) {
 
   auto fs = TestFS();
 
-  int fd = CreateFileAllowErrors(fs.get(), FILENAME);
-  EXPECT_EQ(-1, fd);
-  EXPECT_EQ(GetParam(), errno);
+  int error = CreateFileReturnError(fs.get(), FILENAME);
+  EXPECT_EQ(GetParam(), error);
 }

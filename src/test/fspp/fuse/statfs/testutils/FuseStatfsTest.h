@@ -23,8 +23,8 @@ protected:
 
   // These two functions are the same as Statfs above, but they don't fail the test when the statfs syscall
   // crashes. Instead, they return the result value of the statfs syscall.
-  int StatfsAllowErrors(const std::string &path);
-  int StatfsAllowErrors(const std::string &path, struct ::statvfs *result);
+  int StatfsReturnError(const std::string &path);
+  int StatfsReturnError(const std::string &path, struct ::statvfs *result);
 
   // You can specify an implementation, which can modify the (struct statfs *) result,
   // our fuse mock filesystem implementation will then return this to fuse on an statfs call.

@@ -1,15 +1,20 @@
 #include "FuseFdatasyncTest.h"
 
 void FuseFdatasyncTest::FdatasyncFile(const char *filename) {
-  int retval = FdatasyncFileAllowError(filename);
-  EXPECT_EQ(0, retval);
+  int error = FdatasyncFileReturnError(filename);
+  EXPECT_EQ(0, error);
 }
 
-int FuseFdatasyncTest::FdatasyncFileAllowError(const char *filename) {
+int FuseFdatasyncTest::FdatasyncFileReturnError(const char *filename) {
   auto fs = TestFS();
 
   int fd = OpenFile(fs.get(), filename);
-  return ::fdatasync(fd);
+  int retval = ::fdatasync(fd);
+  if (retval == 0) {
+    return 0;
+  } else {
+    return errno;
+  }
 }
 
 int FuseFdatasyncTest::OpenFile(const TempTestFS *fs, const char *filename) {

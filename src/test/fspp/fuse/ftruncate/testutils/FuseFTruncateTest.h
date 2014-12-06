@@ -9,7 +9,7 @@ public:
   const char *FILENAME = "/myfile";
 
   void FTruncateFile(const char *filename, off_t size);
-  int FTruncateFileAllowError(const char *filename, off_t size);
+  int FTruncateFileReturnError(const char *filename, off_t size);
 
 private:
   int OpenFile(const TempTestFS *fs, const char *filename);

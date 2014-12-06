@@ -9,7 +9,7 @@ public:
   const char *FILENAME = "/myfile";
 
   void TruncateFile(const char *filename, off_t size);
-  int TruncateFileAllowError(const char *filename, off_t size);
+  int TruncateFileReturnError(const char *filename, off_t size);
 };
 
 #endif

@@ -1,15 +1,20 @@
 #include "FuseFTruncateTest.h"
 
 void FuseFTruncateTest::FTruncateFile(const char *filename, off_t size) {
-  int retval = FTruncateFileAllowError(filename, size);
-  EXPECT_EQ(0, retval);
+  int error = FTruncateFileReturnError(filename, size);
+  EXPECT_EQ(0, error);
 }
 
-int FuseFTruncateTest::FTruncateFileAllowError(const char *filename, off_t size) {
+int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, off_t size) {
   auto fs = TestFS();
 
   int fd = OpenFile(fs.get(), filename);
-  return ::ftruncate(fd, size);
+  int retval = ::ftruncate(fd, size);
+  if (0 == retval) {
+    return 0;
+  } else {
+    return errno;
+  }
 }
 
 int FuseFTruncateTest::OpenFile(const TempTestFS *fs, const char *filename) {

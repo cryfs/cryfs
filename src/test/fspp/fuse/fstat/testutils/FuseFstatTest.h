@@ -7,8 +7,10 @@
 class FuseFstatTest: public FuseTest {
 public:
   int CreateFile(const TempTestFS *fs, const std::string &filename);
-  int CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename);
+  int CreateFileReturnError(const TempTestFS *fs, const std::string &filename);
   void OnCreateAndOpenReturnFileDescriptor(const char *filename, int descriptor);
+private:
+  int CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename);
 };
 
 
