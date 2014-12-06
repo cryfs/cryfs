@@ -22,7 +22,7 @@ public:
     std::unique_ptr<Blob> blob;
   };
 
-  virtual BlobWithKey create(const std::string &key, size_t size) = 0;
+  virtual BlobWithKey create(size_t size) = 0;
   virtual std::unique_ptr<Blob> load(const std::string &key) = 0;
   //TODO Needed for performance? Or is deleting loaded blobs enough?
   //virtual void remove(const std::string &key) = 0;

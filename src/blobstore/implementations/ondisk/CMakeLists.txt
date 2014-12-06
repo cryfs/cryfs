@@ -1,3 +1,3 @@
-add_library(blobstore_ondisk Data.cpp OnDiskBlob.cpp OnDiskBlobStore.cpp FileAlreadyExistsException.cpp FileDoesntExistException.cpp)
+add_library(blobstore_ondisk Data.cpp OnDiskBlob.cpp OnDiskBlobStore.cpp RandomKeyGenerator.cpp FileAlreadyExistsException.cpp FileDoesntExistException.cpp)
 
-target_link_libraries(blobstore_ondisk boost_filesystem boost_system)
+target_link_libraries(blobstore_ondisk boost_filesystem boost_system cryptopp)
