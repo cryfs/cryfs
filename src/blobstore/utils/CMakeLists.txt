@@ -1,2 +1,2 @@
-add_library(blobstore_utils Data.cpp FileDoesntExistException.cpp)
+add_library(blobstore_utils Data.cpp RandomKeyGenerator.cpp FileDoesntExistException.cpp)
 

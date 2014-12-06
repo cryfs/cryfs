@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "blobstore/implementations/ondisk/RandomKeyGenerator.h"
+#include "blobstore/utils/RandomKeyGenerator.h"
 
 using ::testing::Test;
 

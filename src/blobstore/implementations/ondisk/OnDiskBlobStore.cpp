@@ -1,7 +1,7 @@
 #include "OnDiskBlobStore.h"
 
 #include "OnDiskBlob.h"
-#include "RandomKeyGenerator.h"
+#include "blobstore/utils/RandomKeyGenerator.h"
 
 using std::unique_ptr;
 using std::string;
