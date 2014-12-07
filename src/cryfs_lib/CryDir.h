@@ -4,12 +4,13 @@
 
 #include <fspp/fs_interface/Dir.h>
 #include "CryNode.h"
+#include "impl/DirBlob.h"
 
 namespace cryfs {
 
 class CryDir: public fspp::Dir, CryNode {
 public:
-  CryDir();
+  CryDir(CryDevice *device, std::unique_ptr<DirBlob> blob);
   virtual ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -20,6 +21,9 @@ public:
   std::unique_ptr<std::vector<std::string>> children() const override;
 
 private:
+  CryDevice *_device;
+  std::unique_ptr<DirBlob> _blob;
+
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };
 

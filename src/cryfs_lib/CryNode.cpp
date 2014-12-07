@@ -20,10 +20,13 @@ CryNode::~CryNode() {
 }
 
 void CryNode::stat(struct ::stat *result) const {
+  result->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IWUSR;
+  return;
   throw FuseErrnoException(ENOTSUP);
 }
 
 void CryNode::access(int mask) const {
+  return;
   throw FuseErrnoException(ENOTSUP);
 }
 

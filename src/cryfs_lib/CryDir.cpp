@@ -22,7 +22,8 @@ using std::vector;
 
 namespace cryfs {
 
-CryDir::CryDir() {
+CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> blob)
+: _device(device), _blob(std::move(blob)) {
 }
 
 CryDir::~CryDir() {
@@ -33,7 +34,10 @@ unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
 }
 
 unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
-  throw FuseErrnoException(ENOTSUP);
+  auto child = _device->CreateBlob(CryDevice::DIR_BLOBSIZE);
+  _blob->AddChild(name, child.key);
+  //TODO I don't think we need a return value in createDir for fspp. Change fspp!
+  return make_unique<CryDir>(_device, make_unique<DirBlob>(std::move(child.blob)));
 }
 
 void CryDir::rmdir() {
@@ -41,7 +45,7 @@ void CryDir::rmdir() {
 }
 
 unique_ptr<vector<string>> CryDir::children() const {
-  throw FuseErrnoException(ENOTSUP);
+  return _blob->GetChildren();
 }
 
 }
