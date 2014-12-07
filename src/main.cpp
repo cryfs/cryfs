@@ -7,13 +7,19 @@
 #include "fspp/impl/FilesystemImpl.h"
 #include "copyfs/CopyDevice.h"
 #include "cryfs_lib/CryDevice.h"
+#include "blobstore/implementations/ondisk/OnDiskBlobStore.h"
 
 namespace bf = boost::filesystem;
+
+using blobstore::ondisk::OnDiskBlobStore;
+
+using std::make_unique;
 
 int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
-  copyfs::CopyDevice device(bf::path("/home/heinzi/cryfstest/root"));
+  auto blobStore = make_unique<OnDiskBlobStore>(bf::path("/home/heinzi/cryfstest/root"));
+  cryfs::CryDevice device(std::move(blobStore));
   fspp::FilesystemImpl fsimpl(&device);
   fspp::fuse::Fuse fuse(&fsimpl);
   fuse.run(argc, argv);

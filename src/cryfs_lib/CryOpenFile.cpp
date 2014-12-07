@@ -10,57 +10,44 @@ namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of a exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
+using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, const bf::path &path, int flags)
-  :_descriptor(::open((device->RootDir() / path).c_str(), flags)) {
-  CHECK_RETVAL(_descriptor);
+CryOpenFile::CryOpenFile() {
+  throw FuseErrnoException(ENOTSUP);
 }
 
 CryOpenFile::~CryOpenFile() {
-  int retval = ::close(_descriptor);
-  CHECK_RETVAL(retval);
+  //TODO
 }
 
 void CryOpenFile::flush() {
+  throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
-  int retval = ::fstat(_descriptor, result);
-  CHECK_RETVAL(retval);
+  throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::truncate(off_t size) const {
-  int retval = ::ftruncate(_descriptor, size);
-  CHECK_RETVAL(retval);
+  throw FuseErrnoException(ENOTSUP);
 }
 
 int CryOpenFile::read(void *buf, size_t count, off_t offset) {
-  //printf("Reading from real descriptor %d (%d, %d)\n", _descriptor, offset, count);
-  //fflush(stdout);
-  int retval = ::pread(_descriptor, buf, count, offset);
-  CHECK_RETVAL(retval);
-  //printf("retval: %d, count: %d\n", retval, count);
-  //fflush(stdout);
-  assert(static_cast<unsigned int>(retval) <= count);
-  return retval;
+  throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
-  int retval = ::pwrite(_descriptor, buf, count, offset);
-  CHECK_RETVAL(retval);
-  assert(static_cast<unsigned int>(retval) == count);
+  throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::fsync() {
-  int retval = ::fsync(_descriptor);
-  CHECK_RETVAL(retval);
+  throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::fdatasync() {
-  int retval = ::fdatasync(_descriptor);
-  CHECK_RETVAL(retval);
+  throw FuseErrnoException(ENOTSUP);
 }
 
-} /* namespace cryfs */
+}

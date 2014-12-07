@@ -10,7 +10,7 @@ class CryDevice;
 
 class CryOpenFile: public fspp::OpenFile {
 public:
-  CryOpenFile(const CryDevice *device, const boost::filesystem::path &path, int flags);
+  CryOpenFile();
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
@@ -22,11 +22,10 @@ public:
   void fdatasync() override;
 
 private:
-  int _descriptor;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };
 
-} /* namespace cryfs */
+}
 
 #endif

@@ -9,7 +9,7 @@ namespace cryfs {
 
 class CryDir: public fspp::Dir, CryNode {
 public:
-  CryDir(CryDevice *device, const bf::path &path);
+  CryDir();
   virtual ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -23,6 +23,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };
 
-} /* namespace cryfs */
+}
 
 #endif
