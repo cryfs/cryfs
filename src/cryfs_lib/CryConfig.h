@@ -4,6 +4,8 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "fspp/utils/macros.h"
+
 namespace cryfs {
 
 class CryConfig {
@@ -22,6 +24,7 @@ private:
 
   std::string _root_blob;
 
+  DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };
 
 }
