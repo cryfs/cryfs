@@ -4,6 +4,7 @@
 
 #include <cstdio>
 
+//TODO Rename to RandomData or something more speaking about what this class does.
 class VirtualTestFile {
 public:
   VirtualTestFile(size_t size, long long int IV = 1);
