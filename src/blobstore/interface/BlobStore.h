@@ -17,6 +17,7 @@ public:
   virtual ~BlobStore() {}
 
   virtual BlobWithKey create(size_t size) = 0;
+  //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if blob with this key doesn't exists
   virtual std::unique_ptr<Blob> load(const std::string &key) = 0;
   //TODO Needed for performance? Or is deleting loaded blobs enough?

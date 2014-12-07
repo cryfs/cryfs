@@ -12,6 +12,7 @@ namespace blobstore {
 // work with the BlobStore interface instead.
 class BlobStoreWithRandomKeys: public BlobStore {
 public:
+  //TODO Use boost::optional (if key already exists)
   // Return nullptr if key already exists
   virtual std::unique_ptr<BlobWithKey> create(const std::string &key, size_t size) = 0;
 
