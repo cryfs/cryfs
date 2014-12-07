@@ -20,12 +20,19 @@ using blobstore::BlobStore;
 
 namespace cryfs {
 
-CryDevice::CryDevice(unique_ptr<BlobStore> blobStore)
-: _blob_store(std::move(blobStore)), _root_key() {
+CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlobStore> blobStore)
+: _blob_store(std::move(blobStore)), _root_key(config->RootBlob()) {
+  if (_root_key == "") {
+    _root_key = CreateRootBlobAndReturnKey();
+    config->SetRootBlob(_root_key);
+  }
+}
+
+string CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob = _blob_store->create(DIR_BLOBSIZE);
   DirBlob rootDir(std::move(rootBlob.blob));
   rootDir.InitializeEmptyDir();
-  _root_key = rootBlob.key;
+  return rootBlob.key;
 }
 
 CryDevice::~CryDevice() {

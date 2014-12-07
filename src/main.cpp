@@ -19,7 +19,8 @@ int main (int argc, char *argv[])
 {
   printf("Version: %d\n", buildconfig::VERSION::MAJOR);
   auto blobStore = make_unique<OnDiskBlobStore>(bf::path("/home/heinzi/cryfstest/root"));
-  cryfs::CryDevice device(std::move(blobStore));
+  auto config = make_unique<cryfs::CryConfig>(bf::path("/home/heinzi/cryfstest/config.json"));
+  cryfs::CryDevice device(std::move(config), std::move(blobStore));
   fspp::FilesystemImpl fsimpl(&device);
   fspp::fuse::Fuse fuse(&fsimpl);
   fuse.run(argc, argv);
