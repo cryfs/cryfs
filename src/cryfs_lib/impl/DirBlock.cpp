@@ -13,6 +13,7 @@ using std::vector;
 using std::string;
 
 using blockstore::Block;
+using blockstore::Key;
 
 namespace cryfs {
 
@@ -61,12 +62,14 @@ const char *DirBlock::readAndAddNextChild(const char *pos, vector<string> *resul
   return posAfterKey;
 }
 
-void DirBlock::AddChild(const std::string &name, const std::string &blockKey) {
+void DirBlock::AddChild(const std::string &name, const Key &blockKey) {
+  string blockKeyStr = blockKey.AsString();
+
   char *insertPos = entriesEnd();
-  assertEnoughSpaceLeft(insertPos, name.size() + 1 + blockKey.size() + 1);
+  assertEnoughSpaceLeft(insertPos, name.size() + 1 + blockKeyStr.size() + 1);
 
   memcpy(insertPos, name.c_str(), name.size()+1);
-  memcpy(insertPos + name.size()+1, blockKey.c_str(), blockKey.size()+1);
+  memcpy(insertPos + name.size()+1, blockKeyStr.c_str(), blockKeyStr.size()+1);
   ++(*entryCounter());
 }
 
@@ -75,14 +78,14 @@ void DirBlock::assertEnoughSpaceLeft(char *insertPos, size_t insertSize) const {
   assert(usedSize + insertSize <= _block->size());
 }
 
-string DirBlock::GetBlockKeyForName(const string &name) const {
+Key DirBlock::GetBlockKeyForName(const string &name) const {
   unsigned int entryCount = *entryCounter();
   const char *pos = entriesBegin();
   for(unsigned int i = 0; i < entryCount; ++i) {
     size_t name_length = strlen(pos);
     if (name_length == name.size() && 0==std::memcmp(pos, name.c_str(), name_length)) {
       pos += strlen(pos) + 1; // Skip name
-      return pos; // Return key
+      return Key::FromString(pos); // Return key
     }
     pos += strlen(pos) + 1; // Skip name
     pos += strlen(pos) + 1; // Skip key

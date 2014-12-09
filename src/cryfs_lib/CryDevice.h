@@ -18,7 +18,7 @@ class CryDevice: public fspp::Device {
 public:
   static constexpr size_t DIR_BLOCKSIZE = 4096;
 
-  CryDevice(std::unique_ptr<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockbStore);
+  CryDevice(std::unique_ptr<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
@@ -26,12 +26,13 @@ public:
   blockstore::BlockWithKey CreateBlock(size_t size);
 
 private:
-  std::string CreateRootBlockAndReturnKey();
+  blockstore::Key GetOrCreateRootKey(CryConfig *config);
+  blockstore::Key CreateRootBlockAndReturnKey();
   std::unique_ptr<fspp::Node> Load(const bf::path &path) override;
 
   std::unique_ptr<blockstore::BlockStore> _block_store;
 
-  std::string _root_key;
+  blockstore::Key _root_key;
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };

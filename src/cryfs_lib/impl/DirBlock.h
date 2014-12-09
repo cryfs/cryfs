@@ -3,6 +3,7 @@
 #define CRYFS_LIB_IMPL_DIRBLOCK_H_
 
 #include <blockstore/interface/Block.h>
+#include <blockstore/utils/Key.h>
 #include "fspp/utils/macros.h"
 
 #include <memory>
@@ -17,8 +18,8 @@ public:
 
   void InitializeEmptyDir();
   std::unique_ptr<std::vector<std::string>> GetChildren() const;
-  void AddChild(const std::string &name, const std::string &blockKey);
-  std::string GetBlockKeyForName(const std::string &name) const;
+  void AddChild(const std::string &name, const blockstore::Key &blockKey);
+  blockstore::Key GetBlockKeyForName(const std::string &name) const;
 
   static bool IsDir(const blockstore::Block &block);
 

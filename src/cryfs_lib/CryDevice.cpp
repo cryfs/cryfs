@@ -17,18 +17,26 @@ using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
 using blockstore::BlockStore;
+using blockstore::Key;
 
 namespace cryfs {
 
 CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _block_store(std::move(blockStore)), _root_key(config->RootBlock()) {
-  if (_root_key == "") {
-    _root_key = CreateRootBlockAndReturnKey();
-    config->SetRootBlock(_root_key);
-  }
+: _block_store(std::move(blockStore)), _root_key(GetOrCreateRootKey(config.get())) {
 }
 
-string CryDevice::CreateRootBlockAndReturnKey() {
+Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
+  string root_key = config->RootBlock();
+  if (root_key == "") {
+    auto key = CreateRootBlockAndReturnKey();
+    config->SetRootBlock(key.AsString());
+    return key;
+  }
+
+  return Key::FromString(root_key);
+}
+
+Key CryDevice::CreateRootBlockAndReturnKey() {
   auto rootBlock = _block_store->create(DIR_BLOCKSIZE);
   DirBlock rootDir(std::move(rootBlock.block));
   rootDir.InitializeEmptyDir();
@@ -50,7 +58,7 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
     }
     unique_ptr<DirBlock> currentDir = make_unique<DirBlock>(std::move(current_block));
 
-    string childKey = currentDir->GetBlockKeyForName(component.c_str());
+    Key childKey = currentDir->GetBlockKeyForName(component.c_str());
     current_block = _block_store->load(childKey);
   }
   if (DirBlock::IsDir(*current_block)) {
