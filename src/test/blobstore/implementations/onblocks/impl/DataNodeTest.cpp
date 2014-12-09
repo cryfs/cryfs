@@ -61,3 +61,14 @@ TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
+
+TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfMagicNumberIsWrong) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  string key = block.key;
+  DataNode::NodeHeader* header = (DataNode::NodeHeader*)block.block->data();
+  header->magicNumber = 0xFF; // this is an invalid magic number
+
+  EXPECT_ANY_THROW(
+    DataNode::load(std::move(block.block))
+  );
+}
