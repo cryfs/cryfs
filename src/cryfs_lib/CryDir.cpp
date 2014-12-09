@@ -30,14 +30,21 @@ CryDir::~CryDir() {
 }
 
 unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
-  throw FuseErrnoException(ENOTSUP);
+  auto child = _device->CreateBlob(0);
+  _blob->AddChild(name, child.key);
+  //TODO Di we need a return value in createDir for fspp? If not, change fspp!
+  auto fileblob = make_unique<FileBlob>(std::move(child.blob));
+  fileblob->InitializeEmptyFile();
+  return make_unique<CryFile>(std::move(fileblob));
 }
 
 unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
   auto child = _device->CreateBlob(CryDevice::DIR_BLOBSIZE);
   _blob->AddChild(name, child.key);
   //TODO I don't think we need a return value in createDir for fspp. Change fspp!
-  return make_unique<CryDir>(_device, make_unique<DirBlob>(std::move(child.blob)));
+  auto dirblob = make_unique<DirBlob>(std::move(child.blob));
+  dirblob->InitializeEmptyDir();
+  return make_unique<CryDir>(_device, std::move(dirblob));
 }
 
 void CryDir::rmdir() {

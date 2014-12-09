@@ -15,9 +15,12 @@ public:
 
   static bool IsFile(const blobstore::Blob &blob);
 
+  void InitializeEmptyFile();
+
 private:
   std::unique_ptr<blobstore::Blob> _blob;
 
+  unsigned char *magicNumber();
   static const unsigned char *magicNumber(const blobstore::Blob &blob);
 };
 

@@ -14,6 +14,14 @@ FileBlob::FileBlob(unique_ptr<Blob> blob)
 FileBlob::~FileBlob() {
 }
 
+void FileBlob::InitializeEmptyFile() {
+  *magicNumber() = MagicNumbers::FILE;
+}
+
+unsigned char *FileBlob::magicNumber() {
+  return const_cast<unsigned char*>(magicNumber(const_cast<const Blob&>(*_blob)));
+}
+
 const unsigned char *FileBlob::magicNumber(const blobstore::Blob &blob) {
   return (unsigned char*)blob.data();
 }
