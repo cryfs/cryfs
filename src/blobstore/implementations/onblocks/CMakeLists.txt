@@ -1,0 +1,3 @@
+add_library(blobstore_onblocks BlobOnBlocks.cpp BlobStoreOnBlocks)
+
+target_link_libraries(blobstore_onblocks blockstore_interface)
