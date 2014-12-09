@@ -40,14 +40,26 @@ CryDevice::~CryDevice() {
 
 unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
   printf("Loading %s\n", path.c_str());
-  unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(_blob_store->load(_root_key));
   assert(path.is_absolute());
+
+  auto current_blob = _blob_store->load(_root_key);
+
   for (const bf::path &component : path.relative_path()) {
-    printf("Component: %s\n", component.c_str());
+    if (!DirBlob::IsDir(*current_blob)) {
+      throw FuseErrnoException(ENOTDIR);
+    }
+    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(current_blob));
+
     string childKey = currentDir->GetBlobKeyForName(component.c_str());
-    currentDir = make_unique<DirBlob>(_blob_store->load(childKey));
+    current_blob = _blob_store->load(childKey);
   }
-  return make_unique<CryDir>(this, std::move(currentDir));
+  if (DirBlob::IsDir(*current_blob)) {
+    return make_unique<CryDir>(this, std::move(make_unique<DirBlob>(std::move(current_blob))));
+  } else if (FileBlob::IsFile(*current_blob)) {
+    return make_unique<CryFile>(std::move(make_unique<FileBlob>(std::move(current_blob))));
+  } else {
+    throw FuseErrnoException(EIO);
+  }
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {

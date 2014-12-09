@@ -15,7 +15,8 @@ using std::make_unique;
 
 namespace cryfs {
 
-CryFile::CryFile() {
+CryFile::CryFile(unique_ptr<FileBlob> blob)
+: _blob(std::move(blob)) {
 }
 
 CryFile::~CryFile() {
