@@ -1,6 +1,5 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "testutils/FuseWriteTest.h"
-
-#include "test/testutils/VirtualTestFile.h"
 
 #include "fspp/fuse/FuseErrnoException.h"
 
@@ -21,8 +20,8 @@ public:
   size_t WRITESIZE;
   size_t OFFSET;
 
-  VirtualTestFileWriteable testFile;
-  VirtualTestFile writeData;
+  DataBlockFixtureWriteable testFile;
+  DataBlockFixture writeData;
 
   FuseWriteOverflowTest(size_t filesize, size_t writesize, size_t offset)
   : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(FILESIZE), writeData(WRITESIZE) {

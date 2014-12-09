@@ -1,6 +1,5 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "testutils/FuseReadTest.h"
-
-#include "test/testutils/VirtualTestFile.h"
 
 #include "fspp/fuse/FuseErrnoException.h"
 
@@ -45,12 +44,12 @@ struct TestData {
 // memory region and check methods to check for data equality of a region.
 class FuseReadReturnedDataTest: public FuseReadTest, public WithParamInterface<tuple<size_t, off_t, size_t>> {
 public:
-  unique_ptr<VirtualTestFile> testFile;
+  unique_ptr<DataBlockFixture> testFile;
   TestData testData;
 
   FuseReadReturnedDataTest() {
     testData = GetParam();
-    testFile = make_unique<VirtualTestFile>(testData.fileSize());
+    testFile = make_unique<DataBlockFixture>(testData.fileSize());
 
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);

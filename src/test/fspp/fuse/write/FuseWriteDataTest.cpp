@@ -1,6 +1,5 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "testutils/FuseWriteTest.h"
-
-#include "test/testutils/VirtualTestFile.h"
 
 #include "fspp/fuse/FuseErrnoException.h"
 
@@ -44,12 +43,12 @@ struct TestData {
 // memory region and check methods to check for data equality of a region.
 class FuseWriteDataTest: public FuseWriteTest, public WithParamInterface<tuple<size_t, off_t, size_t>> {
 public:
-  unique_ptr<VirtualTestFileWriteable> testFile;
+  unique_ptr<DataBlockFixtureWriteable> testFile;
   TestData testData;
 
   FuseWriteDataTest() {
     testData = GetParam();
-    testFile = make_unique<VirtualTestFileWriteable>(testData.fileSize(), 1);
+    testFile = make_unique<DataBlockFixtureWriteable>(testData.fileSize(), 1);
 
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
@@ -66,14 +65,14 @@ INSTANTIATE_TEST_CASE_P(FuseWriteDataTest, FuseWriteDataTest, Combine(Values(0,1
 
 
 TEST_P(FuseWriteDataTest, DataWasCorrectlyWritten) {
-  VirtualTestFile randomWriteData(testData.count, 2);
+  DataBlockFixture randomWriteData(testData.count, 2);
   WriteFile(FILENAME, randomWriteData.data(), testData.count, testData.offset);
 
   EXPECT_TRUE(testFile->fileContentEqual(randomWriteData.data(), testData.count, testData.offset));
 }
 
 TEST_P(FuseWriteDataTest, RestOfFileIsUnchanged) {
-  VirtualTestFile randomWriteData(testData.count, 2);
+  DataBlockFixture randomWriteData(testData.count, 2);
   WriteFile(FILENAME, randomWriteData.data(), testData.count, testData.offset);
 
   EXPECT_TRUE(testFile->sizeUnchanged());

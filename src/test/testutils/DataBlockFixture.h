@@ -1,14 +1,13 @@
 #pragma once
-#ifndef TEST_TESTUTILS_VIRTUALTESTFILE_H_
-#define TEST_TESTUTILS_VIRTUALTESTFILE_H_
+#ifndef TEST_TESTUTILS_DATABLOCKFIXTURE_H_
+#define TEST_TESTUTILS_DATABLOCKFIXTURE_H_
 
 #include <cstdio>
 
-//TODO Rename to RandomData or something more speaking about what this class does.
-class VirtualTestFile {
+class DataBlockFixture {
 public:
-  VirtualTestFile(size_t size, long long int IV = 1);
-  virtual ~VirtualTestFile();
+  DataBlockFixture(size_t size, long long int IV = 1);
+  virtual ~DataBlockFixture();
 
   int read(void *buf, size_t count, off_t offset);
 
@@ -27,10 +26,10 @@ private:
   void fillFileWithRandomData(long long int IV);
 };
 
-class VirtualTestFileWriteable: public VirtualTestFile {
+class DataBlockFixtureWriteable: public DataBlockFixture {
 public:
-  VirtualTestFileWriteable(size_t size, long long int IV = 1);
-  virtual ~VirtualTestFileWriteable();
+  DataBlockFixtureWriteable(size_t size, long long int IV = 1);
+  virtual ~DataBlockFixtureWriteable();
 
   void write(const void *buf, size_t count, off_t offset);
 
