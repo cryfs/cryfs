@@ -20,7 +20,11 @@ public:
   void AddChild(const std::string &name, const std::string &blobKey);
   std::string GetBlobKeyForName(const std::string &name) const;
 
+  static bool IsDir(const blobstore::Blob &blob);
+
 private:
+  unsigned char *magicNumber();
+  static const unsigned char *magicNumber(const blobstore::Blob &blob);
   unsigned int *entryCounter();
   const unsigned int *entryCounter() const;
   char *entriesBegin();

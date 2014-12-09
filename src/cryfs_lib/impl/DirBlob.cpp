@@ -5,6 +5,8 @@
 //TODO Remove and replace with exception hierarchy
 #include "fspp/fuse/FuseErrnoException.h"
 
+#include "MagicNumbers.h"
+
 using std::unique_ptr;
 using std::make_unique;
 using std::vector;
@@ -22,7 +24,20 @@ DirBlob::~DirBlob() {
 }
 
 void DirBlob::InitializeEmptyDir() {
+  *magicNumber() = MagicNumbers::DIR;
   *entryCounter() = 0;
+}
+
+unsigned char *DirBlob::magicNumber() {
+  return const_cast<unsigned char*>(magicNumber(const_cast<const Blob&>(*_blob)));
+}
+
+const unsigned char *DirBlob::magicNumber(const blobstore::Blob &blob) {
+  return (unsigned char*)blob.data();
+}
+
+bool DirBlob::IsDir(const blobstore::Blob &blob) {
+  return *magicNumber(blob) == MagicNumbers::DIR;
 }
 
 unique_ptr<vector<string>> DirBlob::GetChildren() const {
@@ -80,7 +95,7 @@ unsigned int *DirBlob::entryCounter() {
 }
 
 const unsigned int *DirBlob::entryCounter() const {
-  return (unsigned int*)(_blob->data());
+  return (unsigned int*)((char*)_blob->data() + sizeof(unsigned char));
 }
 
 char *DirBlob::entriesBegin() {
@@ -88,7 +103,7 @@ char *DirBlob::entriesBegin() {
 }
 
 const char *DirBlob::entriesBegin() const {
-  return (char *)(_blob->data())+sizeof(unsigned int);
+  return (char *)(_blob->data())+sizeof(unsigned char) + sizeof(unsigned int);
 }
 
 char *DirBlob::entriesEnd() {
