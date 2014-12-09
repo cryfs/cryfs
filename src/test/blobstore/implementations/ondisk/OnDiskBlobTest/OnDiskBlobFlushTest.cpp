@@ -1,8 +1,7 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "gtest/gtest.h"
 
 #include "test/testutils/TempFile.h"
-#include "test/testutils/VirtualTestFile.h"
-
 #include "blobstore/implementations/ondisk/OnDiskBlob.h"
 #include "blobstore/implementations/ondisk/FileAlreadyExistsException.h"
 
@@ -25,7 +24,7 @@ public:
   }
   TempFile file;
 
-  VirtualTestFile randomData;
+  DataBlockFixture randomData;
 
   unique_ptr<OnDiskBlob> CreateBlobAndLoadItFromDisk() {
     {

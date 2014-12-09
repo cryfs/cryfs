@@ -2,8 +2,8 @@
 #ifndef TEST_BLOBSTORE_IMPLEMENTATIONS_TESTUTILS_BLOBSTOREWITHRANDOMKEYSTEST_H_
 #define TEST_BLOBSTORE_IMPLEMENTATIONS_TESTUTILS_BLOBSTOREWITHRANDOMKEYSTEST_H_
 
+#include <test/testutils/DataBlockFixture.h>
 #include "test/testutils/TempDir.h"
-#include "test/testutils/VirtualTestFile.h"
 #include "blobstore/interface/BlobStore.h"
 #include "blobstore/utils/RandomKeyGenerator.h"
 

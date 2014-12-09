@@ -2,8 +2,8 @@
 #ifndef TEST_BLOBSTORE_IMPLEMENTATIONS_TESTUTILS_BLOBSTORETEST_H_
 #define TEST_BLOBSTORE_IMPLEMENTATIONS_TESTUTILS_BLOBSTORETEST_H_
 
+#include <test/testutils/DataBlockFixture.h>
 #include "test/testutils/TempDir.h"
-#include "test/testutils/VirtualTestFile.h"
 #include "blobstore/interface/BlobStore.h"
 #include "blobstore/utils/RandomKeyGenerator.h"
 
@@ -53,21 +53,21 @@ public:
   }
 
   void TestLoadedBlobIsCorrect() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     auto loaded_blob = StoreDataToBlobAndLoadIt(randomData);
     EXPECT_EQ(size, loaded_blob->size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), loaded_blob->data(), size));
   }
 
   void TestLoadedBlobIsCorrectWhenLoadedDirectlyAfterFlushing() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     auto loaded_blob = StoreDataToBlobAndLoadItDirectlyAfterFlushing(randomData);
     EXPECT_EQ(size, loaded_blob->size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), loaded_blob->data(), size));
   }
 
   void TestAfterCreate_FlushingDoesntChangeBlob() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     auto blob =  CreateBlob();
     WriteDataToBlob(blob.get(), randomData);
     blob->flush();
@@ -76,7 +76,7 @@ public:
   }
 
   void TestAfterLoad_FlushingDoesntChangeBlob() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     auto blob =  CreateBlobAndLoadIt();
     WriteDataToBlob(blob.get(), randomData);
     blob->flush();
@@ -85,7 +85,7 @@ public:
   }
 
   void TestAfterCreate_FlushesWhenDestructed() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     std::string key;
     {
       auto blob = blobStore->create(size);
@@ -97,7 +97,7 @@ public:
   }
 
   void TestAfterLoad_FlushesWhenDestructed() {
-    VirtualTestFile randomData(size);
+    DataBlockFixture randomData(size);
     std::string key;
     {
       key = blobStore->create(size).key;
@@ -136,18 +136,18 @@ private:
     return ZEROES;
   }
 
-  std::unique_ptr<blobstore::Blob> StoreDataToBlobAndLoadIt(const VirtualTestFile &data) {
+  std::unique_ptr<blobstore::Blob> StoreDataToBlobAndLoadIt(const DataBlockFixture &data) {
     std::string key = StoreDataToBlobAndGetKey(data);
     return blobStore->load(key);
   }
 
-  std::string StoreDataToBlobAndGetKey(const VirtualTestFile &data) {
+  std::string StoreDataToBlobAndGetKey(const DataBlockFixture &data) {
     auto blob = blobStore->create(data.size());
     std::memcpy(blob.blob->data(), data.data(), data.size());
     return blob.key;
   }
 
-  std::unique_ptr<blobstore::Blob> StoreDataToBlobAndLoadItDirectlyAfterFlushing(const VirtualTestFile &data) {
+  std::unique_ptr<blobstore::Blob> StoreDataToBlobAndLoadItDirectlyAfterFlushing(const DataBlockFixture &data) {
     auto blob = blobStore->create(data.size());
     std::memcpy(blob.blob->data(), data.data(), data.size());
     blob.blob->flush();
@@ -163,11 +163,11 @@ private:
     return blobStore->create(size).blob;
   }
 
-  void WriteDataToBlob(blobstore::Blob *blob, const VirtualTestFile &randomData) {
+  void WriteDataToBlob(blobstore::Blob *blob, const DataBlockFixture &randomData) {
     std::memcpy(blob->data(), randomData.data(), randomData.size());
   }
 
-  void EXPECT_BLOB_DATA_CORRECT(const blobstore::Blob &blob, const VirtualTestFile &randomData) {
+  void EXPECT_BLOB_DATA_CORRECT(const blobstore::Blob &blob, const DataBlockFixture &randomData) {
     EXPECT_EQ(randomData.size(), blob.size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), blob.data(), randomData.size()));
   }

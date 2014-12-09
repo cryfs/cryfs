@@ -1,9 +1,9 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "gtest/gtest.h"
 
 #include "blobstore/utils/Data.h"
 #include "blobstore/utils/FileDoesntExistException.h"
 
-#include "test/testutils/VirtualTestFile.h"
 #include "test/testutils/TempFile.h"
 
 #include <fstream>
@@ -28,12 +28,12 @@ public:
     return true;
   }
 
-  void FillData(const VirtualTestFile &fillData, Data *data) {
+  void FillData(const DataBlockFixture &fillData, Data *data) {
     ASSERT_EQ(fillData.size(), data->size());
     std::memcpy(data->data(), fillData.data(), fillData.size());
   }
 
-  void EXPECT_DATA_CORRECT(const VirtualTestFile &expectedData, const Data &data) {
+  void EXPECT_DATA_CORRECT(const DataBlockFixture &expectedData, const Data &data) {
     ASSERT_EQ(expectedData.size(), data.size());
     EXPECT_EQ(0, std::memcmp(expectedData.data(), data.data(), expectedData.size()));
   }
@@ -41,7 +41,7 @@ public:
 
 class DataTestWithSizeParam: public DataTest, public WithParamInterface<size_t> {
 public:
-  VirtualTestFile randomData;
+  DataBlockFixture randomData;
 
   DataTestWithSizeParam(): randomData(GetParam()) {}
 
@@ -134,7 +134,7 @@ TEST_F(DataTest, InitializeWithZeroes) {
 
 TEST_F(DataTest, FillModifiedDataWithZeroes) {
   Data data(10*1024);
-  VirtualTestFile randomData(10*1024);
+  DataBlockFixture randomData(10*1024);
   FillData(randomData, &data);
   EXPECT_FALSE(DataIsZeroes(data));
 

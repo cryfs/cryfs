@@ -1,8 +1,7 @@
+#include <test/testutils/DataBlockFixture.h>
 #include "gtest/gtest.h"
 
 #include "test/testutils/TempFile.h"
-#include "test/testutils/VirtualTestFile.h"
-
 #include "blobstore/implementations/ondisk/OnDiskBlob.h"
 #include "blobstore/utils/FileDoesntExistException.h"
 #include "blobstore/utils/Data.h"
@@ -31,7 +30,7 @@ public:
     data.StoreToFile(file.path());
   }
 
-  void StoreData(const VirtualTestFile &data) {
+  void StoreData(const DataBlockFixture &data) {
     //TODO Implement data.StoreToFile(filepath) instead
     Data dataobj(data.size());
     std::memcpy(dataobj.data(), data.data(), data.size());
@@ -42,7 +41,7 @@ public:
     return OnDiskBlob::LoadFromDisk(file.path());
   }
 
-  void EXPECT_BLOB_DATA_EQ(const VirtualTestFile &expected, const OnDiskBlob &actual) {
+  void EXPECT_BLOB_DATA_EQ(const DataBlockFixture &expected, const OnDiskBlob &actual) {
     EXPECT_EQ(expected.size(), actual.size());
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
   }
@@ -58,7 +57,7 @@ TEST_P(OnDiskBlobLoadTest, FileSizeIsCorrect) {
 }
 
 TEST_P(OnDiskBlobLoadTest, LoadedDataIsCorrect) {
-  VirtualTestFile randomData(GetParam());
+  DataBlockFixture randomData(GetParam());
   StoreData(randomData);
 
   auto blob = LoadBlob();
