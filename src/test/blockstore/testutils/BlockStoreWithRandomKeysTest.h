@@ -21,7 +21,7 @@ public:
     "Given test fixture for instantiating the (type parameterized) BlockStoreWithRandomKeysTest must inherit from BlockStoreWithRandomKeysTestFixture"
   );
 
-  blockstore::Key key = blockstore::Key::CreateDummyKey();
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
 
   const std::vector<size_t> SIZES = {0, 1, 1024, 4096, 10*1024*1024};
 

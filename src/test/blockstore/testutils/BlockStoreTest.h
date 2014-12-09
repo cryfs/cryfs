@@ -85,7 +85,7 @@ public:
 
   void TestAfterCreate_FlushesWhenDestructed() {
     DataBlockFixture randomData(size);
-    blockstore::Key key = blockstore::Key::CreateDummyKey();
+    blockstore::Key key = key;
     {
       auto block = blockStore->create(size);
       key = block.key;
@@ -97,7 +97,7 @@ public:
 
   void TestAfterLoad_FlushesWhenDestructed() {
     DataBlockFixture randomData(size);
-    blockstore::Key key = blockstore::Key::CreateDummyKey();
+    blockstore::Key key = key;
     {
       key = blockStore->create(size).key;
       auto block = blockStore->load(key);
@@ -109,17 +109,18 @@ public:
 
   void TestLoadNonExistingBlock() {
     EXPECT_FALSE(
-        (bool)blockStore->load(blockstore::Key::CreateRandomKey())
+        (bool)blockStore->load(key)
     );
   }
 
   void TestLoadNonExistingBlockWithEmptyKey() {
     EXPECT_FALSE(
-        (bool)blockStore->load(blockstore::Key::CreateDummyKey())
+        (bool)blockStore->load(key)
     );
   }
 
 private:
+  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
   std::unique_ptr<blockstore::BlockStore> blockStore;
   size_t size;
 

@@ -35,12 +35,6 @@ Key Key::CreateRandomKey() {
   return result;
 }
 
-Key Key::CreateDummyKey() {
-  Key result;
-  std::memset(result._key, 0, KEYLENGTH_BINARY);
-  return result;
-}
-
 Key Key::FromString(const std::string &key) {
   assert(key.size() == KEYLENGTH_STRING);
   Key result;

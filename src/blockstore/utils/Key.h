@@ -16,7 +16,6 @@ public:
   static constexpr unsigned int KEYLENGTH_STRING = 2 * KEYLENGTH_BINARY; // Hex encoding
 
   static Key CreateRandomKey();
-  static Key CreateDummyKey();
 
   static Key FromString(const std::string &key);
   std::string AsString() const;

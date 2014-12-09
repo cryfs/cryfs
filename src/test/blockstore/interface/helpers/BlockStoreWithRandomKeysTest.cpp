@@ -38,6 +38,7 @@ class BlockStoreWithRandomKeysTest: public Test {
 public:
   BlockStoreWithRandomKeysMock blockStoreMock;
   BlockStore &blockStore = blockStoreMock;
+  const blockstore::Key key = Key::FromString("1491BB4932A389EE14BC7090AC772972");
 };
 
 TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough0) {
@@ -65,7 +66,7 @@ TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
-  Key first_key = Key::CreateDummyKey();
+  Key first_key = key;
   EXPECT_CALL(blockStoreMock, do_create(_, _))
       .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
@@ -81,7 +82,7 @@ TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExists) {
-  Key first_key = Key::CreateDummyKey();
+  Key first_key = key;
   EXPECT_CALL(blockStoreMock, do_create(_, _))
       .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
@@ -96,7 +97,7 @@ TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExists) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExistsTwoTimes) {
-  Key first_key = Key::CreateDummyKey();
+  Key first_key = key;
   EXPECT_CALL(blockStoreMock, do_create(_, _))
       .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
