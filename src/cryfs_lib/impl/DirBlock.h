@@ -1,8 +1,8 @@
 #pragma once
-#ifndef CRYFS_LIB_IMPL_DIRBLOB_H_
-#define CRYFS_LIB_IMPL_DIRBLOB_H_
+#ifndef CRYFS_LIB_IMPL_DIRBLOCK_H_
+#define CRYFS_LIB_IMPL_DIRBLOCK_H_
 
-#include "blobstore/interface/Blob.h"
+#include <blockstore/interface/Block.h>
 #include "fspp/utils/macros.h"
 
 #include <memory>
@@ -10,21 +10,21 @@
 
 namespace cryfs{
 
-class DirBlob {
+class DirBlock {
 public:
-  DirBlob(std::unique_ptr<blobstore::Blob> blob);
-  virtual ~DirBlob();
+  DirBlock(std::unique_ptr<blockstore::Block> block);
+  virtual ~DirBlock();
 
   void InitializeEmptyDir();
   std::unique_ptr<std::vector<std::string>> GetChildren() const;
-  void AddChild(const std::string &name, const std::string &blobKey);
-  std::string GetBlobKeyForName(const std::string &name) const;
+  void AddChild(const std::string &name, const std::string &blockKey);
+  std::string GetBlockKeyForName(const std::string &name) const;
 
-  static bool IsDir(const blobstore::Blob &blob);
+  static bool IsDir(const blockstore::Block &block);
 
 private:
   unsigned char *magicNumber();
-  static const unsigned char *magicNumber(const blobstore::Blob &blob);
+  static const unsigned char *magicNumber(const blockstore::Block &block);
   unsigned int *entryCounter();
   const unsigned int *entryCounter() const;
   char *entriesBegin();
@@ -34,9 +34,9 @@ private:
   const char *readAndAddNextChild(const char *pos, std::vector<std::string> *result) const;
   void assertEnoughSpaceLeft(char *insertPos, size_t insertSize) const;
 
-  std::unique_ptr<blobstore::Blob> _blob;
+  std::unique_ptr<blockstore::Block> _block;
 
-  DISALLOW_COPY_AND_ASSIGN(DirBlob);
+  DISALLOW_COPY_AND_ASSIGN(DirBlock);
 };
 
 }
