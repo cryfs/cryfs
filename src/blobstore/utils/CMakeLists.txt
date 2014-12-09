@@ -1,3 +1,0 @@
-add_library(blobstore_utils Data.cpp RandomKeyGenerator.cpp FileDoesntExistException.cpp)
-
-target_link_libraries(blobstore_utils cryptopp)
