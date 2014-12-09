@@ -1,0 +1,3 @@
+add_library(blockstore_ondisk OnDiskBlock.cpp OnDiskBlockStore.cpp FileAlreadyExistsException.cpp)
+
+target_link_libraries(blockstore_ondisk blockstore_interface blockstore_utils boost_filesystem boost_system)

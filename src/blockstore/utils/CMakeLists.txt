@@ -1,0 +1,3 @@
+add_library(blockstore_utils Data.cpp RandomKeyGenerator.cpp FileDoesntExistException.cpp)
+
+target_link_libraries(blockstore_utils cryptopp)

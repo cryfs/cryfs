@@ -1,0 +1,1 @@
+add_library(blockstore_interface helpers/BlockStoreWithRandomKeys.cpp)

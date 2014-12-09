@@ -1,0 +1,3 @@
+add_library(blockstore_inmemory InMemoryBlock.cpp InMemoryBlockStore.cpp)
+
+target_link_libraries(blockstore_inmemory blockstore_interface blockstore_utils)
