@@ -5,13 +5,14 @@
 #include <blockstore/interface/Block.h>
 #include <memory>
 #include "fspp/utils/macros.h"
+#include "Key.h"
 
 namespace blockstore {
 
 struct BlockWithKey {
-  BlockWithKey(const std::string &key_, std::unique_ptr<Block> block_): key(key_), block(std::move(block_)) {}
+  BlockWithKey(const Key &key_, std::unique_ptr<Block> block_): key(key_), block(std::move(block_)) {}
 
-  std::string key;
+  Key key;
   std::unique_ptr<Block> block;
 };
 

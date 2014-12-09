@@ -16,8 +16,8 @@ class InMemoryBlockStore: public BlockStoreWithRandomKeys {
 public:
   InMemoryBlockStore();
 
-  std::unique_ptr<BlockWithKey> create(const std::string &key, size_t size) override;
-  std::unique_ptr<Block> load(const std::string &key) override;
+  std::unique_ptr<Block> create(const Key &key, size_t size) override;
+  std::unique_ptr<Block> load(const Key &key) override;
 
 private:
   std::map<std::string, InMemoryBlock> _blocks;

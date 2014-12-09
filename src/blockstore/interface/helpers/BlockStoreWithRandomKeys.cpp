@@ -1,19 +1,19 @@
 #include <blockstore/interface/helpers/BlockStoreWithRandomKeys.h>
-#include <blockstore/utils/RandomKeyGenerator.h>
 
 using namespace blockstore;
 
 using std::string;
 
 BlockWithKey BlockStoreWithRandomKeys::create(size_t size) {
-  std::unique_ptr<BlockWithKey> result;
-  do {
-    result = create(_generateRandomKey(), size);
-  } while (!result);
-
-  return std::move(*result);
+  BlockWithKey result = tryCreate(size);
+  while (!result.block) {
+    result = tryCreate(size);
+  }
+  return result;
 }
 
-string BlockStoreWithRandomKeys::_generateRandomKey() {
-  return RandomKeyGenerator::singleton().create();
+BlockWithKey BlockStoreWithRandomKeys::tryCreate(size_t size) {
+  Key key = Key::CreateRandomKey();
+  return BlockWithKey(key, create(key, size));
 }
+

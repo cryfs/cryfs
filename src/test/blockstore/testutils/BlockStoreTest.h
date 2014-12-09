@@ -3,7 +3,6 @@
 #define TEST_BLOCKSTORE_IMPLEMENTATIONS_TESTUTILS_BLOCKSTORETEST_H_
 
 #include <blockstore/interface/BlockStore.h>
-#include <blockstore/utils/RandomKeyGenerator.h>
 #include <test/testutils/DataBlockFixture.h>
 #include "test/testutils/TempDir.h"
 
@@ -86,7 +85,7 @@ public:
 
   void TestAfterCreate_FlushesWhenDestructed() {
     DataBlockFixture randomData(size);
-    std::string key;
+    blockstore::Key key = blockstore::Key::CreateDummyKey();
     {
       auto block = blockStore->create(size);
       key = block.key;
@@ -98,7 +97,7 @@ public:
 
   void TestAfterLoad_FlushesWhenDestructed() {
     DataBlockFixture randomData(size);
-    std::string key;
+    blockstore::Key key = blockstore::Key::CreateDummyKey();
     {
       key = blockStore->create(size).key;
       auto block = blockStore->load(key);
@@ -108,21 +107,15 @@ public:
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
   }
 
-  void TestLoadNonExistingBlockWithDefinitelyValidKey() {
+  void TestLoadNonExistingBlock() {
     EXPECT_FALSE(
-        (bool)blockStore->load(blockstore::RandomKeyGenerator::singleton().create())
-    );
-  }
-
-  void TestLoadNonExistingBlockWithMaybeInvalidKey() {
-    EXPECT_FALSE(
-        (bool)blockStore->load("not-existing-key")
+        (bool)blockStore->load(blockstore::Key::CreateRandomKey())
     );
   }
 
   void TestLoadNonExistingBlockWithEmptyKey() {
     EXPECT_FALSE(
-        (bool)blockStore->load("")
+        (bool)blockStore->load(blockstore::Key::CreateDummyKey())
     );
   }
 
@@ -137,11 +130,11 @@ private:
   }
 
   std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadIt(const DataBlockFixture &data) {
-    std::string key = StoreDataToBlockAndGetKey(data);
+    blockstore::Key key = StoreDataToBlockAndGetKey(data);
     return blockStore->load(key);
   }
 
-  std::string StoreDataToBlockAndGetKey(const DataBlockFixture &data) {
+  blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &data) {
     auto block = blockStore->create(data.size());
     std::memcpy(block.block->data(), data.data(), data.size());
     return block.key;
@@ -155,7 +148,7 @@ private:
   }
 
   std::unique_ptr<blockstore::Block> CreateBlockAndLoadIt() {
-    std::string key = blockStore->create(size).key;
+    blockstore::Key key = blockStore->create(size).key;
     return blockStore->load(key);
   }
 
@@ -194,8 +187,7 @@ TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushesWhenDestructed);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushesWhenDestructed);
-TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlockWithDefinitelyValidKey);
-TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlockWithMaybeInvalidKey);
+TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlockWithEmptyKey);
 
 TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
@@ -216,8 +208,7 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     AfterLoad_FlushingDoesntChangeBlock,
     AfterCreate_FlushesWhenDestructed,
     AfterLoad_FlushesWhenDestructed,
-    LoadNonExistingBlockWithDefinitelyValidKey,
-    LoadNonExistingBlockWithMaybeInvalidKey,
+    LoadNonExistingBlock,
     LoadNonExistingBlockWithEmptyKey,
     TwoCreatedBlocksHaveDifferentKeys
 );

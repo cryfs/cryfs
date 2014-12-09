@@ -1,5 +1,4 @@
 #include <blockstore/interface/helpers/BlockStoreWithRandomKeys.h>
-#include <blockstore/utils/RandomKeyGenerator.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -17,15 +16,14 @@ using namespace blockstore;
 
 class BlockStoreWithRandomKeysMock: public BlockStoreWithRandomKeys {
 public:
-  unique_ptr<BlockWithKey> create(const std::string &key, size_t size) {
-    return unique_ptr<BlockWithKey>(do_create(key, size));
+  unique_ptr<Block> create(const Key &key, size_t size) {
+    return unique_ptr<Block>(do_create(key, size));
   }
-  MOCK_METHOD2(do_create, BlockWithKey*(const std::string &, size_t));
-  unique_ptr<Block> load(const string &key) {
+  MOCK_METHOD2(do_create, Block*(const Key &, size_t));
+  unique_ptr<Block> load(const Key &key) {
     return unique_ptr<Block>(do_load(key));
   }
-  MOCK_METHOD1(do_load, Block*(const string &));
-  MOCK_METHOD1(exists, bool(const string &));
+  MOCK_METHOD1(do_load, Block*(const Key &));
 };
 
 class BlockMock: public Block {
@@ -43,39 +41,39 @@ public:
 };
 
 TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough0) {
-  EXPECT_CALL(blockStoreMock, do_create(_, 0)).WillOnce(Return(new BlockWithKey("", make_unique<BlockMock>())));
+  EXPECT_CALL(blockStoreMock, do_create(_, 0)).WillOnce(Return(new BlockMock));
   blockStore.create(0);
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough1) {
-  EXPECT_CALL(blockStoreMock, do_create(_, 1)).WillOnce(Return(new BlockWithKey("", make_unique<BlockMock>())));
+  EXPECT_CALL(blockStoreMock, do_create(_, 1)).WillOnce(Return(new BlockMock));
   blockStore.create(1);
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough1024) {
-  EXPECT_CALL(blockStoreMock, do_create(_, 1024)).WillOnce(Return(new BlockWithKey("", make_unique<BlockMock>())));
+  EXPECT_CALL(blockStoreMock, do_create(_, 1024)).WillOnce(Return(new BlockMock));
   blockStore.create(1024);
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
-  EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const string &key, size_t) {
-    EXPECT_EQ(RandomKeyGenerator::KEYLENGTH, key.size());
-    return new BlockWithKey("", make_unique<BlockMock>());
+  EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const Key &key, size_t) {
+    EXPECT_EQ(Key::KEYLENGTH_STRING, key.AsString().size());
+    return new BlockMock;
   }));
 
   blockStore.create(1024);
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
-  string first_key;
+  Key first_key = Key::CreateDummyKey();
   EXPECT_CALL(blockStoreMock, do_create(_, _))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
-        return new BlockWithKey("", make_unique<BlockMock>());
+        return new BlockMock;
       }))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         EXPECT_NE(first_key, key);
-        return new BlockWithKey("", make_unique<BlockMock>());
+        return new BlockMock;
       }));
 
   blockStore.create(1024);
@@ -83,34 +81,34 @@ TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExists) {
-  string first_key;
+  Key first_key = Key::CreateDummyKey();
   EXPECT_CALL(blockStoreMock, do_create(_, _))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
         return nullptr;
       }))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         EXPECT_NE(first_key, key);
-        return new BlockWithKey("", make_unique<BlockMock>());
+        return new BlockMock;
       }));
 
   blockStore.create(1024);
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExistsTwoTimes) {
-  string first_key;
+  Key first_key = Key::CreateDummyKey();
   EXPECT_CALL(blockStoreMock, do_create(_, _))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
         return nullptr;
       }))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         first_key = key;
         return nullptr;
       }))
-      .WillOnce(Invoke([&first_key](const string &key, size_t) {
+      .WillOnce(Invoke([&first_key](const Key &key, size_t) {
         EXPECT_NE(first_key, key);
-        return new BlockWithKey("", make_unique<BlockMock>());
+        return new BlockMock;
       }));
 
   blockStore.create(1024);

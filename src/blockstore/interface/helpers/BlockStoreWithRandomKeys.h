@@ -14,12 +14,12 @@ class BlockStoreWithRandomKeys: public BlockStore {
 public:
   //TODO Use boost::optional (if key already exists)
   // Return nullptr if key already exists
-  virtual std::unique_ptr<BlockWithKey> create(const std::string &key, size_t size) = 0;
+  virtual std::unique_ptr<Block> create(const Key &key, size_t size) = 0;
 
   BlockWithKey create(size_t size) final;
 
 private:
-  std::string _generateRandomKey();
+  BlockWithKey tryCreate(size_t size);
 };
 
 }
