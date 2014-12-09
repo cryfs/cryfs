@@ -76,3 +76,9 @@ TEST_F(KeyTest, ToAndFromString2) {
   auto key2 = Key::FromString(key.AsString());
   EXPECT_EQ(key, key2);
 }
+
+// This tests that a Key object is very lightweight
+// (we will often pass keys around)
+TEST_F(KeyTest, KeyIsLightweightObject) {
+  EXPECT_EQ(Key::KEYLENGTH_BINARY, sizeof(Key));
+}
