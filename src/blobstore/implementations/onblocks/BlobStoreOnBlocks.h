@@ -10,6 +10,8 @@ namespace onblocks {
 
 class BlobStoreOnBlocks: public BlobStore {
 public:
+  static constexpr size_t BLOCKSIZE = 4096;
+
   BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~BlobStoreOnBlocks();
 

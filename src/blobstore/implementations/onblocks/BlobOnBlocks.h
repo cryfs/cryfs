@@ -12,7 +12,7 @@ namespace onblocks {
 
 class BlobOnBlocks: public Blob {
 public:
-  BlobOnBlocks(std::unique_ptr<blockstore::Block> block);
+  BlobOnBlocks(std::unique_ptr<blockstore::Block> rootblock);
   virtual ~BlobOnBlocks();
 
   void *data() override;
@@ -23,7 +23,7 @@ public:
   size_t size() const override;
 
 private:
-  std::unique_ptr<blockstore::Block> _block;
+  std::unique_ptr<blockstore::Block> _rootblock;
 };
 
 }

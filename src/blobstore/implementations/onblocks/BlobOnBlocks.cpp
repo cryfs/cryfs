@@ -6,8 +6,8 @@ using blockstore::Block;
 namespace blobstore {
 namespace onblocks {
 
-BlobOnBlocks::BlobOnBlocks(unique_ptr<Block> block)
-: _block(std::move(block)) {
+BlobOnBlocks::BlobOnBlocks(unique_ptr<Block> rootblock)
+: _rootblock(std::move(rootblock)) {
 
 }
 
@@ -19,15 +19,15 @@ void *BlobOnBlocks::data() {
 }
 
 const void *BlobOnBlocks::data() const {
-  return _block->data();
+  return _rootblock->data();
 }
 
 void BlobOnBlocks::flush() {
-  _block->flush();
+  _rootblock->flush();
 }
 
 size_t BlobOnBlocks::size() const {
-  return _block->size();
+  return _rootblock->size();
 }
 
 }
