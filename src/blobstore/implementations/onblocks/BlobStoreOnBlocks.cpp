@@ -22,7 +22,7 @@ BlobWithKey BlobStoreOnBlocks::create(size_t size) {
   return BlobWithKey(block.key, make_unique<BlobOnBlocks>(std::move(block.block)));
 }
 
-unique_ptr<Blob> BlobStoreOnBlocks::load(const std::string &key) {
+unique_ptr<Blob> BlobStoreOnBlocks::load(const Key &key) {
   return make_unique<BlobOnBlocks>(_blocks->load(key));
 }
 

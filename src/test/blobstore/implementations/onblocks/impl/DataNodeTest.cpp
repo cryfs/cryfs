@@ -26,7 +26,7 @@ public:
 
 TEST_F(DataNodeTest, InitializeNewLeafNodeCreatesLeafNodeObject) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  string key = block.key;
+  Key key = block.key;
   auto leafNode = DataNode::initializeNewLeafNode(std::move(block.block));
 
   EXPECT_IS_PTR_TYPE(DataLeafNode, leafNode.get());
@@ -34,7 +34,7 @@ TEST_F(DataNodeTest, InitializeNewLeafNodeCreatesLeafNodeObject) {
 
 TEST_F(DataNodeTest, InitializeNewInnerNodeCreatesInnerNodeObject) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  string key = block.key;
+  Key key = block.key;
   auto innerNode = DataNode::initializeNewInnerNode(std::move(block.block));
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, innerNode.get());
@@ -42,7 +42,7 @@ TEST_F(DataNodeTest, InitializeNewInnerNodeCreatesInnerNodeObject) {
 
 TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  string key = block.key;
+  Key key = block.key;
   auto node = DataNode::initializeNewLeafNode(std::move(block.block));
   node->flush();
 
@@ -53,7 +53,7 @@ TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
 
 TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  string key = block.key;
+  Key key = block.key;
   auto node = DataNode::initializeNewInnerNode(std::move(block.block));
   node->flush();
 
@@ -64,7 +64,7 @@ TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
 
 TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfMagicNumberIsWrong) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  string key = block.key;
+  Key key = block.key;
   DataNode::NodeHeader* header = (DataNode::NodeHeader*)block.block->data();
   header->magicNumber = 0xFF; // this is an invalid magic number
 

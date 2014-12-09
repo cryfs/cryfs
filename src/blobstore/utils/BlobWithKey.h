@@ -5,13 +5,17 @@
 #include <blobstore/interface/Blob.h>
 #include <memory>
 #include "fspp/utils/macros.h"
+#include "blockstore/utils/Key.h"
 
 namespace blobstore {
 
-struct BlobWithKey {
-  BlobWithKey(const std::string &key_, std::unique_ptr<Blob> blob_): key(key_), blob(std::move(blob_)) {}
+//TODO Use own key class to become independent from blockstore?
+typedef blockstore::Key Key;
 
-  std::string key;
+struct BlobWithKey {
+  BlobWithKey(const Key &key_, std::unique_ptr<Blob> blob_): key(key_), blob(std::move(blob_)) {}
+
+  Key key;
   std::unique_ptr<Blob> blob;
 };
 

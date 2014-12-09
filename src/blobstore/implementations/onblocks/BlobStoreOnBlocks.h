@@ -16,7 +16,7 @@ public:
   virtual ~BlobStoreOnBlocks();
 
   BlobWithKey create(size_t size) override;
-  std::unique_ptr<Blob> load(const std::string &key) override;
+  std::unique_ptr<Blob> load(const Key &key) override;
 
 private:
   std::unique_ptr<blockstore::BlockStore> _blocks;
