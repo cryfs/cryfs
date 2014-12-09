@@ -9,10 +9,10 @@
 namespace blobstore {
 
 struct BlobWithKey {
-  BlobWithKey(const std::string &key_, std::unique_ptr<Blocb> blob_): key(key_), blob(std::move(blob_)) {}
+  BlobWithKey(const std::string &key_, std::unique_ptr<Blob> blob_): key(key_), blob(std::move(blob_)) {}
 
   std::string key;
-  std::unique_ptr<Block> blob;
+  std::unique_ptr<Blob> blob;
 };
 
 }
