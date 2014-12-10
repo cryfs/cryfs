@@ -22,6 +22,8 @@ public:
   uint64_t numBytesInThisNode() override;
   void resize(uint64_t newsize_bytes) override;
 
+private:
+  void fillDataWithZeroesFromTo(off_t begin, off_t end);
 };
 
 }
