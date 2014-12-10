@@ -9,6 +9,7 @@ namespace onblocks {
 
 class DataInnerNode: public DataNode {
 public:
+  //TODO Creation of node objects should be in DataNode class (factory)
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
 
