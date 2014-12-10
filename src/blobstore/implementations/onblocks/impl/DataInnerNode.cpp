@@ -85,10 +85,12 @@ DataInnerNode::ChildEntry *DataInnerNode::ChildrenLast() {
 }
 
 void DataInnerNode::write(off_t offset, size_t count, const Data &data) {
-  //assert(count <= data.size());
-  //assert(offset+count <= _node->DATASIZE_BYTES);
-  //std::memcpy(_node->DataBegin()+offset, result.data(), count);
+  //TODO Implement
 
+}
+
+void DataInnerNode::resize(uint64_t newsize_bytes) {
+  //TODO Implement
 }
 
 }

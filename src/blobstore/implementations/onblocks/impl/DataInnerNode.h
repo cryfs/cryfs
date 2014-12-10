@@ -12,17 +12,20 @@ public:
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
 
-  void InitializeNewNode();
-
   struct ChildEntry {
     uint32_t numBlocksInThisAndLeftwardNodes;
     uint8_t key[Key::KEYLENGTH_BINARY];
   };
 
+  static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
+
+  void InitializeNewNode();
+
   void read(off_t offset, size_t count, blockstore::Data *result) override;
   void write(off_t offset, size_t count, const blockstore::Data &data) override;
 
   uint64_t numBytesInThisNode() override;
+  void resize(uint64_t newsize_bytes) override;
 
 private:
 
