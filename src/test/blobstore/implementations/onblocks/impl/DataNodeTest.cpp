@@ -24,27 +24,12 @@ public:
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
-TEST_F(DataNodeTest, InitializeNewLeafNodeCreatesLeafNodeObject) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
-  auto leafNode = DataNode::initializeNewLeafNode(std::move(block.block));
-
-  EXPECT_IS_PTR_TYPE(DataLeafNode, leafNode.get());
-}
-
-TEST_F(DataNodeTest, InitializeNewInnerNodeCreatesInnerNodeObject) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
-  auto innerNode = DataNode::initializeNewInnerNode(std::move(block.block));
-
-  EXPECT_IS_PTR_TYPE(DataInnerNode, innerNode.get());
-}
-
 TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
-  auto node = DataNode::initializeNewLeafNode(std::move(block.block));
-  node->flush();
+  {
+    DataLeafNode(std::move(block.block)).InitializeNewLeafNode();
+  }
 
   auto loaded_node = DataNode::load(blockStore->load(key));
 
@@ -54,8 +39,9 @@ TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
 TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
-  auto node = DataNode::initializeNewInnerNode(std::move(block.block));
-  node->flush();
+  {
+    DataInnerNode(std::move(block.block)).InitializeNewInnerNode();
+  }
 
   auto loaded_node = DataNode::load(blockStore->load(key));
 
@@ -65,10 +51,13 @@ TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
 TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfMagicNumberIsWrong) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
-  DataNode::NodeHeader* header = (DataNode::NodeHeader*)block.block->data();
-  header->magicNumber = 0xFF; // this is an invalid magic number
+  {
+    DataNodeView view(std::move(block.block));
+    *view.MagicNumber() = 0xFF; // this is an invalid magic number
+  }
 
+  auto loaded_block = blockStore->load(key);
   EXPECT_ANY_THROW(
-    DataNode::load(std::move(block.block))
+    DataNode::load(std::move(loaded_block))
   );
 }

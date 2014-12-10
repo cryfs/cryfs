@@ -10,6 +10,7 @@ namespace onblocks {
 
 class BlobStoreOnBlocks: public BlobStore {
 public:
+  //Should be a multiple of 16. The DataNodeView classes have a header of 16 bytes and the block key length (inner data nodes store a list of block keys) is 16 bytes.
   static constexpr size_t BLOCKSIZE = 4096;
 
   BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore);

@@ -2,40 +2,33 @@
 #ifndef BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_IMPL_DATANODE_H_
 #define BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_IMPL_DATANODE_H_
 
-#include "blockstore/interface/Block.h"
+#include "DataNodeView.h"
 
-#include <memory>
+#include "blockstore/utils/Data.h"
 
 namespace blobstore {
 namespace onblocks {
-class DataInnerNode;
-class DataLeafNode;
 
 class DataNode {
 public:
   virtual ~DataNode();
 
-  static constexpr unsigned char magicNumberInnerNode = 0x01;
-  static constexpr unsigned char magicNumberLeaf = 0x02;
-  struct NodeHeader {
-    unsigned char magicNumber;
-  };
+  //TODO MAke read, numBytesInThisNode const
+  virtual void read(off_t offset, size_t count, blockstore::Data *result) = 0;
+  virtual void write(off_t offset, size_t count, const blockstore::Data &data) = 0;
 
-  void flush();
+  virtual uint64_t numBytesInThisNode() = 0;
 
   static std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
 
-  static std::unique_ptr<DataInnerNode> initializeNewInnerNode(std::unique_ptr<blockstore::Block> block);
-  static std::unique_ptr<DataLeafNode> initializeNewLeafNode(std::unique_ptr<blockstore::Block> block);
-
 protected:
-  DataNode(std::unique_ptr<blockstore::Block> block);
+  DataNode(DataNodeView block);
 
-  std::unique_ptr<blockstore::Block> _block;
-
+  DataNodeView _node;
 };
 
 }
 }
+
 
 #endif

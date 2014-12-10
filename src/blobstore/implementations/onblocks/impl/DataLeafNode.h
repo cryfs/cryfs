@@ -9,14 +9,16 @@ namespace onblocks {
 
 class DataLeafNode: public DataNode {
 public:
-  DataLeafNode(std::unique_ptr<blockstore::Block> block);
+  DataLeafNode(DataNodeView block);
   virtual ~DataLeafNode();
 
-  struct LeafHeader {
-    NodeHeader nodeHeader;
-  };
+  void read(off_t offset, size_t count, blockstore::Data *result) override;
+  void write(off_t offset, size_t count, const blockstore::Data &data) override;
 
-  void InitializeEmptyLeaf();
+  void InitializeNewLeafNode();
+
+  uint64_t numBytesInThisNode() override;
+
 };
 
 }

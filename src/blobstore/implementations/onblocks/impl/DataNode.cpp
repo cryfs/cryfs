@@ -12,40 +12,38 @@ using std::runtime_error;
 namespace blobstore {
 namespace onblocks {
 
-DataNode::DataNode(unique_ptr<Block> block)
-: _block(std::move(block)) {
+DataNode::DataNode(DataNodeView node)
+: _node(std::move(node)) {
 }
 
 DataNode::~DataNode() {
 }
 
-void DataNode::flush() {
-  _block->flush();
-}
-
 unique_ptr<DataNode> DataNode::load(unique_ptr<Block> block) {
-  NodeHeader *header = (NodeHeader*)block->data();
-  if (header->magicNumber == magicNumberInnerNode) {
-    return make_unique<DataInnerNode>(std::move(block));
-  } else if (header->magicNumber == magicNumberLeaf) {
-    return make_unique<DataLeafNode>(std::move(block));
+  DataNodeView node(std::move(block));
+
+  if (*node.MagicNumber() == node.magicNumberNodeWithChildren) {
+    return make_unique<DataInnerNode>(std::move(node));
+  } else if (*node.MagicNumber() == node.magicNumberLeaf) {
+    return make_unique<DataLeafNode>(std::move(node));
   } else {
     //TODO Better exception
     throw runtime_error("Invalid node magic number");
   }
 }
 
-unique_ptr<DataInnerNode> DataNode::initializeNewInnerNode(unique_ptr<Block> block) {
+/*
+unique_ptr<DataInnerNode> DataNodeView::initializeNewInnerNode(unique_ptr<Block> block) {
   auto newNode = make_unique<DataInnerNode>(std::move(block));
   newNode->InitializeEmptyInnerNode();
   return newNode;
 }
 
-unique_ptr<DataLeafNode> DataNode::initializeNewLeafNode(unique_ptr<Block> block) {
+unique_ptr<DataLeafNode> DataNodeView::initializeNewLeafNode(unique_ptr<Block> block) {
   auto newNode = make_unique<DataLeafNode>(std::move(block));
   newNode->InitializeEmptyLeaf();
   return newNode;
-}
+}*/
 
 }
 }
