@@ -26,7 +26,7 @@ void DataLeafNode::write(off_t offset, size_t count, const Data &data) {
   std::memcpy(_node.DataBegin<unsigned char>()+offset, data.data(), count);
 }
 
-void DataLeafNode::InitializeNewLeafNode() {
+void DataLeafNode::InitializeNewNode() {
   *_node.MagicNumber() = _node.magicNumberLeaf;
   *_node.Size() = 0;
 }

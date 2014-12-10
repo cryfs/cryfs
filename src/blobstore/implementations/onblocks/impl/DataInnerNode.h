@@ -9,16 +9,15 @@ namespace onblocks {
 
 class DataInnerNode: public DataNode {
 public:
-  //TODO Creation of node objects should be in DataNode class (factory)
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
+
+  void InitializeNewNode();
 
   struct ChildEntry {
     uint32_t numBlocksInThisAndLeftwardNodes;
     uint8_t key[Key::KEYLENGTH_BINARY];
   };
-
-  void InitializeNewInnerNode();
 
   void read(off_t offset, size_t count, blockstore::Data *result) override;
   void write(off_t offset, size_t count, const blockstore::Data &data) override;
@@ -26,6 +25,7 @@ public:
   uint64_t numBytesInThisNode() override;
 
 private:
+
   ChildEntry *ChildrenBegin();
   ChildEntry *ChildrenEnd();
   ChildEntry *ChildrenLast();

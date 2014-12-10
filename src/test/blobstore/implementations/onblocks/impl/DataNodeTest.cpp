@@ -24,11 +24,23 @@ public:
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
+TEST_F(DataNodeTest, CreateLeafNodeCreatesLeafNode) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto node = DataNode::createNewLeafNode(std::move(block.block));
+  EXPECT_IS_PTR_TYPE(DataLeafNode, node.get());
+}
+
+TEST_F(DataNodeTest, CreateInnerNodeCreatesInnerNode) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto node = DataNode::createNewInnerNode(std::move(block.block));
+  EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
+}
+
 TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
   {
-    DataLeafNode(std::move(block.block)).InitializeNewLeafNode();
+    DataNode::createNewLeafNode(std::move(block.block));
   }
 
   auto loaded_node = DataNode::load(blockStore->load(key));
@@ -40,7 +52,7 @@ TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
   {
-    DataInnerNode(std::move(block.block)).InitializeNewInnerNode();
+    DataNode::createNewInnerNode(std::move(block.block));
   }
 
   auto loaded_node = DataNode::load(blockStore->load(key));

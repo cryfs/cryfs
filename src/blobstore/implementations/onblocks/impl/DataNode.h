@@ -20,6 +20,8 @@ public:
   virtual uint64_t numBytesInThisNode() = 0;
 
   static std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
+  static std::unique_ptr<DataNode> createNewLeafNode(std::unique_ptr<blockstore::Block> block);
+  static std::unique_ptr<DataNode> createNewInnerNode(std::unique_ptr<blockstore::Block> block);
 
 protected:
   DataNode(DataNodeView block);

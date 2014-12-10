@@ -14,7 +14,7 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-void DataInnerNode::InitializeNewInnerNode() {
+void DataInnerNode::InitializeNewNode() {
   *_node.MagicNumber() = _node.magicNumberNodeWithChildren;
   *_node.Size() = 0;
 }

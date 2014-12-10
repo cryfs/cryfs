@@ -19,6 +19,8 @@ using blockstore::inmemory::InMemoryBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 
+#define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
+
 class DataLeafNodeTest: public Test {
 public:
   unique_ptr<BlockStore> blockStore = make_unique<InMemoryBlockStore>();
@@ -31,14 +33,15 @@ public:
 
   Key WriteDataToNewLeafBlockAndReturnKey() {
     auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-    DataLeafNode leaf(DataNodeView(std::move(block.block)));
-    leaf.write(0, randomData.size(), randomData);
+    auto leaf = DataNode::createNewLeafNode(std::move(block.block));
+    leaf->write(0, randomData.size(), randomData);
     return block.key;
   }
 
   void ReadDataFromLeafBlock(Key key, Data *data) {
-    DataLeafNode leaf(DataNodeView(blockStore->load(key)));
-    leaf.read(0, data->size(), data);
+    auto leaf = DataNode::load(blockStore->load(key));
+    EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
+    leaf->read(0, data->size(), data);
   }
 
   Data randomData;
@@ -46,11 +49,11 @@ public:
 
 TEST_F(DataLeafNodeTest, ReadWrittenDataImmediately) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  DataLeafNode leaf(DataNodeView(std::move(block.block)));
-  leaf.write(0, randomData.size(), randomData);
+  auto leaf = DataNode::createNewLeafNode(std::move(block.block));
+  leaf->write(0, randomData.size(), randomData);
 
   Data read(DataNodeView::DATASIZE_BYTES);
-  leaf.read(0, read.size(), &read);
+  leaf->read(0, read.size(), &read);
   EXPECT_EQ(0, std::memcmp(randomData.data(), read.data(), randomData.size()));
 }
 
@@ -61,6 +64,22 @@ TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBLock) {
   ReadDataFromLeafBlock(key, &data);
 
   EXPECT_EQ(0, std::memcmp(randomData.data(), data.data(), randomData.size()));
+}
+
+TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto leaf = DataNode::createNewLeafNode(std::move(block.block));
+  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+}
+
+TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero_AfterLoading) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  {
+    DataNode::createNewLeafNode(std::move(block.block));
+  }
+  auto leaf = DataNode::load(blockStore->load(block.key));
+
+  EXPECT_EQ(0u, leaf->numBytesInThisNode());
 }
 
 //TODO Write tests that only read part of the data
