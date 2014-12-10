@@ -16,10 +16,10 @@ public:
 
   void InitializeNewNode();
 
-  void read(off_t offset, size_t count, blockstore::Data *result) override;
+  void read(off_t offset, size_t count, blockstore::Data *result) const override;
   void write(off_t offset, size_t count, const blockstore::Data &data) override;
 
-  uint64_t numBytesInThisNode() override;
+  uint64_t numBytesInThisNode() const override;
   void resize(uint64_t newsize_bytes) override;
 
 private:

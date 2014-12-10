@@ -15,7 +15,7 @@ DataLeafNode::DataLeafNode(DataNodeView view)
 DataLeafNode::~DataLeafNode() {
 }
 
-void DataLeafNode::read(off_t offset, size_t count, Data *result) {
+void DataLeafNode::read(off_t offset, size_t count, Data *result) const {
   assert(count <= result->size());
   assert(offset+count <= numBytesInThisNode());
   std::memcpy(result->data(), _node.DataBegin<unsigned char>()+offset, count);
@@ -37,7 +37,7 @@ void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
   std::memset(_node.DataBegin<unsigned char>()+begin, 0, end-begin);
 }
 
-uint64_t DataLeafNode::numBytesInThisNode() {
+uint64_t DataLeafNode::numBytesInThisNode() const {
   return *_node.Size();
 }
 

@@ -19,14 +19,14 @@ void DataInnerNode::InitializeNewNode() {
   *_node.Size() = 0;
 }
 
-void DataInnerNode::read(off_t offset, size_t count, Data *result) {
+void DataInnerNode::read(off_t offset, size_t count, Data *result) const {
   assert(count <= result->size());
   const uint64_t end = offset + count;
   assert(end <= numBytesInThisNode());
 
   uint8_t *target = (uint8_t*)result->data();
 
-  ChildEntry *child = ChildContainingFirstByteAfterOffset(offset);
+  const ChildEntry *child = ChildContainingFirstByteAfterOffset(offset);
   off_t blockrelative_offset = offset - numBytesInLeftwardSiblings(child);
   uint64_t already_read_bytes = readFromChild(child, blockrelative_offset, count, target);
   while(numBytesInChildAndLeftwardSiblings(child) < end) {
@@ -36,7 +36,7 @@ void DataInnerNode::read(off_t offset, size_t count, Data *result) {
   assert(already_read_bytes == count);
 }
 
-uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target) {
+uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target) const {
   uint64_t readable_bytes = std::min(count, numBytesInChild(child) - inner_offset);
 
   //TODO READ...
@@ -44,7 +44,7 @@ uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offse
   return readable_bytes;
 }
 
-DataInnerNode::ChildEntry *DataInnerNode::ChildContainingFirstByteAfterOffset(off_t offset) {
+const DataInnerNode::ChildEntry *DataInnerNode::ChildContainingFirstByteAfterOffset(off_t offset) const {
   uint32_t offset_blocks = offset / _node.BLOCKSIZE_BYTES;
 
   return
@@ -53,34 +53,34 @@ DataInnerNode::ChildEntry *DataInnerNode::ChildContainingFirstByteAfterOffset(of
     });
 }
 
-uint64_t DataInnerNode::numBytesInThisNode() {
+uint64_t DataInnerNode::numBytesInThisNode() const {
   return numBytesInChildAndLeftwardSiblings(ChildrenLast());
 }
 
-uint64_t DataInnerNode::numBytesInChild(const ChildEntry *child) {
+uint64_t DataInnerNode::numBytesInChild(const ChildEntry *child) const {
   return numBytesInChildAndLeftwardSiblings(child) - numBytesInLeftwardSiblings(child);
 }
 
-uint64_t DataInnerNode::numBytesInLeftwardSiblings(const ChildEntry *child) {
+uint64_t DataInnerNode::numBytesInLeftwardSiblings(const ChildEntry *child) const {
   if (child == ChildrenBegin()) {
     return 0;
   }
   return numBytesInChildAndLeftwardSiblings(child-1);
 }
 
-uint64_t DataInnerNode::numBytesInChildAndLeftwardSiblings(const ChildEntry *child) {
+uint64_t DataInnerNode::numBytesInChildAndLeftwardSiblings(const ChildEntry *child) const {
   return (uint64_t)child->numBlocksInThisAndLeftwardNodes * _node.BLOCKSIZE_BYTES;
 }
 
-DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() {
+const DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() const {
   return _node.DataBegin<ChildEntry>();
 }
 
-DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() {
+const DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() const {
   return ChildrenBegin() + *_node.Size();
 }
 
-DataInnerNode::ChildEntry *DataInnerNode::ChildrenLast() {
+const DataInnerNode::ChildEntry *DataInnerNode::ChildrenLast() const{
   return ChildrenEnd()-1;
 }
 

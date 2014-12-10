@@ -21,24 +21,24 @@ public:
 
   void InitializeNewNode();
 
-  void read(off_t offset, size_t count, blockstore::Data *result) override;
+  void read(off_t offset, size_t count, blockstore::Data *result) const override;
   void write(off_t offset, size_t count, const blockstore::Data &data) override;
 
-  uint64_t numBytesInThisNode() override;
+  uint64_t numBytesInThisNode() const override;
   void resize(uint64_t newsize_bytes) override;
 
 private:
 
-  ChildEntry *ChildrenBegin();
-  ChildEntry *ChildrenEnd();
-  ChildEntry *ChildrenLast();
+  const ChildEntry *ChildrenBegin() const;
+  const ChildEntry *ChildrenEnd() const;
+  const ChildEntry *ChildrenLast() const;
 
-  uint64_t readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target);
+  uint64_t readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target) const;
 
-  ChildEntry *ChildContainingFirstByteAfterOffset(off_t offset);
-  uint64_t numBytesInChildAndLeftwardSiblings(const ChildEntry *child);
-  uint64_t numBytesInLeftwardSiblings(const ChildEntry *child);
-  uint64_t numBytesInChild(const ChildEntry *child);
+  const ChildEntry *ChildContainingFirstByteAfterOffset(off_t offset) const;
+  uint64_t numBytesInChildAndLeftwardSiblings(const ChildEntry *child) const;
+  uint64_t numBytesInLeftwardSiblings(const ChildEntry *child) const;
+  uint64_t numBytesInChild(const ChildEntry *child) const;
 };
 
 }
