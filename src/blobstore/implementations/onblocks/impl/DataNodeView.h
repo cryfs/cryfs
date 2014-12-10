@@ -8,13 +8,16 @@
 #include "fspp/utils/macros.h"
 
 #include <memory>
+#include <cassert>
 
 namespace blobstore {
 namespace onblocks {
 
 class DataNodeView {
 public:
-  DataNodeView(std::unique_ptr<blockstore::Block> block): _block(std::move(block)) {}
+  DataNodeView(std::unique_ptr<blockstore::Block> block): _block(std::move(block)) {
+    assert(_block->size() == BLOCKSIZE_BYTES);
+  }
   virtual ~DataNodeView() {}
 
   DataNodeView(DataNodeView &&rhs) = default;
@@ -73,17 +76,15 @@ public:
     return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataEnd<Entry>());
   }
 
-protected:
-
+private:
   template<int offset, class Type>
   const Type *GetOffset() const {
     return (Type*)(((const int8_t*)_block->data())+offset);
   }
 
-private:
-  DISALLOW_COPY_AND_ASSIGN(DataNodeView);
-
   std::unique_ptr<blockstore::Block> _block;
+
+  DISALLOW_COPY_AND_ASSIGN(DataNodeView);
 
 };
 
