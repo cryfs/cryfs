@@ -44,6 +44,9 @@ uint64_t DataLeafNode::numBytesInThisNode() {
 void DataLeafNode::resize(uint64_t newsize_bytes) {
   assert(newsize_bytes <= MAX_STORED_BYTES);
 
+  // If we're shrinking, we want to delete the old data
+  // (overwrite it with zeroes).
+  // TODO Mention this in thesis
   if (newsize_bytes < *_node.Size()) {
     fillDataWithZeroesFromTo(newsize_bytes, *_node.Size());
   }
