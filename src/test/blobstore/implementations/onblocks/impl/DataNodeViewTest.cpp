@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "blockstore/implementations/inmemory/InMemoryBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlock.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include "blobstore/implementations/onblocks/impl/DataNodeView.h"
 #include "test/testutils/DataBlockFixture.h"
@@ -14,7 +14,7 @@ using std::make_unique;
 using std::string;
 
 using blockstore::BlockStore;
-using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 
@@ -25,7 +25,7 @@ public:
   //     because the next block load will just give you the same data region (and the overflow data will most
   //     likely still be intact).
   //     So better write a FakeBlockStore class for test cases.
-  unique_ptr<BlockStore> blockStore = make_unique<InMemoryBlockStore>();
+  unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
 };
 
 TEST_F(DataNodeViewTest, MagicNumberIsStored) {
@@ -54,13 +54,13 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
 
 TEST_F(DataNodeViewTest, DataIsStored) {
   DataBlockFixture randomData(DataNodeView::DATASIZE_BYTES);
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto block = blockStore->create(DataNodeView::BLOCKSIZE_BYTES);
   {
     DataNodeView view(std::move(block.block));
-    std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES);
+    std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), randomData.size());
   }
   DataNodeView view(blockStore->load(block.key));
-  EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES));
+  EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), randomData.size()));
 }
 
 TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {

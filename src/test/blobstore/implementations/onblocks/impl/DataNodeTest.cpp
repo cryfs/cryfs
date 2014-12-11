@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "blockstore/implementations/inmemory/InMemoryBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlock.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include "blobstore/implementations/onblocks/impl/DataNode.h"
 #include "blobstore/implementations/onblocks/impl/DataLeafNode.h"
@@ -13,13 +13,13 @@ using std::make_unique;
 using std::string;
 
 using blockstore::BlockStore;
-using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 
 class DataNodeTest: public Test {
 public:
-  unique_ptr<BlockStore> blockStore = make_unique<InMemoryBlockStore>();
+  unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
 };
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"

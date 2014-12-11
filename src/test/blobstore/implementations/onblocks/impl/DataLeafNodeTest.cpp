@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "blockstore/implementations/inmemory/InMemoryBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlock.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include "blobstore/implementations/onblocks/impl/DataLeafNode.h"
 #include "test/testutils/DataBlockFixture.h"
@@ -16,7 +16,7 @@ using std::string;
 using blockstore::BlockStore;
 using blockstore::BlockWithKey;
 using blockstore::Data;
-using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 
@@ -28,7 +28,7 @@ public:
   DataLeafNodeTest():
     ZEROES(DataLeafNode::MAX_STORED_BYTES),
     randomData(DataLeafNode::MAX_STORED_BYTES),
-    blockStore(make_unique<InMemoryBlockStore>()),
+    blockStore(make_unique<FakeBlockStore>()),
     block(blockStore->create(DataNodeView::BLOCKSIZE_BYTES)),
     leafblock(blockStore->create(DataNodeView::BLOCKSIZE_BYTES)),
     leafblockdata((uint8_t*)leafblock.block->data()),
