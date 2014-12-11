@@ -20,12 +20,12 @@ unique_ptr<Block> InMemoryBlockStore::create(const Key &key, size_t size) {
     return nullptr;
   }
 
-  //Return a copy of the stored InMemoryBlock
+  //Return a pointer to the stored InMemoryBlock
   return make_unique<InMemoryBlock>(insert_result.first->second);
 }
 
 unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {
-  //Return a copy of the stored InMemoryBlock
+  //Return a pointer to the stored InMemoryBlock
   try {
     return make_unique<InMemoryBlock>(_blocks.at(key.AsString()));
   } catch (const std::out_of_range &e) {

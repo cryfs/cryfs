@@ -1,0 +1,3 @@
+add_library(blockstore_testfake FakeBlock.cpp FakeBlockStore.cpp)
+
+target_link_libraries(blockstore_testfake blockstore_interface blockstore_utils)

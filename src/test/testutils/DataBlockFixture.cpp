@@ -20,6 +20,12 @@ void DataBlockFixture::fillFileWithRandomData(long long int IV) {
     val += 1442695040888963407;
     reinterpret_cast<long long int*>(_fileData)[i] = val;
   }
+  //Fill remaining bytes
+  for(size_t i=(_size/sizeof(long long int))*sizeof(long long int); i<_size; ++i) {
+    val *= 6364136223846793005L;
+    val += 1442695040888963407;
+    reinterpret_cast<char*>(_fileData)[i] = val;
+  }
 }
 
 const char *DataBlockFixture::data() const {
