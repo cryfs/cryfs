@@ -125,6 +125,15 @@ TEST_P(DataTestWithSizeParam, StoreAndLoad) {
   EXPECT_DATA_CORRECT(loaded_data);
 }
 
+TEST_P(DataTestWithSizeParam, Copy) {
+  Data data(GetParam());
+  FillData(&data);
+
+  Data copy = data.copy();
+
+  EXPECT_DATA_CORRECT(copy);
+}
+
 TEST_F(DataTest, InitializeWithZeroes) {
   Data data(10*1024);
   data.FillWithZeroes();

@@ -34,6 +34,12 @@ Data::~Data() {
   _data = nullptr;
 }
 
+Data Data::copy() const {
+  Data copy(_size);
+  std::memcpy(copy._data, _data, _size);
+  return copy;
+}
+
 void *Data::data() {
   return const_cast<void*>(const_cast<const Data*>(this)->data());
 }

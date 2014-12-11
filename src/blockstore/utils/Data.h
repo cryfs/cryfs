@@ -17,6 +17,8 @@ public:
   Data(Data &&rhs); // move constructor
   virtual ~Data();
 
+  Data copy() const;
+
   void *data();
   const void *data() const;
 
