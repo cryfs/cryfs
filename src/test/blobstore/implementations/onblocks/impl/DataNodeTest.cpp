@@ -1,3 +1,4 @@
+#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
@@ -19,64 +20,48 @@ using namespace blobstore::onblocks;
 
 class DataNodeTest: public Test {
 public:
-  unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
+  unique_ptr<BlockStore> _blockStore = make_unique<FakeBlockStore>();
+  BlockStore *blockStore = _blockStore.get();
+  unique_ptr<DataNodeStore> nodeStore = make_unique<DataNodeStore>(std::move(_blockStore));
 };
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
 TEST_F(DataNodeTest, CreateLeafNodeCreatesLeafNode) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  auto node = DataNode::createNewLeafNode(std::move(block.block));
+  auto node = nodeStore->createNewLeafNode();
   EXPECT_IS_PTR_TYPE(DataLeafNode, node.get());
 }
 
 TEST_F(DataNodeTest, CreateInnerNodeCreatesInnerNode) {
-  auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
+  auto leaf = nodeStore->createNewLeafNode();
 
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  auto node = DataNode::createNewInnerNode(std::move(block.block), leafblock.key, *leaf);
+  auto node = nodeStore->createNewInnerNode(*leaf);
   EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
 }
 
 TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
-  {
-    DataNode::createNewLeafNode(std::move(block.block));
-  }
+  Key key = nodeStore->createNewLeafNode()->key();
 
-  auto loaded_node = DataNode::load(blockStore->load(key));
+  auto loaded_node = nodeStore->load(key);
 
   EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
 }
 
 TEST_F(DataNodeTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
-  {
-    auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-    auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
-    DataNode::createNewInnerNode(std::move(block.block), leafblock.key, *leaf);
-  }
+  auto leaf = nodeStore->createNewLeafNode();
+  Key key = nodeStore->createNewInnerNode(*leaf)->key();
 
-  auto loaded_node = DataNode::load(blockStore->load(key));
+  auto loaded_node = nodeStore->load(key);
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
 
 TEST_F(DataNodeTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
-  {
-    auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-    auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
-    auto inner1block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-    auto inner1 = DataNode::createNewInnerNode(std::move(inner1block.block), leafblock.key, *leaf);
-    DataNode::createNewInnerNode(std::move(block.block), inner1block.key, *inner1);
-  }
+  auto leaf = nodeStore->createNewLeafNode();
+  auto inner = nodeStore->createNewInnerNode(*leaf);
+  Key key = nodeStore->createNewInnerNode(*inner)->key();
 
-  auto loaded_node = DataNode::load(blockStore->load(key));
+  auto loaded_node = nodeStore->load(key);
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
@@ -86,11 +71,10 @@ TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   Key key = block.key;
   {
     DataNodeView view(std::move(block.block));
-    *view.Depth() = 200u; // this is an invalid depth
+    *view.Depth() = DataNodeStore::MAX_DEPTH + 1;
   }
 
-  auto loaded_block = blockStore->load(key);
   EXPECT_ANY_THROW(
-    DataNode::load(std::move(loaded_block))
+    nodeStore->load(key)
   );
 }

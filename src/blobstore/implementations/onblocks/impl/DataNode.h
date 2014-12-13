@@ -8,12 +8,11 @@
 
 namespace blobstore {
 namespace onblocks {
+class DataNodeStore;
 
 class DataNode {
 public:
   virtual ~DataNode();
-
-  static constexpr uint8_t MAX_DEPTH = 10;
 
   virtual void read(off_t offset, size_t count, blockstore::Data *result) const = 0;
   virtual void write(off_t offset, size_t count, const blockstore::Data &data) = 0;
@@ -21,14 +20,25 @@ public:
   virtual void resize(uint64_t newsize_bytes) = 0;
   virtual uint64_t numBytesInThisNode() const = 0;
 
-  static std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
-  static std::unique_ptr<DataNode> createNewLeafNode(std::unique_ptr<blockstore::Block> block);
-  static std::unique_ptr<DataNode> createNewInnerNode(std::unique_ptr<blockstore::Block> block, const Key &first_child_key, const DataNode &first_child);
+  const Key &key() const;
+
+  uint8_t depth() const;
 
 protected:
-  DataNode(DataNodeView block);
+  DataNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
 
+  DataNodeStore &storage();
+  const DataNodeStore &storage() const;
+
+  DataNodeView &node();
+  const DataNodeView &node() const;
+
+private:
+  Key _key; //TODO Remove this and make blockstore::Block store the key
   DataNodeView _node;
+  DataNodeStore *_nodestorage;
+
+  DISALLOW_COPY_AND_ASSIGN(DataNode);
 };
 
 }

@@ -9,7 +9,7 @@ namespace onblocks {
 
 class DataInnerNode: public DataNode {
 public:
-  DataInnerNode(DataNodeView block);
+  DataInnerNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
   virtual ~DataInnerNode();
 
   struct ChildEntry {
@@ -18,7 +18,7 @@ public:
 
   static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
 
-  void InitializeNewNode(const Key &first_child_key, const DataNodeView &first_child);
+  void InitializeNewNode(const DataNode &first_child);
 
   void read(off_t offset, size_t count, blockstore::Data *result) const override;
   void write(off_t offset, size_t count, const blockstore::Data &data) override;
@@ -30,14 +30,16 @@ private:
   ChildEntry *ChildrenBegin();
   const ChildEntry *ChildrenBegin() const;
   const ChildEntry *ChildrenEnd() const;
-  const ChildEntry *ChildrenLast() const;
+  const ChildEntry *RightmostChild() const;
 
   uint64_t readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target) const;
 
+  uint32_t numChildren() const;
+  uint32_t maxNumDataBlocksPerChild() const;
+  uint64_t maxNumBytesPerChild() const;
+  uint64_t numBytesInNonRightmostChildrenSum() const;
+  uint64_t numBytesInRightmostChild() const;
   const ChildEntry *ChildContainingFirstByteAfterOffset(off_t offset) const;
-  uint64_t numBytesInChildAndLeftwardSiblings(const ChildEntry *child) const;
-  uint64_t numBytesInLeftwardSiblings(const ChildEntry *child) const;
-  uint64_t numBytesInChild(const ChildEntry *child) const;
 };
 
 }

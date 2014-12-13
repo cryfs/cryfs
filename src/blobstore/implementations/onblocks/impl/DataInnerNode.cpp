@@ -1,4 +1,6 @@
+#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
 #include "DataInnerNode.h"
+
 
 using std::unique_ptr;
 using blockstore::Block;
@@ -7,17 +9,17 @@ using blockstore::Data;
 namespace blobstore {
 namespace onblocks {
 
-DataInnerNode::DataInnerNode(DataNodeView view)
-: DataNode(std::move(view)) {
+DataInnerNode::DataInnerNode(DataNodeView view, const Key &key, DataNodeStore *nodestorage)
+: DataNode(std::move(view), key, nodestorage) {
 }
 
 DataInnerNode::~DataInnerNode() {
 }
 
-void DataInnerNode::InitializeNewNode(const Key &first_child_key, const DataNodeView &first_child) {
-  *_node.Depth() = *first_child.Depth() + 1;
-  *_node.Size() = 1;
-  first_child_key.ToBinary(ChildrenBegin()->key);
+void DataInnerNode::InitializeNewNode(const DataNode &first_child) {
+  *node().Depth() = first_child.depth() + 1;
+  *node().Size() = 1;
+  first_child.key().ToBinary(ChildrenBegin()->key);
 }
 
 void DataInnerNode::read(off_t offset, size_t count, Data *result) const {
@@ -28,9 +30,12 @@ void DataInnerNode::read(off_t offset, size_t count, Data *result) const {
   uint8_t *target = (uint8_t*)result->data();
 
   const ChildEntry *child = ChildContainingFirstByteAfterOffset(offset);
-  off_t blockrelative_offset = offset - numBytesInLeftwardSiblings(child);
-  uint64_t already_read_bytes = readFromChild(child, blockrelative_offset, count, target);
-  while(numBytesInChildAndLeftwardSiblings(child) < end) {
+  uint32_t child_index = child-ChildrenBegin();
+  uint64_t child_first_byte_index = maxNumBytesPerChild() * child_index;
+  uint64_t next_child_first_byte_index = child_first_byte_index + maxNumBytesPerChild();
+  off_t childrelative_offset = offset - child_first_byte_index;
+  uint64_t already_read_bytes = readFromChild(child, childrelative_offset, count, target);
+  while(next_child_first_byte_index < end) { //TODO Write a test case that breaks when we're having <= instead of < here
     ++child;
     already_read_bytes += readFromChild(child, 0, count, target + already_read_bytes);
   };
@@ -38,7 +43,8 @@ void DataInnerNode::read(off_t offset, size_t count, Data *result) const {
 }
 
 uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offset, size_t count, uint8_t *target) const {
-  uint64_t readable_bytes = std::min(count, numBytesInChild(child) - inner_offset);
+  //TODO This only works for non-rightmost children
+  uint64_t readable_bytes = std::min(count, maxNumBytesPerChild() - inner_offset);
 
   //TODO READ...
 
@@ -46,48 +52,49 @@ uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offse
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::ChildContainingFirstByteAfterOffset(off_t offset) const {
-  uint32_t offset_blocks = offset / _node.BLOCKSIZE_BYTES;
+  uint8_t child_index = offset/maxNumBytesPerChild();
+  return ChildrenBegin()+child_index;
+}
 
-  //TODO no binary search anymore
-  return
-    std::upper_bound(ChildrenBegin(), ChildrenEnd(), offset_blocks, [](uint32_t offset_blocks, const ChildEntry &child) {
-      return false;//return offset_blocks < child.numBlocksInThisAndLeftwardNodes;
-    });
+uint32_t DataInnerNode::maxNumDataBlocksPerChild() const {
+  return std::round(std::pow(MAX_STORED_CHILDREN, *node().Depth()));
 }
 
 uint64_t DataInnerNode::numBytesInThisNode() const {
-  return numBytesInChildAndLeftwardSiblings(ChildrenLast());
+  return numBytesInNonRightmostChildrenSum() + numBytesInRightmostChild();
 }
 
-uint64_t DataInnerNode::numBytesInChild(const ChildEntry *child) const {
-  return numBytesInChildAndLeftwardSiblings(child) - numBytesInLeftwardSiblings(child);
+uint64_t DataInnerNode::numBytesInNonRightmostChildrenSum() const {
+  return maxNumBytesPerChild() * (numChildren()-1);
 }
 
-uint64_t DataInnerNode::numBytesInLeftwardSiblings(const ChildEntry *child) const {
-  if (child == ChildrenBegin()) {
-    return 0;
-  }
-  return numBytesInChildAndLeftwardSiblings(child-1);
+uint64_t DataInnerNode::numBytesInRightmostChild() const {
+  Key rightmost_child_key = Key::FromBinary(RightmostChild()->key);
+  auto rightmost_child = storage().load(rightmost_child_key);
+  return rightmost_child->numBytesInThisNode();
 }
 
-uint64_t DataInnerNode::numBytesInChildAndLeftwardSiblings(const ChildEntry *child) const {
-  //TODO Rewrite
-  //return (uint64_t)child->numBlocksInThisAndLeftwardNodes * _node.BLOCKSIZE_BYTES;
+uint32_t DataInnerNode::numChildren() const {
+  return *node().Size();
 }
 
+//TODO This only works for non-rightmost children
+uint64_t DataInnerNode::maxNumBytesPerChild() const {
+  return maxNumDataBlocksPerChild() * DataNodeView::DATASIZE_BYTES;
+}
 DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() {
   return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->ChildrenBegin());
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() const {
-  return _node.DataBegin<ChildEntry>();
+  return node().DataBegin<ChildEntry>();
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() const {
-  return ChildrenBegin() + *_node.Size();
+  return ChildrenBegin() + *node().Size();
 }
 
-const DataInnerNode::ChildEntry *DataInnerNode::ChildrenLast() const{
+const DataInnerNode::ChildEntry *DataInnerNode::RightmostChild() const{
   return ChildrenEnd()-1;
 }
 

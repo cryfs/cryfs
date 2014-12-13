@@ -9,7 +9,7 @@ namespace onblocks {
 
 class DataLeafNode: public DataNode {
 public:
-  DataLeafNode(DataNodeView block);
+  DataLeafNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
   virtual ~DataLeafNode();
 
   static constexpr uint32_t MAX_STORED_BYTES = DataNodeView::DATASIZE_BYTES;

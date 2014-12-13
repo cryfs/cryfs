@@ -1,3 +1,4 @@
+#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
@@ -28,11 +29,10 @@ public:
   DataLeafNodeTest():
     ZEROES(DataLeafNode::MAX_STORED_BYTES),
     randomData(DataLeafNode::MAX_STORED_BYTES),
-    blockStore(make_unique<FakeBlockStore>()),
-    block(blockStore->create(DataNodeView::BLOCKSIZE_BYTES)),
-    leafblock(blockStore->create(DataNodeView::BLOCKSIZE_BYTES)),
-    leafblockdata((uint8_t*)leafblock.block->data()),
-    leaf(DataNode::createNewLeafNode(std::move(leafblock.block))) {
+    _blockStore(make_unique<FakeBlockStore>()),
+    blockStore(_blockStore.get()),
+    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore))),
+    leaf(nodeStore->createNewLeafNode()) {
 
     ZEROES.FillWithZeroes();
 
@@ -42,11 +42,10 @@ public:
   }
 
   Key WriteDataToNewLeafBlockAndReturnKey() {
-    auto block = blockStore->create(DataNodeView::BLOCKSIZE_BYTES);
-    auto leaf = DataNode::createNewLeafNode(std::move(block.block));
-    leaf->resize(randomData.size());
-    leaf->write(0, randomData.size(), randomData);
-    return block.key;
+    auto newleaf = nodeStore->createNewLeafNode();
+    newleaf->resize(randomData.size());
+    newleaf->write(0, randomData.size(), randomData);
+    return newleaf->key();
   }
 
   void FillLeafBlockWithData() {
@@ -55,17 +54,22 @@ public:
   }
 
   void ReadDataFromLoadedLeafBlock(Key key, Data *data) {
-    auto leaf = DataNode::load(blockStore->load(key));
+    auto leaf = nodeStore->load(key);
     EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
     leaf->read(0, data->size(), data);
   }
 
+  void ResizeLeaf(const Key &key, size_t size) {
+    auto leaf = nodeStore->load(key);
+    EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
+    leaf->resize(size);
+  }
+
   Data ZEROES;
   Data randomData;
-  unique_ptr<BlockStore> blockStore;
-  BlockWithKey block;
-  BlockWithKey leafblock;
-  const uint8_t *leafblockdata;
+  unique_ptr<BlockStore> _blockStore;
+  BlockStore *blockStore;
+  unique_ptr<DataNodeStore> nodeStore;
   unique_ptr<DataNode> leaf;
 };
 
@@ -92,15 +96,20 @@ TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero_AfterLoading) {
-  {
-    DataNode::createNewLeafNode(std::move(block.block));
-  }
-  auto leaf = DataNode::load(blockStore->load(block.key));
+  Key key = nodeStore->createNewLeafNode()->key();
+  auto leaf = nodeStore->load(key);
 
   EXPECT_EQ(0u, leaf->numBytesInThisNode());
 }
 
-class DataLeafNodeSizeTest: public DataLeafNodeTest, public WithParamInterface<unsigned int> {};
+class DataLeafNodeSizeTest: public DataLeafNodeTest, public WithParamInterface<unsigned int> {
+public:
+  Key CreateLeafResizeItAndReturnKey() {
+    auto leaf = nodeStore->createNewLeafNode();
+    leaf->resize(GetParam());
+    return leaf->key();
+  }
+};
 INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataLeafNode::MAX_STORED_BYTES));
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
@@ -109,11 +118,9 @@ TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
 }
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeAfterLoading) {
-  {
-    auto leaf = DataNode::createNewLeafNode(std::move(block.block));
-    leaf->resize(GetParam());
-  }
-  auto leaf = DataNode::load(blockStore->load(block.key));
+  Key key = CreateLeafResizeItAndReturnKey();
+
+  auto leaf = nodeStore->load(key);
   EXPECT_EQ(GetParam(), leaf->numBytesInThisNode());
 }
 
@@ -139,14 +146,20 @@ TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
 }
 
 TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
-  FillLeafBlockWithData();
+  Key key = WriteDataToNewLeafBlockAndReturnKey();
   uint32_t smaller_size = randomData.size() - 100;
-  //At first, we expect there to be random data in the underlying data block
-  EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, leafblockdata+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+  {
+    //At first, we expect there to be random data in the underlying data block
+    auto block = blockStore->load(key);
+    EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+  }
 
   //After shrinking, we expect there to be zeroes in the underlying data block
-  leaf->resize(smaller_size);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), leafblockdata+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+  ResizeLeaf(key, smaller_size);
+  {
+    auto block = blockStore->load(leaf->key());
+    EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+  }
 }
 
 //TODO Write tests that only read part of the data

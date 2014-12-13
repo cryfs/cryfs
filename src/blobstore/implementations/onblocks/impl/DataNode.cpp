@@ -1,3 +1,4 @@
+#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
 #include "DataNode.h"
 
 #include "DataInnerNode.h"
@@ -12,35 +13,35 @@ using std::runtime_error;
 namespace blobstore {
 namespace onblocks {
 
-DataNode::DataNode(DataNodeView node)
-: _node(std::move(node)) {
+DataNode::DataNode(DataNodeView node, const Key &key, DataNodeStore *nodestorage)
+: _key(key), _node(std::move(node)), _nodestorage(nodestorage) {
 }
 
 DataNode::~DataNode() {
 }
 
-unique_ptr<DataNode> DataNode::load(unique_ptr<Block> block) {
-  DataNodeView node(std::move(block));
-
-  if (*node.Depth() == 0) {
-    return unique_ptr<DataLeafNode>(new DataLeafNode(std::move(node)));
-  } else if (*node.Depth() < MAX_DEPTH) {
-    return unique_ptr<DataInnerNode>(new DataInnerNode(std::move(node)));
-  } else {
-    throw runtime_error("Tree is to deep. Data corruption?");
-  }
+DataNodeStore &DataNode::storage() {
+  return const_cast<DataNodeStore&>(const_cast<const DataNode*>(this)->storage());
 }
 
-unique_ptr<DataNode> DataNode::createNewInnerNode(unique_ptr<Block> block, const Key &first_child_key, const DataNode &first_child) {
-  auto newNode = unique_ptr<DataInnerNode>(new DataInnerNode(std::move(block)));
-  newNode->InitializeNewNode(first_child_key, first_child._node);
-  return std::move(newNode);
+const DataNodeStore &DataNode::storage() const {
+  return *_nodestorage;
 }
 
-unique_ptr<DataNode> DataNode::createNewLeafNode(unique_ptr<Block> block) {
-  auto newNode = unique_ptr<DataLeafNode>(new DataLeafNode(std::move(block)));
-  newNode->InitializeNewNode();
-  return std::move(newNode);
+DataNodeView &DataNode::node() {
+  return const_cast<DataNodeView&>(const_cast<const DataNode*>(this)->node());
+}
+
+const DataNodeView &DataNode::node() const {
+  return _node;
+}
+
+const Key &DataNode::key() const {
+  return _key;
+}
+
+uint8_t DataNode::depth() const {
+  return *_node.Depth();
 }
 
 }
