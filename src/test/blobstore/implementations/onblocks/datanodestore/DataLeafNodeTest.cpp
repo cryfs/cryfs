@@ -10,6 +10,7 @@
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
+using ::testing::Combine;
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
@@ -173,4 +174,94 @@ TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
   }
 }
 
-//TODO Write tests that only read part of the data
+struct DataRange {
+  DataRange(size_t leafsize_, off_t offset_, size_t count_): leafsize(leafsize_), offset(offset_), count(count_) {}
+  size_t leafsize;
+  off_t offset;
+  size_t count;
+};
+
+class DataLeafNodeDataTest: public DataLeafNodeTest, public WithParamInterface<DataRange> {
+public:
+  Data foregroundData;
+  Data backgroundData;
+
+  DataLeafNodeDataTest(): foregroundData(GetParam().count), backgroundData(GetParam().leafsize) {
+    DataBlockFixture _foregroundData(GetParam().count);
+    DataBlockFixture _backgroundData(GetParam().leafsize);
+    std::memcpy(foregroundData.data(), _foregroundData.data(), foregroundData.size());
+    std::memcpy(backgroundData.data(), _backgroundData.data(), backgroundData.size());
+  }
+
+  void EXPECT_DATA_EQ(const Data &expected, const Data &actual) {
+    EXPECT_EQ(expected.size(), actual.size());
+    EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
+  }
+
+  Key CreateLeafWriteToItAndReturnKey(const Data &to_write) {
+    auto newleaf = nodeStore->createNewLeafNode();
+
+    newleaf->resize(GetParam().leafsize);
+    newleaf->write(GetParam().offset, GetParam().count, to_write);
+    return newleaf->key();
+  }
+
+  void EXPECT_DATA_READS_AS(const Data &expected, const DataNode &leaf, off_t offset, size_t count) {
+    Data read(count);
+    leaf.read(offset, count, &read);
+    EXPECT_DATA_EQ(expected, read);
+  }
+
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataNode &leaf, off_t start, size_t count) {
+    Data begin(start);
+    Data end(GetParam().leafsize - count - start);
+
+    std::memcpy(begin.data(), expected.data(), start);
+    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+
+    EXPECT_DATA_READS_AS(begin, leaf, 0, start);
+    EXPECT_DATA_READS_AS(end, leaf, start + count, end.size());
+  }
+
+  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const DataNode &leaf, off_t start, size_t count) {
+    Data ZEROES(GetParam().leafsize);
+    ZEROES.FillWithZeroes();
+    EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, leaf, start, count);
+  }
+};
+INSTANTIATE_TEST_CASE_P(DataLeafNodeDataTest, DataLeafNodeDataTest, Values(
+  DataRange(DataLeafNode::MAX_STORED_BYTES,     0,   DataLeafNode::MAX_STORED_BYTES),     // full size leaf, access beginning to end
+  DataRange(DataLeafNode::MAX_STORED_BYTES,     100, DataLeafNode::MAX_STORED_BYTES-200), // full size leaf, access middle to middle
+  DataRange(DataLeafNode::MAX_STORED_BYTES,     0,   DataLeafNode::MAX_STORED_BYTES-100), // full size leaf, access beginning to middle
+  DataRange(DataLeafNode::MAX_STORED_BYTES,     100, DataLeafNode::MAX_STORED_BYTES-100), // full size leaf, access middle to end
+  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 0,   DataLeafNode::MAX_STORED_BYTES-100), // non-full size leaf, access beginning to end
+  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 100, DataLeafNode::MAX_STORED_BYTES-300), // non-full size leaf, access middle to middle
+  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 0,   DataLeafNode::MAX_STORED_BYTES-200), // non-full size leaf, access beginning to middle
+  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 100, DataLeafNode::MAX_STORED_BYTES-200)  // non-full size leaf, access middle to end
+));
+
+TEST_P(DataLeafNodeDataTest, WriteAndReadImmediately) {
+  leaf->resize(GetParam().leafsize);
+  leaf->write(GetParam().offset, GetParam().count, this->foregroundData);
+
+  EXPECT_DATA_READS_AS(this->foregroundData, *leaf, GetParam().offset, GetParam().count);
+  EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*leaf, GetParam().offset, GetParam().count);
+}
+
+TEST_P(DataLeafNodeDataTest, WriteAndReadAfterLoading) {
+  Key key = CreateLeafWriteToItAndReturnKey(this->foregroundData);
+
+  auto loaded_leaf = nodeStore->load(key);
+  EXPECT_DATA_READS_AS(this->foregroundData, *loaded_leaf, GetParam().offset, GetParam().count);
+  EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_leaf, GetParam().offset, GetParam().count);
+}
+
+TEST_P(DataLeafNodeDataTest, OverwriteAndRead) {
+  leaf->resize(GetParam().leafsize);
+  leaf->write(0, GetParam().leafsize, this->backgroundData);
+  leaf->write(GetParam().offset, GetParam().count, this->foregroundData);
+
+  EXPECT_DATA_READS_AS(this->foregroundData, *leaf, GetParam().offset, GetParam().count);
+  EXPECT_DATA_READS_AS_OUTSIDE_OF(this->backgroundData, *leaf, GetParam().offset, GetParam().count);
+}
+
