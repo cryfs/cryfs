@@ -69,7 +69,7 @@ void Key::ToBinary(void *target) const {
   std::memcpy(target, _key, KEYLENGTH_BINARY);
 }
 
-Key Key::FromBinary(void *source) {
+Key Key::FromBinary(const void *source) {
   Key result;
   std::memcpy(result._key, source, KEYLENGTH_BINARY);
   return result;

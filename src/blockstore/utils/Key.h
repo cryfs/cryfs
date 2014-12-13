@@ -20,7 +20,7 @@ public:
   static Key FromString(const std::string &key);
   std::string ToString() const;
 
-  static Key FromBinary(void *source);
+  static Key FromBinary(const void *source);
   void ToBinary(void *target) const;
 
   const unsigned char *data() const;
