@@ -18,7 +18,7 @@ using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 
-class DataNodeTest: public Test {
+class DataNodeStoreTest: public Test {
 public:
   unique_ptr<BlockStore> _blockStore = make_unique<FakeBlockStore>();
   BlockStore *blockStore = _blockStore.get();
@@ -27,19 +27,19 @@ public:
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
-TEST_F(DataNodeTest, CreateLeafNodeCreatesLeafNode) {
+TEST_F(DataNodeStoreTest, CreateLeafNodeCreatesLeafNode) {
   auto node = nodeStore->createNewLeafNode();
   EXPECT_IS_PTR_TYPE(DataLeafNode, node.get());
 }
 
-TEST_F(DataNodeTest, CreateInnerNodeCreatesInnerNode) {
+TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
   auto leaf = nodeStore->createNewLeafNode();
 
   auto node = nodeStore->createNewInnerNode(*leaf);
   EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
 }
 
-TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
+TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   Key key = nodeStore->createNewLeafNode()->key();
 
   auto loaded_node = nodeStore->load(key);
@@ -47,7 +47,7 @@ TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
 }
 
-TEST_F(DataNodeTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
+TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode();
   Key key = nodeStore->createNewInnerNode(*leaf)->key();
 
@@ -56,7 +56,7 @@ TEST_F(DataNodeTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
 
-TEST_F(DataNodeTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
+TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode();
   auto inner = nodeStore->createNewInnerNode(*leaf);
   Key key = nodeStore->createNewInnerNode(*inner)->key();
@@ -66,7 +66,7 @@ TEST_F(DataNodeTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
 
-TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
+TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
   {
