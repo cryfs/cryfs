@@ -63,7 +63,7 @@ const char *DirBlock::readAndAddNextChild(const char *pos, vector<string> *resul
 }
 
 void DirBlock::AddChild(const std::string &name, const Key &blockKey) {
-  string blockKeyStr = blockKey.AsString();
+  string blockKeyStr = blockKey.ToString();
 
   char *insertPos = entriesEnd();
   assertEnoughSpaceLeft(insertPos, name.size() + 1 + blockKeyStr.size() + 1);

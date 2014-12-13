@@ -29,7 +29,7 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
   string root_key = config->RootBlock();
   if (root_key == "") {
     auto key = CreateRootBlockAndReturnKey();
-    config->SetRootBlock(key.AsString());
+    config->SetRootBlock(key.ToString());
     return key;
   }
 
