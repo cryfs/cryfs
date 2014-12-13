@@ -1,29 +1,33 @@
 #include "BlobStoreOnBlocks.h"
 
 #include "BlobOnBlocks.h"
+#include "datanodestore/DataNodeStore.h"
+#include "datanodestore/DataLeafNode.h"
 
 using std::unique_ptr;
 using std::make_unique;
 
 using blockstore::BlockStore;
+using blockstore::Key;
 
 namespace blobstore {
 namespace onblocks {
 
+using datanodestore::DataNodeStore;
+
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore)
-: _blocks(std::move(blockStore)) {
+: _nodes(make_unique<DataNodeStore>(std::move(blockStore))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
 }
 
-BlobWithKey BlobStoreOnBlocks::create(size_t size) {
-  auto block = _blocks->create(size);
-  return BlobWithKey(block.key, make_unique<BlobOnBlocks>(std::move(block.block)));
+unique_ptr<Blob> BlobStoreOnBlocks::create() {
+  return make_unique<BlobOnBlocks>(_nodes->createNewLeafNode());
 }
 
 unique_ptr<Blob> BlobStoreOnBlocks::load(const Key &key) {
-  return make_unique<BlobOnBlocks>(_blocks->load(key));
+  return make_unique<BlobOnBlocks>(_nodes->load(key));
 }
 
 }

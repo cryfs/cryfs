@@ -15,8 +15,10 @@ using std::string;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
+using blockstore::Key;
 using namespace blobstore;
 using namespace blobstore::onblocks;
+using namespace blobstore::onblocks::datanodestore;
 
 class DataNodeStoreTest: public Test {
 public:

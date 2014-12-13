@@ -12,6 +12,7 @@
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 class DataNodeView {
 public:
@@ -83,6 +84,7 @@ private:
 
 };
 
+}
 }
 }
 

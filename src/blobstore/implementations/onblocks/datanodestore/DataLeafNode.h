@@ -6,10 +6,11 @@
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 class DataLeafNode: public DataNode {
 public:
-  DataLeafNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
+  DataLeafNode(DataNodeView block, const blockstore::Key &key, DataNodeStore *nodestorage);
   virtual ~DataLeafNode();
 
   static constexpr uint32_t MAX_STORED_BYTES = DataNodeView::DATASIZE_BYTES;
@@ -26,6 +27,7 @@ private:
   void fillDataWithZeroesFromTo(off_t begin, off_t end);
 };
 
+}
 }
 }
 

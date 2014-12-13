@@ -5,6 +5,7 @@
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 
 using blockstore::Block;
+using blockstore::Key;
 
 using std::unique_ptr;
 using std::make_unique;
@@ -12,6 +13,7 @@ using std::runtime_error;
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 DataNode::DataNode(DataNodeView node, const Key &key, DataNodeStore *nodestorage)
 : _key(key), _node(std::move(node)), _nodestorage(nodestorage) {
@@ -44,5 +46,6 @@ uint8_t DataNode::depth() const {
   return *_node.Depth();
 }
 
+}
 }
 }

@@ -6,14 +6,15 @@
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 class DataInnerNode: public DataNode {
 public:
-  DataInnerNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
+  DataInnerNode(DataNodeView block, const blockstore::Key &key, DataNodeStore *nodestorage);
   virtual ~DataInnerNode();
 
   struct ChildEntry {
-    uint8_t key[Key::KEYLENGTH_BINARY];
+    uint8_t key[blockstore::Key::KEYLENGTH_BINARY];
   };
 
   static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
@@ -42,6 +43,7 @@ private:
   const ChildEntry *ChildContainingFirstByteAfterOffset(off_t offset) const;
 };
 
+}
 }
 }
 

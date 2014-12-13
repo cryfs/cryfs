@@ -3,9 +3,11 @@
 using std::unique_ptr;
 using blockstore::Block;
 using blockstore::Data;
+using blockstore::Key;
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 DataLeafNode::DataLeafNode(DataNodeView view, const Key &key, DataNodeStore *nodestorage)
 : DataNode(std::move(view), key, nodestorage) {
@@ -54,5 +56,6 @@ void DataLeafNode::resize(uint64_t newsize_bytes) {
   *node().Size() = newsize_bytes;
 }
 
+}
 }
 }

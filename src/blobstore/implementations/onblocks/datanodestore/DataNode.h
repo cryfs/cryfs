@@ -7,6 +7,7 @@
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 class DataNodeStore;
 
 class DataNode {
@@ -19,12 +20,12 @@ public:
   virtual void resize(uint64_t newsize_bytes) = 0;
   virtual uint64_t numBytesInThisNode() const = 0;
 
-  const Key &key() const;
+  const blockstore::Key &key() const;
 
   uint8_t depth() const;
 
 protected:
-  DataNode(DataNodeView block, const Key &key, DataNodeStore *nodestorage);
+  DataNode(DataNodeView block, const blockstore::Key &key, DataNodeStore *nodestorage);
 
   DataNodeStore &storage();
   const DataNodeStore &storage() const;
@@ -33,13 +34,14 @@ protected:
   const DataNodeView &node() const;
 
 private:
-  Key _key; //TODO Remove this and make blockstore::Block store the key
+  blockstore::Key _key; //TODO Remove this and make blockstore::Block store the key
   DataNodeView _node;
   DataNodeStore *_nodestorage;
 
   DISALLOW_COPY_AND_ASSIGN(DataNode);
 };
 
+}
 }
 }
 

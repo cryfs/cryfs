@@ -14,6 +14,7 @@ using std::runtime_error;
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 DataNodeStore::DataNodeStore(unique_ptr<BlockStore> blockstore)
 : _blockstore(std::move(blockstore)) {
@@ -56,5 +57,6 @@ unique_ptr<const DataNode> DataNodeStore::load(const Key &key) const {
   return const_cast<DataNodeStore*>(this)->load(key);
 }
 
+}
 }
 }

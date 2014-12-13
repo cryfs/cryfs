@@ -17,6 +17,7 @@ using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
+using namespace blobstore::onblocks::datanodestore;
 
 class DataNodeViewTest: public Test {
 public:

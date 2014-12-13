@@ -5,9 +5,11 @@
 using std::unique_ptr;
 using blockstore::Block;
 using blockstore::Data;
+using blockstore::Key;
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 
 DataInnerNode::DataInnerNode(DataNodeView view, const Key &key, DataNodeStore *nodestorage)
 : DataNode(std::move(view), key, nodestorage) {
@@ -107,5 +109,6 @@ void DataInnerNode::resize(uint64_t newsize_bytes) {
   //TODO Implement
 }
 
+}
 }
 }

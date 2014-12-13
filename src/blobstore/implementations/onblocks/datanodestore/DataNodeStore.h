@@ -13,6 +13,7 @@ class Key;
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
 class DataNode;
 class DataLeafNode;
 class DataInnerNode;
@@ -38,6 +39,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DataNodeStore);
 };
 
+}
 }
 }
 
