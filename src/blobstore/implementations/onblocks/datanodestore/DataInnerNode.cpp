@@ -1,5 +1,5 @@
-#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
-#include "DataInnerNode.h"
+#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 
 
 using std::unique_ptr;

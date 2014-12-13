@@ -1,0 +1,3 @@
+add_library(blobstore_onblocks_datanodestore DataInnerNode.cpp DataLeafNode.cpp DataNode.cpp DataNodeStore.cpp)
+
+target_link_libraries(blobstore_onblocks_datanodestore blockstore_interface)

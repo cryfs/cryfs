@@ -1,10 +1,10 @@
-#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
-#include "blobstore/implementations/onblocks/impl/DataLeafNode.h"
 #include "test/testutils/DataBlockFixture.h"
 
 using ::testing::Test;

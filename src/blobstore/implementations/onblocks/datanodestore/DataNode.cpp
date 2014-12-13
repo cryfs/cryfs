@@ -1,8 +1,8 @@
-#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
-#include "DataNode.h"
-
 #include "DataInnerNode.h"
-#include "DataLeafNode.h"
+#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 
 using blockstore::Block;
 

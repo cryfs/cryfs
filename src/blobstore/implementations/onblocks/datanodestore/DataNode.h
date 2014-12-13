@@ -1,9 +1,8 @@
 #pragma once
-#ifndef BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_IMPL_DATANODE_H_
-#define BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_IMPL_DATANODE_H_
+#ifndef BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODE_H_
+#define BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODE_H_
 
-#include "DataNodeView.h"
-
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeView.h>
 #include "blockstore/utils/Data.h"
 
 namespace blobstore {

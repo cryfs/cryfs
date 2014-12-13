@@ -1,12 +1,12 @@
-#include <blobstore/implementations/onblocks/impl/DataNodeStore.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
-#include "blobstore/implementations/onblocks/impl/DataNode.h"
-#include "blobstore/implementations/onblocks/impl/DataLeafNode.h"
-#include "blobstore/implementations/onblocks/impl/DataInnerNode.h"
 
 using ::testing::Test;
 using std::unique_ptr;

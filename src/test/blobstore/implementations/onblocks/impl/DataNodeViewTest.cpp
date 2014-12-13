@@ -1,9 +1,9 @@
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeView.h>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
-#include "blobstore/implementations/onblocks/impl/DataNodeView.h"
 #include "test/testutils/DataBlockFixture.h"
 
 using ::testing::Test;
