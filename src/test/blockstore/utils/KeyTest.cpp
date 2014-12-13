@@ -5,6 +5,8 @@
 #include "test/testutils/DataBlockFixture.h"
 
 using ::testing::Test;
+using ::testing::WithParamInterface;
+using ::testing::Values;
 
 using std::string;
 
@@ -20,12 +22,12 @@ public:
   const DataBlockFixture KEY4_AS_BINARY;
 
   KeyTest() : KEY3_AS_BINARY(Key::KEYLENGTH_BINARY, 1), KEY4_AS_BINARY(Key::KEYLENGTH_BINARY, 2) {}
-};
 
-#define EXPECT_DATA_EQ(expected, actual) {                                       \
-  EXPECT_EQ(expected.size(), actual.size());                                     \
-  EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));    \
-}                                                                                \
+  void EXPECT_DATA_EQ(const DataBlockFixture &expected, const Data &actual) {
+    EXPECT_EQ(expected.size(), actual.size());
+    EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
+  }
+};
 
 TEST_F(KeyTest, CanGenerateRandomKeysWithoutCrashing) {
   Key result = Key::CreateRandomKey();
@@ -68,68 +70,50 @@ TEST_F(KeyTest, NotEqualsTrue) {
   EXPECT_TRUE(key2_1 != key1_1);
 }
 
-TEST_F(KeyTest, FromAndToString1) {
-  Key key = Key::FromString(KEY1_AS_STRING);
-  EXPECT_EQ(KEY1_AS_STRING, key.ToString());
+class KeyTestWithStringKeyParam: public KeyTest, public WithParamInterface<string> {};
+INSTANTIATE_TEST_CASE_P(KeyTestWithStringKeyParam, KeyTestWithStringKeyParam, Values("2898B4B8A13CA63CBE0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
+
+TEST_P(KeyTestWithStringKeyParam, FromAndToString) {
+  Key key = Key::FromString(GetParam());
+  EXPECT_EQ(GetParam(), key.ToString());
 }
 
-TEST_F(KeyTest, FromAndToString2) {
-  Key key = Key::FromString(KEY2_AS_STRING);
-  EXPECT_EQ(KEY2_AS_STRING, key.ToString());
-}
-
-TEST_F(KeyTest, ToAndFromString1) {
-  Key key = Key::FromString(KEY1_AS_STRING);
+TEST_P(KeyTestWithStringKeyParam, ToAndFromString) {
+  Key key = Key::FromString(GetParam());
   Key key2 = Key::FromString(key.ToString());
   EXPECT_EQ(key, key2);
 }
 
-TEST_F(KeyTest, ToAndFromString2) {
-  Key key = Key::FromString(KEY2_AS_STRING);
-  Key key2 = Key::FromString(key.ToString());
-  EXPECT_EQ(key, key2);
-}
+class KeyTestWithBinaryKeyParam: public KeyTest, public WithParamInterface<const DataBlockFixture*> {
+public:
+  static const DataBlockFixture VALUE1;
+  static const DataBlockFixture VALUE2;
+};
+const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE1(Key::KEYLENGTH_BINARY, 3);
+const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE2(Key::KEYLENGTH_BINARY, 4);
+INSTANTIATE_TEST_CASE_P(KeyTestWithBinaryKeyParam, KeyTestWithBinaryKeyParam, Values(&KeyTestWithBinaryKeyParam::VALUE1, &KeyTestWithBinaryKeyParam::VALUE2));
 
-TEST_F(KeyTest, FromAndToBinary1) {
-  Key key = Key::FromBinary((uint8_t*)KEY3_AS_BINARY.data());
+TEST_P(KeyTestWithBinaryKeyParam, FromAndToBinary) {
+  Key key = Key::FromBinary((uint8_t*)GetParam()->data());
   Data keydata(Key::KEYLENGTH_BINARY);
   key.ToBinary(keydata.data());
-  EXPECT_DATA_EQ(KEY3_AS_BINARY, keydata);
+  EXPECT_DATA_EQ(*GetParam(), keydata);
 }
 
-TEST_F(KeyTest, FromAndToBinary2) {
-  Key key = Key::FromBinary((uint8_t*)KEY4_AS_BINARY.data());
-  Data keydata(Key::KEYLENGTH_BINARY);
-  key.ToBinary(keydata.data());
-  EXPECT_DATA_EQ(KEY4_AS_BINARY, keydata);
-}
-
-TEST_F(KeyTest, ToAndFromBinary1) {
-  Key key = Key::FromBinary((uint8_t*)KEY3_AS_BINARY.data());
+TEST_P(KeyTestWithBinaryKeyParam, ToAndFromBinary) {
+  Key key = Key::FromBinary((uint8_t*)GetParam()->data());
   Data stored(Key::KEYLENGTH_BINARY);
   key.ToBinary(stored.data());
   Key loaded = Key::FromBinary(stored.data());
   EXPECT_EQ(key, loaded);
 }
 
-TEST_F(KeyTest, ToAndFromBinary2) {
-  Key key = Key::FromBinary((uint8_t*)KEY4_AS_BINARY.data());
-  Data stored(Key::KEYLENGTH_BINARY);
-  key.ToBinary(stored.data());
-  Key loaded = Key::FromBinary(stored.data());
-  EXPECT_EQ(key, loaded);
-}
+class KeyTestWithKeyParam: public KeyTest, public WithParamInterface<Key> {};
+INSTANTIATE_TEST_CASE_P(KeyTestWithKeyParam, KeyTestWithKeyParam, Values(Key::FromString("2898B4B8A13CA63CBE0F0278CCE465DB"), Key::FromString("6FFEBAD90C0DAA2B79628F0627CE9841")));
 
-TEST_F(KeyTest, CopyConstructor1) {
-  Key key = Key::FromString(KEY1_AS_STRING);
-  Key copy(key);
-  EXPECT_EQ(key, copy);
-}
-
-TEST_F(KeyTest, CopyConstructor2) {
-  Key key = Key::FromString(KEY2_AS_STRING);
-  Key copy(key);
-  EXPECT_EQ(key, copy);
+TEST_P(KeyTestWithKeyParam, CopyConstructor) {
+  Key copy(GetParam());
+  EXPECT_EQ(GetParam(), copy);
 }
 
 TEST_F(KeyTest, CopyConstructorDoesntChangeSource) {
@@ -138,20 +122,11 @@ TEST_F(KeyTest, CopyConstructorDoesntChangeSource) {
   EXPECT_EQ(KEY1_AS_STRING, key1.ToString());
 }
 
-TEST_F(KeyTest, IsEqualAfterAssignment1) {
-  Key key1 = Key::FromString(KEY1_AS_STRING);
+TEST_P(KeyTestWithKeyParam, IsEqualAfterAssignment1) {
   Key key2 = Key::FromString(KEY2_AS_STRING);
-  EXPECT_NE(key1, key2);
-  key2 = key1;
-  EXPECT_EQ(key1, key2);
-}
-
-TEST_F(KeyTest, IsEqualAfterAssignment2) {
-  Key key1 = Key::FromString(KEY2_AS_STRING);
-  Key key2 = Key::FromString(KEY1_AS_STRING);
-  EXPECT_NE(key1, key2);
-  key2 = key1;
-  EXPECT_EQ(key1, key2);
+  EXPECT_NE(GetParam(), key2);
+  key2 = GetParam();
+  EXPECT_EQ(GetParam(), key2);
 }
 
 TEST_F(KeyTest, AssignmentDoesntChangeSource) {
