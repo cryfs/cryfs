@@ -14,6 +14,8 @@ class Key;
 namespace blobstore {
 namespace onblocks {
 class DataNode;
+class DataLeafNode;
+class DataInnerNode;
 
 class DataNodeStore {
 public:
@@ -25,8 +27,8 @@ public:
   std::unique_ptr<DataNode> load(const blockstore::Key &key);
   std::unique_ptr<const DataNode> load(const blockstore::Key &key) const;
 
-  std::unique_ptr<DataNode> createNewLeafNode();
-  std::unique_ptr<DataNode> createNewInnerNode(const DataNode &first_child);
+  std::unique_ptr<DataLeafNode> createNewLeafNode();
+  std::unique_ptr<DataInnerNode> createNewInnerNode(const DataNode &first_child);
 
 private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block, const blockstore::Key &key);

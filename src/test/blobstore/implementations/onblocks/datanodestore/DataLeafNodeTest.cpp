@@ -70,8 +70,19 @@ public:
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
   unique_ptr<DataNodeStore> nodeStore;
-  unique_ptr<DataNode> leaf;
+  unique_ptr<DataLeafNode> leaf;
 };
+
+TEST_F(DataLeafNodeTest, InitializesCorrectly) {
+  leaf->InitializeNewNode();
+  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+}
+
+TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
+  leaf->resize(5);
+  leaf->InitializeNewNode();
+  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+}
 
 TEST_F(DataLeafNodeTest, ReadWrittenDataImmediately) {
   leaf->resize(randomData.size());

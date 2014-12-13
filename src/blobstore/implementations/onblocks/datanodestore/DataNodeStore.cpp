@@ -34,14 +34,14 @@ unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block, const Key &key
   }
 }
 
-unique_ptr<DataNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
+unique_ptr<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
   auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
   auto newNode = make_unique<DataInnerNode>(std::move(block.block), block.key, this);
   newNode->InitializeNewNode(first_child);
   return std::move(newNode);
 }
 
-unique_ptr<DataNode> DataNodeStore::createNewLeafNode() {
+unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
   auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
   auto newNode = make_unique<DataLeafNode>(std::move(block.block), block.key, this);
   newNode->InitializeNewNode();
