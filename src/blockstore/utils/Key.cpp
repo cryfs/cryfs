@@ -44,7 +44,7 @@ Key Key::FromString(const std::string &key) {
   return result;
 }
 
-string Key::AsString() const {
+string Key::ToString() const {
   string result;
   ArraySource(_key, KEYLENGTH_BINARY, true,
     new HexEncoder(new StringSink(result))
@@ -63,6 +63,16 @@ bool operator==(const Key &lhs, const Key &rhs) {
 
 bool operator!=(const Key &lhs, const Key &rhs) {
   return !operator==(lhs, rhs);
+}
+
+void Key::ToBinary(void *target) const {
+  std::memcpy(target, _key, KEYLENGTH_BINARY);
+}
+
+Key Key::FromBinary(void *source) {
+  Key result;
+  std::memcpy(result._key, source, KEYLENGTH_BINARY);
+  return result;
 }
 
 }

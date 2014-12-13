@@ -15,7 +15,7 @@ FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks() {}
 
 unique_ptr<Block> FakeBlockStore::create(const Key &key, size_t size) {
-  auto insert_result = _blocks.emplace(key.AsString(), size);
+  auto insert_result = _blocks.emplace(key.ToString(), size);
   insert_result.first->second.FillWithZeroes();
 
   if (!insert_result.second) {
@@ -28,7 +28,7 @@ unique_ptr<Block> FakeBlockStore::create(const Key &key, size_t size) {
 
 unique_ptr<Block> FakeBlockStore::load(const Key &key) {
   //Return a copy of the stored data
-  string key_string = key.AsString();
+  string key_string = key.ToString();
   try {
     return makeFakeBlockFromData(key_string, _blocks.at(key_string));
   } catch (const std::out_of_range &e) {

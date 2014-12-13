@@ -14,7 +14,7 @@ InMemoryBlockStore::InMemoryBlockStore()
  : _blocks() {}
 
 unique_ptr<Block> InMemoryBlockStore::create(const Key &key, size_t size) {
-  auto insert_result = _blocks.emplace(key.AsString(), size);
+  auto insert_result = _blocks.emplace(key.ToString(), size);
 
   if (!insert_result.second) {
     return nullptr;
@@ -27,7 +27,7 @@ unique_ptr<Block> InMemoryBlockStore::create(const Key &key, size_t size) {
 unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {
   //Return a pointer to the stored InMemoryBlock
   try {
-    return make_unique<InMemoryBlock>(_blocks.at(key.AsString()));
+    return make_unique<InMemoryBlock>(_blocks.at(key.ToString()));
   } catch (const std::out_of_range &e) {
     return nullptr;
   }

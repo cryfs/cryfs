@@ -58,7 +58,7 @@ TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough1024) {
 
 TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
   EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const Key &key, size_t) {
-    EXPECT_EQ(Key::KEYLENGTH_STRING, key.AsString().size());
+    EXPECT_EQ(Key::KEYLENGTH_STRING, key.ToString().size());
     return new BlockMock;
   }));
 

@@ -18,7 +18,10 @@ public:
   static Key CreateRandomKey();
 
   static Key FromString(const std::string &key);
-  std::string AsString() const;
+  std::string ToString() const;
+
+  static Key FromBinary(void *source);
+  void ToBinary(void *target) const;
 
   const unsigned char *data() const;
 
