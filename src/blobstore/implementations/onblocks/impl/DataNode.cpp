@@ -22,19 +22,18 @@ DataNode::~DataNode() {
 unique_ptr<DataNode> DataNode::load(unique_ptr<Block> block) {
   DataNodeView node(std::move(block));
 
-  if (*node.MagicNumber() == node.magicNumberNodeWithChildren) {
-    return unique_ptr<DataInnerNode>(new DataInnerNode(std::move(node)));
-  } else if (*node.MagicNumber() == node.magicNumberLeaf) {
+  if (*node.Depth() == 0) {
     return unique_ptr<DataLeafNode>(new DataLeafNode(std::move(node)));
+  } else if (*node.Depth() < MAX_DEPTH) {
+    return unique_ptr<DataInnerNode>(new DataInnerNode(std::move(node)));
   } else {
-    //TODO Better exception
-    throw runtime_error("Invalid node magic number");
+    throw runtime_error("Tree is to deep. Data corruption?");
   }
 }
 
-unique_ptr<DataNode> DataNode::createNewInnerNode(unique_ptr<Block> block) {
+unique_ptr<DataNode> DataNode::createNewInnerNode(unique_ptr<Block> block, const Key &first_child_key, const DataNode &first_child) {
   auto newNode = unique_ptr<DataInnerNode>(new DataInnerNode(std::move(block)));
-  newNode->InitializeNewNode();
+  newNode->InitializeNewNode(first_child_key, first_child._node);
   return std::move(newNode);
 }
 

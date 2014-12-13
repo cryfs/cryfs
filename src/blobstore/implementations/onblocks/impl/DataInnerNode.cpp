@@ -14,9 +14,10 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-void DataInnerNode::InitializeNewNode() {
-  *_node.MagicNumber() = _node.magicNumberNodeWithChildren;
-  *_node.Size() = 0;
+void DataInnerNode::InitializeNewNode(const Key &first_child_key, const DataNodeView &first_child) {
+  *_node.Depth() = *first_child.Depth() + 1;
+  *_node.Size() = 1;
+  first_child_key.ToBinary(ChildrenBegin()->key);
 }
 
 void DataInnerNode::read(off_t offset, size_t count, Data *result) const {
@@ -47,9 +48,10 @@ uint64_t DataInnerNode::readFromChild(const ChildEntry *child, off_t inner_offse
 const DataInnerNode::ChildEntry *DataInnerNode::ChildContainingFirstByteAfterOffset(off_t offset) const {
   uint32_t offset_blocks = offset / _node.BLOCKSIZE_BYTES;
 
+  //TODO no binary search anymore
   return
     std::upper_bound(ChildrenBegin(), ChildrenEnd(), offset_blocks, [](uint32_t offset_blocks, const ChildEntry &child) {
-      return offset_blocks < child.numBlocksInThisAndLeftwardNodes;
+      return false;//return offset_blocks < child.numBlocksInThisAndLeftwardNodes;
     });
 }
 
@@ -69,7 +71,12 @@ uint64_t DataInnerNode::numBytesInLeftwardSiblings(const ChildEntry *child) cons
 }
 
 uint64_t DataInnerNode::numBytesInChildAndLeftwardSiblings(const ChildEntry *child) const {
-  return (uint64_t)child->numBlocksInThisAndLeftwardNodes * _node.BLOCKSIZE_BYTES;
+  //TODO Rewrite
+  //return (uint64_t)child->numBlocksInThisAndLeftwardNodes * _node.BLOCKSIZE_BYTES;
+}
+
+DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() {
+  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->ChildrenBegin());
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() const {

@@ -24,8 +24,8 @@ public:
 
   //Total size of the header
   static constexpr unsigned int HEADERSIZE_BYTES = 8;
-  //Where in the header is the magic number
-  static constexpr unsigned int MAGICNUMBER_OFFSET_BYTES = 0;
+  //Where in the header is the depth field
+  static constexpr unsigned int DEPTH_OFFSET_BYTES = 0;
   //Where in the header is the size field (for inner nodes: number of children, for leafs: content data size)
   static constexpr unsigned int SIZE_OFFSET_BYTES = 4;
 
@@ -34,17 +34,12 @@ public:
   //How much space is there for data
   static constexpr unsigned int DATASIZE_BYTES = BLOCKSIZE_BYTES - HEADERSIZE_BYTES;
 
-  static constexpr unsigned char magicNumberNodeWithChildren = 0x01;
-  static constexpr unsigned char magicNumberLeaf = 0x02;
-  static constexpr unsigned char magicNumberRootWithChildren = 0x03;
-  static constexpr unsigned char magicNumberRootLeaf = 0x04;
-
-  const uint8_t *MagicNumber() const {
-    return GetOffset<MAGICNUMBER_OFFSET_BYTES, uint8_t>();
+  const uint8_t *Depth() const {
+    return GetOffset<DEPTH_OFFSET_BYTES, uint8_t>();
   }
 
-  uint8_t *MagicNumber() {
-    return const_cast<uint8_t*>(const_cast<const DataNodeView*>(this)->MagicNumber());
+  uint8_t *Depth() {
+    return const_cast<uint8_t*>(const_cast<const DataNodeView*>(this)->Depth());
   }
 
   const uint32_t *Size() const {

@@ -28,7 +28,7 @@ void DataLeafNode::write(off_t offset, size_t count, const Data &data) {
 }
 
 void DataLeafNode::InitializeNewNode() {
-  *_node.MagicNumber() = _node.magicNumberLeaf;
+  *_node.Depth() = 0;
   *_node.Size() = 0;
   //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.
 }

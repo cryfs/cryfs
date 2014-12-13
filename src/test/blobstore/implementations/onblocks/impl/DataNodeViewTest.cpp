@@ -28,14 +28,18 @@ public:
   unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
 };
 
-TEST_F(DataNodeViewTest, MagicNumberIsStored) {
+class DataNodeViewDepthTest: public DataNodeViewTest, public WithParamInterface<uint8_t> {
+};
+INSTANTIATE_TEST_CASE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 1, 3, 10, 100));
+
+TEST_P(DataNodeViewDepthTest, DepthIsStored) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   {
     DataNodeView view(std::move(block.block));
-    *view.MagicNumber() = 0x3F;
+    *view.Depth() = GetParam();
   }
   DataNodeView view(blockStore->load(block.key));
-  EXPECT_EQ(0x3F, *view.MagicNumber());
+  EXPECT_EQ(GetParam(), *view.Depth());
 }
 
 class DataNodeViewSizeTest: public DataNodeViewTest, public WithParamInterface<uint32_t> {
@@ -68,12 +72,12 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   {
     DataNodeView view(std::move(block.block));
-    *view.MagicNumber() = 0xAA;
+    *view.Depth() = 3;
     *view.Size() = 1000000000u;
     std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES);
   }
   DataNodeView view(blockStore->load(block.key));
-  EXPECT_EQ(0xAA, *view.MagicNumber());
+  EXPECT_EQ(3, *view.Depth());
   EXPECT_EQ(1000000000u, *view.Size());
   EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES));
 }

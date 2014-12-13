@@ -31,8 +31,11 @@ TEST_F(DataNodeTest, CreateLeafNodeCreatesLeafNode) {
 }
 
 TEST_F(DataNodeTest, CreateInnerNodeCreatesInnerNode) {
+  auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
+
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  auto node = DataNode::createNewInnerNode(std::move(block.block));
+  auto node = DataNode::createNewInnerNode(std::move(block.block), leafblock.key, *leaf);
   EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
 }
 
@@ -48,11 +51,13 @@ TEST_F(DataNodeTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
 }
 
-TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
+TEST_F(DataNodeTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
   {
-    DataNode::createNewInnerNode(std::move(block.block));
+    auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+    auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
+    DataNode::createNewInnerNode(std::move(block.block), leafblock.key, *leaf);
   }
 
   auto loaded_node = DataNode::load(blockStore->load(key));
@@ -60,12 +65,28 @@ TEST_F(DataNodeTest, InnerNodeIsRecognizedAfterStoreAndLoad) {
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
 
-TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfMagicNumberIsWrong) {
+TEST_F(DataNodeTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
+  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  Key key = block.key;
+  {
+    auto leafblock = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+    auto leaf = DataNode::createNewLeafNode(std::move(leafblock.block));
+    auto inner1block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+    auto inner1 = DataNode::createNewInnerNode(std::move(inner1block.block), leafblock.key, *leaf);
+    DataNode::createNewInnerNode(std::move(block.block), inner1block.key, *inner1);
+  }
+
+  auto loaded_node = DataNode::load(blockStore->load(key));
+
+  EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
+}
+
+TEST_F(DataNodeTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
   Key key = block.key;
   {
     DataNodeView view(std::move(block.block));
-    *view.MagicNumber() = 0xFF; // this is an invalid magic number
+    *view.Depth() = 200u; // this is an invalid depth
   }
 
   auto loaded_block = blockStore->load(key);
