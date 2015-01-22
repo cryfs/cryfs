@@ -14,7 +14,6 @@ using namespace blockstore;
 
 class KeyTest: public Test {
 public:
-  //TODO Use parametrized tests
   const string KEY1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";
   const string KEY2_AS_STRING = "272EE5517627CFA147A971A8E6E747E0";
 
