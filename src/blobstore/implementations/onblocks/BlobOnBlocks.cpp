@@ -1,6 +1,6 @@
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 
-#include "datanodestore/DataNode.h"
+#include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
 
 using std::unique_ptr;
 
@@ -18,7 +18,8 @@ BlobOnBlocks::~BlobOnBlocks() {
 }
 
 size_t BlobOnBlocks::size() const {
-  return _rootnode->numBytesInThisNode();
+  assert(false); //TODO Implement
+  //return _rootnode->numBytesInThisNode();
 }
 
 }

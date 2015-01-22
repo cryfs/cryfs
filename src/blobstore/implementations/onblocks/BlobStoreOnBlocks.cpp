@@ -1,8 +1,8 @@
+#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include "BlobStoreOnBlocks.h"
 
 #include "BlobOnBlocks.h"
-#include "datanodestore/DataNodeStore.h"
-#include "datanodestore/DataLeafNode.h"
 
 using std::unique_ptr;
 using std::make_unique;

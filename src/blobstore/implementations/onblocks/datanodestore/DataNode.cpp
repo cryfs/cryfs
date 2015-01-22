@@ -1,8 +1,7 @@
 #include "DataInnerNode.h"
-#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
+#include "DataLeafNode.h"
+#include "DataNode.h"
+#include "DataNodeStore.h"
 
 using blockstore::Block;
 using blockstore::Key;
@@ -15,19 +14,11 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataNode::DataNode(DataNodeView node, const Key &key, DataNodeStore *nodestorage)
-: _key(key), _node(std::move(node)), _nodestorage(nodestorage) {
+DataNode::DataNode(DataNodeView node, const Key &key)
+: _key(key), _node(std::move(node)) {
 }
 
 DataNode::~DataNode() {
-}
-
-DataNodeStore &DataNode::storage() {
-  return const_cast<DataNodeStore&>(const_cast<const DataNode*>(this)->storage());
-}
-
-const DataNodeStore &DataNode::storage() const {
-  return *_nodestorage;
 }
 
 DataNodeView &DataNode::node() {
@@ -43,8 +34,9 @@ const Key &DataNode::key() const {
 }
 
 uint8_t DataNode::depth() const {
-  return *_node.Depth();
+  return *node().Depth();
 }
+
 
 }
 }

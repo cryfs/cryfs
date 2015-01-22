@@ -2,6 +2,8 @@
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <gtest/gtest.h>
 
+#include "fspp/utils/pointer.h"
+
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
@@ -14,6 +16,8 @@ using ::testing::Combine;
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
+
+using fspp::dynamic_pointer_move;
 
 using blockstore::BlockStore;
 using blockstore::BlockWithKey;
@@ -47,23 +51,22 @@ public:
   Key WriteDataToNewLeafBlockAndReturnKey() {
     auto newleaf = nodeStore->createNewLeafNode();
     newleaf->resize(randomData.size());
-    newleaf->write(0, randomData.size(), randomData);
+    std::memcpy(newleaf->data(), randomData.data(), randomData.size());
     return newleaf->key();
   }
 
   void FillLeafBlockWithData() {
     leaf->resize(randomData.size());
-    leaf->write(0, randomData.size(), randomData);
+    std::memcpy(leaf->data(), randomData.data(), randomData.size());
   }
 
-  void ReadDataFromLoadedLeafBlock(Key key, Data *data) {
+  unique_ptr<DataLeafNode> LoadLeafNode(const Key &key) {
     auto leaf = nodeStore->load(key);
-    EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
-    leaf->read(0, data->size(), data);
+    return dynamic_pointer_move<DataLeafNode>(leaf);
   }
 
   void ResizeLeaf(const Key &key, size_t size) {
-    auto leaf = nodeStore->load(key);
+    auto leaf = LoadLeafNode(key);
     EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
     leaf->resize(size);
   }
@@ -78,42 +81,33 @@ public:
 
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
   leaf->InitializeNewNode();
-  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+  EXPECT_EQ(0u, leaf->numBytes());
 }
 
 TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
   leaf->resize(5);
   leaf->InitializeNewNode();
-  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+  EXPECT_EQ(0u, leaf->numBytes());
 }
 
-TEST_F(DataLeafNodeTest, ReadWrittenDataImmediately) {
-  leaf->resize(randomData.size());
-  leaf->write(0, randomData.size(), randomData);
-
-  Data read(DataLeafNode::MAX_STORED_BYTES);
-  leaf->read(0, read.size(), &read);
-  EXPECT_EQ(0, std::memcmp(randomData.data(), read.data(), randomData.size()));
-}
-
-TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBLock) {
+TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBlock) {
   Key key = WriteDataToNewLeafBlockAndReturnKey();
 
-  Data data(DataLeafNode::MAX_STORED_BYTES);
-  ReadDataFromLoadedLeafBlock(key, &data);
+  auto loaded = LoadLeafNode(key);
 
-  EXPECT_EQ(0, std::memcmp(randomData.data(), data.data(), randomData.size()));
+  EXPECT_EQ(randomData.size(), loaded->numBytes());
+  EXPECT_EQ(0, std::memcmp(randomData.data(), loaded->data(), randomData.size()));
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
-  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+  EXPECT_EQ(0u, leaf->numBytes());
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero_AfterLoading) {
   Key key = nodeStore->createNewLeafNode()->key();
-  auto leaf = nodeStore->load(key);
+  auto leaf = LoadLeafNode(key);
 
-  EXPECT_EQ(0u, leaf->numBytesInThisNode());
+  EXPECT_EQ(0u, leaf->numBytes());
 }
 
 class DataLeafNodeSizeTest: public DataLeafNodeTest, public WithParamInterface<unsigned int> {
@@ -128,22 +122,19 @@ INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1,
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
   leaf->resize(GetParam());
-  EXPECT_EQ(GetParam(), leaf->numBytesInThisNode());
+  EXPECT_EQ(GetParam(), leaf->numBytes());
 }
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeAfterLoading) {
   Key key = CreateLeafResizeItAndReturnKey();
 
-  auto leaf = nodeStore->load(key);
-  EXPECT_EQ(GetParam(), leaf->numBytesInThisNode());
+  auto leaf = LoadLeafNode(key);
+  EXPECT_EQ(GetParam(), leaf->numBytes());
 }
 
 TEST_F(DataLeafNodeTest, SpaceIsZeroFilledWhenGrowing) {
   leaf->resize(randomData.size());
-
-  Data read(randomData.size());
-  leaf->read(0, read.size(), &read);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), read.data(), read.size()));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), leaf->data(), randomData.size()));
 }
 
 TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
@@ -154,9 +145,7 @@ TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
   leaf->resize(randomData.size());
 
   //Check that the space was filled with zeroes
-  Data read(100);
-  leaf->read(smaller_size, read.size(), &read);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), read.data(), read.size()));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), ((uint8_t*)leaf->data())+smaller_size, 100));
 }
 
 TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
@@ -171,10 +160,26 @@ TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
   //After shrinking, we expect there to be zeroes in the underlying data block
   ResizeLeaf(key, smaller_size);
   {
-    auto block = blockStore->load(leaf->key());
+    auto block = blockStore->load(key);
     EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
   }
 }
+
+TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
+  FillLeafBlockWithData();
+  uint32_t smaller_size = randomData.size() - 100;
+  leaf->resize(smaller_size);
+
+  //Check that the remaining data region is unchanged
+  EXPECT_EQ(0, std::memcmp(randomData.data(), leaf->data(), smaller_size));
+}
+
+
+/*
+ * The following test cases test reading/writing part of a leaf. This doesn't make much sense,
+ * since the new leaf abstraction doesn't offer read()/write() anymore, but direct data pointer access.
+ * However, these test cases might make sense wherever the read()/write() for a leaf will be implemented.
+ * In case they're not needed then, delete them.
 
 struct DataRange {
   DataRange(size_t leafsize_, off_t offset_, size_t count_): leafsize(leafsize_), offset(offset_), count(count_) {}
@@ -262,8 +267,8 @@ TEST_P(DataLeafNodeDataTest, OverwriteAndRead) {
   leaf->resize(GetParam().leafsize);
   leaf->write(0, GetParam().leafsize, this->backgroundData);
   leaf->write(GetParam().offset, GetParam().count, this->foregroundData);
-
   EXPECT_DATA_READS_AS(this->foregroundData, *leaf, GetParam().offset, GetParam().count);
   EXPECT_DATA_READS_AS_OUTSIDE_OF(this->backgroundData, *leaf, GetParam().offset, GetParam().count);
 }
+*/
 

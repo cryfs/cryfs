@@ -1,5 +1,6 @@
 add_subdirectory(datanodestore)
+add_subdirectory(datatreestore)
 
 add_library(blobstore_onblocks BlobOnBlocks.cpp BlobStoreOnBlocks.cpp)
 
-target_link_libraries(blobstore_onblocks blobstore_onblocks_datanodestore)
+target_link_libraries(blobstore_onblocks blobstore_onblocks_datatreestore)
