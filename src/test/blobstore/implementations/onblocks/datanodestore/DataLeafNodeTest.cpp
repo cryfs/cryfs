@@ -175,7 +175,7 @@ TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
 }
 
 
-/*
+/* TODO
  * The following test cases test reading/writing part of a leaf. This doesn't make much sense,
  * since the new leaf abstraction doesn't offer read()/write() anymore, but direct data pointer access.
  * However, these test cases might make sense wherever the read()/write() for a leaf will be implemented.
