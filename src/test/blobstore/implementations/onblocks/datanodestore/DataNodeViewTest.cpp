@@ -21,11 +21,6 @@ using namespace blobstore::onblocks::datanodestore;
 
 class DataNodeViewTest: public Test {
 public:
-  //TODO Don't use InMemoryBlockStore for test cases, because it ignores flushing.
-  //     And if you for example write more than the actual block size, it still will keep that data for you,
-  //     because the next block load will just give you the same data region (and the overflow data will most
-  //     likely still be intact).
-  //     So better write a FakeBlockStore class for test cases.
   unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
 };
 
