@@ -31,20 +31,22 @@ public:
 
   void InitializeNewNode(const DataNode &first_child_key);
 
-  ChildEntry *ChildrenBegin();
-  ChildEntry *ChildrenEnd();
-  const ChildEntry *ChildrenBegin() const;
-  const ChildEntry *ChildrenEnd() const;
-
   ChildEntry *getChild(unsigned int index);
   const ChildEntry *getChild(unsigned int index) const;
-
-  ChildEntry *LastChild();
-  const ChildEntry *LastChild() const;
 
   uint32_t numChildren() const;
 
   void addChild(const DataNode &child_key);
+
+private:
+
+  ChildEntry *LastChild();
+  const ChildEntry *LastChild() const;
+
+  ChildEntry *ChildrenBegin();
+  ChildEntry *ChildrenEnd();
+  const ChildEntry *ChildrenBegin() const;
+  const ChildEntry *ChildrenEnd() const;
 };
 
 }
