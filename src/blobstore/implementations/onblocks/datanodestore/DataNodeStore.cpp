@@ -53,10 +53,6 @@ unique_ptr<DataNode> DataNodeStore::load(const Key &key) {
   return load(_blockstore->load(key), key);
 }
 
-unique_ptr<const DataNode> DataNodeStore::load(const Key &key) const {
-  return const_cast<DataNodeStore*>(this)->load(key);
-}
-
 }
 }
 }

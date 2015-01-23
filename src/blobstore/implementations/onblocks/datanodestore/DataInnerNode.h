@@ -38,10 +38,10 @@ public:
 
   void addChild(const DataNode &child_key);
 
-private:
-
   ChildEntry *LastChild();
   const ChildEntry *LastChild() const;
+
+private:
 
   ChildEntry *ChildrenBegin();
   ChildEntry *ChildrenEnd();

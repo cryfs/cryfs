@@ -138,3 +138,5 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   EXPECT_EQ(node2->key(), parent->getChild(1)->key());
 }
 
+//TODO TestCase for LastChild
+
