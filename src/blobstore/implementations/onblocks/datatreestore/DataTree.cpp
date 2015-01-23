@@ -13,8 +13,11 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 
 using std::unique_ptr;
+using std::dynamic_pointer_cast;
+using std::function;
 
 using fspp::dynamic_pointer_move;
+using fspp::ptr::optional_ownership_ptr;
 
 namespace blobstore {
 namespace onblocks {
@@ -27,51 +30,47 @@ DataTree::DataTree(DataNodeStore *nodeStore, unique_ptr<DataNode> rootNode)
 DataTree::~DataTree() {
 }
 
-void DataTree::addDataLeaf() {
-  auto insertPosOrNull = LowestRightBorderNodeWithLessThanKChildrenOrNull();
+unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
+  auto insertPosOrNull = lowestRightBorderNodeWithLessThanKChildrenOrNull();
   if (insertPosOrNull) {
-    addDataLeafAt(insertPosOrNull.get());
+    return addDataLeafAt(insertPosOrNull.get());
   } else {
-    addDataLeafToFullTree();
+    return addDataLeafToFullTree();
   }
 }
 
-unique_ptr<DataInnerNode> DataTree::LowestRightBorderNodeWithLessThanKChildrenOrNull() {
-  const DataInnerNode *root_inner_node = dynamic_cast<const DataInnerNode*>(_rootNode.get());
-  if (nullptr == root_inner_node) {
-    //Root is not an inner node but a leaf
-    return nullptr;
-  }
-
-  unique_ptr<DataNode> currentNode = _nodeStore->load(root_inner_node->LastChild()->key());
-  unique_ptr<DataInnerNode> result(nullptr);
-  while(auto currentInnerNode = dynamic_pointer_move<DataInnerNode>(currentNode)) {
-    Key rightmostChildKey = currentInnerNode->LastChild()->key();
-    if (currentInnerNode->numChildren() < DataInnerNode::MAX_STORED_CHILDREN) {
-      result = std::move(currentInnerNode);
+optional_ownership_ptr<DataInnerNode> DataTree::lowestRightBorderNodeWithLessThanKChildrenOrNull() {
+  optional_ownership_ptr<DataInnerNode> currentNode = fspp::ptr::WithoutOwnership(dynamic_cast<DataInnerNode*>(_rootNode.get()));
+  optional_ownership_ptr<DataInnerNode> result = fspp::ptr::null<DataInnerNode>();
+  for (unsigned int i=0; i < _rootNode->depth(); ++i) {
+    auto lastChild = getLastChildAsInnerNode(*currentNode);
+    if (currentNode->numChildren() < DataInnerNode::MAX_STORED_CHILDREN) {
+      result = std::move(currentNode);
     }
-    currentNode = _nodeStore->load(rightmostChildKey);
+    currentNode = std::move(lastChild);
   }
 
   return result;
 }
 
+unique_ptr<DataInnerNode> DataTree::getLastChildAsInnerNode(const DataInnerNode &node) {
+  Key key = node.LastChild()->key();
+  auto lastChild = _nodeStore->load(key);
+  return dynamic_pointer_move<DataInnerNode>(lastChild);
+}
+
 unique_ptr<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {
   auto new_leaf = _nodeStore->createNewLeafNode();
-  if (insertPos->depth() == 1) {
-    insertPos->addChild(*new_leaf);
-  } else {
-    auto chain = createChainOfInnerNodes(insertPos->depth()-1, *new_leaf);
-    insertPos->addChild(*chain);
-  }
+  auto chain = createChainOfInnerNodes(insertPos->depth()-1, new_leaf.get());
+  insertPos->addChild(*chain);
   return new_leaf;
 }
 
-unique_ptr<DataInnerNode> DataTree::createChainOfInnerNodes(unsigned int num, const DataLeafNode &leaf) {
-  assert(num > 0);
-  unique_ptr<DataInnerNode> chain = _nodeStore->createNewInnerNode(leaf);
-  for(unsigned int i=1; i<num; ++i) {
-    chain = _nodeStore->createNewInnerNode(*chain);
+optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, DataLeafNode *leaf) {
+  optional_ownership_ptr<DataNode> chain = fspp::ptr::WithoutOwnership<DataNode>(leaf);
+  for(unsigned int i=0; i<num; ++i) {
+    auto newnode = _nodeStore->createNewInnerNode(*chain);
+    chain = fspp::ptr::WithOwnership<DataNode>(std::move(newnode));
   }
   return chain;
 }

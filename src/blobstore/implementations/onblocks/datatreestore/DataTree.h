@@ -4,6 +4,7 @@
 
 #include <memory>
 #include "fspp/utils/macros.h"
+#include "fspp/utils/OptionalOwnershipPointer.h"
 
 namespace blobstore {
 namespace onblocks {
@@ -20,14 +21,15 @@ public:
   DataTree(datanodestore::DataNodeStore *nodeStore, std::unique_ptr<datanodestore::DataNode> rootNode);
   virtual ~DataTree();
 
-  void addDataLeaf();
+  std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
 private:
   datanodestore::DataNodeStore *_nodeStore;
-  std::unique_ptr<datanodestore::DataNode> _rootNode;
+  std::shared_ptr<datanodestore::DataNode> _rootNode;
 
-  std::unique_ptr<datanodestore::DataInnerNode> LowestRightBorderNodeWithLessThanKChildrenOrNull();
+  fspp::ptr::optional_ownership_ptr<datanodestore::DataInnerNode> lowestRightBorderNodeWithLessThanKChildrenOrNull();
+  std::unique_ptr<datanodestore::DataInnerNode> getLastChildAsInnerNode(const datanodestore::DataInnerNode &node);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
-  std::unique_ptr<datanodestore::DataInnerNode> createChainOfInnerNodes(unsigned int num, const datanodestore::DataLeafNode &leaf);
+  fspp::ptr::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataLeafNode *leaf);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
   std::unique_ptr<datanodestore::DataNode> copyNode(const datanodestore::DataNode &source);
 
