@@ -7,8 +7,6 @@
 namespace fspp {
 namespace ptr {
 
-//TODO Test cases
-
 template<typename T>
 using optional_ownership_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 
