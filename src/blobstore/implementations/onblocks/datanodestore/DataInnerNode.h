@@ -14,21 +14,37 @@ public:
   virtual ~DataInnerNode();
 
   struct ChildEntry {
-    uint8_t key[blockstore::Key::KEYLENGTH_BINARY];
+  public:
+    blockstore::Key key() const {
+      return blockstore::Key::FromBinary(_keydata);
+    }
+  private:
+    void setKey(const blockstore::Key &key) {
+      key.ToBinary(_keydata);
+    }
+    friend class DataInnerNode;
+    uint8_t _keydata[blockstore::Key::KEYLENGTH_BINARY];
+    DISALLOW_COPY_AND_ASSIGN(ChildEntry);
   };
 
   static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
 
-  void InitializeNewNode(const DataNode &first_child);
+  void InitializeNewNode(const DataNode &first_child_key);
 
   ChildEntry *ChildrenBegin();
   ChildEntry *ChildrenEnd();
   const ChildEntry *ChildrenBegin() const;
   const ChildEntry *ChildrenEnd() const;
 
-  const ChildEntry *RightmostExistingChild() const;
+  ChildEntry *getChild(unsigned int index);
+  const ChildEntry *getChild(unsigned int index) const;
+
+  ChildEntry *LastChild();
+  const ChildEntry *LastChild() const;
 
   uint32_t numChildren() const;
+
+  void addChild(const DataNode &child_key);
 };
 
 }

@@ -80,3 +80,15 @@ TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
     nodeStore->load(key)
   );
 }
+
+TEST_F(DataNodeStoreTest, CreatedInnerNodeIsInitialized) {
+  auto leaf = nodeStore->createNewLeafNode();
+  auto node = nodeStore->createNewInnerNode(*leaf);
+  EXPECT_EQ(1u, node->numChildren());
+  EXPECT_EQ(leaf->key(), node->getChild(0)->key());
+}
+
+TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
+  auto leaf = nodeStore->createNewLeafNode();
+  EXPECT_EQ(0u, leaf->numBytes());
+}

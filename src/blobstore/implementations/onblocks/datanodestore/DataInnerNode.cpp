@@ -21,7 +21,7 @@ DataInnerNode::~DataInnerNode() {
 void DataInnerNode::InitializeNewNode(const DataNode &first_child) {
   *node().Depth() = first_child.depth() + 1;
   *node().Size() = 1;
-  first_child.key().ToBinary(ChildrenBegin()->key);
+  ChildrenBegin()->setKey(first_child.key());
 }
 
 uint32_t DataInnerNode::numChildren() const {
@@ -44,8 +44,28 @@ const DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() const {
   return ChildrenBegin() + *node().Size();
 }
 
-const DataInnerNode::ChildEntry *DataInnerNode::RightmostExistingChild() const{
+DataInnerNode::ChildEntry *DataInnerNode::LastChild() {
+  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->LastChild());
+}
+
+const DataInnerNode::ChildEntry *DataInnerNode::LastChild() const {
   return ChildrenEnd()-1;
+}
+
+DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) {
+  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->getChild(index));
+}
+
+const DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) const {
+  assert(index < numChildren());
+  return ChildrenBegin()+index;
+}
+
+void DataInnerNode::addChild(const DataNode &child) {
+  assert(numChildren() < DataInnerNode::MAX_STORED_CHILDREN);
+  assert(child.depth() == depth()-1);
+  *node().Size() += 1;
+  LastChild()->setKey(child.key());
 }
 
 }
