@@ -7,6 +7,7 @@
 namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
+class DataInnerNode;
 
 class DataLeafNode: public DataNode {
 public:

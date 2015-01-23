@@ -1,6 +1,8 @@
 #include "DataLeafNode.h"
+#include "DataInnerNode.h"
 
 using std::unique_ptr;
+using std::make_unique;
 using blockstore::Block;
 using blockstore::Data;
 using blockstore::Key;
@@ -45,7 +47,7 @@ void DataLeafNode::resize(uint32_t new_size) {
 }
 
 void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
-  std::memset(node().DataBegin<unsigned char>()+begin, 0, end-begin);
+  std::memset(node().DataBegin<uint8_t>()+begin, 0, end-begin);
 }
 
 }

@@ -76,12 +76,11 @@ optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int 
 }
 
 unique_ptr<DataLeafNode> DataTree::addDataLeafToFullTree() {
-  //TODO
-  //auto copyOfOldRoot = copyNode(*_rootNode);
-  //_rootNode->InitializeNewInnerNode(*copyOfOldRoot);
-  //addDataLeafAt(_rootNode.get());
-  assert(false);
-  return nullptr;
+  auto copyOfOldRoot = copyNode(*_rootNode);
+  auto newRootNode = DataNode::convertToNewInnerNode(std::move(_rootNode), *copyOfOldRoot);
+  auto newLeaf = addDataLeafAt(newRootNode.get());
+  _rootNode = std::move(newRootNode);
+  return newLeaf;
 }
 
 unique_ptr<DataNode> DataTree::copyNode(const DataNode &source) {

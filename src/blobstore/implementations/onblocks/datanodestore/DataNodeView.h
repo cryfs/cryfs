@@ -72,6 +72,10 @@ public:
     return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataEnd<Entry>());
   }
 
+  std::unique_ptr<blockstore::Block> releaseBlock() {
+    return std::move(_block);
+  }
+
 private:
   template<int offset, class Type>
   const Type *GetOffset() const {

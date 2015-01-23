@@ -9,6 +9,7 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 class DataNodeStore;
+class DataInnerNode;
 
 class DataNode {
 public:
@@ -17,6 +18,8 @@ public:
   const blockstore::Key &key() const;
 
   uint8_t depth() const;
+
+  static std::unique_ptr<DataInnerNode> convertToNewInnerNode(std::unique_ptr<DataNode> node, const DataNode &first_child);
 
 protected:
   DataNode(DataNodeView block, const blockstore::Key &key);

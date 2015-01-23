@@ -37,6 +37,15 @@ uint8_t DataNode::depth() const {
   return *node().Depth();
 }
 
+unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> node, const DataNode &first_child) {
+  Key key = node->key();
+  auto block = node->_node.releaseBlock();
+  std::memset(block->data(), 0, block->size());
+
+  auto innerNode = make_unique<DataInnerNode>(DataNodeView(std::move(block)), key);
+  innerNode->InitializeNewNode(first_child);
+  return innerNode;
+}
 
 }
 }

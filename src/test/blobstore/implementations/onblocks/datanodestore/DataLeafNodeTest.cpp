@@ -1,4 +1,5 @@
 #include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
+#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <gtest/gtest.h>
 
@@ -56,8 +57,12 @@ public:
   }
 
   void FillLeafBlockWithData() {
-    leaf->resize(randomData.size());
-    std::memcpy(leaf->data(), randomData.data(), randomData.size());
+    FillLeafBlockWithData(leaf.get());
+  }
+
+  void FillLeafBlockWithData(DataLeafNode *leaf_to_fill) {
+    leaf_to_fill->resize(randomData.size());
+    std::memcpy(leaf_to_fill->data(), randomData.data(), randomData.size());
   }
 
   unique_ptr<DataLeafNode> LoadLeafNode(const Key &key) {
@@ -69,6 +74,14 @@ public:
     auto leaf = LoadLeafNode(key);
     EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
     leaf->resize(size);
+  }
+
+  Key CreateLeafWithDataConvertItToInnerNodeAndReturnKey() {
+    auto leaf = nodeStore->createNewLeafNode();
+    FillLeafBlockWithData(leaf.get());
+    auto child = nodeStore->createNewLeafNode();
+    unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
+    return converted->key();
   }
 
   Data ZEROES;
@@ -172,6 +185,23 @@ TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
 
   //Check that the remaining data region is unchanged
   EXPECT_EQ(0, std::memcmp(randomData.data(), leaf->data(), smaller_size));
+}
+
+TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
+  auto child = nodeStore->createNewLeafNode();
+  Key leaf_key = leaf->key();
+  unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
+
+  EXPECT_EQ(1u, converted->numChildren());
+  EXPECT_EQ(child->key(), converted->getChild(0)->key());
+  EXPECT_EQ(leaf_key, converted->key());
+}
+
+TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
+  Key key = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
+
+  auto block = blockStore->load(key);
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
 }
 
 

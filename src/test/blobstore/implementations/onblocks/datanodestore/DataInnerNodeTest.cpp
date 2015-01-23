@@ -17,6 +17,7 @@ using fspp::dynamic_pointer_move;
 using blockstore::Key;
 using blockstore::testfake::FakeBlockStore;
 using blockstore::BlockStore;
+using blockstore::Data;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
@@ -27,11 +28,14 @@ using std::make_unique;
 class DataInnerNodeTest: public Test {
 public:
   DataInnerNodeTest() :
+    ZEROES(DataLeafNode::MAX_STORED_BYTES),
     _blockStore(make_unique<FakeBlockStore>()),
     blockStore(_blockStore.get()),
     nodeStore(make_unique<DataNodeStore>(std::move(_blockStore))),
     leaf(nodeStore->createNewLeafNode()),
     node(nodeStore->createNewInnerNode(*leaf)) {
+
+    ZEROES.FillWithZeroes();
   }
 
   unique_ptr<DataInnerNode> LoadInnerNode(const Key &key) {
@@ -74,6 +78,16 @@ public:
     return leaf2->key();
   }
 
+  Key CreateNodeWithDataConvertItToInnerNodeAndReturnKey() {
+    auto node = CreateNewInnerNode();
+    AddALeafTo(node.get());
+    AddALeafTo(node.get());
+    auto child = nodeStore->createNewLeafNode();
+    unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), *child);
+    return converted->key();
+  }
+
+  Data ZEROES;
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
   unique_ptr<DataNodeStore> nodeStore;
@@ -136,6 +150,23 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   EXPECT_EQ(2u, parent->numChildren());
   EXPECT_EQ(node->key(), parent->getChild(0)->key());
   EXPECT_EQ(node2->key(), parent->getChild(1)->key());
+}
+
+TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
+  auto child = nodeStore->createNewLeafNode();
+  Key node_key = node->key();
+  unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), *child);
+
+  EXPECT_EQ(1u, converted->numChildren());
+  EXPECT_EQ(child->key(), converted->getChild(0)->key());
+  EXPECT_EQ(node_key, converted->key());
+}
+
+TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
+  Key key = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
+
+  auto block = blockStore->load(key);
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
 }
 
 //TODO TestCase for LastChild

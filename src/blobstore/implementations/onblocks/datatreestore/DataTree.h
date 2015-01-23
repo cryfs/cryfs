@@ -24,7 +24,7 @@ public:
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
 private:
   datanodestore::DataNodeStore *_nodeStore;
-  std::shared_ptr<datanodestore::DataNode> _rootNode;
+  std::unique_ptr<datanodestore::DataNode> _rootNode;
 
   fspp::ptr::optional_ownership_ptr<datanodestore::DataInnerNode> lowestRightBorderNodeWithLessThanKChildrenOrNull();
   std::unique_ptr<datanodestore::DataInnerNode> getLastChildAsInnerNode(const datanodestore::DataInnerNode &node);
