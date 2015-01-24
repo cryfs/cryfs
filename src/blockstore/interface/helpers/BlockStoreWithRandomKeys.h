@@ -16,10 +16,10 @@ public:
   // Return nullptr if key already exists
   virtual std::unique_ptr<Block> create(const Key &key, size_t size) = 0;
 
-  BlockWithKey create(size_t size) final;
+  std::unique_ptr<Block> create(size_t size) final;
 
 private:
-  BlockWithKey tryCreate(size_t size);
+  std::unique_ptr<Block> tryCreate(size_t size);
 };
 
 }

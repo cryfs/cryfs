@@ -3,7 +3,6 @@
 #define FSPP_BLOCKSTORE_BLOCKSTORE_H_
 
 #include <blockstore/interface/Block.h>
-#include <blockstore/utils/BlockWithKey.h>
 #include <string>
 #include <memory>
 
@@ -16,7 +15,7 @@ class BlockStore {
 public:
   virtual ~BlockStore() {}
 
-  virtual BlockWithKey create(size_t size) = 0;
+  virtual std::unique_ptr<Block> create(size_t size) = 0;
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual std::unique_ptr<Block> load(const Key &key) = 0;

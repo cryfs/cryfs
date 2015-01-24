@@ -31,23 +31,23 @@ public:
 
   void TestCreatedBlockHasCorrectSize() {
     auto block = blockStore->create(size);
-    EXPECT_EQ(size, block.block->size());
+    EXPECT_EQ(size, block->size());
   }
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
     auto block = blockStore->create(size);
-    auto loaded_block = blockStore->load(block.key);
+    auto loaded_block = blockStore->load(block->key());
     EXPECT_EQ(size, loaded_block->size());
   }
 
   void TestCreatedBlockIsZeroedOut() {
     auto block = blockStore->create(size);
-    EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), block.block->data(), size));
+    EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), block->data(), size));
   }
 
   void TestLoadingUnchangedBlockIsZeroedOut() {
     auto block = blockStore->create(size);
-    auto loaded_block = blockStore->load(block.key);
+    auto loaded_block = blockStore->load(block->key());
     EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), loaded_block->data(), size));
   }
 
@@ -88,8 +88,8 @@ public:
     blockstore::Key key = key;
     {
       auto block = blockStore->create(size);
-      key = block.key;
-      WriteDataToBlock(block.block.get(), randomData);
+      key = block->key();
+      WriteDataToBlock(block.get(), randomData);
     }
     auto loaded_block = blockStore->load(key);
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
@@ -99,7 +99,7 @@ public:
     DataBlockFixture randomData(size);
     blockstore::Key key = key;
     {
-      key = blockStore->create(size).key;
+      key = blockStore->create(size)->key();
       auto block = blockStore->load(key);
       WriteDataToBlock(block.get(), randomData);
     }
@@ -137,24 +137,24 @@ private:
 
   blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &data) {
     auto block = blockStore->create(data.size());
-    std::memcpy(block.block->data(), data.data(), data.size());
-    return block.key;
+    std::memcpy(block->data(), data.data(), data.size());
+    return block->key();
   }
 
   std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const DataBlockFixture &data) {
     auto block = blockStore->create(data.size());
-    std::memcpy(block.block->data(), data.data(), data.size());
-    block.block->flush();
-    return blockStore->load(block.key);
+    std::memcpy(block->data(), data.data(), data.size());
+    block->flush();
+    return blockStore->load(block->key());
   }
 
   std::unique_ptr<blockstore::Block> CreateBlockAndLoadIt() {
-    blockstore::Key key = blockStore->create(size).key;
+    blockstore::Key key = blockStore->create(size)->key();
     return blockStore->load(key);
   }
 
   std::unique_ptr<blockstore::Block> CreateBlock() {
-    return blockStore->create(size).block;
+    return blockStore->create(size);
   }
 
   void WriteDataToBlock(blockstore::Block *block, const DataBlockFixture &randomData) {
@@ -195,7 +195,7 @@ TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
   auto blockStore = this->fixture.createBlockStore();
   auto block1 = blockStore->create(1024);
   auto block2 = blockStore->create(1024);
-  EXPECT_NE(block1.key, block2.key);
+  EXPECT_NE(block1->key(), block2->key());
 }
 
 REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,

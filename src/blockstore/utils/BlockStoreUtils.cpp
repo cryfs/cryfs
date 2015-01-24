@@ -8,9 +8,9 @@ using std::unique_ptr;
 namespace blockstore {
 namespace utils {
 
-BlockWithKey copyToNewBlock(BlockStore *blockStore, const Block &block) {
+unique_ptr<Block> copyToNewBlock(BlockStore *blockStore, const Block &block) {
   auto newBlock = blockStore->create(block.size());
-  std::memcpy(newBlock.block->data(), block.data(), block.size());
+  std::memcpy(newBlock->data(), block.data(), block.size());
   return newBlock;
 }
 

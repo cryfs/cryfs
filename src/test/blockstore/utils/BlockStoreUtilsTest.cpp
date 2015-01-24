@@ -35,32 +35,32 @@ public:
 
 TEST_F(BlockStoreUtilsTest, CopyEmptyBlock) {
   auto block = blockStore->create(0);
-  auto block2 = copyToNewBlock(blockStore.get(), *block.block);
+  auto block2 = copyToNewBlock(blockStore.get(), *block);
 
-  EXPECT_EQ(0u, block2.block->size());
+  EXPECT_EQ(0u, block2->size());
 }
 
 TEST_F(BlockStoreUtilsTest, CopyZeroBlock) {
-  auto block = blockStore->create(SIZE).block;
-  auto block2 = copyToNewBlock(blockStore.get(), *block).block;
+  auto block = blockStore->create(SIZE);
+  auto block2 = copyToNewBlock(blockStore.get(), *block);
 
   EXPECT_EQ(SIZE, block2->size());
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), block2->data(), SIZE));
 }
 
 TEST_F(BlockStoreUtilsTest, CopyDataBlock) {
-  auto block = blockStore->create(SIZE).block;
+  auto block = blockStore->create(SIZE);
   std::memcpy(block->data(), dataFixture.data(), SIZE);
-  auto block2 = copyToNewBlock(blockStore.get(), *block).block;
+  auto block2 = copyToNewBlock(blockStore.get(), *block);
 
   EXPECT_EQ(SIZE, block2->size());
   EXPECT_EQ(0, std::memcmp(dataFixture.data(), block2->data(), SIZE));
 }
 
 TEST_F(BlockStoreUtilsTest, OriginalBlockUnchanged) {
-  auto block = blockStore->create(SIZE).block;
+  auto block = blockStore->create(SIZE);
   std::memcpy(block->data(), dataFixture.data(), SIZE);
-  auto block2 = copyToNewBlock(blockStore.get(), *block).block;
+  auto block2 = copyToNewBlock(blockStore.get(), *block);
 
   EXPECT_EQ(SIZE, block->size());
   EXPECT_EQ(0, std::memcmp(dataFixture.data(), block->data(), SIZE));
