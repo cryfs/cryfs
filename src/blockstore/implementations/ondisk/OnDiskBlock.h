@@ -17,8 +17,8 @@ class OnDiskBlock: public Block {
 public:
   virtual ~OnDiskBlock();
 
-  static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &filepath);
-  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &filepath, size_t size);
+  static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
+  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, size_t size);
 
   void *data() override;
   const void *data() const override;
@@ -31,8 +31,8 @@ private:
   const boost::filesystem::path _filepath;
   Data _data;
 
-  OnDiskBlock(const boost::filesystem::path &filepath, size_t size);
-  OnDiskBlock(const boost::filesystem::path &filepath, Data &&data);
+  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, size_t size);
+  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, Data &&data);
 
   void _fillDataWithZeroes();
   void _storeToDisk() const;

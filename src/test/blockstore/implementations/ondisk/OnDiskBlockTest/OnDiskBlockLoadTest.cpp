@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "test/testutils/TempFile.h"
+#include "test/testutils/TempDir.h"
 #include <fstream>
 
 using ::testing::Test;
@@ -22,6 +23,13 @@ namespace bf = boost::filesystem;
 
 class OnDiskBlockLoadTest: public Test, public WithParamInterface<size_t> {
 public:
+  OnDiskBlockLoadTest():
+    dir(),
+    key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
+    file(dir.path() / key.ToString()) {
+  }
+  TempDir dir;
+  Key key;
   TempFile file;
 
   void SetFileSize(size_t size) {
@@ -37,7 +45,7 @@ public:
   }
 
   unique_ptr<OnDiskBlock> LoadBlock() {
-    return OnDiskBlock::LoadFromDisk(file.path());
+    return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
   void EXPECT_BLOCK_DATA_EQ(const DataBlockFixture &expected, const OnDiskBlock &actual) {
@@ -65,8 +73,8 @@ TEST_P(OnDiskBlockLoadTest, LoadedDataIsCorrect) {
 }
 
 TEST_F(OnDiskBlockLoadTest, LoadNotExistingBlock) {
-  TempFile file2(false); // Pass false, so the file isn't created.
+  Key key2 = Key::FromString("272EE5517627CFA147A971A8E6E747E0");
   EXPECT_FALSE(
-      (bool)OnDiskBlock::LoadFromDisk(file2.path())
+      (bool)OnDiskBlock::LoadFromDisk(dir.path(), key2)
   );
 }

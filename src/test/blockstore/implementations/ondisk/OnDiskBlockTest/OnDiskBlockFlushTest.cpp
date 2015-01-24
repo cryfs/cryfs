@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "test/testutils/TempFile.h"
+#include "test/testutils/TempDir.h"
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
@@ -20,21 +21,26 @@ class OnDiskBlockFlushTest: public Test, public WithParamInterface<size_t> {
 public:
   OnDiskBlockFlushTest()
   // Don't create the temp file yet (therefore pass false to the TempFile constructor)
-  : file(false), randomData(GetParam()) {
+  : dir(),
+    key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
+    file(dir.path() / key.ToString(), false),
+    randomData(GetParam()) {
   }
+  TempDir dir;
+  Key key;
   TempFile file;
 
   DataBlockFixture randomData;
 
   unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      auto block = OnDiskBlock::CreateOnDisk(file.path(), randomData.size());
+      auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.size());
     }
-    return OnDiskBlock::LoadFromDisk(file.path());
+    return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
   unique_ptr<OnDiskBlock> CreateBlock() {
-    return OnDiskBlock::CreateOnDisk(file.path(), randomData.size());
+    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.size());
   }
 
   void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {

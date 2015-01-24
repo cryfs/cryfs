@@ -34,7 +34,7 @@ public:
   std::unique_ptr<Block> create(const Key &key, size_t size) override;
   std::unique_ptr<Block> load(const Key &key) override;
 
-  void updateData(const std::string &key, const Data &data);
+  void updateData(const Key &key, const Data &data);
 
 private:
   std::map<std::string, Data> _blocks;
@@ -46,7 +46,7 @@ private:
   //We want to avoid this for the reasons mentioned above (overflow data).
   std::vector<std::shared_ptr<Data>> _used_dataregions_for_blocks;
 
-  std::unique_ptr<Block> makeFakeBlockFromData(const std::string &key, const Data &data);
+  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const Data &data);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };

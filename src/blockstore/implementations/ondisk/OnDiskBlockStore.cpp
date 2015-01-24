@@ -16,8 +16,7 @@ OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
 unique_ptr<Block> OnDiskBlockStore::create(const Key &key, size_t size) {
-  auto file_path = _rootdir / key.ToString();
-  auto block = OnDiskBlock::CreateOnDisk(file_path, size);
+  auto block = OnDiskBlock::CreateOnDisk(_rootdir, key, size);
 
   if (!block) {
     return nullptr;
@@ -26,8 +25,7 @@ unique_ptr<Block> OnDiskBlockStore::create(const Key &key, size_t size) {
 }
 
 unique_ptr<Block> OnDiskBlockStore::load(const Key &key) {
-  auto file_path = _rootdir / key.ToString();
-  return OnDiskBlock::LoadFromDisk(file_path);
+  return OnDiskBlock::LoadFromDisk(_rootdir, key);
 }
 
 }

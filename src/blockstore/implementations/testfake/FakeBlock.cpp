@@ -14,8 +14,8 @@ using std::string;
 namespace blockstore {
 namespace testfake {
 
-FakeBlock::FakeBlock(FakeBlockStore *store, const string &key, shared_ptr<Data> data)
- : _store(store), _key(key), _data(data) {
+FakeBlock::FakeBlock(FakeBlockStore *store, const Key &key, shared_ptr<Data> data)
+ : Block(key), _store(store), _data(data) {
 }
 
 FakeBlock::~FakeBlock() {
@@ -35,7 +35,7 @@ size_t FakeBlock::size() const {
 }
 
 void FakeBlock::flush() {
-  _store->updateData(_key, *_data);
+  _store->updateData(key(), *_data);
 }
 
 }

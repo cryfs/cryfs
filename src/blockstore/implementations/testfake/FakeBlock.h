@@ -13,7 +13,7 @@ class FakeBlockStore;
 
 class FakeBlock: public Block {
 public:
-  FakeBlock(FakeBlockStore *store, const std::string &key, std::shared_ptr<Data> data);
+  FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<Data> data);
   virtual ~FakeBlock();
 
   void *data() override;
@@ -25,7 +25,6 @@ public:
 
 private:
   FakeBlockStore *_store;
-  const std::string _key;
   std::shared_ptr<Data> _data;
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlock);

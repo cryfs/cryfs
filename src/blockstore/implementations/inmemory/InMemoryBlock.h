@@ -11,7 +11,7 @@ class InMemoryBlockStore;
 
 class InMemoryBlock: public Block {
 public:
-  InMemoryBlock(size_t size);
+  InMemoryBlock(const Key &key, size_t size);
   InMemoryBlock(const InMemoryBlock &rhs);
   virtual ~InMemoryBlock();
 

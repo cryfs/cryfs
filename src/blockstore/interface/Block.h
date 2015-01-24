@@ -3,6 +3,7 @@
 #define BLOCKSTORE_INTERFACE_BLOCK_H_
 
 #include <cstring>
+#include "blockstore/utils/Key.h"
 
 namespace blockstore {
 
@@ -16,6 +17,16 @@ public:
   virtual void flush() = 0;
 
   virtual size_t size() const = 0;
+
+  const Key &key() const {
+    return _key;
+  }
+
+protected:
+  Block(const Key &key) : _key(key) {}
+
+private:
+  const Key _key;
 };
 
 }
