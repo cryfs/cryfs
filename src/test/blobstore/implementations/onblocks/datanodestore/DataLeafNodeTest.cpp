@@ -84,6 +84,11 @@ public:
     return converted->key();
   }
 
+  unique_ptr<DataLeafNode> CopyLeafNode(const DataLeafNode &node) {
+    auto copied = nodeStore->createNewNodeAsCopyFrom(node);
+    return dynamic_pointer_move<DataLeafNode>(copied);
+  }
+
   Data ZEROES;
   Data randomData;
   unique_ptr<BlockStore> _blockStore;
@@ -204,6 +209,24 @@ TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
 }
 
+TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf) {
+  auto copied = CopyLeafNode(*leaf);
+  EXPECT_NE(leaf->key(), copied->key());
+}
+
+TEST_F(DataLeafNodeTest, CopyEmptyLeaf) {
+  auto copied = CopyLeafNode(*leaf);
+  EXPECT_EQ(leaf->numBytes(), copied->numBytes());
+}
+
+TEST_F(DataLeafNodeTest, CopyDataLeaf) {
+  FillLeafBlockWithData();
+  auto copied = CopyLeafNode(*leaf);
+
+  EXPECT_EQ(leaf->numBytes(), copied->numBytes());
+  EXPECT_EQ(0, std::memcmp(leaf->data(), copied->data(), leaf->numBytes()));
+  EXPECT_NE(leaf->data(), copied->data());
+}
 
 /* TODO
  * The following test cases test reading/writing part of a leaf. This doesn't make much sense,

@@ -30,6 +30,8 @@ public:
   std::unique_ptr<DataLeafNode> createNewLeafNode();
   std::unique_ptr<DataInnerNode> createNewInnerNode(const DataNode &first_child);
 
+  std::unique_ptr<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
+
 private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block, const blockstore::Key &key);
 

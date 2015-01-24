@@ -31,7 +31,6 @@ private:
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
   fspp::ptr::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataLeafNode *leaf);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
-  std::unique_ptr<datanodestore::DataNode> copyNode(const datanodestore::DataNode &source);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

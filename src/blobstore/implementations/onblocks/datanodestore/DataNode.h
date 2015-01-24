@@ -26,6 +26,7 @@ protected:
 
   DataNodeView &node();
   const DataNodeView &node() const;
+  friend class DataNodeStore;
 
 private:
   blockstore::Key _key; //TODO Remove this and make blockstore::Block store the key

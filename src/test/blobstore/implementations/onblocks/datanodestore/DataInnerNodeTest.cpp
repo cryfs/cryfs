@@ -87,6 +87,11 @@ public:
     return converted->key();
   }
 
+  unique_ptr<DataInnerNode> CopyInnerNode(const DataInnerNode &node) {
+    auto copied = nodeStore->createNewNodeAsCopyFrom(node);
+    return dynamic_pointer_move<DataInnerNode>(copied);
+  }
+
   Data ZEROES;
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
@@ -167,6 +172,27 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
 
   auto block = blockStore->load(key);
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
+}
+
+TEST_F(DataInnerNodeTest, CopyingCreatesNewNode) {
+  auto copied = CopyInnerNode(*node);
+  EXPECT_NE(node->key(), copied->key());
+}
+
+TEST_F(DataInnerNodeTest, CopyInnerNodeWithOneChild) {
+  auto copied = CopyInnerNode(*node);
+
+  EXPECT_EQ(node->numChildren(), copied->numChildren());
+  EXPECT_EQ(node->getChild(0)->key(), copied->getChild(0)->key());
+}
+
+TEST_F(DataInnerNodeTest, CopyInnerNodeWithTwoChildren) {
+  AddALeafTo(node.get());
+  auto copied = CopyInnerNode(*node);
+
+  EXPECT_EQ(node->numChildren(), copied->numChildren());
+  EXPECT_EQ(node->getChild(0)->key(), copied->getChild(0)->key());
+  EXPECT_EQ(node->getChild(1)->key(), copied->getChild(1)->key());
 }
 
 //TODO TestCase for LastChild

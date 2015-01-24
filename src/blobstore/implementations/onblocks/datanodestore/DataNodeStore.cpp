@@ -3,6 +3,7 @@
 #include "DataNodeStore.h"
 #include "blockstore/interface/BlockStore.h"
 #include "blockstore/interface/Block.h"
+#include "blockstore/utils/BlockStoreUtils.h"
 
 
 using blockstore::BlockStore;
@@ -51,6 +52,11 @@ unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
 
 unique_ptr<DataNode> DataNodeStore::load(const Key &key) {
   return load(_blockstore->load(key), key);
+}
+
+unique_ptr<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &source) {
+  auto newBlock = blockstore::utils::copyToNewBlock(_blockstore.get(), source.node().block());
+  return load(std::move(newBlock.block), newBlock.key);
 }
 
 }

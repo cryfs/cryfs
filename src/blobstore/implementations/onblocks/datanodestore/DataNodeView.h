@@ -76,6 +76,10 @@ public:
     return std::move(_block);
   }
 
+  const blockstore::Block &block() const {
+    return *_block;
+  }
+
 private:
   template<int offset, class Type>
   const Type *GetOffset() const {
