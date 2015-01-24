@@ -23,7 +23,7 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  blockstore::BlockWithKey CreateBlock(size_t size);
+  std::unique_ptr<blockstore::Block> CreateBlock(size_t size);
 
 private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);

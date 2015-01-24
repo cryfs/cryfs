@@ -38,9 +38,9 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
 
 Key CryDevice::CreateRootBlockAndReturnKey() {
   auto rootBlock = _block_store->create(DIR_BLOCKSIZE);
-  DirBlock rootDir(std::move(rootBlock.block));
+  DirBlock rootDir(std::move(rootBlock));
   rootDir.InitializeEmptyDir();
-  return rootBlock.key;
+  return rootBlock->key();
 }
 
 CryDevice::~CryDevice() {
@@ -74,7 +74,7 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   throw FuseErrnoException(ENOTSUP);
 }
 
-blockstore::BlockWithKey CryDevice::CreateBlock(size_t size) {
+unique_ptr<blockstore::Block> CryDevice::CreateBlock(size_t size) {
   return _block_store->create(size);
 }
 
