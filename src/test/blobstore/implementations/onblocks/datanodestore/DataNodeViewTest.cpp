@@ -30,11 +30,12 @@ INSTANTIATE_TEST_CASE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 
 
 TEST_P(DataNodeViewDepthTest, DepthIsStored) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto key = block->key();
   {
-    DataNodeView view(std::move(block.block));
+    DataNodeView view(std::move(block));
     *view.Depth() = GetParam();
   }
-  DataNodeView view(blockStore->load(block.key));
+  DataNodeView view(blockStore->load(key));
   EXPECT_EQ(GetParam(), *view.Depth());
 }
 
@@ -44,35 +45,38 @@ INSTANTIATE_TEST_CASE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50
 
 TEST_P(DataNodeViewSizeTest, SizeIsStored) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto key = block->key();
   {
-    DataNodeView view(std::move(block.block));
+    DataNodeView view(std::move(block));
     *view.Size() = GetParam();
   }
-  DataNodeView view(blockStore->load(block.key));
+  DataNodeView view(blockStore->load(key));
   EXPECT_EQ(GetParam(), *view.Size());
 }
 
 TEST_F(DataNodeViewTest, DataIsStored) {
   DataBlockFixture randomData(DataNodeView::DATASIZE_BYTES);
   auto block = blockStore->create(DataNodeView::BLOCKSIZE_BYTES);
+  auto key = block->key();
   {
-    DataNodeView view(std::move(block.block));
+    DataNodeView view(std::move(block));
     std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), randomData.size());
   }
-  DataNodeView view(blockStore->load(block.key));
+  DataNodeView view(blockStore->load(key));
   EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), randomData.size()));
 }
 
 TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   DataBlockFixture randomData(DataNodeView::DATASIZE_BYTES);
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto key = block->key();
   {
-    DataNodeView view(std::move(block.block));
+    DataNodeView view(std::move(block));
     *view.Depth() = 3;
     *view.Size() = 1000000000u;
     std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES);
   }
-  DataNodeView view(blockStore->load(block.key));
+  DataNodeView view(blockStore->load(key));
   EXPECT_EQ(3, *view.Depth());
   EXPECT_EQ(1000000000u, *view.Size());
   EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), DataNodeView::DATASIZE_BYTES));
@@ -80,32 +84,32 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithOneByteEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   EXPECT_EQ(blockBegin+view.HEADERSIZE_BYTES, view.DataBegin<uint8_t>());
 }
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithEightByteEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   EXPECT_EQ(blockBegin+view.HEADERSIZE_BYTES, (uint8_t*)view.DataBegin<uint64_t>());
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithOneByteEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   EXPECT_EQ(blockBegin+view.BLOCKSIZE_BYTES, view.DataEnd<uint8_t>());
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithEightByteEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   EXPECT_EQ(blockBegin+view.BLOCKSIZE_BYTES, (uint8_t*)view.DataEnd<uint64_t>());
 }
@@ -120,16 +124,16 @@ BOOST_STATIC_ASSERT_MSG(DataNodeView::DATASIZE_BYTES % sizeof(SizedDataEntry) !=
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithStructEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   EXPECT_EQ(blockBegin+view.HEADERSIZE_BYTES, (uint8_t*)view.DataBegin<SizedDataEntry>());
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithStructByteEntries) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  uint8_t *blockBegin = (uint8_t*)block.block->data();
-  DataNodeView view(std::move(block.block));
+  uint8_t *blockBegin = (uint8_t*)block->data();
+  DataNodeView view(std::move(block));
 
   unsigned int numFittingEntries = view.DATASIZE_BYTES / sizeof(SizedDataEntry);
 

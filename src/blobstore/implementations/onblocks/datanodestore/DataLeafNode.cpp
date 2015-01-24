@@ -11,8 +11,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataLeafNode::DataLeafNode(DataNodeView view, const Key &key)
-: DataNode(std::move(view), key) {
+DataLeafNode::DataLeafNode(DataNodeView view)
+: DataNode(std::move(view)) {
   assert(numBytes() <= MAX_STORED_BYTES);
 }
 

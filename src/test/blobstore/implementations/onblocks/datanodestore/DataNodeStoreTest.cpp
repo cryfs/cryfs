@@ -70,9 +70,9 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
 
 TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
-  Key key = block.key;
+  Key key = block->key();
   {
-    DataNodeView view(std::move(block.block));
+    DataNodeView view(std::move(block));
     *view.Depth() = DataNodeStore::MAX_DEPTH + 1;
   }
 

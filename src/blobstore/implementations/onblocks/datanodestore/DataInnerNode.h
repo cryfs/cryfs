@@ -10,7 +10,7 @@ namespace datanodestore {
 
 class DataInnerNode: public DataNode {
 public:
-  DataInnerNode(DataNodeView block, const blockstore::Key &key);
+  DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
 
   struct ChildEntry {

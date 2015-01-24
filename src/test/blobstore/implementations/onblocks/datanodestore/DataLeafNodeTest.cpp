@@ -21,7 +21,6 @@ using std::string;
 using fspp::dynamic_pointer_move;
 
 using blockstore::BlockStore;
-using blockstore::BlockWithKey;
 using blockstore::Data;
 using blockstore::Key;
 using blockstore::testfake::FakeBlockStore;

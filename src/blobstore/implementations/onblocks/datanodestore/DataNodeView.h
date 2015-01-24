@@ -80,6 +80,10 @@ public:
     return *_block;
   }
 
+  const blockstore::Key &key() const {
+    return _block->key();
+  }
+
 private:
   template<int offset, class Type>
   const Type *GetOffset() const {

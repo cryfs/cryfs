@@ -33,7 +33,7 @@ public:
   std::unique_ptr<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
 
 private:
-  std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block, const blockstore::Key &key);
+  std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
 
   std::unique_ptr<blockstore::BlockStore> _blockstore;
 

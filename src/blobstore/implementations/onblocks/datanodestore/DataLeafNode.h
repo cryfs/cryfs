@@ -11,7 +11,7 @@ class DataInnerNode;
 
 class DataLeafNode: public DataNode {
 public:
-  DataLeafNode(DataNodeView block, const blockstore::Key &key);
+  DataLeafNode(DataNodeView block);
   virtual ~DataLeafNode();
 
   static constexpr uint32_t MAX_STORED_BYTES = DataNodeView::DATASIZE_BYTES;

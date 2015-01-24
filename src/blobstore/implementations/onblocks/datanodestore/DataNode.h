@@ -22,14 +22,13 @@ public:
   static std::unique_ptr<DataInnerNode> convertToNewInnerNode(std::unique_ptr<DataNode> node, const DataNode &first_child);
 
 protected:
-  DataNode(DataNodeView block, const blockstore::Key &key);
+  DataNode(DataNodeView block);
 
   DataNodeView &node();
   const DataNodeView &node() const;
   friend class DataNodeStore;
 
 private:
-  blockstore::Key _key; //TODO Remove this and make blockstore::Block store the key
   DataNodeView _node;
 
   DISALLOW_COPY_AND_ASSIGN(DataNode);

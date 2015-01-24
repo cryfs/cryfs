@@ -11,8 +11,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataInnerNode::DataInnerNode(DataNodeView view, const Key &key)
-: DataNode(std::move(view), key) {
+DataInnerNode::DataInnerNode(DataNodeView view)
+: DataNode(std::move(view)) {
 }
 
 DataInnerNode::~DataInnerNode() {

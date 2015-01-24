@@ -14,8 +14,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataNode::DataNode(DataNodeView node, const Key &key)
-: _key(key), _node(std::move(node)) {
+DataNode::DataNode(DataNodeView node)
+: _node(std::move(node)) {
 }
 
 DataNode::~DataNode() {
@@ -30,7 +30,7 @@ const DataNodeView &DataNode::node() const {
 }
 
 const Key &DataNode::key() const {
-  return _key;
+  return _node.key();
 }
 
 uint8_t DataNode::depth() const {
@@ -42,7 +42,7 @@ unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> n
   auto block = node->_node.releaseBlock();
   std::memset(block->data(), 0, block->size());
 
-  auto innerNode = make_unique<DataInnerNode>(DataNodeView(std::move(block)), key);
+  auto innerNode = make_unique<DataInnerNode>(DataNodeView(std::move(block)));
   innerNode->InitializeNewNode(first_child);
   return innerNode;
 }
