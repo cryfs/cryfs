@@ -195,5 +195,17 @@ TEST_F(DataInnerNodeTest, CopyInnerNodeWithTwoChildren) {
   EXPECT_EQ(node->getChild(1)->key(), copied->getChild(1)->key());
 }
 
-//TODO TestCase for LastChild
+TEST_F(DataInnerNodeTest, LastChildWhenOneChild) {
+  EXPECT_EQ(leaf->key(), node->LastChild()->key());
+}
 
+TEST_F(DataInnerNodeTest, LastChildWhenTwoChildren) {
+  Key key = AddALeafTo(node.get());
+  EXPECT_EQ(key, node->LastChild()->key());
+}
+
+TEST_F(DataInnerNodeTest, LastChildWhenThreeChildren) {
+  AddALeafTo(node.get());
+  Key key = AddALeafTo(node.get());
+  EXPECT_EQ(key, node->LastChild()->key());
+}
