@@ -16,6 +16,8 @@ namespace impl {
 
 class GetLowestRightBorderNodeWithLessThanKChildrenOrNull {
 public:
+  //Returns the lowest right border node with less than k children (not considering leaves).
+  //Returns nullptr, if all right border nodes have k children (the tree is full)
   static fspp::ptr::optional_ownership_ptr<datanodestore::DataInnerNode> run(datanodestore::DataNodeStore *nodeStore, datanodestore::DataNode *rootNode);
 };
 
