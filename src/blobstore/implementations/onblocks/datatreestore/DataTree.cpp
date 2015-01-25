@@ -4,6 +4,8 @@
 #include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 
+#include "impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull.h"
+
 #include "fspp/utils/pointer.h"
 
 using blockstore::Key;
@@ -31,32 +33,12 @@ DataTree::~DataTree() {
 }
 
 unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
-  auto insertPosOrNull = lowestRightBorderNodeWithLessThanKChildrenOrNull();
+  auto insertPosOrNull = impl::GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(_nodeStore, _rootNode.get());
   if (insertPosOrNull) {
     return addDataLeafAt(insertPosOrNull.get());
   } else {
     return addDataLeafToFullTree();
   }
-}
-
-optional_ownership_ptr<DataInnerNode> DataTree::lowestRightBorderNodeWithLessThanKChildrenOrNull() {
-  optional_ownership_ptr<DataInnerNode> currentNode = fspp::ptr::WithoutOwnership(dynamic_cast<DataInnerNode*>(_rootNode.get()));
-  optional_ownership_ptr<DataInnerNode> result = fspp::ptr::null<DataInnerNode>();
-  for (unsigned int i=0; i < _rootNode->depth(); ++i) {
-    auto lastChild = getLastChildAsInnerNode(*currentNode);
-    if (currentNode->numChildren() < DataInnerNode::MAX_STORED_CHILDREN) {
-      result = std::move(currentNode);
-    }
-    currentNode = std::move(lastChild);
-  }
-
-  return result;
-}
-
-unique_ptr<DataInnerNode> DataTree::getLastChildAsInnerNode(const DataInnerNode &node) {
-  Key key = node.LastChild()->key();
-  auto lastChild = _nodeStore->load(key);
-  return dynamic_pointer_move<DataInnerNode>(lastChild);
 }
 
 unique_ptr<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {

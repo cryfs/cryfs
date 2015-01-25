@@ -4,7 +4,7 @@
 
 #include <memory>
 #include "fspp/utils/macros.h"
-#include "fspp/utils/OptionalOwnershipPointer.h"
+#include "impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull.h"
 
 namespace blobstore {
 namespace onblocks {
@@ -26,8 +26,6 @@ private:
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;
 
-  fspp::ptr::optional_ownership_ptr<datanodestore::DataInnerNode> lowestRightBorderNodeWithLessThanKChildrenOrNull();
-  std::unique_ptr<datanodestore::DataInnerNode> getLastChildAsInnerNode(const datanodestore::DataInnerNode &node);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
   fspp::ptr::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataLeafNode *leaf);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
