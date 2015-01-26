@@ -65,6 +65,9 @@ unique_ptr<DataLeafNode> DataTree::addDataLeafToFullTree() {
   return newLeaf;
 }
 
+const Key &DataTree::key() const {
+  return _rootNode->key();
+}
 
 
 }

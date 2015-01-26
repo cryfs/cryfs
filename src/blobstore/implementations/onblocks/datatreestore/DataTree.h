@@ -6,6 +6,9 @@
 #include "fspp/utils/macros.h"
 #include "impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull.h"
 
+namespace blockstore {
+class Key;
+}
 namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
@@ -22,6 +25,8 @@ public:
   virtual ~DataTree();
 
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
+
+  const blockstore::Key &key() const;
 private:
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;
