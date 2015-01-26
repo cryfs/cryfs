@@ -92,6 +92,14 @@ TEST_F(DataTreeTest, GrowAOneNodeTree_Structure) {
   EXPECT_IS_LEAF_NODE(root->getChild(1)->key());
 }
 
+TEST_F(DataTreeTest, GrowATwoNodeTree_KeyDoesntChange) {
+  auto tree = CreateLeafOnlyTree();
+  auto key = tree->key();
+  tree->addDataLeaf();
+  tree->addDataLeaf();
+  EXPECT_EQ(key, tree->key());
+}
+
 TEST_F(DataTreeTest, GrowATwoNodeTree_Structure) {
   auto key = CreateTreeAddTwoLeavesReturnRootKey();
 
@@ -104,6 +112,9 @@ TEST_F(DataTreeTest, GrowATwoNodeTree_Structure) {
   EXPECT_IS_LEAF_NODE(root->getChild(2)->key());
 }
 
+//TODO Grow a full two-level tree
+//TODO Grow a three-level tree
+//TODO Go through some cases where the right border node chosen is special
 //TODO Test that when growing, the original leaf retains its data
 
 }
