@@ -51,6 +51,27 @@ public:
     return key;
   }
 
+  Key CreateTreeAddThreeLeavesReturnRootKey() {
+    auto tree = CreateLeafOnlyTree();
+    auto key = tree->key();
+    tree->addDataLeaf();
+    tree->addDataLeaf();
+    tree->addDataLeaf();
+    return key;
+  }
+
+  Key CreateThreeNodeChainedTreeReturnRootKey() {
+    auto leaf = nodeStore.createNewLeafNode();
+    auto node = nodeStore.createNewInnerNode(*leaf);
+    auto root = nodeStore.createNewInnerNode(*node);
+    return root->key();
+  }
+
+  void AddLeafTo(const Key &key) {
+    DataTree tree(&nodeStore, nodeStore.load(key));
+    tree.addDataLeaf();
+  }
+
   unique_ptr<DataInnerNode> LoadInnerNode(const Key &key) {
     auto node = nodeStore.load(key);
     return dynamic_pointer_move<DataInnerNode>(node);
@@ -110,6 +131,51 @@ TEST_F(DataTreeTest, GrowATwoNodeTree_Structure) {
   EXPECT_IS_LEAF_NODE(root->getChild(0)->key());
   EXPECT_IS_LEAF_NODE(root->getChild(1)->key());
   EXPECT_IS_LEAF_NODE(root->getChild(2)->key());
+}
+
+TEST_F(DataTreeTest, GrowAThreeNodeTree_KeyDoesntChange) {
+  auto tree = CreateLeafOnlyTree();
+  auto key = tree->key();
+  tree->addDataLeaf();
+  tree->addDataLeaf();
+  tree->addDataLeaf();
+  EXPECT_EQ(key, tree->key());
+}
+
+TEST_F(DataTreeTest, GrowAThreeNodeTree_Structure) {
+  auto key = CreateTreeAddThreeLeavesReturnRootKey();
+
+  EXPECT_IS_INNER_NODE(key);
+  auto root = LoadInnerNode(key);
+
+  EXPECT_EQ(4u, root->numChildren());
+  EXPECT_IS_LEAF_NODE(root->getChild(0)->key());
+  EXPECT_IS_LEAF_NODE(root->getChild(1)->key());
+  EXPECT_IS_LEAF_NODE(root->getChild(2)->key());
+  EXPECT_IS_LEAF_NODE(root->getChild(3)->key());
+}
+
+TEST_F(DataTreeTest, GrowAThreeNodeChainedTree_KeyDoesntChange) {
+  auto root_key = CreateThreeNodeChainedTreeReturnRootKey();
+  DataTree tree(&nodeStore, nodeStore.load(root_key));
+  tree.addDataLeaf();
+  EXPECT_EQ(root_key, tree.key());
+}
+
+TEST_F(DataTreeTest, GrowAThreeNodeChainedTree_Structure) {
+  auto key = CreateThreeNodeChainedTreeReturnRootKey();
+  AddLeafTo(key);
+
+  EXPECT_IS_INNER_NODE(key);
+  auto root = LoadInnerNode(key);
+
+  EXPECT_EQ(1u, root->numChildren());
+  EXPECT_IS_INNER_NODE(root->getChild(0)->key());
+  auto node = LoadInnerNode(root->getChild(0)->key());
+
+  EXPECT_EQ(2u, node->numChildren());
+  EXPECT_IS_LEAF_NODE(node->getChild(0)->key());
+  EXPECT_IS_LEAF_NODE(node->getChild(1)->key());
 }
 
 //TODO Grow a full two-level tree
