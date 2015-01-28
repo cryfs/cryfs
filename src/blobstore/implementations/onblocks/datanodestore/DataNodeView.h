@@ -84,6 +84,10 @@ public:
     return _block->key();
   }
 
+  void flush() const {
+    _block->flush();
+  }
+
 private:
   template<int offset, class Type>
   const Type *GetOffset() const {

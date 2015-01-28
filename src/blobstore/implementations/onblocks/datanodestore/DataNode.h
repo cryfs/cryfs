@@ -21,6 +21,8 @@ public:
 
   static std::unique_ptr<DataInnerNode> convertToNewInnerNode(std::unique_ptr<DataNode> node, const DataNode &first_child);
 
+  void flush() const;
+
 protected:
   DataNode(DataNodeView block);
 

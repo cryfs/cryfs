@@ -47,6 +47,10 @@ unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> n
   return innerNode;
 }
 
+void DataNode::flush() const {
+  _node.flush();
+}
+
 }
 }
 }

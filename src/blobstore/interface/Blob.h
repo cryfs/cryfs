@@ -11,6 +11,8 @@ public:
   virtual ~Blob() {}
 
   virtual size_t size() const = 0;
+
+  virtual void flush() const = 0;
 };
 
 }

@@ -19,6 +19,8 @@ public:
 
   size_t size() const override;
 
+  void flush() const override;
+
 private:
   std::unique_ptr<datanodestore::DataNode> _rootnode;
 };

@@ -69,6 +69,10 @@ const Key &DataTree::key() const {
   return _rootNode->key();
 }
 
+void DataTree::flush() const {
+  _rootNode->flush();
+}
+
 
 }
 }

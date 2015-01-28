@@ -22,5 +22,9 @@ size_t BlobOnBlocks::size() const {
   //return _rootnode->numBytesInThisNode();
 }
 
+void BlobOnBlocks::flush() const {
+  _rootnode->flush();
+}
+
 }
 }

@@ -27,6 +27,8 @@ public:
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
 
   const blockstore::Key &key() const;
+
+  void flush() const;
 private:
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;

@@ -11,6 +11,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
+constexpr uint32_t DataInnerNode::MAX_STORED_CHILDREN;
+
 DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
 }
