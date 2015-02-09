@@ -342,3 +342,4 @@ TEST_F(DataTreeGrowingDataTest, GrowAThreeNodeChainedTree_DataStaysIntact) {
 
 //TODO Test that when growing, the original leaves retains its data (for ThreeLevelTreeWithLowerLevelFull, FullTwoLevelTree)
 //TODO Test tree depth markers on the nodes
+//TODO Build-up test cases (build a leaf tree, add N leaves and check end state. End states for example FullTwoLevelTree, FullThreeLevelTree)
