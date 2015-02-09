@@ -3,6 +3,7 @@
 #include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "test/testutils/DataBlockFixture.h"
 
 #include "fspp/utils/pointer.h"
 
@@ -267,5 +268,77 @@ TEST_F(DataTreeGrowingTest, GrowAThreeLevelTreeWithTwoFullSubtrees_Structure) {
   EXPECT_IS_TWONODE_CHAIN(root->getChild(2)->key());
 }
 
-//TODO Test that when growing, the original leaf retains its data
-//TODO Test tree depth
+class DataTreeGrowingDataTest: public DataTreeGrowingTest {
+public:
+  DataTreeGrowingDataTest(): data(DataLeafNode::MAX_STORED_BYTES-2) {}
+  DataBlockFixture data;
+
+  unique_ptr<DataTree> CreateLeafOnlyTreeWithData() {
+    auto leafnode = nodeStore.createNewLeafNode();
+    leafnode->resize(data.size());
+    std::memcpy(leafnode->data(), data.data(), data.size());
+
+    return make_unique<DataTree>(&nodeStore, std::move(leafnode));
+  }
+
+  unique_ptr<DataTree> CreateTwoNodeTreeWithData() {
+    auto tree = CreateLeafOnlyTreeWithData();
+    tree->addDataLeaf();
+    return tree;
+  }
+
+  unique_ptr<DataTree> CreateThreeNodeChainedTreeWithData() {
+    auto leaf = nodeStore.createNewLeafNode();
+    leaf->resize(data.size());
+    std::memcpy(leaf->data(), data.data(), data.size());
+
+    auto inner = nodeStore.createNewInnerNode(*leaf);
+    return make_unique<DataTree>(&nodeStore, nodeStore.createNewInnerNode(*inner));
+  }
+
+  unique_ptr<DataLeafNode> LoadFirstLeafOf(const Key &key) {
+    auto root = LoadInnerNode(key);
+    return LoadLeafNode(root->getChild(0)->key());
+  }
+
+  unique_ptr<DataLeafNode> LoadTwoLevelFirstLeafOf(const Key &key) {
+    auto root = LoadInnerNode(key);
+    auto inner = LoadInnerNode(root->getChild(0)->key());
+    return LoadLeafNode(inner->getChild(0)->key());
+  }
+
+  void EXPECT_DATA_CORRECT(const DataLeafNode &leaf) {
+    EXPECT_EQ(data.size(), leaf.numBytes());
+    EXPECT_EQ(0, std::memcmp(data.data(), leaf.data(), data.size()));
+  }
+};
+
+TEST_F(DataTreeGrowingDataTest, GrowAOneNodeTree_DataStaysIntact) {
+  auto tree = CreateLeafOnlyTreeWithData();
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadFirstLeafOf(tree->key());
+  EXPECT_DATA_CORRECT(*leaf);
+}
+
+TEST_F(DataTreeGrowingDataTest, GrowATwoNodeTree_DataStaysIntact) {
+  auto tree = CreateTwoNodeTreeWithData();
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadFirstLeafOf(tree->key());
+  EXPECT_DATA_CORRECT(*leaf);
+}
+
+TEST_F(DataTreeGrowingDataTest, GrowAThreeNodeChainedTree_DataStaysIntact) {
+  auto tree = CreateThreeNodeChainedTreeWithData();
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadTwoLevelFirstLeafOf(tree->key());
+  EXPECT_DATA_CORRECT(*leaf);
+}
+
+//TODO Test that when growing, the original leaves retains its data (for ThreeLevelTreeWithLowerLevelFull, FullTwoLevelTree)
+//TODO Test tree depth markers on the nodes
