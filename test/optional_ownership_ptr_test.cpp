@@ -1,14 +1,12 @@
 #include "google/gtest/gtest.h"
-#include "../OptionalOwnershipPointer.h"
-
-using namespace fspp;
+#include "../optional_ownership_ptr.h"
+#include "../macros.h"
 
 using std::unique_ptr;
 using std::function;
 using ::testing::Test;
-using fspp::ptr::optional_ownership_ptr;
 
-#define UNUSED(x) ((void)x)
+using namespace cpputils;
 
 class TestObject {
 public:
@@ -58,7 +56,7 @@ TEST_F(OptionalOwnershipPointerTest, TestIsInitializedCorrectly) {
 
 TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnership) {
   {
-    optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithOwnership(unique_ptr<TestObject>(obj.get()));
+    optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(obj.get()));
     UNUSED(ptr);
   }
   EXPECT_TRUE(obj.isDestructed());
@@ -66,8 +64,8 @@ TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnership) {
 
 TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnershipAfterAssignment) {
   {
-    optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithoutOwnership(obj.get());
-    ptr = fspp::ptr::WithOwnership(unique_ptr<TestObject>(obj2.get()));
+    optional_ownership_ptr<TestObject> ptr = WithoutOwnership(obj.get());
+    ptr = WithOwnership(unique_ptr<TestObject>(obj2.get()));
   }
   EXPECT_FALSE(obj.isDestructed());
   EXPECT_TRUE(obj2.isDestructed());
@@ -75,7 +73,7 @@ TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnershipAfterAssignment)
 
 TEST_F(OptionalOwnershipPointerTest, DoesntDestructWhenItDoesntHaveOwnership) {
   {
-    optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithoutOwnership(obj.get());
+    optional_ownership_ptr<TestObject> ptr = WithoutOwnership(obj.get());
     UNUSED(ptr);
   }
   EXPECT_FALSE(obj.isDestructed());
@@ -83,30 +81,30 @@ TEST_F(OptionalOwnershipPointerTest, DoesntDestructWhenItDoesntHaveOwnership) {
 
 TEST_F(OptionalOwnershipPointerTest, DoesntDestructWhenItDoesntHaveOwnershipAfterAssignment) {
   {
-    optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithOwnership(unique_ptr<TestObject>(obj.get()));
-    ptr = fspp::ptr::WithoutOwnership(obj2.get());
+    optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(obj.get()));
+    ptr = WithoutOwnership(obj2.get());
     EXPECT_TRUE(obj.isDestructed());
   }
   EXPECT_FALSE(obj2.isDestructed());
 }
 
 TEST_F(OptionalOwnershipPointerTest, DestructsOnReassignmentWithNull) {
-  optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithOwnership(unique_ptr<TestObject>(obj.get()));
-  ptr = fspp::ptr::null<TestObject>();
+  optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(obj.get()));
+  ptr = null<TestObject>();
   EXPECT_TRUE(obj.isDestructed());
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptr1) {
-  optional_ownership_ptr<TestObject> ptr = fspp::ptr::null<TestObject>();
+  optional_ownership_ptr<TestObject> ptr = null<TestObject>();
   UNUSED(ptr);
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptrWithoutOwnership) {
-  optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithoutOwnership((TestObject*)nullptr);
+  optional_ownership_ptr<TestObject> ptr = WithoutOwnership((TestObject*)nullptr);
   UNUSED(ptr);
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptrWithOwnership) {
-  optional_ownership_ptr<TestObject> ptr = fspp::ptr::WithOwnership(unique_ptr<TestObject>(nullptr));
+  optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(nullptr));
   UNUSED(ptr);
 }

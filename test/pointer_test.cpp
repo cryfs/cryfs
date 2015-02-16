@@ -1,7 +1,7 @@
 #include "google/gtest/gtest.h"
 #include "../pointer.h"
 
-using namespace fspp;
+using namespace cpputils;
 
 using std::unique_ptr;
 using std::make_unique;
