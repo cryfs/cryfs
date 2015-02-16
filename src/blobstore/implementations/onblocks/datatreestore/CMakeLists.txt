@@ -1,3 +1,0 @@
-add_library(blobstore_onblocks_datatreestore DataTree.cpp DataTreeStore.cpp impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull)
-
-target_link_libraries(blobstore_onblocks_datatreestore blobstore_onblocks_datanodestore)
