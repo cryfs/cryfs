@@ -3,7 +3,7 @@
 #include <cassert>
 
 //TODO Remove and replace with exception hierarchy
-#include "fspp/fuse/FuseErrnoException.h"
+#include "messmer/fspp/fuse/FuseErrnoException.h"
 
 #include "MagicNumbers.h"
 

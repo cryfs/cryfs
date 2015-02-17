@@ -1,4 +1,4 @@
-#include <cryfs_lib/CryConfig.h>
+#include "CryConfig.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>

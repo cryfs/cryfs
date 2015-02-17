@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_IMPL_FILEBLOCK_H_
 #define CRYFS_LIB_IMPL_FILEBLOCK_H_
 
-#include <blockstore/interface/Block.h>
+#include <messmer/blockstore/interface/Block.h>
 #include <memory>
 
 namespace cryfs {

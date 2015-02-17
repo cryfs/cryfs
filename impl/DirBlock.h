@@ -2,9 +2,9 @@
 #ifndef CRYFS_LIB_IMPL_DIRBLOCK_H_
 #define CRYFS_LIB_IMPL_DIRBLOCK_H_
 
-#include <blockstore/interface/Block.h>
-#include <blockstore/utils/Key.h>
-#include "fspp/utils/macros.h"
+#include <messmer/blockstore/interface/Block.h>
+#include <messmer/blockstore/utils/Key.h>
+#include "messmer/cpp-utils/macros.h"
 
 #include <memory>
 #include <vector>

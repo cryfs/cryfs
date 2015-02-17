@@ -2,8 +2,8 @@
 #ifndef CRYFS_LIB_CRYNODE_H_
 #define CRYFS_LIB_CRYNODE_H_
 
-#include <fspp/fs_interface/Node.h>
-#include "fspp/utils/macros.h"
+#include <messmer/fspp/fs_interface/Node.h>
+#include "messmer/cpp-utils/macros.h"
 
 #include "CryDevice.h"
 

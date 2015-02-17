@@ -3,7 +3,7 @@
 #include "CryDir.h"
 #include "CryFile.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "messmer/fspp/fuse/FuseErrnoException.h"
 #include "impl/DirBlock.h"
 
 using std::unique_ptr;

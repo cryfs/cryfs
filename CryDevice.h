@@ -2,13 +2,13 @@
 #ifndef CRYFS_LIB_CRYDEVICE_H_
 #define CRYFS_LIB_CRYDEVICE_H_
 
-#include <blockstore/interface/BlockStore.h>
+#include <messmer/blockstore/interface/BlockStore.h>
 #include "CryConfig.h"
 
 #include <boost/filesystem.hpp>
-#include <fspp/fs_interface/Device.h>
+#include <messmer/fspp/fs_interface/Device.h>
 
-#include "fspp/utils/macros.h"
+#include "messmer/cpp-utils/macros.h"
 
 namespace cryfs {
 

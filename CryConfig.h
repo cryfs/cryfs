@@ -4,7 +4,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "fspp/utils/macros.h"
+#include "messmer/cpp-utils/macros.h"
 
 namespace cryfs {
 
