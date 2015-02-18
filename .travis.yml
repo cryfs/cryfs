@@ -1,0 +1,22 @@
+language: cpp
+compiler:
+- gcc
+before_install:
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
+  && source ./update_gcc_version.sh 4.9
+before_script:
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
+  && source ./setup_biicode_project.sh
+script:
+- bii find
+- bii cpp:configure
+- bii cpp:build
+- "./bin/messmer_fspp_test_main"
+#deploy:
+#  provider: biicode
+#  user: messmer
+#  password:
+#    secure: pw-hash
+#  on:
+#    branch: develop
+#    repo: smessmer/tempfile
