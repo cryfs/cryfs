@@ -4,6 +4,8 @@ compiler:
 before_install:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
   && source ./update_gcc_version.sh 4.9
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/install_boost.sh
+  && source ./install_boost.sh libboost-filesystem1.55-dev libboost-system1.55-dev
 before_script:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
   && source ./setup_biicode_project.sh
