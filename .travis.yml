@@ -13,7 +13,7 @@ script:
 - bii find
 - bii cpp:configure
 - bii cpp:build
-- "./bin/messmer_tempfile_test_main"
+- "./bin/messmer_blockstore_test_main"
 #deploy:
 #  provider: biicode
 #  user: messmer
