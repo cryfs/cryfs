@@ -3,12 +3,12 @@ compiler:
 - gcc
 before_install:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/install_boost.sh
-  && source ./install_boost.sh libboost-filesystem1.55-dev libboost-system1.55-dev
+  && ./install_boost.sh libboost-filesystem1.55-dev libboost-system1.55-dev
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
-  && source ./update_gcc_version.sh 4.9
+  && ./update_gcc_version.sh 4.9
 before_script:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
-  && source ./setup_biicode_project.sh
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.py
+  && ./setup_biicode_project.py
 script:
 - bii find
 - bii cpp:configure
