@@ -14,11 +14,11 @@ script:
 - bii cpp:configure
 - bii cpp:build
 - "../../../bin/messmer_blockstore_test_main"
-#deploy:
-#  provider: biicode
-#  user: messmer
-#  password:
-#    secure: pw-hash
-#  on:
-#    branch: develop
-#    repo: smessmer/tempfile
+deploy:
+  provider: biicode
+  user: ${BII_USERNAME}
+  password:
+    secure: ${BII_PASSWORD}
+  on:
+    branch: develop
+
