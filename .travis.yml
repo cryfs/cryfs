@@ -14,8 +14,8 @@ script:
 - "../../../bin/messmer_cpp-utils_test_main"
 deploy:
   provider: biicode
-  user: messmer
+  user: ${BII_USERNAME}
   password:
-    secure: PSCqNTbwsgQdwB2Lz09rcumjUoJWfl0VI76XNJywDoRA3X7gx4qTu7CHQKmG4GKW1FK7y3u6U2qII/T1uX3tQZ9pa76TwfXGz6OCzfUhf7trwoP3cRKjllm0SrAM5gr4E34XTLpCk50UmuFSux5Dtf4C8z2fKdMn5amDvm9uH00=
+    secure: ${BII_PASSWORD}
   on:
     branch: develop
