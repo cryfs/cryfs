@@ -1,11 +1,12 @@
 language: cpp
 compiler:
 - gcc
-before_install:
+install:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/install_boost.sh && chmod +x install_boost.sh
   && ./install_boost.sh libboost-filesystem1.55-dev libboost-system1.55-dev
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh && chmod +x update_gcc_version.sh
   && ./update_gcc_version.sh 4.9
+- sudo apt-get install libfuse-dev
 before_script:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.py && chmod +x setup_biicode_project.py
   && ./setup_biicode_project.py
@@ -13,7 +14,8 @@ script:
 - bii find
 - bii cpp:configure
 - bii cpp:build
-#- "../../../bin/messmer_cryfs_test_main"
+#- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh && chmod +x run_with_fuse.sh
+  && ./run_with_fuse.sh "../../../bin/messmer_cryfs_test_main"
 deploy:
   provider: biicode
   user: ${BII_USERNAME}
