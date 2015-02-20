@@ -1,5 +1,8 @@
 #include "testutils/DataTreeGrowingTest.h"
 
+using blobstore::onblocks::datanodestore::DataInnerNode;
+using blockstore::Key;
+
 class DataTreeGrowingTest_Structure: public DataTreeGrowingTest {};
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAOneNodeTree) {
@@ -27,6 +30,14 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAThreeNodeChainedTree) {
   EXPECT_INNER_NODE_NUMBER_OF_LEAVES_IS(2, root->getChild(0)->key());
 }
 
+TEST_F(DataTreeGrowingTest_Structure, GrowAFullTwoLevelTreeFromGroundUp) {
+  auto key = CreateLeafOnlyTree()->key();
+  for (int i = 1; i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+    AddLeafTo(key);
+  }
+  EXPECT_IS_FULL_TWOLEVEL_TREE(key);
+}
+
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullTwoLevelTree) {
   auto root_key = CreateFullTwoLevelTree();
   AddLeafTo(root_key);
@@ -49,6 +60,14 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithLowerLevelFull) {
   EXPECT_IS_TWONODE_CHAIN(root->getChild(1)->key());
 }
 
+TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTreeFromGroundUp) {
+  auto key = CreateLeafOnlyTree()->key();
+  for (int i = 1; i < DataInnerNode::MAX_STORED_CHILDREN * DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+    AddLeafTo(key);
+  }
+  EXPECT_IS_FULL_THREELEVEL_TREE(key);
+}
+
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTree) {
   auto root_key = CreateFullThreeLevelTree();
   AddLeafTo(root_key);
@@ -60,11 +79,24 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTree) {
   EXPECT_IS_THREENODE_CHAIN(root->getChild(1)->key());
 }
 
-TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithTwoFullSubtrees) {
-  auto root_key = CreateThreeLevelTreeWithTwoFullSubtrees();
-  AddLeafTo(root_key);
+TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithTwoFullSubtreesFromGroundUp) {
+  auto key = CreateLeafOnlyTree()->key();
+  for (int i = 1; i < 2 * DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+    AddLeafTo(key);
+  }
 
-  auto root = LoadInnerNode(root_key);
+  auto root = LoadInnerNode(key);
+  EXPECT_EQ(2u, root->numChildren());
+
+  EXPECT_IS_FULL_TWOLEVEL_TREE(root->getChild(0)->key());
+  EXPECT_IS_FULL_TWOLEVEL_TREE(root->getChild(1)->key());
+}
+
+TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithTwoFullSubtrees) {
+  auto key = CreateThreeLevelTreeWithTwoFullSubtrees();
+  AddLeafTo(key);
+
+  auto root = LoadInnerNode(key);
   EXPECT_EQ(3u, root->numChildren());
 
   EXPECT_IS_FULL_TWOLEVEL_TREE(root->getChild(0)->key());

@@ -25,5 +25,3 @@ TEST_F(DataTreeGrowingTest, GrowAOneNodeTree_FlushingWorks) {
 
   EXPECT_INNER_NODE_NUMBER_OF_LEAVES_IS(2, tree->key());
 }
-
-//TODO Build-up test cases (build a leaf tree, add N leaves and check end state. End states for example FullTwoLevelTree, FullThreeLevelTree)
