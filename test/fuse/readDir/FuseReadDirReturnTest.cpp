@@ -56,7 +56,8 @@ TEST_F(FuseReadDirReturnTest, ReturnedDirEntriesAreCorrect_LargeDir1000) {
 
 // If using this with GTest Value-Parametrized TEST_P, it breaks some other unrelated tests
 // (probably because it is doing a lot of construction work on the start of the test program)
-TEST_F(FuseReadDirReturnTest, ReturnedDirEntriesAreCorrect_LargeDir1000000) {
+// DISABLED, because it uses a lot of memory
+TEST_F(FuseReadDirReturnTest, DISABLED_ReturnedDirEntriesAreCorrect_LargeDir1000000) {
   auto direntries = LARGE_DIR(1000000);
   testDirEntriesAreCorrect(*direntries);
 }
