@@ -1,9 +1,10 @@
 #include "google/gtest/gtest.h"
 
-#include "../DataTreeTest.h"
+#include "../testutils/DataTreeTest.h"
 #include "../../../../../implementations/onblocks/datatreestore/DataTree.h"
 #include "../../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "../../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 
 using ::testing::Test;
 using std::unique_ptr;
