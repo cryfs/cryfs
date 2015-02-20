@@ -7,6 +7,9 @@
 
 #include "messmer/cpp-utils/pointer.h"
 
+using ::testing::WithParamInterface;
+using ::testing::Values;
+
 using cpputils::dynamic_pointer_move;
 
 using blobstore::onblocks::datanodestore::DataNode;
@@ -368,36 +371,6 @@ public:
   }
 };
 
-TEST_F(DataTreeGrowingDataTest, GrowAOneNodeTree_DataStaysIntact) {
-  LeafDataFixture data(DataLeafNode::MAX_STORED_BYTES-1);
-  auto tree = CreateLeafOnlyTreeWithData(data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto leaf = LoadFirstLeafOf(tree->key());
-  data.EXPECT_DATA_CORRECT(*leaf);
-}
-
-TEST_F(DataTreeGrowingDataTest, GrowATwoNodeTree_DataStaysIntact) {
-  LeafDataFixture data(DataLeafNode::MAX_STORED_BYTES-1);
-  auto tree = CreateTwoNodeTreeWithData(data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto leaf = LoadFirstLeafOf(tree->key());
-  data.EXPECT_DATA_CORRECT(*leaf);
-}
-
-TEST_F(DataTreeGrowingDataTest, GrowAThreeNodeChainedTree_DataStaysIntact) {
-  LeafDataFixture data(DataLeafNode::MAX_STORED_BYTES-1);
-  auto tree = CreateThreeNodeChainedTreeWithData(data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto leaf = LoadTwoLevelFirstLeafOf(tree->key());
-  data.EXPECT_DATA_CORRECT(*leaf);
-}
-
 TEST_F(DataTreeGrowingDataTest, GrowAFullTwoLevelTree_DataStaysIntact) {
   TwoLevelDataFixture data(&nodeStore);
   auto tree = CreateFullTwoLevelTreeWithData(&data);
@@ -418,6 +391,39 @@ TEST_F(DataTreeGrowingDataTest, GrowAThreeLevelTreeWithLowerLevelFull_DataStaysI
   data.EXPECT_DATA_CORRECT(*dynamic_pointer_move<DataInnerNode>(node));
 }
 
-//TODO Test that when growing, the original leaves retains its data with empty and full leaves
+class DataTreeGrowingDataTest_OneDataLeaf: public DataTreeGrowingDataTest, public WithParamInterface<uint32_t> {
+};
+INSTANTIATE_TEST_CASE_P(DataTreeGrowingDataTest_OneDataLeaf, DataTreeGrowingDataTest_OneDataLeaf, Values(0, 1, DataLeafNode::MAX_STORED_BYTES-2, DataLeafNode::MAX_STORED_BYTES-1, DataLeafNode::MAX_STORED_BYTES));
+
+TEST_P(DataTreeGrowingDataTest_OneDataLeaf, GrowAOneNodeTree_DataStaysIntact) {
+  LeafDataFixture data(GetParam());
+  auto tree = CreateLeafOnlyTreeWithData(data);
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadFirstLeafOf(tree->key());
+  data.EXPECT_DATA_CORRECT(*leaf);
+}
+
+TEST_P(DataTreeGrowingDataTest_OneDataLeaf, GrowATwoNodeTree_DataStaysIntact) {
+  LeafDataFixture data(GetParam());
+  auto tree = CreateTwoNodeTreeWithData(data);
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadFirstLeafOf(tree->key());
+  data.EXPECT_DATA_CORRECT(*leaf);
+}
+
+TEST_P(DataTreeGrowingDataTest_OneDataLeaf, GrowAThreeNodeChainedTree_DataStaysIntact) {
+  LeafDataFixture data(GetParam());
+  auto tree = CreateThreeNodeChainedTreeWithData(data);
+  tree->addDataLeaf();
+  tree->flush();
+
+  auto leaf = LoadTwoLevelFirstLeafOf(tree->key());
+  data.EXPECT_DATA_CORRECT(*leaf);
+}
+
 //TODO Test tree depth markers on the nodes
 //TODO Build-up test cases (build a leaf tree, add N leaves and check end state. End states for example FullTwoLevelTree, FullThreeLevelTree)
