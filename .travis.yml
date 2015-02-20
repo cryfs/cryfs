@@ -15,7 +15,7 @@ script:
 - bii cpp:configure
 - bii cpp:build
 #- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh && chmod +x run_with_fuse.sh
-  && ./run_with_fuse.sh "../../../bin/messmer_cryfs_test_main"
+#  && ./run_with_fuse.sh "../../../bin/messmer_cryfs_test_main"
 deploy:
   provider: biicode
   user: ${BII_USERNAME}
