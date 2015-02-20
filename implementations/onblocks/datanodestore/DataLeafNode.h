@@ -11,12 +11,12 @@ class DataInnerNode;
 
 class DataLeafNode: public DataNode {
 public:
+  static std::unique_ptr<DataLeafNode> InitializeNewNode(std::unique_ptr<blockstore::Block> block);
+
   DataLeafNode(DataNodeView block);
   virtual ~DataLeafNode();
 
   static constexpr uint32_t MAX_STORED_BYTES = DataNodeView::DATASIZE_BYTES;
-
-  void InitializeNewNode();
 
   void *data();
   const void *data() const;

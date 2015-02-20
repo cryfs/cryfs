@@ -88,6 +88,12 @@ public:
     return dynamic_pointer_move<DataLeafNode>(copied);
   }
 
+  Key InitializeLeafGrowAndReturnKey() {
+    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES));
+    leaf->resize(5);
+    return leaf->key();
+  }
+
   Data ZEROES;
   Data randomData;
   unique_ptr<BlockStore> _blockStore;
@@ -97,13 +103,13 @@ public:
 };
 
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
-  leaf->InitializeNewNode();
+  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES));
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
 TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
-  leaf->resize(5);
-  leaf->InitializeNewNode();
+  auto key = InitializeLeafGrowAndReturnKey();
+  auto leaf = DataLeafNode::InitializeNewNode(blockStore->load(key));
   EXPECT_EQ(0u, leaf->numBytes());
 }
 

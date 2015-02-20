@@ -13,16 +13,19 @@ namespace datanodestore {
 
 DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
+  assert(*node().Depth() == 0);
   assert(numBytes() <= MAX_STORED_BYTES);
 }
 
 DataLeafNode::~DataLeafNode() {
 }
 
-void DataLeafNode::InitializeNewNode() {
-  *node().Depth() = 0;
-  *node().Size() = 0;
+unique_ptr<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ptr<Block> block) {
+  DataNodeView node(std::move(block));
+  *node.Depth() = 0;
+  *node.Size() = 0;
   //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.
+  return make_unique<DataLeafNode>(std::move(node));
 }
 
 void *DataLeafNode::data() {

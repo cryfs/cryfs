@@ -2,6 +2,7 @@
 #include "DataNodeStore.h"
 
 using std::unique_ptr;
+using std::make_unique;
 using blockstore::Block;
 using blockstore::Data;
 using blockstore::Key;
@@ -14,15 +15,23 @@ constexpr uint32_t DataInnerNode::MAX_STORED_CHILDREN;
 
 DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
+  assert(depth() > 0);
 }
 
 DataInnerNode::~DataInnerNode() {
 }
 
-void DataInnerNode::InitializeNewNode(const DataNode &first_child) {
-  *node().Depth() = first_child.depth() + 1;
-  *node().Size() = 1;
-  ChildrenBegin()->setKey(first_child.key());
+unique_ptr<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ptr<Block> block, const DataNode &first_child) {
+  DataNodeView node(std::move(block));
+  *node.Depth() = first_child.depth() + 1;
+  *node.Size() = 1;
+  auto result = make_unique<DataInnerNode>(std::move(node));
+  result->ChildrenBegin()->setKey(first_child.key());
+  return result;
+}
+
+uint8_t DataInnerNode::depth() const {
+  return *node().Depth();
 }
 
 uint32_t DataInnerNode::numChildren() const {

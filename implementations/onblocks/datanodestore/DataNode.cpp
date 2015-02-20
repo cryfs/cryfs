@@ -42,9 +42,7 @@ unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> n
   auto block = node->_node.releaseBlock();
   std::memset(block->data(), 0, block->size());
 
-  auto innerNode = make_unique<DataInnerNode>(DataNodeView(std::move(block)));
-  innerNode->InitializeNewNode(first_child);
-  return innerNode;
+  return DataInnerNode::InitializeNewNode(std::move(block), first_child);
 }
 
 void DataNode::flush() const {

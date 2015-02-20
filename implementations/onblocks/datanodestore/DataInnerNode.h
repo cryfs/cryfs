@@ -10,6 +10,8 @@ namespace datanodestore {
 
 class DataInnerNode: public DataNode {
 public:
+  static std::unique_ptr<DataInnerNode> InitializeNewNode(std::unique_ptr<blockstore::Block> block, const DataNode &first_child_key);
+
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
 
@@ -29,7 +31,7 @@ public:
 
   static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
 
-  void InitializeNewNode(const DataNode &first_child_key);
+  uint8_t depth() const;
 
   ChildEntry *getChild(unsigned int index);
   const ChildEntry *getChild(unsigned int index) const;

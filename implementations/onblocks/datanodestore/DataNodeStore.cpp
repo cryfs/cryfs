@@ -38,16 +38,12 @@ unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
 
 unique_ptr<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
   auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
-  auto newNode = make_unique<DataInnerNode>(std::move(block));
-  newNode->InitializeNewNode(first_child);
-  return std::move(newNode);
+  return DataInnerNode::InitializeNewNode(std::move(block), first_child);
 }
 
 unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
   auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
-  auto newNode = make_unique<DataLeafNode>(std::move(block));
-  newNode->InitializeNewNode();
-  return std::move(newNode);
+  return DataLeafNode::InitializeNewNode(std::move(block));
 }
 
 unique_ptr<DataNode> DataNodeStore::load(const Key &key) {

@@ -92,6 +92,12 @@ public:
     return dynamic_pointer_move<DataInnerNode>(copied);
   }
 
+  Key InitializeInnerNodeAddLeafReturnKey() {
+    auto node = DataInnerNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES), *leaf);
+    AddALeafTo(node.get());
+    return node->key();
+  }
+
   Data ZEROES;
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
@@ -101,15 +107,15 @@ public:
 };
 
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
-  node->InitializeNewNode(*leaf);
+  auto node = DataInnerNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
 }
 
 TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
-  AddALeafTo(node.get());
-  node->InitializeNewNode(*leaf);
+  auto key = InitializeInnerNodeAddLeafReturnKey();
+  auto node = DataInnerNode::InitializeNewNode(blockStore->load(key), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
