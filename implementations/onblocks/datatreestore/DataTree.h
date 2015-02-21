@@ -3,8 +3,8 @@
 #define BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATATREE_H_
 
 #include <memory>
-#include "messmer/cpp-utils/macros.h"
-#include "impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull.h"
+#include <messmer/cpp-utils/macros.h>
+#include <messmer/cpp-utils/optional_ownership_ptr.h>
 
 namespace blockstore {
 class Key;
@@ -25,6 +25,7 @@ public:
   virtual ~DataTree();
 
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
+  void removeLastDataLeaf();
 
   const blockstore::Key &key() const;
 

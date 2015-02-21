@@ -5,6 +5,7 @@
 #include "../../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "../../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
+#include "../../../../../implementations/onblocks/datatreestore/impl/algorithms.h"
 
 using ::testing::Test;
 using std::unique_ptr;
@@ -17,9 +18,9 @@ using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
-using blobstore::onblocks::datatreestore::impl::GetLowestRightBorderNodeWithLessThanKChildrenOrNull;
+using namespace blobstore::onblocks::datatreestore::algorithms;
 
-class GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest: public DataTreeTest {
+class GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest: public DataTreeTest {
 public:
   struct TestData {
     TestData(Key rootNode_, Key expectedResult_): rootNode(rootNode_), expectedResult(expectedResult_) {}
@@ -29,7 +30,7 @@ public:
 
   void check(const TestData &testData) {
     auto root = nodeStore.load(testData.rootNode);
-    auto result = GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(&nodeStore, root.get());
+    auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }
 
@@ -68,40 +69,40 @@ public:
   }
 };
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, Leaf) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, Leaf) {
   auto leaf = nodeStore.createNewLeafNode();
-  auto result = GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(&nodeStore, leaf.get());
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, TwoRightBorderNodes) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, TwoRightBorderNodes) {
   auto testData = CreateTwoRightBorderNodes();
   check(testData);
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, ThreeRightBorderNodes) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, ThreeRightBorderNodes) {
   auto testData = CreateThreeRightBorderNodes();
   check(testData);
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, ThreeRightBorderNodes_LastFull) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, ThreeRightBorderNodes_LastFull) {
   auto testData = CreateThreeRightBorderNodes_LastFull();
   check(testData);
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, LargerTree) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, LargerTree) {
   auto testData = CreateLargerTree();
   check(testData);
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, FullTwoLevelTree) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullTwoLevelTree) {
   auto root = nodeStore.load(CreateFullTwoLevelTree());
-  auto result = GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(&nodeStore, root.get());
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
-TEST_F(GetLowestRightBorderNodeWithLessThanKChildrenOrNullTest, FullThreeLevelTree) {
+TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullThreeLevelTree) {
   auto root = nodeStore.load(CreateFullThreeLevelTree());
-  auto result = GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(&nodeStore, root.get());
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }

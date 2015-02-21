@@ -4,7 +4,7 @@
 #include "../datanodestore/DataInnerNode.h"
 #include "../datanodestore/DataLeafNode.h"
 
-#include "impl/GetLowestRightBorderNodeWithLessThanKChildrenOrNull.h"
+#include "impl/algorithms.h"
 
 #include "messmer/cpp-utils/pointer.h"
 
@@ -32,8 +32,16 @@ DataTree::DataTree(DataNodeStore *nodeStore, unique_ptr<DataNode> rootNode)
 DataTree::~DataTree() {
 }
 
+void DataTree::removeLastDataLeaf() {
+  DataInnerNode *rootNode = dynamic_cast<DataInnerNode*>(_rootNode.get());
+  assert(rootNode != nullptr);
+
+  auto deletePosOrNull = algorithms::GetLowestRightBorderNodeWithMoreThanOneChildOrNull(_nodeStore, _rootNode.get());
+  //TODO ...
+}
+
 unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
-  auto insertPosOrNull = impl::GetLowestRightBorderNodeWithLessThanKChildrenOrNull::run(_nodeStore, _rootNode.get());
+  auto insertPosOrNull = algorithms::GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(_nodeStore, _rootNode.get());
   if (insertPosOrNull) {
     return addDataLeafAt(insertPosOrNull.get());
   } else {
