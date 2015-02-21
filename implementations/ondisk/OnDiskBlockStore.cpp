@@ -28,5 +28,9 @@ unique_ptr<Block> OnDiskBlockStore::load(const Key &key) {
   return OnDiskBlock::LoadFromDisk(_rootdir, key);
 }
 
+void OnDiskBlockStore::remove(const Key &key) {
+  OnDiskBlock::RemoveFromDisk(_rootdir, key);
+}
+
 }
 }

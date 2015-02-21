@@ -71,6 +71,12 @@ unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const
   return block;
 }
 
+void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
+  auto filepath = rootdir / key.ToString();
+  assert(bf::is_regular_file(filepath));
+  bf::remove(filepath);
+}
+
 void OnDiskBlock::_fillDataWithZeroes() {
   _data.FillWithZeroes();
 }

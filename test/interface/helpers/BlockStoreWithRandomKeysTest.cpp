@@ -24,6 +24,7 @@ public:
     return unique_ptr<Block>(do_load(key));
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
+  MOCK_METHOD1(remove, void(const Key &));
 };
 
 class BlockMock: public Block {

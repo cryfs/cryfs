@@ -36,5 +36,10 @@ unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {
   }
 }
 
+void InMemoryBlockStore::remove(const Key &key) {
+  int numRemoved = _blocks.erase(key.ToString());
+  assert(1==numRemoved);
+}
+
 }
 }

@@ -36,6 +36,11 @@ unique_ptr<Block> FakeBlockStore::load(const Key &key) {
   }
 }
 
+void FakeBlockStore::remove(const Key &key) {
+  int numRemoved = _blocks.erase(key.ToString());
+  assert(numRemoved == 1);
+}
+
 unique_ptr<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data) {
   auto newdata = make_shared<Data>(data.copy());
   _used_dataregions_for_blocks.push_back(newdata);
