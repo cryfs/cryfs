@@ -19,6 +19,15 @@ public:
   blockstore::Key CreateFullTwoLevelTree();
   blockstore::Key CreateFullThreeLevelTree();
   blobstore::onblocks::datanodestore::DataNodeStore nodeStore;
+
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+
+  void EXPECT_IS_LEAF_NODE(const blockstore::Key &key);
+  void EXPECT_IS_INNER_NODE(const blockstore::Key &key);
+  void EXPECT_IS_TWONODE_CHAIN(const blockstore::Key &key);
+  void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::Key &key);
+  void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::Key &key);
 };
 
 

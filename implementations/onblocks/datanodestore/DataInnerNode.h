@@ -40,6 +40,8 @@ public:
 
   void addChild(const DataNode &child_key);
 
+  void removeLastChild();
+
   ChildEntry *LastChild();
   const ChildEntry *LastChild() const;
 

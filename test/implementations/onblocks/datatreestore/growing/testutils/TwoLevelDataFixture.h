@@ -3,6 +3,7 @@
 #define BLOCKS_MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_TWOLEVELDATAFIXTURE_H_
 
 #include <messmer/cpp-utils/macros.h>
+#include <messmer/cpp-utils/pointer.h>
 
 // A data fixture containing data for a two-level tree (one inner node with leaf children).
 // The class can fill this data into the leaf children of a given inner node

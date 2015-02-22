@@ -1,6 +1,15 @@
 #include "testutils/DataTreeGrowingTest.h"
 
-class DataTreeGrowingTest_KeyDoesntChange: public DataTreeGrowingTest {};
+using blobstore::onblocks::datatreestore::DataTree;
+
+class DataTreeGrowingTest_KeyDoesntChange: public DataTreeGrowingTest {
+public:
+  void EXPECT_KEY_DOESNT_CHANGE_WHEN_GROWING(const blockstore::Key &key) {
+    DataTree tree(&nodeStore, nodeStore.load(key));
+    tree.addDataLeaf();
+    EXPECT_EQ(key, tree.key());
+  }
+};
 
 TEST_F(DataTreeGrowingTest_KeyDoesntChange, GrowAOneNodeTree) {
   auto key = CreateLeafOnlyTree()->key();

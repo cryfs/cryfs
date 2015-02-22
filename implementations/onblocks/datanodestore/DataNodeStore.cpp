@@ -55,6 +55,22 @@ unique_ptr<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &sour
   return load(std::move(newBlock));
 }
 
+unique_ptr<DataNode> DataNodeStore::overwriteNodeWith(unique_ptr<DataNode> target, const DataNode &source) {
+  Key key = target->key();
+  {
+    auto targetBlock = target->node().releaseBlock();
+    target.reset();
+    blockstore::utils::copyTo(targetBlock.get(), source.node().block());
+  }
+  return load(key);
+}
+
+void DataNodeStore::remove(unique_ptr<DataNode> node) {
+  auto block = node->node().releaseBlock();
+  node.reset();
+  _blockstore->remove(std::move(block));
+}
+
 }
 }
 }

@@ -78,6 +78,11 @@ void DataInnerNode::addChild(const DataNode &child) {
   LastChild()->setKey(child.key());
 }
 
+void DataInnerNode::removeLastChild() {
+  assert(*node().Size() > 1);
+  *node().Size() -= 1;
+}
+
 }
 }
 }

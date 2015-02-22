@@ -1,7 +1,4 @@
-#include "testutils/DataTreeGrowingTest.h"
-
-#include "../../../../testutils/DataBlockFixture.h"
-#include <messmer/cpp-utils/pointer.h>
+#include "testutils/DataTreeShrinkingTest.h"
 
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -18,11 +15,10 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blockstore::Key;
 
-TEST_F(DataTreeGrowingTest, GrowAOneNodeTree_FlushingWorks) {
-  //Tests that after calling flush(), the complete grown tree structure is written to the blockstore
-  auto tree = CreateLeafOnlyTree();
-  tree->addDataLeaf();
-  tree->flush();
-
-  EXPECT_INNER_NODE_NUMBER_OF_LEAVES_IS(2, tree->key());
+TEST_F(DataTreeShrinkingTest, ShrinkingALeafOnlyTreeCrashes) {
+  Key key = CreateLeafOnlyTree()->key();
+  auto tree = make_unique<DataTree>(&nodeStore, nodeStore.load(key));
+  EXPECT_DEATH(tree->removeLastDataLeaf(), "");
 }
+
+//TODO Test that blocks are actually deleted

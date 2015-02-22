@@ -33,11 +33,46 @@ DataTree::~DataTree() {
 }
 
 void DataTree::removeLastDataLeaf() {
+  auto deletePosOrNull = algorithms::GetLowestRightBorderNodeWithMoreThanOneChildOrNull(_nodeStore, _rootNode.get());
+  assert(deletePosOrNull.get() != nullptr); //TODO Correct exception (tree has only one leaf, can't shrink it)
+
+  deleteLastChildSubtree(deletePosOrNull.get());
+
+  ifRootHasOnlyOneChildReplaceRootWithItsChild();
+}
+
+void DataTree::ifRootHasOnlyOneChildReplaceRootWithItsChild() {
   DataInnerNode *rootNode = dynamic_cast<DataInnerNode*>(_rootNode.get());
   assert(rootNode != nullptr);
+  if (rootNode->numChildren() == 1) {
+    auto child = _nodeStore->load(rootNode->getChild(0)->key());
+    _rootNode = _nodeStore->overwriteNodeWith(std::move(_rootNode), *child);
+    _nodeStore->remove(std::move(child));
+  }
+}
 
-  auto deletePosOrNull = algorithms::GetLowestRightBorderNodeWithMoreThanOneChildOrNull(_nodeStore, _rootNode.get());
-  //TODO ...
+void DataTree::deleteLastChildSubtree(DataInnerNode *node) {
+  deleteSubtree(node->LastChild()->key());
+  node->removeLastChild();
+}
+
+void DataTree::deleteSubtree(const Key &key) {
+  auto node = _nodeStore->load(key);
+  deleteChildrenOf(*node);
+  _nodeStore->remove(std::move(node));
+}
+
+void DataTree::deleteChildrenOf(const DataNode &node) {
+  const DataInnerNode *node_inner = dynamic_cast<const DataInnerNode*>(&node);
+  if (node_inner != nullptr) {
+    deleteChildrenOf(*node_inner);
+  }
+}
+
+void DataTree::deleteChildrenOf(const DataInnerNode &node) {
+  for(int i = 0; i < node.numChildren(); ++i) {
+    deleteSubtree(node.getChild(i)->key());
+  }
 }
 
 unique_ptr<DataLeafNode> DataTree::addDataLeaf() {

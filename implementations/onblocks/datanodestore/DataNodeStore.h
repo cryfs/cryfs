@@ -32,6 +32,10 @@ public:
 
   std::unique_ptr<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
 
+  std::unique_ptr<DataNode> overwriteNodeWith(std::unique_ptr<DataNode> target, const DataNode &source);
+
+  void remove(std::unique_ptr<DataNode> node);
+
 private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
 
