@@ -10,6 +10,7 @@ class Block;
 namespace utils {
 
 std::unique_ptr<Block> copyToNewBlock(BlockStore *blockStore, const Block &block);
+void copyTo(Block *target, const Block &source);
 
 }
 }
