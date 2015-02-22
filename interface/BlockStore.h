@@ -19,7 +19,7 @@ public:
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual std::unique_ptr<Block> load(const Key &key) = 0;
-  virtual void remove(const Key &key) = 0;
+  virtual void remove(std::unique_ptr<Block> block) = 0;
 };
 
 }

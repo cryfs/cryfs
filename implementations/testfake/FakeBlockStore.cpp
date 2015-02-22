@@ -36,7 +36,9 @@ unique_ptr<Block> FakeBlockStore::load(const Key &key) {
   }
 }
 
-void FakeBlockStore::remove(const Key &key) {
+void FakeBlockStore::remove(unique_ptr<Block> block) {
+  Key key = block->key();
+  block.reset();
   int numRemoved = _blocks.erase(key.ToString());
   assert(numRemoved == 1);
 }

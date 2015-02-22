@@ -36,7 +36,9 @@ unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {
   }
 }
 
-void InMemoryBlockStore::remove(const Key &key) {
+void InMemoryBlockStore::remove(unique_ptr<Block> block) {
+  Key key = block->key();
+  block.reset();
   int numRemoved = _blocks.erase(key.ToString());
   assert(1==numRemoved);
 }

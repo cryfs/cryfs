@@ -203,16 +203,10 @@ TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
 TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
   auto blockStore = this->fixture.createBlockStore();
   auto blockkey = blockStore->create(1024)->key();
-  EXPECT_NE(nullptr, blockStore->load(blockkey));
-  blockStore->remove(blockkey);
+  auto block = blockStore->load(blockkey);
+  EXPECT_NE(nullptr, block);
+  blockStore->remove(std::move(block));
   EXPECT_EQ(nullptr, blockStore->load(blockkey));
-}
-
-TYPED_TEST_P(BlockStoreTest, CrashesWhenTryingToDeleteNonexistingBlock) {
-  auto blockStore = this->fixture.createBlockStore();
-  auto blockkey = blockStore->create(1024)->key();
-  blockStore->remove(blockkey);
-  EXPECT_DEATH(blockStore->remove(blockkey), "");
 }
 
 REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
@@ -229,8 +223,7 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     LoadNonExistingBlock,
     LoadNonExistingBlockWithEmptyKey,
     TwoCreatedBlocksHaveDifferentKeys,
-    BlockIsNotLoadableAfterDeleting,
-    CrashesWhenTryingToDeleteNonexistingBlock
+    BlockIsNotLoadableAfterDeleting
 );
 
 

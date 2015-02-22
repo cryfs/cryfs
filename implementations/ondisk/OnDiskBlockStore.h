@@ -18,7 +18,7 @@ public:
 
   std::unique_ptr<Block> create(const Key &key, size_t size) override;
   std::unique_ptr<Block> load(const Key &key) override;
-  void remove(const Key &key) override;
+  void remove(std::unique_ptr<Block> block) override;
 
 private:
   const boost::filesystem::path _rootdir;
