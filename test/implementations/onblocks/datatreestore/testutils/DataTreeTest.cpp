@@ -13,6 +13,7 @@ using blockstore::Key;
 using std::make_unique;
 using std::unique_ptr;
 using std::initializer_list;
+using std::vector;
 using cpputils::dynamic_pointer_move;
 
 DataTreeTest::DataTreeTest()
@@ -23,7 +24,17 @@ unique_ptr<DataLeafNode> DataTreeTest::CreateLeaf() {
   return nodeStore.createNewLeafNode();
 }
 
+unique_ptr<DataInnerNode> DataTreeTest::CreateInner(initializer_list<unique_ptr<DataNode>> children) {
+  vector<const DataNode*> childrenVector(children.size());
+  std::transform(children.begin(), children.end(), childrenVector.begin(), [](const unique_ptr<DataNode> &ptr) {return ptr.get();});
+  return CreateInner(childrenVector);
+}
+
 unique_ptr<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataNode*> children) {
+  return CreateInner(vector<const DataNode*>(children));
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> children) {
   assert(children.size() >= 1);
   auto node = nodeStore.createNewInnerNode(**children.begin());
   for(auto child = children.begin()+1; child != children.end(); ++child) {

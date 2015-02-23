@@ -69,61 +69,61 @@ public:
 };
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoLeafTree) {
-  auto key = CreateTwoLeafTree()->key();
+  auto key = CreateTwoLeaf()->key();
   Shrink(key);
   EXPECT_IS_LEAF_ONLY_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFourNodeThreeLeafTree) {
-  auto key = CreateFourNodeThreeLeafTree();
+  auto key = CreateFourNodeThreeLeaf()->key();
   Shrink(key);
   EXPECT_IS_TWO_LEAF_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoInnerNodeOneTwoLeavesTree) {
-  auto key = CreateTwoInnerNodeOneTwoLeavesTree();
+  auto key = CreateTwoInnerNodeOneTwoLeaves()->key();
   Shrink(key);
   EXPECT_IS_TWO_INNER_NODE_TREE_WITH_ONE_LEAF_EACH(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoInnerNodeTwoOneLeavesTree) {
-  auto key = CreateTwoInnerNodeTwoOneLeavesTree();
+  auto key = CreateTwoInnerNodeTwoOneLeaves()->key();
   Shrink(key);
   EXPECT_IS_TWO_LEAF_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAThreeLevelMinDataTree) {
-  auto key = CreateThreeLevelMinDataTree();
+  auto key = CreateThreeLevelMinData()->key();
   Shrink(key);
   EXPECT_IS_FULL_TWOLEVEL_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFourLevelMinDataTree) {
-  auto key = CreateFourLevelMinDataTree();
+  auto key = CreateFourLevelMinData()->key();
   Shrink(key);
   EXPECT_IS_FULL_THREELEVEL_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFourLevelTreeWithTwoSiblingLeaves1) {
-  auto key = CreateFourLevelTreeWithTwoSiblingLeaves1();
+  auto key = CreateFourLevelWithTwoSiblingLeaves1()->key();
   Shrink(key);
   EXPECT_IS_FOURLEVEL_MINDATA_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFourLevelTreeWithTwoSiblingLeaves2) {
-  auto key = CreateFourLevelTreeWithTwoSiblingLeaves2();
+  auto key = CreateFourLevelWithTwoSiblingLeaves2()->key();
   Shrink(key);
   EXPECT_IS_TREE_WITH_FIRST_CHILD_OF_ROOT_FULL_THREELEVEL_AND_SECOND_CHILD_MINDATA_THREELEVEL_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkATreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel) {
-  auto key = CreateTreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel();
+  auto key = CreateWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel()->key();
   Shrink(key);
   EXPECT_IS_TREE_WITH_FIRST_CHILD_OF_ROOT_FULL_THREELEVEL_AND_SECOND_CHILD_FULL_TWOLEVEL_TREE(key);
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAThreeLevelTreeWithThreeChildrenOfRoot) {
-  auto key = CreateThreeLevelTreeWithThreeChildrenOfRoot();
+  auto key = CreateThreeLevelWithThreeChildrenOfRoot()->key();
   Shrink(key);
   EXPECT_IS_THREELEVEL_TREE_WITH_TWO_FULL_TWOLEVEL_TREES(key);
 }

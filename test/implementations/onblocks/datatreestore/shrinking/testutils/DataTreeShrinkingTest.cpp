@@ -13,101 +13,63 @@ void DataTreeShrinkingTest::Shrink(const Key &key) {
   tree.removeLastDataLeaf();
 }
 
-Key DataTreeShrinkingTest::CreateFourNodeThreeLeafTree() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto root = nodeStore.createNewInnerNode(*leaf1);
-  root->addChild(*nodeStore.createNewLeafNode());
-  root->addChild(*nodeStore.createNewLeafNode());
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourNodeThreeLeaf() {
+  return CreateInner({CreateLeaf(), CreateLeaf(), CreateLeaf()});
 }
 
-Key DataTreeShrinkingTest::CreateTwoInnerNodeOneTwoLeavesTree() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto node1 = nodeStore.createNewInnerNode(*leaf1);
-  auto leaf2 = nodeStore.createNewLeafNode();
-  auto node2 = nodeStore.createNewInnerNode(*leaf2);
-  node2->addChild(*nodeStore.createNewLeafNode());
-  auto root = nodeStore.createNewInnerNode(*node1);
-  root->addChild(*node2);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateTwoInnerNodeOneTwoLeaves() {
+  return CreateInner({
+    CreateInner({CreateLeaf()}),
+    CreateInner({CreateLeaf(), CreateLeaf()})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateTwoInnerNodeTwoOneLeavesTree() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto node1 = nodeStore.createNewInnerNode(*leaf1);
-  node1->addChild(*nodeStore.createNewLeafNode());
-  auto leaf2 = nodeStore.createNewLeafNode();
-  auto node2 = nodeStore.createNewInnerNode(*leaf2);
-  auto root = nodeStore.createNewInnerNode(*node1);
-  root->addChild(*node2);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateTwoInnerNodeTwoOneLeaves() {
+  return CreateInner({
+    CreateInner({CreateLeaf(), CreateLeaf()}),
+    CreateInner({CreateLeaf()})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateThreeLevelMinDataTree() {
-  auto fullTwoLevelRoot = CreateFullTwoLevel();
-  auto root = nodeStore.createNewInnerNode(*fullTwoLevelRoot);
-  auto leaf = nodeStore.createNewLeafNode();
-  auto inner = nodeStore.createNewInnerNode(*leaf);
-  root->addChild(*inner);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateThreeLevelMinData() {
+  return CreateInner({
+    CreateFullTwoLevel(),
+    CreateInner({CreateLeaf()})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateFourLevelMinDataTree() {
-  auto fullThreeLevelRoot = CreateFullThreeLevel();
-  auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
-  auto leaf = nodeStore.createNewLeafNode();
-  auto inner = nodeStore.createNewInnerNode(*leaf);
-  auto nodechainRoot = nodeStore.createNewInnerNode(*inner);
-  root->addChild(*nodechainRoot);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourLevelMinData() {
+  return CreateInner({
+    CreateFullThreeLevel(),
+    CreateInner({CreateInner({CreateLeaf()})})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves1() {
-  auto fullThreeLevelRoot = CreateFullThreeLevel();
-  auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
-  auto leaf = nodeStore.createNewLeafNode();
-  auto inner = nodeStore.createNewInnerNode(*leaf);
-  inner->addChild(*nodeStore.createNewLeafNode());
-  auto inner_top = nodeStore.createNewInnerNode(*inner);
-  root->addChild(*inner_top);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourLevelWithTwoSiblingLeaves1() {
+  return CreateInner({
+    CreateFullThreeLevel(),
+    CreateInner({CreateTwoLeaf()})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves2() {
-  auto fullThreeLevelRoot = CreateFullThreeLevel();
-  auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto inner1 = nodeStore.createNewInnerNode(*leaf1);
-  FillNode(inner1.get());
-  auto leaf2 = nodeStore.createNewLeafNode();
-  auto inner2 = nodeStore.createNewInnerNode(*leaf2);
-  inner2->addChild(*nodeStore.createNewLeafNode());
-  auto inner_top = nodeStore.createNewInnerNode(*inner1);
-  inner_top->addChild(*inner2);
-  root->addChild(*inner_top);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourLevelWithTwoSiblingLeaves2() {
+  return CreateInner({
+    CreateFullThreeLevel(),
+    CreateInner({CreateFullTwoLevel(), CreateTwoLeaf()})
+  });
 }
 
-Key DataTreeShrinkingTest::CreateTreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel() {
-  auto fullThreeLevelRoot = CreateFullThreeLevel();
-  auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto inner1 = nodeStore.createNewInnerNode(*leaf1);
-  FillNode(inner1.get());
-  auto leaf2 = nodeStore.createNewLeafNode();
-  auto inner2 = nodeStore.createNewInnerNode(*leaf2);
-  auto inner_top = nodeStore.createNewInnerNode(*inner1);
-  inner_top->addChild(*inner2);
-  root->addChild(*inner_top);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel() {
+  return CreateInner({
+    CreateFullThreeLevel(),
+    CreateThreeLevelMinData()
+  });
 }
 
-Key DataTreeShrinkingTest::CreateThreeLevelTreeWithThreeChildrenOfRoot() {
-  auto fullTwoLevelTree1 = CreateFullTwoLevel();
-  auto fullTwoLevelTree2 = CreateFullTwoLevel();
-  auto twonodechain = nodeStore.createNewInnerNode(*nodeStore.createNewLeafNode());
-  auto root = nodeStore.createNewInnerNode(*fullTwoLevelTree1);
-  root->addChild(*fullTwoLevelTree2);
-  root->addChild(*twonodechain);
-  return root->key();
+unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateThreeLevelWithThreeChildrenOfRoot() {
+  return CreateInner({
+    CreateFullTwoLevel(),
+    CreateFullTwoLevel(),
+    CreateInner({CreateLeaf()})
+  });
 }

@@ -14,7 +14,9 @@ public:
   DataTreeTest();
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::vector<const blobstore::onblocks::datanodestore::DataNode *> children);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<const blobstore::onblocks::datanodestore::DataNode *> children);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<std::unique_ptr<blobstore::onblocks::datanodestore::DataNode>> children);
 
   std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateLeafOnlyTree();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeaf();
