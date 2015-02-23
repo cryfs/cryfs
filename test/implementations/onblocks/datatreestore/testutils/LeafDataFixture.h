@@ -4,7 +4,7 @@
 
 #include <google/gtest/gtest.h>
 
-#include "../../../../../testutils/DataBlockFixture.h"
+#include "../../../../testutils/DataBlockFixture.h"
 
 // A data fixture containing data for a leaf.
 // The class can fill this data into a given leaf
