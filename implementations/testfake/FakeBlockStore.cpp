@@ -55,5 +55,9 @@ void FakeBlockStore::updateData(const Key &key, const Data &data) {
   std::memcpy(stored_data.data(), data.data(), data.size());
 }
 
+uint64_t FakeBlockStore::numBlocks() const {
+  return _blocks.size();
+}
+
 }
 }

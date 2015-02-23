@@ -34,5 +34,9 @@ void OnDiskBlockStore::remove(unique_ptr<Block> block) {
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 
+uint64_t OnDiskBlockStore::numBlocks() const {
+  return std::distance(bf::directory_iterator(_rootdir), bf::directory_iterator());
+}
+
 }
 }

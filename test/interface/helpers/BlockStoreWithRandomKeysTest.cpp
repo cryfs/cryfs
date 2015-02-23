@@ -25,6 +25,7 @@ public:
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
   void remove(unique_ptr<Block> block) {}
+  MOCK_CONST_METHOD0(numBlocks, uint64_t());
 };
 
 class BlockMock: public Block {

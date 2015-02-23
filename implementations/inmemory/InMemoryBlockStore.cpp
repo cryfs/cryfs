@@ -43,5 +43,9 @@ void InMemoryBlockStore::remove(unique_ptr<Block> block) {
   assert(1==numRemoved);
 }
 
+uint64_t InMemoryBlockStore::numBlocks() const {
+  return _blocks.size();
+}
+
 }
 }

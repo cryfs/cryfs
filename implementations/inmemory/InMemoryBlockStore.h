@@ -19,6 +19,7 @@ public:
   std::unique_ptr<Block> create(const Key &key, size_t size) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
+  uint64_t numBlocks() const override;
 
 private:
   std::map<std::string, InMemoryBlock> _blocks;
