@@ -13,7 +13,6 @@ class DataTreeShrinkingTest: public DataTreeTest {
 public:
   void Shrink(const blockstore::Key &key);
 
-  blockstore::Key CreateTwoLeafTree();
   blockstore::Key CreateFourNodeThreeLeafTree();
   blockstore::Key CreateTwoInnerNodeOneTwoLeavesTree();
   blockstore::Key CreateTwoInnerNodeTwoOneLeavesTree();

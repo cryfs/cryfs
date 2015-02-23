@@ -13,13 +13,6 @@ void DataTreeShrinkingTest::Shrink(const Key &key) {
   tree.removeLastDataLeaf();
 }
 
-Key DataTreeShrinkingTest::CreateTwoLeafTree() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto root = nodeStore.createNewInnerNode(*leaf1);
-  root->addChild(*nodeStore.createNewLeafNode());
-  return root->key();
-}
-
 Key DataTreeShrinkingTest::CreateFourNodeThreeLeafTree() {
   auto leaf1 = nodeStore.createNewLeafNode();
   auto root = nodeStore.createNewInnerNode(*leaf1);

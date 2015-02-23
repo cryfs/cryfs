@@ -21,4 +21,31 @@ TEST_F(DataTreeShrinkingTest, ShrinkingALeafOnlyTreeCrashes) {
   EXPECT_DEATH(tree->removeLastDataLeaf(), "");
 }
 
-//TODO Test that blocks are actually deleted
+TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_FlushingWorks) {
+  //Tests that after calling flush(), the complete grown tree structure is written to the blockstore
+  auto tree = CreateTwoLeafTree();
+  tree->removeLastDataLeaf();
+  tree->flush();
+
+  EXPECT_IS_LEAF_NODE(tree->key());
+}
+
+TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_LastLeafBlockIsDeleted) {
+  auto tree = CreateTwoLeafTree();
+  tree->flush();
+  auto lastChildKey = LoadInnerNode(tree->key())->getChild(1)->key();
+
+  tree->removeLastDataLeaf();
+  EXPECT_EQ(nullptr, nodeStore.load(lastChildKey));
+}
+
+TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
+  auto tree = CreateTwoLeafTree();
+  tree->flush();
+  auto firstChildKey = LoadInnerNode(tree->key())->getChild(0)->key();
+
+  tree->removeLastDataLeaf();
+  EXPECT_EQ(nullptr, nodeStore.load(firstChildKey));
+}
+
+//TODO Test Shrinking full trees down to 1-leaf-tree

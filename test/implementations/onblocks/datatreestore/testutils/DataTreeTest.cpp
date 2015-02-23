@@ -68,6 +68,13 @@ unique_ptr<DataLeafNode> DataTreeTest::LoadLeafNode(const Key &key) {
   return casted;
 }
 
+unique_ptr<DataTree> DataTreeTest::CreateTwoLeafTree() {
+  auto leaf1 = nodeStore.createNewLeafNode();
+  auto root = nodeStore.createNewInnerNode(*leaf1);
+  root->addChild(*nodeStore.createNewLeafNode());
+  return make_unique<DataTree>(&nodeStore, std::move(root));
+}
+
 void DataTreeTest::EXPECT_IS_LEAF_NODE(const Key &key) {
   auto node = LoadLeafNode(key);
   EXPECT_NE(nullptr, node.get());

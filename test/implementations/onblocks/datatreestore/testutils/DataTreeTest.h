@@ -14,6 +14,7 @@ public:
   DataTreeTest();
 
   std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateLeafOnlyTree();
+  std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateTwoLeafTree();
   void FillNode(blobstore::onblocks::datanodestore::DataInnerNode *node);
   void FillNodeTwoLevel(blobstore::onblocks::datanodestore::DataInnerNode *node);
   blockstore::Key CreateFullTwoLevelTree();

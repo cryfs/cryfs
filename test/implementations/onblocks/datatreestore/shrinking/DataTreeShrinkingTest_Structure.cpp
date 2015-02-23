@@ -69,7 +69,7 @@ public:
 };
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoLeafTree) {
-  auto key = CreateTwoLeafTree();
+  auto key = CreateTwoLeafTree()->key();
   Shrink(key);
   EXPECT_IS_LEAF_ONLY_TREE(key);
 }
@@ -86,11 +86,11 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoInnerNodeOneTwoLeavesTree) {
   EXPECT_IS_TWO_INNER_NODE_TREE_WITH_ONE_LEAF_EACH(key);
 }
 
-/*TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoInnerNodeTwoOneLeavesTree) {
+TEST_F(DataTreeShrinkingTest_Structure, ShrinkATwoInnerNodeTwoOneLeavesTree) {
   auto key = CreateTwoInnerNodeTwoOneLeavesTree();
   Shrink(key);
   EXPECT_IS_TWO_LEAF_TREE(key);
-}*/
+}
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAThreeLevelMinDataTree) {
   auto key = CreateThreeLevelMinDataTree();

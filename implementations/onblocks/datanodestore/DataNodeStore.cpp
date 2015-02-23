@@ -47,7 +47,11 @@ unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
 }
 
 unique_ptr<DataNode> DataNodeStore::load(const Key &key) {
-  return load(_blockstore->load(key));
+  auto block = _blockstore->load(key);
+  if (block == nullptr) {
+    return nullptr;
+  }
+  return load(std::move(block));
 }
 
 unique_ptr<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &source) {

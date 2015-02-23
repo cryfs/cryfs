@@ -13,7 +13,7 @@ public:
 };
 
 TEST_F(DataTreeShrinkingTest_KeyDoesntChange, ShrinkATwoLeafTree) {
-  auto key = CreateTwoLeafTree();
+  auto key = CreateTwoLeafTree()->key();
   EXPECT_KEY_DOESNT_CHANGE_WHEN_SHRINKING(key);
 }
 
