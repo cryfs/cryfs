@@ -96,13 +96,13 @@ TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, LargerTree)
 }
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullTwoLevelTree) {
-  auto root = nodeStore.load(CreateFullTwoLevelTree());
+  auto root = CreateFullTwoLevel();
   auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullThreeLevelTree) {
-  auto root = nodeStore.load(CreateFullThreeLevelTree());
+  auto root = CreateFullThreeLevel();
   auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }

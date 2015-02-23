@@ -38,7 +38,7 @@ public:
   }
 
   unique_ptr<DataTree> CreateFullTwoLevelTreeWithData(TwoLevelDataFixture *data) {
-    auto root = LoadInnerNode(CreateFullTwoLevelTree());
+    auto root = CreateFullTwoLevel();
     assert(root->numChildren() == DataInnerNode::MAX_STORED_CHILDREN);
     data->FillInto(root.get());
     return make_unique<DataTree>(&nodeStore, std::move(root));

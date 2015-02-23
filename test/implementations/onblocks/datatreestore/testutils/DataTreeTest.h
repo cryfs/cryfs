@@ -13,12 +13,16 @@ class DataTreeTest: public ::testing::Test {
 public:
   DataTreeTest();
 
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<const blobstore::onblocks::datanodestore::DataNode *> children);
+
   std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateLeafOnlyTree();
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeaf();
   std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateTwoLeafTree();
   void FillNode(blobstore::onblocks::datanodestore::DataInnerNode *node);
   void FillNodeTwoLevel(blobstore::onblocks::datanodestore::DataInnerNode *node);
-  blockstore::Key CreateFullTwoLevelTree();
-  blockstore::Key CreateFullThreeLevelTree();
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevel();
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevel();
   blobstore::onblocks::datanodestore::DataNodeStore nodeStore;
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);

@@ -37,7 +37,7 @@ TEST_F(DataTreeGrowingTest_DepthFlags, GrowAThreeNodeChainedTree) {
 }
 
 TEST_F(DataTreeGrowingTest_DepthFlags, GrowAFullTwoLevelTree) {
-  auto key = CreateFullTwoLevelTree();
+  auto key = CreateFullTwoLevel()->key();
   AddLeafTo(key);
   CHECK_DEPTH(2, key);
 }
@@ -49,7 +49,7 @@ TEST_F(DataTreeGrowingTest_DepthFlags, GrowAThreeLevelTreeWithLowerLevelFull) {
 }
 
 TEST_F(DataTreeGrowingTest_DepthFlags, GrowAFullThreeLevelTree) {
-  auto key = CreateFullThreeLevelTree();
+  auto key = CreateFullThreeLevel()->key();
   AddLeafTo(key);
   CHECK_DEPTH(3, key);
 }

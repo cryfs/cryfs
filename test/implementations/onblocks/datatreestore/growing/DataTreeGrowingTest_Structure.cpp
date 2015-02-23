@@ -39,7 +39,7 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAFullTwoLevelTreeFromGroundUp) {
 }
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullTwoLevelTree) {
-  auto root_key = CreateFullTwoLevelTree();
+  auto root_key = CreateFullTwoLevel()->key();
   AddLeafTo(root_key);
 
   auto root = LoadInnerNode(root_key);
@@ -69,7 +69,7 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTreeFromGroundUp) {
 }
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTree) {
-  auto root_key = CreateFullThreeLevelTree();
+  auto root_key = CreateFullThreeLevel()->key();
   AddLeafTo(root_key);
 
   auto root = LoadInnerNode(root_key);

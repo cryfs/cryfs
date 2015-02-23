@@ -44,7 +44,7 @@ Key DataTreeShrinkingTest::CreateTwoInnerNodeTwoOneLeavesTree() {
 }
 
 Key DataTreeShrinkingTest::CreateThreeLevelMinDataTree() {
-  auto fullTwoLevelRoot = nodeStore.load(CreateFullTwoLevelTree());
+  auto fullTwoLevelRoot = CreateFullTwoLevel();
   auto root = nodeStore.createNewInnerNode(*fullTwoLevelRoot);
   auto leaf = nodeStore.createNewLeafNode();
   auto inner = nodeStore.createNewInnerNode(*leaf);
@@ -53,7 +53,7 @@ Key DataTreeShrinkingTest::CreateThreeLevelMinDataTree() {
 }
 
 Key DataTreeShrinkingTest::CreateFourLevelMinDataTree() {
-  auto fullThreeLevelRoot = nodeStore.load(CreateFullThreeLevelTree());
+  auto fullThreeLevelRoot = CreateFullThreeLevel();
   auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
   auto leaf = nodeStore.createNewLeafNode();
   auto inner = nodeStore.createNewInnerNode(*leaf);
@@ -63,7 +63,7 @@ Key DataTreeShrinkingTest::CreateFourLevelMinDataTree() {
 }
 
 Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves1() {
-  auto fullThreeLevelRoot = nodeStore.load(CreateFullThreeLevelTree());
+  auto fullThreeLevelRoot = CreateFullThreeLevel();
   auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
   auto leaf = nodeStore.createNewLeafNode();
   auto inner = nodeStore.createNewInnerNode(*leaf);
@@ -74,7 +74,7 @@ Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves1() {
 }
 
 Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves2() {
-  auto fullThreeLevelRoot = nodeStore.load(CreateFullThreeLevelTree());
+  auto fullThreeLevelRoot = CreateFullThreeLevel();
   auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
   auto leaf1 = nodeStore.createNewLeafNode();
   auto inner1 = nodeStore.createNewInnerNode(*leaf1);
@@ -89,7 +89,7 @@ Key DataTreeShrinkingTest::CreateFourLevelTreeWithTwoSiblingLeaves2() {
 }
 
 Key DataTreeShrinkingTest::CreateTreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel() {
-  auto fullThreeLevelRoot = nodeStore.load(CreateFullThreeLevelTree());
+  auto fullThreeLevelRoot = CreateFullThreeLevel();
   auto root = nodeStore.createNewInnerNode(*fullThreeLevelRoot);
   auto leaf1 = nodeStore.createNewLeafNode();
   auto inner1 = nodeStore.createNewInnerNode(*leaf1);
@@ -103,8 +103,8 @@ Key DataTreeShrinkingTest::CreateTreeWithFirstChildOfRootFullThreelevelAndSecond
 }
 
 Key DataTreeShrinkingTest::CreateThreeLevelTreeWithThreeChildrenOfRoot() {
-  auto fullTwoLevelTree1 = nodeStore.load(CreateFullTwoLevelTree());
-  auto fullTwoLevelTree2 = nodeStore.load(CreateFullTwoLevelTree());
+  auto fullTwoLevelTree1 = CreateFullTwoLevel();
+  auto fullTwoLevelTree2 = CreateFullTwoLevel();
   auto twonodechain = nodeStore.createNewInnerNode(*nodeStore.createNewLeafNode());
   auto root = nodeStore.createNewInnerNode(*fullTwoLevelTree1);
   root->addChild(*fullTwoLevelTree2);

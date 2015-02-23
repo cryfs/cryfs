@@ -37,12 +37,12 @@ TEST_F(DataTreeGrowingTest_KeyDoesntChange, GrowAThreeLevelTreeWithLowerLevelFul
 }
 
 TEST_F(DataTreeGrowingTest_KeyDoesntChange, GrowAFullTwoLevelTree) {
-  auto root_key = CreateFullTwoLevelTree();
+  auto root_key = CreateFullTwoLevel()->key();
   EXPECT_KEY_DOESNT_CHANGE_WHEN_GROWING(root_key);
 }
 
 TEST_F(DataTreeGrowingTest_KeyDoesntChange, GrowAFullThreeLevelTree) {
-  auto root_key = CreateFullThreeLevelTree();
+  auto root_key = CreateFullThreeLevel()->key();
   EXPECT_KEY_DOESNT_CHANGE_WHEN_GROWING(root_key);
 }
 

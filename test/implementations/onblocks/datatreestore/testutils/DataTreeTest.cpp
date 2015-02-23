@@ -4,6 +4,7 @@
 #include <messmer/cpp-utils/pointer.h>
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
+using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datatreestore::DataTree;
@@ -11,47 +12,52 @@ using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
 using std::make_unique;
 using std::unique_ptr;
+using std::initializer_list;
 using cpputils::dynamic_pointer_move;
 
 DataTreeTest::DataTreeTest()
   :nodeStore(make_unique<FakeBlockStore>()) {
 }
 
+unique_ptr<DataLeafNode> DataTreeTest::CreateLeaf() {
+  return nodeStore.createNewLeafNode();
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataNode*> children) {
+  assert(children.size() >= 1);
+  auto node = nodeStore.createNewInnerNode(**children.begin());
+  for(auto child = children.begin()+1; child != children.end(); ++child) {
+    node->addChild(**child);
+  }
+  return node;
+}
+
 unique_ptr<DataTree> DataTreeTest::CreateLeafOnlyTree() {
-  auto leafnode = nodeStore.createNewLeafNode();
-  return make_unique<DataTree>(&nodeStore, std::move(leafnode));
+  return make_unique<DataTree>(&nodeStore, CreateLeaf());
 }
 
 void DataTreeTest::FillNode(DataInnerNode *node) {
   for(unsigned int i=node->numChildren(); i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
-    node->addChild(*nodeStore.createNewLeafNode());
+    node->addChild(*CreateLeaf());
   }
 }
 
 void DataTreeTest::FillNodeTwoLevel(DataInnerNode *node) {
   for(unsigned int i=node->numChildren(); i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
-    auto inner_node = nodeStore.createNewInnerNode(*nodeStore.createNewLeafNode());
-    for(unsigned int j = 1;j < DataInnerNode::MAX_STORED_CHILDREN; ++j) {
-      inner_node->addChild(*nodeStore.createNewLeafNode());
-    }
-    node->addChild(*inner_node);
+    node->addChild(*CreateFullTwoLevel());
   }
 }
 
-Key DataTreeTest::CreateFullTwoLevelTree() {
-  auto leaf = nodeStore.createNewLeafNode();
-  auto root = nodeStore.createNewInnerNode(*leaf);
+unique_ptr<DataInnerNode> DataTreeTest::CreateFullTwoLevel() {
+  auto root = CreateInner({CreateLeaf().get()});
   FillNode(root.get());
-  return root->key();
+  return root;
 }
 
-Key DataTreeTest::CreateFullThreeLevelTree() {
-  auto leaf = nodeStore.createNewLeafNode();
-  auto node = nodeStore.createNewInnerNode(*leaf);
-  auto root = nodeStore.createNewInnerNode(*node);
-  FillNode(node.get());
+unique_ptr<DataInnerNode> DataTreeTest::CreateFullThreeLevel() {
+  auto root = CreateInner({CreateFullTwoLevel().get()});
   FillNodeTwoLevel(root.get());
-  return root->key();
+  return root;
 }
 
 unique_ptr<DataInnerNode> DataTreeTest::LoadInnerNode(const Key &key) {
@@ -68,11 +74,12 @@ unique_ptr<DataLeafNode> DataTreeTest::LoadLeafNode(const Key &key) {
   return casted;
 }
 
+unique_ptr<DataInnerNode> DataTreeTest::CreateTwoLeaf() {
+  return CreateInner({CreateLeaf().get(), CreateLeaf().get()});
+}
+
 unique_ptr<DataTree> DataTreeTest::CreateTwoLeafTree() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto root = nodeStore.createNewInnerNode(*leaf1);
-  root->addChild(*nodeStore.createNewLeafNode());
-  return make_unique<DataTree>(&nodeStore, std::move(root));
+  return make_unique<DataTree>(&nodeStore, CreateTwoLeaf());
 }
 
 void DataTreeTest::EXPECT_IS_LEAF_NODE(const Key &key) {
