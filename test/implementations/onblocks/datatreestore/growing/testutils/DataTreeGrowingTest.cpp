@@ -33,31 +33,15 @@ Key DataTreeGrowingTest::CreateTreeAddThreeLeavesReturnRootKey() {
 }
 
 Key DataTreeGrowingTest::CreateThreeNodeChainedTreeReturnRootKey() {
-  auto leaf = nodeStore.createNewLeafNode();
-  auto node = nodeStore.createNewInnerNode(*leaf);
-  auto root = nodeStore.createNewInnerNode(*node);
-  return root->key();
+  return CreateInner({CreateInner({CreateLeaf()})})->key();
 }
 
 Key DataTreeGrowingTest::CreateThreeLevelTreeWithLowerLevelFullReturnRootKey() {
-  auto leaf = nodeStore.createNewLeafNode();
-  auto node = nodeStore.createNewInnerNode(*leaf);
-  FillNode(node.get());
-  auto root = nodeStore.createNewInnerNode(*node);
-  return root->key();
+  return CreateInner({CreateFullTwoLevel()})->key();
 }
 
 Key DataTreeGrowingTest::CreateThreeLevelTreeWithTwoFullSubtrees() {
-  auto leaf1 = nodeStore.createNewLeafNode();
-  auto leaf2 = nodeStore.createNewLeafNode();
-  auto leaf3 = nodeStore.createNewLeafNode();
-  auto node1 = nodeStore.createNewInnerNode(*leaf1);
-  FillNode(node1.get());
-  auto node2 = nodeStore.createNewInnerNode(*leaf2);
-  FillNode(node2.get());
-  auto root = nodeStore.createNewInnerNode(*node1);
-  root->addChild(*node2);
-  return root->key();
+  return CreateInner({CreateFullTwoLevel(), CreateFullTwoLevel()})->key();
 }
 
 void DataTreeGrowingTest::AddLeafTo(const Key &key) {
