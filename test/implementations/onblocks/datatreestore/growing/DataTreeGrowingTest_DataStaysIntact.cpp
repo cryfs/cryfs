@@ -16,91 +16,85 @@ using cpputils::dynamic_pointer_move;
 
 class DataTreeGrowingTest_DataStaysIntact: public DataTreeGrowingTest {
 public:
-  unique_ptr<DataTree> CreateLeafOnlyTreeWithData(TwoLevelDataFixture *data) {
-    auto leafnode = nodeStore.createNewLeafNode();
-    data->FillInto(leafnode.get());
-
-    return make_unique<DataTree>(&nodeStore, std::move(leafnode));
-  }
-
-  unique_ptr<DataTree> CreateTwoNodeTreeWithData(TwoLevelDataFixture *data) {
-    auto root = CreateInner({CreateLeaf(), CreateLeaf()});
+  unique_ptr<DataTree> TreeWithData(unique_ptr<DataNode> root, TwoLevelDataFixture *data) {
     data->FillInto(root.get());
     return make_unique<DataTree>(&nodeStore, std::move(root));
   }
 
-  unique_ptr<DataTree> CreateThreeNodeChainedTreeWithData(TwoLevelDataFixture *data) {
-    auto leaf = nodeStore.createNewLeafNode();
-    data->FillInto(leaf.get());
+  void TestDataStaysIntactOnGrowing(unique_ptr<DataNode> root, TwoLevelDataFixture *data) {
+    uint32_t numLeaves = countLeaves(root.get());
+    auto tree = TreeWithData(std::move(root), data);
+    tree->addDataLeaf();
+    tree->flush();
 
-    auto inner = nodeStore.createNewInnerNode(*leaf);
-    return make_unique<DataTree>(&nodeStore, nodeStore.createNewInnerNode(*inner));
+    data->EXPECT_DATA_CORRECT(nodeStore.load(tree->key()).get(), numLeaves);
   }
 
-  unique_ptr<DataTree> CreateFullTwoLevelTreeWithData(TwoLevelDataFixture *data) {
-    auto root = CreateFullTwoLevel();
-    assert(root->numChildren() == DataInnerNode::MAX_STORED_CHILDREN);
-    data->FillInto(root.get());
-    return make_unique<DataTree>(&nodeStore, std::move(root));
-  }
-
-  unique_ptr<DataTree> CreateThreeLevelTreeWithLowerLevelFullWithData(TwoLevelDataFixture *data) {
-    auto root = CreateInner({CreateFullTwoLevel()});
-    data->FillInto(root.get());
-    return make_unique<DataTree>(&nodeStore, std::move(root));
+  uint32_t countLeaves(DataNode *node) {
+    DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node);
+    if (inner == nullptr) {
+      return 1;
+    }
+    uint32_t result = 0;
+    for(int i = 0; i < inner->numChildren(); ++i) {
+      result += countLeaves(nodeStore.load(inner->getChild(i)->key()).get());
+    }
+    return result;
   }
 };
 
-TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAFullTwoLevelTree) {
-  TwoLevelDataFixture data(&nodeStore);
-  auto tree = CreateFullTwoLevelTreeWithData(&data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto root = LoadInnerNode(tree->key());
-  data.EXPECT_DATA_CORRECT(dynamic_pointer_move<DataInnerNode>(root).get(), DataInnerNode::MAX_STORED_CHILDREN);
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAFullTwoLevelTree_FullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, true);
+  TestDataStaysIntactOnGrowing(CreateFullTwoLevel(), &data);
 }
 
-TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAThreeLevelTreeWithLowerLevelFull) {
-  TwoLevelDataFixture data(&nodeStore);
-  auto tree = CreateThreeLevelTreeWithLowerLevelFullWithData(&data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto root = LoadInnerNode(tree->key());
-  data.EXPECT_DATA_CORRECT(dynamic_pointer_move<DataInnerNode>(root).get(), DataInnerNode::MAX_STORED_CHILDREN);
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAFullTwoLevelTree_NonFullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, false);
+  TestDataStaysIntactOnGrowing(CreateFullTwoLevel(), &data);
 }
 
-class DataTreeGrowingTest_DataStaysIntact_OneDataLeaf: public DataTreeGrowingTest_DataStaysIntact, public WithParamInterface<uint32_t> {
-};
-INSTANTIATE_TEST_CASE_P(DataTreeGrowingTest_DataStaysIntact_OneDataLeaf, DataTreeGrowingTest_DataStaysIntact_OneDataLeaf, Values(0, 1, DataLeafNode::MAX_STORED_BYTES-2, DataLeafNode::MAX_STORED_BYTES-1, DataLeafNode::MAX_STORED_BYTES));
-
-TEST_P(DataTreeGrowingTest_DataStaysIntact_OneDataLeaf, GrowAOneNodeTree) {
-  TwoLevelDataFixture data(&nodeStore, GetParam(), true);
-  auto tree = CreateLeafOnlyTreeWithData(&data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto root = LoadInnerNode(tree->key());
-  data.EXPECT_DATA_CORRECT(root.get(), 1);
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAThreeLevelTreeWithLowerLevelFull_FullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, true);
+  auto node = CreateInner({CreateFullTwoLevel()});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
 }
 
-TEST_P(DataTreeGrowingTest_DataStaysIntact_OneDataLeaf, GrowATwoNodeTree) {
-  TwoLevelDataFixture data(&nodeStore, GetParam(), true);
-  auto tree = CreateTwoNodeTreeWithData(&data);
-  tree->addDataLeaf();
-  tree->flush();
-
-  auto root = LoadInnerNode(tree->key());
-  data.EXPECT_DATA_CORRECT(root.get(), 2);
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAThreeLevelTreeWithLowerLevelFull_NonFullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, false);
+  auto node = CreateInner({CreateFullTwoLevel()});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
 }
 
-TEST_P(DataTreeGrowingTest_DataStaysIntact_OneDataLeaf, GrowAThreeNodeChainedTree) {
-  TwoLevelDataFixture data(&nodeStore, GetParam(), true);
-  auto tree = CreateThreeNodeChainedTreeWithData(&data);
-  tree->addDataLeaf();
-  tree->flush();
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAOneNodeTree_FullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, true);
+  TestDataStaysIntactOnGrowing(CreateLeaf(), &data);
+}
 
-  auto root = LoadInnerNode(tree->key());
-  data.EXPECT_DATA_CORRECT(root.get(), 1);
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAOneNodeTree_NonFullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, false);
+  TestDataStaysIntactOnGrowing(CreateLeaf(), &data);
+}
+
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowATwoNodeTree_FullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, true);
+  auto node = CreateInner({CreateLeaf()});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
+}
+
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowATwoNodeTree_NonFullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, false);
+  auto node = CreateInner({CreateLeaf()});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
+}
+
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAThreeNodeChainedTree_FullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, true);
+  auto node = CreateInner({CreateInner({CreateLeaf()})});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
+}
+
+TEST_F(DataTreeGrowingTest_DataStaysIntact, GrowAThreeNodeChainedTree_NonFullLeaves) {
+  TwoLevelDataFixture data(&nodeStore, 0, false);
+  auto node = CreateInner({CreateInner({CreateLeaf()})});
+  TestDataStaysIntactOnGrowing(std::move(node), &data);
 }

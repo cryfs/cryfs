@@ -2,6 +2,7 @@
 #include "../testutils/TwoLevelDataFixture.h"
 
 using blobstore::onblocks::datanodestore::DataInnerNode;
+using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datatreestore::DataTree;
 using blockstore::Key;
 
@@ -11,13 +12,13 @@ using std::function;
 
 class DataTreeShrinkingTest_DataStaysIntact: public DataTreeShrinkingTest {
 public:
-  unique_ptr<DataTree> TwoLevelTreeWithData(unique_ptr<DataInnerNode> root, TwoLevelDataFixture *data) {
+  unique_ptr<DataTree> TreeWithData(unique_ptr<DataNode> root, TwoLevelDataFixture *data) {
     data->FillInto(root.get());
     return make_unique<DataTree>(&nodeStore, std::move(root));
   }
 
   void TestDataStaysIntactOnShrinking(unique_ptr<DataInnerNode> root, TwoLevelDataFixture *data) {
-    auto tree = TwoLevelTreeWithData(std::move(root), data);
+    auto tree = TreeWithData(std::move(root), data);
     tree->removeLastDataLeaf();
     tree->flush();
 
