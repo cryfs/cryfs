@@ -49,3 +49,5 @@ TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
 }
 
 //TODO Test Shrinking full trees down to 1-leaf-tree
+//TODO Test DataStaysIntact
+//TODO Test DepthFlags stay intact
