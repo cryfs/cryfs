@@ -35,85 +35,47 @@ public:
   }
 
   Key CreateLeafOnlyTree() {
-    return nodeStore.createNewLeafNode()->key();
+    return CreateLeaf()->key();
   }
 
   Key CreateTwoRightBorderNodes() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node = nodeStore.createNewInnerNode(*leaf);
-    return node->key(), node->key();
+    return CreateInner({CreateLeaf()})->key();
   }
 
   Key CreateThreeRightBorderNodes() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node = nodeStore.createNewInnerNode(*leaf);
-    auto root = nodeStore.createNewInnerNode(*node);
-    return root->key();
+    return CreateInner({CreateInner({CreateLeaf()})})->key();
   }
 
   TestData CreateThreeRightBorderNodes_LastFull() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node = nodeStore.createNewInnerNode(*leaf);
-    FillNode(node.get());
-    auto root = nodeStore.createNewInnerNode(*node);
+    auto node = CreateFullTwoLevel();
+    auto root = CreateInner({node.get()});
     return TestData(root->key(), node->key());
   }
 
   TestData CreateLargerTree() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto leaf2 = nodeStore.createNewLeafNode();
-    auto leaf3 = nodeStore.createNewLeafNode();
-    auto node = nodeStore.createNewInnerNode(*leaf);
-    FillNode(node.get());
-    auto node2 = nodeStore.createNewInnerNode(*leaf2);
-    node2->addChild(*leaf3);
-    auto root = nodeStore.createNewInnerNode(*node);
-    root->addChild(*node2);
-    return TestData(root->key(), node2->key());
+    auto node = CreateInner({CreateLeaf(), CreateLeaf()});
+    auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
+    return TestData(root->key(), node->key());
   }
 
   TestData CreateThreeLevelTreeWithRightBorderSingleNodeChain() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node1 = nodeStore.createNewInnerNode(*leaf);
-    FillNode(node1.get());
-    auto leaf2 = nodeStore.createNewLeafNode();
-    auto node2 = nodeStore.createNewInnerNode(*leaf2);
-    auto root = nodeStore.createNewInnerNode(*node1);
-    root->addChild(*node2);
+    auto root = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})});
     return TestData(root->key(), root->key());
   }
 
   TestData CreateThreeLevelTree() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node1 = nodeStore.createNewInnerNode(*leaf);
-    FillNode(node1.get());
-    auto leaf2 = nodeStore.createNewLeafNode();
-    auto leaf3 = nodeStore.createNewLeafNode();
-    auto node2 = nodeStore.createNewInnerNode(*leaf2);
-    node2->addChild(*leaf3);
-    auto root = nodeStore.createNewInnerNode(*node1);
-    root->addChild(*node2);
-    return TestData(root->key(), node2->key());
+    auto node = CreateInner({CreateLeaf(), CreateLeaf()});
+    auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
+    return TestData(root->key(), node->key());
   }
 
   TestData CreateFullTwoLevelTree() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto node = nodeStore.createNewInnerNode(*leaf);
-    FillNode(node.get());
+    auto node = CreateFullTwoLevel();
     return TestData(node->key(), node->key());
   }
 
   TestData CreateFullThreeLevelTree() {
-    auto leaf = nodeStore.createNewLeafNode();
-    auto firstFullTwoLevelTree = nodeStore.createNewInnerNode(*leaf);
-    FillNode(firstFullTwoLevelTree.get());
-    auto root = nodeStore.createNewInnerNode(*firstFullTwoLevelTree);
-    for (int i = 1; i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
-      auto leaf2 = nodeStore.createNewLeafNode();
-      auto fullTwoLevelTree = nodeStore.createNewInnerNode(*leaf2);
-      FillNode(fullTwoLevelTree.get());
-      root->addChild(*fullTwoLevelTree);
-    }
+    auto root = CreateFullThreeLevel();
     return TestData(root->key(), root->LastChild()->key());
   }
 };
