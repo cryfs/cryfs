@@ -48,5 +48,4 @@ TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
   EXPECT_EQ(nullptr, nodeStore.load(firstChildKey));
 }
 
-//TODO Test Shrinking full trees down to 1-leaf-tree
 //TODO Test DepthFlags stay intact

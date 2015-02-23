@@ -1,6 +1,7 @@
 #include "testutils/DataTreeShrinkingTest.h"
 
 using blobstore::onblocks::datatreestore::DataTree;
+using blobstore::onblocks::datanodestore::DataInnerNode;
 using blockstore::Key;
 
 class DataTreeShrinkingTest_Structure: public DataTreeShrinkingTest {
@@ -126,4 +127,22 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkAThreeLevelTreeWithThreeChildrenOf
   auto key = CreateThreeLevelWithThreeChildrenOfRoot()->key();
   Shrink(key);
   EXPECT_IS_THREELEVEL_TREE_WITH_TWO_FULL_TWOLEVEL_TREES(key);
+}
+
+TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullTwoLevelTreeDownToOneLeaf) {
+  auto key = CreateFullTwoLevel()->key();
+  for (int i = 0; i < DataInnerNode::MAX_STORED_CHILDREN-1; ++i) {
+    Shrink(key);
+  }
+  EXPECT_IS_LEAF_NODE(key);
+  EXPECT_EQ(1, nodeStore.numNodes());
+}
+
+TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullThreeLevelTreeDownToOneLeaf) {
+  auto key = CreateFullThreeLevel()->key();
+  for (int i = 0; i < DataInnerNode::MAX_STORED_CHILDREN*DataInnerNode::MAX_STORED_CHILDREN-1; ++i) {
+    Shrink(key);
+  }
+  EXPECT_IS_LEAF_NODE(key);
+  EXPECT_EQ(1, nodeStore.numNodes());
 }

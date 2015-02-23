@@ -75,6 +75,10 @@ void DataNodeStore::remove(unique_ptr<DataNode> node) {
   _blockstore->remove(std::move(block));
 }
 
+uint64_t DataNodeStore::numNodes() const {
+  return _blockstore->numBlocks();
+}
+
 }
 }
 }
