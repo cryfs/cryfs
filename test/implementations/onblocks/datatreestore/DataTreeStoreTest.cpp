@@ -14,6 +14,12 @@ using namespace blobstore::onblocks::datatreestore;
 class DataTreeStoreTest: public DataTreeTest {
 };
 
+TEST_F(DataTreeStoreTest, CreatedTreeIsLoadable) {
+  auto key = treeStore.createNewTree()->key();
+  auto loaded = treeStore.load(key);
+  EXPECT_NE(nullptr, loaded.get());
+}
+
 TEST_F(DataTreeStoreTest, NewTreeIsLeafOnly) {
   auto tree = treeStore.createNewTree();
   tree->flush();
@@ -40,5 +46,3 @@ TEST_F(DataTreeStoreTest, RemovingTreeRemovesAllNodesOfTheTree) {
   EXPECT_EQ(1, nodeStore->numNodes());
   EXPECT_NE(nullptr, treeStore.load(tree2_key).get());
 }
-
-//TODO ...
