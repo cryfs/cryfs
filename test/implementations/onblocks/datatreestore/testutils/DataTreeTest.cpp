@@ -135,10 +135,8 @@ void DataTreeTest::CHECK_DEPTH(int depth, const Key &key) {
   } else {
     auto node = LoadInnerNode(key);
     EXPECT_EQ(depth, node->depth());
-    if (depth > 1) {
-      for (int i = 0; i < node->numChildren(); ++i) {
-        CHECK_DEPTH(depth-1, node->getChild(i)->key());
-      }
+    for (int i = 0; i < node->numChildren(); ++i) {
+      CHECK_DEPTH(depth-1, node->getChild(i)->key());
     }
   }
 }
