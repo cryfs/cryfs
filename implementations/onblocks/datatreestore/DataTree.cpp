@@ -116,6 +116,10 @@ void DataTree::flush() const {
   _rootNode->flush();
 }
 
+unique_ptr<DataNode> DataTree::releaseRootNode() {
+  return std::move(_rootNode);
+}
+
 
 }
 }

@@ -17,7 +17,7 @@ using blockstore::Key;
 
 TEST_F(DataTreeShrinkingTest, ShrinkingALeafOnlyTreeCrashes) {
   Key key = CreateLeafOnlyTree()->key();
-  auto tree = make_unique<DataTree>(&nodeStore, nodeStore.load(key));
+  auto tree = treeStore.load(key);
   EXPECT_DEATH(tree->removeLastDataLeaf(), "");
 }
 
@@ -36,7 +36,7 @@ TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_LastLeafBlockIsDeleted) {
   auto lastChildKey = LoadInnerNode(tree->key())->getChild(1)->key();
 
   tree->removeLastDataLeaf();
-  EXPECT_EQ(nullptr, nodeStore.load(lastChildKey));
+  EXPECT_EQ(nullptr, nodeStore->load(lastChildKey));
 }
 
 TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
@@ -45,5 +45,5 @@ TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
   auto firstChildKey = LoadInnerNode(tree->key())->getChild(0)->key();
 
   tree->removeLastDataLeaf();
-  EXPECT_EQ(nullptr, nodeStore.load(firstChildKey));
+  EXPECT_EQ(nullptr, nodeStore->load(firstChildKey));
 }

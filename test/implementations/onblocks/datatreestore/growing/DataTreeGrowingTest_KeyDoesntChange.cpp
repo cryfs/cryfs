@@ -5,9 +5,9 @@ using blobstore::onblocks::datatreestore::DataTree;
 class DataTreeGrowingTest_KeyDoesntChange: public DataTreeGrowingTest {
 public:
   void EXPECT_KEY_DOESNT_CHANGE_WHEN_GROWING(const blockstore::Key &key) {
-    DataTree tree(&nodeStore, nodeStore.load(key));
-    tree.addDataLeaf();
-    EXPECT_EQ(key, tree.key());
+    auto tree = treeStore.load(key);
+    tree->addDataLeaf();
+    EXPECT_EQ(key, tree->key());
   }
 };
 

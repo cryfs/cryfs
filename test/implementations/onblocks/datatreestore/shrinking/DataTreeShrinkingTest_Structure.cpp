@@ -135,7 +135,7 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullTwoLevelTreeDownToOneLeaf) {
     Shrink(key);
   }
   EXPECT_IS_LEAF_NODE(key);
-  EXPECT_EQ(1, nodeStore.numNodes());
+  EXPECT_EQ(1, nodeStore->numNodes());
 }
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullThreeLevelTreeDownToOneLeaf) {
@@ -144,5 +144,5 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullThreeLevelTreeDownToOneLeaf) 
     Shrink(key);
   }
   EXPECT_IS_LEAF_NODE(key);
-  EXPECT_EQ(1, nodeStore.numNodes());
+  EXPECT_EQ(1, nodeStore->numNodes());
 }

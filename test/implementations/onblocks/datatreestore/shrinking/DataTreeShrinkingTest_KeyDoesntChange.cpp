@@ -6,9 +6,9 @@ using blockstore::Key;
 class DataTreeShrinkingTest_KeyDoesntChange: public DataTreeShrinkingTest {
 public:
   void EXPECT_KEY_DOESNT_CHANGE_WHEN_SHRINKING(const Key &key) {
-    DataTree tree(&nodeStore, nodeStore.load(key));
-    tree.removeLastDataLeaf();
-    EXPECT_EQ(key, tree.key());
+    auto tree = treeStore.load(key);
+    tree->removeLastDataLeaf();
+    EXPECT_EQ(key, tree->key());
   }
 };
 

@@ -21,12 +21,23 @@ DataTreeStore::~DataTreeStore() {
 }
 
 unique_ptr<DataTree> DataTreeStore::load(const blockstore::Key &key) {
-  return make_unique<DataTree>(_nodeStore.get(), _nodeStore->load(key));
+  auto node = _nodeStore->load(key);
+  if (node.get() == nullptr) {
+    return nullptr;
+  } else {
+    return make_unique<DataTree>(_nodeStore.get(), std::move(node));
+  }
 }
 
 unique_ptr<DataTree> DataTreeStore::createNewTree() {
   unique_ptr<DataNode> newleaf = _nodeStore->createNewLeafNode();
   return make_unique<DataTree>(_nodeStore.get(), std::move(newleaf));
+}
+
+void DataTreeStore::remove(unique_ptr<DataTree> tree) {
+  auto root = tree->releaseRootNode();
+  tree.reset();
+  _nodeStore->removeSubtree(std::move(root));
 }
 
 }

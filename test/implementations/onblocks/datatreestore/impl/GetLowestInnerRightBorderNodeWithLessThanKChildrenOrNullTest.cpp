@@ -29,8 +29,8 @@ public:
   };
 
   void check(const TestData &testData) {
-    auto root = nodeStore.load(testData.rootNode);
-    auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
+    auto root = nodeStore->load(testData.rootNode);
+    auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }
 
@@ -58,8 +58,8 @@ public:
 };
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, Leaf) {
-  auto leaf = nodeStore.createNewLeafNode();
-  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, leaf.get());
+  auto leaf = nodeStore->createNewLeafNode();
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
@@ -85,12 +85,12 @@ TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, LargerTree)
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullTwoLevelTree) {
   auto root = CreateFullTwoLevel();
-  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, FullThreeLevelTree) {
   auto root = CreateFullThreeLevel();
-  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(&nodeStore, root.get());
+  auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
   EXPECT_EQ(nullptr, result.get());
 }

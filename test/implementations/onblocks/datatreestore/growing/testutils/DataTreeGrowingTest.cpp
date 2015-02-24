@@ -45,8 +45,7 @@ Key DataTreeGrowingTest::CreateThreeLevelTreeWithTwoFullSubtrees() {
 }
 
 void DataTreeGrowingTest::AddLeafTo(const Key &key) {
-  DataTree tree(&nodeStore, nodeStore.load(key));
-  tree.addDataLeaf();
+  treeStore.load(key)->addDataLeaf();
 }
 
 void DataTreeGrowingTest::EXPECT_IS_THREENODE_CHAIN(const Key &key) {

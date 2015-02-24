@@ -36,8 +36,10 @@ public:
 
   void remove(std::unique_ptr<DataNode> node);
 
+  void removeSubtree(std::unique_ptr<DataNode> node);
+
   uint64_t numNodes() const;
-  //TODO Test overwriteNodeWith(), createNodeAsCopyFrom()
+  //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
 private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);

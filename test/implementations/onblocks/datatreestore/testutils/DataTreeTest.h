@@ -8,6 +8,7 @@
 #include "../../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "../../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "../../../../../implementations/onblocks/datatreestore/DataTree.h"
+#include "../../../../../implementations/onblocks/datatreestore/DataTreeStore.h"
 
 class DataTreeTest: public ::testing::Test {
 public:
@@ -25,10 +26,13 @@ public:
   void FillNodeTwoLevel(blobstore::onblocks::datanodestore::DataInnerNode *node);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevel();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevel();
-  blobstore::onblocks::datanodestore::DataNodeStore nodeStore;
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
+  blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;
+  blobstore::onblocks::datatreestore::DataTreeStore treeStore;
 
   void EXPECT_IS_LEAF_NODE(const blockstore::Key &key);
   void EXPECT_IS_INNER_NODE(const blockstore::Key &key);

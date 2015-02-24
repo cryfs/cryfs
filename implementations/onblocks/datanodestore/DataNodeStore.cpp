@@ -79,6 +79,17 @@ uint64_t DataNodeStore::numNodes() const {
   return _blockstore->numBlocks();
 }
 
+void DataNodeStore::removeSubtree(unique_ptr<DataNode> node) {
+   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
+   if (inner != nullptr) {
+     for (int i = 0; i < inner->numChildren(); ++i) {
+       auto child = load(inner->getChild(i)->key());
+       removeSubtree(std::move(child));
+     }
+   }
+   remove(std::move(node));
+ }
+
 }
 }
 }

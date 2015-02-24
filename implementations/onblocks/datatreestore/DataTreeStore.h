@@ -25,6 +25,8 @@ public:
 
   std::unique_ptr<DataTree> createNewTree();
 
+  void remove(std::unique_ptr<DataTree> tree);
+
 private:
   std::unique_ptr<datanodestore::DataNodeStore> _nodeStore;
 

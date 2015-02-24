@@ -30,9 +30,13 @@ public:
   const blockstore::Key &key() const;
 
   void flush() const;
+
 private:
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;
+
+  std::unique_ptr<datanodestore::DataNode> releaseRootNode();
+  friend class DataTreeStore;
 
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
   cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataLeafNode *leaf);

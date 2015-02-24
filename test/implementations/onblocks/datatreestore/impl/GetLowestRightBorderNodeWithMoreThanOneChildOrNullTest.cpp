@@ -29,8 +29,8 @@ public:
   };
 
   void check(const TestData &testData) {
-    auto root = nodeStore.load(testData.rootNode);
-    auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(&nodeStore, root.get());
+    auto root = nodeStore->load(testData.rootNode);
+    auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }
 
@@ -81,20 +81,20 @@ public:
 };
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, Leaf) {
-  auto leaf = nodeStore.load(CreateLeafOnlyTree());
-  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(&nodeStore, leaf.get());
+  auto leaf = nodeStore->load(CreateLeafOnlyTree());
+  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, TwoRightBorderNodes) {
-  auto node = nodeStore.load(CreateTwoRightBorderNodes());
-  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(&nodeStore, node.get());
+  auto node = nodeStore->load(CreateTwoRightBorderNodes());
+  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, node.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, ThreeRightBorderNodes) {
-  auto node = nodeStore.load(CreateThreeRightBorderNodes());
-  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(&nodeStore, node.get());
+  auto node = nodeStore->load(CreateThreeRightBorderNodes());
+  auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, node.get());
   EXPECT_EQ(nullptr, result.get());
 }
 

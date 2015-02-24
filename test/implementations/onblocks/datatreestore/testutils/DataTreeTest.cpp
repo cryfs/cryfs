@@ -17,11 +17,13 @@ using std::vector;
 using cpputils::dynamic_pointer_move;
 
 DataTreeTest::DataTreeTest()
-  :nodeStore(make_unique<FakeBlockStore>()) {
+  :_nodeStore(make_unique<DataNodeStore>(make_unique<FakeBlockStore>())),
+   nodeStore(_nodeStore.get()),
+   treeStore(std::move(_nodeStore)) {
 }
 
 unique_ptr<DataLeafNode> DataTreeTest::CreateLeaf() {
-  return nodeStore.createNewLeafNode();
+  return nodeStore->createNewLeafNode();
 }
 
 unique_ptr<DataInnerNode> DataTreeTest::CreateInner(initializer_list<unique_ptr<DataNode>> children) {
@@ -36,7 +38,7 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataN
 
 unique_ptr<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> children) {
   assert(children.size() >= 1);
-  auto node = nodeStore.createNewInnerNode(**children.begin());
+  auto node = nodeStore->createNewInnerNode(**children.begin());
   for(auto child = children.begin()+1; child != children.end(); ++child) {
     node->addChild(**child);
   }
@@ -44,7 +46,8 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> chil
 }
 
 unique_ptr<DataTree> DataTreeTest::CreateLeafOnlyTree() {
-  return make_unique<DataTree>(&nodeStore, CreateLeaf());
+  auto key = CreateLeaf()->key();
+  return treeStore.load(key);
 }
 
 void DataTreeTest::FillNode(DataInnerNode *node) {
@@ -72,14 +75,14 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateFullThreeLevel() {
 }
 
 unique_ptr<DataInnerNode> DataTreeTest::LoadInnerNode(const Key &key) {
-  auto node = nodeStore.load(key);
+  auto node = nodeStore->load(key);
   auto casted = dynamic_pointer_move<DataInnerNode>(node);
   EXPECT_NE(nullptr, casted.get()) << "Is not an inner node";
   return casted;
 }
 
 unique_ptr<DataLeafNode> DataTreeTest::LoadLeafNode(const Key &key) {
-  auto node = nodeStore.load(key);
+  auto node = nodeStore->load(key);
   auto casted =  dynamic_pointer_move<DataLeafNode>(node);
   EXPECT_NE(nullptr, casted.get()) << "Is not a leaf node";
   return casted;
@@ -90,7 +93,8 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateTwoLeaf() {
 }
 
 unique_ptr<DataTree> DataTreeTest::CreateTwoLeafTree() {
-  return make_unique<DataTree>(&nodeStore, CreateTwoLeaf());
+  auto key = CreateTwoLeaf()->key();
+  return treeStore.load(key);
 }
 
 void DataTreeTest::EXPECT_IS_LEAF_NODE(const Key &key) {

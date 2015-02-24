@@ -9,8 +9,7 @@ using blockstore::Key;
 using blobstore::onblocks::datatreestore::DataTree;
 
 void DataTreeShrinkingTest::Shrink(const Key &key) {
-  DataTree tree(&nodeStore, nodeStore.load(key));
-  tree.removeLastDataLeaf();
+  treeStore.load(key)->removeLastDataLeaf();
 }
 
 unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourNodeThreeLeaf() {
