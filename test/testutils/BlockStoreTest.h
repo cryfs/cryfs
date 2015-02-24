@@ -204,9 +204,9 @@ TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
   auto blockStore = this->fixture.createBlockStore();
   auto blockkey = blockStore->create(1024)->key();
   auto block = blockStore->load(blockkey);
-  EXPECT_NE(nullptr, block);
+  EXPECT_NE(nullptr, block.get());
   blockStore->remove(std::move(block));
-  EXPECT_EQ(nullptr, blockStore->load(blockkey));
+  EXPECT_EQ(nullptr, blockStore->load(blockkey).get());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
