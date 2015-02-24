@@ -128,3 +128,17 @@ void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const Key &key) {
     }
   }
 }
+
+void DataTreeTest::CHECK_DEPTH(int depth, const Key &key) {
+  if (depth == 0) {
+    EXPECT_IS_LEAF_NODE(key);
+  } else {
+    auto node = LoadInnerNode(key);
+    EXPECT_EQ(depth, node->depth());
+    if (depth > 1) {
+      for (int i = 0; i < node->numChildren(); ++i) {
+        CHECK_DEPTH(depth-1, node->getChild(i)->key());
+      }
+    }
+  }
+}

@@ -35,6 +35,8 @@ public:
   void EXPECT_IS_TWONODE_CHAIN(const blockstore::Key &key);
   void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::Key &key);
   void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::Key &key);
+
+  void CHECK_DEPTH(int depth, const blockstore::Key &key);
 };
 
 

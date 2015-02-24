@@ -47,5 +47,3 @@ TEST_F(DataTreeShrinkingTest, ShrinkATwoLeafTree_IntermediateBlocksAreDeleted) {
   tree->removeLastDataLeaf();
   EXPECT_EQ(nullptr, nodeStore.load(firstChildKey));
 }
-
-//TODO Test DepthFlags stay intact
