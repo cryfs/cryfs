@@ -27,6 +27,8 @@ public:
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevel();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevel();
 
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
+
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
 

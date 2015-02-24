@@ -30,7 +30,7 @@ TEST_F(DataTreeStoreTest, TreeIsNotLoadableAfterRemove) {
 }
 
 TEST_F(DataTreeStoreTest, RemovingTreeRemovesAllNodesOfTheTree) {
-  auto key = CreateFullThreeLevel()->key();
+  auto key = CreateThreeLevelMinData()->key();
   auto tree1 = treeStore.load(key);
   auto tree2_key = treeStore.createNewTree()->key();
 

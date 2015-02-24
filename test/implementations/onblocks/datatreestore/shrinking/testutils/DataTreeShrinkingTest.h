@@ -16,7 +16,6 @@ public:
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourNodeThreeLeaf();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoInnerNodeOneTwoLeaves();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoInnerNodeTwoOneLeaves();
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinData();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelWithTwoSiblingLeaves1();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelWithTwoSiblingLeaves2();
