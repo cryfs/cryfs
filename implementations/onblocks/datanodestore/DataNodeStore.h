@@ -37,7 +37,7 @@ public:
   void remove(std::unique_ptr<DataNode> node);
 
   uint64_t numNodes() const;
-  //TODO Test remove(), overwriteNodeWith(), createNodeAsCopyFrom()
+  //TODO Test overwriteNodeWith(), createNodeAsCopyFrom()
 
 private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);

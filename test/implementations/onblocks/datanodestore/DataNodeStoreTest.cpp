@@ -93,6 +93,14 @@ TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
+TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {
+  auto nodekey = nodeStore->createNewLeafNode()->key();
+  auto node = nodeStore->load(nodekey);
+  EXPECT_NE(nullptr, node);
+  nodeStore->remove(std::move(node));
+  EXPECT_EQ(nullptr, nodeStore->load(nodekey));
+}
+
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {
   EXPECT_EQ(0, nodeStore->numNodes());
 }
