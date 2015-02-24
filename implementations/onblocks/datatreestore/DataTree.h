@@ -43,9 +43,6 @@ private:
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
 
   void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
-  void deleteSubtree(const blockstore::Key &key);
-  void deleteChildrenOf(const datanodestore::DataNode &node);
-  void deleteChildrenOf(const datanodestore::DataInnerNode &node);
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);

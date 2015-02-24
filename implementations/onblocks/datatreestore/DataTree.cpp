@@ -52,27 +52,9 @@ void DataTree::ifRootHasOnlyOneChildReplaceRootWithItsChild() {
 }
 
 void DataTree::deleteLastChildSubtree(DataInnerNode *node) {
-  deleteSubtree(node->LastChild()->key());
+  auto lastChild = _nodeStore->load(node->LastChild()->key());
+  _nodeStore->removeSubtree(std::move(lastChild));
   node->removeLastChild();
-}
-
-void DataTree::deleteSubtree(const Key &key) {
-  auto node = _nodeStore->load(key);
-  deleteChildrenOf(*node);
-  _nodeStore->remove(std::move(node));
-}
-
-void DataTree::deleteChildrenOf(const DataNode &node) {
-  const DataInnerNode *node_inner = dynamic_cast<const DataInnerNode*>(&node);
-  if (node_inner != nullptr) {
-    deleteChildrenOf(*node_inner);
-  }
-}
-
-void DataTree::deleteChildrenOf(const DataInnerNode &node) {
-  for(int i = 0; i < node.numChildren(); ++i) {
-    deleteSubtree(node.getChild(i)->key());
-  }
 }
 
 unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
