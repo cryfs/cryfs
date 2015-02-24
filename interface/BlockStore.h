@@ -21,7 +21,6 @@ public:
   virtual std::unique_ptr<Block> load(const Key &key) = 0;
   virtual void remove(std::unique_ptr<Block> block) = 0;
   virtual uint64_t numBlocks() const = 0;
-  //TODO Test numBlocks
 };
 
 }

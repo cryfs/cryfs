@@ -209,6 +209,39 @@ TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
   EXPECT_EQ(nullptr, blockStore->load(blockkey));
 }
 
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
+  auto blockStore = this->fixture.createBlockStore();
+  EXPECT_EQ(0, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->create(1);
+  EXPECT_EQ(1, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto block = blockStore->create(1);
+  blockStore->remove(std::move(block));
+  EXPECT_EQ(0, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->create(1);
+  blockStore->create(0);
+  EXPECT_EQ(2, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto block = blockStore->create(1);
+  blockStore->create(1);
+  blockStore->remove(std::move(block));
+  EXPECT_EQ(1, blockStore->numBlocks());
+}
+
 REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     CreatedBlockHasCorrectSize,
     LoadingUnchangedBlockHasCorrectSize,
@@ -223,7 +256,12 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     LoadNonExistingBlock,
     LoadNonExistingBlockWithEmptyKey,
     TwoCreatedBlocksHaveDifferentKeys,
-    BlockIsNotLoadableAfterDeleting
+    BlockIsNotLoadableAfterDeleting,
+    NumBlocksIsCorrectOnEmptyBlockstore,
+    NumBlocksIsCorrectAfterAddingOneBlock,
+    NumBlocksIsCorrectAfterRemovingTheLastBlock,
+    NumBlocksIsCorrectAfterAddingTwoBlocks,
+    NumBlocksIsCorrectAfterRemovingABlock
 );
 
 
