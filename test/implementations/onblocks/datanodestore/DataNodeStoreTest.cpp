@@ -92,3 +92,31 @@ TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
   auto leaf = nodeStore->createNewLeafNode();
   EXPECT_EQ(0u, leaf->numBytes());
 }
+
+TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {
+  EXPECT_EQ(0, nodeStore->numNodes());
+}
+
+TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingOneLeafNode) {
+  nodeStore->createNewLeafNode();
+  EXPECT_EQ(1, nodeStore->numNodes());
+}
+
+TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingTheLastNode) {
+  auto leaf = nodeStore->createNewLeafNode();
+  nodeStore->remove(std::move(leaf));
+  EXPECT_EQ(0, nodeStore->numNodes());
+}
+
+TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingTwoNodes) {
+  auto leaf = nodeStore->createNewLeafNode();
+  auto node = nodeStore->createNewInnerNode(*leaf);
+  EXPECT_EQ(2, nodeStore->numNodes());
+}
+
+TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingANode) {
+  auto leaf = nodeStore->createNewLeafNode();
+  auto node = nodeStore->createNewInnerNode(*leaf);
+  nodeStore->remove(std::move(node));
+  EXPECT_EQ(1, nodeStore->numNodes());
+}
