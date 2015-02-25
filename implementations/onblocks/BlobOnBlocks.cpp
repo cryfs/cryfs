@@ -1,7 +1,6 @@
 #include "BlobOnBlocks.h"
 
 #include "datatreestore/DataTree.h"
-#include <cassert>
 
 using std::unique_ptr;
 
@@ -19,8 +18,7 @@ BlobOnBlocks::~BlobOnBlocks() {
 }
 
 size_t BlobOnBlocks::size() const {
-  assert(false); //TODO Implement
-  //return _rootnode->numBytesInThisNode();
+  return _datatree->numStoredBytes();
 }
 
 void BlobOnBlocks::flush() const {
