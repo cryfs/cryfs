@@ -1,16 +1,17 @@
 #include "BlobOnBlocks.h"
 
-#include "datanodestore/DataNode.h"
+#include "datatreestore/DataTree.h"
+#include <cassert>
 
 using std::unique_ptr;
 
 namespace blobstore {
 namespace onblocks {
 
-using datanodestore::DataNode;
+using datatreestore::DataTree;
 
-BlobOnBlocks::BlobOnBlocks(unique_ptr<DataNode> rootnode)
-: _rootnode(std::move(rootnode)) {
+BlobOnBlocks::BlobOnBlocks(unique_ptr<DataTree> datatree)
+: _datatree(std::move(datatree)) {
 
 }
 
@@ -23,7 +24,7 @@ size_t BlobOnBlocks::size() const {
 }
 
 void BlobOnBlocks::flush() const {
-  _rootnode->flush();
+  _datatree->flush();
 }
 
 }

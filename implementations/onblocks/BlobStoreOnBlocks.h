@@ -7,8 +7,8 @@
 
 namespace blobstore {
 namespace onblocks {
-namespace datanodestore {
-class DataNodeStore;
+namespace datatreestore {
+class DataTreeStore;
 }
 
 class BlobStoreOnBlocks: public BlobStore {
@@ -22,7 +22,7 @@ public:
   std::unique_ptr<Blob> load(const blockstore::Key &key) override;
 
 private:
-  std::unique_ptr<datanodestore::DataNodeStore> _nodes;
+  std::unique_ptr<datatreestore::DataTreeStore> _dataTreeStore;
 };
 
 }
