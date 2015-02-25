@@ -7,6 +7,7 @@
 #include "impl/algorithms.h"
 
 #include "messmer/cpp-utils/pointer.h"
+#include <cmath>
 
 using blockstore::Key;
 using blobstore::onblocks::datanodestore::DataNodeStore;
@@ -102,6 +103,57 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
   return std::move(_rootNode);
 }
 
+void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  assert(beginIndex <= endIndex);
+  //TODO assert(beginIndex <= numLeaves());
+  //TODO assert(endIndex <= numLeaves());
+  traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
+}
+
+//TODO Put intPow, ceilDivision, maxZeroSubtraction into utils and write test cases
+
+uint32_t intPow(uint32_t base, uint32_t exponent) {
+  uint32_t result = 1;
+  for(int i = 0; i < exponent; ++i) {
+    result *= base;
+  }
+  return result;
+}
+
+uint32_t ceilDivision(uint32_t dividend, uint32_t divisor) {
+  return (dividend + divisor - 1)/divisor;
+}
+
+uint32_t maxZeroSubtraction(uint32_t minuend, uint32_t subtrahend) {
+  if (minuend < subtrahend) {
+    return 0u;
+  }
+  return minuend-subtrahend;
+}
+
+void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
+  if (leaf != nullptr) {
+    assert(beginIndex <= 1 && endIndex <= 1);
+    if (beginIndex == 0 && endIndex == 1) {
+      func(leaf, leafOffset);
+    }
+    return;
+  }
+
+  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
+  uint32_t leavesPerChild = intPow(DataInnerNode::MAX_STORED_CHILDREN, root->depth()-1);
+  uint32_t beginChild = beginIndex/leavesPerChild;
+  uint32_t endChild = ceilDivision(endIndex, leavesPerChild);
+
+  for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
+    uint32_t childOffset = childIndex * leavesPerChild;
+    uint32_t localBeginIndex = maxZeroSubtraction(beginIndex, childOffset);
+    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+    auto child = _nodeStore->load(inner->getChild(childIndex)->key());
+    traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
+  }
+}
 
 }
 }

@@ -11,6 +11,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
+constexpr uint32_t DataLeafNode::MAX_STORED_BYTES;
+
 DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
   assert(*node().Depth() == 0);
