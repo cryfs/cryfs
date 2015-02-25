@@ -16,7 +16,7 @@ public:
   DataLeafNode(DataNodeView block);
   virtual ~DataLeafNode();
 
-  static constexpr uint32_t MAX_STORED_BYTES = DataNodeView::DATASIZE_BYTES;
+  uint32_t maxStoreableBytes() const;
 
   void *data();
   const void *data() const;

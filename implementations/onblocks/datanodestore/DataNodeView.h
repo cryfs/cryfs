@@ -4,39 +4,67 @@
 
 #include "messmer/blockstore/interface/Block.h"
 #include "../BlobStoreOnBlocks.h"
+#include "DataInnerNode_ChildEntry.h"
 
 #include "messmer/cpp-utils/macros.h"
 
 #include <memory>
-#include <cassert>
+#include <stdexcept>
 
 namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
+//TODO Move DataNodeLayout into own file
+class DataNodeLayout {
+public:
+  constexpr DataNodeLayout(uint32_t blocksizeBytes)
+    :_blocksizeBytes(
+        (HEADERSIZE_BYTES + 2*sizeof(DataInnerNode_ChildEntry) <= blocksizeBytes)
+        ? blocksizeBytes
+        : throw std::logic_error("Blocksize too small, not enough space to store two children in an inner node")) {
+  }
+
+  //Total size of the header
+  static constexpr uint32_t HEADERSIZE_BYTES = 8;
+  //Where in the header is the depth field
+  static constexpr uint32_t DEPTH_OFFSET_BYTES = 0;
+  //Where in the header is the size field (for inner nodes: number of children, for leafs: content data size)
+  static constexpr uint32_t SIZE_OFFSET_BYTES = 4;
+
+  //Size of a block (header + data region)
+  constexpr uint32_t blocksizeBytes() const {
+    return _blocksizeBytes;
+  }
+
+  //Number of bytes in the data region of a node
+  constexpr uint32_t datasizeBytes() const {
+    return _blocksizeBytes - HEADERSIZE_BYTES;
+  }
+
+  //Maximum number of children an inner node can store
+  constexpr uint32_t maxChildrenPerInnerNode() const {
+    return datasizeBytes() / sizeof(DataInnerNode_ChildEntry);
+  }
+
+  //Maximum number of bytes a leaf can store
+  constexpr uint32_t maxBytesPerLeaf() const {
+    return datasizeBytes();
+  }
+private:
+  uint32_t _blocksizeBytes;
+};
+
 class DataNodeView {
 public:
   DataNodeView(std::unique_ptr<blockstore::Block> block): _block(std::move(block)) {
-    assert(_block->size() == BLOCKSIZE_BYTES);
   }
   virtual ~DataNodeView() {}
 
   DataNodeView(DataNodeView &&rhs) = default;
 
-  //Total size of the header
-  static constexpr unsigned int HEADERSIZE_BYTES = 8;
-  //Where in the header is the depth field
-  static constexpr unsigned int DEPTH_OFFSET_BYTES = 0;
-  //Where in the header is the size field (for inner nodes: number of children, for leafs: content data size)
-  static constexpr unsigned int SIZE_OFFSET_BYTES = 4;
-
-  //How big is one blob in total (header + data)
-  static constexpr unsigned int BLOCKSIZE_BYTES = BlobStoreOnBlocks::BLOCKSIZE;
-  //How much space is there for data
-  static constexpr unsigned int DATASIZE_BYTES = BLOCKSIZE_BYTES - HEADERSIZE_BYTES;
-
   const uint8_t *Depth() const {
-    return GetOffset<DEPTH_OFFSET_BYTES, uint8_t>();
+    return GetOffset<DataNodeLayout::DEPTH_OFFSET_BYTES, uint8_t>();
   }
 
   uint8_t *Depth() {
@@ -44,7 +72,7 @@ public:
   }
 
   const uint32_t *Size() const {
-    return GetOffset<SIZE_OFFSET_BYTES, uint32_t>();
+    return GetOffset<DataNodeLayout::SIZE_OFFSET_BYTES, uint32_t>();
   }
 
   uint32_t *Size() {
@@ -53,7 +81,7 @@ public:
 
   template<typename Entry>
   const Entry *DataBegin() const {
-    return GetOffset<HEADERSIZE_BYTES, Entry>();
+    return GetOffset<DataNodeLayout::HEADERSIZE_BYTES, Entry>();
   }
 
   template<typename Entry>
@@ -61,9 +89,13 @@ public:
     return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataBegin<Entry>());
   }
 
+  DataNodeLayout layout() const {
+    return DataNodeLayout(_block->size());
+  }
+
   template<typename Entry>
   const Entry *DataEnd() const {
-    constexpr unsigned int NUM_ENTRIES = DATASIZE_BYTES / sizeof(Entry);
+    const unsigned int NUM_ENTRIES = layout().datasizeBytes() / sizeof(Entry);
     return DataBegin<Entry>() + NUM_ENTRIES;
   }
 

@@ -16,8 +16,10 @@ using std::initializer_list;
 using std::vector;
 using cpputils::dynamic_pointer_move;
 
+constexpr uint32_t DataTreeTest::BLOCKSIZE_BYTES;
+
 DataTreeTest::DataTreeTest()
-  :_nodeStore(make_unique<DataNodeStore>(make_unique<FakeBlockStore>())),
+  :_nodeStore(make_unique<DataNodeStore>(make_unique<FakeBlockStore>(), BLOCKSIZE_BYTES)),
    nodeStore(_nodeStore.get()),
    treeStore(std::move(_nodeStore)) {
 }
@@ -51,13 +53,13 @@ unique_ptr<DataTree> DataTreeTest::CreateLeafOnlyTree() {
 }
 
 void DataTreeTest::FillNode(DataInnerNode *node) {
-  for(unsigned int i=node->numChildren(); i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+  for(unsigned int i=node->numChildren(); i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     node->addChild(*CreateLeaf());
   }
 }
 
 void DataTreeTest::FillNodeTwoLevel(DataInnerNode *node) {
-  for(unsigned int i=node->numChildren(); i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+  for(unsigned int i=node->numChildren(); i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     node->addChild(*CreateFullTwoLevel());
   }
 }
@@ -129,7 +131,7 @@ void DataTreeTest::EXPECT_IS_TWONODE_CHAIN(const Key &key) {
 
 void DataTreeTest::EXPECT_IS_FULL_TWOLEVEL_TREE(const Key &key) {
   auto node = LoadInnerNode(key);
-  EXPECT_EQ(DataInnerNode::MAX_STORED_CHILDREN, node->numChildren());
+  EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
   for (unsigned int i = 0; i < node->numChildren(); ++i) {
     EXPECT_IS_LEAF_NODE(node->getChild(i)->key());
   }
@@ -137,10 +139,10 @@ void DataTreeTest::EXPECT_IS_FULL_TWOLEVEL_TREE(const Key &key) {
 
 void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const Key &key) {
   auto root = LoadInnerNode(key);
-  EXPECT_EQ(DataInnerNode::MAX_STORED_CHILDREN, root->numChildren());
+  EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), root->numChildren());
   for (unsigned int i = 0; i < root->numChildren(); ++i) {
     auto node = LoadInnerNode(root->getChild(i)->key());
-    EXPECT_EQ(DataInnerNode::MAX_STORED_CHILDREN, node->numChildren());
+    EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
     for (unsigned int j = 0; j < node->numChildren(); ++j) {
       EXPECT_IS_LEAF_NODE(node->getChild(j)->key());
     }

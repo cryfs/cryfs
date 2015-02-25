@@ -27,11 +27,13 @@ using std::make_unique;
 
 class DataInnerNodeTest: public Test {
 public:
+  static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+
   DataInnerNodeTest() :
-    ZEROES(DataLeafNode::MAX_STORED_BYTES),
     _blockStore(make_unique<FakeBlockStore>()),
     blockStore(_blockStore.get()),
-    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore))),
+    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
+    ZEROES(nodeStore->layout().maxBytesPerLeaf()),
     leaf(nodeStore->createNewLeafNode()),
     node(nodeStore->createNewInnerNode(*leaf)) {
 
@@ -93,21 +95,23 @@ public:
   }
 
   Key InitializeInnerNodeAddLeafReturnKey() {
-    auto node = DataInnerNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES), *leaf);
+    auto node = DataInnerNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES), *leaf);
     AddALeafTo(node.get());
     return node->key();
   }
 
-  Data ZEROES;
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
   unique_ptr<DataNodeStore> nodeStore;
+  Data ZEROES;
   unique_ptr<DataLeafNode> leaf;
   unique_ptr<DataInnerNode> node;
 };
 
+constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
+
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
-  auto node = DataInnerNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES), *leaf);
+  auto node = DataInnerNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
@@ -177,7 +181,7 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   Key key = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
 
   auto block = blockStore->load(key);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 
 TEST_F(DataInnerNodeTest, CopyingCreatesNewNode) {

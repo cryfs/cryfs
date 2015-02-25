@@ -4,6 +4,7 @@
 
 #include <memory>
 #include "messmer/cpp-utils/macros.h"
+#include "DataNodeView.h"
 
 namespace blockstore{
 class Block;
@@ -20,10 +21,12 @@ class DataInnerNode;
 
 class DataNodeStore {
 public:
-  DataNodeStore(std::unique_ptr<blockstore::BlockStore> blockstore);
+  DataNodeStore(std::unique_ptr<blockstore::BlockStore> blockstore, uint32_t blocksizeBytes);
   virtual ~DataNodeStore();
 
   static constexpr uint8_t MAX_DEPTH = 10;
+
+  DataNodeLayout layout() const;
 
   std::unique_ptr<DataNode> load(const blockstore::Key &key);
 
@@ -45,6 +48,7 @@ private:
   std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
 
   std::unique_ptr<blockstore::BlockStore> _blockstore;
+  const DataNodeLayout _layout;
 
   DISALLOW_COPY_AND_ASSIGN(DataNodeStore);
 };

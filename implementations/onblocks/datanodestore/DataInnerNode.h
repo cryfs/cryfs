@@ -3,6 +3,7 @@
 #define BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATAINNERNODE_H_
 
 #include "DataNode.h"
+#include "DataInnerNode_ChildEntry.h"
 
 namespace blobstore {
 namespace onblocks {
@@ -15,21 +16,9 @@ public:
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();
 
-  struct ChildEntry {
-  public:
-    blockstore::Key key() const {
-      return blockstore::Key::FromBinary(_keydata);
-    }
-  private:
-    void setKey(const blockstore::Key &key) {
-      key.ToBinary(_keydata);
-    }
-    friend class DataInnerNode;
-    uint8_t _keydata[blockstore::Key::KEYLENGTH_BINARY];
-    DISALLOW_COPY_AND_ASSIGN(ChildEntry);
-  };
+  using ChildEntry = DataInnerNode_ChildEntry;
 
-  static constexpr uint32_t MAX_STORED_CHILDREN = DataNodeView::DATASIZE_BYTES / sizeof(ChildEntry);
+  uint32_t maxStoreableChildren() const;
 
   uint8_t depth() const;
 

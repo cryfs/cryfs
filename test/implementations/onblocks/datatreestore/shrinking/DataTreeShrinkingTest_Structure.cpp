@@ -131,7 +131,7 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkAThreeLevelTreeWithThreeChildrenOf
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullTwoLevelTreeDownToOneLeaf) {
   auto key = CreateFullTwoLevel()->key();
-  for (int i = 0; i < DataInnerNode::MAX_STORED_CHILDREN-1; ++i) {
+  for (int i = 0; i < nodeStore->layout().maxChildrenPerInnerNode()-1; ++i) {
     Shrink(key);
   }
   EXPECT_IS_LEAF_NODE(key);
@@ -140,7 +140,7 @@ TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullTwoLevelTreeDownToOneLeaf) {
 
 TEST_F(DataTreeShrinkingTest_Structure, ShrinkAFullThreeLevelTreeDownToOneLeaf) {
   auto key = CreateFullThreeLevel()->key();
-  for (int i = 0; i < DataInnerNode::MAX_STORED_CHILDREN*DataInnerNode::MAX_STORED_CHILDREN-1; ++i) {
+  for (int i = 0; i < nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode()-1; ++i) {
     Shrink(key);
   }
   EXPECT_IS_LEAF_NODE(key);

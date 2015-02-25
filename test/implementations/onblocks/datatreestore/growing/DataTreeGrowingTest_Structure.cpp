@@ -32,7 +32,7 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAThreeNodeChainedTree) {
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullTwoLevelTreeFromGroundUp) {
   auto key = CreateLeafOnlyTree()->key();
-  for (int i = 1; i < DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+  for (int i = 1; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     AddLeafTo(key);
   }
   EXPECT_IS_FULL_TWOLEVEL_TREE(key);
@@ -62,7 +62,7 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithLowerLevelFull) {
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTreeFromGroundUp) {
   auto key = CreateLeafOnlyTree()->key();
-  for (int i = 1; i < DataInnerNode::MAX_STORED_CHILDREN * DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+  for (int i = 1; i < nodeStore->layout().maxChildrenPerInnerNode() * nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     AddLeafTo(key);
   }
   EXPECT_IS_FULL_THREELEVEL_TREE(key);
@@ -81,7 +81,7 @@ TEST_F(DataTreeGrowingTest_Structure, GrowAFullThreeLevelTree) {
 
 TEST_F(DataTreeGrowingTest_Structure, GrowAThreeLevelTreeWithTwoFullSubtreesFromGroundUp) {
   auto key = CreateLeafOnlyTree()->key();
-  for (int i = 1; i < 2 * DataInnerNode::MAX_STORED_CHILDREN; ++i) {
+  for (int i = 1; i < 2 * nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     AddLeafTo(key);
   }
 

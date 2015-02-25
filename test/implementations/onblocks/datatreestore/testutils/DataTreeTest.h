@@ -14,6 +14,8 @@ class DataTreeTest: public ::testing::Test {
 public:
   DataTreeTest();
 
+  static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::vector<const blobstore::onblocks::datanodestore::DataNode *> children);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<const blobstore::onblocks::datanodestore::DataNode *> children);

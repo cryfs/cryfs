@@ -17,14 +17,15 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataNodeStore::DataNodeStore(unique_ptr<BlockStore> blockstore)
-: _blockstore(std::move(blockstore)) {
+DataNodeStore::DataNodeStore(unique_ptr<BlockStore> blockstore, uint32_t blocksizeBytes)
+: _blockstore(std::move(blockstore)), _layout(blocksizeBytes) {
 }
 
 DataNodeStore::~DataNodeStore() {
 }
 
 unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
+  assert(block->size() == _layout.blocksizeBytes());
   DataNodeView node(std::move(block));
 
   if (*node.Depth() == 0) {
@@ -37,12 +38,13 @@ unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
 }
 
 unique_ptr<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
-  auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
+  assert(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
+  auto block = _blockstore->create(_layout.blocksizeBytes());
   return DataInnerNode::InitializeNewNode(std::move(block), first_child);
 }
 
 unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
-  auto block = _blockstore->create(DataNodeView::BLOCKSIZE_BYTES);
+  auto block = _blockstore->create(_layout.blocksizeBytes());
   return DataLeafNode::InitializeNewNode(std::move(block));
 }
 
@@ -55,11 +57,14 @@ unique_ptr<DataNode> DataNodeStore::load(const Key &key) {
 }
 
 unique_ptr<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &source) {
+  assert(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
   auto newBlock = blockstore::utils::copyToNewBlock(_blockstore.get(), source.node().block());
   return load(std::move(newBlock));
 }
 
 unique_ptr<DataNode> DataNodeStore::overwriteNodeWith(unique_ptr<DataNode> target, const DataNode &source) {
+  assert(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes());
+  assert(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes());
   Key key = target->key();
   {
     auto targetBlock = target->node().releaseBlock();
@@ -80,15 +85,19 @@ uint64_t DataNodeStore::numNodes() const {
 }
 
 void DataNodeStore::removeSubtree(unique_ptr<DataNode> node) {
-   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
-   if (inner != nullptr) {
-     for (int i = 0; i < inner->numChildren(); ++i) {
-       auto child = load(inner->getChild(i)->key());
-       removeSubtree(std::move(child));
-     }
-   }
-   remove(std::move(node));
- }
+  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
+  if (inner != nullptr) {
+    for (int i = 0; i < inner->numChildren(); ++i) {
+      auto child = load(inner->getChild(i)->key());
+      removeSubtree(std::move(child));
+    }
+  }
+  remove(std::move(node));
+}
+
+DataNodeLayout DataNodeStore::layout() const {
+  return _layout;
+}
 
 }
 }

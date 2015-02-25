@@ -33,17 +33,19 @@ using namespace blobstore::onblocks::datanodestore;
 class DataLeafNodeTest: public Test {
 public:
 
+  static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+
   DataLeafNodeTest():
-    ZEROES(DataLeafNode::MAX_STORED_BYTES),
-    randomData(DataLeafNode::MAX_STORED_BYTES),
     _blockStore(make_unique<FakeBlockStore>()),
     blockStore(_blockStore.get()),
-    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore))),
+    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
+    randomData(nodeStore->layout().maxBytesPerLeaf()),
+    ZEROES(nodeStore->layout().maxBytesPerLeaf()),
     leaf(nodeStore->createNewLeafNode()) {
 
     ZEROES.FillWithZeroes();
 
-    DataBlockFixture dataFixture(DataLeafNode::MAX_STORED_BYTES);
+    DataBlockFixture dataFixture(nodeStore->layout().maxBytesPerLeaf());
 
     std::memcpy(randomData.data(), dataFixture.data(), randomData.size());
   }
@@ -89,21 +91,23 @@ public:
   }
 
   Key InitializeLeafGrowAndReturnKey() {
-    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES));
+    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES));
     leaf->resize(5);
     return leaf->key();
   }
 
-  Data ZEROES;
-  Data randomData;
   unique_ptr<BlockStore> _blockStore;
   BlockStore *blockStore;
   unique_ptr<DataNodeStore> nodeStore;
+  Data ZEROES;
+  Data randomData;
   unique_ptr<DataLeafNode> leaf;
 };
 
+constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
+
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
-  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(DataNodeView::BLOCKSIZE_BYTES));
+  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES));
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
@@ -141,7 +145,7 @@ public:
     return leaf->key();
   }
 };
-INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataLeafNode::MAX_STORED_BYTES));
+INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataNodeLayout(DataLeafNodeTest::BLOCKSIZE_BYTES).maxBytesPerLeaf()));
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
   leaf->resize(GetParam());
@@ -177,14 +181,14 @@ TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
   {
     //At first, we expect there to be random data in the underlying data block
     auto block = blockStore->load(key);
-    EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+    EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 
   //After shrinking, we expect there to be zeroes in the underlying data block
   ResizeLeaf(key, smaller_size);
   {
     auto block = blockStore->load(key);
-    EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+smaller_size, 100));
+    EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 }
 
@@ -211,7 +215,7 @@ TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   Key key = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
 
   auto block = blockStore->load(key);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeView::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), DataLeafNode::MAX_STORED_BYTES-sizeof(DataInnerNode::ChildEntry)));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 
 TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf) {

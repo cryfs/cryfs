@@ -11,8 +11,6 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-constexpr uint32_t DataInnerNode::MAX_STORED_CHILDREN;
-
 DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
   assert(depth() > 0);
@@ -72,7 +70,7 @@ const DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) con
 }
 
 void DataInnerNode::addChild(const DataNode &child) {
-  assert(numChildren() < DataInnerNode::MAX_STORED_CHILDREN);
+  assert(numChildren() < maxStoreableChildren());
   assert(child.depth() == depth()-1);
   *node().Size() += 1;
   LastChild()->setKey(child.key());
@@ -81,6 +79,10 @@ void DataInnerNode::addChild(const DataNode &child) {
 void DataInnerNode::removeLastChild() {
   assert(*node().Size() > 1);
   *node().Size() -= 1;
+}
+
+uint32_t DataInnerNode::maxStoreableChildren() const {
+  return node().layout().maxChildrenPerInnerNode();
 }
 
 }

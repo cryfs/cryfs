@@ -13,7 +13,7 @@ class DataNodeStore;
 
 class BlobStoreOnBlocks: public BlobStore {
 public:
-  static constexpr size_t BLOCKSIZE = 4096;
+  static constexpr size_t BLOCKSIZE_BYTES = 4096;
 
   BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~BlobStoreOnBlocks();

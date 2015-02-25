@@ -11,12 +11,10 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-constexpr uint32_t DataLeafNode::MAX_STORED_BYTES;
-
 DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
   assert(*node().Depth() == 0);
-  assert(numBytes() <= MAX_STORED_BYTES);
+  assert(numBytes() <= maxStoreableBytes());
 }
 
 DataLeafNode::~DataLeafNode() {
@@ -43,7 +41,7 @@ uint32_t DataLeafNode::numBytes() const {
 }
 
 void DataLeafNode::resize(uint32_t new_size) {
-  assert(new_size <= MAX_STORED_BYTES);
+  assert(new_size <= maxStoreableBytes());
   uint32_t old_size = *node().Size();
   if (new_size < old_size) {
     fillDataWithZeroesFromTo(new_size, old_size);
@@ -53,6 +51,10 @@ void DataLeafNode::resize(uint32_t new_size) {
 
 void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
   std::memset(node().DataBegin<uint8_t>()+begin, 0, end-begin);
+}
+
+uint32_t DataLeafNode::maxStoreableBytes() const {
+  return node().layout().maxBytesPerLeaf();
 }
 
 }

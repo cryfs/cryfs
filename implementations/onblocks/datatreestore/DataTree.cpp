@@ -142,7 +142,7 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
   }
 
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
-  uint32_t leavesPerChild = intPow(DataInnerNode::MAX_STORED_CHILDREN, root->depth()-1);
+  uint32_t leavesPerChild = intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root->depth()-1);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = ceilDivision(endIndex, leavesPerChild);
 

@@ -22,10 +22,14 @@ using namespace blobstore::onblocks::datanodestore;
 
 class DataNodeStoreTest: public Test {
 public:
+  static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+
   unique_ptr<BlockStore> _blockStore = make_unique<FakeBlockStore>();
   BlockStore *blockStore = _blockStore.get();
-  unique_ptr<DataNodeStore> nodeStore = make_unique<DataNodeStore>(std::move(_blockStore));
+  unique_ptr<DataNodeStore> nodeStore = make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES);
 };
+
+constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
@@ -69,7 +73,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
 }
 
 TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
-  auto block = blockStore->create(BlobStoreOnBlocks::BLOCKSIZE);
+  auto block = blockStore->create(BLOCKSIZE_BYTES);
   Key key = block->key();
   {
     DataNodeView view(std::move(block));

@@ -49,7 +49,7 @@ optional_ownership_ptr<DataInnerNode> GetLowestRightBorderNodeWithMoreThanOneChi
 
 optional_ownership_ptr<datanodestore::DataInnerNode> GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(datanodestore::DataNodeStore *nodeStore, datanodestore::DataNode *rootNode) {
   return GetLowestInnerRightBorderNodeWithConditionOrNull(nodeStore, rootNode, [] (const datanodestore::DataInnerNode &node) {
-    return node.numChildren() < DataInnerNode::MAX_STORED_CHILDREN;
+    return node.numChildren() < node.maxStoreableChildren();
   });
 }
 

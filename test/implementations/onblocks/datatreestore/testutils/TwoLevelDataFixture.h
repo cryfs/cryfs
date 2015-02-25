@@ -6,6 +6,7 @@
 #include <messmer/cpp-utils/pointer.h>
 #include "LeafDataFixture.h"
 
+//TODO Rename, since we now allow any number of levels
 // A data fixture containing data for a two-level tree (one inner node with leaf children).
 // The class can fill this data into the leaf children of a given inner node
 // and given an inner node can check, whether the data stored is correct.
@@ -52,9 +53,10 @@ private:
 
   int size(int childIndex) {
     if (_useFullSizeLeaves) {
-      return blobstore::onblocks::datanodestore::DataLeafNode::MAX_STORED_BYTES;
+      return _dataNodeStore->layout().maxBytesPerLeaf();
     } else {
-      return mod(blobstore::onblocks::datanodestore::DataLeafNode::MAX_STORED_BYTES - childIndex, blobstore::onblocks::datanodestore::DataLeafNode::MAX_STORED_BYTES);
+      uint32_t maxBytesPerLeaf = _dataNodeStore->layout().maxBytesPerLeaf();
+      return mod(maxBytesPerLeaf - childIndex, maxBytesPerLeaf);
     }
   }
 

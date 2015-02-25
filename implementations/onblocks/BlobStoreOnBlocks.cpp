@@ -15,8 +15,10 @@ namespace onblocks {
 
 using datanodestore::DataNodeStore;
 
+constexpr size_t BlobStoreOnBlocks::BLOCKSIZE_BYTES;
+
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore)
-: _nodes(make_unique<DataNodeStore>(std::move(blockStore))) {
+: _nodes(make_unique<DataNodeStore>(std::move(blockStore), BLOCKSIZE_BYTES)) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
