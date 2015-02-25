@@ -32,6 +32,8 @@ public:
   void flush() const;
 
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  uint64_t numStoredBytes() const;
+  //TODO Test numStoredBytes()
 
 private:
   datanodestore::DataNodeStore *_nodeStore;
@@ -48,6 +50,8 @@ private:
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
   void traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
+  uint64_t numStoredBytes(const datanodestore::DataNode &root) const;
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

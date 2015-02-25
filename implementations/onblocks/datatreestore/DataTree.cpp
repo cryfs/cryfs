@@ -142,7 +142,7 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
   }
 
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
-  uint32_t leavesPerChild = intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root->depth()-1);
+  uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = ceilDivision(endIndex, leavesPerChild);
 
@@ -153,6 +153,28 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
     auto child = _nodeStore->load(inner->getChild(childIndex)->key());
     traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
   }
+}
+
+uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
+  return intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root.depth()-1);
+}
+
+uint64_t DataTree::numStoredBytes() const {
+  return numStoredBytes(*_rootNode);
+}
+
+uint64_t DataTree::numStoredBytes(const DataNode &root) const {
+  const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&root);
+  if (leaf != nullptr) {
+    return leaf->numBytes();
+  }
+
+  const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
+  uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
+  auto lastChild = _nodeStore->load(inner.LastChild()->key());
+  uint64_t numBytesInRightChild = numStoredBytes(*lastChild);
+
+  return numBytesInLeftChildren + numBytesInRightChild;
 }
 
 }
