@@ -335,8 +335,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfThreelevelTree) {
   TraverseLeaves(root.get(), 0, 5 * nodeStore->layout().maxChildrenPerInnerNode() + child->numChildren());
 }
 
-//Disabled because it takes too long
-TEST_F(DataTreeTest_TraverseLeaves, DISABLED_TraverseAllLeavesOfFourLevelTree) {
+TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfFourLevelTree) {
   auto root = CreateFourLevel();
   //Traverse all leaves of the full threelevel tree in the first child
   auto firstChild = LoadInnerNode(root->getChild(0)->key());
@@ -356,5 +355,30 @@ TEST_F(DataTreeTest_TraverseLeaves, DISABLED_TraverseAllLeavesOfFourLevelTree) {
   TraverseLeaves(root.get(), 0, 2*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode() + 1);
 }
 
-//TODO Traverse inner part of four level tree
+TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfFourLevelTree) {
+  auto root = CreateFourLevel();
+  //Traverse some leaves of the full threelevel tree in the first child
+  auto firstChild = LoadInnerNode(root->getChild(0)->key());
+  auto secondChildOfFirstChild = LoadInnerNode(firstChild->getChild(1)->key());
+  for(int i = 5; i < secondChildOfFirstChild->numChildren(); ++i) {
+    EXPECT_TRAVERSE_LEAF(secondChildOfFirstChild->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode()+i);
+  }
+  for(int i = 2; i < firstChild->numChildren(); ++i) {
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+  }
+  //Traverse all leaves of the full threelevel tree in the second child
+  auto secondChild = LoadInnerNode(root->getChild(1)->key());
+  for(int i = 0; i < secondChild->numChildren(); ++i) {
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->getChild(i)->key()), (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
+  }
+  //Traverse some leaves of the non-full threelevel tree in the third child
+  auto thirdChild = LoadInnerNode(root->getChild(2)->key());
+  auto firstChildOfThirdChild = LoadInnerNode(thirdChild->getChild(0)->key());
+  for(int i = 0; i < firstChildOfThirdChild->numChildren()-1; ++i) {
+    EXPECT_TRAVERSE_LEAF(firstChildOfThirdChild->getChild(i)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode()+i);
+  }
+
+  TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode()+5, 2*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode() -1);
+}
+
 //TODO Refactor the test cases that are too long
