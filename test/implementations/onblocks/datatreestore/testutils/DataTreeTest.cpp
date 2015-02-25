@@ -75,6 +75,13 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateThreeLevelMinData() {
   });
 }
 
+unique_ptr<DataInnerNode> DataTreeTest::CreateFourLevelMinData() {
+  return CreateInner({
+    CreateFullThreeLevel(),
+    CreateInner({CreateInner({CreateLeaf()})})
+  });
+}
+
 unique_ptr<DataInnerNode> DataTreeTest::CreateFullThreeLevel() {
   auto root = CreateInner({CreateFullTwoLevel().get()});
   FillNodeTwoLevel(root.get());

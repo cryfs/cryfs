@@ -30,13 +30,6 @@ unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateTwoInnerNodeTwoOneLeaves(
   });
 }
 
-unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourLevelMinData() {
-  return CreateInner({
-    CreateFullThreeLevel(),
-    CreateInner({CreateInner({CreateLeaf()})})
-  });
-}
-
 unique_ptr<DataInnerNode> DataTreeShrinkingTest::CreateFourLevelWithTwoSiblingLeaves1() {
   return CreateInner({
     CreateFullThreeLevel(),
