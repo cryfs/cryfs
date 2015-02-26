@@ -22,29 +22,29 @@ using std::vector;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, unique_ptr<DirBlock> block)
-: _device(device), _block(std::move(block)) {
+CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> blob)
+: _device(device), _blob(std::move(blob)) {
 }
 
 CryDir::~CryDir() {
 }
 
 unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
-  auto child = _device->CreateBlock(0);
-  _block->AddChild(name, child->key());
-  //TODO Di we need a return value in createDir for fspp? If not, change fspp!
-  auto fileblock = make_unique<FileBlock>(std::move(child));
-  fileblock->InitializeEmptyFile();
-  return make_unique<CryFile>(std::move(fileblock));
+  auto child = _device->CreateBlob();
+  _blob->AddChild(name, child->key());
+  //TODO Do we need a return value in createDir for fspp? If not, change fspp!
+  auto fileblob = make_unique<FileBlob>(std::move(child));
+  fileblob->InitializeEmptyFile();
+  return make_unique<CryFile>(std::move(fileblob));
 }
 
 unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
-  auto child = _device->CreateBlock(CryDevice::DIR_BLOCKSIZE);
-  _block->AddChild(name, child->key());
+  auto child = _device->CreateBlob();
+  _blob->AddChild(name, child->key());
   //TODO I don't think we need a return value in createDir for fspp. Change fspp!
-  auto dirblock = make_unique<DirBlock>(std::move(child));
-  dirblock->InitializeEmptyDir();
-  return make_unique<CryDir>(_device, std::move(dirblock));
+  auto dirblob = make_unique<DirBlob>(std::move(child));
+  dirblob->InitializeEmptyDir();
+  return make_unique<CryDir>(_device, std::move(dirblob));
 }
 
 void CryDir::rmdir() {
@@ -52,7 +52,7 @@ void CryDir::rmdir() {
 }
 
 unique_ptr<vector<string>> CryDir::children() const {
-  return _block->GetChildren();
+  return _blob->GetChildren();
 }
 
 }

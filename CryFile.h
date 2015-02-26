@@ -2,16 +2,16 @@
 #ifndef CRYFS_LIB_CRYFILE_H_
 #define CRYFS_LIB_CRYFILE_H_
 
+#include <messmer/cryfs/impl/FileBlob.h>
 #include <messmer/fspp/fs_interface/File.h>
 #include "CryNode.h"
 
-#include "impl/FileBlock.h"
 
 namespace cryfs {
 
 class CryFile: public fspp::File, CryNode {
 public:
-  CryFile(std::unique_ptr<FileBlock> block);
+  CryFile(std::unique_ptr<FileBlob> blob);
   virtual ~CryFile();
 
   std::unique_ptr<fspp::OpenFile> open(int flags) const override;
@@ -19,7 +19,7 @@ public:
   void unlink() override;
 
 private:
-  std::unique_ptr<FileBlock> _block;
+  std::unique_ptr<FileBlob> _blob;
 
   DISALLOW_COPY_AND_ASSIGN(CryFile);
 };

@@ -11,7 +11,7 @@ using boost::property_tree::ptree;
 namespace cryfs {
 
 CryConfig::CryConfig(const bf::path &configfile)
-:_configfile(configfile), _root_block("") {
+:_configfile(configfile), _rootBlob("") {
   if (bf::exists(_configfile)) {
     load();
   }
@@ -21,23 +21,23 @@ void CryConfig::load() {
   ptree pt;
   read_json(_configfile.native(), pt);
 
-  _root_block = pt.get("cryfs.rootblock", "");
+  _rootBlob = pt.get("cryfs.rootblob", "");
 }
 
 void CryConfig::save() const {
   ptree pt;
 
-  pt.put("cryfs.rootblock", _root_block);
+  pt.put("cryfs.rootblob", _rootBlob);
 
   write_json(_configfile.native(), pt);
 }
 
-const std::string &CryConfig::RootBlock() const {
-  return _root_block;
+const std::string &CryConfig::RootBlob() const {
+  return _rootBlob;
 }
 
-void CryConfig::SetRootBlock(const std::string &value) {
-  _root_block = value;
+void CryConfig::SetRootBlob(const std::string &value) {
+  _rootBlob = value;
 }
 
 CryConfig::~CryConfig() {
