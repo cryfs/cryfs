@@ -9,6 +9,7 @@ using std::unique_ptr;
 using std::function;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
+using blockstore::Key;
 
 namespace blobstore {
 namespace onblocks {
@@ -57,6 +58,10 @@ void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
   traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
     std::memcpy(leafDataBegin, source, leafDataSize);
   });
+}
+
+Key BlobOnBlocks::key() const {
+  return _datatree->key();
 }
 
 }
