@@ -30,7 +30,7 @@ public:
 
 private:
    //TODO Don't pass DataLeafNode, but pointer to its data region? Does this work with both read/write (const/nonconst)?
-   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (datanodestore::DataLeafNode*, uint64_t, uint32_t, uint32_t)>) const;
+   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, void *, uint32_t)>) const;
 
   std::unique_ptr<datatreestore::DataTree> _datatree;
 };

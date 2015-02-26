@@ -34,7 +34,7 @@ void BlobOnBlocks::flush() const {
   _datatree->flush();
 }
 
-void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (DataLeafNode*, uint64_t, uint32_t, uint32_t)> func) const {
+void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, void *, uint32_t)> func) const {
   uint64_t endByte = beginByte + sizeBytes;
   assert(endByte <= size());
   uint32_t firstLeaf = beginByte / _datatree->maxBytesPerLeaf();
@@ -43,19 +43,19 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
     uint32_t dataSize = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
-    func(leaf, indexOfFirstLeafByte, dataBegin, dataSize);
+    func(indexOfFirstLeafByte, (uint8_t*)leaf->data() + dataBegin, dataSize);
   });
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t size) const {
-  traverseLeaves(offset, size, [target] (DataLeafNode *leaf, uint64_t indexOfFirstLeafByte, uint32_t dataBegin, uint32_t dataSize) {
-    std::memcpy(target, (uint8_t*)leaf->data() + dataBegin, dataSize);
+  traverseLeaves(offset, size, [target] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
+    std::memcpy(target, leafDataBegin, leafDataSize);
   });
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
-  traverseLeaves(offset, size, [source] (DataLeafNode *leaf, uint64_t indexOfFirstLeafByte, uint32_t dataBegin, uint32_t dataSize) {
-    std::memcpy((uint8_t*)leaf->data() + dataBegin, source, dataSize);
+  traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
+    std::memcpy(leafDataBegin, source, leafDataSize);
   });
 }
 
