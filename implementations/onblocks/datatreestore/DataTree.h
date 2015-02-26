@@ -5,6 +5,7 @@
 #include <memory>
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/optional_ownership_ptr.h>
+#include "../datanodestore/DataNodeView.h"
 
 namespace blockstore {
 class Key;
@@ -19,6 +20,7 @@ class DataNode;
 }
 namespace datatreestore {
 
+//TODO It is strange that DataLeafNode is still part in the public interface of DataTree. This should be separated somehow.
 class DataTree {
 public:
   DataTree(datanodestore::DataNodeStore *nodeStore, std::unique_ptr<datanodestore::DataNode> rootNode);
@@ -28,6 +30,7 @@ public:
   void removeLastDataLeaf();
 
   const blockstore::Key &key() const;
+  uint32_t maxBytesPerLeaf() const;
 
   void flush() const;
 

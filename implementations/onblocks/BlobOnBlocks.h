@@ -8,6 +8,9 @@
 
 namespace blobstore {
 namespace onblocks {
+namespace datanodestore {
+class DataLeafNode;
+}
 namespace datatreestore {
 class DataTree;
 }
@@ -20,9 +23,15 @@ public:
   uint64_t size() const override;
   void resize(uint64_t numBytes) override;
 
+  void read(void *target, uint64_t offset, uint64_t size) const;
+  void write(const void *source, uint64_t offset, uint64_t size);
+
   void flush() const override;
 
 private:
+   //TODO Don't pass DataLeafNode, but pointer to its data region? Does this work with both read/write (const/nonconst)?
+   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (datanodestore::DataLeafNode*, uint64_t, uint32_t, uint32_t)>) const;
+
   std::unique_ptr<datatreestore::DataTree> _datatree;
 };
 

@@ -3,6 +3,7 @@
 #include "../datanodestore/DataNodeStore.h"
 #include "../datanodestore/DataInnerNode.h"
 #include "../datanodestore/DataLeafNode.h"
+#include "../utils/Math.h"
 
 #include "impl/algorithms.h"
 
@@ -15,6 +16,7 @@ using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
+using blobstore::onblocks::datanodestore::DataNodeLayout;
 
 using std::unique_ptr;
 using std::dynamic_pointer_cast;
@@ -113,27 +115,6 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
 }
 
-//TODO Put intPow, ceilDivision, maxZeroSubtraction into utils and write test cases
-
-uint32_t intPow(uint32_t base, uint32_t exponent) {
-  uint32_t result = 1;
-  for(int i = 0; i < exponent; ++i) {
-    result *= base;
-  }
-  return result;
-}
-
-uint32_t ceilDivision(uint32_t dividend, uint32_t divisor) {
-  return (dividend + divisor - 1)/divisor;
-}
-
-uint32_t maxZeroSubtraction(uint32_t minuend, uint32_t subtrahend) {
-  if (minuend < subtrahend) {
-    return 0u;
-  }
-  return minuend-subtrahend;
-}
-
 void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
   DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
   if (leaf != nullptr) {
@@ -147,11 +128,11 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
-  uint32_t endChild = ceilDivision(endIndex, leavesPerChild);
+  uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
 
   for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
     uint32_t childOffset = childIndex * leavesPerChild;
-    uint32_t localBeginIndex = maxZeroSubtraction(beginIndex, childOffset);
+    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
     auto child = _nodeStore->load(inner->getChild(childIndex)->key());
     traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
@@ -159,7 +140,7 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
-  return intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root.depth()-1);
+  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root.depth()-1);
 }
 
 uint64_t DataTree::numStoredBytes() const {
@@ -186,7 +167,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   uint64_t currentNumBytes = numStoredBytes();
   assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
   uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
-  uint32_t newNumLeaves = ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf());
+  uint32_t newNumLeaves = utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf());
 
   for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
     addDataLeaf();
@@ -216,6 +197,10 @@ unique_ptr<DataLeafNode> DataTree::LastLeaf(unique_ptr<DataNode> root) {
   }
   auto inner = dynamic_pointer_move<DataInnerNode>(root);
   return LastLeaf(_nodeStore->load(inner->LastChild()->key()));
+}
+
+uint32_t DataTree::maxBytesPerLeaf() const {
+  return _nodeStore->layout().maxBytesPerLeaf();
 }
 
 }
