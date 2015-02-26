@@ -7,6 +7,7 @@
 #include "impl/algorithms.h"
 
 #include "messmer/cpp-utils/pointer.h"
+#include "messmer/cpp-utils/optional_ownership_ptr.h"
 #include <cmath>
 
 using blockstore::Key;
@@ -21,6 +22,8 @@ using std::function;
 
 using cpputils::dynamic_pointer_move;
 using cpputils::optional_ownership_ptr;
+using cpputils::WithOwnership;
+using cpputils::WithoutOwnership;
 
 namespace blobstore {
 namespace onblocks {
@@ -175,6 +178,43 @@ uint64_t DataTree::numStoredBytes(const DataNode &root) const {
   uint64_t numBytesInRightChild = numStoredBytes(*lastChild);
 
   return numBytesInLeftChildren + numBytesInRightChild;
+}
+
+void DataTree::resizeNumBytes(uint64_t newNumBytes) {
+  //TODO Faster implementation possible
+  LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
+  uint64_t currentNumBytes = numStoredBytes();
+  assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
+  uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
+  uint32_t newNumLeaves = ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf());
+
+  for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
+    addDataLeaf();
+  }
+  for(uint32_t i = currentNumLeaves; i > newNumLeaves; --i) {
+    removeLastDataLeaf();
+  }
+  uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
+  LastLeaf(_rootNode.get())->resize(newLastLeafSize);
+}
+
+optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
+  DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
+  if (leaf != nullptr) {
+    return WithoutOwnership(leaf);
+  }
+
+  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
+  return WithOwnership(LastLeaf(_nodeStore->load(inner->LastChild()->key())));
+}
+
+unique_ptr<DataLeafNode> DataTree::LastLeaf(unique_ptr<DataNode> root) {
+  auto leaf = dynamic_pointer_move<DataLeafNode>(root);
+  if (leaf.get() != nullptr) {
+    return leaf;
+  }
+  auto inner = dynamic_pointer_move<DataInnerNode>(root);
+  return LastLeaf(_nodeStore->load(inner->LastChild()->key()));
 }
 
 }

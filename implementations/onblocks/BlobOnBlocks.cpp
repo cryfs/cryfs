@@ -17,8 +17,12 @@ BlobOnBlocks::BlobOnBlocks(unique_ptr<DataTree> datatree)
 BlobOnBlocks::~BlobOnBlocks() {
 }
 
-size_t BlobOnBlocks::size() const {
+uint64_t BlobOnBlocks::size() const {
   return _datatree->numStoredBytes();
+}
+
+void BlobOnBlocks::resize(uint64_t numBytes) {
+  _datatree->resizeNumBytes(numBytes);
 }
 
 void BlobOnBlocks::flush() const {

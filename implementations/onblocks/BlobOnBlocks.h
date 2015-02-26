@@ -17,7 +17,8 @@ public:
   BlobOnBlocks(std::unique_ptr<datatreestore::DataTree> datatree);
   virtual ~BlobOnBlocks();
 
-  size_t size() const override;
+  uint64_t size() const override;
+  void resize(uint64_t numBytes) override;
 
   void flush() const override;
 
