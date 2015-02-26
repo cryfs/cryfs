@@ -1,4 +1,4 @@
-#include "../testutils/DataTreeTest.h"
+#include "testutils/DataTreeTest.h"
 #include <google/gmock/gmock.h>
 
 using ::testing::_;
