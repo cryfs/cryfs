@@ -33,7 +33,6 @@ public:
 
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
   uint64_t numStoredBytes() const;
-  //TODO Test numStoredBytes()
 
 private:
   datanodestore::DataNodeStore *_nodeStore;
