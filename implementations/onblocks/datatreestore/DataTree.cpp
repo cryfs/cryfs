@@ -170,7 +170,7 @@ uint64_t DataTree::numStoredBytes(const DataNode &root) const {
   }
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
-  uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
+  uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
   uint64_t numBytesInRightChild = numStoredBytes(*lastChild);
 
