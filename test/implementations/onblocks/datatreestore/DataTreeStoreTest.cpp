@@ -14,6 +14,12 @@ using namespace blobstore::onblocks::datatreestore;
 class DataTreeStoreTest: public DataTreeTest {
 };
 
+TEST_F(DataTreeStoreTest, CorrectKeyReturned) {
+  Key key = treeStore.createNewTree()->key();
+  auto tree = treeStore.load(key);
+  EXPECT_EQ(key, tree->key());
+}
+
 TEST_F(DataTreeStoreTest, CreatedTreeIsLoadable) {
   auto key = treeStore.createNewTree()->key();
   auto loaded = treeStore.load(key);

@@ -110,6 +110,22 @@ public:
 
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
+TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterInitialization) {
+  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  Key key = block->key();
+  auto node = DataInnerNode::InitializeNewNode(std::move(block), *leaf);
+  EXPECT_EQ(key, node->key());
+}
+
+TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
+  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  Key key = block->key();
+  DataInnerNode::InitializeNewNode(std::move(block), *leaf);
+
+  auto loaded = nodeStore->load(key);
+  EXPECT_EQ(key, loaded->key());
+}
+
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
   auto node = DataInnerNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES), *leaf);
 

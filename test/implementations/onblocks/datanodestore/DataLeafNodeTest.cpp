@@ -106,6 +106,22 @@ public:
 
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
 
+TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterInitialization) {
+  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  Key key = block->key();
+  auto node = DataLeafNode::InitializeNewNode(std::move(block));
+  EXPECT_EQ(key, node->key());
+}
+
+TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
+  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  Key key = block->key();
+  DataLeafNode::InitializeNewNode(std::move(block));
+
+  auto loaded = nodeStore->load(key);
+  EXPECT_EQ(key, loaded->key());
+}
+
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
   auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES));
   EXPECT_EQ(0u, leaf->numBytes());
