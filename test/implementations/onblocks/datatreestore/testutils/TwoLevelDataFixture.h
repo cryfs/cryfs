@@ -26,9 +26,14 @@ public:
     });
   }
 
-  void EXPECT_DATA_CORRECT(blobstore::onblocks::datanodestore::DataNode *node, int maxCheckedLeaves = 0) {
-    ForEachLeaf(node, _iv, _iv+maxCheckedLeaves, [this] (blobstore::onblocks::datanodestore::DataLeafNode *leaf, int leafIndex) {
-      LeafDataFixture(size(leafIndex, leaf), leafIndex).EXPECT_DATA_CORRECT(*leaf);
+  void EXPECT_DATA_CORRECT(blobstore::onblocks::datanodestore::DataNode *node, int maxCheckedLeaves = 0, int lastLeafMaxCheckedBytes = -1) {
+    ForEachLeaf(node, _iv, _iv+maxCheckedLeaves, [this, maxCheckedLeaves, lastLeafMaxCheckedBytes] (blobstore::onblocks::datanodestore::DataLeafNode *leaf, int leafIndex) {
+      if (leafIndex == _iv+maxCheckedLeaves-1) {
+        // It is the last leaf
+        LeafDataFixture(size(leafIndex, leaf), leafIndex).EXPECT_DATA_CORRECT(*leaf, lastLeafMaxCheckedBytes);
+      } else {
+        LeafDataFixture(size(leafIndex, leaf), leafIndex).EXPECT_DATA_CORRECT(*leaf);
+      }
     });
   }
 

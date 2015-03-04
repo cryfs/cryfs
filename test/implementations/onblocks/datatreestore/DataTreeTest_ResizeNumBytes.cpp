@@ -1,6 +1,7 @@
 #include "testutils/DataTreeTest.h"
 #include "testutils/TwoLevelDataFixture.h"
 #include "../../../../implementations/onblocks/utils/Math.h"
+#include <messmer/blockstore/utils/Data.h>
 
 #include <tuple>
 
@@ -11,6 +12,7 @@ using std::tuple;
 using std::get;
 using std::function;
 using std::mem_fn;
+using cpputils::dynamic_pointer_move;
 
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
@@ -19,6 +21,7 @@ using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::utils::ceilDivision;
 using blockstore::Key;
+using blockstore::Data;
 
 using std::unique_ptr;
 
@@ -93,14 +96,32 @@ public:
       tree(get<0>(GetParam())(this, oldLastLeafSize)),
       newNumberOfLeaves(get<2>(GetParam())),
       newLastLeafSize(get<3>(GetParam())),
-      newSize((newNumberOfLeaves-1) * LAYOUT.maxBytesPerLeaf() + newLastLeafSize)
-  {}
+      newSize((newNumberOfLeaves-1) * LAYOUT.maxBytesPerLeaf() + newLastLeafSize),
+      ZEROES(LAYOUT.maxBytesPerLeaf())
+  {
+    ZEROES.FillWithZeroes();
+  }
+
+  void ResizeTree(const Key &key, uint64_t size) {
+    treeStore.load(key)->resizeNumBytes(size);
+  }
+
+  unique_ptr<DataLeafNode> LastLeaf(const Key &key) {
+    auto root = nodeStore->load(key);
+    auto leaf = dynamic_pointer_move<DataLeafNode>(root);
+    if (leaf.get() != nullptr) {
+      return leaf;
+    }
+    auto inner = dynamic_pointer_move<DataInnerNode>(root);
+    return LastLeaf(inner->LastChild()->key());
+  }
 
   uint32_t oldLastLeafSize;
   unique_ptr<DataTree> tree;
   uint32_t newNumberOfLeaves;
   uint32_t newLastLeafSize;
   uint64_t newSize;
+  Data ZEROES;
 };
 INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumBytes_P,
   Combine(
@@ -174,14 +195,44 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
   Key key = tree->key();
   tree.reset();
   data.FillInto(nodeStore->load(key).get());
-  tree = treeStore.load(key);
 
-  tree->resizeNumBytes(newSize);
-  tree.reset();
+  ResizeTree(key, newSize);
 
-  //TODO Also check last leaf
-  data.EXPECT_DATA_CORRECT(nodeStore->load(key).get(), std::min(oldNumberOfLeaves-1, newNumberOfLeaves-1));
+  if (oldNumberOfLeaves < newNumberOfLeaves || (oldNumberOfLeaves == newNumberOfLeaves && oldLastLeafSize < newLastLeafSize)) {
+    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get(), oldNumberOfLeaves, oldLastLeafSize);
+  } else {
+    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get(), newNumberOfLeaves, newLastLeafSize);
+  }
 }
 
-//TODO Test resizing to zero size
-//TODO Test that rest data of last leaf is zeroes
+TEST_P(DataTreeTest_ResizeNumBytes_P, UnusedEndOfLastLeafIsZero) {
+  uint32_t oldNumberOfLeaves = std::max(1u, ceilDivision(tree->numStoredBytes(), nodeStore->layout().maxBytesPerLeaf()));
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
+  Key key = tree->key();
+  tree.reset();
+  data.FillInto(nodeStore->load(key).get());
+
+  ResizeTree(key, newSize);
+
+  auto lastLeaf = LastLeaf(key);
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (char*)lastLeaf->data()+lastLeaf->numBytes(), LAYOUT.maxBytesPerLeaf()-lastLeaf->numBytes()));
+}
+
+
+//Resize to zero is not caught in the parametrized test above, in the following, we test it separately.
+
+TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
+  auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
+  tree->resizeNumBytes(0);
+  Key key = tree->key();
+  tree.reset();
+  auto leaf = LoadLeafNode(key);
+  EXPECT_EQ(0u, leaf->numBytes());
+}
+
+TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_KeyDoesntChange) {
+  auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
+  Key key = tree->key();
+  tree->resizeNumBytes(0);
+  EXPECT_EQ(key, tree->key());
+}

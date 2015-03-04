@@ -18,9 +18,14 @@ public:
     std::memcpy(leaf->data(), _data.data(), _data.size());
   }
 
-  void EXPECT_DATA_CORRECT(const blobstore::onblocks::datanodestore::DataLeafNode &leaf) const {
-    EXPECT_EQ(_data.size(), leaf.numBytes());
-    EXPECT_EQ(0, std::memcmp(_data.data(), leaf.data(), _data.size()));
+  void EXPECT_DATA_CORRECT(const blobstore::onblocks::datanodestore::DataLeafNode &leaf, int onlyCheckNumBytes = -1) const {
+    if (onlyCheckNumBytes == -1) {
+      EXPECT_EQ(_data.size(), leaf.numBytes());
+      EXPECT_EQ(0, std::memcmp(_data.data(), leaf.data(), _data.size()));
+    } else {
+      EXPECT_LE(onlyCheckNumBytes, leaf.numBytes());
+      EXPECT_EQ(0, std::memcmp(_data.data(), leaf.data(), onlyCheckNumBytes));
+    }
   }
 
 private:
