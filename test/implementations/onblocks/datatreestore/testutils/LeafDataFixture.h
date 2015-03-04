@@ -15,20 +15,25 @@ public:
 
   void FillInto(blobstore::onblocks::datanodestore::DataLeafNode *leaf) const {
     leaf->resize(_data.size());
-    std::memcpy(leaf->data(), _data.data(), _data.size());
+    leaf->write(_data.data(), 0, _data.size());
   }
 
   void EXPECT_DATA_CORRECT(const blobstore::onblocks::datanodestore::DataLeafNode &leaf, int onlyCheckNumBytes = -1) const {
     if (onlyCheckNumBytes == -1) {
       EXPECT_EQ(_data.size(), leaf.numBytes());
-      EXPECT_EQ(0, std::memcmp(_data.data(), leaf.data(), _data.size()));
+      EXPECT_EQ(0, std::memcmp(_data.data(), loadData(leaf).data(), _data.size()));
     } else {
       EXPECT_LE(onlyCheckNumBytes, leaf.numBytes());
-      EXPECT_EQ(0, std::memcmp(_data.data(), leaf.data(), onlyCheckNumBytes));
+      EXPECT_EQ(0, std::memcmp(_data.data(), loadData(leaf).data(), onlyCheckNumBytes));
     }
   }
 
 private:
+  static blockstore::Data loadData(const blobstore::onblocks::datanodestore::DataLeafNode &leaf) {
+    blockstore::Data data(leaf.numBytes());
+    leaf.read(data.data(), 0, leaf.numBytes());
+    return data;
+  }
   DataBlockFixture _data;
 };
 

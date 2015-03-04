@@ -77,7 +77,7 @@ TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   Key key = block->key();
   {
     DataNodeView view(std::move(block));
-    *view.Depth() = DataNodeStore::MAX_DEPTH + 1;
+    view.setDepth(DataNodeStore::MAX_DEPTH + 1);
   }
 
   EXPECT_ANY_THROW(

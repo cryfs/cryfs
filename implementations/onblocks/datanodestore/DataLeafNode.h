@@ -18,8 +18,8 @@ public:
 
   uint32_t maxStoreableBytes() const;
 
-  void *data();
-  const void *data() const;
+  void read(void *target, uint64_t offset, uint64_t size) const;
+  void write(const void *source, uint64_t offset, uint64_t size);
 
   uint32_t numBytes() const;
 

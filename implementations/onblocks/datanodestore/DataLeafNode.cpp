@@ -13,7 +13,7 @@ namespace datanodestore {
 
 DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
-  assert(*node().Depth() == 0);
+  assert(node().Depth() == 0);
   assert(numBytes() <= maxStoreableBytes());
 }
 
@@ -22,35 +22,39 @@ DataLeafNode::~DataLeafNode() {
 
 unique_ptr<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ptr<Block> block) {
   DataNodeView node(std::move(block));
-  *node.Depth() = 0;
-  *node.Size() = 0;
+  node.setDepth(0);
+  node.setSize(0);
   //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.
   return make_unique<DataLeafNode>(std::move(node));
 }
 
-void *DataLeafNode::data() {
-  return const_cast<void*>(const_cast<const DataLeafNode*>(this)->data());
+void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {
+  assert(offset <= node().Size() && offset + size <= node().Size()); // Also check offset, because the addition could lead to overflows
+  std::memcpy(target, (uint8_t*)node().data() + offset, size);
 }
 
-const void *DataLeafNode::data() const {
-  return node().DataBegin<uint8_t>();
+void DataLeafNode::write(const void *source, uint64_t offset, uint64_t size) {
+  assert(offset <= node().Size() && offset + size <= node().Size()); // Also check offset, because the addition could lead to overflows
+  node().write(source, offset, size);
 }
 
 uint32_t DataLeafNode::numBytes() const {
-  return *node().Size();
+  return node().Size();
 }
 
 void DataLeafNode::resize(uint32_t new_size) {
   assert(new_size <= maxStoreableBytes());
-  uint32_t old_size = *node().Size();
+  uint32_t old_size = node().Size();
   if (new_size < old_size) {
     fillDataWithZeroesFromTo(new_size, old_size);
   }
-  *node().Size() = new_size;
+  node().setSize(new_size);
 }
 
 void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
-  std::memset(node().DataBegin<uint8_t>()+begin, 0, end-begin);
+  Data ZEROES(end-begin);
+  ZEROES.FillWithZeroes();
+  node().write(ZEROES.data(), begin, end-begin);
 }
 
 uint32_t DataLeafNode::maxStoreableBytes() const {

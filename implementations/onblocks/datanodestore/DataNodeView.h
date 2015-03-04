@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 
 namespace blobstore {
 namespace onblocks {
@@ -31,6 +32,7 @@ public:
   static constexpr uint32_t DEPTH_OFFSET_BYTES = 0;
   //Where in the header is the size field (for inner nodes: number of children, for leafs: content data size)
   static constexpr uint32_t SIZE_OFFSET_BYTES = 4;
+
 
   //Size of a block (header + data region)
   constexpr uint32_t blocksizeBytes() const {
@@ -63,20 +65,28 @@ public:
 
   DataNodeView(DataNodeView &&rhs) = default;
 
-  const uint8_t *Depth() const {
-    return GetOffset<DataNodeLayout::DEPTH_OFFSET_BYTES, uint8_t>();
+  uint8_t Depth() const {
+    return *((uint8_t*)_block->data()+DataNodeLayout::DEPTH_OFFSET_BYTES);
   }
 
-  uint8_t *Depth() {
-    return const_cast<uint8_t*>(const_cast<const DataNodeView*>(this)->Depth());
+  void setDepth(uint8_t value) {
+    _block->write(&value, DataNodeLayout::DEPTH_OFFSET_BYTES, sizeof(value));
   }
 
-  const uint32_t *Size() const {
-    return GetOffset<DataNodeLayout::SIZE_OFFSET_BYTES, uint32_t>();
+  uint32_t Size() const {
+    return *(uint32_t*)((uint8_t*)_block->data()+DataNodeLayout::SIZE_OFFSET_BYTES);
   }
 
-  uint32_t *Size() {
-    return const_cast<uint32_t*>(const_cast<const DataNodeView*>(this)->Size());
+  void setSize(uint32_t value) {
+    _block->write(&value, DataNodeLayout::SIZE_OFFSET_BYTES, sizeof(value));
+  }
+
+  const void *data() const {
+    return (uint8_t*)_block->data() + DataNodeLayout::HEADERSIZE_BYTES;
+  }
+
+  void write(const void *source, uint64_t offset, uint64_t size) {
+    _block->write(source, offset + DataNodeLayout::HEADERSIZE_BYTES, size);
   }
 
   template<typename Entry>
@@ -89,10 +99,6 @@ public:
     return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataBegin<Entry>());
   }
 
-  DataNodeLayout layout() const {
-    return DataNodeLayout(_block->size());
-  }
-
   template<typename Entry>
   const Entry *DataEnd() const {
     const unsigned int NUM_ENTRIES = layout().datasizeBytes() / sizeof(Entry);
@@ -102,6 +108,11 @@ public:
   template<typename Entry>
   Entry *DataEnd() {
     return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataEnd<Entry>());
+  }
+
+
+  DataNodeLayout layout() const {
+    return DataNodeLayout(_block->size());
   }
 
   std::unique_ptr<blockstore::Block> releaseBlock() {

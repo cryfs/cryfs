@@ -2,6 +2,7 @@
 #include "DataLeafNode.h"
 #include "DataNode.h"
 #include "DataNodeStore.h"
+#include <messmer/blockstore/utils/BlockStoreUtils.h>
 
 using blockstore::Block;
 using blockstore::Key;
@@ -34,13 +35,13 @@ const Key &DataNode::key() const {
 }
 
 uint8_t DataNode::depth() const {
-  return *node().Depth();
+  return _node.Depth();
 }
 
 unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> node, const DataNode &first_child) {
   Key key = node->key();
   auto block = node->_node.releaseBlock();
-  std::memset(block->data(), 0, block->size());
+  blockstore::utils::fillWithZeroes(block.get());
 
   return DataInnerNode::InitializeNewNode(std::move(block), first_child);
 }

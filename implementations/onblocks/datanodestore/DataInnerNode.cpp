@@ -21,19 +21,15 @@ DataInnerNode::~DataInnerNode() {
 
 unique_ptr<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ptr<Block> block, const DataNode &first_child) {
   DataNodeView node(std::move(block));
-  *node.Depth() = first_child.depth() + 1;
-  *node.Size() = 1;
+  node.setDepth(first_child.depth() + 1);
+  node.setSize(1);
   auto result = make_unique<DataInnerNode>(std::move(node));
   result->ChildrenBegin()->setKey(first_child.key());
   return result;
 }
 
-uint8_t DataInnerNode::depth() const {
-  return *node().Depth();
-}
-
 uint32_t DataInnerNode::numChildren() const {
-  return *node().Size();
+  return node().Size();
 }
 
 DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() {
@@ -49,7 +45,7 @@ DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() {
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() const {
-  return ChildrenBegin() + *node().Size();
+  return ChildrenBegin() + node().Size();
 }
 
 DataInnerNode::ChildEntry *DataInnerNode::LastChild() {
@@ -57,7 +53,7 @@ DataInnerNode::ChildEntry *DataInnerNode::LastChild() {
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::LastChild() const {
-  return ChildrenEnd()-1;
+  return getChild(numChildren()-1);
 }
 
 DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) {
@@ -72,13 +68,13 @@ const DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) con
 void DataInnerNode::addChild(const DataNode &child) {
   assert(numChildren() < maxStoreableChildren());
   assert(child.depth() == depth()-1);
-  *node().Size() += 1;
+  node().setSize(node().Size()+1);
   LastChild()->setKey(child.key());
 }
 
 void DataInnerNode::removeLastChild() {
-  assert(*node().Size() > 1);
-  *node().Size() -= 1;
+  assert(node().Size() > 1);
+  node().setSize(node().Size()-1);
 }
 
 uint32_t DataInnerNode::maxStoreableChildren() const {

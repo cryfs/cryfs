@@ -36,10 +36,10 @@ TEST_P(DataNodeViewDepthTest, DepthIsStored) {
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
-    *view.Depth() = GetParam();
+    view.setDepth(GetParam());
   }
   DataNodeView view(blockStore->load(key));
-  EXPECT_EQ(GetParam(), *view.Depth());
+  EXPECT_EQ(GetParam(), view.Depth());
 }
 
 class DataNodeViewSizeTest: public DataNodeViewTest, public WithParamInterface<uint32_t> {
@@ -51,10 +51,10 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
-    *view.Size() = GetParam();
+    view.setSize(GetParam());
   }
   DataNodeView view(blockStore->load(key));
-  EXPECT_EQ(GetParam(), *view.Size());
+  EXPECT_EQ(GetParam(), view.Size());
 }
 
 TEST_F(DataNodeViewTest, DataIsStored) {
@@ -75,13 +75,13 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
-    *view.Depth() = 3;
-    *view.Size() = 1000000000u;
+    view.setDepth(3);
+    view.setSize(1000000000u);
     std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), DATASIZE_BYTES);
   }
   DataNodeView view(blockStore->load(key));
-  EXPECT_EQ(3, *view.Depth());
-  EXPECT_EQ(1000000000u, *view.Size());
+  EXPECT_EQ(3, view.Depth());
+  EXPECT_EQ(1000000000u, view.Size());
   EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), DATASIZE_BYTES));
 }
 
@@ -144,3 +144,5 @@ TEST_F(DataNodeViewTest, DataEndWorksWithStructByteEntries) {
   EXPECT_EQ(blockBegin+DataNodeLayout::HEADERSIZE_BYTES + numFittingEntries * sizeof(SizedDataEntry), dataEnd);
   EXPECT_LT(dataEnd, blockBegin + BLOCKSIZE_BYTES);
 }
+
+//TODO Test that header fields (and data) are also stored over reloads

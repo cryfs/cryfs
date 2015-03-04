@@ -201,20 +201,6 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
   }
 }
 
-TEST_P(DataTreeTest_ResizeNumBytes_P, UnusedEndOfLastLeafIsZero) {
-  uint32_t oldNumberOfLeaves = std::max(1u, ceilDivision(tree->numStoredBytes(), nodeStore->layout().maxBytesPerLeaf()));
-  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
-  Key key = tree->key();
-  tree.reset();
-  data.FillInto(nodeStore->load(key).get());
-
-  ResizeTree(key, newSize);
-
-  auto lastLeaf = LastLeaf(key);
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (char*)lastLeaf->data()+lastLeaf->numBytes(), LAYOUT.maxBytesPerLeaf()-lastLeaf->numBytes()));
-}
-
-
 //Resize to zero is not caught in the parametrized test above, in the following, we test it separately.
 
 TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {

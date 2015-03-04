@@ -31,7 +31,7 @@ void BlobOnBlocks::resize(uint64_t numBytes) {
   _datatree->resizeNumBytes(numBytes);
 }
 
-void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, void *, uint32_t)> func) const {
+void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, DataLeafNode *leaf, uint32_t, uint32_t)> func) const {
   uint64_t endByte = beginByte + sizeBytes;
   assert(endByte <= size());
   uint32_t firstLeaf = beginByte / _datatree->maxBytesPerLeaf();
@@ -40,20 +40,20 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
     uint32_t dataSize = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
-    func(indexOfFirstLeafByte, (uint8_t*)leaf->data() + dataBegin, dataSize);
+    func(indexOfFirstLeafByte, leaf, dataBegin, dataSize);
   });
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t size) const {
-  traverseLeaves(offset, size, [target] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
-    std::memcpy(target, leafDataBegin, leafDataSize);
+  traverseLeaves(offset, size, [target] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+    leaf->read((uint8_t*)target + indexOfFirstLeafByte + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
   resizeIfSmallerThan(offset + size);
-  traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
-    std::memcpy(leafDataBegin, source, leafDataSize);
+  traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+    leaf->write((uint8_t*)source + indexOfFirstLeafByte + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 

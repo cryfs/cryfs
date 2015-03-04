@@ -50,10 +50,16 @@ public:
     std::memcpy(randomData.data(), dataFixture.data(), randomData.size());
   }
 
+  Data loadData(const DataLeafNode &leaf) {
+    Data data(leaf.numBytes());
+    leaf.read(data.data(), 0, leaf.numBytes());
+    return data;
+  }
+
   Key WriteDataToNewLeafBlockAndReturnKey() {
     auto newleaf = nodeStore->createNewLeafNode();
     newleaf->resize(randomData.size());
-    std::memcpy(newleaf->data(), randomData.data(), randomData.size());
+    newleaf->write(randomData.data(), 0, randomData.size());
     return newleaf->key();
   }
 
@@ -63,7 +69,7 @@ public:
 
   void FillLeafBlockWithData(DataLeafNode *leaf_to_fill) {
     leaf_to_fill->resize(randomData.size());
-    std::memcpy(leaf_to_fill->data(), randomData.data(), randomData.size());
+    leaf_to_fill->write(randomData.data(), 0, randomData.size());
   }
 
   unique_ptr<DataLeafNode> LoadLeafNode(const Key &key) {
@@ -139,7 +145,7 @@ TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBlock) {
   auto loaded = LoadLeafNode(key);
 
   EXPECT_EQ(randomData.size(), loaded->numBytes());
-  EXPECT_EQ(0, std::memcmp(randomData.data(), loaded->data(), randomData.size()));
+  EXPECT_EQ(0, std::memcmp(randomData.data(), loadData(*loaded).data(), randomData.size()));
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
@@ -177,7 +183,7 @@ TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeAfterLoading) {
 
 TEST_F(DataLeafNodeTest, SpaceIsZeroFilledWhenGrowing) {
   leaf->resize(randomData.size());
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), leaf->data(), randomData.size()));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), loadData(*leaf).data(), randomData.size()));
 }
 
 TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
@@ -188,7 +194,7 @@ TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
   leaf->resize(randomData.size());
 
   //Check that the space was filled with zeroes
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), ((uint8_t*)leaf->data())+smaller_size, 100));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), ((uint8_t*)loadData(*leaf).data())+smaller_size, 100));
 }
 
 TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
@@ -214,7 +220,7 @@ TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
   leaf->resize(smaller_size);
 
   //Check that the remaining data region is unchanged
-  EXPECT_EQ(0, std::memcmp(randomData.data(), leaf->data(), smaller_size));
+  EXPECT_EQ(0, std::memcmp(randomData.data(), loadData(*leaf).data(), smaller_size));
 }
 
 TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
@@ -249,8 +255,13 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
   auto copied = CopyLeafNode(*leaf);
 
   EXPECT_EQ(leaf->numBytes(), copied->numBytes());
-  EXPECT_EQ(0, std::memcmp(leaf->data(), copied->data(), leaf->numBytes()));
-  EXPECT_NE(leaf->data(), copied->data());
+  EXPECT_EQ(0, std::memcmp(loadData(*leaf).data(), loadData(*copied).data(), leaf->numBytes()));
+
+  //Test that they have different data regions (changing the original one doesn't change the copy)
+  char data = '\0';
+  leaf->write(&data, 0, 1);
+  EXPECT_EQ(data, *(char*)loadData(*leaf).data());
+  EXPECT_NE(data, *(char*)loadData(*copied).data());
 }
 
 /* TODO

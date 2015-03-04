@@ -20,8 +20,6 @@ public:
 
   uint32_t maxStoreableChildren() const;
 
-  uint8_t depth() const;
-
   ChildEntry *getChild(unsigned int index);
   const ChildEntry *getChild(unsigned int index) const;
 

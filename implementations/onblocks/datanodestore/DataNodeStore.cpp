@@ -28,9 +28,9 @@ unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
   assert(block->size() == _layout.blocksizeBytes());
   DataNodeView node(std::move(block));
 
-  if (*node.Depth() == 0) {
+  if (node.Depth() == 0) {
     return unique_ptr<DataLeafNode>(new DataLeafNode(std::move(node)));
-  } else if (*node.Depth() <= MAX_DEPTH) {
+  } else if (node.Depth() <= MAX_DEPTH) {
     return unique_ptr<DataInnerNode>(new DataInnerNode(std::move(node)));
   } else {
     throw runtime_error("Tree is to deep. Data corruption?");
