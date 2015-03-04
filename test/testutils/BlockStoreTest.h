@@ -139,13 +139,13 @@ private:
 
   blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &data) {
     auto block = blockStore->create(data.size());
-    std::memcpy(block->data(), data.data(), data.size());
+    block->write(data.data(), 0, data.size());
     return block->key();
   }
 
   std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const DataBlockFixture &data) {
     auto block = blockStore->create(data.size());
-    std::memcpy(block->data(), data.data(), data.size());
+    block->write(data.data(), 0, data.size());
     block->flush();
     return blockStore->load(block->key());
   }
@@ -160,7 +160,7 @@ private:
   }
 
   void WriteDataToBlock(blockstore::Block *block, const DataBlockFixture &randomData) {
-    std::memcpy(block->data(), randomData.data(), randomData.size());
+    block->write(randomData.data(), 0, randomData.size());
   }
 
   void EXPECT_BLOCK_DATA_CORRECT(const blockstore::Block &block, const DataBlockFixture &randomData) {

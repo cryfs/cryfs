@@ -22,12 +22,13 @@ FakeBlock::~FakeBlock() {
   flush();
 }
 
-void *FakeBlock::data() {
+const void *FakeBlock::data() const {
   return _data->data();
 }
 
-const void *FakeBlock::data() const {
-  return _data->data();
+void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
+  assert(offset <= _data->size() && offset + size <= _data->size()); //Also check offset < _data->size() because of possible overflow in the addition
+  std::memcpy((uint8_t*)_data->data()+offset, source, size);
 }
 
 size_t FakeBlock::size() const {

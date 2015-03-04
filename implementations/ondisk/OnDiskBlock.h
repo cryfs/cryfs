@@ -21,8 +21,8 @@ public:
   static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, size_t size);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 
-  void *data() override;
   const void *data() const override;
+  void write(const void *source, uint64_t offset, uint64_t size) override;
 
   void flush() override;
 

@@ -47,7 +47,7 @@ public:
   }
 
   void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {
-    std::memcpy(block->data(), randomData.data(), randomData.size());
+    block->write(randomData.data(), 0, randomData.size());
   }
 
   void EXPECT_BLOCK_DATA_CORRECT(const unique_ptr<OnDiskBlock> &block) {

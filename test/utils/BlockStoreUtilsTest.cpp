@@ -51,7 +51,7 @@ TEST_F(BlockStoreUtilsTest_CopyToNewBlock, CopyZeroBlock) {
 
 TEST_F(BlockStoreUtilsTest_CopyToNewBlock, CopyDataBlock) {
   auto block = blockStore->create(SIZE);
-  std::memcpy(block->data(), dataFixture.data(), SIZE);
+  block->write(dataFixture.data(), 0, SIZE);
   auto block2 = copyToNewBlock(blockStore.get(), *block);
 
   EXPECT_EQ(SIZE, block2->size());
@@ -60,7 +60,7 @@ TEST_F(BlockStoreUtilsTest_CopyToNewBlock, CopyDataBlock) {
 
 TEST_F(BlockStoreUtilsTest_CopyToNewBlock, OriginalBlockUnchanged) {
   auto block = blockStore->create(SIZE);
-  std::memcpy(block->data(), dataFixture.data(), SIZE);
+  block->write(dataFixture.data(), 0, SIZE);
   auto block2 = copyToNewBlock(blockStore.get(), *block);
 
   EXPECT_EQ(SIZE, block->size());
@@ -78,7 +78,7 @@ TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, CopyEmptyBlock) {
 TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, CopyZeroBlock) {
   auto block = blockStore->create(SIZE);
   auto block2 = blockStore->create(SIZE);
-  std::memcpy(block2->data(), dataFixture.data(), SIZE);
+  block2->write(dataFixture.data(), 0, SIZE);
   copyTo(block2.get(), *block);
 
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), block2->data(), SIZE));
@@ -86,7 +86,7 @@ TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, CopyZeroBlock) {
 
 TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, CopyDataBlock) {
   auto block = blockStore->create(SIZE);
-  std::memcpy(block->data(), dataFixture.data(), SIZE);
+  block->write(dataFixture.data(), 0, SIZE);
   auto block2 = blockStore->create(SIZE);
   copyTo(block2.get(), *block);
 
@@ -95,7 +95,7 @@ TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, CopyDataBlock) {
 
 TEST_F(BlockStoreUtilsTest_CopyToExistingBlock, OriginalBlockUnchanged) {
   auto block = blockStore->create(SIZE);
-  std::memcpy(block->data(), dataFixture.data(), SIZE);
+  block->write(dataFixture.data(), 0, SIZE);
   auto block2 = blockStore->create(SIZE);
   copyTo(block2.get(), *block);
 

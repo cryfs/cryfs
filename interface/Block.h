@@ -11,8 +11,8 @@ class Block {
 public:
   virtual ~Block() {}
 
-  virtual void *data() = 0;
   virtual const void *data() const = 0;
+  virtual void write(const void *source, uint64_t offset, uint64_t size) = 0;
 
   virtual void flush() = 0;
 

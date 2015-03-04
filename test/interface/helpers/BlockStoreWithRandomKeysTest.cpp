@@ -31,8 +31,8 @@ public:
 class BlockMock: public Block {
 public:
   BlockMock(): Block(Key::CreateRandomKey()) {}
-  MOCK_METHOD0(data, void*());
   MOCK_CONST_METHOD0(data, const void*());
+  MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
   MOCK_METHOD0(flush, void());
   MOCK_CONST_METHOD0(size, size_t());
   MOCK_CONST_METHOD0(key, const Key&());

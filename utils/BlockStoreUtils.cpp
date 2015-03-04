@@ -1,5 +1,6 @@
-#include <messmer/blockstore/interface/BlockStore.h>
-#include <messmer/blockstore/utils/BlockStoreUtils.h>
+#include "../interface/BlockStore.h"
+#include "BlockStoreUtils.h"
+#include "Data.h"
 #include <memory>
 #include <cassert>
 
@@ -16,7 +17,13 @@ unique_ptr<Block> copyToNewBlock(BlockStore *blockStore, const Block &block) {
 
 void copyTo(Block *target, const Block &source) {
   assert(target->size() == source.size());
-  std::memcpy(target->data(), source.data(), source.size());
+  target->write(source.data(), 0, source.size());
+}
+
+void fillWithZeroes(Block *target) {
+  Data zeroes(target->size());
+  zeroes.FillWithZeroes();
+  target->write(zeroes.data(), 0, target->size());
 }
 
 }
