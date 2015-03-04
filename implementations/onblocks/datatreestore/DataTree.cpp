@@ -167,10 +167,10 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   uint64_t currentNumBytes = numStoredBytes();
   assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
   uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
-  uint32_t newNumLeaves = utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf());
+  uint32_t newNumLeaves = std::max(1u, utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
 
   for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
-    addDataLeaf();
+    addDataLeaf()->resize(_nodeStore->layout().maxBytesPerLeaf());
   }
   for(uint32_t i = currentNumLeaves; i > newNumLeaves; --i) {
     removeLastDataLeaf();
