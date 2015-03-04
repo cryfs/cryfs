@@ -29,101 +29,101 @@ public:
 };
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoLeafTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateTwoLeaf(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoLeafTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateTwoLeaf(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourNodeThreeLeafTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateFourNodeThreeLeaf(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourNodeThreeLeafTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateFourNodeThreeLeaf(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoInnerNodeOneTwoLeavesTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateTwoInnerNodeOneTwoLeaves(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoInnerNodeOneTwoLeavesTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateTwoInnerNodeOneTwoLeaves(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoInnerNodeTwoOneLeavesTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateTwoInnerNodeTwoOneLeaves(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATwoInnerNodeTwoOneLeavesTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateTwoInnerNodeTwoOneLeaves(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAThreeLevelMinDataTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateThreeLevelMinData(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAThreeLevelMinDataTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateThreeLevelMinData(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelMinDataTree_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateFourLevelMinData(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelMinDataTree_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateFourLevelMinData(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelTreeWithTwoSiblingLeaves1_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateFourLevelWithTwoSiblingLeaves1(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelTreeWithTwoSiblingLeaves1_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateFourLevelWithTwoSiblingLeaves1(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelTreeWithTwoSiblingLeaves2_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateFourLevelWithTwoSiblingLeaves2(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAFourLevelTreeWithTwoSiblingLeaves2_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateFourLevelWithTwoSiblingLeaves2(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkATreeWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateWithFirstChildOfRootFullThreelevelAndSecondChildMindataThreelevel(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAThreeLevelTreeWithThreeChildrenOfRoot_FullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, true);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Full);
   TestDataStaysIntactOnShrinking(CreateThreeLevelWithThreeChildrenOfRoot(), &data);
 }
 
 TEST_F(DataTreeShrinkingTest_DataStaysIntact, ShrinkAThreeLevelTreeWithThreeChildrenOfRoot_NonFullLeaves) {
-  TwoLevelDataFixture data(nodeStore, 0, false);
+  TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Random);
   TestDataStaysIntactOnShrinking(CreateThreeLevelWithThreeChildrenOfRoot(), &data);
 }

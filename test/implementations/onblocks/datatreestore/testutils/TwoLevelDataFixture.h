@@ -12,18 +12,23 @@
 // and given an inner node can check, whether the data stored is correct.
 class TwoLevelDataFixture {
 public:
-  TwoLevelDataFixture(blobstore::onblocks::datanodestore::DataNodeStore *dataNodeStore, int iv=0, bool useFullSizeLeaves = false): _dataNodeStore(dataNodeStore), _iv(iv), _useFullSizeLeaves(useFullSizeLeaves) {}
+  enum class SizePolicy {
+    Random,
+    Full,
+    Unchanged
+  };
+  TwoLevelDataFixture(blobstore::onblocks::datanodestore::DataNodeStore *dataNodeStore, SizePolicy sizePolicy, int iv=0): _dataNodeStore(dataNodeStore), _iv(iv), _sizePolicy(sizePolicy) {}
 
   void FillInto(blobstore::onblocks::datanodestore::DataNode *node) {
     // _iv-1 means there is no endLeafIndex - we fill all leaves.
     ForEachLeaf(node, _iv, _iv-1, [this] (blobstore::onblocks::datanodestore::DataLeafNode *leaf, int leafIndex) {
-      LeafDataFixture(size(leafIndex), leafIndex).FillInto(leaf);
+      LeafDataFixture(size(leafIndex, leaf), leafIndex).FillInto(leaf);
     });
   }
 
   void EXPECT_DATA_CORRECT(blobstore::onblocks::datanodestore::DataNode *node, int maxCheckedLeaves = 0) {
     ForEachLeaf(node, _iv, _iv+maxCheckedLeaves, [this] (blobstore::onblocks::datanodestore::DataLeafNode *leaf, int leafIndex) {
-      LeafDataFixture(size(leafIndex), leafIndex).EXPECT_DATA_CORRECT(*leaf);
+      LeafDataFixture(size(leafIndex, leaf), leafIndex).EXPECT_DATA_CORRECT(*leaf);
     });
   }
 
@@ -49,14 +54,16 @@ private:
 
   blobstore::onblocks::datanodestore::DataNodeStore *_dataNodeStore;
   int _iv;
-  bool _useFullSizeLeaves;
+  SizePolicy _sizePolicy;
 
-  int size(int childIndex) {
-    if (_useFullSizeLeaves) {
+  int size(int childIndex, blobstore::onblocks::datanodestore::DataLeafNode *leaf) {
+    switch (_sizePolicy) {
+    case SizePolicy::Full:
       return _dataNodeStore->layout().maxBytesPerLeaf();
-    } else {
-      uint32_t maxBytesPerLeaf = _dataNodeStore->layout().maxBytesPerLeaf();
-      return mod(maxBytesPerLeaf - childIndex, maxBytesPerLeaf);
+    case SizePolicy::Random:
+      return mod(_dataNodeStore->layout().maxBytesPerLeaf() - childIndex, _dataNodeStore->layout().maxBytesPerLeaf());
+    case SizePolicy::Unchanged:
+      return leaf->numBytes();
     }
   }
 

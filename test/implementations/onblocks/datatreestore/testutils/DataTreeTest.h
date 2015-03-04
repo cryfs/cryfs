@@ -14,7 +14,7 @@ class DataTreeTest: public ::testing::Test {
 public:
   DataTreeTest();
 
-  static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+  static constexpr uint32_t BLOCKSIZE_BYTES = 256;
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::vector<const blobstore::onblocks::datanodestore::DataNode *> children);
@@ -34,6 +34,15 @@ public:
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
   std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeafWithSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeafWithSecondLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevelWithLastLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithOneChildAndLastLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithTwoChildrenAndLastLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithThreeChildrenAndLastLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevelWithLastLeafSize(uint32_t size);
+  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinDataWithLastLeafSize(uint32_t size);
 
   std::unique_ptr<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
   blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;

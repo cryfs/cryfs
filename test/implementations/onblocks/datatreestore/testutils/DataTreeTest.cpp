@@ -113,6 +113,77 @@ unique_ptr<DataTree> DataTreeTest::CreateTwoLeafTree() {
   return treeStore.load(key);
 }
 
+unique_ptr<DataLeafNode> DataTreeTest::CreateLeafWithSize(uint32_t size) {
+  auto leaf = CreateLeaf();
+  leaf->resize(size);
+  return leaf;
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateTwoLeafWithSecondLeafSize(uint32_t size) {
+  return CreateInner({
+    CreateLeafWithSize(nodeStore->layout().maxBytesPerLeaf()),
+    CreateLeafWithSize(size)
+  });
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateFullTwoLevelWithLastLeafSize(uint32_t size) {
+  auto root = CreateFullTwoLevel();
+  for (int i = 0; i < root->numChildren()-1; ++i) {
+    LoadLeafNode(root->getChild(i)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
+  }
+  LoadLeafNode(root->LastChild()->key())->resize(size);
+  return root;
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateThreeLevelWithOneChildAndLastLeafSize(uint32_t size) {
+  return CreateInner({
+    CreateInner({
+      CreateLeafWithSize(nodeStore->layout().maxBytesPerLeaf()),
+      CreateLeafWithSize(size)
+    })
+  });
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateThreeLevelWithTwoChildrenAndLastLeafSize(uint32_t size) {
+  return CreateInner({
+    CreateFullTwoLevelWithLastLeafSize(nodeStore->layout().maxBytesPerLeaf()),
+    CreateInner({
+      CreateLeafWithSize(nodeStore->layout().maxBytesPerLeaf()),
+      CreateLeafWithSize(size)
+    })
+  });
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateThreeLevelWithThreeChildrenAndLastLeafSize(uint32_t size) {
+  return CreateInner({
+    CreateFullTwoLevelWithLastLeafSize(nodeStore->layout().maxBytesPerLeaf()),
+    CreateFullTwoLevelWithLastLeafSize(nodeStore->layout().maxBytesPerLeaf()),
+    CreateInner({
+      CreateLeafWithSize(nodeStore->layout().maxBytesPerLeaf()),
+      CreateLeafWithSize(size)
+    })
+  });
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateFullThreeLevelWithLastLeafSize(uint32_t size) {
+  auto root = CreateFullThreeLevel();
+  for (int i = 0; i < root->numChildren(); ++i) {
+    auto node = LoadInnerNode(root->getChild(i)->key());
+    for (int j = 0; j < node->numChildren(); ++j) {
+      LoadLeafNode(node->getChild(j)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
+    }
+  }
+  LoadLeafNode(LoadInnerNode(root->LastChild()->key())->LastChild()->key())->resize(size);
+  return root;
+}
+
+unique_ptr<DataInnerNode> DataTreeTest::CreateFourLevelMinDataWithLastLeafSize(uint32_t size) {
+  return CreateInner({
+    CreateFullThreeLevelWithLastLeafSize(nodeStore->layout().maxBytesPerLeaf()),
+    CreateInner({CreateInner({CreateLeafWithSize(size)})})
+  });
+}
+
 void DataTreeTest::EXPECT_IS_LEAF_NODE(const Key &key) {
   auto node = LoadLeafNode(key);
   EXPECT_NE(nullptr, node.get());
