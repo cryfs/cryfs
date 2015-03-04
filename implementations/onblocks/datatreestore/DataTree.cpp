@@ -109,14 +109,21 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  const_cast<const DataTree*>(this)->traverseLeaves(beginIndex, endIndex, [func](const DataLeafNode* leaf, uint32_t leafIndex) {
+    func(const_cast<DataLeafNode*>(leaf), leafIndex);
+  });
+  flush();
+}
+
+void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
   assert(beginIndex <= endIndex);
   //TODO assert(beginIndex <= numLeaves());
   //TODO assert(endIndex <= numLeaves());
   traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
 }
 
-void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
-  DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
+void DataTree::traverseLeaves(const DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
+  const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(root);
   if (leaf != nullptr) {
     assert(beginIndex <= 1 && endIndex <= 1);
     if (beginIndex == 0 && endIndex == 1) {
@@ -125,7 +132,7 @@ void DataTree::traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t begi
     return;
   }
 
-  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
+  const DataInnerNode *inner = dynamic_cast<const DataInnerNode*>(root);
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
@@ -179,6 +186,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   LastLeaf(_rootNode.get())->resize(newLastLeafSize);
 
   assert(newNumBytes == numStoredBytes());
+  flush();
 }
 
 optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {

@@ -28,7 +28,6 @@ TEST_F(DataTreeStoreTest, CreatedTreeIsLoadable) {
 
 TEST_F(DataTreeStoreTest, NewTreeIsLeafOnly) {
   auto tree = treeStore.createNewTree();
-  tree->flush();
 
   EXPECT_IS_LEAF_NODE(tree->key());
 }

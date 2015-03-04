@@ -26,23 +26,21 @@ public:
   DataTree(datanodestore::DataNodeStore *nodeStore, std::unique_ptr<datanodestore::DataNode> rootNode);
   virtual ~DataTree();
 
-  //TODO Might be that we don't need addDataLeaf()/removeDataLeaf() to be public anymore
-  std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
-  void removeLastDataLeaf();
-
   const blockstore::Key &key() const;
   uint32_t maxBytesPerLeaf() const;
 
-  //TODO Remove flush() and instead call it implicitly on traverseLeaves()/resizeNumBytes()
-  void flush() const;
-
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const;
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
-  uint64_t numStoredBytes() const;
   void resizeNumBytes(uint64_t newNumBytes);
+
+  uint64_t numStoredBytes() const;
 
 private:
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;
+
+  std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
+  void removeLastDataLeaf();
 
   std::unique_ptr<datanodestore::DataNode> releaseRootNode();
   friend class DataTreeStore;
@@ -54,11 +52,13 @@ private:
   void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
-  void traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  void traverseLeaves(const datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const;
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t numStoredBytes(const datanodestore::DataNode &root) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
+
+  void flush() const;
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

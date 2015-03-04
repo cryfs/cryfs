@@ -23,8 +23,6 @@ public:
 
   virtual void read(void *target, uint64_t offset, uint64_t size) const = 0;
   virtual void write(const void *source, uint64_t offset, uint64_t size) = 0;
-
-  virtual void flush() const = 0;
 };
 
 }

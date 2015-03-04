@@ -31,10 +31,6 @@ void BlobOnBlocks::resize(uint64_t numBytes) {
   _datatree->resizeNumBytes(numBytes);
 }
 
-void BlobOnBlocks::flush() const {
-  _datatree->flush();
-}
-
 void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, void *, uint32_t)> func) const {
   uint64_t endByte = beginByte + sizeBytes;
   assert(endByte <= size());
