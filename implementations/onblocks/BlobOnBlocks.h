@@ -29,7 +29,9 @@ public:
   void write(const void *source, uint64_t offset, uint64_t size) override;
 
 private:
-   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, void *, uint32_t)>) const;
+
+  void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, void *, uint32_t)>) const;
+  void resizeIfSmallerThan(uint64_t neededSize);
 
   std::unique_ptr<datatreestore::DataTree> _datatree;
 };

@@ -169,7 +169,7 @@ uint64_t DataTree::numStoredBytes(const DataNode &root) const {
 }
 
 void DataTree::resizeNumBytes(uint64_t newNumBytes) {
-  //TODO Faster implementation possible
+  //TODO Faster implementation possible (no addDataLeaf()/removeLastDataLeaf() in a loop, but directly resizing)
   LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
   uint64_t currentNumBytes = numStoredBytes();
   assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);

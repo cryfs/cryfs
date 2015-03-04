@@ -51,9 +51,17 @@ void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t size) const {
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
+  resizeIfSmallerThan(offset + size);
   traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, void *leafDataBegin, uint32_t leafDataSize) {
     std::memcpy(leafDataBegin, source, leafDataSize);
   });
+}
+
+void BlobOnBlocks::resizeIfSmallerThan(uint64_t neededSize) {
+  //TODO This is inefficient, because size() and resizeNumBytes() both traverse the tree. Better: _datatree->ensureMinSize(x)
+  if (neededSize > size()) {
+    _datatree->resizeNumBytes(neededSize);
+  }
 }
 
 Key BlobOnBlocks::key() const {
