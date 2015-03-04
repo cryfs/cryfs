@@ -18,6 +18,8 @@ using std::unique_ptr;
 using std::make_unique;
 using std::string;
 
+//TODO Split into multiple files
+
 using cpputils::dynamic_pointer_move;
 
 using blockstore::BlockStore;
@@ -34,6 +36,7 @@ class DataLeafNodeTest: public Test {
 public:
 
   static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
+  static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   DataLeafNodeTest():
     _blockStore(make_unique<FakeBlockStore>()),
@@ -111,6 +114,7 @@ public:
 };
 
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
+constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
 TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterInitialization) {
   auto block = blockStore->create(BLOCKSIZE_BYTES);
@@ -264,11 +268,6 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
   EXPECT_NE(data, *(char*)loadData(*copied).data());
 }
 
-/* TODO
- * The following test cases test reading/writing part of a leaf. This doesn't make much sense,
- * since the new leaf abstraction doesn't offer read()/write() anymore, but direct data pointer access.
- * However, these test cases might make sense wherever the read()/write() for a leaf will be implemented.
- * In case they're not needed then, delete them.
 
 struct DataRange {
   DataRange(size_t leafsize_, off_t offset_, size_t count_): leafsize(leafsize_), offset(offset_), count(count_) {}
@@ -298,17 +297,17 @@ public:
     auto newleaf = nodeStore->createNewLeafNode();
 
     newleaf->resize(GetParam().leafsize);
-    newleaf->write(GetParam().offset, GetParam().count, to_write);
+    newleaf->write(to_write.data(), GetParam().offset, GetParam().count);
     return newleaf->key();
   }
 
-  void EXPECT_DATA_READS_AS(const Data &expected, const DataNode &leaf, off_t offset, size_t count) {
+  void EXPECT_DATA_READS_AS(const Data &expected, const DataLeafNode &leaf, off_t offset, size_t count) {
     Data read(count);
-    leaf.read(offset, count, &read);
+    leaf.read(read.data(), offset, count);
     EXPECT_DATA_EQ(expected, read);
   }
 
-  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataNode &leaf, off_t start, size_t count) {
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataLeafNode &leaf, off_t start, size_t count) {
     Data begin(start);
     Data end(GetParam().leafsize - count - start);
 
@@ -319,26 +318,26 @@ public:
     EXPECT_DATA_READS_AS(end, leaf, start + count, end.size());
   }
 
-  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const DataNode &leaf, off_t start, size_t count) {
+  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const DataLeafNode &leaf, off_t start, size_t count) {
     Data ZEROES(GetParam().leafsize);
     ZEROES.FillWithZeroes();
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, leaf, start, count);
   }
 };
 INSTANTIATE_TEST_CASE_P(DataLeafNodeDataTest, DataLeafNodeDataTest, Values(
-  DataRange(DataLeafNode::MAX_STORED_BYTES,     0,   DataLeafNode::MAX_STORED_BYTES),     // full size leaf, access beginning to end
-  DataRange(DataLeafNode::MAX_STORED_BYTES,     100, DataLeafNode::MAX_STORED_BYTES-200), // full size leaf, access middle to middle
-  DataRange(DataLeafNode::MAX_STORED_BYTES,     0,   DataLeafNode::MAX_STORED_BYTES-100), // full size leaf, access beginning to middle
-  DataRange(DataLeafNode::MAX_STORED_BYTES,     100, DataLeafNode::MAX_STORED_BYTES-100), // full size leaf, access middle to end
-  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 0,   DataLeafNode::MAX_STORED_BYTES-100), // non-full size leaf, access beginning to end
-  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 100, DataLeafNode::MAX_STORED_BYTES-300), // non-full size leaf, access middle to middle
-  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 0,   DataLeafNode::MAX_STORED_BYTES-200), // non-full size leaf, access beginning to middle
-  DataRange(DataLeafNode::MAX_STORED_BYTES-100, 100, DataLeafNode::MAX_STORED_BYTES-200)  // non-full size leaf, access middle to end
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()),     // full size leaf, access beginning to end
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200), // full size leaf, access middle to middle
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access beginning to middle
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access middle to end
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // non-full size leaf, access beginning to end
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-300), // non-full size leaf, access middle to middle
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200), // non-full size leaf, access beginning to middle
+  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200)  // non-full size leaf, access middle to end
 ));
 
 TEST_P(DataLeafNodeDataTest, WriteAndReadImmediately) {
   leaf->resize(GetParam().leafsize);
-  leaf->write(GetParam().offset, GetParam().count, this->foregroundData);
+  leaf->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
 
   EXPECT_DATA_READS_AS(this->foregroundData, *leaf, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*leaf, GetParam().offset, GetParam().count);
@@ -347,17 +346,16 @@ TEST_P(DataLeafNodeDataTest, WriteAndReadImmediately) {
 TEST_P(DataLeafNodeDataTest, WriteAndReadAfterLoading) {
   Key key = CreateLeafWriteToItAndReturnKey(this->foregroundData);
 
-  auto loaded_leaf = nodeStore->load(key);
+  auto loaded_leaf = LoadLeafNode(key);
   EXPECT_DATA_READS_AS(this->foregroundData, *loaded_leaf, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_leaf, GetParam().offset, GetParam().count);
 }
 
 TEST_P(DataLeafNodeDataTest, OverwriteAndRead) {
   leaf->resize(GetParam().leafsize);
-  leaf->write(0, GetParam().leafsize, this->backgroundData);
-  leaf->write(GetParam().offset, GetParam().count, this->foregroundData);
+  leaf->write(this->backgroundData.data(), 0, GetParam().leafsize);
+  leaf->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
   EXPECT_DATA_READS_AS(this->foregroundData, *leaf, GetParam().offset, GetParam().count);
   EXPECT_DATA_READS_AS_OUTSIDE_OF(this->backgroundData, *leaf, GetParam().offset, GetParam().count);
 }
-*/
 
