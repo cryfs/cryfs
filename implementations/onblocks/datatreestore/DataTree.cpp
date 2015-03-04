@@ -177,6 +177,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   }
   uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
   LastLeaf(_rootNode.get())->resize(newLastLeafSize);
+
   assert(newNumBytes == numStoredBytes());
 }
 

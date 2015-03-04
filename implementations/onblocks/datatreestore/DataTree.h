@@ -26,6 +26,7 @@ public:
   DataTree(datanodestore::DataNodeStore *nodeStore, std::unique_ptr<datanodestore::DataNode> rootNode);
   virtual ~DataTree();
 
+  //TODO Might be that we don't need addDataLeaf()/removeDataLeaf() to be public anymore
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
   void removeLastDataLeaf();
 
@@ -38,8 +39,6 @@ public:
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
   uint64_t numStoredBytes() const;
   void resizeNumBytes(uint64_t newNumBytes);
-
-  //TODO Test resizeNumBytes()
 
 private:
   datanodestore::DataNodeStore *_nodeStore;
