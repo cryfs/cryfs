@@ -26,6 +26,7 @@ public:
 private:
   FakeBlockStore *_store;
   std::shared_ptr<Data> _data;
+  bool _dataChanged;
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlock);
 };

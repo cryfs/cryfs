@@ -15,7 +15,7 @@ namespace blockstore {
 namespace testfake {
 
 FakeBlock::FakeBlock(FakeBlockStore *store, const Key &key, shared_ptr<Data> data)
- : Block(key), _store(store), _data(data) {
+ : Block(key), _store(store), _data(data), _dataChanged(false) {
 }
 
 FakeBlock::~FakeBlock() {
@@ -29,6 +29,7 @@ const void *FakeBlock::data() const {
 void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
   assert(offset <= _data->size() && offset + size <= _data->size()); //Also check offset < _data->size() because of possible overflow in the addition
   std::memcpy((uint8_t*)_data->data()+offset, source, size);
+  _dataChanged = true;
 }
 
 size_t FakeBlock::size() const {
@@ -36,7 +37,10 @@ size_t FakeBlock::size() const {
 }
 
 void FakeBlock::flush() {
-  _store->updateData(key(), *_data);
+  if(_dataChanged) {
+    _store->updateData(key(), *_data);
+    _dataChanged = false;
+  }
 }
 
 }

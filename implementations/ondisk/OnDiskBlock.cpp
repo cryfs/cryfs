@@ -20,15 +20,15 @@ namespace blockstore {
 namespace ondisk {
 
 OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, size_t size)
- : Block(key), _filepath(filepath), _data(size) {
+ : Block(key), _filepath(filepath), _data(size), _dataChanged(false) {
 }
 
 OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, Data &&data)
- : Block(key), _filepath(filepath), _data(std::move(data)) {
+ : Block(key), _filepath(filepath), _data(std::move(data)), _dataChanged(false) {
 }
 
 OnDiskBlock::~OnDiskBlock() {
-  _storeToDisk();
+  flush();
 }
 
 const void *OnDiskBlock::data() const {
@@ -38,6 +38,7 @@ const void *OnDiskBlock::data() const {
 void OnDiskBlock::write(const void *source, uint64_t offset, uint64_t size) {
   assert(offset <= _data.size() && offset + size <= _data.size()); //Also check offset < _data->size() because of possible overflow in the addition
   std::memcpy((uint8_t*)_data.data()+offset, source, size);
+  _dataChanged = true;
 }
 
 size_t OnDiskBlock::size() const {
@@ -61,6 +62,7 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
 }
 
 unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, size_t size) {
+  //TODO Only writeback, if data was actually changed (Block::write() was called)
   auto filepath = rootdir / key.ToString();
   if (bf::exists(filepath)) {
     return nullptr;
@@ -87,7 +89,10 @@ void OnDiskBlock::_storeToDisk() const {
 }
 
 void OnDiskBlock::flush() {
-  _storeToDisk();
+  if (_dataChanged) {
+    _storeToDisk();
+    _dataChanged = false;
+  }
 }
 
 }

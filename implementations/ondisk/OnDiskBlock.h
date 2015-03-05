@@ -31,6 +31,7 @@ public:
 private:
   const boost::filesystem::path _filepath;
   Data _data;
+  bool _dataChanged;
 
   OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, size_t size);
   OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, Data &&data);
