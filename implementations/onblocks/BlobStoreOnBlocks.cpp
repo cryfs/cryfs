@@ -18,10 +18,8 @@ namespace onblocks {
 using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
 
-constexpr size_t BlobStoreOnBlocks::BLOCKSIZE_BYTES;
-
-BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore)
-: _dataTreeStore(make_unique<DataTreeStore>(make_unique<DataNodeStore>(std::move(blockStore), BLOCKSIZE_BYTES))) {
+BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t blocksizeBytes)
+: _dataTreeStore(make_unique<DataTreeStore>(make_unique<DataNodeStore>(std::move(blockStore), blocksizeBytes))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {

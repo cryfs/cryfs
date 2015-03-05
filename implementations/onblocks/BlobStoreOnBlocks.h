@@ -13,9 +13,7 @@ class DataTreeStore;
 
 class BlobStoreOnBlocks: public BlobStore {
 public:
-  static constexpr size_t BLOCKSIZE_BYTES = 4096;
-
-  BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore);
+  BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore, uint32_t blocksizeBytes);
   virtual ~BlobStoreOnBlocks();
 
   std::unique_ptr<Blob> create() override;
