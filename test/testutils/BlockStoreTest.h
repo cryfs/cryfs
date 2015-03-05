@@ -115,12 +115,6 @@ public:
     );
   }
 
-  void TestLoadNonExistingBlockWithEmptyKey() {
-    EXPECT_FALSE(
-        (bool)blockStore->load(key)
-    );
-  }
-
 private:
   const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
   std::unique_ptr<blockstore::BlockStore> blockStore;
@@ -191,7 +185,6 @@ TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushesWhenDestructed);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushesWhenDestructed);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlock);
-TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlockWithEmptyKey);
 
 TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
   auto blockStore = this->fixture.createBlockStore();
@@ -254,7 +247,6 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     AfterCreate_FlushesWhenDestructed,
     AfterLoad_FlushesWhenDestructed,
     LoadNonExistingBlock,
-    LoadNonExistingBlockWithEmptyKey,
     TwoCreatedBlocksHaveDifferentKeys,
     BlockIsNotLoadableAfterDeleting,
     NumBlocksIsCorrectOnEmptyBlockstore,
