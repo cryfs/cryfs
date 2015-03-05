@@ -63,10 +63,10 @@ TEST_F(DataNodeViewTest, DataIsStored) {
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
-    std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), randomData.size());
+    view.write(randomData.data(), 0, randomData.size());
   }
   DataNodeView view(blockStore->load(key));
-  EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), randomData.size()));
+  EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), randomData.size()));
 }
 
 TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
@@ -77,12 +77,12 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
     DataNodeView view(std::move(block));
     view.setDepth(3);
     view.setSize(1000000000u);
-    std::memcpy(view.DataBegin<uint8_t>(), randomData.data(), DATASIZE_BYTES);
+    view.write(randomData.data(), 0, DATASIZE_BYTES);
   }
   DataNodeView view(blockStore->load(key));
   EXPECT_EQ(3, view.Depth());
   EXPECT_EQ(1000000000u, view.Size());
-  EXPECT_EQ(0, std::memcmp(view.DataBegin<uint8_t>(), randomData.data(), DATASIZE_BYTES));
+  EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), DATASIZE_BYTES));
 }
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithOneByteEntries) {

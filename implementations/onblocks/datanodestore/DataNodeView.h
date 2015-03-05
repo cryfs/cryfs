@@ -95,21 +95,10 @@ public:
   }
 
   template<typename Entry>
-  Entry *DataBegin() {
-    return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataBegin<Entry>());
-  }
-
-  template<typename Entry>
   const Entry *DataEnd() const {
     const unsigned int NUM_ENTRIES = layout().datasizeBytes() / sizeof(Entry);
     return DataBegin<Entry>() + NUM_ENTRIES;
   }
-
-  template<typename Entry>
-  Entry *DataEnd() {
-    return const_cast<Entry*>(const_cast<const DataNodeView*>(this)->DataEnd<Entry>());
-  }
-
 
   DataNodeLayout layout() const {
     return DataNodeLayout(_block->size());
