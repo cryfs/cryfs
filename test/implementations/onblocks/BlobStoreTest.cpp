@@ -33,12 +33,3 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
   blobStore->remove(blobStore->load(key));
   EXPECT_EQ(nullptr, blobStore->load(key).get());
 }
-
-//TODO Test read/write
-//TODO Test read/write with loading inbetween
-//TODO Test flushing isn't necessary (changes do auto-flush)
-
-//Taken from BlockStoreTest.h:
-//TODO Blob is zeroed out after growing
-//TODO Blob is zeroed out after growing and loading
-//TODO Last blob part is zeroed out after shrinking and regrowing
