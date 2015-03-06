@@ -38,5 +38,6 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
 //TODO Test read/write with loading inbetween
 
 //Taken from BlockStoreTest.h:
-//TODO Created blob is zeroed out
-//TODO Created blob is zeroed out after loading
+//TODO Blob is zeroed out after growing
+//TODO Blob is zeroed out after growing and loading
+//TODO Last blob part is zeroed out after shrinking and regrowing
