@@ -72,3 +72,36 @@ TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
   auto loaded = blobStore->load(key);
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
+
+TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_Empty) {
+  int value;
+  blob->write(&value, 0, 4);
+  EXPECT_EQ(4, blob->size());
+}
+
+TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_Empty) {
+  int value;
+  blob->write(&value, 2, 4);
+  EXPECT_EQ(6, blob->size());
+}
+
+TEST_F(BlobSizeTest, WritingOverEndOfBlobGrowsBlob_NonEmpty) {
+  blob->resize(1);
+  int value;
+  blob->write(&value, 0, 4);
+  EXPECT_EQ(4, blob->size());
+}
+
+TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_NonEmpty) {
+  blob->resize(1);
+  int value;
+  blob->write(&value, 1, 4);
+  EXPECT_EQ(5, blob->size());
+}
+
+TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
+  blob->resize(1);
+  int value;
+  blob->write(&value, 2, 4);
+  EXPECT_EQ(6, blob->size());
+}

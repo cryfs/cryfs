@@ -39,8 +39,8 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
   _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte](DataLeafNode *leaf, uint32_t leafIndex) {
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
-    uint32_t dataSize = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
-    func(indexOfFirstLeafByte, leaf, dataBegin, dataSize);
+    uint32_t dataEnd = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
+    func(indexOfFirstLeafByte, leaf, dataBegin, dataEnd-dataBegin);
   });
 }
 

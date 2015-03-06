@@ -36,6 +36,7 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
 
 //TODO Test read/write
 //TODO Test read/write with loading inbetween
+//TODO Test flushing isn't necessary (changes do auto-flush)
 
 //Taken from BlockStoreTest.h:
 //TODO Blob is zeroed out after growing
