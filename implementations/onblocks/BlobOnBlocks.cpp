@@ -45,15 +45,17 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t size) const {
-  traverseLeaves(offset, size, [target] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
-    leaf->read((uint8_t*)target + indexOfFirstLeafByte + leafDataOffset, leafDataOffset, leafDataSize);
+  traverseLeaves(offset, size, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+    //TODO Simplify formula, make it easier to understand
+    leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
   resizeIfSmallerThan(offset + size);
-  traverseLeaves(offset, size, [source] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
-    leaf->write((uint8_t*)source + indexOfFirstLeafByte + leafDataOffset, leafDataOffset, leafDataSize);
+  traverseLeaves(offset, size, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+    //TODO Simplify formula, make it easier to understand
+    leaf->write((uint8_t*)source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 
