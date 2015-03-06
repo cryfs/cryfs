@@ -2,6 +2,17 @@
 
 using blockstore::Key;
 
+TEST_F(BlobStoreTest, LoadNonexistingKeyOnEmptyBlobstore) {
+  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(nullptr, blobStore->load(key));
+}
+
+TEST_F(BlobStoreTest, LoadNonexistingKeyOnNonEmptyBlobstore) {
+  blobStore->create();
+  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(nullptr, blobStore->load(key));
+}
+
 TEST_F(BlobStoreTest, TwoCreatedBlobsHaveDifferentKeys) {
   auto blob1 = blobStore->create();
   auto blob2 = blobStore->create();
@@ -29,4 +40,3 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
 //Taken from BlockStoreTest.h:
 //TODO Created blob is zeroed out
 //TODO Created blob is zeroed out after loading
-//TODO Try loading nonexisting blob
