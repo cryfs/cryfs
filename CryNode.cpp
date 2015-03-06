@@ -3,6 +3,8 @@
 #include <sys/time.h>
 
 #include "CryDevice.h"
+#include "CryDir.h"
+#include "CryFile.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 
 namespace bf = boost::filesystem;
@@ -20,7 +22,16 @@ CryNode::~CryNode() {
 }
 
 void CryNode::stat(struct ::stat *result) const {
-  result->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IWUSR;
+  if (dynamic_cast<const CryDir*>(this) != nullptr) {
+    //printf("Stat: dir\n");
+    result->st_mode = S_IFDIR;
+  } else if (dynamic_cast<const CryFile*>(this) != nullptr) {
+    //printf("Stat: file\n");
+    result->st_mode = S_IFREG;
+  } else {
+    throw FuseErrnoException(EIO);
+  }
+  result->st_mode |= S_IRUSR | S_IXUSR | S_IWUSR;
   return;
   throw FuseErrnoException(ENOTSUP);
 }
