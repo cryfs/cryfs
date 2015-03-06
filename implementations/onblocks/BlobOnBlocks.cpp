@@ -68,5 +68,9 @@ Key BlobOnBlocks::key() const {
   return _datatree->key();
 }
 
+unique_ptr<DataTree> BlobOnBlocks::releaseTree() {
+  return std::move(_datatree);
+}
+
 }
 }

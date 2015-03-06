@@ -5,12 +5,14 @@
 #include "BlobStoreOnBlocks.h"
 
 #include "BlobOnBlocks.h"
+#include <messmer/cpp-utils/pointer.h>
 
 using std::unique_ptr;
 using std::make_unique;
 
 using blockstore::BlockStore;
 using blockstore::Key;
+using cpputils::dynamic_pointer_move;
 
 namespace blobstore {
 namespace onblocks {
@@ -30,7 +32,16 @@ unique_ptr<Blob> BlobStoreOnBlocks::create() {
 }
 
 unique_ptr<Blob> BlobStoreOnBlocks::load(const Key &key) {
-  return make_unique<BlobOnBlocks>(_dataTreeStore->load(key));
+  auto tree = _dataTreeStore->load(key);
+  if (tree == nullptr) {
+  	return nullptr;
+  }
+  return make_unique<BlobOnBlocks>(std::move(tree));
+}
+
+void BlobStoreOnBlocks::remove(unique_ptr<Blob> blob) {
+  auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
+  _dataTreeStore->remove(_blob->releaseTree());
 }
 
 }

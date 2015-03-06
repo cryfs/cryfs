@@ -18,8 +18,7 @@ public:
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual std::unique_ptr<Blob> load(const blockstore::Key &key) = 0;
-  //TODO Needed for performance? Or is deleting loaded blocks enough?
-  //virtual void remove(const std::string &key) = 0;
+  virtual void remove(std::unique_ptr<Blob> blob) = 0;
 };
 
 }

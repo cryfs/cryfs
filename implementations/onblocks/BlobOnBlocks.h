@@ -28,6 +28,8 @@ public:
   void read(void *target, uint64_t offset, uint64_t size) const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
 
+  std::unique_ptr<datatreestore::DataTree> releaseTree();
+
 private:
 
   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, datanodestore::DataLeafNode *, uint32_t, uint32_t)>) const;

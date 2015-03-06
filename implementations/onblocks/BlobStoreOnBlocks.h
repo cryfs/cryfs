@@ -19,6 +19,8 @@ public:
   std::unique_ptr<Blob> create() override;
   std::unique_ptr<Blob> load(const blockstore::Key &key) override;
 
+  void remove(std::unique_ptr<Blob> blob) override;
+
 private:
   std::unique_ptr<datatreestore::DataTreeStore> _dataTreeStore;
 };
