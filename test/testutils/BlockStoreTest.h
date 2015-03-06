@@ -258,3 +258,5 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
 
 
 #endif
+
+//TODO Add a test for write() writing and rereading parts of a block, rereading both immediately and after loading (similar to the one in messmer/blobstore/.../DataLeafTest)
