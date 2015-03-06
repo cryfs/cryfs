@@ -25,8 +25,10 @@ using blobstore::onblocks::BlobOnBlocks;
 
 namespace cryfs {
 
+constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
+
 CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique<BlobStoreOnBlocks>(std::move(blockStore))), _rootKey(GetOrCreateRootKey(config.get())) {
+: _blobStore(make_unique<BlobStoreOnBlocks>(std::move(blockStore), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {

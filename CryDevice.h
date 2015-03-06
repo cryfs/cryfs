@@ -17,6 +17,8 @@ namespace bf = boost::filesystem;
 
 class CryDevice: public fspp::Device {
 public:
+  static constexpr uint32_t BLOCKSIZE_BYTES = 4096;
+
   CryDevice(std::unique_ptr<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
 
