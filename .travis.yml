@@ -15,7 +15,7 @@ before_script:
 script:
 - bii find
 - bii cpp:configure
-- bii cpp:build
+- bii cpp:build -- -j2
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
   && chmod +x run_with_fuse.sh
   && ./run_with_fuse.sh ../../../bin/messmer_fspp_test_main
