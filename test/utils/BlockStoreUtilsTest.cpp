@@ -32,6 +32,14 @@ public:
   unique_ptr<BlockStore> blockStore;
 };
 
+TEST_F(BlockStoreUtilsTest, FillWithZeroes) {
+  auto block = blockStore->create(SIZE);
+  block->write(dataFixture.data(), 0, SIZE);
+  EXPECT_NE(0, std::memcmp(ZEROES.data(), block->data(), SIZE));
+  fillWithZeroes(block.get());
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), block->data(), SIZE));
+}
+
 class BlockStoreUtilsTest_CopyToNewBlock: public BlockStoreUtilsTest {};
 
 TEST_F(BlockStoreUtilsTest_CopyToNewBlock, CopyEmptyBlock) {

@@ -13,8 +13,6 @@ std::unique_ptr<Block> copyToNewBlock(BlockStore *blockStore, const Block &block
 void copyTo(Block *target, const Block &source);
 void fillWithZeroes(Block *target);
 
-//TODO Test fillWithZeroes
-
 }
 }
 
