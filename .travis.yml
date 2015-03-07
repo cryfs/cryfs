@@ -14,7 +14,7 @@ before_script:
 script:
 - bii find
 - bii cpp:configure
-- bii cpp:build
+- bii cpp:build -- -j2
 - "../../../bin/messmer_blobstore_test_main"
 deploy:
   provider: biicode
