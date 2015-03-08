@@ -45,6 +45,7 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t size) const {
+  assert(offset <= _datatree->numStoredBytes() && offset + size <= _datatree->numStoredBytes());
   traverseLeaves(offset, size, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
     //TODO Simplify formula, make it easier to understand
     leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
