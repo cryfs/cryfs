@@ -11,13 +11,13 @@ namespace cryfs {
 
 class CryNode: public virtual fspp::Node {
 public:
-  CryNode();
-  virtual ~CryNode();
-
-  void stat(struct ::stat *result) const override;
   void access(int mask) const override;
   void rename(const boost::filesystem::path &to) override;
   void utimens(const timespec times[2]) override;
+
+protected:
+  CryNode();
+  virtual ~CryNode();
 
 private:
 

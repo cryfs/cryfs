@@ -29,6 +29,12 @@ CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> blob)
 CryDir::~CryDir() {
 }
 
+void CryDir::stat(struct ::stat *result) const {
+  result->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IWUSR;
+  return;
+  throw FuseErrnoException(ENOTSUP);
+}
+
 unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
   auto child = _device->CreateBlob();
   _blob->AddChild(name, child->key());

@@ -13,6 +13,7 @@ public:
   CryDir(CryDevice *device, std::unique_ptr<DirBlob> blob);
   virtual ~CryDir();
 
+  void stat(struct ::stat *result) const override;
   //TODO return type variance to CryFile/CryDir?
   std::unique_ptr<fspp::File> createFile(const std::string &name, mode_t mode) override;
   std::unique_ptr<fspp::Dir> createDir(const std::string &name, mode_t mode) override;

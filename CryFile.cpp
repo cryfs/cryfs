@@ -26,6 +26,12 @@ unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
   throw FuseErrnoException(ENOTSUP);
 }
 
+void CryFile::stat(struct ::stat *result) const {
+  result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+  return;
+  throw FuseErrnoException(ENOTSUP);
+}
+
 void CryFile::truncate(off_t size) const {
   throw FuseErrnoException(ENOTSUP);
 }

@@ -21,21 +21,6 @@ CryNode::CryNode() {
 CryNode::~CryNode() {
 }
 
-void CryNode::stat(struct ::stat *result) const {
-  if (dynamic_cast<const CryDir*>(this) != nullptr) {
-    //printf("Stat: dir\n");
-    result->st_mode = S_IFDIR;
-  } else if (dynamic_cast<const CryFile*>(this) != nullptr) {
-    //printf("Stat: file\n");
-    result->st_mode = S_IFREG;
-  } else {
-    throw FuseErrnoException(EIO);
-  }
-  result->st_mode |= S_IRUSR | S_IXUSR | S_IWUSR;
-  return;
-  throw FuseErrnoException(ENOTSUP);
-}
-
 void CryNode::access(int mask) const {
   return;
   throw FuseErrnoException(ENOTSUP);
