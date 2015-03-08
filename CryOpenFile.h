@@ -7,10 +7,11 @@
 
 namespace cryfs {
 class CryDevice;
+class FileBlob;
 
 class CryOpenFile: public fspp::OpenFile {
 public:
-  CryOpenFile();
+  CryOpenFile(std::unique_ptr<FileBlob> fileBlob);
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
@@ -22,6 +23,7 @@ public:
   void fdatasync() override;
 
 private:
+  std::unique_ptr<FileBlob> _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };

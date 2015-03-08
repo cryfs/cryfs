@@ -25,6 +25,7 @@ public:
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
   std::unique_ptr<blobstore::Blob> CreateBlob();
+  std::unique_ptr<blobstore::Blob> LoadBlob(const blockstore::Key &key);
 
 private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);

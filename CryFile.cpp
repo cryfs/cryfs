@@ -15,15 +15,17 @@ using std::make_unique;
 
 namespace cryfs {
 
-CryFile::CryFile(unique_ptr<FileBlob> blob)
-: _blob(std::move(blob)) {
+CryFile::CryFile(CryDevice *device, unique_ptr<FileBlob> blob)
+: _device(device),
+  _blob(std::move(blob)) {
 }
 
 CryFile::~CryFile() {
 }
 
 unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
-  throw FuseErrnoException(ENOTSUP);
+  //TODO This is a performance issue because we open the blob twice on the "open" syscall
+  return make_unique<CryOpenFile>(make_unique<FileBlob>(_device->LoadBlob(_blob->key())));
 }
 
 void CryFile::stat(struct ::stat *result) const {

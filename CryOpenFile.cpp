@@ -5,8 +5,12 @@
 
 #include "CryDevice.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
+#include "impl/FileBlob.h"
 
 namespace bf = boost::filesystem;
+
+using std::unique_ptr;
+using blobstore::Blob;
 
 //TODO Get rid of this in favor of a exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -14,8 +18,8 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile() {
-  throw FuseErrnoException(ENOTSUP);
+CryOpenFile::CryOpenFile(unique_ptr<FileBlob> fileBlob)
+: _fileBlob(std::move(fileBlob)) {
 }
 
 CryOpenFile::~CryOpenFile() {
@@ -35,11 +39,13 @@ void CryOpenFile::truncate(off_t size) const {
 }
 
 int CryOpenFile::read(void *buf, size_t count, off_t offset) {
-  throw FuseErrnoException(ENOTSUP);
+  //TODO Return number of read bytes
+  _fileBlob->read(buf, offset, count);
+  return count;
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
-  throw FuseErrnoException(ENOTSUP);
+  _fileBlob->write(buf, offset, count);
 }
 
 void CryOpenFile::fsync() {

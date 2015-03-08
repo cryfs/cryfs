@@ -71,7 +71,7 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
   if (DirBlob::IsDir(*currentBlob)) {
     return make_unique<CryDir>(this, std::move(make_unique<DirBlob>(std::move(currentBlob))));
   } else if (FileBlob::IsFile(*currentBlob)) {
-    return make_unique<CryFile>(std::move(make_unique<FileBlob>(std::move(currentBlob))));
+    return make_unique<CryFile>(this, std::move(make_unique<FileBlob>(std::move(currentBlob))));
   } else {
     throw FuseErrnoException(EIO);
   }
@@ -83,6 +83,10 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
 
 unique_ptr<blobstore::Blob> CryDevice::CreateBlob() {
   return _blobStore->create();
+}
+
+unique_ptr<blobstore::Blob> CryDevice::LoadBlob(const blockstore::Key &key) {
+  return _blobStore->load(key);
 }
 
 }

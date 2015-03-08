@@ -11,7 +11,7 @@ namespace cryfs {
 
 class CryFile: public fspp::File, CryNode {
 public:
-  CryFile(std::unique_ptr<FileBlob> blob);
+  CryFile(CryDevice *device, std::unique_ptr<FileBlob> blob);
   virtual ~CryFile();
 
   void stat(struct ::stat *result) const override;
@@ -20,6 +20,7 @@ public:
   void unlink() override;
 
 private:
+  CryDevice *_device;
   std::unique_ptr<FileBlob> _blob;
 
   DISALLOW_COPY_AND_ASSIGN(CryFile);

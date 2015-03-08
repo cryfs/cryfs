@@ -16,6 +16,11 @@ public:
 
   void InitializeEmptyFile();
 
+  void read(void *target, uint64_t offset, uint64_t count) const;
+  void write(const void *source, uint64_t offset, uint64_t count);
+
+  blockstore::Key key() const;
+
 private:
   std::unique_ptr<blobstore::Blob> _blob;
 

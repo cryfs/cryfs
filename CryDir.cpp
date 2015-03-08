@@ -41,7 +41,7 @@ unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
   //TODO Do we need a return value in createDir for fspp? If not, change fspp!
   auto fileblob = make_unique<FileBlob>(std::move(child));
   fileblob->InitializeEmptyFile();
-  return make_unique<CryFile>(std::move(fileblob));
+  return make_unique<CryFile>(_device, std::move(fileblob));
 }
 
 unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
