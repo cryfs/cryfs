@@ -62,7 +62,6 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
 }
 
 unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, size_t size) {
-  //TODO Only writeback, if data was actually changed (Block::write() was called)
   auto filepath = rootdir / key.ToString();
   if (bf::exists(filepath)) {
     return nullptr;

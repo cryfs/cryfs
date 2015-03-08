@@ -9,8 +9,6 @@
 
 namespace blockstore {
 
-//TODO Don't use string, but own class for keys? (better performance for all keys have same length)
-
 class BlockStore {
 public:
   virtual ~BlockStore() {}
