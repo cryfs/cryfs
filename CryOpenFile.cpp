@@ -27,11 +27,12 @@ CryOpenFile::~CryOpenFile() {
 }
 
 void CryOpenFile::flush() {
-  throw FuseErrnoException(ENOTSUP);
+  //throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
   result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+  result->st_size = _fileBlob->size();
   return;
 }
 
@@ -50,11 +51,11 @@ void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
 }
 
 void CryOpenFile::fsync() {
-  throw FuseErrnoException(ENOTSUP);
+  //throw FuseErrnoException(ENOTSUP);
 }
 
 void CryOpenFile::fdatasync() {
-  throw FuseErrnoException(ENOTSUP);
+  //throw FuseErrnoException(ENOTSUP);
 }
 
 }

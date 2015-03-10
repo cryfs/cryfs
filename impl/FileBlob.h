@@ -18,6 +18,7 @@ public:
   void write(const void *source, uint64_t offset, uint64_t count);
 
   void resize(off_t size);
+  off_t size() const;
 
   blockstore::Key key() const;
 

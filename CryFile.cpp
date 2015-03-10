@@ -33,12 +33,14 @@ unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
 
 void CryFile::stat(struct ::stat *result) const {
   result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+  //TODO Loading the blob for only getting the size is not very performant.
+  result->st_size = FileBlob(_device->LoadBlob(_key)).size();
   return;
   throw FuseErrnoException(ENOTSUP);
 }
 
 void CryFile::truncate(off_t size) const {
-  throw FuseErrnoException(ENOTSUP);
+  FileBlob(_device->LoadBlob(_key)).resize(size);
 }
 
 void CryFile::unlink() {

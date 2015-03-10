@@ -42,7 +42,11 @@ blockstore::Key FileBlob::key() const {
 }
 
 void FileBlob::resize(off_t size) {
-  _blob->resize(size);
+  _blob->resize(size+1);
+}
+
+off_t FileBlob::size() const {
+  return _blob->size()-1;
 }
 
 }
