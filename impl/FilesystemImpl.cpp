@@ -127,7 +127,7 @@ void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {
   node->rename(to);
 }
 
-unique_ptr<vector<string>> FilesystemImpl::readDir(const bf::path &path) {
+unique_ptr<vector<Dir::Entry>> FilesystemImpl::readDir(const bf::path &path) {
   auto dir = LoadDir(path);
   return dir->children();
 }

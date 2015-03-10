@@ -14,6 +14,7 @@ using std::vector;
 using std::string;
 
 using namespace fspp::fuse;
+using fspp::Dir;
 
 unique_ptr<vector<string>> LARGE_DIR(int num_entries) {
   auto result = make_unique<vector<string>>();
