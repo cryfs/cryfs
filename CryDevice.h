@@ -12,6 +12,7 @@
 #include "messmer/cpp-utils/macros.h"
 
 namespace cryfs {
+class DirBlob;
 
 namespace bf = boost::filesystem;
 
@@ -31,6 +32,8 @@ private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);
   blockstore::Key CreateRootBlobAndReturnKey();
   std::unique_ptr<fspp::Node> Load(const bf::path &path) override;
+
+  std::unique_ptr<DirBlob> LoadDirBlob(const bf::path &path);
 
   std::unique_ptr<blobstore::BlobStore> _blobStore;
 

@@ -3,6 +3,7 @@
 #include "CryDevice.h"
 #include "CryOpenFile.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
+#include "impl/DirBlob.h"
 
 namespace bf = boost::filesystem;
 
@@ -13,19 +14,21 @@ using fspp::fuse::FuseErrnoException;
 using std::unique_ptr;
 using std::make_unique;
 
+using blockstore::Key;
+
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ptr<FileBlob> blob)
+CryFile::CryFile(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
 : _device(device),
-  _blob(std::move(blob)) {
+  _parent(std::move(parent)),
+  _key(key) {
 }
 
 CryFile::~CryFile() {
 }
 
 unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
-  //TODO This is a performance issue because we open the blob twice on the "open" syscall
-  return make_unique<CryOpenFile>(make_unique<FileBlob>(_device->LoadBlob(_blob->key())));
+  return make_unique<CryOpenFile>(make_unique<FileBlob>(_device->LoadBlob(_key)));
 }
 
 void CryFile::stat(struct ::stat *result) const {

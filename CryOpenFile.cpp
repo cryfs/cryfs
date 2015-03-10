@@ -31,11 +31,12 @@ void CryOpenFile::flush() {
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
-  throw FuseErrnoException(ENOTSUP);
+  result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+  return;
 }
 
 void CryOpenFile::truncate(off_t size) const {
-  throw FuseErrnoException(ENOTSUP);
+  _fileBlob->resize(size);
 }
 
 int CryOpenFile::read(void *buf, size_t count, off_t offset) {

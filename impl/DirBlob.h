@@ -14,24 +14,24 @@ namespace cryfs{
 
 class DirBlob {
 public:
+  static std::unique_ptr<DirBlob> InitializeEmptyDir(std::unique_ptr<blobstore::Blob> blob);
+
   DirBlob(std::unique_ptr<blobstore::Blob> blob);
   virtual ~DirBlob();
 
-  void InitializeEmptyDir();
   std::unique_ptr<std::vector<fspp::Dir::Entry>> GetChildren() const;
+  //TODO Use struct instead of pair
+  std::pair<fspp::Dir::EntryType, blockstore::Key> GetChild(const std::string &name) const;
   void AddChildDir(const std::string &name, const blockstore::Key &blobKey);
   void AddChildFile(const std::string &name, const blockstore::Key &blobKey);
-  blockstore::Key GetBlobKeyForName(const std::string &name) const;
-
-  static bool IsDir(const blobstore::Blob &blob);
 
 private:
   unsigned char magicNumber() const;
-  static const unsigned char magicNumber(const blobstore::Blob &blob);
 
   void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type);
 
   const char *readAndAddNextChild(const char *pos, std::vector<fspp::Dir::Entry> *result) const;
+  const char *getStartingPosOfEntry(const char *pos, const std::string &name) const;
 
   std::unique_ptr<blobstore::Blob> _blob;
 

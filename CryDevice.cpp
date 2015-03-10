@@ -9,8 +9,6 @@
 #include "messmer/blobstore/implementations/onblocks/BlobOnBlocks.h"
 
 using std::unique_ptr;
-
-using std::unique_ptr;
 using std::make_unique;
 using std::string;
 
@@ -45,8 +43,7 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
 Key CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob = _blobStore->create();
   Key rootBlobKey = rootBlob->key();
-  DirBlob rootDir(std::move(rootBlob));
-  rootDir.InitializeEmptyDir();
+  DirBlob::InitializeEmptyDir(std::move(rootBlob));
   return rootBlobKey;
 }
 
@@ -57,24 +54,36 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
   printf("Loading %s\n", path.c_str());
   assert(path.is_absolute());
 
-  auto currentBlob = _blobStore->load(_rootKey);
-
-  for (const bf::path &component : path.relative_path()) {
-    if (!DirBlob::IsDir(*currentBlob)) {
-      throw FuseErrnoException(ENOTDIR);
-    }
-    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(currentBlob));
-
-    Key childKey = currentDir->GetBlobKeyForName(component.c_str());
-    currentBlob = _blobStore->load(childKey);
+  if (path.parent_path().empty()) {
+    //We are asked to load the root directory '/'.
+    return make_unique<CryDir>(this, _rootKey);
   }
-  if (DirBlob::IsDir(*currentBlob)) {
-    return make_unique<CryDir>(this, std::move(make_unique<DirBlob>(std::move(currentBlob))));
-  } else if (FileBlob::IsFile(*currentBlob)) {
-    return make_unique<CryFile>(this, std::move(make_unique<FileBlob>(std::move(currentBlob))));
+  auto parent = LoadDirBlob(path.parent_path());
+  auto entry = parent->GetChild(path.filename().native());
+
+  if (entry.first == fspp::Dir::EntryType::DIR) {
+    return make_unique<CryDir>(this, entry.second);
+  } else if (entry.first == fspp::Dir::EntryType::FILE) {
+    return make_unique<CryFile>(this, std::move(parent), entry.second);
   } else {
     throw FuseErrnoException(EIO);
   }
+}
+
+unique_ptr<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
+  auto currentBlob = _blobStore->load(_rootKey);
+
+  for (const bf::path &component : path.relative_path()) {
+    //TODO Check whether the next path component is a dir.
+    //     Right now, an assertion in DirBlob constructor will fail if it isn't.
+    //     But fuse should rather return the correct error code.
+    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(currentBlob));
+
+    Key childKey = currentDir->GetChild(component.c_str()).second;
+    currentBlob = _blobStore->load(childKey);
+  }
+
+  return make_unique<DirBlob>(std::move(currentBlob));
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {

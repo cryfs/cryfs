@@ -8,6 +8,7 @@
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 #include "CryDevice.h"
 #include "CryFile.h"
+#include "CryOpenFile.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -20,10 +21,12 @@ using std::make_unique;
 using std::string;
 using std::vector;
 
+using blockstore::Key;
+
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> blob)
-: _device(device), _blob(std::move(blob)) {
+CryDir::CryDir(CryDevice *device, const Key &key)
+: _device(device), _key(key) {
 }
 
 CryDir::~CryDir() {
@@ -35,22 +38,26 @@ void CryDir::stat(struct ::stat *result) const {
   throw FuseErrnoException(ENOTSUP);
 }
 
-unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
+unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode) {
+  auto blob = LoadBlob();
   auto child = _device->CreateBlob();
-  _blob->AddChildFile(name, child->key());
-  //TODO Do we need a return value in createDir for fspp? If not, change fspp!
-  auto fileblob = make_unique<FileBlob>(std::move(child));
-  fileblob->InitializeEmptyFile();
-  return make_unique<CryFile>(_device, std::move(fileblob));
+  Key childkey = child->key();
+  blob->AddChildFile(name, childkey);
+  //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
+  auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
+  return make_unique<CryOpenFile>(std::move(childblob));
 }
 
-unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
+void CryDir::createDir(const string &name, mode_t mode) {
+  auto blob = LoadBlob();
   auto child = _device->CreateBlob();
-  _blob->AddChildDir(name, child->key());
-  //TODO I don't think we need a return value in createDir for fspp. Change fspp!
-  auto dirblob = make_unique<DirBlob>(std::move(child));
-  dirblob->InitializeEmptyDir();
-  return make_unique<CryDir>(_device, std::move(dirblob));
+  Key childkey = child->key();
+  blob->AddChildDir(name, childkey);
+  DirBlob::InitializeEmptyDir(std::move(child));
+}
+
+unique_ptr<DirBlob> CryDir::LoadBlob() const {
+  return make_unique<DirBlob>(_device->LoadBlob(_key));
 }
 
 void CryDir::rmdir() {
@@ -58,7 +65,7 @@ void CryDir::rmdir() {
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
-  return _blob->GetChildren();
+  return LoadBlob()->GetChildren();
 }
 
 }

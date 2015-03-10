@@ -11,6 +11,8 @@ using std::unique_ptr;
 using std::make_unique;
 using std::vector;
 using std::string;
+using std::pair;
+using std::make_pair;
 
 using blobstore::Blob;
 using blockstore::Key;
@@ -22,29 +24,23 @@ namespace cryfs {
 
 DirBlob::DirBlob(unique_ptr<Blob> blob)
 : _blob(std::move(blob)) {
+  assert(magicNumber() == MagicNumbers::DIR);
 }
 
 DirBlob::~DirBlob() {
 }
 
-void DirBlob::InitializeEmptyDir() {
-  _blob->resize(1);
+unique_ptr<DirBlob> DirBlob::InitializeEmptyDir(unique_ptr<Blob> blob) {
+  blob->resize(1);
   unsigned char magicNumber = MagicNumbers::DIR;
-  _blob->write(&magicNumber, 0, 1);
+  blob->write(&magicNumber, 0, 1);
+  return make_unique<DirBlob>(std::move(blob));
 }
 
 unsigned char DirBlob::magicNumber() const {
-  return magicNumber(*_blob);
-}
-
-const unsigned char DirBlob::magicNumber(const blobstore::Blob &blob) {
   unsigned char number;
-  blob.read(&number, 0, 1);
+  _blob->read(&number, 0, 1);
   return number;
-}
-
-bool DirBlob::IsDir(const blobstore::Blob &blob) {
-  return magicNumber(blob) == MagicNumbers::DIR;
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> DirBlob::GetChildren() const {
@@ -97,19 +93,18 @@ void DirBlob::AddChild(const std::string &name, const Key &blobKey, fspp::Dir::E
   _blob->write(blobKeyStr.c_str(), oldBlobSize + 1 + name.size() + 1, blobKeyStr.size()+1);
 }
 
-Key DirBlob::GetBlobKeyForName(const string &name) const {
-  auto result = make_unique<vector<string>>();
-
+pair<fspp::Dir::EntryType, Key> DirBlob::GetChild(const string &name) const {
   Data entries(_blob->size()-1);
   _blob->read(entries.data(), 1, _blob->size()-1);
 
   const char *pos = (const char*)entries.data();
   while(pos < (const char*)entries.data()+entries.size()) {
+    fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
     pos += 1; // Skip entry type magic number (whether it is a dir or a file)
     size_t name_length = strlen(pos);
     if (name_length == name.size() && 0==std::memcmp(pos, name.c_str(), name_length)) {
       pos += strlen(pos) + 1; // Skip name
-      return Key::FromString(pos); // Return key
+      return make_pair(type, Key::FromString(pos)); // Return key
     }
     pos += strlen(pos) + 1; // Skip name
     pos += strlen(pos) + 1; // Skip key

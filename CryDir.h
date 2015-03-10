@@ -10,13 +10,13 @@ namespace cryfs {
 
 class CryDir: public fspp::Dir, CryNode {
 public:
-  CryDir(CryDevice *device, std::unique_ptr<DirBlob> blob);
+  CryDir(CryDevice *device, const blockstore::Key &key);
   virtual ~CryDir();
 
   void stat(struct ::stat *result) const override;
   //TODO return type variance to CryFile/CryDir?
-  std::unique_ptr<fspp::File> createFile(const std::string &name, mode_t mode) override;
-  std::unique_ptr<fspp::Dir> createDir(const std::string &name, mode_t mode) override;
+  std::unique_ptr<fspp::OpenFile> createAndOpenFile(const std::string &name, mode_t mode) override;
+  void createDir(const std::string &name, mode_t mode) override;
   void rmdir() override;
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
@@ -24,7 +24,9 @@ public:
 
 private:
   CryDevice *_device;
-  std::unique_ptr<DirBlob> _blob;
+  blockstore::Key _key;
+
+  std::unique_ptr<DirBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

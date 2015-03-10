@@ -9,15 +9,15 @@ namespace cryfs {
 
 class FileBlob {
 public:
+  static std::unique_ptr<FileBlob> InitializeEmptyFile(std::unique_ptr<blobstore::Blob> blob);
+
   FileBlob(std::unique_ptr<blobstore::Blob> blob);
   virtual ~FileBlob();
 
-  static bool IsFile(const blobstore::Blob &blob);
-
-  void InitializeEmptyFile();
-
   void read(void *target, uint64_t offset, uint64_t count) const;
   void write(const void *source, uint64_t offset, uint64_t count);
+
+  void resize(off_t size);
 
   blockstore::Key key() const;
 
@@ -25,7 +25,6 @@ private:
   std::unique_ptr<blobstore::Blob> _blob;
 
   unsigned char magicNumber() const;
-  static unsigned char magicNumber(const blobstore::Blob &blob);
 };
 
 }
