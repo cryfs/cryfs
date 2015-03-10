@@ -8,6 +8,7 @@
 #include "../../fuse/Filesystem.h"
 #include "../../fuse/FuseErrnoException.h"
 #include "../../fuse/Fuse.h"
+#include "../../fs_interface/Dir.h"
 
 #include <boost/filesystem.hpp>
 
@@ -57,10 +58,10 @@ public:
     return rename(from.c_str(), to.c_str());
   }
   MOCK_METHOD2(rename, void(const char*, const char*));
-  std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path) {
-    return std::unique_ptr<std::vector<std::string>>(readDir(path.c_str()));
+  std::unique_ptr<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) {
+    return std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()));
   }
-  MOCK_METHOD1(readDir, std::vector<std::string>*(const char*));
+  MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
   void utimens(const boost::filesystem::path &path, const timespec ts[2]) override {
     return utimens(path.c_str(), ts);
   }

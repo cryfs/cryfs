@@ -11,7 +11,6 @@ namespace fspp {
 class Node;
 class File;
 class OpenFile;
-class Dir;
 
 class FilesystemImpl: public fuse::Filesystem {
 public:
@@ -35,7 +34,7 @@ public:
 	void rmdir(const boost::filesystem::path &path) override;
 	void unlink(const boost::filesystem::path &path) override;
 	void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) override;
-	std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path) override;
+	std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) override;
 	void utimens(const boost::filesystem::path &path, const timespec times[2]) override;
 	void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) override;
 

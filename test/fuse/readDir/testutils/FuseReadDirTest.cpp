@@ -79,7 +79,10 @@ void FuseReadDirTest::closeDir(DIR *dir) {
   EXPECT_EQ(0, retval) << "Closing dir failed";
 }
 
-Action<vector<string>*(const char*)> FuseReadDirTest::ReturnDirEntries(vector<string> entries) {
-  vector<string> *direntries = new vector<string>(entries);
+Action<vector<fspp::Dir::Entry>*(const char*)> FuseReadDirTest::ReturnDirEntries(vector<std::string> entries) {
+  vector<fspp::Dir::Entry> *direntries = new vector<fspp::Dir::Entry>(entries.size(), fspp::Dir::Entry(fspp::Dir::EntryType::FILE, ""));
+  for(unsigned int i = 0; i < entries.size(); ++i) {
+    (*direntries)[i].name = entries[i];
+  }
   return Return(direntries);
 }

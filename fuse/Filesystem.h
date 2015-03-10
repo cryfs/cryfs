@@ -6,6 +6,7 @@
 #include <memory>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include "../fs_interface/Dir.h"
 
 namespace fspp {
 namespace fuse {
@@ -32,7 +33,8 @@ public:
   virtual void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) = 0;
   virtual void utimens(const boost::filesystem::path &path, const timespec times[2]) = 0;
   virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
-  virtual std::unique_ptr<std::vector<std::string>> readDir(const boost::filesystem::path &path) = 0;
+  //TODO We shouldn't use Dir::Entry here, that's in another layer
+  virtual std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) = 0;
 };
 
 }

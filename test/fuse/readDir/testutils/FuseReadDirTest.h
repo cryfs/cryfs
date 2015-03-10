@@ -4,6 +4,7 @@
 
 #include "../../../testutils/FuseTest.h"
 #include <dirent.h>
+#include "../../../../fs_interface/Dir.h"
 
 class FuseReadDirTest: public FuseTest {
 public:
@@ -12,7 +13,7 @@ public:
   std::unique_ptr<std::vector<std::string>> ReadDir(const char *dirname);
   int ReadDirReturnError(const char *dirname);
 
-  static ::testing::Action<std::vector<std::string>*(const char*)> ReturnDirEntries(std::vector<std::string> entries);
+  static ::testing::Action<std::vector<fspp::Dir::Entry>*(const char*)> ReturnDirEntries(std::vector<std::string> entries);
 
 private:
   DIR *openDir(TempTestFS *fs, const char *dirname);

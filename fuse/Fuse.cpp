@@ -472,7 +472,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
       //We could pass file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse seems to ignore it.
       //It does getattr() calls on all entries nevertheless.
-      if (filler(buf, entry.c_str(), nullptr, 0) != 0) {
+      if (filler(buf, entry.name.c_str(), nullptr, 0) != 0) {
         return -ENOMEM;
       }
     }
