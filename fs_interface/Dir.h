@@ -8,7 +8,7 @@
 
 namespace fspp {
 class Device;
-class File;
+class OpenFile;
 
 class Dir: public virtual Node {
 public:
@@ -25,8 +25,8 @@ public:
     std::string name;
   };
 
-  virtual std::unique_ptr<File> createFile(const std::string &name, mode_t mode) = 0;
-  virtual std::unique_ptr<Dir> createDir(const std::string &name, mode_t mode) = 0;
+  virtual std::unique_ptr<OpenFile> createAndOpenFile(const std::string &name, mode_t mode) = 0;
+  virtual void createDir(const std::string &name, mode_t mode) = 0;
   virtual void rmdir() = 0;
 
   //TODO Allow alternative implementation returning only children names without more information

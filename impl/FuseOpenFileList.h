@@ -14,7 +14,7 @@ public:
   FuseOpenFileList();
   virtual ~FuseOpenFileList();
 
-  int open(const File &rhs, int flags);
+  int open(std::unique_ptr<OpenFile> file);
   OpenFile *get(int descriptor);
   void close(int descriptor);
 
@@ -31,8 +31,8 @@ inline FuseOpenFileList::FuseOpenFileList()
 inline FuseOpenFileList::~FuseOpenFileList() {
 }
 
-inline int FuseOpenFileList::open(const File &file, int flags) {
-  return _open_files.add(file.open(flags));
+inline int FuseOpenFileList::open(std::unique_ptr<OpenFile> file) {
+  return _open_files.add(std::move(file));
 }
 
 inline OpenFile *FuseOpenFileList::get(int descriptor) {

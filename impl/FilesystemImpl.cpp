@@ -52,7 +52,7 @@ int FilesystemImpl::openFile(const bf::path &path, int flags) {
 }
 
 int FilesystemImpl::openFile(const File &file, int flags) {
-  return _open_files.open(file, flags);
+  return _open_files.open(file.open(flags));
 }
 
 void FilesystemImpl::flush(int descriptor) {
@@ -103,8 +103,8 @@ int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode) {
   //TODO Creating the file opens and closes it. We then reopen it afterwards.
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
-  auto file = dir->createFile(path.filename().native(), mode);
-  return openFile(*file, O_WRONLY | O_TRUNC);
+  auto file = dir->createAndOpenFile(path.filename().native(), mode);
+  return _open_files.open(std::move(file));
 }
 
 void FilesystemImpl::mkdir(const bf::path &path, mode_t mode) {

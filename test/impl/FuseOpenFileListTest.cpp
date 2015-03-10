@@ -27,22 +27,6 @@ public:
   MOCK_METHOD0(fdatasync, void());
 };
 
-class MockFile: public File {
-public:
-  MockFile(int id_): id(id_) {}
-  int id;
-
-  unique_ptr<OpenFile> open(int flags) const override {
-    return make_unique<MockOpenFile>(id, flags);
-  }
-  MOCK_CONST_METHOD1(truncate, void(off_t));
-  MOCK_METHOD0(unlink, void());
-  MOCK_CONST_METHOD1(stat, void(struct ::stat*));
-  MOCK_CONST_METHOD1(access, void(int));
-  MOCK_METHOD1(rename, void(const boost::filesystem::path &));
-  MOCK_METHOD1(utimens, void(const timespec[2]));
-};
-
 struct FuseOpenFileListTest: public ::testing::Test {
   const int FILEID1 = 4;
   const int FLAGS1 = 5;
@@ -53,7 +37,7 @@ struct FuseOpenFileListTest: public ::testing::Test {
 
   FuseOpenFileList list;
   int open(int fileid, int flags) {
-    return list.open(MockFile(fileid), flags);
+    return list.open(make_unique<MockOpenFile>(fileid, flags));
   }
   int open() {
     return open(FILEID1, FILEID2);
