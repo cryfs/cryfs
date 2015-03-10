@@ -37,7 +37,7 @@ void CryDir::stat(struct ::stat *result) const {
 
 unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
   auto child = _device->CreateBlob();
-  _blob->AddChild(name, child->key());
+  _blob->AddChildFile(name, child->key());
   //TODO Do we need a return value in createDir for fspp? If not, change fspp!
   auto fileblob = make_unique<FileBlob>(std::move(child));
   fileblob->InitializeEmptyFile();
@@ -46,7 +46,7 @@ unique_ptr<fspp::File> CryDir::createFile(const string &name, mode_t mode) {
 
 unique_ptr<fspp::Dir> CryDir::createDir(const string &name, mode_t mode) {
   auto child = _device->CreateBlob();
-  _blob->AddChild(name, child->key());
+  _blob->AddChildDir(name, child->key());
   //TODO I don't think we need a return value in createDir for fspp. Change fspp!
   auto dirblob = make_unique<DirBlob>(std::move(child));
   dirblob->InitializeEmptyDir();
@@ -57,7 +57,7 @@ void CryDir::rmdir() {
   throw FuseErrnoException(ENOTSUP);
 }
 
-unique_ptr<vector<string>> CryDir::children() const {
+unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
   return _blob->GetChildren();
 }
 

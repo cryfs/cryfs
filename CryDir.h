@@ -19,7 +19,8 @@ public:
   std::unique_ptr<fspp::Dir> createDir(const std::string &name, mode_t mode) override;
   void rmdir() override;
 
-  std::unique_ptr<std::vector<std::string>> children() const override;
+  //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
+  std::unique_ptr<std::vector<fspp::Dir::Entry>> children() const override;
 
 private:
   CryDevice *_device;
