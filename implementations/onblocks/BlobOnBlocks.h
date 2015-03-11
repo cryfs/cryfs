@@ -26,6 +26,7 @@ public:
   void resize(uint64_t numBytes) override;
 
   void read(void *target, uint64_t offset, uint64_t size) const override;
+  uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
 
   std::unique_ptr<datatreestore::DataTree> releaseTree();
