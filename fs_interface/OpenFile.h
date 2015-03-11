@@ -14,7 +14,7 @@ public:
 
   virtual void stat(struct ::stat *result) const = 0;
   virtual void truncate(off_t size) const = 0;
-  virtual int read(void *buf, size_t count, off_t offset) = 0;
+  virtual ssize_t read(void *buf, size_t count, off_t offset) = 0;
   virtual void write(const void *buf, size_t count, off_t offset) = 0;
   virtual void flush() = 0;
   virtual void fsync() = 0;
