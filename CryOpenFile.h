@@ -16,7 +16,7 @@ public:
 
   void stat(struct ::stat *result) const override;
   void truncate(off_t size) const override;
-  int read(void *buf, size_t count, off_t offset) override;
+  ssize_t read(void *buf, size_t count, off_t offset) override;
   void write(const void *buf, size_t count, off_t offset) override;
   void flush() override;
   void fsync() override;

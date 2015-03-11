@@ -29,8 +29,8 @@ unsigned char FileBlob::magicNumber() const {
   return value;
 }
 
-void FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
-  _blob->read(target, offset + 1, count);
+ssize_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
+  return _blob->tryRead(target, offset + 1, count);
 }
 
 void FileBlob::write(const void *source, uint64_t offset, uint64_t count) {

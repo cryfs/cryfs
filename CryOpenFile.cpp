@@ -40,10 +40,8 @@ void CryOpenFile::truncate(off_t size) const {
   _fileBlob->resize(size);
 }
 
-int CryOpenFile::read(void *buf, size_t count, off_t offset) {
-  //TODO Return number of read bytes
-  _fileBlob->read(buf, offset, count);
-  return count;
+ssize_t CryOpenFile::read(void *buf, size_t count, off_t offset) {
+  return _fileBlob->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
