@@ -1,6 +1,6 @@
-#include <messmer/blockstore/test/testutils/DataBlockFixture.h>
-#include <messmer/blockstore/utils/Data.h>
-#include <messmer/blockstore/utils/Key.h>
+#include "../testutils/DataBlockFixture.h"
+#include "../../utils/Data.h"
+#include "../../utils/Key.h"
 #include "google/gtest/gtest.h"
 
 

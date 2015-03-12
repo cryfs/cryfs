@@ -1,5 +1,5 @@
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlock.h>
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include "OnDiskBlock.h"
+#include "OnDiskBlockStore.h"
 
 using std::unique_ptr;
 using std::make_unique;

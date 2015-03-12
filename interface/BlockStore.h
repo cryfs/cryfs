@@ -2,7 +2,7 @@
 #ifndef FSPP_BLOCKSTORE_BLOCKSTORE_H_
 #define FSPP_BLOCKSTORE_BLOCKSTORE_H_
 
-#include <messmer/blockstore/interface/Block.h>
+#include "Block.h"
 #include <string>
 #include <memory>
 

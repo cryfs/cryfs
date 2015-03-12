@@ -2,7 +2,7 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 
-#include <messmer/blockstore/interface/Block.h>
+#include "../../interface/Block.h"
 #include "../../utils/Data.h"
 
 #include "messmer/cpp-utils/macros.h"

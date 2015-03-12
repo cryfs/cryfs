@@ -1,4 +1,4 @@
-#include <messmer/blockstore/utils/FileDoesntExistException.h>
+#include "FileDoesntExistException.h"
 
 namespace bf = boost::filesystem;
 

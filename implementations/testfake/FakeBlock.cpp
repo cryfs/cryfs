@@ -1,5 +1,5 @@
-#include <messmer/blockstore/implementations/testfake/FakeBlock.h>
-#include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
+#include "FakeBlock.h"
+#include "FakeBlockStore.h"
 #include <cstring>
 
 using std::unique_ptr;

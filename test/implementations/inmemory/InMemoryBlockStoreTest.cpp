@@ -1,7 +1,7 @@
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
-#include <messmer/blockstore/test/testutils/BlockStoreTest.h>
-#include <messmer/blockstore/test/testutils/BlockStoreWithRandomKeysTest.h>
+#include "../../../implementations/inmemory/InMemoryBlock.h"
+#include "../../../implementations/inmemory/InMemoryBlockStore.h"
+#include "../../testutils/BlockStoreTest.h"
+#include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include "google/gtest/gtest.h"
 
 

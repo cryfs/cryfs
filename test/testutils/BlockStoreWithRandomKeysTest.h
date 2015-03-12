@@ -3,7 +3,7 @@
 #define TEST_BLOCKSTORE_IMPLEMENTATIONS_TESTUTILS_BLOCKSTOREWITHRANDOMKEYSTEST_H_
 
 #include <google/gtest/gtest.h>
-#include <messmer/blockstore/test/testutils/DataBlockFixture.h>
+#include "DataBlockFixture.h"
 
 #include "../../interface/BlockStore.h"
 

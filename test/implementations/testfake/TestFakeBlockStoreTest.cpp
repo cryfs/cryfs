@@ -1,7 +1,7 @@
-#include <messmer/blockstore/implementations/testfake/FakeBlock.h>
-#include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
-#include <messmer/blockstore/test/testutils/BlockStoreTest.h>
-#include <messmer/blockstore/test/testutils/BlockStoreWithRandomKeysTest.h>
+#include "../../../implementations/testfake/FakeBlock.h"
+#include "../../../implementations/testfake/FakeBlockStore.h"
+#include "../../testutils/BlockStoreTest.h"
+#include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include "google/gtest/gtest.h"
 
 

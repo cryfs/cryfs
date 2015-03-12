@@ -2,7 +2,7 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCKSTORE_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCKSTORE_H_
 
-#include <messmer/blockstore/interface/helpers/BlockStoreWithRandomKeys.h>
+#include "../../interface/helpers/BlockStoreWithRandomKeys.h"
 #include "../../utils/Data.h"
 #include "messmer/cpp-utils/macros.h"
 

@@ -2,7 +2,7 @@
 #ifndef FSPP_BLOCKSTORE_BLOCKSTOREWITHRANDOMKEYS_H_
 #define FSPP_BLOCKSTORE_BLOCKSTOREWITHRANDOMKEYS_H_
 
-#include <messmer/blockstore/interface/BlockStore.h>
+#include "../BlockStore.h"
 #include "../Block.h"
 
 namespace blockstore {

@@ -1,5 +1,5 @@
-#include <messmer/blockstore/implementations/ondisk/FileAlreadyExistsException.h>
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlock.h>
+#include "../../../../implementations/ondisk/FileAlreadyExistsException.h"
+#include "../../../../implementations/ondisk/OnDiskBlock.h"
 #include "google/gtest/gtest.h"
 
 #include "messmer/tempfile/src/TempFile.h"

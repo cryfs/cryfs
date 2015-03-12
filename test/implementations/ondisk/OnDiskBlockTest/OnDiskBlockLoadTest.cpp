@@ -1,6 +1,6 @@
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlock.h>
-#include <messmer/blockstore/test/testutils/DataBlockFixture.h>
-#include <messmer/blockstore/utils/FileDoesntExistException.h>
+#include "../../../../implementations/ondisk/OnDiskBlock.h"
+#include "../../../testutils/DataBlockFixture.h"
+#include "../../../../utils/FileDoesntExistException.h"
 #include "google/gtest/gtest.h"
 
 #include "../../../../utils/Data.h"

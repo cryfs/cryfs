@@ -1,5 +1,5 @@
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
+#include "InMemoryBlock.h"
+#include "InMemoryBlockStore.h"
 #include <memory>
 
 using std::unique_ptr;

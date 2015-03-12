@@ -1,10 +1,10 @@
 #include <cstring>
 #include <fstream>
 #include <boost/filesystem.hpp>
-#include <messmer/blockstore/implementations/ondisk/FileAlreadyExistsException.h>
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlock.h>
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include <messmer/blockstore/utils/FileDoesntExistException.h>
+#include "FileAlreadyExistsException.h"
+#include "OnDiskBlock.h"
+#include "OnDiskBlockStore.h"
+#include "../../utils/FileDoesntExistException.h"
 
 using std::unique_ptr;
 using std::make_unique;

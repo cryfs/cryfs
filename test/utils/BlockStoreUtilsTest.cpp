@@ -1,6 +1,6 @@
-#include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
-#include <messmer/blockstore/test/testutils/DataBlockFixture.h>
-#include <messmer/blockstore/utils/BlockStoreUtils.h>
+#include "../../implementations/testfake/FakeBlockStore.h"
+#include "../testutils/DataBlockFixture.h"
+#include "../../utils/BlockStoreUtils.h"
 #include "google/gtest/gtest.h"
 
 #include <memory>

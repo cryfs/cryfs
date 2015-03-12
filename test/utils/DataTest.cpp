@@ -1,6 +1,6 @@
-#include <messmer/blockstore/test/testutils/DataBlockFixture.h>
-#include <messmer/blockstore/utils/Data.h>
-#include <messmer/blockstore/utils/FileDoesntExistException.h>
+#include "../testutils/DataBlockFixture.h"
+#include "../../utils/Data.h"
+#include "../../utils/FileDoesntExistException.h"
 #include "google/gtest/gtest.h"
 
 #include "messmer/tempfile/src/TempFile.h"

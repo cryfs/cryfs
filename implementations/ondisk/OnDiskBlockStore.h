@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOCKSTORE_H_
 
 #include <boost/filesystem.hpp>
-#include <messmer/blockstore/interface/helpers/BlockStoreWithRandomKeys.h>
+#include "../../interface/helpers/BlockStoreWithRandomKeys.h"
 
 #include "messmer/cpp-utils/macros.h"
 

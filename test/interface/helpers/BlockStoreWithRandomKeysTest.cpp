@@ -1,4 +1,4 @@
-#include <messmer/blockstore/interface/helpers/BlockStoreWithRandomKeys.h>
+#include "../../../interface/helpers/BlockStoreWithRandomKeys.h"
 #include "google/gtest/gtest.h"
 #include "google/gmock/gmock.h"
 

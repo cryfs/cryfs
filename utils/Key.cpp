@@ -1,6 +1,6 @@
 #include <cryptopp/cryptopp/hex.h>
 #include <cryptopp/cryptopp/osrng.h>
-#include <messmer/blockstore/utils/Key.h>
+#include "Key.h"
 
 #include <cstring>
 

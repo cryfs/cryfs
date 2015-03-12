@@ -1,7 +1,7 @@
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlock.h>
-#include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include <messmer/blockstore/test/testutils/BlockStoreTest.h>
-#include <messmer/blockstore/test/testutils/BlockStoreWithRandomKeysTest.h>
+#include "../../../implementations/ondisk/OnDiskBlock.h"
+#include "../../../implementations/ondisk/OnDiskBlockStore.h"
+#include "../../testutils/BlockStoreTest.h"
+#include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include "google/gtest/gtest.h"
 
 #include "messmer/tempfile/src/TempDir.h"

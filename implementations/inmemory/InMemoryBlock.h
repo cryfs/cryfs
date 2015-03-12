@@ -2,8 +2,8 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 
-#include <messmer/blockstore/interface/Block.h>
-#include <messmer/blockstore/utils/Data.h>
+#include "../../interface/Block.h"
+#include "../../utils/Data.h"
 
 namespace blockstore {
 namespace inmemory {

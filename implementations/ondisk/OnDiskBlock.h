@@ -3,8 +3,8 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_ONDISK_ONDISKBLOCK_H_
 
 #include <boost/filesystem/path.hpp>
-#include <messmer/blockstore/interface/Block.h>
-#include <messmer/blockstore/utils/Data.h>
+#include "../../interface/Block.h"
+#include "../../utils/Data.h"
 #include <iostream>
 
 #include "messmer/cpp-utils/macros.h"

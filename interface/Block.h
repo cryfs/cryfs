@@ -2,7 +2,7 @@
 #ifndef BLOCKSTORE_INTERFACE_BLOCK_H_
 #define BLOCKSTORE_INTERFACE_BLOCK_H_
 
-#include <messmer/blockstore/utils/Key.h>
+#include "../utils/Key.h"
 #include <cstring>
 
 namespace blockstore {
