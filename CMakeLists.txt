@@ -8,6 +8,8 @@ SETUP_GOOGLETEST()
 # Actually create targets: EXEcutables and libraries.
 ADD_BIICODE_TARGETS()
 
+ADD_BOOST(filesystem system)
+
 ACTIVATE_CPP14()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
