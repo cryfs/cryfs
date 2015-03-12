@@ -8,17 +8,15 @@ install:
   && rm update_gcc_version.sh
 - sudo apt-get install libfuse-dev
 before_script:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.py
-  && chmod +x setup_biicode_project.py
-  && ./setup_biicode_project.py
-  && rm setup_biicode_project.py
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
+  && chmod +x setup_biicode_project.sh
+  && ./setup_biicode_project.sh
+  && rm setup_biicode_project.sh
 script:
-- bii find
-- bii cpp:configure
 - bii cpp:build -- -j2
 #- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
 #  && chmod +x run_with_fuse.sh
-#  && ./run_with_fuse.sh "../../../bin/messmer_cryfs_test_main"
+#  && ./run_with_fuse.sh "./bin/messmer_cryfs_test_main"
 #  && rm run_with_fuse.sh
 deploy:
   provider: biicode
