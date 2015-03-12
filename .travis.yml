@@ -7,15 +7,13 @@ before_install:
   && ./update_gcc_version.sh 4.9
   && rm update_gcc_version.sh
 before_script:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.py
-  && chmod +x setup_biicode_project.py
-  && ./setup_biicode_project.py
-  && rm setup_biicode_project.py
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
+  && chmod +x setup_biicode_project.sh
+  && ./setup_biicode_project.sh
+  && rm setup_biicode_project.sh
 script:
-- bii find
-- bii cpp:configure
 - bii cpp:build -- -j2
-- "../../../bin/messmer_blockstore_test_main"
+- "./bin/messmer_blockstore_test_main"
 deploy:
   provider: biicode
   user: ${BII_USERNAME}
