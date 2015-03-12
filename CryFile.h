@@ -2,7 +2,7 @@
 #ifndef CRYFS_LIB_CRYFILE_H_
 #define CRYFS_LIB_CRYFILE_H_
 
-#include <messmer/cryfs/impl/FileBlob.h>
+#include "impl/FileBlob.h"
 #include <messmer/fspp/fs_interface/File.h>
 #include "CryNode.h"
 

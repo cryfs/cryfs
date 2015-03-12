@@ -1,4 +1,4 @@
-#include <messmer/cryfs/impl/DirBlob.h>
+#include "impl/DirBlob.h"
 #include "CryDevice.h"
 
 #include "CryDir.h"
