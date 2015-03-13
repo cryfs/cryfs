@@ -1,6 +1,4 @@
-
-# Initializes block variables
-INIT_BIICODE_BLOCK()
+INCLUDE(messmer/cmake/tools)
 
 # Actually create targets: EXEcutables and libraries.
 ADD_BIICODE_TARGETS()
