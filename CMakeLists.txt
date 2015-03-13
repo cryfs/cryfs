@@ -1,10 +1,5 @@
 INCLUDE(messmer/cmake/tools)
 
-# Initializes block variables
-INIT_BIICODE_BLOCK()
-
-SETUP_GOOGLETEST()
-
 # Actually create targets: EXEcutables and libraries.
 ADD_BIICODE_TARGETS()
 
