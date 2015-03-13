@@ -12,7 +12,7 @@ before_script:
   && ./setup_biicode_project.sh
   && rm setup_biicode_project.sh
 script:
-- bii cpp:build -- -j2
+- bii cpp:build --target messmer_cpp-utils_test_main -- -j2
 - "./bin/messmer_cpp-utils_test_main"
 deploy:
   provider: biicode
