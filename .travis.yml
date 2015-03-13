@@ -13,7 +13,7 @@ before_script:
   && ./setup_biicode_project.sh
   && rm setup_biicode_project.sh
 script:
-- bii cpp:build -- -j2
+- bii cpp:build --target messmer_fspp_test_main -- -j2
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
   && chmod +x run_with_fuse.sh
   && ./run_with_fuse.sh ./bin/messmer_fspp_test_main
