@@ -161,20 +161,6 @@ TEST_F(DataTest, LargesizeSize) {
   EXPECT_EQ(size, data.size());
 }
 
-// This test doesn't ensure that the Data class gives the memory region free,
-// but it is a good indicator.
-TEST_F(DataTest, InaccessibleAfterDeletion) {
-  Data *data = new Data(1);
-  ((char*)data->data())[0] = 0x3E; // Access data byte 0
-
-  delete data;
-
-  EXPECT_DEATH(
-      ((char*)data->data())[0] = 0x3E,
-      ""
-  );
-}
-
 TEST_F(DataTest, LoadingNonexistingFile) {
   TempFile file(false); // Pass false to constructor, so the tempfile is not created
   EXPECT_THROW(
