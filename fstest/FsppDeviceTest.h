@@ -47,7 +47,32 @@ TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromExistingDir) {
   );
 }
 
-//TODO Load file/dir which is more nested
+TYPED_TEST_P(FsppDeviceTest, LoadFileFromDir_Nesting1) {
+  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/mydir")->createAndOpenFile("myfile", 0);
+  this->LoadFile("/mydir/myfile");
+}
+
+TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting1) {
+  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/mydir")->createDir("mysubdir", 0);
+  this->LoadDir("/mydir/mysubdir");
+}
+
+TYPED_TEST_P(FsppDeviceTest, LoadFileFromDir_Nesting2) {
+  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/mydir")->createDir("mysubdir", 0);
+  this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", 0);
+  this->LoadFile("/mydir/mysubdir/myfile");
+}
+
+TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting2) {
+  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/mydir")->createDir("mysubdir", 0);
+  this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", 0);
+  this->LoadDir("/mydir/mysubdir/mysubsubdir");
+}
+
 //TODO Load from dir structure with more than one entry per dir
 //TODO statfs
 
@@ -58,7 +83,11 @@ REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest,
   LoadDirFromRootDir,
   LoadNonexistingFromRootDir,
   LoadNonexistingFromNonexistingDir,
-  LoadNonexistingFromExistingDir
+  LoadNonexistingFromExistingDir,
+  LoadFileFromDir_Nesting1,
+  LoadDirFromDir_Nesting1,
+  LoadFileFromDir_Nesting2,
+  LoadDirFromDir_Nesting2
 );
 
 #endif
