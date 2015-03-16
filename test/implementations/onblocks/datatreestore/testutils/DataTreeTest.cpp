@@ -128,7 +128,7 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateTwoLeafWithSecondLeafSize(uint32_t
 
 unique_ptr<DataInnerNode> DataTreeTest::CreateFullTwoLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullTwoLevel();
-  for (int i = 0; i < root->numChildren()-1; ++i) {
+  for (uint32_t i = 0; i < root->numChildren()-1; ++i) {
     LoadLeafNode(root->getChild(i)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
   }
   LoadLeafNode(root->LastChild()->key())->resize(size);
@@ -167,9 +167,9 @@ unique_ptr<DataInnerNode> DataTreeTest::CreateThreeLevelWithThreeChildrenAndLast
 
 unique_ptr<DataInnerNode> DataTreeTest::CreateFullThreeLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullThreeLevel();
-  for (int i = 0; i < root->numChildren(); ++i) {
+  for (uint32_t i = 0; i < root->numChildren(); ++i) {
     auto node = LoadInnerNode(root->getChild(i)->key());
-    for (int j = 0; j < node->numChildren(); ++j) {
+    for (uint32_t j = 0; j < node->numChildren(); ++j) {
       LoadLeafNode(node->getChild(j)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
     }
   }
@@ -226,7 +226,7 @@ void DataTreeTest::CHECK_DEPTH(int depth, const Key &key) {
   } else {
     auto node = LoadInnerNode(key);
     EXPECT_EQ(depth, node->depth());
-    for (int i = 0; i < node->numChildren(); ++i) {
+    for (uint32_t i = 0; i < node->numChildren(); ++i) {
       CHECK_DEPTH(depth-1, node->getChild(i)->key());
     }
   }

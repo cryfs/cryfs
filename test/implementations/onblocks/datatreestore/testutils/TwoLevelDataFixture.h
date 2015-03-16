@@ -49,7 +49,7 @@ private:
     } else {
       auto inner = dynamic_cast<blobstore::onblocks::datanodestore::DataInnerNode*>(node);
       int leafIndex = firstLeafIndex;
-      for (int i = 0; i < inner->numChildren(); ++i) {
+      for (uint32_t i = 0; i < inner->numChildren(); ++i) {
         auto child = _dataNodeStore->load(inner->getChild(i)->key());
         leafIndex = ForEachLeaf(child.get(), leafIndex, endLeafIndex, action);
       }
@@ -69,6 +69,8 @@ private:
       return mod(_dataNodeStore->layout().maxBytesPerLeaf() - childIndex, _dataNodeStore->layout().maxBytesPerLeaf());
     case SizePolicy::Unchanged:
       return leaf->numBytes();
+    default:
+      assert(false);
     }
   }
 

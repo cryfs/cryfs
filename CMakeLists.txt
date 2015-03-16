@@ -4,6 +4,7 @@ INCLUDE(messmer/cmake/tools)
 ADD_BIICODE_TARGETS()
 
 ACTIVATE_CPP14()
+ENABLE_STYLE_WARNINGS()
 
 # You can safely delete lines from here...
 

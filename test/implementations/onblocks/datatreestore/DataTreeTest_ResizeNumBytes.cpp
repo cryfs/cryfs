@@ -67,7 +67,7 @@ public:
     auto root = nodeStore->load(key);
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
-      for (int i = 0; i < inner->numChildren()-1; ++i) {
+      for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
         EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
       }
       EXPECT_IS_LEFTMAXDATA_TREE(inner->LastChild()->key());
@@ -78,7 +78,7 @@ public:
     auto root = nodeStore->load(key);
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
-      for (int i = 0; i < inner->numChildren(); ++i) {
+      for (uint32_t i = 0; i < inner->numChildren(); ++i) {
         EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
       }
     } else {

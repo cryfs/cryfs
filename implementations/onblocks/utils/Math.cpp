@@ -6,7 +6,7 @@ namespace utils {
 
 uint32_t intPow(uint32_t base, uint32_t exponent) {
   uint32_t result = 1;
-  for(int i = 0; i < exponent; ++i) {
+  for(uint32_t i = 0; i < exponent; ++i) {
     result *= base;
   }
   return result;
