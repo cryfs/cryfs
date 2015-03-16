@@ -30,6 +30,8 @@ public:
   ConcreteFileSystemTestFixture fixture;
   std::unique_ptr<fspp::Device> device;
 
+  static constexpr mode_t MODE_PUBLIC = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
+
   std::unique_ptr<fspp::Dir> LoadDir(const boost::filesystem::path &path) {
 	auto loaded = device->Load(path);
 	auto dir = cpputils::dynamic_pointer_move<fspp::Dir>(loaded);
@@ -44,7 +46,6 @@ public:
 	return file;
   }
 };
-
 
 
 #endif

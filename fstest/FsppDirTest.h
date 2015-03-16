@@ -14,7 +14,7 @@ TYPED_TEST_P(FsppDirTest, Children_EmptyRootDir) {
 
 TYPED_TEST_P(FsppDirTest, Children_OneFileInRootDir) {
   auto rootdir = this->LoadDir("/");
-  rootdir->createAndOpenFile("myfile", 0);
+  rootdir->createAndOpenFile("myfile", this->MODE_PUBLIC);
   auto children = rootdir->children();
   EXPECT_EQ(1, children->size());
   EXPECT_EQ(fspp::Dir::EntryType::FILE, (*children)[0].type);
@@ -23,7 +23,7 @@ TYPED_TEST_P(FsppDirTest, Children_OneFileInRootDir) {
 
 TYPED_TEST_P(FsppDirTest, Children_OneDirInRootDir) {
   auto rootdir = this->LoadDir("/");
-  rootdir->createDir("mydir", 0);
+  rootdir->createDir("mydir", this->MODE_PUBLIC);
   auto children = rootdir->children();
   EXPECT_EQ(1, children->size());
   EXPECT_EQ(fspp::Dir::EntryType::DIR, (*children)[0].type);
@@ -31,9 +31,9 @@ TYPED_TEST_P(FsppDirTest, Children_OneDirInRootDir) {
 }
 
 TYPED_TEST_P(FsppDirTest, Children_OneFileInNestedDir_Directly) {
-  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   auto dir = this->LoadDir("/mydir");
-  dir->createAndOpenFile("myfile", 0);
+  dir->createAndOpenFile("myfile", this->MODE_PUBLIC);
   auto children = dir->children();
   EXPECT_EQ(1, children->size());
   EXPECT_EQ(fspp::Dir::EntryType::FILE, (*children)[0].type);
@@ -41,8 +41,8 @@ TYPED_TEST_P(FsppDirTest, Children_OneFileInNestedDir_Directly) {
 }
 
 TYPED_TEST_P(FsppDirTest, Children_OneFileInNestedDir_AfterReloadingDir) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createAndOpenFile("myfile", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   auto dir = this->LoadDir("/mydir");
   auto children = dir->children();
   EXPECT_EQ(1, children->size());
@@ -51,9 +51,9 @@ TYPED_TEST_P(FsppDirTest, Children_OneFileInNestedDir_AfterReloadingDir) {
 }
 
 TYPED_TEST_P(FsppDirTest, Children_OneDirInNestedDir_Directly) {
-  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   auto dir = this->LoadDir("/mydir");
-  dir->createDir("mysubdir", 0);
+  dir->createDir("mysubdir", this->MODE_PUBLIC);
   auto children = dir->children();
   EXPECT_EQ(1, children->size());
   EXPECT_EQ(fspp::Dir::EntryType::DIR, (*children)[0].type);
@@ -61,8 +61,8 @@ TYPED_TEST_P(FsppDirTest, Children_OneDirInNestedDir_Directly) {
 }
 
 TYPED_TEST_P(FsppDirTest, Children_OneDirInNestedDir_AfterReloadingDir) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createDir("mysubdir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC);
   auto dir = this->LoadDir("/mydir");
   auto children = dir->children();
   EXPECT_EQ(1, children->size());
@@ -71,12 +71,12 @@ TYPED_TEST_P(FsppDirTest, Children_OneDirInNestedDir_AfterReloadingDir) {
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_LoadAfterwards) {
-  this->LoadDir("/")->createAndOpenFile("myfile", 0);
+  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   this->LoadFile("/myfile");
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_LoadAfterwards) {
-  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   this->LoadDir("/mydir");
 }
 
@@ -93,6 +93,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
 );
 
 //TODO Build dir structure with more than one entry
+//TODO createDir/createAndOpenFile for already existing
 
 //TODO rmdir
 

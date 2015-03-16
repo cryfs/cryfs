@@ -16,12 +16,12 @@ TYPED_TEST_P(FsppDeviceTest, LoadRootDir) {
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadFileFromRootDir) {
-  this->LoadDir("/")->createAndOpenFile("myfile", 0);
+  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   this->LoadFile("/myfile");
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadDirFromRootDir) {
-  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   this->LoadDir("/mydir");
 }
 
@@ -40,7 +40,7 @@ TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromNonexistingDir) {
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromExistingDir) {
-  this->LoadDir("/")->createDir("mydir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   //TODO Change, as soon as it's clear how we want to handle fs errors
   EXPECT_ANY_THROW(
     this->device->Load("/mydir/nonexisting")
@@ -48,28 +48,28 @@ TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromExistingDir) {
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadFileFromDir_Nesting1) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createAndOpenFile("myfile", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   this->LoadFile("/mydir/myfile");
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting1) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createDir("mysubdir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC);
   this->LoadDir("/mydir/mysubdir");
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadFileFromDir_Nesting2) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createDir("mysubdir", 0);
-  this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   this->LoadFile("/mydir/mysubdir/myfile");
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting2) {
-  this->LoadDir("/")->createDir("mydir", 0);
-  this->LoadDir("/mydir")->createDir("mysubdir", 0);
-  this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC);
+  this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", this->MODE_PUBLIC);
   this->LoadDir("/mydir/mysubdir/mysubsubdir");
 }
 
