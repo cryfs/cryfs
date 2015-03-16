@@ -34,6 +34,6 @@ public:
   virtual std::unique_ptr<std::vector<Entry>> children() const = 0;
 };
 
-} /* namespace fspp */
+}
 
-#endif /* FSPP_DIR_H_ */
+#endif
