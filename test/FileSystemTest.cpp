@@ -28,4 +28,4 @@ public:
   tempfile::TempFile configFile;
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(CryFS, FileSystemTest, CryFsTestFixture);
+FSPP_ADD_FILESYTEM_TESTS(CryFS, CryFsTestFixture);
