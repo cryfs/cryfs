@@ -175,6 +175,10 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   CreateDir_AlreadyExisting
 );
 
+//TODO stat
+//TODO access
+//TODO rename
+//TODO utimens
 //TODO rmdir
 
 #endif
