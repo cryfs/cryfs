@@ -4,10 +4,12 @@
 #include "testutils/FileSystemTest.h"
 #include "FsppDeviceTest.h"
 #include "FsppDirTest.h"
+#include "FsppFileTest.h"
 
 #define FSPP_ADD_FILESYTEM_TESTS(FS_NAME, FIXTURE) \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppDeviceTest, FIXTURE);    \
-  INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppDirTest,    FIXTURE);
+  INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppDirTest,    FIXTURE);    \
+  INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppFileTest,    FIXTURE);   \
 
 //TODO ...
 

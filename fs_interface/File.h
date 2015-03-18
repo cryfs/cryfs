@@ -18,6 +18,6 @@ public:
   virtual void unlink() = 0;
 };
 
-} /* namespace fspp */
+}
 
-#endif /* FSPP_FILE_H_ */
+#endif

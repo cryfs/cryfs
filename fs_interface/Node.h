@@ -18,6 +18,6 @@ public:
   virtual void utimens(const timespec times[2]) = 0;
 };
 
-} /* namespace fspp */
+}
 
-#endif /* FSPP_NODE_H_ */
+#endif
