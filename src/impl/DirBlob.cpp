@@ -57,6 +57,17 @@ unique_ptr<vector<fspp::Dir::Entry>> DirBlob::GetChildren() const {
   return result;
 }
 
+bool DirBlob::hasChild(const string &name) const {
+  //TODO Faster implementation without creating children array possible
+  auto children = GetChildren();
+  for (const auto &child : *children) {
+	if (child.name == name) {
+      return true;
+	}
+  }
+  return false;
+}
+
 const char *DirBlob::readAndAddNextChild(const char *pos, vector<fspp::Dir::Entry> *result) const {
   // Read type magic number (whether it is a dir or a file)
   fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
@@ -79,6 +90,10 @@ void DirBlob::AddChildFile(const std::string &name, const Key &blobKey) {
 }
 
 void DirBlob::AddChild(const std::string &name, const Key &blobKey, fspp::Dir::EntryType entryType) {
+  if (hasChild(name)) {
+	throw fspp::fuse::FuseErrnoException(EEXIST);
+  }
+
   //TODO blob.resize(blob.size()+X) has to traverse tree twice. Better would be blob.addSize(X) which returns old size
   uint64_t oldBlobSize = _blob->size();
   string blobKeyStr = blobKey.ToString();

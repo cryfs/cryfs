@@ -32,6 +32,7 @@ private:
 
   const char *readAndAddNextChild(const char *pos, std::vector<fspp::Dir::Entry> *result) const;
   const char *getStartingPosOfEntry(const char *pos, const std::string &name) const;
+  bool hasChild(const std::string &name) const;
 
   std::unique_ptr<blobstore::Blob> _blob;
 
