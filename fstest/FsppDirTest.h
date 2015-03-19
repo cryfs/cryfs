@@ -159,9 +159,39 @@ TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
   });
 }
 
-TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_LoadAfterwards) {
+TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyRoot) {
   this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC);
   this->LoadFile("/myfile");
+}
+
+TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
+  this->InitDirStructure();
+  this->LoadDir("/")->createAndOpenFile("mynewfile", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/", {
+    FileEntry("myfile"),
+	DirEntry("mydir"),
+	DirEntry("myemptydir"),
+	FileEntry("mynewfile")
+  });
+}
+
+TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyNestedDir) {
+  this->InitDirStructure();
+  this->LoadDir("/myemptydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/myemptydir", {
+	FileEntry("mynewfile")
+  });
+}
+
+TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyNestedDir) {
+  this->InitDirStructure();
+  this->LoadDir("/mydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/mydir", {
+    FileEntry("myfile"),
+	FileEntry("myfile2"),
+	DirEntry("mysubdir"),
+	FileEntry("mynewfile")
+  });
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
@@ -172,9 +202,39 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
   );
 }
 
-TYPED_TEST_P(FsppDirTest, CreateDir_LoadAfterwards) {
+TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyRoot) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   this->LoadDir("/mydir");
+}
+
+TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
+  this->InitDirStructure();
+  this->LoadDir("/")->createDir("mynewdir", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/", {
+    FileEntry("myfile"),
+	DirEntry("mydir"),
+	DirEntry("myemptydir"),
+	DirEntry("mynewdir")
+  });
+}
+
+TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyNestedDir) {
+  this->InitDirStructure();
+  this->LoadDir("/myemptydir")->createDir("mynewdir", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/myemptydir", {
+	DirEntry("mynewdir")
+  });
+}
+
+TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyNestedDir) {
+  this->InitDirStructure();
+  this->LoadDir("/mydir")->createDir("mynewdir", this->MODE_PUBLIC);
+  this->EXPECT_CHILDREN_ARE("/mydir", {
+    FileEntry("myfile"),
+	FileEntry("myfile2"),
+	DirEntry("mysubdir"),
+	DirEntry("mynewdir")
+  });
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
@@ -184,6 +244,8 @@ TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
     this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
   );
 }
+
+
 
 REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   Children_RootDir_Empty,
@@ -200,9 +262,15 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   Children_Nested_LargerStructure,
   Children_Nested_LargerStructure_Empty,
   Children_Nested2_LargerStructure,
-  CreateAndOpenFile_LoadAfterwards,
+  CreateAndOpenFile_InEmptyRoot,
+  CreateAndOpenFile_InNonemptyRoot,
+  CreateAndOpenFile_InEmptyNestedDir,
+  CreateAndOpenFile_InNonemptyNestedDir,
   CreateAndOpenFile_AlreadyExisting,
-  CreateDir_LoadAfterwards,
+  CreateDir_InEmptyRoot,
+  CreateDir_InNonemptyRoot,
+  CreateDir_InEmptyNestedDir,
+  CreateDir_InNonemptyNestedDir,
   CreateDir_AlreadyExisting
 );
 

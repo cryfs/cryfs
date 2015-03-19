@@ -210,4 +210,6 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
 //TODO utimens
 //TODO unlink
 
+//TODO Test permission flags
+
 #endif
