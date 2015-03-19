@@ -1,8 +1,10 @@
 #ifndef MESSMER_FSPP_FSTEST_FSPPOPENFILETEST_H_
 #define MESSMER_FSPP_FSTEST_FSPPOPENFILETEST_H_
 
+#include "testutils/FileTest.h"
+
 template<class ConcreteFileSystemTestFixture>
-class FsppOpenFileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
+class FsppOpenFileTest: public FileTest<ConcreteFileSystemTestFixture> {
 public:
 };
 
