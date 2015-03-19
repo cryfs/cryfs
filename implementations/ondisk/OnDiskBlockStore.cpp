@@ -4,8 +4,6 @@
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
-using std::mutex;
-using std::lock_guard;
 
 namespace bf = boost::filesystem;
 

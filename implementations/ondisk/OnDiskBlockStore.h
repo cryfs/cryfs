@@ -7,8 +7,6 @@
 
 #include "messmer/cpp-utils/macros.h"
 
-#include <mutex>
-
 namespace blockstore {
 namespace ondisk {
 
