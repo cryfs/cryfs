@@ -19,7 +19,7 @@ public:
   DirBlob(std::unique_ptr<blobstore::Blob> blob);
   virtual ~DirBlob();
 
-  std::unique_ptr<std::vector<fspp::Dir::Entry>> GetChildren() const;
+  void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
   //TODO Use struct instead of pair
   std::pair<fspp::Dir::EntryType, blockstore::Key> GetChild(const std::string &name) const;
   void AddChildDir(const std::string &name, const blockstore::Key &blobKey);

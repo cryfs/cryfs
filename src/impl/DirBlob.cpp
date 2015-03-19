@@ -43,24 +43,21 @@ unsigned char DirBlob::magicNumber() const {
   return number;
 }
 
-unique_ptr<vector<fspp::Dir::Entry>> DirBlob::GetChildren() const {
+void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
   Data entries(_blob->size()-1);
   _blob->read(entries.data(), 1, _blob->size()-1);
 
-  auto result = make_unique<vector<fspp::Dir::Entry>>();
-
   const char *pos = (const char*)entries.data();
   while(pos < (const char*)entries.data()+entries.size()) {
-    pos = readAndAddNextChild(pos, result.get());
+    pos = readAndAddNextChild(pos, result);
   }
-
-  return result;
 }
 
 bool DirBlob::hasChild(const string &name) const {
   //TODO Faster implementation without creating children array possible
-  auto children = GetChildren();
-  for (const auto &child : *children) {
+  vector<fspp::Dir::Entry> children;
+  AppendChildrenTo(&children);
+  for (const auto &child : children) {
 	if (child.name == name) {
       return true;
 	}

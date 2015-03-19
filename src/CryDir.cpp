@@ -65,7 +65,11 @@ void CryDir::rmdir() {
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
-  return LoadBlob()->GetChildren();
+  auto children = make_unique<vector<fspp::Dir::Entry>>();
+  children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
+  children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
+  LoadBlob()->AppendChildrenTo(children.get());
+  return children;
 }
 
 }
