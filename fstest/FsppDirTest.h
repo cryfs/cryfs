@@ -280,4 +280,6 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
 //TODO utimens
 //TODO rmdir
 
+//TODO Test permission flags
+
 #endif

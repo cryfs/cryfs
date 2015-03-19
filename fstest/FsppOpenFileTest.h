@@ -16,4 +16,12 @@ REGISTER_TYPED_TEST_CASE_P(FsppOpenFileTest,
   Bla
 );
 
+//TODO Test stat
+//TODO Test truncate
+//TODO Test read
+//TODO Test write
+//TODO Test flush
+//TODO Test fsync
+//TODO Test fdatasync
+
 #endif
