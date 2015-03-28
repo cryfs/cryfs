@@ -3,37 +3,36 @@
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
-using std::mutex;
-using std::lock_guard;
-
-namespace bf = boost::filesystem;
 
 namespace blockstore {
 namespace synchronized {
 
 SynchronizedBlockStore::SynchronizedBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)), _mutex() {}
+ : _baseBlockStore(std::move(baseBlockStore)),
+   _openBlockList() {
+}
 
 unique_ptr<Block> SynchronizedBlockStore::create(size_t size) {
-  //TODO Does this need to be locked?
-  lock_guard<mutex> lock(_mutex);
-  return _baseBlockStore->create(size);
+  return _openBlockList.insert(_baseBlockStore->create(size));
 }
 
 unique_ptr<Block> SynchronizedBlockStore::load(const Key &key) {
-  //TODO Only load each block once and lock until old block not used anymore
-  lock_guard<mutex> lock(_mutex);
-  return _baseBlockStore->load(key);
+  return _openBlockList.acquire(key, [this, key] {
+    return _baseBlockStore->load(key);
+  });
 }
 
 void SynchronizedBlockStore::remove(unique_ptr<Block> block) {
-  lock_guard<mutex> lock(_mutex);
-  return _baseBlockStore->remove(std::move(block));
+  //TODO
+  //Remove from openBlockList, therefore close it, and second parameter is meant to be an onClose event handler
+  //(called after all threads wanting to work with the block have been satisfied).
+  //But is quite unreadable here this way...
+  //_openBlockList.remove(std::move(block), [] (unique_ptr<Block> block) {
+  //  _baseBlockStore->remove(block);
+  //});
 }
 
 uint64_t SynchronizedBlockStore::numBlocks() const {
-  //TODO Does this need to be locked?
-  lock_guard<mutex> lock(_mutex);
   return _baseBlockStore->numBlocks();
 }
 

@@ -2,13 +2,12 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_SYNCHRONIZED_SYNCHRONIZEDBLOCKSTORE_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_SYNCHRONIZED_SYNCHRONIZEDBLOCKSTORE_H_
 
-#include <boost/filesystem.hpp>
-#include "../../interface/BlockStore.h"
-
 #include "messmer/cpp-utils/macros.h"
-
-#include <mutex>
 #include <memory>
+
+#include "../../interface/BlockStore.h"
+#include "OpenBlockList.h"
+
 
 namespace blockstore {
 namespace synchronized {
@@ -24,7 +23,7 @@ public:
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  mutable std::mutex _mutex;
+  OpenBlockList _openBlockList;
 
   DISALLOW_COPY_AND_ASSIGN(SynchronizedBlockStore);
 };

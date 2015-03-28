@@ -34,6 +34,9 @@ private:
 bool operator==(const Key &lhs, const Key &rhs);
 bool operator!=(const Key &lhs, const Key &rhs);
 
+//operator< is defined, so that Key objects can be used in std::map and std::set
+bool operator<(const Key &lhs, const Key &rhs);
+
 }
 
 #endif

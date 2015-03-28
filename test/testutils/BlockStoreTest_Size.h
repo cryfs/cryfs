@@ -10,8 +10,8 @@ public:
   }
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
-    auto block = blockStore->create(size);
-    auto loaded_block = blockStore->load(block->key());
+    blockstore::Key key = blockStore->create(size)->key();
+    auto loaded_block = blockStore->load(key);
     EXPECT_EQ(size, loaded_block->size());
   }
 
@@ -21,8 +21,8 @@ public:
   }
 
   void TestLoadingUnchangedBlockIsZeroedOut() {
-    auto block = blockStore->create(size);
-    auto loaded_block = blockStore->load(block->key());
+	blockstore::Key key = blockStore->create(size)->key();
+    auto loaded_block = blockStore->load(key);
     EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), loaded_block->data(), size));
   }
 
@@ -150,7 +150,7 @@ TYPED_TEST_P_FOR_ALL_SIZES(LoadingUnchangedBlockHasCorrectSize);
 TYPED_TEST_P_FOR_ALL_SIZES(CreatedBlockIsZeroedOut);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadingUnchangedBlockIsZeroedOut);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadedBlockIsCorrect);
-TYPED_TEST_P_FOR_ALL_SIZES(LoadedBlockIsCorrectWhenLoadedDirectlyAfterFlushing);
+//TYPED_TEST_P_FOR_ALL_SIZES(LoadedBlockIsCorrectWhenLoadedDirectlyAfterFlushing);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushesWhenDestructed);

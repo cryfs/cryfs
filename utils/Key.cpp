@@ -66,6 +66,10 @@ bool operator!=(const Key &lhs, const Key &rhs) {
   return !operator==(lhs, rhs);
 }
 
+bool operator<(const Key &lhs, const Key &rhs) {
+  return 0 > std::memcmp(lhs.data(), rhs.data(), Key::KEYLENGTH_BINARY);
+}
+
 void Key::ToBinary(void *target) const {
   std::memcpy(target, _key, KEYLENGTH_BINARY);
 }
