@@ -23,13 +23,9 @@ unique_ptr<Block> SynchronizedBlockStore::load(const Key &key) {
 }
 
 void SynchronizedBlockStore::remove(unique_ptr<Block> block) {
-  //TODO
-  //Remove from openBlockList, therefore close it, and second parameter is meant to be an onClose event handler
-  //(called after all threads wanting to work with the block have been satisfied).
-  //But is quite unreadable here this way...
-  //_openBlockList.remove(std::move(block), [] (unique_ptr<Block> block) {
-  //  _baseBlockStore->remove(block);
-  //});
+  _openBlockList.close(std::move(block), [this] (unique_ptr<Block> block) {
+    _baseBlockStore->remove(std::move(block));
+  });
 }
 
 uint64_t SynchronizedBlockStore::numBlocks() const {

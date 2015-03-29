@@ -44,7 +44,7 @@ unique_ptr<Block> OpenBlockList::acquire(const Key &key, function<unique_ptr<Blo
 }
 
 future<unique_ptr<Block>> OpenBlockList::_addPromiseForBlock(const Key &key) {
-  auto insertResult = _wantedBlocks.emplace(std::make_pair(key, promise<unique_ptr<Block>>()));
+  auto insertResult = _wantedBlocks.emplace(key, promise<unique_ptr<Block>>());
   assert(insertResult.second == true);
   return insertResult.first->second.get_future();
 }
@@ -55,7 +55,19 @@ void OpenBlockList::release(unique_ptr<Block> block) {
 	foundWantedBlock->second.set_value(std::move(block));
   } else {
 	_openBlocks.erase(block->key());
+    auto foundBlockToClose = _blocksToClose.find(block->key());
+    if (foundBlockToClose != _blocksToClose.end()) {
+      foundBlockToClose->second.set_value(std::move(block));
+    }
   }
+}
+
+void OpenBlockList::close(unique_ptr<Block> block, function<void (unique_ptr<Block>)> onClose) {
+  auto insertResult = _blocksToClose.emplace(block->key(), promise<unique_ptr<Block>>());
+  assert(insertResult.second == true);
+  block.reset();
+  auto closedBlock = insertResult.first->second.get_future().get();
+  onClose(std::move(closedBlock));
 }
 
 }
