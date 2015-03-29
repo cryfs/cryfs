@@ -22,16 +22,18 @@ OpenBlockList::~OpenBlockList() {
 }
 
 unique_ptr<Block> OpenBlockList::insert(unique_ptr<Block> block) {
+  lock_guard<mutex> lock(_mutex);
   auto insertResult = _openBlocks.insert(block->key());
   assert(insertResult.second == true);
   return make_unique<OpenBlock>(std::move(block), this);
 }
 
 unique_ptr<Block> OpenBlockList::acquire(const Key &key, function<unique_ptr<Block> ()> loader) {
-  //TODO Think it through, whether we really don't need any locks here.
+  unique_lock<mutex> lock(_mutex);
   auto insertResult = _openBlocks.insert(key);
   auto blockWasNotOpenYet = insertResult.second;
   if (blockWasNotOpenYet) {
+	lock.unlock();
 	auto block = loader();
 	if (block.get() == nullptr) {
 	  return nullptr;
@@ -39,6 +41,7 @@ unique_ptr<Block> OpenBlockList::acquire(const Key &key, function<unique_ptr<Blo
 	return make_unique<OpenBlock>(std::move(block), this);
   } else {
 	auto blockFuture = _addPromiseForBlock(key);
+	lock.unlock();
 	return blockFuture.get();
   }
 }
@@ -50,6 +53,7 @@ future<unique_ptr<Block>> OpenBlockList::_addPromiseForBlock(const Key &key) {
 }
 
 void OpenBlockList::release(unique_ptr<Block> block) {
+  lock_guard<mutex> lock(_mutex);
   auto foundWantedBlock = _wantedBlocks.find(block->key());
   if (foundWantedBlock != _wantedBlocks.end()) {
 	foundWantedBlock->second.set_value(std::move(block));
@@ -63,9 +67,11 @@ void OpenBlockList::release(unique_ptr<Block> block) {
 }
 
 void OpenBlockList::close(unique_ptr<Block> block, function<void (unique_ptr<Block>)> onClose) {
+  unique_lock<mutex> lock(_mutex);
   auto insertResult = _blocksToClose.emplace(block->key(), promise<unique_ptr<Block>>());
   assert(insertResult.second == true);
   block.reset();
+  lock.unlock();
   auto closedBlock = insertResult.first->second.get_future().get();
   onClose(std::move(closedBlock));
 }

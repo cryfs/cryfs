@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include <mutex>
 
 #include "../../utils/Key.h"
 #include <future>
@@ -29,6 +30,8 @@ private:
   std::set<Key> _openBlocks;
   std::map<Key, std::promise<std::unique_ptr<Block>>> _wantedBlocks;
   std::map<Key, std::promise<std::unique_ptr<Block>>> _blocksToClose;
+  //TODO Check whether we need this mutex or whether we can write it threadsafe without a mutex
+  mutable std::mutex _mutex;
 
   std::future<std::unique_ptr<Block>> _addPromiseForBlock(const Key &key);
 };
