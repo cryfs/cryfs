@@ -4,14 +4,16 @@
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
+#include <mutex>
+#include <map>
+#include <future>
 
 #include "../../interface/BlockStore.h"
-#include "OpenBlockList.h"
-
 
 namespace blockstore {
 namespace synchronized {
 
+//TODO Rename to CachingBlockStore or something else
 class SynchronizedBlockStore: public BlockStore {
 public:
   SynchronizedBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
@@ -21,9 +23,27 @@ public:
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
+  void release(const Block *block);
+
 private:
+  struct OpenBlock {
+	OpenBlock(std::unique_ptr<Block> block_): block(std::move(block_)), refCount(0) {}
+	Block *getReference() {
+	  ++refCount;
+	  return block.get();
+	}
+	void releaseReference() {
+	  --refCount;
+	}
+    std::unique_ptr<Block> block;
+    uint32_t refCount;
+  };
   std::unique_ptr<BlockStore> _baseBlockStore;
-  OpenBlockList _openBlockList;
+  std::map<Key, OpenBlock> _openBlocks;
+  std::mutex _mutex;
+  std::map<Key, std::promise<std::unique_ptr<Block>>> _blocksToRemove;
+
+  std::unique_ptr<Block> _addOpenBlock(std::unique_ptr<Block> block);
 
   DISALLOW_COPY_AND_ASSIGN(SynchronizedBlockStore);
 };
