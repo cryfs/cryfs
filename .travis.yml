@@ -1,0 +1,24 @@
+language: cpp
+compiler:
+- gcc
+before_install:
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
+  && chmod +x update_gcc_version.sh
+  && ./update_gcc_version.sh 4.9
+  && rm update_gcc_version.sh
+before_script:
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
+  && chmod +x setup_biicode_project.sh
+  && ./setup_biicode_project.sh
+  && rm setup_biicode_project.sh
+script:
+- bii cpp:build --target messmer_cachingstore_test_main -- -j2
+- "./bin/messmer_cachingstore_test_main"
+deploy:
+  provider: biicode
+  user: ${BII_USERNAME}
+  password:
+    secure: ${BII_PASSWORD}
+  on:
+    branch: develop
+
