@@ -1,10 +1,9 @@
+#include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
 #include "datanodestore/DataLeafNode.h"
 #include "datanodestore/DataNodeStore.h"
 #include "datatreestore/DataTreeStore.h"
 #include "datatreestore/DataTree.h"
 #include "BlobStoreOnBlocks.h"
-#include <messmer/blockstore/implementations/synchronized/SynchronizedBlockStore.h>
-
 #include "BlobOnBlocks.h"
 #include <messmer/cpp-utils/pointer.h>
 
@@ -12,7 +11,7 @@ using std::unique_ptr;
 using std::make_unique;
 
 using blockstore::BlockStore;
-using blockstore::synchronized::SynchronizedBlockStore;
+using blockstore::caching::CachingBlockStore;
 using blockstore::Key;
 using cpputils::dynamic_pointer_move;
 
@@ -23,7 +22,7 @@ using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t blocksizeBytes)
-: _dataTreeStore(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<SynchronizedBlockStore>(std::move(blockStore)), blocksizeBytes))) {
+: _dataTreeStore(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<CachingBlockStore>(std::move(blockStore)), blocksizeBytes))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
