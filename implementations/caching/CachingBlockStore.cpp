@@ -2,6 +2,8 @@
 #include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
 #include <cassert>
 
+#include "CachingBlockStoreAdapter.h"
+
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
@@ -13,31 +15,23 @@ namespace blockstore {
 namespace caching {
 
 CachingBlockStore::CachingBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)) {
+ : _baseBlockStore(std::move(baseBlockStore)), _cachingStore(make_unique<CachingBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
 unique_ptr<Block> CachingBlockStore::create(size_t size) {
   auto block = _baseBlockStore->create(size);
   Key key = block->key();
-  return CachingStore::add(key, std::move(block));
+  return _cachingStore.add(key, std::move(block));
 }
 
 unique_ptr<Block> CachingBlockStore::load(const Key &key) {
-  return CachingStore::load(key);
+  return _cachingStore.load(key);
 }
 
 
 void CachingBlockStore::remove(unique_ptr<Block> block) {
   Key key = block->key();
-  return CachingStore::remove(key, std::move(block));
-}
-
-unique_ptr<Block> CachingBlockStore::loadFromBaseStore(const Key &key) {
-  return _baseBlockStore->load(key);
-}
-
-void CachingBlockStore::removeFromBaseStore(unique_ptr<Block> block) {
-  return _baseBlockStore->remove(std::move(block));
+  return _cachingStore.remove(key, std::move(block));
 }
 
 uint64_t CachingBlockStore::numBlocks() const {

@@ -2,7 +2,7 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHINGBLOCKSTORE_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHIN_CACHINGBLOCKSTORE_H_
 
-#include "CachingStore.h"
+#include <messmer/cachingstore/CachingStore.h>
 
 #include "../../interface/BlockStore.h"
 #include "CachedBlockRef.h"
@@ -10,7 +10,7 @@
 namespace blockstore {
 namespace caching {
 
-class CachingBlockStore: public BlockStore, private CachingStore<Block, CachedBlockRef, Key> {
+class CachingBlockStore: public BlockStore {
 public:
   CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
@@ -19,12 +19,9 @@ public:
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
-protected:
-  std::unique_ptr<Block> loadFromBaseStore(const Key &key) override;
-  void removeFromBaseStore(std::unique_ptr<Block> block) override;
-
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
+  cachingstore::CachingStore<Block, CachedBlockRef, Key> _cachingStore;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);
 };
