@@ -8,17 +8,13 @@ using std::function;
 namespace blockstore {
 namespace caching {
 
-CachedBlockRef::CachedBlockRef(Block *baseBlock, CachingBlockStore *blockStore)
-  //TODO We store key twice here - once in OpenBlock, once in the underlying baseBlock.
-  //     Should we move that to make CachedBlockRef::key() call _baseBlock.key()?
+CachedBlockRef::CachedBlockRef(Block *baseBlock)
   :Block(baseBlock->key()),
-   _baseBlock(baseBlock),
-   _blockStore(blockStore) {
+   _baseBlock(baseBlock) {
 }
 
 CachedBlockRef::~CachedBlockRef() {
   _baseBlock->flush();
-  _blockStore->release(_baseBlock);
 }
 
 const void *CachedBlockRef::data() const {

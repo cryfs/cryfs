@@ -1,8 +1,9 @@
 #pragma once
-#ifndef BLOCKSTORE_IMPLEMENTATIONS_SYNCHRONIZED_CACHEDBLOCKREF_H_
-#define BLOCKSTORE_IMPLEMENTATIONS_SYNCHRONIZED_CACHEDBLOCKREF_H_
+#ifndef BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEDBLOCKREF_H_
+#define BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEDBLOCKREF_H_
 
 #include "../../interface/Block.h"
+#include "CachingStore.h"
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
@@ -11,9 +12,9 @@ namespace blockstore {
 namespace caching {
 class CachingBlockStore;
 
-class CachedBlockRef: public Block {
+class CachedBlockRef: public Block, public CachingStore<Block, CachedBlockRef, Key>::CachedResource {
 public:
-  CachedBlockRef(Block *baseBlock, CachingBlockStore *blockStore);
+  CachedBlockRef(Block *baseBlock);
   virtual ~CachedBlockRef();
 
   const void *data() const override;
@@ -25,7 +26,6 @@ public:
 
 private:
   Block *_baseBlock;
-  CachingBlockStore *_blockStore;
 
   DISALLOW_COPY_AND_ASSIGN(CachedBlockRef);
 };

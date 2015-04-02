@@ -13,60 +13,33 @@ namespace blockstore {
 namespace caching {
 
 CachingBlockStore::CachingBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)),
-   _openBlocks() {
+ : _baseBlockStore(std::move(baseBlockStore)) {
 }
 
 unique_ptr<Block> CachingBlockStore::create(size_t size) {
   auto block = _baseBlockStore->create(size);
-  lock_guard<mutex> lock(_mutex);
-  return _addOpenBlock(std::move(block));
-}
-
-unique_ptr<Block> CachingBlockStore::_addOpenBlock(unique_ptr<Block> block) {
-  auto insertResult = _openBlocks.emplace(block->key(), std::move(block));
-  assert(true == insertResult.second);
-  return make_unique<CachedBlockRef>(insertResult.first->second.getReference(), this);
+  return CachingStore::add(std::move(block));
 }
 
 unique_ptr<Block> CachingBlockStore::load(const Key &key) {
-  lock_guard<mutex> lock(_mutex);
-  auto found = _openBlocks.find(key);
-  if (found == _openBlocks.end()) {
-	auto block = _baseBlockStore->load(key);
-	if (block.get() == nullptr) {
-	  return nullptr;
-	}
-	return _addOpenBlock(std::move(block));
-  } else {
-	return make_unique<CachedBlockRef>(found->second.getReference(), this);
-  }
+  return CachingStore::load(key);
 }
 
-void CachingBlockStore::release(const Block *block) {
-  lock_guard<mutex> lock(_mutex);
-  Key key = block->key();
-  auto found = _openBlocks.find(key);
-  assert (found != _openBlocks.end());
-  found->second.releaseReference();
-  if (found->second.refCount == 0) {
-	auto foundToRemove = _blocksToRemove.find(key);
-	if (foundToRemove != _blocksToRemove.end()) {
-	  foundToRemove->second.set_value(std::move(found->second.block));
-	}
-	_openBlocks.erase(found);
-  }
-}
 
 void CachingBlockStore::remove(unique_ptr<Block> block) {
-  auto insertResult = _blocksToRemove.emplace(block->key(), promise<unique_ptr<Block>>());
-  assert(true == insertResult.second);
-  block.reset();
+  return CachingStore::remove(std::move(block));
+}
 
-  //Wait for last block user to release it
-  auto blockToRemove = insertResult.first->second.get_future().get();
+const Key &CachingBlockStore::getKey(const Block &block) const {
+  return block.key();
+}
 
-  _baseBlockStore->remove(std::move(blockToRemove));
+unique_ptr<Block> CachingBlockStore::loadFromBaseStore(const Key &key) {
+  return _baseBlockStore->load(key);
+}
+
+void CachingBlockStore::removeFromBaseStore(unique_ptr<Block> block) {
+  return _baseBlockStore->remove(std::move(block));
 }
 
 uint64_t CachingBlockStore::numBlocks() const {
