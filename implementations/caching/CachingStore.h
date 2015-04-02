@@ -31,13 +31,11 @@ public:
     Key _key;
   };
 
-  std::unique_ptr<Resource> add(std::unique_ptr<Resource> resource);
+  std::unique_ptr<Resource> add(const Key &key, std::unique_ptr<Resource> resource);
   std::unique_ptr<Resource> load(const Key &key);
-  void remove(std::unique_ptr<Resource> block);
+  void remove(const Key &key, std::unique_ptr<Resource> block);
 
 protected:
-  //TODO Template instead of virtual for getKey?
-  virtual const Key &getKey(const Resource &resource) const = 0;
   virtual std::unique_ptr<Resource> loadFromBaseStore(const Key &key) = 0;
   virtual void removeFromBaseStore(std::unique_ptr<Resource> resource) = 0;
 
@@ -71,7 +69,7 @@ private:
   std::map<Key, OpenResource> _openResources;
   std::map<Key, std::promise<std::unique_ptr<Resource>>> _resourcesToRemove;
 
-  std::unique_ptr<Resource> _add(std::unique_ptr<Resource> resource);
+  std::unique_ptr<Resource> _add(const Key &key, std::unique_ptr<Resource> resource);
   std::unique_ptr<Resource> _createCachedResourceRef(Resource *resource, const Key &key);
 
   void release(const Key &key);
@@ -81,22 +79,22 @@ private:
 };
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::add(std::unique_ptr<Resource> resource) {
+std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::add(const Key &key, std::unique_ptr<Resource> resource) {
   std::lock_guard<std::mutex> lock(_mutex);
-  return _add(std::move(resource));
+  return _add(key, std::move(resource));
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::_add(std::unique_ptr<Resource> resource) {
-  auto insertResult = _openResources.emplace(getKey(*resource), std::move(resource));
+std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::_add(const Key &key, std::unique_ptr<Resource> resource) {
+  auto insertResult = _openResources.emplace(key, std::move(resource));
   assert(true == insertResult.second);
-  return _createCachedResourceRef(insertResult.first->second.getReference(), getKey(*resource));
+  return _createCachedResourceRef(insertResult.first->second.getReference(), key);
 }
 
 template<class Resource, class CachedResourceRef, class Key>
 std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::_createCachedResourceRef(Resource *resource, const Key &key) {
   auto resourceRef = std::make_unique<CachedResourceRef>(resource);
-  resourceRef->init(this, getKey(*resource));
+  resourceRef->init(this, key);
   return std::move(resourceRef);
 }
 
@@ -109,15 +107,15 @@ std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::load(c
 	if (resource.get() == nullptr) {
 	  return nullptr;
 	}
-	return _add(std::move(resource));
+	return _add(key, std::move(resource));
   } else {
 	return _createCachedResourceRef(found->second.getReference(), key);
   }
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-void CachingStore<Resource, CachedResourceRef, Key>::remove(std::unique_ptr<Resource> resource) {
-  auto insertResult = _resourcesToRemove.emplace(getKey(*resource), std::promise<std::unique_ptr<Resource>>());
+void CachingStore<Resource, CachedResourceRef, Key>::remove(const Key &key, std::unique_ptr<Resource> resource) {
+  auto insertResult = _resourcesToRemove.emplace(key, std::promise<std::unique_ptr<Resource>>());
   assert(true == insertResult.second);
   resource.reset();
 

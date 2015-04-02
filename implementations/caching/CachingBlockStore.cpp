@@ -18,7 +18,8 @@ CachingBlockStore::CachingBlockStore(unique_ptr<BlockStore> baseBlockStore)
 
 unique_ptr<Block> CachingBlockStore::create(size_t size) {
   auto block = _baseBlockStore->create(size);
-  return CachingStore::add(std::move(block));
+  Key key = block->key();
+  return CachingStore::add(key, std::move(block));
 }
 
 unique_ptr<Block> CachingBlockStore::load(const Key &key) {
@@ -27,11 +28,8 @@ unique_ptr<Block> CachingBlockStore::load(const Key &key) {
 
 
 void CachingBlockStore::remove(unique_ptr<Block> block) {
-  return CachingStore::remove(std::move(block));
-}
-
-const Key &CachingBlockStore::getKey(const Block &block) const {
-  return block.key();
+  Key key = block->key();
+  return CachingStore::remove(key, std::move(block));
 }
 
 unique_ptr<Block> CachingBlockStore::loadFromBaseStore(const Key &key) {

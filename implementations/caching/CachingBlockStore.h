@@ -20,7 +20,6 @@ public:
   uint64_t numBlocks() const override;
 
 protected:
-  const Key &getKey(const Block &block) const override;
   std::unique_ptr<Block> loadFromBaseStore(const Key &key) override;
   void removeFromBaseStore(std::unique_ptr<Block> block) override;
 
