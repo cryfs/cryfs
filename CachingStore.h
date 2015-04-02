@@ -8,22 +8,33 @@
 #include <cassert>
 #include <messmer/cpp-utils/macros.h>
 
-//TODO Test CachingStore
+#include "CachingBaseStore.h"
+
+//TODO Refactor
+//TODO Test cases
+
+namespace cachingstore {
 
 template<class Resource, class CachedResourceRef, class Key>
 class CachingStore {
 public:
-  CachingStore(): _mutex(), _openResources(), _resourcesToRemove() {}
+  CachingStore(std::unique_ptr<CachingBaseStore<Resource, Key>> baseStore)
+    : _mutex(),
+	  _baseStore(std::move(baseStore)),
+	  _openResources(),
+	  _resourcesToRemove() {
+  }
 
   //TODO Enforce CachedResourceRef inherits from CachedResource
+
   class CachedResource {
   public:
-	//TODO Better way to initialize
-	CachedResource(): _cachingStore(nullptr), _key(Key::CreateRandomKey()) {}
-	void init(CachingStore *cachingStore, const Key &key) {
-	  _cachingStore = cachingStore;
-	  _key = key;
-	}
+    //TODO Better way to initialize
+    CachedResource(): _cachingStore(nullptr), _key(Key::CreateRandomKey()) {}
+    void init(CachingStore *cachingStore, const Key &key) {
+      _cachingStore = cachingStore;
+      _key = key;
+    }
     virtual ~CachedResource() {
       _cachingStore->release(_key);
     }
@@ -36,10 +47,6 @@ public:
   std::unique_ptr<Resource> add(const Key &key, std::unique_ptr<Resource> resource);
   std::unique_ptr<Resource> load(const Key &key);
   void remove(const Key &key, std::unique_ptr<Resource> block);
-
-protected:
-  virtual std::unique_ptr<Resource> loadFromBaseStore(const Key &key) = 0;
-  virtual void removeFromBaseStore(std::unique_ptr<Resource> resource) = 0;
 
 private:
   class OpenResource {
@@ -68,6 +75,8 @@ private:
   };
 
   std::mutex _mutex;
+  std::unique_ptr<CachingBaseStore<Resource, Key>> _baseStore;
+
   std::map<Key, OpenResource> _openResources;
   std::map<Key, std::promise<std::unique_ptr<Resource>>> _resourcesToRemove;
 
@@ -105,7 +114,7 @@ std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::load(c
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
-	auto resource = loadFromBaseStore(key);
+	auto resource = _baseStore->loadFromBaseStore(key);
 	if (resource.get() == nullptr) {
 	  return nullptr;
 	}
@@ -124,7 +133,7 @@ void CachingStore<Resource, CachedResourceRef, Key>::remove(const Key &key, std:
   //Wait for last resource user to release it
   auto resourceToRemove = insertResult.first->second.get_future().get();
 
-  removeFromBaseStore(std::move(resourceToRemove));
+  _baseStore->removeFromBaseStore(std::move(resourceToRemove));
 }
 
 template<class Resource, class CachedResourceRef, class Key>
@@ -142,5 +151,6 @@ void CachingStore<Resource, CachedResourceRef, Key>::release(const Key &key) {
   }
 }
 
+}
 
 #endif
