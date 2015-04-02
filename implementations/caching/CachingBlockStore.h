@@ -11,12 +11,11 @@
 #include "../../interface/BlockStore.h"
 
 namespace blockstore {
-namespace synchronized {
+namespace caching {
 
-//TODO Rename to CachingBlockStore or something else
-class SynchronizedBlockStore: public BlockStore {
+class CachingBlockStore: public BlockStore {
 public:
-  SynchronizedBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
+  CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
   std::unique_ptr<Block> create(size_t size) override;
   std::unique_ptr<Block> load(const Key &key) override;
@@ -45,7 +44,7 @@ private:
 
   std::unique_ptr<Block> _addOpenBlock(std::unique_ptr<Block> block);
 
-  DISALLOW_COPY_AND_ASSIGN(SynchronizedBlockStore);
+  DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);
 };
 
 }

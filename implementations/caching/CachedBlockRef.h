@@ -8,12 +8,12 @@
 #include <memory>
 
 namespace blockstore {
-namespace synchronized {
-class SynchronizedBlockStore;
+namespace caching {
+class CachingBlockStore;
 
 class CachedBlockRef: public Block {
 public:
-  CachedBlockRef(Block *baseBlock, SynchronizedBlockStore *blockStore);
+  CachedBlockRef(Block *baseBlock, CachingBlockStore *blockStore);
   virtual ~CachedBlockRef();
 
   const void *data() const override;
@@ -25,7 +25,7 @@ public:
 
 private:
   Block *_baseBlock;
-  SynchronizedBlockStore *_blockStore;
+  CachingBlockStore *_blockStore;
 
   DISALLOW_COPY_AND_ASSIGN(CachedBlockRef);
 };

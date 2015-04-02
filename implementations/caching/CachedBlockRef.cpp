@@ -1,14 +1,14 @@
-#include "CachedBlockRef.h"
-#include "SynchronizedBlockStore.h"
+#include <messmer/blockstore/implementations/caching/CachedBlockRef.h>
+#include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
 
 using std::shared_ptr;
 using std::make_unique;
 using std::function;
 
 namespace blockstore {
-namespace synchronized {
+namespace caching {
 
-CachedBlockRef::CachedBlockRef(Block *baseBlock, SynchronizedBlockStore *blockStore)
+CachedBlockRef::CachedBlockRef(Block *baseBlock, CachingBlockStore *blockStore)
   //TODO We store key twice here - once in OpenBlock, once in the underlying baseBlock.
   //     Should we move that to make CachedBlockRef::key() call _baseBlock.key()?
   :Block(baseBlock->key()),
