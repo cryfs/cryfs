@@ -1,5 +1,5 @@
-#include <messmer/blockstore/implementations/caching/CachedBlockRef.h>
-#include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
+#include "CachedBlockRef.h"
+#include "CachingBlockStore.h"
 #include <cassert>
 
 #include "CachingBlockStoreAdapter.h"
