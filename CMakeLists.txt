@@ -1,6 +1,6 @@
 INCLUDE(messmer/cmake/tools)
 
-ADD_BIICODE_TARGETS()
+ADD_BII_TARGETS()
 
 ACTIVATE_CPP14()
 
