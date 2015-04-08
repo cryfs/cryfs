@@ -28,7 +28,9 @@ CryFile::~CryFile() {
 }
 
 unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
-  return make_unique<CryOpenFile>(make_unique<FileBlob>(_device->LoadBlob(_key)));
+  auto blob = _device->LoadBlob(_key);
+  assert(blob.get() != nullptr);
+  return make_unique<CryOpenFile>(make_unique<FileBlob>(std::move(blob)));
 }
 
 void CryFile::stat(struct ::stat *result) const {

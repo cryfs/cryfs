@@ -1,4 +1,6 @@
 #include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
+#include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -10,6 +12,7 @@
 namespace bf = boost::filesystem;
 
 using blockstore::ondisk::OnDiskBlockStore;
+using blockstore::inmemory::InMemoryBlockStore;
 
 using std::make_unique;
 

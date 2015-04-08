@@ -2,6 +2,7 @@
 
 #include "MagicNumbers.h"
 #include <messmer/blockstore/utils/Key.h>
+#include <cassert>
 
 using std::unique_ptr;
 using std::make_unique;
@@ -17,6 +18,7 @@ FileBlob::~FileBlob() {
 }
 
 unique_ptr<FileBlob> FileBlob::InitializeEmptyFile(unique_ptr<Blob> blob) {
+  assert(blob.get() != nullptr);
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::FILE;
   blob->write(&magicNumber, 0, 1);
