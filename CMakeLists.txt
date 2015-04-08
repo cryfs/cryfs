@@ -1,7 +1,7 @@
 INCLUDE(messmer/cmake/tools)
 
 # Actually create targets: EXEcutables and libraries.
-ADD_BIICODE_TARGETS()
+ADD_BII_TARGETS()
 
 ADD_BOOST(filesystem system)
 
