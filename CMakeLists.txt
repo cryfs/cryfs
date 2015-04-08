@@ -3,7 +3,7 @@ INCLUDE(messmer/cmake/tools)
 SETUP_GOOGLETEST()
 
 # Actually create targets: EXEcutables and libraries.
-ADD_BIICODE_TARGETS()
+ADD_BII_TARGETS()
 
 ACTIVATE_CPP14()
 
