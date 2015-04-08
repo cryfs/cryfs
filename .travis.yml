@@ -15,11 +15,14 @@ before_script:
 script:
 - bii cpp:build --target messmer_blobstore_test_main -- -j2
 - "./bin/messmer_blobstore_test_main"
-deploy:
-  provider: biicode
-  user: ${BII_USERNAME}
-  password:
-    secure: ${BII_PASSWORD}
-  on:
-    branch: develop
+after_success:
+- bii user ${BII_USERNAME} -p ${BII_PASSWORD}
+- bii publish
+#deploy:
+#  provider: biicode
+#  user: ${BII_USERNAME}
+#  password:
+#    secure: ${BII_PASSWORD}
+#  on:
+#    branch: develop
 
