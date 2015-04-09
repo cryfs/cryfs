@@ -35,6 +35,8 @@ public:
 
   uint64_t numStoredBytes() const;
 
+  void flush() const;
+
 private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
@@ -60,8 +62,6 @@ private:
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
-
-  void flush() const;
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

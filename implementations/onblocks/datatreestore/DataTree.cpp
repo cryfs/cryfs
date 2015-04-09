@@ -115,7 +115,6 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   const_cast<const DataTree*>(this)->traverseLeaves(beginIndex, endIndex, [func](const DataLeafNode* leaf, uint32_t leafIndex) {
     func(const_cast<DataLeafNode*>(leaf), leafIndex);
   });
-  flush();
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
@@ -196,7 +195,6 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     }
     uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
     LastLeaf(_rootNode.get())->resize(newLastLeafSize);
-    flush();
   }
   assert(newNumBytes == numStoredBytes());
 }
