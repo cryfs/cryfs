@@ -10,7 +10,7 @@ namespace cryfs {
 
 class CryDir: public fspp::Dir, CryNode {
 public:
-  CryDir(CryDevice *device, const blockstore::Key &key);
+  CryDir(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
   virtual ~CryDir();
 
   void stat(struct ::stat *result) const override;
@@ -24,6 +24,7 @@ public:
 
 private:
   CryDevice *_device;
+  std::unique_ptr<DirBlob> _parent;
   blockstore::Key _key;
 
   std::unique_ptr<DirBlob> LoadBlob() const;

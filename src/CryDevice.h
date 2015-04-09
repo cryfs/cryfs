@@ -27,6 +27,7 @@ public:
 
   std::unique_ptr<blobstore::Blob> CreateBlob();
   std::unique_ptr<blobstore::Blob> LoadBlob(const blockstore::Key &key);
+  void RemoveBlob(const blockstore::Key &key);
 
 private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);

@@ -58,15 +58,15 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
 
   if (path.parent_path().empty()) {
     //We are asked to load the root directory '/'.
-    return make_unique<CryDir>(this, _rootKey);
+    return make_unique<CryDir>(this, nullptr, _rootKey);
   }
   auto parent = LoadDirBlob(path.parent_path());
   auto entry = parent->GetChild(path.filename().native());
 
-  if (entry.first == fspp::Dir::EntryType::DIR) {
-    return make_unique<CryDir>(this, entry.second);
-  } else if (entry.first == fspp::Dir::EntryType::FILE) {
-    return make_unique<CryFile>(this, std::move(parent), entry.second);
+  if (entry.type == fspp::Dir::EntryType::DIR) {
+    return make_unique<CryDir>(this, std::move(parent), entry.key);
+  } else if (entry.type == fspp::Dir::EntryType::FILE) {
+    return make_unique<CryFile>(this, std::move(parent), entry.key);
   } else {
     throw FuseErrnoException(EIO);
   }
@@ -81,7 +81,7 @@ unique_ptr<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
     //     But fuse should rather return the correct error code.
     unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(currentBlob));
 
-    Key childKey = currentDir->GetChild(component.c_str()).second;
+    Key childKey = currentDir->GetChild(component.c_str()).key;
     currentBlob = _blobStore->load(childKey);
   }
 
@@ -98,6 +98,10 @@ unique_ptr<blobstore::Blob> CryDevice::CreateBlob() {
 
 unique_ptr<blobstore::Blob> CryDevice::LoadBlob(const blockstore::Key &key) {
   return _blobStore->load(key);
+}
+
+void CryDevice::RemoveBlob(const blockstore::Key &key) {
+  _blobStore->remove(_blobStore->load(key));
 }
 
 }

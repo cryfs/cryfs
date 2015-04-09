@@ -18,23 +18,31 @@ using blobstore::Blob;
 using blockstore::Key;
 using blockstore::Data;
 
-//TODO Refactor: Keep a parsed dir structure (list of entries and blob keys they're pointing to) in memory and serialize/deserialize it
-
 namespace cryfs {
 
-DirBlob::DirBlob(unique_ptr<Blob> blob)
-: _blob(std::move(blob)) {
+DirBlob::DirBlob(unique_ptr<Blob> blob) :
+    _blob(std::move(blob)), _entries(), _changed(false) {
   assert(magicNumber() == MagicNumbers::DIR);
+  _readEntriesFromBlob();
 }
 
 DirBlob::~DirBlob() {
+  flush();
+}
+
+void DirBlob::flush() {
+  if (_changed) {
+    _writeEntriesToBlob();
+    _changed = false;
+  }
+  _blob->flush();
 }
 
 unique_ptr<DirBlob> DirBlob::InitializeEmptyDir(unique_ptr<Blob> blob) {
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::DIR;
   blob->write(&magicNumber, 0, 1);
-  return make_unique<DirBlob>(std::move(blob));
+  return make_unique < DirBlob > (std::move(blob));
 }
 
 unsigned char DirBlob::magicNumber() const {
@@ -43,39 +51,57 @@ unsigned char DirBlob::magicNumber() const {
   return number;
 }
 
-void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
-  Data entries(_blob->size()-1);
-  _blob->read(entries.data(), 1, _blob->size()-1);
-
-  const char *pos = (const char*)entries.data();
-  while(pos < (const char*)entries.data()+entries.size()) {
-    pos = readAndAddNextChild(pos, result);
+void DirBlob::_writeEntriesToBlob() {
+  //TODO Resizing is imperformant
+  _blob->resize(1);
+  unsigned int offset = 1;
+  for (const auto &entry : _entries) {
+    unsigned char entryTypeMagicNumber = static_cast<unsigned char>(entry.type);
+    _blob->write(&entryTypeMagicNumber, offset, 1);
+    offset += 1;
+    _blob->write(entry.name.c_str(), offset, entry.name.size() + 1);
+    offset += entry.name.size() + 1;
+    string keystr = entry.key.ToString();
+    _blob->write(keystr.c_str(), offset, keystr.size() + 1);
+    offset += keystr.size() + 1;
   }
+}
+
+void DirBlob::_readEntriesFromBlob() {
+  _entries.clear();
+  Data data(_blob->size() - 1);
+  _blob->read(data.data(), 1, _blob->size() - 1);
+
+  const char *pos = (const char*) data.data();
+  while (pos < (const char*) data.data() + data.size()) {
+    pos = readAndAddNextChild(pos, &_entries);
+  }
+}
+
+const char *DirBlob::readAndAddNextChild(const char *pos,
+    vector<DirBlob::Entry> *result) const {
+  // Read type magic number (whether it is a dir or a file)
+  fspp::Dir::EntryType type =
+      static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
+  pos += 1;
+
+  size_t namelength = strlen(pos);
+  std::string name(pos, namelength);
+  pos += namelength + 1;
+
+  size_t keylength = strlen(pos);
+  std::string keystr(pos, keylength);
+  pos += keylength + 1;
+
+  result->emplace_back(type, name, Key::FromString(keystr));
+  return pos;
 }
 
 bool DirBlob::hasChild(const string &name) const {
-  //TODO Faster implementation without creating children array possible
-  vector<fspp::Dir::Entry> children;
-  AppendChildrenTo(&children);
-  for (const auto &child : children) {
-	if (child.name == name) {
-      return true;
-	}
-  }
-  return false;
-}
-
-const char *DirBlob::readAndAddNextChild(const char *pos, vector<fspp::Dir::Entry> *result) const {
-  // Read type magic number (whether it is a dir or a file)
-  fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
-  pos += 1;
-
-  size_t length = strlen(pos);
-  std::string name(pos, length);
-  result->emplace_back(fspp::Dir::Entry(type, name));
-  const char *posAfterName = pos + length + 1;
-  const char *posAfterKey = posAfterName + strlen(posAfterName) + 1;
-  return posAfterKey;
+  auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const Entry &entry) {
+    return entry.name == name;
+  });
+  return found != _entries.end();
 }
 
 void DirBlob::AddChildDir(const std::string &name, const Key &blobKey) {
@@ -86,43 +112,42 @@ void DirBlob::AddChildFile(const std::string &name, const Key &blobKey) {
   AddChild(name, blobKey, fspp::Dir::EntryType::FILE);
 }
 
-void DirBlob::AddChild(const std::string &name, const Key &blobKey, fspp::Dir::EntryType entryType) {
+void DirBlob::AddChild(const std::string &name, const Key &blobKey,
+    fspp::Dir::EntryType entryType) {
   if (hasChild(name)) {
-	throw fspp::fuse::FuseErrnoException(EEXIST);
+    throw fspp::fuse::FuseErrnoException(EEXIST);
   }
 
-  //TODO blob.resize(blob.size()+X) has to traverse tree twice. Better would be blob.addSize(X) which returns old size
-  uint64_t oldBlobSize = _blob->size();
-  string blobKeyStr = blobKey.ToString();
-  _blob->resize(oldBlobSize + name.size() + 1 + blobKeyStr.size() + 1);
-
-  //Write entry type
-  unsigned char entryTypeMagicNumber = static_cast<unsigned char>(entryType);
-  _blob->write(&entryTypeMagicNumber, oldBlobSize, 1);
-  //Write entry name inclusive null terminator
-  _blob->write(name.c_str(), oldBlobSize + 1, name.size()+1);
-  //Write blob key inclusive null terminator
-  _blob->write(blobKeyStr.c_str(), oldBlobSize + 1 + name.size() + 1, blobKeyStr.size()+1);
+  _entries.emplace_back(entryType, name, blobKey);
+  _changed = true;
 }
 
-pair<fspp::Dir::EntryType, Key> DirBlob::GetChild(const string &name) const {
-  Data entries(_blob->size()-1);
-  _blob->read(entries.data(), 1, _blob->size()-1);
-
-  const char *pos = (const char*)entries.data();
-  while(pos < (const char*)entries.data()+entries.size()) {
-    fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
-    pos += 1; // Skip entry type magic number (whether it is a dir or a file)
-    size_t name_length = strlen(pos);
-    if (name_length == name.size() && 0==std::memcmp(pos, name.c_str(), name_length)) {
-      pos += strlen(pos) + 1; // Skip name
-      return make_pair(type, Key::FromString(pos)); // Return key
-    }
-    pos += strlen(pos) + 1; // Skip name
-    pos += strlen(pos) + 1; // Skip key
+const DirBlob::Entry &DirBlob::GetChild(const string &name) const {
+  auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const Entry &entry) {
+    return entry.name == name;
+  });
+  if (found == _entries.end()) {
+    throw fspp::fuse::FuseErrnoException(ENOENT);
   }
-  throw fspp::fuse::FuseErrnoException(ENOENT);
+  return *found;
 }
 
+void DirBlob::RemoveChild(const Key &key) {
+  auto found = std::find_if(_entries.begin(), _entries.end(), [key] (const Entry &entry) {
+    return entry.key == key;
+  });
+  if (found == _entries.end()) {
+    throw fspp::fuse::FuseErrnoException(ENOENT);
+  }
+  _entries.erase(found);
+  _changed = true;
+}
+
+void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
+  result->reserve(result->size() + _entries.size());
+  for (const auto &entry : _entries) {
+    result->emplace_back(entry.type, entry.name);
+  }
+}
 
 }

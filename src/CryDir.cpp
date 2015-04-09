@@ -25,8 +25,8 @@ using blockstore::Key;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, const Key &key)
-: _device(device), _key(key) {
+CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
+: _device(device), _parent(std::move(parent)), _key(key) {
 }
 
 CryDir::~CryDir() {
@@ -61,7 +61,8 @@ unique_ptr<DirBlob> CryDir::LoadBlob() const {
 }
 
 void CryDir::rmdir() {
-  throw FuseErrnoException(ENOTSUP);
+  _parent->RemoveChild(_key);
+  _device->RemoveBlob(_key);
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {

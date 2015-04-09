@@ -46,7 +46,8 @@ void CryFile::truncate(off_t size) const {
 }
 
 void CryFile::unlink() {
-  throw FuseErrnoException(ENOTSUP);
+  _parent->RemoveChild(_key);
+  _device->RemoveBlob(_key);
 }
 
 }
