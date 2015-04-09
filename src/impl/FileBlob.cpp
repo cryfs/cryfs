@@ -39,6 +39,10 @@ void FileBlob::write(const void *source, uint64_t offset, uint64_t count) {
   _blob->write(source, offset + 1, count);
 }
 
+void FileBlob::flush() {
+  _blob->flush();
+}
+
 blockstore::Key FileBlob::key() const {
   	return _blob->key();
 }

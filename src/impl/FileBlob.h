@@ -16,6 +16,7 @@ public:
 
   ssize_t read(void *target, uint64_t offset, uint64_t count) const;
   void write(const void *source, uint64_t offset, uint64_t count);
+  void flush();
 
   void resize(off_t size);
   off_t size() const;

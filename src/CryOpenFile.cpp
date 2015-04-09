@@ -27,7 +27,7 @@ CryOpenFile::~CryOpenFile() {
 }
 
 void CryOpenFile::flush() {
-  //throw FuseErrnoException(ENOTSUP);
+  _fileBlob->flush();
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
