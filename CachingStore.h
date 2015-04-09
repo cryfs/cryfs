@@ -111,6 +111,7 @@ std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key
 
 template<class Resource, class CachedResourceRef, class Key>
 std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key>::load(const Key &key) {
+  //TODO This lock doesn't allow loading different blocks in parallel. Can we do something with futures maybe?
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
