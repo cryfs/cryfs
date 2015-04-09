@@ -1,6 +1,7 @@
 #include "CachedBlockRef.h"
 #include "CachingBlockStore.h"
 #include <cassert>
+#include <messmer/cpp-utils/pointer.h>
 
 #include "CachingBlockStoreAdapter.h"
 
@@ -10,6 +11,7 @@ using std::string;
 using std::mutex;
 using std::lock_guard;
 using std::promise;
+using cpputils::dynamic_pointer_move;
 
 namespace blockstore {
 namespace caching {
@@ -31,7 +33,7 @@ unique_ptr<Block> CachingBlockStore::load(const Key &key) {
 
 void CachingBlockStore::remove(unique_ptr<Block> block) {
   Key key = block->key();
-  return _cachingStore.remove(key, std::move(block));
+  return _cachingStore.remove(key, dynamic_pointer_move<CachedBlockRef>(block));
 }
 
 uint64_t CachingBlockStore::numBlocks() const {
