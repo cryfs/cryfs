@@ -112,7 +112,6 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
-  shared_lock<shared_mutex> lock(_mutex);
   const_cast<const DataTree*>(this)->traverseLeaves(beginIndex, endIndex, [func](const DataLeafNode* leaf, uint32_t leafIndex) {
     func(const_cast<DataLeafNode*>(leaf), leafIndex);
   });
@@ -156,11 +155,15 @@ uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
 }
 
 uint64_t DataTree::numStoredBytes() const {
-  return numStoredBytes(*_rootNode);
+  shared_lock<shared_mutex> lock(_mutex);
+  return _numStoredBytes();
 }
 
-uint64_t DataTree::numStoredBytes(const DataNode &root) const {
-  shared_lock<shared_mutex> lock(_mutex);
+uint64_t DataTree::_numStoredBytes() const {
+  return _numStoredBytes(*_rootNode);
+}
+
+uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
   const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&root);
   if (leaf != nullptr) {
     return leaf->numBytes();
@@ -169,31 +172,33 @@ uint64_t DataTree::numStoredBytes(const DataNode &root) const {
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
   uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
-  uint64_t numBytesInRightChild = numStoredBytes(*lastChild);
+  uint64_t numBytesInRightChild = _numStoredBytes(*lastChild);
 
   return numBytesInLeftChildren + numBytesInRightChild;
 }
 
 void DataTree::resizeNumBytes(uint64_t newNumBytes) {
-  unique_lock<shared_mutex> lock(_mutex);
-  //TODO Faster implementation possible (no addDataLeaf()/removeLastDataLeaf() in a loop, but directly resizing)
-  LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
-  uint64_t currentNumBytes = numStoredBytes();
-  assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
-  uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
-  uint32_t newNumLeaves = std::max(1u, utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
+  boost::upgrade_lock<shared_mutex> lock(_mutex);
+  {
+    boost::upgrade_to_unique_lock<shared_mutex> exclusiveLock(lock);
+    //TODO Faster implementation possible (no addDataLeaf()/removeLastDataLeaf() in a loop, but directly resizing)
+    LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
+    uint64_t currentNumBytes = _numStoredBytes();
+    assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
+    uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
+    uint32_t newNumLeaves = std::max(1u, utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
 
-  for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
-    addDataLeaf()->resize(_nodeStore->layout().maxBytesPerLeaf());
+    for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
+      addDataLeaf()->resize(_nodeStore->layout().maxBytesPerLeaf());
+    }
+    for(uint32_t i = currentNumLeaves; i > newNumLeaves; --i) {
+      removeLastDataLeaf();
+    }
+    uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
+    LastLeaf(_rootNode.get())->resize(newLastLeafSize);
+    flush();
   }
-  for(uint32_t i = currentNumLeaves; i > newNumLeaves; --i) {
-    removeLastDataLeaf();
-  }
-  uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
-  LastLeaf(_rootNode.get())->resize(newLastLeafSize);
-
   assert(newNumBytes == numStoredBytes());
-  flush();
 }
 
 optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {

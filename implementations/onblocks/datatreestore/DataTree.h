@@ -55,9 +55,11 @@ private:
   void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
+  //TODO Use underscore for private methods
   void traverseLeaves(const datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const;
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
-  uint64_t numStoredBytes(const datanodestore::DataNode &root) const;
+  uint64_t _numStoredBytes() const;
+  uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
 
