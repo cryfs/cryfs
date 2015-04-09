@@ -29,6 +29,8 @@ public:
   uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
 
+  void flush() override;
+
   std::unique_ptr<cachingdatatreestore::CachedDataTreeRef> releaseTree();
 
 private:

@@ -22,6 +22,8 @@ public:
   virtual uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const = 0;
   virtual void write(const void *source, uint64_t offset, uint64_t size) = 0;
 
+  virtual void flush() = 0;
+
   //TODO Test tryRead
 };
 

@@ -68,6 +68,10 @@ void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
   });
 }
 
+void BlobOnBlocks::flush() {
+  _datatree->flush();
+}
+
 void BlobOnBlocks::resizeIfSmallerThan(uint64_t neededSize) {
   //TODO This is inefficient, because size() and resizeNumBytes() both traverse the tree. Better: _datatree->ensureMinSize(x)
   if (neededSize > size()) {

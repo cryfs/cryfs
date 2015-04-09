@@ -36,6 +36,10 @@ public:
   uint64_t numStoredBytes() const {
     return _baseTree->numStoredBytes();
   }
+
+  void flush() {
+    return _baseTree->flush();
+  }
 private:
   datatreestore::DataTree *_baseTree;
 };
