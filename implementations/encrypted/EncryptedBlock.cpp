@@ -3,7 +3,7 @@
 
 #include "../../utils/BlockStoreUtils.h"
 
-using CryptoPP::CBC_Mode;
+using CryptoPP::CFB_Mode;
 using CryptoPP::AES;
 
 using std::make_unique;
@@ -55,16 +55,19 @@ size_t EncryptedBlock::size() const {
 void EncryptedBlock::_decryptFromBaseBlock() {
   const byte *iv = (byte*)_baseBlock->data();
   const byte *data = (byte*)_baseBlock->data() + IV_SIZE;
-  auto dec = CBC_Mode<AES>::Decryption((byte*)_encKey.data(), EncryptionKey::BINARY_LENGTH, iv);
-  std::memcpy(_plaintextData.data(), (byte*)_baseBlock->data()+IV_SIZE, _plaintextData.size());
+  auto decryption = CFB_Mode<AES>::Decryption((byte*)_encKey.data(), EncryptionKey::BINARY_LENGTH, iv);
+  decryption.ProcessData((byte*)_plaintextData.data(), data, _plaintextData.size());
 }
 
 void EncryptedBlock::_encryptToBaseBlock() {
   if (_dataChanged) {
     FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreateRandom();
-    auto enc = CBC_Mode<AES>::Decryption(_encKey.data(), EncryptionKey::BINARY_LENGTH, iv.data());
+    auto encryption = CFB_Mode<AES>::Encryption(_encKey.data(), EncryptionKey::BINARY_LENGTH, iv.data());
+    //TODO More performance when not using "Data encrypted" object, but specialized CryptoPP sink
+    Data encrypted(_plaintextData.size());
+    encryption.ProcessData((byte*)encrypted.data(), (byte*)_plaintextData.data(), _plaintextData.size());
     _baseBlock->write(iv.data(), 0, IV_SIZE);
-    _baseBlock->write(_plaintextData.data(), IV_SIZE, _plaintextData.size());
+    _baseBlock->write(encrypted.data(), IV_SIZE, encrypted.size());
     _dataChanged = false;
   }
 }
