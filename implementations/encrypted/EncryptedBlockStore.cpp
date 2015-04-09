@@ -1,6 +1,7 @@
 #include "EncryptedBlockStore.h"
 #include "EncryptedBlock.h"
 #include <messmer/cpp-utils/pointer.h>
+#include "../../utils/BlockStoreUtils.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -13,7 +14,7 @@ EncryptedBlockStore::EncryptedBlockStore(unique_ptr<BlockStore> baseBlockStore, 
 }
 
 unique_ptr<Block> EncryptedBlockStore::create(size_t size) {
-  return make_unique<EncryptedBlock>(_baseBlockStore->create(size), _encKey);
+  return EncryptedBlock::CreateNew(_baseBlockStore->create(EncryptedBlock::BASE_BLOCK_SIZE(size)), _encKey);
 }
 
 unique_ptr<Block> EncryptedBlockStore::load(const Key &key) {

@@ -7,7 +7,7 @@
 namespace blockstore {
 namespace encrypted {
 
-using EncryptionKey = FixedSizeData<32>;
+using EncryptionKey = FixedSizeData<CryptoPP::AES::MAX_KEYLENGTH>;
 
 }
 }
