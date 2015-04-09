@@ -18,6 +18,8 @@ class DataTree;
 namespace cachingdatatreestore {
 class CachedDataTreeRef;
 
+//TODO Test CachingDataTreeStore
+
 class CachingDataTreeStore {
 public:
   CachingDataTreeStore(std::unique_ptr<datatreestore::DataTreeStore> dataTreeStore);
