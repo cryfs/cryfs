@@ -44,9 +44,9 @@ public:
     Key _key;
   };
 
-  std::unique_ptr<Resource> add(const Key &key, std::unique_ptr<Resource> resource);
-  std::unique_ptr<Resource> load(const Key &key);
-  void remove(const Key &key, std::unique_ptr<Resource> block);
+  std::unique_ptr<CachedResourceRef> add(const Key &key, std::unique_ptr<Resource> resource);
+  std::unique_ptr<CachedResourceRef> load(const Key &key);
+  void remove(const Key &key, std::unique_ptr<CachedResourceRef> block);
 
 private:
   class OpenResource {
@@ -80,8 +80,8 @@ private:
   std::map<Key, OpenResource> _openResources;
   std::map<Key, std::promise<std::unique_ptr<Resource>>> _resourcesToRemove;
 
-  std::unique_ptr<Resource> _add(const Key &key, std::unique_ptr<Resource> resource);
-  std::unique_ptr<Resource> _createCachedResourceRef(Resource *resource, const Key &key);
+  std::unique_ptr<CachedResourceRef> _add(const Key &key, std::unique_ptr<Resource> resource);
+  std::unique_ptr<CachedResourceRef> _createCachedResourceRef(Resource *resource, const Key &key);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -90,42 +90,42 @@ private:
 };
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::add(const Key &key, std::unique_ptr<Resource> resource) {
+std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key>::add(const Key &key, std::unique_ptr<Resource> resource) {
   std::lock_guard<std::mutex> lock(_mutex);
   return _add(key, std::move(resource));
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::_add(const Key &key, std::unique_ptr<Resource> resource) {
+std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key>::_add(const Key &key, std::unique_ptr<Resource> resource) {
   auto insertResult = _openResources.emplace(key, std::move(resource));
   assert(true == insertResult.second);
   return _createCachedResourceRef(insertResult.first->second.getReference(), key);
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::_createCachedResourceRef(Resource *resource, const Key &key) {
+std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key>::_createCachedResourceRef(Resource *resource, const Key &key) {
   auto resourceRef = std::make_unique<CachedResourceRef>(resource);
   resourceRef->init(this, key);
   return std::move(resourceRef);
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-std::unique_ptr<Resource> CachingStore<Resource, CachedResourceRef, Key>::load(const Key &key) {
+std::unique_ptr<CachedResourceRef> CachingStore<Resource, CachedResourceRef, Key>::load(const Key &key) {
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
-	auto resource = _baseStore->loadFromBaseStore(key);
-	if (resource.get() == nullptr) {
-	  return nullptr;
-	}
-	return _add(key, std::move(resource));
+	  auto resource = _baseStore->loadFromBaseStore(key);
+	  if (resource.get() == nullptr) {
+  	  return nullptr;
+  	}
+  	return _add(key, std::move(resource));
   } else {
-	return _createCachedResourceRef(found->second.getReference(), key);
+	  return _createCachedResourceRef(found->second.getReference(), key);
   }
 }
 
 template<class Resource, class CachedResourceRef, class Key>
-void CachingStore<Resource, CachedResourceRef, Key>::remove(const Key &key, std::unique_ptr<Resource> resource) {
+void CachingStore<Resource, CachedResourceRef, Key>::remove(const Key &key, std::unique_ptr<CachedResourceRef> resource) {
   auto insertResult = _resourcesToRemove.emplace(key, std::promise<std::unique_ptr<Resource>>());
   assert(true == insertResult.second);
   resource.reset();
@@ -143,11 +143,11 @@ void CachingStore<Resource, CachedResourceRef, Key>::release(const Key &key) {
   assert (found != _openResources.end());
   found->second.releaseReference();
   if (found->second.refCountIsZero()) {
-	auto foundToRemove = _resourcesToRemove.find(key);
-	if (foundToRemove != _resourcesToRemove.end()) {
-	  foundToRemove->second.set_value(found->second.moveResourceOut());
-	}
-	_openResources.erase(found);
+	  auto foundToRemove = _resourcesToRemove.find(key);
+	  if (foundToRemove != _resourcesToRemove.end()) {
+	    foundToRemove->second.set_value(found->second.moveResourceOut());
+	  }
+	  _openResources.erase(found);
   }
 }
 
