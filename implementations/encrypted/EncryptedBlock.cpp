@@ -8,6 +8,8 @@ using CryptoPP::AES;
 
 using std::make_unique;
 
+//TODO not only encryption, but also hmac
+
 namespace blockstore {
 namespace encrypted {
 
