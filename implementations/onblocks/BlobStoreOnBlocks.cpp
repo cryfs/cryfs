@@ -3,6 +3,8 @@
 #include "datanodestore/DataNodeStore.h"
 #include "datatreestore/DataTreeStore.h"
 #include "datatreestore/DataTree.h"
+#include "cachingdatatreestore/CachingDataTreeStore.h"
+#include "cachingdatatreestore/CachedDataTreeRef.h"
 #include "BlobStoreOnBlocks.h"
 #include "BlobOnBlocks.h"
 #include <messmer/cpp-utils/pointer.h>
@@ -20,9 +22,10 @@ namespace onblocks {
 
 using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
+using cachingdatatreestore::CachingDataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t blocksizeBytes)
-: _dataTreeStore(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<CachingBlockStore>(std::move(blockStore)), blocksizeBytes))) {
+: _dataTreeStore(make_unique<CachingDataTreeStore>(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<CachingBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
