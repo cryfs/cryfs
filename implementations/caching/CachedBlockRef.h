@@ -17,10 +17,6 @@ public:
   //TODO Unneccessarily storing Key twice here (in parent class and in _baseBlock).
   CachedBlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}
 
-  virtual ~CachedBlockRef() {
-    _baseBlock->flush();
-  }
-
   const void *data() const override {
 	return _baseBlock->data();
   }
