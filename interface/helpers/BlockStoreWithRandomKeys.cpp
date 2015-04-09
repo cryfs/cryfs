@@ -14,7 +14,7 @@ unique_ptr<Block> BlockStoreWithRandomKeys::create(size_t size) {
 }
 
 unique_ptr<Block> BlockStoreWithRandomKeys::tryCreate(size_t size) {
-  Key key = Key::CreateRandomKey();
+  Key key = Key::CreateRandom();
   return create(key, size);
 }
 

@@ -30,7 +30,7 @@ public:
 
 class BlockMock: public Block {
 public:
-  BlockMock(): Block(Key::CreateRandomKey()) {}
+  BlockMock(): Block(Key::CreateRandom()) {}
   MOCK_CONST_METHOD0(data, const void*());
   MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
   MOCK_METHOD0(flush, void());
@@ -62,7 +62,7 @@ TEST_F(BlockStoreWithRandomKeysTest, SizeIsPassedThrough1024) {
 
 TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
   EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const Key &key, size_t) {
-    EXPECT_EQ(Key::KEYLENGTH_STRING, key.ToString().size());
+    EXPECT_EQ(Key::STRING_LENGTH, key.ToString().size());
     return new BlockMock;
   }));
 

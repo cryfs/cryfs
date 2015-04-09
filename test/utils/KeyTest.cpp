@@ -20,7 +20,7 @@ public:
   const DataBlockFixture KEY3_AS_BINARY;
   const DataBlockFixture KEY4_AS_BINARY;
 
-  KeyTest() : KEY3_AS_BINARY(Key::KEYLENGTH_BINARY, 1), KEY4_AS_BINARY(Key::KEYLENGTH_BINARY, 2) {}
+  KeyTest() : KEY3_AS_BINARY(Key::BINARY_LENGTH, 1), KEY4_AS_BINARY(Key::BINARY_LENGTH, 2) {}
 
   void EXPECT_DATA_EQ(const DataBlockFixture &expected, const Data &actual) {
     EXPECT_EQ(expected.size(), actual.size());
@@ -29,12 +29,12 @@ public:
 };
 
 TEST_F(KeyTest, CanGenerateRandomKeysWithoutCrashing) {
-  Key result = Key::CreateRandomKey();
+  Key result = Key::CreateRandom();
 }
 
 TEST_F(KeyTest, CreatedRandomKeysHaveCorrectLength) {
-  Key key = Key::CreateRandomKey();
-  EXPECT_EQ(Key::KEYLENGTH_STRING, key.ToString().size());
+  Key key = Key::CreateRandom();
+  EXPECT_EQ(Key::STRING_LENGTH, key.ToString().size());
 }
 
 TEST_F(KeyTest, EqualsTrue) {
@@ -88,20 +88,20 @@ public:
   static const DataBlockFixture VALUE1;
   static const DataBlockFixture VALUE2;
 };
-const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE1(Key::KEYLENGTH_BINARY, 3);
-const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE2(Key::KEYLENGTH_BINARY, 4);
+const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE1(Key::BINARY_LENGTH, 3);
+const DataBlockFixture KeyTestWithBinaryKeyParam::VALUE2(Key::BINARY_LENGTH, 4);
 INSTANTIATE_TEST_CASE_P(KeyTestWithBinaryKeyParam, KeyTestWithBinaryKeyParam, Values(&KeyTestWithBinaryKeyParam::VALUE1, &KeyTestWithBinaryKeyParam::VALUE2));
 
 TEST_P(KeyTestWithBinaryKeyParam, FromAndToBinary) {
   Key key = Key::FromBinary((uint8_t*)GetParam()->data());
-  Data keydata(Key::KEYLENGTH_BINARY);
+  Data keydata(Key::BINARY_LENGTH);
   key.ToBinary(keydata.data());
   EXPECT_DATA_EQ(*GetParam(), keydata);
 }
 
 TEST_P(KeyTestWithBinaryKeyParam, ToAndFromBinary) {
   Key key = Key::FromBinary((uint8_t*)GetParam()->data());
-  Data stored(Key::KEYLENGTH_BINARY);
+  Data stored(Key::BINARY_LENGTH);
   key.ToBinary(stored.data());
   Key loaded = Key::FromBinary(stored.data());
   EXPECT_EQ(key, loaded);
@@ -138,5 +138,5 @@ TEST_F(KeyTest, AssignmentDoesntChangeSource) {
 // This tests that a Key object is very lightweight
 // (we will often pass keys around)
 TEST_F(KeyTest, KeyIsLightweightObject) {
-  EXPECT_EQ(Key::KEYLENGTH_BINARY, sizeof(Key));
+  EXPECT_EQ(Key::BINARY_LENGTH, sizeof(Key));
 }
