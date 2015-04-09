@@ -8,12 +8,12 @@ using std::make_unique;
 namespace blockstore {
 namespace encrypted {
 
-EncryptedBlockStore::EncryptedBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)) {
+EncryptedBlockStore::EncryptedBlockStore(unique_ptr<BlockStore> baseBlockStore, const EncryptionKey &encKey)
+ : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey) {
 }
 
 unique_ptr<Block> EncryptedBlockStore::create(size_t size) {
-  return make_unique<EncryptedBlock>(_baseBlockStore->create(size));
+  return make_unique<EncryptedBlock>(_baseBlockStore->create(size), _encKey);
 }
 
 unique_ptr<Block> EncryptedBlockStore::load(const Key &key) {
@@ -21,7 +21,7 @@ unique_ptr<Block> EncryptedBlockStore::load(const Key &key) {
   if (block.get() == nullptr) {
     return nullptr;
   }
-  return make_unique<EncryptedBlock>(std::move(block));
+  return make_unique<EncryptedBlock>(std::move(block), _encKey);
 }
 
 void EncryptedBlockStore::remove(unique_ptr<Block> block) {

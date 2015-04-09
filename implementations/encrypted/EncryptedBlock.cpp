@@ -3,8 +3,8 @@
 namespace blockstore {
 namespace encrypted {
 
-EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock)
-  :Block(baseBlock->key()), _baseBlock(std::move(baseBlock)) {
+EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey)
+  :Block(baseBlock->key()), _baseBlock(std::move(baseBlock)), _encKey(encKey) {
 }
 
 const void *EncryptedBlock::data() const {

@@ -12,6 +12,8 @@ using std::string;
 
 using namespace blockstore;
 
+//TODO Test blockstore::FixedSizeData instead of blockstore::Key
+
 class KeyTest: public Test {
 public:
   const string KEY1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";

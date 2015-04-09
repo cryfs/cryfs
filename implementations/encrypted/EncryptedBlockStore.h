@@ -4,13 +4,14 @@
 
 #include "../../interface/BlockStore.h"
 #include <messmer/cpp-utils/macros.h>
+#include "EncryptionKey.h"
 
 namespace blockstore {
 namespace encrypted {
 
 class EncryptedBlockStore: public BlockStore {
 public:
-  EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
+  EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const EncryptionKey &encKey);
 
   std::unique_ptr<Block> create(size_t size) override;
   std::unique_ptr<Block> load(const Key &key) override;
@@ -19,6 +20,7 @@ public:
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
+  EncryptionKey _encKey;
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlockStore);
 };

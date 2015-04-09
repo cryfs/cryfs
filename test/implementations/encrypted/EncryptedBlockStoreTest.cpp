@@ -6,6 +6,7 @@
 
 using blockstore::BlockStore;
 using blockstore::encrypted::EncryptedBlockStore;
+using blockstore::encrypted::EncryptionKey;
 using blockstore::testfake::FakeBlockStore;
 
 using std::unique_ptr;
@@ -14,7 +15,7 @@ using std::make_unique;
 class EncryptedBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
   unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<EncryptedBlockStore>(make_unique<FakeBlockStore>());
+    return make_unique<EncryptedBlockStore>(make_unique<FakeBlockStore>(), EncryptionKey::FromString("1491BB4932A389EE14BC7090A272EE5517627CFA147A971A8E6E747E0C772972"));
   }
 };
 
