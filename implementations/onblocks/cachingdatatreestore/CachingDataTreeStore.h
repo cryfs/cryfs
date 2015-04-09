@@ -5,10 +5,8 @@
 #include <memory>
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cachingstore/CachingStore.h>
+#include <messmer/blockstore/utils/Key.h>
 
-namespace blockstore{
-class Key;
-}
 namespace blobstore {
 namespace onblocks {
 namespace datatreestore {

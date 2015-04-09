@@ -4,10 +4,7 @@
 
 #include <cstring>
 #include <cstdint>
-
-namespace blockstore {
-class Key;
-}
+#include <messmer/blockstore/utils/Key.h>
 
 namespace blobstore {
 

@@ -8,10 +8,8 @@
 #include "../datanodestore/DataNodeView.h"
 //TODO Replace with C++14 once std::shared_mutex is supported
 #include <boost/thread/shared_mutex.hpp>
+#include <messmer/blockstore/utils/Key.h>
 
-namespace blockstore {
-class Key;
-}
 namespace blobstore {
 namespace onblocks {
 namespace datanodestore {

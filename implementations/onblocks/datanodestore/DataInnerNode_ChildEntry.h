@@ -18,7 +18,7 @@ private:
     key.ToBinary(_keydata);
   }
   friend class DataInnerNode;
-  uint8_t _keydata[blockstore::Key::KEYLENGTH_BINARY];
+  uint8_t _keydata[blockstore::Key::BINARY_LENGTH];
   DISALLOW_COPY_AND_ASSIGN(DataInnerNode_ChildEntry);
 };
 

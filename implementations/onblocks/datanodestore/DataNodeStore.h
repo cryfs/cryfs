@@ -5,11 +5,11 @@
 #include <memory>
 #include "messmer/cpp-utils/macros.h"
 #include "DataNodeView.h"
+#include <messmer/blockstore/utils/Key.h>
 
 namespace blockstore{
 class Block;
 class BlockStore;
-class Key;
 }
 
 namespace blobstore {
