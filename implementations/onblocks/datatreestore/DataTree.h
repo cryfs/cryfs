@@ -6,6 +6,8 @@
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/optional_ownership_ptr.h>
 #include "../datanodestore/DataNodeView.h"
+//TODO Replace with C++14 once std::shared_mutex is supported
+#include <boost/thread/shared_mutex.hpp>
 
 namespace blockstore {
 class Key;
@@ -36,6 +38,7 @@ public:
   uint64_t numStoredBytes() const;
 
 private:
+  mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
   std::unique_ptr<datanodestore::DataNode> _rootNode;
 

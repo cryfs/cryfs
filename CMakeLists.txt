@@ -3,6 +3,8 @@ INCLUDE(messmer/cmake/tools)
 # Actually create targets: EXEcutables and libraries.
 ADD_BII_TARGETS()
 
+ADD_BOOST(thread)
+
 ACTIVATE_CPP14()
 
 # You can safely delete lines from here...

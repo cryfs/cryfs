@@ -21,6 +21,9 @@ using blobstore::onblocks::datanodestore::DataNodeLayout;
 using std::unique_ptr;
 using std::dynamic_pointer_cast;
 using std::function;
+using boost::shared_mutex;
+using boost::shared_lock;
+using boost::unique_lock;
 
 using cpputils::dynamic_pointer_move;
 using cpputils::optional_ownership_ptr;
@@ -32,7 +35,7 @@ namespace onblocks {
 namespace datatreestore {
 
 DataTree::DataTree(DataNodeStore *nodeStore, unique_ptr<DataNode> rootNode)
-  : _nodeStore(nodeStore), _rootNode(std::move(rootNode)) {
+  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)) {
 }
 
 DataTree::~DataTree() {
@@ -109,6 +112,7 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  shared_lock<shared_mutex> lock(_mutex);
   const_cast<const DataTree*>(this)->traverseLeaves(beginIndex, endIndex, [func](const DataLeafNode* leaf, uint32_t leafIndex) {
     func(const_cast<DataLeafNode*>(leaf), leafIndex);
   });
@@ -116,6 +120,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
+  shared_lock<shared_mutex> lock(_mutex);
   assert(beginIndex <= endIndex);
   //TODO assert(beginIndex <= numLeaves());
   //TODO assert(endIndex <= numLeaves());
@@ -155,6 +160,7 @@ uint64_t DataTree::numStoredBytes() const {
 }
 
 uint64_t DataTree::numStoredBytes(const DataNode &root) const {
+  shared_lock<shared_mutex> lock(_mutex);
   const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&root);
   if (leaf != nullptr) {
     return leaf->numBytes();
@@ -169,6 +175,7 @@ uint64_t DataTree::numStoredBytes(const DataNode &root) const {
 }
 
 void DataTree::resizeNumBytes(uint64_t newNumBytes) {
+  unique_lock<shared_mutex> lock(_mutex);
   //TODO Faster implementation possible (no addDataLeaf()/removeLastDataLeaf() in a loop, but directly resizing)
   LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
   uint64_t currentNumBytes = numStoredBytes();
