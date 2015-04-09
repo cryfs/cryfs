@@ -30,7 +30,7 @@ public:
   class CachedResource {
   public:
     //TODO Better way to initialize
-    CachedResource(): _cachingStore(nullptr), _key(Key::CreateRandomKey()) {}
+    CachedResource(): _cachingStore(nullptr), _key(Key::CreateRandom()) {}
     void init(CachingStore *cachingStore, const Key &key) {
       _cachingStore = cachingStore;
       _key = key;
