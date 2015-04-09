@@ -163,11 +163,13 @@ INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumByt
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, StructureIsValid) {
   tree->resizeNumBytes(newSize);
+  tree->flush();
   EXPECT_IS_LEFTMAXDATA_TREE(tree->key());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
   tree->resizeNumBytes(newSize);
+  tree->flush();
   // tree->numStoredBytes() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
   EXPECT_EQ(newSize, tree->numStoredBytes());
@@ -175,12 +177,14 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DepthFlagsAreCorrect) {
   tree->resizeNumBytes(newSize);
+  tree->flush();
   uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()));
   CHECK_DEPTH(depth, tree->key());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
   Key key = tree->key();
+  tree->flush();
   tree->resizeNumBytes(newSize);
   EXPECT_EQ(key, tree->key());
 }
@@ -216,5 +220,6 @@ TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_KeyDoesntChange) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
   Key key = tree->key();
   tree->resizeNumBytes(0);
+  tree->flush();
   EXPECT_EQ(key, tree->key());
 }
