@@ -17,12 +17,8 @@ public:
   void stat(struct ::stat *result) const override;
   std::unique_ptr<fspp::OpenFile> open(int flags) const override;
   void truncate(off_t size) const override;
-  void unlink() override;
 
 private:
-  CryDevice *_device;
-  std::unique_ptr<DirBlob> _parent;
-  blockstore::Key _key;
 
   DISALLOW_COPY_AND_ASSIGN(CryFile);
 };

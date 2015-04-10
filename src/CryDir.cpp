@@ -26,7 +26,7 @@ using blockstore::Key;
 namespace cryfs {
 
 CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
-: _device(device), _parent(std::move(parent)), _key(key) {
+: CryNode(device, std::move(parent), key) {
 }
 
 CryDir::~CryDir() {
@@ -40,7 +40,7 @@ void CryDir::stat(struct ::stat *result) const {
 
 unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode) {
   auto blob = LoadBlob();
-  auto child = _device->CreateBlob();
+  auto child = device()->CreateBlob();
   Key childkey = child->key();
   blob->AddChildFile(name, childkey);
   //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
@@ -50,19 +50,14 @@ unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
 
 void CryDir::createDir(const string &name, mode_t mode) {
   auto blob = LoadBlob();
-  auto child = _device->CreateBlob();
+  auto child = device()->CreateBlob();
   Key childkey = child->key();
   blob->AddChildDir(name, childkey);
   DirBlob::InitializeEmptyDir(std::move(child));
 }
 
 unique_ptr<DirBlob> CryDir::LoadBlob() const {
-  return make_unique<DirBlob>(_device->LoadBlob(_key));
-}
-
-void CryDir::rmdir() {
-  _parent->RemoveChild(_key);
-  _device->RemoveBlob(_key);
+  return make_unique<DirBlob>(CryNode::LoadBlob());
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
