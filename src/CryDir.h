@@ -21,6 +21,8 @@ public:
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
   std::unique_ptr<std::vector<fspp::Dir::Entry>> children() const override;
 
+  fspp::Dir::EntryType getType() const override;
+
 private:
   std::unique_ptr<DirBlob> LoadBlob() const;
 

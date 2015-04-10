@@ -68,4 +68,8 @@ unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
   return children;
 }
 
+fspp::Dir::EntryType CryDir::getType() const {
+  return fspp::Dir::EntryType::DIR;
+}
+
 }

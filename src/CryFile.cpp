@@ -43,4 +43,8 @@ void CryFile::truncate(off_t size) const {
   FileBlob(LoadBlob()).resize(size);
 }
 
+fspp::Dir::EntryType CryFile::getType() const {
+  return fspp::Dir::EntryType::FILE;
+}
+
 }

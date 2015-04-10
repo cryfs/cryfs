@@ -30,13 +30,12 @@ public:
   const Entry &GetChild(const std::string &name) const;
   void AddChildDir(const std::string &name, const blockstore::Key &blobKey);
   void AddChildFile(const std::string &name, const blockstore::Key &blobKey);
+  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type);
   void RemoveChild(const blockstore::Key &key);
   void flush();
 
 private:
   unsigned char magicNumber() const;
-
-  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type);
 
   const char *readAndAddNextChild(const char *pos, std::vector<Entry> *result) const;
   bool hasChild(const std::string &name) const;

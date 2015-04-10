@@ -4,6 +4,7 @@
 
 #include <messmer/fspp/fs_interface/Node.h>
 #include "messmer/cpp-utils/macros.h"
+#include <messmer/fspp/fs_interface/Dir.h>
 
 #include "CryDevice.h"
 
@@ -24,6 +25,8 @@ protected:
   CryDevice *device();
   const CryDevice *device() const;
   std::unique_ptr<blobstore::Blob> LoadBlob() const;
+
+  virtual fspp::Dir::EntryType getType() const = 0;
 
 private:
   CryDevice *_device;
