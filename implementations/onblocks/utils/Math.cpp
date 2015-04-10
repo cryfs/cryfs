@@ -1,5 +1,7 @@
 #include "Math.h"
 
+#include <cmath>
+
 namespace blobstore {
 namespace onblocks {
 namespace utils {
@@ -21,6 +23,10 @@ uint32_t maxZeroSubtraction(uint32_t minuend, uint32_t subtrahend) {
     return 0u;
   }
   return minuend-subtrahend;
+}
+
+uint32_t ceilLog(uint32_t base, uint32_t value) {
+  return std::ceil((long double)std::log(value)/(long double)std::log(base));
 }
 
 }

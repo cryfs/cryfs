@@ -109,6 +109,12 @@ INSTANTIATE_TEST_CASE_P(BlobReadWriteDataTest, BlobReadWriteDataTest, Values(
   DataRange(BlobReadWriteDataTest::LARGE_SIZE,     BlobReadWriteDataTest::LARGE_SIZE*1/3, BlobReadWriteDataTest::LARGE_SIZE*2/3) // access middle to end
 ));
 
+TEST_P(BlobReadWriteDataTest, WritingDoesntChangeSize) {
+  blob->resize(GetParam().blobsize);
+  blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
+  EXPECT_EQ(GetParam().blobsize, blob->size());
+}
+
 TEST_P(BlobReadWriteDataTest, WriteAndReadImmediately) {
   blob->resize(GetParam().blobsize);
   blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);

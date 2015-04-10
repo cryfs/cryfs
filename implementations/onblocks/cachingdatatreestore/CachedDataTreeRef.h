@@ -21,12 +21,12 @@ public:
     return _baseTree->maxBytesPerLeaf();
   }
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const {
-    return const_cast<const datatreestore::DataTree*>(_baseTree)->traverseLeaves(beginIndex, endIndex, func);
-  }
-
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func) {
     return _baseTree->traverseLeaves(beginIndex, endIndex, func);
+  }
+
+  uint32_t numLeaves() const {
+    return _baseTree->numLeaves();
   }
 
   void resizeNumBytes(uint64_t newNumBytes) {

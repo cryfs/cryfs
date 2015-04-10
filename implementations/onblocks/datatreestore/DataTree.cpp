@@ -24,6 +24,7 @@ using std::function;
 using boost::shared_mutex;
 using boost::shared_lock;
 using boost::unique_lock;
+using std::vector;
 
 using cpputils::dynamic_pointer_move;
 using cpputils::optional_ownership_ptr;
@@ -82,8 +83,9 @@ unique_ptr<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {
   return new_leaf;
 }
 
-optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, DataLeafNode *leaf) {
-  optional_ownership_ptr<DataNode> chain = cpputils::WithoutOwnership<DataNode>(leaf);
+optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, DataNode *child) {
+  //TODO This function is implemented twice, once with optional_ownership_ptr, once with unique_ptr. Redundancy!
+  optional_ownership_ptr<DataNode> chain = cpputils::WithoutOwnership<DataNode>(child);
   for(unsigned int i=0; i<num; ++i) {
     auto newnode = _nodeStore->createNewInnerNode(*chain);
     chain = cpputils::WithOwnership<DataNode>(std::move(newnode));
@@ -91,11 +93,27 @@ optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int 
   return chain;
 }
 
-unique_ptr<DataLeafNode> DataTree::addDataLeafToFullTree() {
+unique_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, unique_ptr<DataNode> child) {
+  unique_ptr<DataNode> chain = std::move(child);
+  for(unsigned int i=0; i<num; ++i) {
+    chain = _nodeStore->createNewInnerNode(*chain);
+  }
+  return chain;
+}
+
+DataInnerNode* DataTree::increaseTreeDepth(unsigned int levels) {
+  assert(levels >= 1);
   auto copyOfOldRoot = _nodeStore->createNewNodeAsCopyFrom(*_rootNode);
-  auto newRootNode = DataNode::convertToNewInnerNode(std::move(_rootNode), *copyOfOldRoot);
-  auto newLeaf = addDataLeafAt(newRootNode.get());
+  auto chain = createChainOfInnerNodes(levels-1, copyOfOldRoot.get());
+  auto newRootNode = DataNode::convertToNewInnerNode(std::move(_rootNode), *chain);
+  DataInnerNode *result = newRootNode.get();
   _rootNode = std::move(newRootNode);
+  return result;
+}
+
+unique_ptr<DataLeafNode> DataTree::addDataLeafToFullTree() {
+  DataInnerNode *rootNode = increaseTreeDepth(1);
+  auto newLeaf = addDataLeafAt(rootNode);
   return newLeaf;
 }
 
@@ -111,22 +129,46 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
   return std::move(_rootNode);
 }
 
+//TODO Test numLeaves()
+uint32_t DataTree::numLeaves() const {
+  //TODO Direct calculating the number of leaves would be faster
+  uint64_t currentNumBytes = _numStoredBytes();
+  if(currentNumBytes == 0) {
+    //We always have at least one leaf
+    currentNumBytes = 1;
+  }
+  return utils::ceilDivision(currentNumBytes, _nodeStore->layout().maxBytesPerLeaf());
+}
+
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
-  const_cast<const DataTree*>(this)->traverseLeaves(beginIndex, endIndex, [func](const DataLeafNode* leaf, uint32_t leafIndex) {
-    func(const_cast<DataLeafNode*>(leaf), leafIndex);
-  });
-}
-
-void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
-  shared_lock<shared_mutex> lock(_mutex);
+  unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing
   assert(beginIndex <= endIndex);
-  //TODO assert(beginIndex <= numLeaves());
-  //TODO assert(endIndex <= numLeaves());
-  traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
+
+  uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), endIndex);
+  uint32_t numLeaves = this->numLeaves();
+  if (_rootNode->depth() < neededTreeDepth) {
+    //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
+    increaseTreeDepth(neededTreeDepth - _rootNode->depth());
+  }
+  if (numLeaves < endIndex) {
+    //TODO Can this case be efficiently combined with the traversing?
+    LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
+  }
+  uint32_t lastLeafIndex = std::max(numLeaves, endIndex) - 1;
+  if (numLeaves < beginIndex) {
+    //TODO Test cases with numLeaves < / >= beginIndex
+    return _traverseLeaves(_rootNode.get(), 0, numLeaves, endIndex, [beginIndex, numLeaves, lastLeafIndex, &func](DataLeafNode* node, uint32_t index) {
+      if (index >= beginIndex) {
+        func(node, index);
+      }
+    });
+  } else {
+    return _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
+  }
 }
 
-void DataTree::traverseLeaves(const DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (const DataLeafNode*, uint32_t)> func) const {
-  const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(root);
+void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
   if (leaf != nullptr) {
     assert(beginIndex <= 1 && endIndex <= 1);
     if (beginIndex == 0 && endIndex == 1) {
@@ -135,18 +177,40 @@ void DataTree::traverseLeaves(const DataNode *root, uint32_t leafOffset, uint32_
     return;
   }
 
-  const DataInnerNode *inner = dynamic_cast<const DataInnerNode*>(root);
+  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
+  vector<unique_ptr<DataNode>> children = getOrCreateChildren(inner, beginChild, endChild);
 
   for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
     uint32_t childOffset = childIndex * leavesPerChild;
     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-    auto child = _nodeStore->load(inner->getChild(childIndex)->key());
-    traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
+    auto child = std::move(children[childIndex-beginChild]);
+    _traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
   }
+}
+
+vector<unique_ptr<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, uint32_t begin, uint32_t end) {
+  vector<unique_ptr<DataNode>> children;
+  children.reserve(end-begin);
+  for (uint32_t childIndex = begin; childIndex < std::min(node->numChildren(), end); ++childIndex) {
+    children.emplace_back(_nodeStore->load(node->getChild(childIndex)->key()));
+  }
+  for (uint32_t childIndex = node->numChildren(); childIndex < end; ++childIndex) {
+    children.emplace_back(addChildTo(node));
+  }
+  assert(children.size() == end-begin);
+  return children;
+}
+
+unique_ptr<DataNode> DataTree::addChildTo(DataInnerNode *node) {
+  auto new_leaf = _nodeStore->createNewLeafNode();
+  new_leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
+  auto chain = createChainOfInnerNodes(node->depth()-1, std::move(new_leaf));
+  node->addChild(*chain);
+  return std::move(chain);
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {

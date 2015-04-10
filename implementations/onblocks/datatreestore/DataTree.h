@@ -29,10 +29,10 @@ public:
   const blockstore::Key &key() const;
   uint32_t maxBytesPerLeaf() const;
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const;
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
   void resizeNumBytes(uint64_t newNumBytes);
 
+  uint32_t numLeaves() const;
   uint64_t numStoredBytes() const;
 
   void flush() const;
@@ -49,19 +49,23 @@ private:
   friend class DataTreeStore;
 
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
-  cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataLeafNode *leaf);
+  cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataNode *child);
+  std::unique_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, std::unique_ptr<datanodestore::DataNode> child);
   std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
 
   void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
   //TODO Use underscore for private methods
-  void traverseLeaves(const datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (const datanodestore::DataLeafNode*, uint32_t)> func) const;
+  void _traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
+  datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
+  std::vector<std::unique_ptr<datanodestore::DataNode>> getOrCreateChildren(datanodestore::DataInnerNode *node, uint32_t begin, uint32_t end);
+  std::unique_ptr<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };
