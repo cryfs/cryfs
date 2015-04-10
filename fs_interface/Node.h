@@ -16,6 +16,7 @@ public:
   virtual void access(int mask) const = 0;
   virtual void rename(const boost::filesystem::path &to) = 0;
   virtual void utimens(const timespec times[2]) = 0;
+  virtual void remove() = 0;
 };
 
 }

@@ -15,7 +15,6 @@ public:
 
   virtual std::unique_ptr<OpenFile> open(int flags) const = 0;
   virtual void truncate(off_t size) const = 0;
-  virtual void unlink() = 0;
 };
 
 }

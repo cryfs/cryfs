@@ -27,7 +27,6 @@ public:
 
   virtual std::unique_ptr<OpenFile> createAndOpenFile(const std::string &name, mode_t mode) = 0;
   virtual void createDir(const std::string &name, mode_t mode) = 0;
-  virtual void rmdir() = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
   //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;

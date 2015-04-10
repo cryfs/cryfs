@@ -84,6 +84,7 @@ int FilesystemImpl::read(int descriptor, void *buf, size_t count, off_t offset) 
 }
 
 void FilesystemImpl::write(int descriptor, const void *buf, size_t count, off_t offset) {
+  //printf("Write %d bytes to offset %d\n", count, offset);fflush(stdout);
   _open_files.get(descriptor)->write(buf, count, offset);
 }
 
@@ -114,12 +115,12 @@ void FilesystemImpl::mkdir(const bf::path &path, mode_t mode) {
 
 void FilesystemImpl::rmdir(const bf::path &path) {
   auto dir = LoadDir(path);
-  dir->rmdir();
+  dir->remove();
 }
 
 void FilesystemImpl::unlink(const bf::path &path) {
   auto file = LoadFile(path);
-  file->unlink();
+  file->remove();
 }
 
 void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {
