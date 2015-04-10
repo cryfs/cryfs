@@ -65,7 +65,6 @@ uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) co
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
-  //resizeIfSmallerThan(offset + size);
   traverseLeaves(offset, size, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
     //TODO Simplify formula, make it easier to understand
     leaf->write((uint8_t*)source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);

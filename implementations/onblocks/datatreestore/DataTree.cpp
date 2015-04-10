@@ -129,15 +129,23 @@ unique_ptr<DataNode> DataTree::releaseRootNode() {
   return std::move(_rootNode);
 }
 
-//TODO Test numLeaves()
+//TODO Test numLeaves(), for example also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
 uint32_t DataTree::numLeaves() const {
-  //TODO Direct calculating the number of leaves would be faster
-  uint64_t currentNumBytes = _numStoredBytes();
-  if(currentNumBytes == 0) {
-    //We always have at least one leaf
-    currentNumBytes = 1;
+  return _numLeaves(*_rootNode);
+}
+
+uint32_t DataTree::_numLeaves(const DataNode &node) const {
+  const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&node);
+  if (leaf != nullptr) {
+    return 1;
   }
-  return utils::ceilDivision(currentNumBytes, _nodeStore->layout().maxBytesPerLeaf());
+
+  const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
+  uint64_t numLeavesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
+  auto lastChild = _nodeStore->load(inner.LastChild()->key());
+  uint64_t numLeavesInRightChild = _numLeaves(*lastChild);
+
+  return numLeavesInLeftChildren + numLeavesInRightChild;
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
@@ -150,20 +158,30 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
     increaseTreeDepth(neededTreeDepth - _rootNode->depth());
   }
-  if (numLeaves < endIndex) {
-    //TODO Can this case be efficiently combined with the traversing?
-    LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
-  }
-  uint32_t lastLeafIndex = std::max(numLeaves, endIndex) - 1;
-  if (numLeaves < beginIndex) {
+
+  if (numLeaves <= beginIndex) {
     //TODO Test cases with numLeaves < / >= beginIndex
-    return _traverseLeaves(_rootNode.get(), 0, numLeaves, endIndex, [beginIndex, numLeaves, lastLeafIndex, &func](DataLeafNode* node, uint32_t index) {
+    // There is a gap between the current size and the begin of the traversal
+    return _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, [beginIndex, numLeaves, &func, this](DataLeafNode* node, uint32_t index) {
       if (index >= beginIndex) {
         func(node, index);
+      } else if (index == numLeaves - 1) {
+        // It is the old last leaf - resize it to maximum
+        node->resize(_nodeStore->layout().maxBytesPerLeaf());
       }
     });
+  } else if (numLeaves < endIndex) {
+    // We are starting traversal in the valid region, but traverse until after it (we grow new leaves)
+    return _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, [numLeaves, &func, this] (DataLeafNode *node, uint32_t index) {
+      if (index == numLeaves - 1) {
+        // It is the old last leaf  - resize it to maximum
+        node->resize(_nodeStore->layout().maxBytesPerLeaf());
+      }
+      func(node, index);
+    });
   } else {
-    return _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
+    //We are traversing entierly inside the valid region
+    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
   }
 }
 

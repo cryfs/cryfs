@@ -61,6 +61,7 @@ private:
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
+  uint32_t _numLeaves(const datanodestore::DataNode &node) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
   datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
