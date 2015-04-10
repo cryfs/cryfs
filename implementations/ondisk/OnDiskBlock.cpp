@@ -69,7 +69,6 @@ unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const
 
   auto block = unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, size));
   block->_fillDataWithZeroes();
-  block->_storeToDisk();
   return block;
 }
 
