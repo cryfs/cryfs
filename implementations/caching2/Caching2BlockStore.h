@@ -8,6 +8,7 @@
 namespace blockstore {
 namespace caching2 {
 
+//TODO Rename this to CachingBlockStore and the other one to something else
 class Caching2BlockStore: public BlockStore {
 public:
   Caching2BlockStore(std::unique_ptr<BlockStore> baseBlockStore);
