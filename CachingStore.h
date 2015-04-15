@@ -133,6 +133,7 @@ void CachingStore<Resource, CachedResourceRef, Key>::remove(const Key &key, std:
 
   //Wait for last resource user to release it
   auto resourceToRemove = insertResult.first->second.get_future().get();
+  _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
 
   _baseStore->removeFromBaseStore(std::move(resourceToRemove));
 }
