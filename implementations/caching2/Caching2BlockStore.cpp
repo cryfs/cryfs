@@ -1,7 +1,11 @@
 #include "Caching2BlockStore.h"
+#include "CachedBlock.h"
 #include "../../interface/Block.h"
 
+#include <algorithm>
+
 using std::unique_ptr;
+using std::make_unique;
 
 namespace blockstore {
 namespace caching2 {
@@ -15,11 +19,15 @@ unique_ptr<Block> Caching2BlockStore::create(size_t size) {
   //     When writing back is done efficiently in the base store (e.g. only one safe-to-disk, not one in the create() and then one in the save(), this is not supported by the current BlockStore interface),
   //     then the base store could actually directly create a block in the create() call, OnDiskBlockStore wouldn't have to avoid file creation in the create() call for performance reasons and I could also adapt the OnDiskBlockStore test cases and remove a lot of flush() calls there because then blocks are loadable directly after the create call() without a flush.
   //     Currently, OnDiskBlockStore doesn't create new blocks directly but only after they're destructed (performance reasons), but this means a newly created block can't be loaded directly.
-  return _baseBlockStore->create(size);
+  return make_unique<CachedBlock>(_baseBlockStore->create(size), this);
 }
 
 unique_ptr<Block> Caching2BlockStore::load(const Key &key) {
-  return _baseBlockStore->load(key);
+  auto block = _cache.pop(key);
+  if (block.get() != nullptr) {
+    return make_unique<CachedBlock>(std::move(block), this);
+  }
+  return make_unique<CachedBlock>(_baseBlockStore->load(key), this);
 }
 
 void Caching2BlockStore::remove(std::unique_ptr<Block> block) {
@@ -28,6 +36,10 @@ void Caching2BlockStore::remove(std::unique_ptr<Block> block) {
 
 uint64_t Caching2BlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
+}
+
+void Caching2BlockStore::release(unique_ptr<Block> block) {
+  _cache.push(std::move(block));
 }
 
 }

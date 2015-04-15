@@ -15,7 +15,9 @@ public:
   CacheEntry(std::unique_ptr<Block> block): _lastAccess(time(nullptr)), _block(std::move(block)) {
   }
 
-  double ageSeconds() {
+  CacheEntry(CacheEntry &&) = default;
+
+  double ageSeconds() const {
     return difftime(time(nullptr), _lastAccess);
   }
 

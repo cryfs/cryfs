@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHING2_CACHINGBLOCKSTORE_H_
 
 #include "../../interface/BlockStore.h"
-#include "CacheEntry.h"
+#include "Cache.h"
 
 namespace blockstore {
 namespace caching2 {
@@ -17,10 +17,11 @@ public:
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
-private:
+  void release(std::unique_ptr<Block> block);
 
+private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  std::map<Key, CacheEntry> _cachedBlocks;
+  Cache _cache;
 
   DISALLOW_COPY_AND_ASSIGN(Caching2BlockStore);
 };
