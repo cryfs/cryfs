@@ -3,9 +3,11 @@
 #include "../../interface/Block.h"
 
 #include <algorithm>
+#include <messmer/cpp-utils/pointer.h>
 
 using std::unique_ptr;
 using std::make_unique;
+using cpputils::dynamic_pointer_move;
 
 namespace blockstore {
 namespace caching2 {
@@ -27,11 +29,15 @@ unique_ptr<Block> Caching2BlockStore::load(const Key &key) {
   if (block.get() != nullptr) {
     return make_unique<CachedBlock>(std::move(block), this);
   }
-  return make_unique<CachedBlock>(_baseBlockStore->load(key), this);
+  block = _baseBlockStore->load(key);
+  if (block.get() == nullptr) {
+    return nullptr;
+  }
+  return make_unique<CachedBlock>(std::move(block), this);
 }
 
 void Caching2BlockStore::remove(std::unique_ptr<Block> block) {
-  return _baseBlockStore->remove(std::move(block));
+  return _baseBlockStore->remove(std::move(dynamic_pointer_move<CachedBlock>(block)->releaseBlock()));
 }
 
 uint64_t Caching2BlockStore::numBlocks() const {

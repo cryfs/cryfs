@@ -4,11 +4,15 @@
 
 #include "../../interface/Block.h"
 #include "CacheEntry.h"
+#include "QueueMap.h"
 #include <memory>
 #include <mutex>
 
 namespace blockstore {
 namespace caching2 {
+
+//TODO Test
+//TODO Also throw blocks out after a timeout
 
 class Cache {
 public:
@@ -22,9 +26,7 @@ public:
 
 private:
   mutable std::mutex _mutex;
-  std::map<Key, CacheEntry> _cachedBlocks;
-
-  void deleteOldestEntry();
+  QueueMap<Key, CacheEntry> _cachedBlocks;
 };
 
 }

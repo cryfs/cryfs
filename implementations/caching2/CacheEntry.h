@@ -25,9 +25,18 @@ public:
     return std::move(_block);
   }
 
+  void setNextEntry(const CacheEntry *entry) {
+    _nextEntry = entry;
+  }
+
+  const CacheEntry *nextEntry() {
+    return _nextEntry;
+  }
+
 private:
   time_t _lastAccess;
   std::unique_ptr<Block> _block;
+  const CacheEntry *_nextEntry;
 
   DISALLOW_COPY_AND_ASSIGN(CacheEntry);
 };

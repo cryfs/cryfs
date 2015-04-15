@@ -1,6 +1,7 @@
 #include "CachedBlock.h"
 #include "Caching2BlockStore.h"
 
+using std::unique_ptr;
 using std::make_unique;
 
 namespace blockstore {
@@ -13,7 +14,9 @@ CachedBlock::CachedBlock(std::unique_ptr<Block> baseBlock, Caching2BlockStore *b
 }
 
 CachedBlock::~CachedBlock() {
-  _blockStore->release(std::move(_baseBlock));
+  if (_baseBlock.get() != nullptr) {
+    _blockStore->release(std::move(_baseBlock));
+  }
 }
 
 const void *CachedBlock::data() const {
@@ -30,6 +33,10 @@ void CachedBlock::flush() {
 
 size_t CachedBlock::size() const {
   return _baseBlock->size();
+}
+
+unique_ptr<Block> CachedBlock::releaseBlock() {
+  return std::move(_baseBlock);
 }
 
 }

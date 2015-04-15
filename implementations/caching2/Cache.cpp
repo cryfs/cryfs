@@ -19,31 +19,23 @@ Cache::~Cache() {
 
 unique_ptr<Block> Cache::pop(const Key &key) {
   lock_guard<mutex> lock(_mutex);
-  auto found = _cachedBlocks.find(key);
-  if (found == _cachedBlocks.end()) {
+  auto found = _cachedBlocks.pop(key);
+  if (found.get() == nullptr) {
     return nullptr;
   }
-  auto block = found->second.releaseBlock();
-  _cachedBlocks.erase(found);
+  auto block = found->releaseBlock();
   return block;
 }
 
 void Cache::push(unique_ptr<Block> block) {
   lock_guard<mutex> lock(_mutex);
-  if (_cachedBlocks.size() > MAX_ENTRIES) {
-    deleteOldestEntry();
+  assert(_cachedBlocks.size() <= MAX_ENTRIES);
+  if (_cachedBlocks.size() == MAX_ENTRIES) {
+    _cachedBlocks.pop();
     assert(_cachedBlocks.size() == MAX_ENTRIES-1);
   }
   Key key = block->key();
-  _cachedBlocks.emplace(key, std::move(block));
-}
-
-void Cache::deleteOldestEntry() {
-  auto oldestEntry = std::min_element(_cachedBlocks.begin(), _cachedBlocks.end(), [] (const pair<const Key, CacheEntry> &lhs, const pair<const Key, CacheEntry> &rhs) {
-    return lhs.second.ageSeconds() > rhs.second.ageSeconds();
-  });
-  //printf("Deleting age %f (vs %f)\n", oldestEntry->second.ageSeconds(), _cachedBlocks.begin()->second.ageSeconds());
-  _cachedBlocks.erase(oldestEntry);
+  _cachedBlocks.push(key, make_unique<CacheEntry>(std::move(block)));
 }
 
 }
