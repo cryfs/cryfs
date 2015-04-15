@@ -8,6 +8,7 @@
 #include "messmer/blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include "messmer/blobstore/implementations/onblocks/BlobOnBlocks.h"
 #include "messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h"
+#include "messmer/blockstore/implementations/caching2/Caching2BlockStore.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -22,13 +23,14 @@ using blockstore::Key;
 using blockstore::encrypted::EncryptedBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
+using blockstore::caching2::Caching2BlockStore;
 
 namespace cryfs {
 
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<EncryptedBlockStore>(std::move(blockStore), config->EncryptionKey()), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<Caching2BlockStore>(make_unique<EncryptedBlockStore>(std::move(blockStore), config->EncryptionKey())), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
