@@ -32,6 +32,7 @@ TYPED_TEST_CASE_P(BlockStoreWithRandomKeysTest);
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSameSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(this->key, 1024);
+  block->flush();
   auto block2 = blockStore->create(this->key, 1024);
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
@@ -40,6 +41,7 @@ TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSameSize
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndDifferentSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(this->key, 1024);
+  block->flush();
   auto block2 = blockStore->create(this->key, 4096);
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
@@ -48,6 +50,7 @@ TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndDifferen
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndFirstNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(this->key, 0);
+  block->flush();
   auto block2 = blockStore->create(this->key, 1024);
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
@@ -56,6 +59,7 @@ TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndFirstNul
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSecondNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(this->key, 1024);
+  block->flush();
   auto block2 = blockStore->create(this->key, 0);
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
@@ -64,6 +68,7 @@ TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSecondNu
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndBothNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(this->key, 0);
+  block->flush();
   auto block2 = blockStore->create(this->key, 0);
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);

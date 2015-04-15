@@ -48,7 +48,7 @@ private:
   //We want to avoid this for the reasons mentioned above (overflow data).
   std::vector<std::shared_ptr<Data>> _used_dataregions_for_blocks;
 
-  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const Data &data);
+  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const Data &data, bool dirty);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };

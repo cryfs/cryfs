@@ -13,7 +13,7 @@ class FakeBlockStore;
 
 class FakeBlock: public Block {
 public:
-  FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<Data> data);
+  FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<Data> data, bool dirty);
   virtual ~FakeBlock();
 
   const void *data() const override;

@@ -7,6 +7,9 @@
 
 namespace blockstore {
 
+//TODO Make Block non-virtual class that stores ptr to its blockstore and writes itself back to the blockstore who is offering a corresponding function.
+//     Then ondisk blockstore can be actually create the file on disk in blockstore::create() and cachingblockstore will delay that call to its base block store.
+
 class Block {
 public:
   virtual ~Block() {}

@@ -15,22 +15,19 @@ FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks() {}
 
 unique_ptr<Block> FakeBlockStore::create(const Key &key, size_t size) {
-  auto insert_result = _blocks.emplace(key.ToString(), size);
-  insert_result.first->second.FillWithZeroes();
-
-  if (!insert_result.second) {
+  if (_blocks.find(key.ToString()) != _blocks.end()) {
     return nullptr;
   }
-
-  //Return a copy of the stored data
-  return load(key);
+  Data data(size);
+  data.FillWithZeroes();
+  return makeFakeBlockFromData(key, data, true);
 }
 
 unique_ptr<Block> FakeBlockStore::load(const Key &key) {
   //Return a copy of the stored data
   string key_string = key.ToString();
   try {
-    return makeFakeBlockFromData(key, _blocks.at(key_string));
+    return makeFakeBlockFromData(key, _blocks.at(key_string), false);
   } catch (const std::out_of_range &e) {
     return nullptr;
   }
@@ -43,14 +40,20 @@ void FakeBlockStore::remove(unique_ptr<Block> block) {
   assert(numRemoved == 1);
 }
 
-unique_ptr<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data) {
+unique_ptr<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
   auto newdata = make_shared<Data>(data.copy());
   _used_dataregions_for_blocks.push_back(newdata);
-  return make_unique<FakeBlock>(this, key, newdata);
+  return make_unique<FakeBlock>(this, key, newdata, dirty);
 }
 
 void FakeBlockStore::updateData(const Key &key, const Data &data) {
-  Data &stored_data = _blocks.at(key.ToString());
+  auto found = _blocks.find(key.ToString());
+  if (found == _blocks.end()) {
+    auto insertResult = _blocks.emplace(key.ToString(), data.size());
+    assert(true == insertResult.second);
+    found = insertResult.first;
+  }
+  Data &stored_data = found->second;
   assert(data.size() == stored_data.size());
   std::memcpy(stored_data.data(), data.data(), data.size());
 }

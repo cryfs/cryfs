@@ -80,6 +80,7 @@ void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
 
 void OnDiskBlock::_fillDataWithZeroes() {
   _data.FillWithZeroes();
+  _dataChanged = true;
 }
 
 void OnDiskBlock::_storeToDisk() const {

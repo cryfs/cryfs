@@ -36,6 +36,7 @@ TEST_F(OnDiskBlockCreateTest, CreatingBlockCreatesFile) {
   EXPECT_FALSE(bf::exists(file.path()));
 
   auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, 0);
+  block->flush();
 
   EXPECT_TRUE(bf::exists(file.path()));
   EXPECT_TRUE(bf::is_regular_file(file.path()));
@@ -43,6 +44,7 @@ TEST_F(OnDiskBlockCreateTest, CreatingBlockCreatesFile) {
 
 TEST_F(OnDiskBlockCreateTest, CreatingExistingBlockReturnsNull) {
   auto block1 = OnDiskBlock::CreateOnDisk(dir.path(), key, 0);
+  block1->flush();
   auto block2 = OnDiskBlock::CreateOnDisk(dir.path(), key, 0);
   EXPECT_TRUE((bool)block1);
   EXPECT_FALSE((bool)block2);
@@ -57,6 +59,7 @@ public:
     block(OnDiskBlock::CreateOnDisk(dir.path(), key, GetParam())),
     ZEROES(block->size())
   {
+    block->flush();
     ZEROES.FillWithZeroes();
   }
 };
