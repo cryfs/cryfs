@@ -9,6 +9,7 @@ namespace blockstore {
 namespace caching2 {
 
 //TODO Test
+//TODO Move to utils
 template<class Key, class Value>
 class QueueMap {
 public:
