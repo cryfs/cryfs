@@ -2,9 +2,8 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHINGBLOCKSTORE_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHINGBLOCKSTORE_H_
 
+#include <messmer/parallelaccessstore/ParallelAccessStore.h>
 #include "BlockRef.h"
-#include <messmer/cachingstore/CachingStore.h>
-
 #include "../../interface/BlockStore.h"
 
 namespace blockstore {
@@ -22,7 +21,7 @@ public:
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  cachingstore::CachingStore<Block, BlockRef, Key> _cachingStore;
+  parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key> _cachingStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessBlockStore);
 };

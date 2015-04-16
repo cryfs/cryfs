@@ -2,9 +2,8 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEDBLOCKREF_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEDBLOCKREF_H_
 
+#include <messmer/parallelaccessstore/ParallelAccessStore.h>
 #include "../../interface/Block.h"
-#include <messmer/cachingstore/CachingStore.h>
-
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
 
@@ -12,7 +11,7 @@ namespace blockstore {
 namespace parallelaccess {
 class ParallelAccessBlockStore;
 
-class BlockRef: public Block, public cachingstore::CachingStore<Block, BlockRef, Key>::CachedResource {
+class BlockRef: public Block, public parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key>::ResourceRefBase {
 public:
   //TODO Unneccessarily storing Key twice here (in parent class and in _baseBlock).
   BlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}

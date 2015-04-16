@@ -2,13 +2,13 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_PARALLELACCESS_PARALLELACCESSBLOCKSTOREADAPTER_H_
 
 #include <messmer/cpp-utils/macros.h>
-#include <messmer/cachingstore/CachingStore.h>
+#include <messmer/parallelaccessstore/ParallelAccessStore.h>
 #include "../../interface/BlockStore.h"
 
 namespace blockstore {
 namespace parallelaccess {
 
-class ParallelAccessBlockStoreAdapter: public cachingstore::CachingBaseStore<Block, Key> {
+class ParallelAccessBlockStoreAdapter: public parallelaccessstore::ParallelAccessBaseStore<Block, Key> {
 public:
   ParallelAccessBlockStoreAdapter(BlockStore *baseBlockStore)
     :_baseBlockStore(std::move(baseBlockStore)) {
