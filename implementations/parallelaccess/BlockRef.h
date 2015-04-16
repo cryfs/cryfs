@@ -9,13 +9,13 @@
 #include <memory>
 
 namespace blockstore {
-namespace caching {
-class CachingBlockStore;
+namespace parallelaccess {
+class ParallelAccessBlockStore;
 
-class CachedBlockRef: public Block, public cachingstore::CachingStore<Block, CachedBlockRef, Key>::CachedResource {
+class BlockRef: public Block, public cachingstore::CachingStore<Block, BlockRef, Key>::CachedResource {
 public:
   //TODO Unneccessarily storing Key twice here (in parent class and in _baseBlock).
-  CachedBlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}
+  BlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}
 
   const void *data() const override {
 	return _baseBlock->data();
@@ -36,7 +36,7 @@ public:
 private:
   Block *_baseBlock;
 
-  DISALLOW_COPY_AND_ASSIGN(CachedBlockRef);
+  DISALLOW_COPY_AND_ASSIGN(BlockRef);
 };
 
 }
