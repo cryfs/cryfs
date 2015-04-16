@@ -1,17 +1,17 @@
 #pragma once
-#ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_CACHINGDATATREESTORE_DATATREEREF_H_
-#define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_CACHINGDATATREESTORE_DATATREEREF_H_
+#ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_DATATREEREF_H_
+#define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_DATATREEREF_H_
 
+#include <messmer/parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTree.h"
-#include <messmer/cachingstore/CachingStore.h>
 
 namespace blobstore {
 namespace onblocks {
-namespace cachingdatatreestore {
+namespace parallelaccessdatatreestore {
 
-class CachedDataTreeRef: public cachingstore::CachingStore<datatreestore::DataTree, CachedDataTreeRef, blockstore::Key>::CachedResource {
+class DataTreeRef: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key>::ResourceRefBase {
 public:
-  CachedDataTreeRef(datatreestore::DataTree *baseTree): _baseTree(baseTree) {}
+  DataTreeRef(datatreestore::DataTree *baseTree): _baseTree(baseTree) {}
 
   const blockstore::Key &key() const {
     return _baseTree->key();

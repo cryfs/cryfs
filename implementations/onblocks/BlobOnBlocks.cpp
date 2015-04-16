@@ -1,6 +1,6 @@
+#include "parallelaccessdatatreestore/DataTreeRef.h"
 #include "BlobOnBlocks.h"
 
-#include "cachingdatatreestore/CachedDataTreeRef.h"
 #include "datanodestore/DataLeafNode.h"
 #include "utils/Math.h"
 #include <cmath>
@@ -14,9 +14,9 @@ using blockstore::Key;
 namespace blobstore {
 namespace onblocks {
 
-using cachingdatatreestore::CachedDataTreeRef;
+using parallelaccessdatatreestore::DataTreeRef;
 
-BlobOnBlocks::BlobOnBlocks(unique_ptr<CachedDataTreeRef> datatree)
+BlobOnBlocks::BlobOnBlocks(unique_ptr<DataTreeRef> datatree)
 : _datatree(std::move(datatree)) {
 }
 
@@ -86,7 +86,7 @@ Key BlobOnBlocks::key() const {
   return _datatree->key();
 }
 
-unique_ptr<CachedDataTreeRef> BlobOnBlocks::releaseTree() {
+unique_ptr<DataTreeRef> BlobOnBlocks::releaseTree() {
   return std::move(_datatree);
 }
 

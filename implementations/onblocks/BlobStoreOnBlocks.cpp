@@ -1,10 +1,10 @@
+#include "parallelaccessdatatreestore/DataTreeRef.h"
+#include "parallelaccessdatatreestore/ParallelAccessDataTreeStore.h"
 #include <messmer/blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h>
 #include "datanodestore/DataLeafNode.h"
 #include "datanodestore/DataNodeStore.h"
 #include "datatreestore/DataTreeStore.h"
 #include "datatreestore/DataTree.h"
-#include "cachingdatatreestore/CachingDataTreeStore.h"
-#include "cachingdatatreestore/CachedDataTreeRef.h"
 #include "BlobStoreOnBlocks.h"
 #include "BlobOnBlocks.h"
 #include <messmer/cpp-utils/pointer.h>
@@ -22,10 +22,10 @@ namespace onblocks {
 
 using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
-using cachingdatatreestore::CachingDataTreeStore;
+using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t blocksizeBytes)
-: _dataTreeStore(make_unique<CachingDataTreeStore>(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
+: _dataTreeStore(make_unique<ParallelAccessDataTreeStore>(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {

@@ -7,8 +7,8 @@
 
 namespace blobstore {
 namespace onblocks {
-namespace cachingdatatreestore {
-class CachingDataTreeStore;
+namespace parallelaccessdatatreestore {
+class ParallelAccessDataTreeStore;
 }
 
 class BlobStoreOnBlocks: public BlobStore {
@@ -22,7 +22,7 @@ public:
   void remove(std::unique_ptr<Blob> blob) override;
 
 private:
-  std::unique_ptr<cachingdatatreestore::CachingDataTreeStore> _dataTreeStore;
+  std::unique_ptr<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;
 };
 
 }

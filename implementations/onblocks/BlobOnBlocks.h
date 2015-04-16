@@ -11,13 +11,13 @@ namespace onblocks {
 namespace datanodestore {
 class DataLeafNode;
 }
-namespace cachingdatatreestore {
-class CachedDataTreeRef;
+namespace parallelaccessdatatreestore {
+class DataTreeRef;
 }
 
 class BlobOnBlocks: public Blob {
 public:
-  BlobOnBlocks(std::unique_ptr<cachingdatatreestore::CachedDataTreeRef> datatree);
+  BlobOnBlocks(std::unique_ptr<parallelaccessdatatreestore::DataTreeRef> datatree);
   virtual ~BlobOnBlocks();
 
   blockstore::Key key() const override;
@@ -31,14 +31,14 @@ public:
 
   void flush() override;
 
-  std::unique_ptr<cachingdatatreestore::CachedDataTreeRef> releaseTree();
+  std::unique_ptr<parallelaccessdatatreestore::DataTreeRef> releaseTree();
 
 private:
 
   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, datanodestore::DataLeafNode *, uint32_t, uint32_t)>) const;
   void resizeIfSmallerThan(uint64_t neededSize);
 
-  std::unique_ptr<cachingdatatreestore::CachedDataTreeRef> _datatree;
+  std::unique_ptr<parallelaccessdatatreestore::DataTreeRef> _datatree;
 };
 
 }
