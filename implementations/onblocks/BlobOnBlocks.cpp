@@ -56,7 +56,7 @@ void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
 
 uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) const {
   //TODO Quite inefficient to call size() here, because that has to traverse the tree
-  uint64_t realCount = std::max(0uL, std::min(count, size()-offset));
+  uint64_t realCount = std::max(UINT64_C(0), std::min(count, size()-offset));
   traverseLeaves(offset, realCount, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
     //TODO Simplify formula, make it easier to understand
     leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
