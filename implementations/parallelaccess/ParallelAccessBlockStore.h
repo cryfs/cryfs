@@ -21,7 +21,7 @@ public:
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key> _cachingStore;
+  parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key> _parallelAccessStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessBlockStore);
 };

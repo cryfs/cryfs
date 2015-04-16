@@ -17,23 +17,23 @@ namespace blockstore {
 namespace parallelaccess {
 
 ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)), _cachingStore(make_unique<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
+ : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
 unique_ptr<Block> ParallelAccessBlockStore::create(size_t size) {
   auto block = _baseBlockStore->create(size);
   Key key = block->key();
-  return _cachingStore.add(key, std::move(block));
+  return _parallelAccessStore.add(key, std::move(block));
 }
 
 unique_ptr<Block> ParallelAccessBlockStore::load(const Key &key) {
-  return _cachingStore.load(key);
+  return _parallelAccessStore.load(key);
 }
 
 
 void ParallelAccessBlockStore::remove(unique_ptr<Block> block) {
   Key key = block->key();
-  return _cachingStore.remove(key, dynamic_pointer_move<BlockRef>(block));
+  return _parallelAccessStore.remove(key, dynamic_pointer_move<BlockRef>(block));
 }
 
 uint64_t ParallelAccessBlockStore::numBlocks() const {
