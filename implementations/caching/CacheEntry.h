@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING2_CACHEENTRY_H_
-#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING2_CACHEENTRY_H_
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEENTRY_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHEENTRY_H_
 
 #include <ctime>
 #include <memory>
@@ -8,7 +8,7 @@
 
 namespace blockstore {
 class Block;
-namespace caching2 {
+namespace caching {
 
 class CacheEntry {
 public:

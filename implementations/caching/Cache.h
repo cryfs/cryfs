@@ -1,15 +1,15 @@
 #pragma once
-#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING2_CACHE_H_
-#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING2_CACHE_H_
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_H_
 
-#include "../../interface/Block.h"
 #include "CacheEntry.h"
 #include "QueueMap.h"
+#include "../../interface/Block.h"
 #include <memory>
 #include <mutex>
 
 namespace blockstore {
-namespace caching2 {
+namespace caching {
 
 //TODO Test
 //TODO Also throw blocks out after a timeout

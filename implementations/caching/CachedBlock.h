@@ -8,13 +8,13 @@
 #include <memory>
 
 namespace blockstore {
-namespace caching2 {
-class Caching2BlockStore;
+namespace caching {
+class CachingBlockStore;
 
 class CachedBlock: public Block {
 public:
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
-  CachedBlock(std::unique_ptr<Block> baseBlock, Caching2BlockStore *blockStore);
+  CachedBlock(std::unique_ptr<Block> baseBlock, CachingBlockStore *blockStore);
   virtual ~CachedBlock();
 
   const void *data() const override;
@@ -27,7 +27,7 @@ public:
   std::unique_ptr<Block> releaseBlock();
 
 private:
-  Caching2BlockStore *_blockStore;
+  CachingBlockStore *_blockStore;
   std::unique_ptr<Block> _baseBlock;
 
   DISALLOW_COPY_AND_ASSIGN(CachedBlock);

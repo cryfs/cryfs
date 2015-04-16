@@ -7,7 +7,7 @@ using std::lock_guard;
 using std::pair;
 
 namespace blockstore {
-namespace caching2 {
+namespace caching {
 
 constexpr uint32_t Cache::MAX_ENTRIES;
 

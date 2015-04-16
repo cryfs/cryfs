@@ -1,13 +1,13 @@
 #include "CachedBlock.h"
-#include "Caching2BlockStore.h"
+#include "CachingBlockStore.h"
 
 using std::unique_ptr;
 using std::make_unique;
 
 namespace blockstore {
-namespace caching2 {
+namespace caching {
 
-CachedBlock::CachedBlock(std::unique_ptr<Block> baseBlock, Caching2BlockStore *blockStore)
+CachedBlock::CachedBlock(std::unique_ptr<Block> baseBlock, CachingBlockStore *blockStore)
     :Block(baseBlock->key()),
      _blockStore(blockStore),
      _baseBlock(std::move(baseBlock)) {

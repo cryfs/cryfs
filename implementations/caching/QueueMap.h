@@ -4,9 +4,10 @@
 
 #include <memory>
 #include <map>
+#include <cassert>
 
 namespace blockstore {
-namespace caching2 {
+namespace caching {
 
 //TODO Test
 //TODO Move to utils
