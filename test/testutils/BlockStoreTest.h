@@ -49,6 +49,12 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock) {
   auto blockStore = this->fixture.createBlockStore();
+  auto block = blockStore->create(1);
+  EXPECT_EQ(1, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock) {
+  auto blockStore = this->fixture.createBlockStore();
   blockStore->create(1);
   EXPECT_EQ(1, blockStore->numBlocks());
 }
@@ -61,6 +67,27 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto block1 = blockStore->create(1);
+  auto block2 = blockStore->create(0);
+  EXPECT_EQ(2, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->create(1);
+  auto block2 = blockStore->create(0);
+  EXPECT_EQ(2, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto block1 = blockStore->create(1);
+  blockStore->create(0);
+  EXPECT_EQ(2, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(1);
   blockStore->create(0);
@@ -95,8 +122,12 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     BlockIsNotLoadableAfterDeleting,
     NumBlocksIsCorrectOnEmptyBlockstore,
     NumBlocksIsCorrectAfterAddingOneBlock,
+    NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock,
     NumBlocksIsCorrectAfterRemovingTheLastBlock,
     NumBlocksIsCorrectAfterAddingTwoBlocks,
+    NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock,
+    NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock,
+    NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks,
     NumBlocksIsCorrectAfterRemovingABlock,
     WriteAndReadImmediately,
     WriteAndReadAfterLoading,
