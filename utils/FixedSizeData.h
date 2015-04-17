@@ -12,7 +12,6 @@ namespace blockstore {
 template<int SIZE>
 class FixedSizeData {
 public:
-  FixedSizeData() {}
   //Non-virtual destructor because we want objects to be small
   ~FixedSizeData() {}
 
@@ -30,6 +29,7 @@ public:
   const unsigned char *data() const;
 
 private:
+  FixedSizeData() {}
   static CryptoPP::AutoSeededRandomPool &RandomPool();
 
   unsigned char _data[BINARY_LENGTH];

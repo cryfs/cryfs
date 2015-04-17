@@ -14,12 +14,12 @@ namespace caching {
 template<class Key, class Value>
 class QueueMap {
 public:
-  QueueMap(): _entries(), _sentinel(Key(), nullptr, &_sentinel, &_sentinel) {
+  QueueMap(): _entries(), _sentinel(nullptr, nullptr, &_sentinel, &_sentinel) {
   }
   virtual ~QueueMap() {}
 
   void push(const Key &key, std::unique_ptr<Value> value) {
-    auto newEntry = std::make_unique<Entry>(key, std::move(value), _sentinel.prev, &_sentinel);
+    auto newEntry = std::make_unique<Entry>(&key, std::move(value), _sentinel.prev, &_sentinel);
     _sentinel.prev->next = newEntry.get();
     _sentinel.prev = newEntry.get();
     auto insertResult = _entries.emplace(key, std::move(newEntry));
@@ -38,7 +38,7 @@ public:
   }
 
   std::unique_ptr<Value> pop() {
-    return pop(_sentinel.next->key);
+    return pop(*_sentinel.next->key);
   }
 
   uint32_t size() {
@@ -47,8 +47,12 @@ public:
 
 private:
   struct Entry {
-    Entry(const Key &key_, std::unique_ptr<Value> value_, Entry *prev_, Entry *next_): key(key_), value(std::move(value_)), prev(prev_), next(next_) {}
-    Key key;
+    Entry(const Key *key_, std::unique_ptr<Value> value_, Entry *prev_, Entry *next_): key(nullptr), value(std::move(value_)), prev(prev_), next(next_) {
+      if (key_ != nullptr) {
+        key = std::make_unique<Key>(*key_);
+      }
+    }
+    std::unique_ptr<Key> key;
     std::unique_ptr<Value> value;
     Entry *prev;
     Entry *next;
