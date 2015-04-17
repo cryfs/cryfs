@@ -4,6 +4,7 @@
 #include <mutex>
 #include <memory>
 #include <map>
+#include <unordered_map>
 #include <future>
 #include <cassert>
 #include <type_traits>
@@ -71,7 +72,7 @@ private:
   std::mutex _mutex;
   std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> _baseStore;
 
-  std::map<Key, OpenResource> _openResources;
+  std::unordered_map<Key, OpenResource> _openResources;
   std::map<Key, std::promise<std::unique_ptr<Resource>>> _resourcesToRemove;
 
   std::unique_ptr<ResourceRef> _add(const Key &key, std::unique_ptr<Resource> resource);
