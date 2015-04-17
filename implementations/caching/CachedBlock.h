@@ -23,7 +23,6 @@ public:
 
   size_t size() const override;
 
-  bool alreadyExistsInBaseStore();
   std::unique_ptr<Block> releaseBlock();
 
 private:
