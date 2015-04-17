@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING2_MAP_H_
 
 #include <memory>
-#include <map>
+#include <unordered_map>
 #include <cassert>
 
 namespace blockstore {
@@ -60,7 +60,7 @@ private:
   }
 
   //TODO Double indirection unique_ptr<Entry> and Entry has unique_ptr<Value>. Necessary?
-  std::map<Key, std::unique_ptr<Entry>> _entries;
+  std::unordered_map<Key, std::unique_ptr<Entry>> _entries;
   Entry _sentinel;
 };
 

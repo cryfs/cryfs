@@ -38,9 +38,6 @@ private:
 template<int SIZE> bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
 template<int SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
 
-//operator< is defined, so that FixedSizeData objects can be used in std::map and std::set
-template<int SIZE> bool operator<(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
-
 // ----- Implementation -----
 
 template<int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_LENGTH;
@@ -108,11 +105,6 @@ bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) 
 template<int SIZE>
 bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
   return !operator==(lhs, rhs);
-}
-
-template<int SIZE>
-bool operator<(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
-  return 0 > std::memcmp(lhs.data(), rhs.data(), FixedSizeData<SIZE>::BINARY_LENGTH);
 }
 
 }
