@@ -41,6 +41,10 @@ public:
     return pop(*_sentinel.next->key);
   }
 
+  const Value &peek() {
+	return *_sentinel.next->value;
+  }
+
   uint32_t size() {
     return _entries.size();
   }

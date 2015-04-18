@@ -5,6 +5,7 @@
 #include <ctime>
 #include <memory>
 #include <messmer/cpp-utils/macros.h>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace blockstore {
 class Block;
@@ -12,13 +13,13 @@ namespace caching {
 
 class CacheEntry {
 public:
-  CacheEntry(std::unique_ptr<Block> block): _lastAccess(time(nullptr)), _block(std::move(block)) {
+  CacheEntry(std::unique_ptr<Block> block): _lastAccess(currentTime()), _block(std::move(block)) {
   }
 
   CacheEntry(CacheEntry &&) = default;
 
   double ageSeconds() const {
-    return difftime(time(nullptr), _lastAccess);
+    return ((double)(currentTime() - _lastAccess).total_nanoseconds()) / ((double)1000000000);
   }
 
   std::unique_ptr<Block> releaseBlock() {
@@ -34,9 +35,13 @@ public:
   }
 
 private:
-  time_t _lastAccess;
+  boost::posix_time::ptime _lastAccess;
   std::unique_ptr<Block> _block;
   const CacheEntry *_nextEntry;
+
+  static boost::posix_time::ptime currentTime() {
+	return boost::posix_time::microsec_clock::local_time();
+  }
 
   DISALLOW_COPY_AND_ASSIGN(CacheEntry);
 };
