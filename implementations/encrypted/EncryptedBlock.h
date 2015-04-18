@@ -18,6 +18,7 @@ class EncryptedBlock: public Block {
 public:
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
   EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey);
+  EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey, Data plaintextData);
   virtual ~EncryptedBlock();
 
   static std::unique_ptr<EncryptedBlock> TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const EncryptionKey &encKey);

@@ -19,8 +19,6 @@ public:
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
-  std::unique_ptr<Block> tryCreateInBaseStore(const Key &key, Data encryptedData);
-
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
   EncryptionKey _encKey;

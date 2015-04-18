@@ -37,10 +37,6 @@ uint64_t EncryptedBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
 }
 
-unique_ptr<Block> EncryptedBlockStore::tryCreateInBaseStore(const Key &key, Data encryptedData) {
-  return _baseBlockStore->tryCreate(key, std::move(encryptedData));
-}
-
 }
 }
 

@@ -23,16 +23,20 @@ std::unique_ptr<EncryptedBlock> EncryptedBlock::TryCreateNew(BlockStore *baseBlo
 	return nullptr;
   }
 
-  return make_unique<EncryptedBlock>(std::move(baseBlock), encKey);
+  return make_unique<EncryptedBlock>(std::move(baseBlock), encKey, std::move(data));
 }
 
 EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey)
-    :Block(baseBlock->key()),
-     _baseBlock(std::move(baseBlock)),
-     _plaintextData(USEABLE_BLOCK_SIZE(_baseBlock->size())),
-     _encKey(encKey),
-     _dataChanged(false) {
+    :EncryptedBlock(std::move(baseBlock), encKey, Data(USEABLE_BLOCK_SIZE(baseBlock->size()))) {
   _decryptFromBaseBlock();
+}
+
+EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey, Data plaintextData)
+    :Block(baseBlock->key()),
+	 _baseBlock(std::move(baseBlock)),
+	 _plaintextData(std::move(plaintextData)),
+	 _encKey(encKey),
+	 _dataChanged(false) {
 }
 
 EncryptedBlock::~EncryptedBlock() {
