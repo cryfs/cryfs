@@ -13,8 +13,8 @@ before_script:
   && ./setup_biicode_project.sh
   && rm setup_biicode_project.sh
 script:
-- bii cpp:build --target messmer_cachingstore_test_main -- -j2
-- "./bin/messmer_cachingstore_test_main"
+- bii cpp:build --target messmer_parallelaccessstore_test_main -- -j2
+- "./bin/messmer_parallelaccessstore_test_main"
 after_success:
 - bii user ${BII_USERNAME} -p ${BII_PASSWORD}
 - bii publish
