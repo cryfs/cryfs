@@ -72,7 +72,6 @@ INSTANTIATE_TEST_CASE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size
 TEST_P(OnDiskBlockFlushTest, AfterCreate_FlushingDoesntChangeBlock) {
   auto block =  CreateBlock();
   WriteDataToBlock(block);
-  block->flush();
 
   EXPECT_BLOCK_DATA_CORRECT(block);
 }
@@ -82,7 +81,6 @@ TEST_P(OnDiskBlockFlushTest, AfterCreate_FlushingDoesntChangeBlock) {
 TEST_P(OnDiskBlockFlushTest, AfterLoad_FlushingDoesntChangeBlock) {
   auto block =  CreateBlockAndLoadItFromDisk();
   WriteDataToBlock(block);
-  block->flush();
 
   EXPECT_BLOCK_DATA_CORRECT(block);
 }
@@ -90,7 +88,6 @@ TEST_P(OnDiskBlockFlushTest, AfterLoad_FlushingDoesntChangeBlock) {
 TEST_P(OnDiskBlockFlushTest, AfterCreate_FlushingWritesCorrectData) {
   auto block = CreateBlock();
   WriteDataToBlock(block);
-  block->flush();
 
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
@@ -98,7 +95,6 @@ TEST_P(OnDiskBlockFlushTest, AfterCreate_FlushingWritesCorrectData) {
 TEST_P(OnDiskBlockFlushTest, AfterLoad_FlushingWritesCorrectData) {
   auto block = CreateBlockAndLoadItFromDisk();
   WriteDataToBlock(block);
-  block->flush();
 
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
