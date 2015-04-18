@@ -4,6 +4,8 @@ INCLUDE(messmer/cmake/tools)
 ADD_BII_TARGETS()
 
 ADD_BOOST(filesystem system thread)
+# This is needed by boost thread
+TARGET_LINK_LIBRARIES(${BII_BLOCK_TARGET} INTERFACE rt)
 
 ACTIVATE_CPP14()
 
