@@ -48,8 +48,6 @@ void Cache::push(unique_ptr<Block> block) {
 void Cache::_popOldEntries() {
   lock_guard<mutex> lock(_mutex);
   while(_cachedBlocks.size() > 0 && _cachedBlocks.peek().ageSeconds() > PURGE_LIFETIME_SEC) {
-	double age = _cachedBlocks.peek().ageSeconds();
-	printf("Removing block with age: %f\n", age);
 	_cachedBlocks.pop();
   }
 }
