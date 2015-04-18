@@ -12,14 +12,9 @@ namespace blockstore {
 // work with the BlockStore interface instead.
 class BlockStoreWithRandomKeys: public BlockStore {
 public:
-  //TODO Use boost::optional (if key already exists)
-  // Return nullptr if key already exists
-  virtual std::unique_ptr<Block> create(const Key &key, size_t size) = 0;
-
-  std::unique_ptr<Block> create(size_t size) final;
-
-private:
-  std::unique_ptr<Block> tryCreate(size_t size);
+  Key createKey() final {
+	return Key::CreateRandom();
+  }
 };
 
 }

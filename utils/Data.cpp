@@ -50,8 +50,9 @@ size_t Data::size() const {
   return _size;
 }
 
-void Data::FillWithZeroes() {
+Data &Data::FillWithZeroes() {
   std::memset(_data, 0, _size);
+  return *this;
 }
 
 void Data::StoreToFile(const bf::path &filepath) const {
@@ -90,6 +91,10 @@ size_t Data::_getStreamSize(istream &stream) {
 
 void Data::_readFromStream(istream &stream) {
   stream.read((char*)_data, _size);
+}
+
+bool operator==(const Data &lhs, const Data &rhs) {
+  return lhs.size() == rhs.size() && 0 == memcmp(lhs.data(), rhs.data(), lhs.size());
 }
 
 }

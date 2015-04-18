@@ -18,7 +18,7 @@ public:
   virtual ~OnDiskBlock();
 
   static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
-  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, size_t size);
+  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, Data data);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 
   const void *data() const override;
@@ -33,8 +33,7 @@ private:
   Data _data;
   bool _dataChanged;
 
-  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, size_t size);
-  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, Data &&data);
+  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, Data data);
 
   void _fillDataWithZeroes();
   void _storeToDisk() const;

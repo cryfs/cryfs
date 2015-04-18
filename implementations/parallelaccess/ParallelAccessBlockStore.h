@@ -14,7 +14,8 @@ class ParallelAccessBlockStore: public BlockStore {
 public:
   ParallelAccessBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
-  std::unique_ptr<Block> create(size_t size) override;
+  Key createKey() override;
+  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;

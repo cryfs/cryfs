@@ -20,7 +20,7 @@ public:
   }
 
   void TestWriteAndReadImmediately() {
-    auto block = blockStore->create(testData.blocksize);
+    auto block = blockStore->create(blockstore::Data(testData.blocksize).FillWithZeroes());
     block->write(foregroundData.data(), testData.offset, testData.count);
 
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
@@ -36,7 +36,7 @@ public:
   }
 
   void TestOverwriteAndRead() {
-    auto block = blockStore->create(testData.blocksize);
+    auto block = blockStore->create(blockstore::Data(testData.blocksize));
     block->write(backgroundData.data(), 0, testData.blocksize);
     block->write(foregroundData.data(), testData.offset, testData.count);
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
@@ -55,7 +55,7 @@ private:
   }
 
   blockstore::Key CreateBlockWriteToItAndReturnKey(const blockstore::Data &to_write) {
-    auto newblock = blockStore->create(testData.blocksize);
+    auto newblock = blockStore->create(blockstore::Data(testData.blocksize).FillWithZeroes());
 
     newblock->write(to_write.data(), testData.offset, testData.count);
     return newblock->key();

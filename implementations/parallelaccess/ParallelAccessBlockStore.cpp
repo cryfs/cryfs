@@ -20,9 +20,16 @@ ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ptr<BlockStore> baseBl
  : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
-unique_ptr<Block> ParallelAccessBlockStore::create(size_t size) {
-  auto block = _baseBlockStore->create(size);
-  Key key = block->key();
+Key ParallelAccessBlockStore::createKey() {
+  return _baseBlockStore->createKey();
+}
+
+unique_ptr<Block> ParallelAccessBlockStore::tryCreate(const Key &key, Data data) {
+  auto block = _baseBlockStore->tryCreate(key, std::move(data));
+  if (block.get() == nullptr) {
+	//TODO Test this code branch
+	return nullptr;
+  }
   return _parallelAccessStore.add(key, std::move(block));
 }
 

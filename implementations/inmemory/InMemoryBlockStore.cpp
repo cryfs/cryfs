@@ -16,8 +16,8 @@ namespace inmemory {
 InMemoryBlockStore::InMemoryBlockStore()
  : _blocks() {}
 
-unique_ptr<Block> InMemoryBlockStore::create(const Key &key, size_t size) {
-  auto insert_result = _blocks.emplace(piecewise_construct, make_tuple(key.ToString()), make_tuple(key, size));
+unique_ptr<Block> InMemoryBlockStore::tryCreate(const Key &key, Data data) {
+  auto insert_result = _blocks.emplace(piecewise_construct, make_tuple(key.ToString()), make_tuple(key, std::move(data)));
 
   if (!insert_result.second) {
     return nullptr;

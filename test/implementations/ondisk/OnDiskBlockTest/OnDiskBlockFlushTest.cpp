@@ -37,13 +37,17 @@ public:
 
   unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.size());
+      Data data(randomData.size());
+      std::memcpy(data.data(), randomData.data(), randomData.size());
+      auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
     }
     return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
   unique_ptr<OnDiskBlock> CreateBlock() {
-    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.size());
+	Data data(randomData.size());
+	std::memcpy(data.data(), randomData.data(), randomData.size());
+    return OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
   }
 
   void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {

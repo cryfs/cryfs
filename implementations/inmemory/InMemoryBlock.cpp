@@ -13,9 +13,8 @@ using std::ios;
 namespace blockstore {
 namespace inmemory {
 
-InMemoryBlock::InMemoryBlock(const Key &key, size_t size)
- : Block(key), _data(make_shared<Data>(size)) {
-  _data->FillWithZeroes();
+InMemoryBlock::InMemoryBlock(const Key &key, Data data)
+ : Block(key), _data(make_shared<Data>(std::move(data))) {
 }
 
 InMemoryBlock::InMemoryBlock(const InMemoryBlock &rhs)

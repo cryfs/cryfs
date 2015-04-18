@@ -13,8 +13,8 @@ namespace ondisk {
 OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
-unique_ptr<Block> OnDiskBlockStore::create(const Key &key, size_t size) {
-  auto block = OnDiskBlock::CreateOnDisk(_rootdir, key, size);
+unique_ptr<Block> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
+  auto block = OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data));
 
   if (!block) {
     return nullptr;

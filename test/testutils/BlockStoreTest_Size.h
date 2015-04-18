@@ -1,29 +1,38 @@
 // This file is meant to be included by BlockStoreTest.h only
 
+#include "../../utils/Data.h"
+
 class BlockStoreSizeParameterizedTest {
 public:
   BlockStoreSizeParameterizedTest(std::unique_ptr<blockstore::BlockStore> blockStore_, size_t size_): blockStore(std::move(blockStore_)), size(size_) {}
 
   void TestCreatedBlockHasCorrectSize() {
-    auto block = blockStore->create(size);
+    auto block = CreateBlock();
     EXPECT_EQ(size, block->size());
   }
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
-    blockstore::Key key = blockStore->create(size)->key();
+    blockstore::Key key = CreateBlock()->key();
     auto loaded_block = blockStore->load(key);
     EXPECT_EQ(size, loaded_block->size());
   }
 
-  void TestCreatedBlockIsZeroedOut() {
-    auto block = blockStore->create(size);
-    EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), block->data(), size));
+  void TestCreatedBlockData() {
+	DataBlockFixture dataFixture(size);
+	blockstore::Data data(size);
+	std::memcpy(data.data(), dataFixture.data(), size);
+	auto block = blockStore->create(data);
+	EXPECT_EQ(0, std::memcmp(dataFixture.data(), block->data(), size));
+
   }
 
-  void TestLoadingUnchangedBlockIsZeroedOut() {
-	blockstore::Key key = blockStore->create(size)->key();
+  void TestLoadingUnchangedBlockData() {
+	DataBlockFixture dataFixture(size);
+	blockstore::Data data(size);
+	std::memcpy(data.data(), dataFixture.data(), size);
+	blockstore::Key key = blockStore->create(data)->key();
     auto loaded_block = blockStore->load(key);
-    EXPECT_EQ(0, std::memcmp(ZEROES(size).data(), loaded_block->data(), size));
+    EXPECT_EQ(0, std::memcmp(dataFixture.data(), loaded_block->data(), size));
   }
 
   void TestLoadedBlockIsCorrect() {
@@ -62,7 +71,7 @@ public:
     DataBlockFixture randomData(size);
     blockstore::Key key = key;
     {
-      auto block = blockStore->create(size);
+      auto block = blockStore->create(blockstore::Data(size));
       key = block->key();
       WriteDataToBlock(block.get(), randomData);
     }
@@ -74,7 +83,7 @@ public:
     DataBlockFixture randomData(size);
     blockstore::Key key = key;
     {
-      key = blockStore->create(size)->key();
+      key = CreateBlock()->key();
       auto block = blockStore->load(key);
       WriteDataToBlock(block.get(), randomData);
     }
@@ -104,26 +113,27 @@ private:
     return blockStore->load(key);
   }
 
-  blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &data) {
-    auto block = blockStore->create(data.size());
-    block->write(data.data(), 0, data.size());
-    return block->key();
+  blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &dataFixture) {
+	blockstore::Data data(dataFixture.size());
+	std::memcpy(data.data(), dataFixture.data(), dataFixture.size());
+    return blockStore->create(data)->key();
   }
 
-  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const DataBlockFixture &data) {
-    auto block = blockStore->create(data.size());
-    block->write(data.data(), 0, data.size());
+  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const DataBlockFixture &dataFixture) {
+	blockstore::Data data(dataFixture.size());
+	std::memcpy(data.data(), dataFixture.data(), dataFixture.size());
+    auto block = blockStore->create(data);
     block->flush();
     return blockStore->load(block->key());
   }
 
   std::unique_ptr<blockstore::Block> CreateBlockAndLoadIt() {
-    blockstore::Key key = blockStore->create(size)->key();
+    blockstore::Key key = CreateBlock()->key();
     return blockStore->load(key);
   }
 
   std::unique_ptr<blockstore::Block> CreateBlock() {
-    return blockStore->create(size);
+    return blockStore->create(blockstore::Data(size));
   }
 
   void WriteDataToBlock(blockstore::Block *block, const DataBlockFixture &randomData) {
@@ -147,8 +157,8 @@ constexpr std::initializer_list<size_t> SIZES = {0, 1, 1024, 4096, 10*1024*1024}
 
 TYPED_TEST_P_FOR_ALL_SIZES(CreatedBlockHasCorrectSize);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadingUnchangedBlockHasCorrectSize);
-TYPED_TEST_P_FOR_ALL_SIZES(CreatedBlockIsZeroedOut);
-TYPED_TEST_P_FOR_ALL_SIZES(LoadingUnchangedBlockIsZeroedOut);
+TYPED_TEST_P_FOR_ALL_SIZES(CreatedBlockData);
+TYPED_TEST_P_FOR_ALL_SIZES(LoadingUnchangedBlockData);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadedBlockIsCorrect);
 //TYPED_TEST_P_FOR_ALL_SIZES(LoadedBlockIsCorrectWhenLoadedDirectlyAfterFlushing);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushingDoesntChangeBlock);

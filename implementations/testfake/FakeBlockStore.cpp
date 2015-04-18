@@ -14,13 +14,15 @@ namespace testfake {
 FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks() {}
 
-unique_ptr<Block> FakeBlockStore::create(const Key &key, size_t size) {
-  if (_blocks.find(key.ToString()) != _blocks.end()) {
+unique_ptr<Block> FakeBlockStore::tryCreate(const Key &key, Data data) {
+  auto insert_result = _blocks.emplace(key.ToString(), std::move(data));
+
+  if (!insert_result.second) {
     return nullptr;
   }
-  Data data(size);
-  data.FillWithZeroes();
-  return makeFakeBlockFromData(key, data, true);
+
+  //Return a copy of the stored data
+  return load(key);
 }
 
 unique_ptr<Block> FakeBlockStore::load(const Key &key) {
@@ -49,7 +51,7 @@ unique_ptr<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Da
 void FakeBlockStore::updateData(const Key &key, const Data &data) {
   auto found = _blocks.find(key.ToString());
   if (found == _blocks.end()) {
-    auto insertResult = _blocks.emplace(key.ToString(), data.size());
+    auto insertResult = _blocks.emplace(key.ToString(), data.copy());
     assert(true == insertResult.second);
     found = insertResult.first;
   }

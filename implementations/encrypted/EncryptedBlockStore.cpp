@@ -13,8 +13,12 @@ EncryptedBlockStore::EncryptedBlockStore(unique_ptr<BlockStore> baseBlockStore, 
  : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey) {
 }
 
-unique_ptr<Block> EncryptedBlockStore::create(size_t size) {
-  return EncryptedBlock::CreateNew(_baseBlockStore->create(EncryptedBlock::BASE_BLOCK_SIZE(size)), _encKey);
+Key EncryptedBlockStore::createKey() {
+  return _baseBlockStore->createKey();
+}
+
+unique_ptr<Block> EncryptedBlockStore::tryCreate(const Key &key, Data data) {
+  return EncryptedBlock::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
 }
 
 unique_ptr<Block> EncryptedBlockStore::load(const Key &key) {
@@ -33,5 +37,10 @@ uint64_t EncryptedBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
 }
 
+unique_ptr<Block> EncryptedBlockStore::tryCreateInBaseStore(const Key &key, Data encryptedData) {
+  return _baseBlockStore->tryCreate(key, std::move(encryptedData));
+}
+
 }
 }
+

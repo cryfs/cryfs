@@ -19,11 +19,7 @@ namespace bf = boost::filesystem;
 namespace blockstore {
 namespace ondisk {
 
-OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, size_t size)
- : Block(key), _filepath(filepath), _data(size), _dataChanged(false) {
-}
-
-OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, Data &&data)
+OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, Data data)
  : Block(key), _filepath(filepath), _data(std::move(data)), _dataChanged(false) {
 }
 
@@ -61,14 +57,14 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
   }
 }
 
-unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, size_t size) {
+unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
   auto filepath = rootdir / key.ToString();
   if (bf::exists(filepath)) {
     return nullptr;
   }
 
-  auto block = unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, size));
-  block->_fillDataWithZeroes();
+  auto block = unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, std::move(data)));
+  block->_storeToDisk();
   return block;
 }
 

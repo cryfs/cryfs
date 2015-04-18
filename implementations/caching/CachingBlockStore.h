@@ -14,16 +14,21 @@ class CachingBlockStore: public BlockStore {
 public:
   CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
-  std::unique_ptr<Block> create(size_t size) override;
+  Key createKey() override;
+  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
   void release(std::unique_ptr<Block> block);
 
+  std::unique_ptr<Block> tryCreateInBaseStore(const Key &key, Data data);
+  void removeFromBaseStore(std::unique_ptr<Block> block);
+
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
   Cache _cache;
+  uint32_t _numNewBlocks;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);
 };

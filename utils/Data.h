@@ -11,7 +11,7 @@ namespace blockstore {
 
 class Data {
 public:
-  Data(size_t size);
+  explicit Data(size_t size);
   Data(Data &&rhs); // move constructor
   virtual ~Data();
 
@@ -22,7 +22,7 @@ public:
 
   size_t size() const;
 
-  void FillWithZeroes();
+  Data &FillWithZeroes();
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
   static Data LoadFromFile(const boost::filesystem::path &filepath);
@@ -37,6 +37,9 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
+
+//TODO Test operator==
+bool operator==(const Data &lhs, const Data &rhs);
 
 }
 

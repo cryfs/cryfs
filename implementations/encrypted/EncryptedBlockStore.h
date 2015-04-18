@@ -13,10 +13,13 @@ class EncryptedBlockStore: public BlockStore {
 public:
   EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const EncryptionKey &encKey);
 
-  std::unique_ptr<Block> create(size_t size) override;
+  Key createKey() override;
+  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
+
+  std::unique_ptr<Block> tryCreateInBaseStore(const Key &key, Data encryptedData);
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;

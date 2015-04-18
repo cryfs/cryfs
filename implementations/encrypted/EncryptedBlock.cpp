@@ -15,11 +15,15 @@ namespace encrypted {
 
 constexpr unsigned int EncryptedBlock::IV_SIZE;
 
-std::unique_ptr<EncryptedBlock> EncryptedBlock::CreateNew(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey) {
-  auto block = make_unique<EncryptedBlock>(std::move(baseBlock), encKey);
-  //We have to explicitly fill the block with zeroes, because otherwise the encrypted version is filled with zeroes and not the plaintext version
-  utils::fillWithZeroes(block.get());
-  return block;
+std::unique_ptr<EncryptedBlock> EncryptedBlock::TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const EncryptionKey &encKey) {
+  Data encrypted = _encrypt(data, encKey);
+  auto baseBlock = baseBlockStore->tryCreate(key, std::move(encrypted));
+  if (baseBlock.get() == nullptr) {
+	//TODO Test this code branch
+	return nullptr;
+  }
+
+  return make_unique<EncryptedBlock>(std::move(baseBlock), encKey);
 }
 
 EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey)
@@ -32,7 +36,7 @@ EncryptedBlock::EncryptedBlock(std::unique_ptr<Block> baseBlock, const Encryptio
 }
 
 EncryptedBlock::~EncryptedBlock() {
-  flush();
+  _encryptToBaseBlock();
 }
 
 const void *EncryptedBlock::data() const {
@@ -63,15 +67,20 @@ void EncryptedBlock::_decryptFromBaseBlock() {
 
 void EncryptedBlock::_encryptToBaseBlock() {
   if (_dataChanged) {
-    FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreateRandom();
-    auto encryption = CFB_Mode<AES>::Encryption(_encKey.data(), EncryptionKey::BINARY_LENGTH, iv.data());
-    //TODO More performance when not using "Data encrypted" object, but specialized CryptoPP sink
-    Data encrypted(_plaintextData.size());
-    encryption.ProcessData((byte*)encrypted.data(), (byte*)_plaintextData.data(), _plaintextData.size());
-    _baseBlock->write(iv.data(), 0, IV_SIZE);
-    _baseBlock->write(encrypted.data(), IV_SIZE, encrypted.size());
+	Data encrypted = _encrypt(_plaintextData, _encKey);
+    _baseBlock->write(encrypted.data(), 0, encrypted.size());
     _dataChanged = false;
   }
+}
+
+Data EncryptedBlock::_encrypt(const Data &plaintext, const EncryptionKey &encKey) {
+  FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreateRandom();
+  auto encryption = CFB_Mode<AES>::Encryption(encKey.data(), EncryptionKey::BINARY_LENGTH, iv.data());
+  //TODO More performance when not using "Data encrypted" object, but encrypting directly to a target that was specified via a parameter using a specialized CryptoPP sink
+  Data encrypted(IV_SIZE + plaintext.size());
+  std::memcpy(encrypted.data(), iv.data(), IV_SIZE);
+  encryption.ProcessData((byte*)encrypted.data() + IV_SIZE, (byte*)plaintext.data(), plaintext.size());
+  return encrypted;
 }
 
 }

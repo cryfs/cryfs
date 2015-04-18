@@ -10,9 +10,9 @@ namespace blockstore {
 namespace utils {
 
 unique_ptr<Block> copyToNewBlock(BlockStore *blockStore, const Block &block) {
-  auto newBlock = blockStore->create(block.size());
-  copyTo(newBlock.get(), block);
-  return newBlock;
+  Data data(block.size());
+  std::memcpy(data.data(), block.data(), block.size());
+  return blockStore->create(data);
 }
 
 void copyTo(Block *target, const Block &source) {

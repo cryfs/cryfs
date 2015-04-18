@@ -5,6 +5,7 @@
 #include "../../interface/Block.h"
 #include "EncryptionKey.h"
 #include "../../utils/Data.h"
+#include "../../interface/BlockStore.h"
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
@@ -19,7 +20,7 @@ public:
   EncryptedBlock(std::unique_ptr<Block> baseBlock, const EncryptionKey &encKey);
   virtual ~EncryptedBlock();
 
-  static std::unique_ptr<EncryptedBlock> CreateNew(std::unique_ptr<Block>, const EncryptionKey &encKey);
+  static std::unique_ptr<EncryptedBlock> TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const EncryptionKey &encKey);
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
@@ -48,6 +49,8 @@ private:
 
   void _encryptToBaseBlock();
   void _decryptFromBaseBlock();
+
+  static Data _encrypt(const Data &plaintext, const EncryptionKey &encKey);
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlock);
 };
