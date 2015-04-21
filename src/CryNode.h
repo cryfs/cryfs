@@ -14,6 +14,9 @@ class CryNode: public virtual fspp::Node {
 public:
   CryNode(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
   void access(int mask) const override;
+  void stat(struct ::stat *result) const override;
+  void chmod(mode_t mode) override;
+  void chown(uid_t uid, gid_t gid) override;
   void rename(const boost::filesystem::path &to) override;
   void utimens(const timespec times[2]) override;
   void remove() override;

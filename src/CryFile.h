@@ -14,7 +14,6 @@ public:
   CryFile(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
   virtual ~CryFile();
 
-  void stat(struct ::stat *result) const override;
   std::unique_ptr<fspp::OpenFile> open(int flags) const override;
   void truncate(off_t size) const override;
   fspp::Dir::EntryType getType() const override;

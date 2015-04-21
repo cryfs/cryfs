@@ -47,7 +47,7 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
 Key CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob = _blobStore->create();
   Key rootBlobKey = rootBlob->key();
-  DirBlob::InitializeEmptyDir(std::move(rootBlob));
+  DirBlob::InitializeEmptyDir(std::move(rootBlob), this);
   return rootBlobKey;
 }
 
@@ -81,13 +81,13 @@ unique_ptr<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
     //TODO Check whether the next path component is a dir.
     //     Right now, an assertion in DirBlob constructor will fail if it isn't.
     //     But fuse should rather return the correct error code.
-    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(currentBlob));
+    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(currentBlob), this);
 
     Key childKey = currentDir->GetChild(component.c_str()).key;
     currentBlob = _blobStore->load(childKey);
   }
 
-  return make_unique<DirBlob>(std::move(currentBlob));
+  return make_unique<DirBlob>(std::move(currentBlob), this);
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {

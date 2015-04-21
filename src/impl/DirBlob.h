@@ -11,28 +11,49 @@
 #include <vector>
 
 namespace cryfs{
+class CryDevice;
 
 class DirBlob {
 public:
   struct Entry {
-    Entry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_): type(type_), name(name_), key(key_) {}
+    //TODO Remove default value for parameters uid_ and gid_ and instead pass them in
+    Entry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_, mode_t mode_, uid_t uid_=0, gid_t gid_=0): type(type_), name(name_), key(key_), mode(mode_), uid(uid_), gid(gid_) {
+      switch(type) {
+      case fspp::Dir::EntryType::FILE:
+        mode |= S_IFREG;
+        break;
+      case fspp::Dir::EntryType::DIR:
+        mode |= S_IFDIR;
+        break;
+      }
+      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR));
+    }
+
     fspp::Dir::EntryType type;
     std::string name;
     blockstore::Key key;
+    uid_t uid;
+    gid_t gid;
+    mode_t mode;
   };
 
-  static std::unique_ptr<DirBlob> InitializeEmptyDir(std::unique_ptr<blobstore::Blob> blob);
+  static std::unique_ptr<DirBlob> InitializeEmptyDir(std::unique_ptr<blobstore::Blob> blob, CryDevice *device);
 
-  DirBlob(std::unique_ptr<blobstore::Blob> blob);
+  DirBlob(std::unique_ptr<blobstore::Blob> blob, CryDevice *device);
   virtual ~DirBlob();
 
   void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
   const Entry &GetChild(const std::string &name) const;
-  void AddChildDir(const std::string &name, const blockstore::Key &blobKey);
-  void AddChildFile(const std::string &name, const blockstore::Key &blobKey);
-  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type);
+  const Entry &GetChild(const blockstore::Key &key) const;
+  void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode);
+  void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode);
+  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type, mode_t mode);
   void RemoveChild(const blockstore::Key &key);
   void flush();
+
+  void statChild(const blockstore::Key &key, struct ::stat *result) const;
+  void chmodChild(const blockstore::Key &key, mode_t mode);
+  void chownChild(const blockstore::Key &key, uid_t uid, gid_t gid);
 
 private:
   unsigned char magicNumber() const;
@@ -43,6 +64,9 @@ private:
   void _readEntriesFromBlob();
   void _writeEntriesToBlob();
 
+  std::vector<DirBlob::Entry>::iterator _findChild(const blockstore::Key &key);
+
+  CryDevice *_device;
   std::unique_ptr<blobstore::Blob> _blob;
   std::vector<Entry> _entries;
   bool _changed;

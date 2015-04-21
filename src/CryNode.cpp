@@ -31,19 +31,23 @@ CryNode::~CryNode() {
 }
 
 void CryNode::access(int mask) const {
+  //TODO
   return;
   throw FuseErrnoException(ENOTSUP);
 }
 
 void CryNode::rename(const bf::path &to) {
   //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
+  //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
+  mode_t mode = _parent->GetChild(_key).mode;
   _parent->RemoveChild(_key);
   _parent->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType());
+  targetDir->AddChild(to.filename().native(), _key, getType(), mode);
 }
 
 void CryNode::utimens(const timespec times[2]) {
+  //TODO
   throw FuseErrnoException(ENOTSUP);
 }
 
@@ -62,6 +66,24 @@ const CryDevice *CryNode::device() const {
 
 unique_ptr<Blob> CryNode::LoadBlob() const {
   return _device->LoadBlob(_key);
+}
+
+void CryNode::stat(struct ::stat *result) const {
+  if(_parent.get() == nullptr) {
+    //We arethe root directory.
+	  //TODO What should we do?
+	  result->st_mode = S_IFDIR;
+  } else {
+    _parent->statChild(_key, result);
+  }
+}
+
+void CryNode::chmod(mode_t mode) {
+  _parent->chmodChild(_key, mode);
+}
+
+void CryNode::chown(uid_t uid, gid_t gid) {
+  _parent->chownChild(_key, uid, gid);
 }
 
 }

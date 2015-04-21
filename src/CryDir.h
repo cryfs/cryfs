@@ -13,7 +13,6 @@ public:
   CryDir(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
   virtual ~CryDir();
 
-  void stat(struct ::stat *result) const override;
   //TODO return type variance to CryFile/CryDir?
   std::unique_ptr<fspp::OpenFile> createAndOpenFile(const std::string &name, mode_t mode) override;
   void createDir(const std::string &name, mode_t mode) override;

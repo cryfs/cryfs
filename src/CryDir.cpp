@@ -32,17 +32,11 @@ CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
 CryDir::~CryDir() {
 }
 
-void CryDir::stat(struct ::stat *result) const {
-  result->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IWUSR;
-  return;
-  throw FuseErrnoException(ENOTSUP);
-}
-
 unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode) {
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildFile(name, childkey);
+  blob->AddChildFile(name, childkey, mode);
   //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
   auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
   return make_unique<CryOpenFile>(std::move(childblob));
@@ -52,12 +46,13 @@ void CryDir::createDir(const string &name, mode_t mode) {
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildDir(name, childkey);
-  DirBlob::InitializeEmptyDir(std::move(child));
+  blob->AddChildDir(name, childkey, mode);
+  DirBlob::InitializeEmptyDir(std::move(child), device());
 }
 
 unique_ptr<DirBlob> CryDir::LoadBlob() const {
-  return make_unique<DirBlob>(CryNode::LoadBlob());
+  //TODO Without const_cast?
+  return make_unique<DirBlob>(CryNode::LoadBlob(), const_cast<CryDevice*>(device()));
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {

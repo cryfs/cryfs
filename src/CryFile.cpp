@@ -31,14 +31,6 @@ unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
   return make_unique<CryOpenFile>(make_unique<FileBlob>(std::move(blob)));
 }
 
-void CryFile::stat(struct ::stat *result) const {
-  result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
-  //TODO Loading the blob for only getting the size is not very performant.
-  result->st_size = FileBlob(LoadBlob()).size();
-  return;
-  throw FuseErrnoException(ENOTSUP);
-}
-
 void CryFile::truncate(off_t size) const {
   FileBlob(LoadBlob()).resize(size);
 }
