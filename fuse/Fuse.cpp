@@ -470,13 +470,14 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
     auto entries = _fs->readDir(path);
     struct stat stbuf;
     for (const auto &entry : *entries) {
-      //We could pass file metadata to filler() in its third parameter,
-      //but it doesn't help performance since fuse seems to ignore it.
+      //We could pass more file metadata to filler() in its third parameter,
+      //but it doesn't help performance since fuse ignores everything in stbuf
+      //except for file-type bits in st_mode and (if used) st_ino.
       //It does getattr() calls on all entries nevertheless.
       if (entry.type == Dir::EntryType::DIR) {
-        stbuf.st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IWUSR;
+        stbuf.st_mode = S_IFDIR;
       } else {
-        stbuf.st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+        stbuf.st_mode = S_IFREG;
       }
       if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {
         return -ENOMEM;
