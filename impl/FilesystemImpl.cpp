@@ -71,6 +71,14 @@ void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
   _open_files.get(descriptor)->stat(stbuf);
 }
 
+void FilesystemImpl::chmod(const boost::filesystem::path &path, mode_t mode) {
+  _device->Load(path)->chmod(mode);
+}
+
+void FilesystemImpl::chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) {
+  _device->Load(path)->chown(uid, gid);
+}
+
 void FilesystemImpl::truncate(const bf::path &path, off_t size) {
   LoadFile(path)->truncate(size);
 }
@@ -84,7 +92,6 @@ int FilesystemImpl::read(int descriptor, void *buf, size_t count, off_t offset) 
 }
 
 void FilesystemImpl::write(int descriptor, const void *buf, size_t count, off_t offset) {
-  //printf("Write %d bytes to offset %d\n", count, offset);fflush(stdout);
   _open_files.get(descriptor)->write(buf, count, offset);
 }
 

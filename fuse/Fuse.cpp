@@ -241,7 +241,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   }
 
   try {
-  _fs->fstat(fileinfo->fh, stbuf);
+    _fs->fstat(fileinfo->fh, stbuf);
   return 0;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -324,22 +324,22 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
   return ENOSYS;
 }
 
-//TODO
 int Fuse::chmod(const bf::path &path, mode_t mode) {
-  printf("NOT IMPLEMENTED: chmod(%s, %d)\n", path.c_str(), mode);
-  //auto real_path = _impl->RootDir() / path;
-  //int retstat = ::chmod(real_path.c_str(), mode);
-  //return errcode_map(retstat);
-  return ENOSYS;
+  try {
+	_fs->chmod(path, mode);
+	return 0;
+  } catch (fspp::fuse::FuseErrnoException &e) {
+	return -e.getErrno();
+  }
 }
 
-//TODO
 int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
-  printf("NOT IMPLEMENTED: chown(%s, %d, %d)\n", path.c_str(), uid, gid);
-  //auto real_path = _impl->RootDir() / path;
-  //int retstat = ::chown(real_path.c_str(), uid, gid);
-  //return errcode_map(retstat);
-  return ENOSYS;
+  try {
+	_fs->chown(path, uid, gid);
+	return 0;
+  } catch (fspp::fuse::FuseErrnoException &e) {
+	return -e.getErrno();
+  }
 }
 
 int Fuse::truncate(const bf::path &path, off_t size) {

@@ -22,6 +22,8 @@ public:
 	void closeFile(int descriptor) override;
 	void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) override;
 	void fstat(int descriptor, struct ::stat *stbuf) override;
+	void chmod(const boost::filesystem::path &path, mode_t mode) override;
+	void chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) override;
 	void truncate(const boost::filesystem::path &path, off_t size) override;
 	void ftruncate(int descriptor, off_t size) override;
 	int read(int descriptor, void *buf, size_t count, off_t offset) override;
