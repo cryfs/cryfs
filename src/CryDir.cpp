@@ -33,6 +33,7 @@ CryDir::~CryDir() {
 }
 
 unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode) {
+  //TODO Create file owned by calling user (fuse user is given in fuse context)
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
@@ -43,6 +44,7 @@ unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
 }
 
 void CryDir::createDir(const string &name, mode_t mode) {
+  //TODO Create dir owned by calling user (fuse user is given in fuse context)
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
