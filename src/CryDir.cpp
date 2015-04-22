@@ -67,4 +67,8 @@ fspp::Dir::EntryType CryDir::getType() const {
   return fspp::Dir::EntryType::DIR;
 }
 
+void CryDir::createSymlink(const string &name, const bf::path &target) {
+  //TODO
+}
+
 }

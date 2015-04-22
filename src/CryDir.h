@@ -16,6 +16,7 @@ public:
   //TODO return type variance to CryFile/CryDir?
   std::unique_ptr<fspp::OpenFile> createAndOpenFile(const std::string &name, mode_t mode, uid_t uid, gid_t gid) override;
   void createDir(const std::string &name, mode_t mode, uid_t uid, gid_t gid) override;
+  void createSymlink(const std::string &name, const boost::filesystem::path &target) override;
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
   std::unique_ptr<std::vector<fspp::Dir::Entry>> children() const override;
