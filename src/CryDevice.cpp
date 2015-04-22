@@ -55,7 +55,6 @@ CryDevice::~CryDevice() {
 }
 
 unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
-  printf("Loading %s\n", path.c_str());
   assert(path.is_absolute());
 
   if (path.parent_path().empty()) {
