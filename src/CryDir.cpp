@@ -32,23 +32,21 @@ CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
 CryDir::~CryDir() {
 }
 
-unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode) {
-  //TODO Create file owned by calling user (fuse user is given in fuse context)
+unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildFile(name, childkey, mode);
+  blob->AddChildFile(name, childkey, mode, uid, gid);
   //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
   auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
   return make_unique<CryOpenFile>(std::move(childblob));
 }
 
-void CryDir::createDir(const string &name, mode_t mode) {
-  //TODO Create dir owned by calling user (fuse user is given in fuse context)
+void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildDir(name, childkey, mode);
+  blob->AddChildDir(name, childkey, mode, uid, gid);
   DirBlob::InitializeEmptyDir(std::move(child), device());
 }
 

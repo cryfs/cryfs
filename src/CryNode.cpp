@@ -39,11 +39,14 @@ void CryNode::access(int mask) const {
 void CryNode::rename(const bf::path &to) {
   //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
   //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
-  mode_t mode = _parent->GetChild(_key).mode;
+  auto old = _parent->GetChild(_key);
+  auto mode = old.mode;
+  auto uid = old.uid;
+  auto gid = old.gid;
   _parent->RemoveChild(_key);
   _parent->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType(), mode);
+  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
 }
 
 void CryNode::utimens(const timespec times[2]) {

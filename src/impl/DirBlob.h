@@ -16,8 +16,7 @@ class CryDevice;
 class DirBlob {
 public:
   struct Entry {
-    //TODO Remove default value for parameters uid_ and gid_ and instead pass them in
-    Entry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_, mode_t mode_, uid_t uid_=0, gid_t gid_=0): type(type_), name(name_), key(key_), mode(mode_), uid(uid_), gid(gid_) {
+    Entry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_, mode_t mode_, uid_t uid_, gid_t gid_): type(type_), name(name_), key(key_), mode(mode_), uid(uid_), gid(gid_) {
       switch(type) {
       case fspp::Dir::EntryType::FILE:
         mode |= S_IFREG;
@@ -45,9 +44,9 @@ public:
   void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
   const Entry &GetChild(const std::string &name) const;
   const Entry &GetChild(const blockstore::Key &key) const;
-  void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode);
-  void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode);
-  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type, mode_t mode);
+  void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid);
+  void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid);
+  void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type, mode_t mode, uid_t uid, gid_t gid);
   void RemoveChild(const blockstore::Key &key);
   void flush();
 

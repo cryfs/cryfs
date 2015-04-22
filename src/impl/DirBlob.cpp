@@ -125,21 +125,21 @@ bool DirBlob::hasChild(const string &name) const {
   return found != _entries.end();
 }
 
-void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode) {
-  AddChild(name, blobKey, fspp::Dir::EntryType::DIR, mode);
+void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
+  AddChild(name, blobKey, fspp::Dir::EntryType::DIR, mode, uid, gid);
 }
 
-void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t mode) {
-  AddChild(name, blobKey, fspp::Dir::EntryType::FILE, mode);
+void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
+  AddChild(name, blobKey, fspp::Dir::EntryType::FILE, mode, uid, gid);
 }
 
 void DirBlob::AddChild(const std::string &name, const Key &blobKey,
-    fspp::Dir::EntryType entryType, mode_t mode) {
+    fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid) {
   if (hasChild(name)) {
     throw fspp::fuse::FuseErrnoException(EEXIST);
   }
 
-  _entries.emplace_back(entryType, name, blobKey, mode);
+  _entries.emplace_back(entryType, name, blobKey, mode, uid, gid);
   _changed = true;
 }
 
