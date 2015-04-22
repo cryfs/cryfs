@@ -268,7 +268,8 @@ int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
 int Fuse::mkdir(const bf::path &path, mode_t mode) {
   //printf("mkdir(%s, %d)\n", path.c_str(), mode);
   try {
-    _fs->mkdir(path, mode);
+    auto context = fuse_get_context();
+    _fs->mkdir(path, mode, context->uid, context->gid);
     return 0;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -530,7 +531,8 @@ int Fuse::access(const bf::path &path, int mask) {
 int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
   //printf("create(%s, %d, _)\n", path.c_str(), mode);
   try {
-    fileinfo->fh = _fs->createAndOpenFile(path, mode);
+    auto context = fuse_get_context();
+    fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
     return 0;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();

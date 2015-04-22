@@ -107,17 +107,17 @@ void FilesystemImpl::access(const bf::path &path, int mask) {
   _device->Load(path)->access(mask);
 }
 
-int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode) {
+int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
   //TODO Creating the file opens and closes it. We then reopen it afterwards.
   //     This is slow. Improve!
   auto dir = LoadDir(path.parent_path());
-  auto file = dir->createAndOpenFile(path.filename().native(), mode);
+  auto file = dir->createAndOpenFile(path.filename().native(), mode, uid, gid);
   return _open_files.open(std::move(file));
 }
 
-void FilesystemImpl::mkdir(const bf::path &path, mode_t mode) {
+void FilesystemImpl::mkdir(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
   auto dir = LoadDir(path.parent_path());
-  dir->createDir(path.filename().native(), mode);
+  dir->createDir(path.filename().native(), mode, uid, gid);
 }
 
 void FilesystemImpl::rmdir(const bf::path &path) {

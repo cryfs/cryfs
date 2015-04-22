@@ -31,8 +31,8 @@ public:
 	void fsync(int descriptor) override;
 	void fdatasync(int descriptor) override;
 	void access(const boost::filesystem::path &path, int mask) override;
-	int createAndOpenFile(const boost::filesystem::path &path, mode_t mode) override;
-	void mkdir(const boost::filesystem::path &path, mode_t mode) override;
+	int createAndOpenFile(const boost::filesystem::path &path, mode_t mode, uid_t uid, gid_t gid) override;
+	void mkdir(const boost::filesystem::path &path, mode_t mode, uid_t uid, gid_t gid) override;
 	void rmdir(const boost::filesystem::path &path) override;
 	void unlink(const boost::filesystem::path &path) override;
 	void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) override;
