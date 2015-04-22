@@ -37,6 +37,8 @@ public:
   virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
   //TODO We shouldn't use Dir::Entry here, that's in another layer
   virtual std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) = 0;
+  virtual void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from) = 0;
+  virtual void readSymlink(const boost::filesystem::path &path, char *buf, size_t size) = 0;
 };
 
 }

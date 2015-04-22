@@ -45,8 +45,8 @@ int fusepp_rmdir(const char *path) {
   return FUSE_OBJ->rmdir(bf::path(path));
 }
 
-int fusepp_symlink(const char *from, const char *to) {
-  return FUSE_OBJ->symlink(bf::path(from), bf::path(to));
+int fusepp_symlink(const char *to, const char *from) {
+  return FUSE_OBJ->symlink(bf::path(to), bf::path(from));
 }
 
 int fusepp_rename(const char *from, const char *to) {
@@ -248,13 +248,14 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   }
 }
 
-//TODO
 int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
-  UNUSED(path);
-  UNUSED(buf);
-  UNUSED(size);
-  printf("Called non-implemented readlink(%s, _, %zu)\n", path.c_str(), size);
-  return ENOSYS;
+  //printf("readlink(%s, _, %zu)\n", path.c_str(), size);
+  try {
+    _fs->readSymlink(path, buf, size);
+    return 0;
+  } catch (fspp::fuse::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
@@ -295,14 +296,14 @@ int Fuse::rmdir(const bf::path &path) {
   }
 }
 
-//TODO
 int Fuse::symlink(const bf::path &from, const bf::path &to) {
-  printf("NOT IMPLEMENTED: symlink(%s, %s)\n", from.c_str(), to.c_str());
-  //auto real_from = _impl->RootDir() / from;
-  //auto real_to = _impl->RootDir() / to;
-  //int retstat = ::symlink(real_from.c_str(), real_to.c_str());
-  //return errcode_map(retstat);
-  return ENOSYS;
+  //printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
+  try {
+    _fs->createSymlink(from, to);
+    return 0;
+  } catch(fspp::fuse::FuseErrnoException &e) {
+    return -e.getErrno();
+  }
 }
 
 int Fuse::rename(const bf::path &from, const bf::path &to) {
@@ -477,8 +478,13 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
       //It does getattr() calls on all entries nevertheless.
       if (entry.type == Dir::EntryType::DIR) {
         stbuf.st_mode = S_IFDIR;
-      } else {
+      } else if (entry.type == Dir::EntryType::FILE) {
         stbuf.st_mode = S_IFREG;
+      } else if (entry.type == Dir::EntryType::SYMLINK) {
+        printf("readdir:symlink\n");
+        stbuf.st_mode = S_IFLNK;
+      } else {
+        assert(false);
       }
       if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {
         return -ENOMEM;

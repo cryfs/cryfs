@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include "../fs_interface/Device.h"
 #include "../fs_interface/Dir.h"
+#include "../fs_interface/Symlink.h"
 
 #include "../fuse/FuseErrnoException.h"
 #include "../fs_interface/File.h"
@@ -40,6 +41,15 @@ unique_ptr<File> FilesystemImpl::LoadFile(const bf::path &path) {
 unique_ptr<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   auto node = _device->Load(path);
   auto dir = dynamic_pointer_move<Dir>(node);
+  if (!dir) {
+    throw fuse::FuseErrnoException(ENOTDIR);
+  }
+  return dir;
+}
+
+unique_ptr<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
+  auto node = _device->Load(path);
+  auto dir = dynamic_pointer_move<Symlink>(node);
   if (!dir) {
     throw fuse::FuseErrnoException(ENOTDIR);
   }
@@ -147,4 +157,15 @@ void FilesystemImpl::utimens(const bf::path &path, const timespec times[2]) {
 
 void FilesystemImpl::statfs(const bf::path &path, struct statvfs *fsstat) {
   _device->statfs(path, fsstat);
+}
+
+void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from) {
+  auto parent = LoadDir(from.parent_path());
+  parent->createSymlink(from.filename().native(), to);
+}
+
+void FilesystemImpl::readSymlink(const bf::path &path, char *buf, size_t size) {
+  string target = LoadSymlink(path)->target().native();
+  std::memcpy(buf, target.c_str(), std::min(target.size()+1, size));
+  buf[size-1] = '\0';
 }
