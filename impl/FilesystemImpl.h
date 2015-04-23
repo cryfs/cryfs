@@ -40,8 +40,8 @@ public:
 	std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) override;
 	void utimens(const boost::filesystem::path &path, const timespec times[2]) override;
 	void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) override;
-  void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from) override;
-  void readSymlink(const boost::filesystem::path &path, char *buf, size_t size) override;
+    void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) override;
+    void readSymlink(const boost::filesystem::path &path, char *buf, size_t size) override;
 
 private:
 	std::unique_ptr<File> LoadFile(const boost::filesystem::path &path);

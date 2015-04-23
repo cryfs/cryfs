@@ -28,7 +28,7 @@ public:
 
   virtual std::unique_ptr<OpenFile> createAndOpenFile(const std::string &name, mode_t mode, uid_t uid, gid_t gid) = 0;
   virtual void createDir(const std::string &name, mode_t mode, uid_t uid, gid_t gid) = 0;
-  virtual void createSymlink(const std::string &name, const boost::filesystem::path &target) = 0;
+  virtual void createSymlink(const std::string &name, const boost::filesystem::path &target, uid_t uid, gid_t gid) = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
   //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;

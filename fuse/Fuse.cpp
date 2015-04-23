@@ -299,7 +299,8 @@ int Fuse::rmdir(const bf::path &path) {
 int Fuse::symlink(const bf::path &from, const bf::path &to) {
   //printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
   try {
-    _fs->createSymlink(from, to);
+	auto context = fuse_get_context();
+    _fs->createSymlink(from, to, context->uid, context->gid);
     return 0;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();

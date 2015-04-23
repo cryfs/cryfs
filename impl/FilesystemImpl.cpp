@@ -159,9 +159,9 @@ void FilesystemImpl::statfs(const bf::path &path, struct statvfs *fsstat) {
   _device->statfs(path, fsstat);
 }
 
-void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from) {
+void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, uid_t uid, gid_t gid) {
   auto parent = LoadDir(from.parent_path());
-  parent->createSymlink(from.filename().native(), to);
+  parent->createSymlink(from.filename().native(), to, uid, gid);
 }
 
 void FilesystemImpl::readSymlink(const bf::path &path, char *buf, size_t size) {
