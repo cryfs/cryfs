@@ -25,7 +25,7 @@ public:
         mode |= S_IFDIR;
         break;
       }
-      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR));
+      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR) || (type == fspp::Dir::EntryType::SYMLINK));
     }
 
     fspp::Dir::EntryType type;
@@ -46,6 +46,7 @@ public:
   const Entry &GetChild(const blockstore::Key &key) const;
   void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid);
   void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid);
+  void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid);
   void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type, mode_t mode, uid_t uid, gid_t gid);
   void RemoveChild(const blockstore::Key &key);
   void flush();

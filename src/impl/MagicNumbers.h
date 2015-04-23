@@ -6,7 +6,8 @@ namespace cryfs {
 
 enum MagicNumbers {
   DIR = 0x00,
-  FILE = 0x01
+  FILE = 0x01,
+  SYMLINK = 0x02
 };
 
 }

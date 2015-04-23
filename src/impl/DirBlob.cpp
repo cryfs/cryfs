@@ -9,6 +9,7 @@
 #include "MagicNumbers.h"
 #include "../CryDevice.h"
 #include "FileBlob.h"
+#include "SymlinkBlob.h"
 
 using std::unique_ptr;
 using std::make_unique;
@@ -133,6 +134,10 @@ void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t m
   AddChild(name, blobKey, fspp::Dir::EntryType::FILE, mode, uid, gid);
 }
 
+void DirBlob::AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid) {
+  AddChild(name, blobKey, fspp::Dir::EntryType::SYMLINK, S_IFLNK | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH, uid, gid);
+}
+
 void DirBlob::AddChild(const std::string &name, const Key &blobKey,
     fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid) {
   if (hasChild(name)) {
@@ -189,7 +194,7 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   auto child = GetChild(key);
-  //TODO Loading the blob for only getting the size is not very performant.
+  //TODO Loading the blob for only getting the size of the file/symlink is not very performant.
   //     Furthermore, this is the only reason why DirBlob needs a pointer to CryDevice, which is ugly
   result->st_mode = child.mode;
   result->st_uid = child.uid;
@@ -201,8 +206,14 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_mtim = result->st_ctim = result->st_atim;
   if (child.type == fspp::Dir::EntryType::FILE) {
     result->st_size = FileBlob(_device->LoadBlob(key)).size();
-  } else {
+  } else if (child.type == fspp::Dir::EntryType::DIR) {
+	//TODO Why do dirs have 4096 bytes in size? Does that make sense?
     result->st_size = 4096;
+  } else if (child.type == fspp::Dir::EntryType::SYMLINK) {
+	//TODO Necessary with fuse or does fuse set this on symlinks anyhow?
+	result->st_size = SymlinkBlob(_device->LoadBlob(key)).target().native().size();
+  } else {
+	assert(false);
   }
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, 512);
@@ -211,7 +222,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
   auto found = _findChild(key);
-  assert ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)));
+  assert ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)));
   found->mode = mode;
   _changed = true;
 }

@@ -9,6 +9,7 @@
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
+#include "impl/SymlinkBlob.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -67,8 +68,12 @@ fspp::Dir::EntryType CryDir::getType() const {
   return fspp::Dir::EntryType::DIR;
 }
 
-void CryDir::createSymlink(const string &name, const bf::path &target) {
-  //TODO
+void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid, gid_t gid) {
+  auto blob = LoadBlob();
+  auto child = device()->CreateBlob();
+  Key childkey = child->key();
+  blob->AddChildSymlink(name, childkey, uid, gid);
+  SymlinkBlob::InitializeSymlink(std::move(child), target);
 }
 
 }

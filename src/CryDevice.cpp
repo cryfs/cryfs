@@ -4,6 +4,7 @@
 
 #include "CryDir.h"
 #include "CryFile.h"
+#include "CrySymlink.h"
 
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 #include "messmer/blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
@@ -68,6 +69,8 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
     return make_unique<CryDir>(this, std::move(parent), entry.key);
   } else if (entry.type == fspp::Dir::EntryType::FILE) {
     return make_unique<CryFile>(this, std::move(parent), entry.key);
+  } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
+	return make_unique<CrySymlink>(this, std::move(parent), entry.key);
   } else {
     throw FuseErrnoException(EIO);
   }
