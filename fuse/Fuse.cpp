@@ -482,7 +482,6 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
       } else if (entry.type == Dir::EntryType::FILE) {
         stbuf.st_mode = S_IFREG;
       } else if (entry.type == Dir::EntryType::SYMLINK) {
-        printf("readdir:symlink\n");
         stbuf.st_mode = S_IFLNK;
       } else {
         assert(false);
