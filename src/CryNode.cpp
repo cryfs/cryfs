@@ -73,19 +73,29 @@ unique_ptr<Blob> CryNode::LoadBlob() const {
 
 void CryNode::stat(struct ::stat *result) const {
   if(_parent.get() == nullptr) {
-    //We arethe root directory.
-	  //TODO What should we do?
-	  result->st_mode = S_IFDIR;
+    //We are the root directory.
+	//TODO What should we do?
+	result->st_mode = S_IFDIR;
   } else {
     _parent->statChild(_key, result);
   }
 }
 
 void CryNode::chmod(mode_t mode) {
+  if (_parent.get() == nullptr) {
+    //We are the root direcory.
+	//TODO What should we do?
+	throw FuseErrnoException(EIO);
+  }
   _parent->chmodChild(_key, mode);
 }
 
 void CryNode::chown(uid_t uid, gid_t gid) {
+  if (_parent.get() == nullptr) {
+	//We are the root direcory.
+	//TODO What should we do?
+	throw FuseErrnoException(EIO);
+  }
   _parent->chownChild(_key, uid, gid);
 }
 
