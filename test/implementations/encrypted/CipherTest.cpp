@@ -61,30 +61,14 @@ public:
 
 TYPED_TEST_CASE_P(CipherTest);
 
-TYPED_TEST_P(CipherTest, Size_0) {
-  EXPECT_EQ(0, TypeParam::ciphertextSize(TypeParam::plaintextSize(0)));
-}
-
-TYPED_TEST_P(CipherTest, Size_1) {
-  EXPECT_EQ(1, TypeParam::ciphertextSize(TypeParam::plaintextSize(1)));
-}
-
-TYPED_TEST_P(CipherTest, Size_1024) {
-  EXPECT_EQ(1024, TypeParam::ciphertextSize(TypeParam::plaintextSize(1024)));
-  EXPECT_EQ(1024, TypeParam::plaintextSize(TypeParam::ciphertextSize(1024)));
-}
-
-TYPED_TEST_P(CipherTest, Size_4096) {
-  EXPECT_EQ(4096, TypeParam::ciphertextSize(TypeParam::plaintextSize(4096)));
-  EXPECT_EQ(4096, TypeParam::plaintextSize(TypeParam::ciphertextSize(4096)));
-}
-
-TYPED_TEST_P(CipherTest, Size_1048576) {
-  EXPECT_EQ(1048576, TypeParam::ciphertextSize(TypeParam::plaintextSize(1048576)));
-  EXPECT_EQ(1048576, TypeParam::plaintextSize(TypeParam::ciphertextSize(1048576)));
-}
-
 constexpr std::initializer_list<unsigned int> SIZES = {0, 1, 100, 1024, 5000, 1048576, 20971520};
+
+TYPED_TEST_P(CipherTest, Size) {
+  for (auto size: SIZES) {
+    EXPECT_EQ(size, TypeParam::ciphertextSize(TypeParam::plaintextSize(size)));
+    EXPECT_EQ(size, TypeParam::plaintextSize(TypeParam::ciphertextSize(size)));
+  }
+}
 
 TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes) {
   for (auto size: SIZES) {
@@ -122,11 +106,7 @@ TYPED_TEST_P(CipherTest, EncryptedSize) {
 }
 
 REGISTER_TYPED_TEST_CASE_P(CipherTest,
-    Size_0,
-    Size_1,
-    Size_1024,
-    Size_4096,
-    Size_1048576,
+    Size,
     EncryptThenDecrypt_Zeroes,
     EncryptThenDecrypt_Data,
     EncryptIsIndeterministic_Zeroes,
