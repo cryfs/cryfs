@@ -1,5 +1,6 @@
 #include <google/gtest/gtest.h>
 #include "../../../implementations/encrypted/ciphers/AES256_CFB.h"
+#include "../../../implementations/encrypted/ciphers/AES256_GCM.h"
 #include "../../../implementations/encrypted/ciphers/Cipher.h"
 
 #include "../../testutils/DataBlockFixture.h"
@@ -117,3 +118,4 @@ REGISTER_TYPED_TEST_CASE_P(CipherTest,
 //TODO For authenticated ciphers, we need test cases checking that authentication fails on manipulations
 
 INSTANTIATE_TYPED_TEST_CASE_P(AES256_CFB, CipherTest, AES256_CFB);
+INSTANTIATE_TYPED_TEST_CASE_P(AES256_GCM, CipherTest, AES256_GCM);
