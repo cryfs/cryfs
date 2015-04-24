@@ -1,5 +1,6 @@
 #include <google/gtest/gtest.h>
 #include "../../../implementations/encrypted/ciphers/AES256_CFB.h"
+#include "../../../implementations/encrypted/ciphers/Cipher.h"
 
 #include "../../testutils/DataBlockFixture.h"
 #include "../../../utils/Data.h"
@@ -10,6 +11,7 @@ using blockstore::Data;
 template<class Cipher>
 class CipherTest: public ::testing::Test {
 public:
+  BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
   typename Cipher::EncryptionKey encKey = createRandomKey();
 
   static typename Cipher::EncryptionKey createRandomKey(int seed = 0) {
@@ -82,7 +84,7 @@ TYPED_TEST_P(CipherTest, Size_1048576) {
   EXPECT_EQ(1048576, TypeParam::plaintextSize(TypeParam::ciphertextSize(1048576)));
 }
 
-constexpr std::initializer_list<unsigned int> SIZES = {0, 1, 100, 1024, 5000, 1048576, 52428800};
+constexpr std::initializer_list<unsigned int> SIZES = {0, 1, 100, 1024, 5000, 1048576, 20971520};
 
 TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes) {
   for (auto size: SIZES) {

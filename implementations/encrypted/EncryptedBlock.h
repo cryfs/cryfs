@@ -9,6 +9,7 @@
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
 #include <boost/optional.hpp>
+#include "ciphers/Cipher.h"
 
 namespace blockstore {
 namespace encrypted {
@@ -19,6 +20,7 @@ template<class Cipher> class EncryptedBlockStore;
 template<class Cipher>
 class EncryptedBlock: public Block {
 public:
+  BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
   static std::unique_ptr<EncryptedBlock> TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const typename Cipher::EncryptionKey &encKey);
   static std::unique_ptr<EncryptedBlock> TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
