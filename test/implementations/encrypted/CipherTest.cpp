@@ -18,11 +18,28 @@ public:
   }
 
   void CheckEncryptThenDecryptIsIdentity(const Data &plaintext) {
-    Data ciphertext(Cipher::ciphertextSize(plaintext.size()));
-    Data decrypted(plaintext.size());
-    Cipher::encrypt((byte*)plaintext.data(), plaintext.size(), (byte*)ciphertext.data(), this->encKey);
-    Cipher::decrypt((byte*)ciphertext.data(), (byte*) decrypted.data(), decrypted.size(), this->encKey);
+    Data ciphertext = Encrypt(plaintext);
+    Data decrypted = Decrypt(ciphertext);
+    EXPECT_EQ(plaintext.size(), decrypted.size());
     EXPECT_EQ(0, std::memcmp(plaintext.data(), decrypted.data(), plaintext.size()));
+  }
+
+  void CheckEncryptIsIndeterministic(const Data &plaintext) {
+    Data ciphertext = Encrypt(plaintext);
+    Data ciphertext2 = Encrypt(plaintext);
+    EXPECT_NE(0, std::memcmp(ciphertext.data(), ciphertext2.data(), ciphertext.size()));
+  }
+
+  Data Encrypt(const Data &plaintext) {
+    Data ciphertext(Cipher::ciphertextSize(plaintext.size()));
+    Cipher::encrypt((byte*)plaintext.data(), plaintext.size(), (byte*)ciphertext.data(), this->encKey);
+    return ciphertext;
+  }
+
+  Data Decrypt(const Data &ciphertext) {
+    Data decrypted(Cipher::plaintextSize(ciphertext.size()));
+    Cipher::decrypt((byte*)ciphertext.data(), (byte*) decrypted.data(), decrypted.size(), this->encKey);
+    return decrypted;
   }
 
   Data CreateZeroes(unsigned int size) {
@@ -64,69 +81,34 @@ TYPED_TEST_P(CipherTest, Size_1048576) {
   EXPECT_EQ(1048576, TypeParam::plaintextSize(TypeParam::ciphertextSize(1048576)));
 }
 
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Empty) {
-  Data plaintext = this->CreateZeroes(0);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
+constexpr std::initializer_list<unsigned int> SIZES = {0, 1, 100, 1024, 5000, 1048576, 52428800};
+
+TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes) {
+  for (auto size: SIZES) {
+    Data plaintext = this->CreateZeroes(size);
+    this->CheckEncryptThenDecryptIsIdentity(plaintext);
+  }
 }
 
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_1) {
-  Data plaintext = this->CreateZeroes(1);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
+TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data) {
+  for (auto size: SIZES) {
+    Data plaintext = this->CreateData(size);
+    this->CheckEncryptThenDecryptIsIdentity(plaintext);
+  }
 }
 
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_1) {
-  Data plaintext = this->CreateData(1);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
+TYPED_TEST_P(CipherTest, EncryptIsIndeterministic_Zeroes) {
+  for (auto size: SIZES) {
+    Data plaintext = this->CreateZeroes(size);
+    this->CheckEncryptIsIndeterministic(plaintext);
+  }
 }
 
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_100) {
-  Data plaintext = this->CreateZeroes(100);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_100) {
-  Data plaintext = this->CreateData(100);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_1024) {
-  Data plaintext = this->CreateZeroes(1024);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_1024) {
-  Data plaintext = this->CreateData(1024);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_5000) {
-  Data plaintext = this->CreateZeroes(5000);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_5000) {
-  Data plaintext = this->CreateData(5000);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_1MB) {
-  Data plaintext = this->CreateZeroes(1048576);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_1MB) {
-  Data plaintext = this->CreateData(1048576);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes_50MB) {
-  Data plaintext = this->CreateZeroes(52428800);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
-}
-
-TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data_50MB) {
-  Data plaintext = this->CreateData(52428800);
-  this->CheckEncryptThenDecryptIsIdentity(plaintext);
+TYPED_TEST_P(CipherTest, EncryptIsIndeterministic_Data) {
+  for (auto size: SIZES) {
+    Data plaintext = this->CreateData(size);
+    this->CheckEncryptIsIndeterministic(plaintext);
+  }
 }
 
 REGISTER_TYPED_TEST_CASE_P(CipherTest,
@@ -135,19 +117,10 @@ REGISTER_TYPED_TEST_CASE_P(CipherTest,
     Size_1024,
     Size_4096,
     Size_1048576,
-    EncryptThenDecrypt_Empty,
-    EncryptThenDecrypt_Zeroes_1,
-    EncryptThenDecrypt_Data_1,
-    EncryptThenDecrypt_Zeroes_100,
-    EncryptThenDecrypt_Data_100,
-    EncryptThenDecrypt_Zeroes_1024,
-    EncryptThenDecrypt_Data_1024,
-    EncryptThenDecrypt_Zeroes_5000,
-    EncryptThenDecrypt_Data_5000,
-    EncryptThenDecrypt_Zeroes_1MB,
-    EncryptThenDecrypt_Data_1MB,
-    EncryptThenDecrypt_Zeroes_50MB,
-    EncryptThenDecrypt_Data_50MB
+    EncryptThenDecrypt_Zeroes,
+    EncryptThenDecrypt_Data,
+    EncryptIsIndeterministic_Zeroes,
+    EncryptIsIndeterministic_Data
 );
 
 //TODO For authenticated ciphers, we need test cases checking that authentication fails on manipulations
