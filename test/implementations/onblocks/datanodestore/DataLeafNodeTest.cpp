@@ -100,7 +100,7 @@ public:
   }
 
   Key InitializeLeafGrowAndReturnKey() {
-    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES));
+    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)));
     leaf->resize(5);
     return leaf->key();
   }
@@ -117,14 +117,14 @@ constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
 constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
 TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterInitialization) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   Key key = block->key();
   auto node = DataLeafNode::InitializeNewNode(std::move(block));
   EXPECT_EQ(key, node->key());
 }
 
 TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   Key key = block->key();
   DataLeafNode::InitializeNewNode(std::move(block));
 
@@ -133,7 +133,7 @@ TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
 }
 
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
-  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES));
+  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)));
   EXPECT_EQ(0u, leaf->numBytes());
 }
 

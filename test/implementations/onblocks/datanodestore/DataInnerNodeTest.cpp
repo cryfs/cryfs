@@ -95,7 +95,7 @@ public:
   }
 
   Key InitializeInnerNodeAddLeafReturnKey() {
-    auto node = DataInnerNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES), *leaf);
+    auto node = DataInnerNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)), *leaf);
     AddALeafTo(node.get());
     return node->key();
   }
@@ -111,14 +111,14 @@ public:
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
 TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterInitialization) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   Key key = block->key();
   auto node = DataInnerNode::InitializeNewNode(std::move(block), *leaf);
   EXPECT_EQ(key, node->key());
 }
 
 TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   Key key = block->key();
   DataInnerNode::InitializeNewNode(std::move(block), *leaf);
 
@@ -127,7 +127,7 @@ TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
 }
 
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
-  auto node = DataInnerNode::InitializeNewNode(blockStore->create(BLOCKSIZE_BYTES), *leaf);
+  auto node = DataInnerNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());

@@ -16,6 +16,7 @@ using std::string;
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
+using blockstore::Data;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
@@ -73,7 +74,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
 }
 
 TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   Key key = block->key();
   {
     DataNodeView view(std::move(block));

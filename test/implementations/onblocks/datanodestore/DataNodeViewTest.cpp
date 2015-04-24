@@ -15,6 +15,7 @@ using std::string;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
+using blockstore::Data;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
@@ -32,7 +33,7 @@ class DataNodeViewDepthTest: public DataNodeViewTest, public WithParamInterface<
 INSTANTIATE_TEST_CASE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 1, 3, 10, 100));
 
 TEST_P(DataNodeViewDepthTest, DepthIsStored) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
@@ -47,7 +48,7 @@ class DataNodeViewSizeTest: public DataNodeViewTest, public WithParamInterface<u
 INSTANTIATE_TEST_CASE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50, 64, 1024, 1024*1024*1024));
 
 TEST_P(DataNodeViewSizeTest, SizeIsStored) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
@@ -59,7 +60,7 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
 
 TEST_F(DataNodeViewTest, DataIsStored) {
   DataBlockFixture randomData(DATASIZE_BYTES);
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
@@ -71,7 +72,7 @@ TEST_F(DataNodeViewTest, DataIsStored) {
 
 TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   DataBlockFixture randomData(DATASIZE_BYTES);
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
     DataNodeView view(std::move(block));
@@ -86,7 +87,7 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
 }
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithOneByteEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
@@ -94,7 +95,7 @@ TEST_F(DataNodeViewTest, DataBeginWorksWithOneByteEntries) {
 }
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithEightByteEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
@@ -102,7 +103,7 @@ TEST_F(DataNodeViewTest, DataBeginWorksWithEightByteEntries) {
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithOneByteEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
@@ -110,7 +111,7 @@ TEST_F(DataNodeViewTest, DataEndWorksWithOneByteEntries) {
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithEightByteEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
@@ -126,7 +127,7 @@ BOOST_STATIC_ASSERT_MSG(DataNodeViewTest::DATASIZE_BYTES % sizeof(SizedDataEntry
   "If this static assertion fails, please use a different size for SizedDataEntry.");
 
 TEST_F(DataNodeViewTest, DataBeginWorksWithStructEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
@@ -134,7 +135,7 @@ TEST_F(DataNodeViewTest, DataBeginWorksWithStructEntries) {
 }
 
 TEST_F(DataNodeViewTest, DataEndWorksWithStructByteEntries) {
-  auto block = blockStore->create(BLOCKSIZE_BYTES);
+  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   uint8_t *blockBegin = (uint8_t*)block->data();
   DataNodeView view(std::move(block));
 
