@@ -1,4 +1,5 @@
 #include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
+#include <messmer/blockstore/implementations/encrypted/ciphers/AES256_CFB.h>
 #include "impl/DirBlob.h"
 #include "CryDevice.h"
 
@@ -22,6 +23,7 @@ using fspp::fuse::FuseErrnoException;
 using blockstore::BlockStore;
 using blockstore::Key;
 using blockstore::encrypted::EncryptedBlockStore;
+using blockstore::encrypted::AES256_CFB;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
@@ -31,18 +33,27 @@ namespace cryfs {
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<CachingBlockStore>(make_unique<EncryptedBlockStore>(std::move(blockStore), config->EncryptionKey())), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetOrCreateEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
   string root_key = config->RootBlob();
   if (root_key == "") {
-    auto key = CreateRootBlobAndReturnKey();
-    config->SetRootBlob(key.ToString());
-    return key;
+    auto new_key = CreateRootBlobAndReturnKey();
+    config->SetRootBlob(new_key.ToString());
+    return new_key;
   }
 
   return Key::FromString(root_key);
+}
+
+CryDevice::Cipher::EncryptionKey CryDevice::GetOrCreateEncryptionKey(CryConfig *config) {
+  string encryption_key = config->EncryptionKey();
+  if (encryption_key == "") {
+    auto new_key = Cipher::EncryptionKey::CreateRandom();
+    config->SetEncryptionKey(new_key.ToString());
+    return new_key;
+  }
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
