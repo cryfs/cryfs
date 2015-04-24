@@ -41,13 +41,13 @@ unique_ptr<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
 unique_ptr<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
   assert(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
   //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()));
+  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
   return DataInnerNode::InitializeNewNode(std::move(block), first_child);
 }
 
 unique_ptr<DataLeafNode> DataNodeStore::createNewLeafNode() {
   //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()));
+  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
   return DataLeafNode::InitializeNewNode(std::move(block));
 }
 
