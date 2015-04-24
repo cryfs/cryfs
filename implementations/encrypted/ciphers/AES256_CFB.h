@@ -11,7 +11,6 @@
 namespace blockstore {
 namespace encrypted {
 
-//TODO Add contract/interface for ciphers
 class AES256_CFB {
 public:
   BOOST_CONCEPT_ASSERT((CipherConcept<AES256_CFB>));
