@@ -30,16 +30,17 @@ public:
     EXPECT_NE(0, std::memcmp(ciphertext.data(), ciphertext2.data(), ciphertext.size()));
   }
 
+  void CheckEncryptedSize(const Data &plaintext) {
+    Data ciphertext = Encrypt(plaintext);
+    EXPECT_EQ(Cipher::ciphertextSize(plaintext.size()), ciphertext.size());
+  }
+
   Data Encrypt(const Data &plaintext) {
-    Data ciphertext(Cipher::ciphertextSize(plaintext.size()));
-    Cipher::encrypt((byte*)plaintext.data(), plaintext.size(), (byte*)ciphertext.data(), this->encKey);
-    return ciphertext;
+    return Cipher::encrypt((byte*)plaintext.data(), plaintext.size(), this->encKey);
   }
 
   Data Decrypt(const Data &ciphertext) {
-    Data decrypted(Cipher::plaintextSize(ciphertext.size()));
-    Cipher::decrypt((byte*)ciphertext.data(), (byte*) decrypted.data(), decrypted.size(), this->encKey);
-    return decrypted;
+    return Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), this->encKey).value();
   }
 
   Data CreateZeroes(unsigned int size) {
@@ -111,6 +112,13 @@ TYPED_TEST_P(CipherTest, EncryptIsIndeterministic_Data) {
   }
 }
 
+TYPED_TEST_P(CipherTest, EncryptedSize) {
+  for (auto size: SIZES) {
+    Data plaintext = this->CreateData(size);
+    this->CheckEncryptedSize(plaintext);
+  }
+}
+
 REGISTER_TYPED_TEST_CASE_P(CipherTest,
     Size_0,
     Size_1,
@@ -120,7 +128,8 @@ REGISTER_TYPED_TEST_CASE_P(CipherTest,
     EncryptThenDecrypt_Zeroes,
     EncryptThenDecrypt_Data,
     EncryptIsIndeterministic_Zeroes,
-    EncryptIsIndeterministic_Data
+    EncryptIsIndeterministic_Data,
+    EncryptedSize
 );
 
 //TODO For authenticated ciphers, we need test cases checking that authentication fails on manipulations

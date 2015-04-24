@@ -3,7 +3,9 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_CIPHERS_AES256_CFB_H_
 
 #include "../../../utils/FixedSizeData.h"
+#include "../../../utils/Data.h"
 #include <cryptopp/cryptopp/aes.h>
+#include <boost/optional.hpp>
 
 namespace blockstore {
 namespace encrypted {
@@ -24,8 +26,8 @@ public:
     return ciphertextBlockSize - IV_SIZE;
   }
 
-  static void encrypt(const byte *plaintext, unsigned int plaintextSize, byte *ciphertext, const EncryptionKey &key);
-  static void decrypt(const byte *ciphertext, byte *plaintext, unsigned int plaintextSize, const EncryptionKey &key);
+  static Data encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey);
+  static boost::optional<Data> decrypt(const byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey);
 
 private:
   static constexpr unsigned int IV_SIZE = CryptoPP::AES::BLOCKSIZE;

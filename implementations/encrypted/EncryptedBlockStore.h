@@ -6,6 +6,7 @@
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/pointer.h>
 #include "EncryptedBlock.h"
+#include <iostream>
 
 namespace blockstore {
 namespace encrypted {
@@ -51,7 +52,12 @@ std::unique_ptr<Block> EncryptedBlockStore<Cipher>::load(const Key &key) {
   if (block.get() == nullptr) {
     return nullptr;
   }
-  return std::make_unique<EncryptedBlock<Cipher>>(std::move(block), _encKey);
+  auto encBlock = EncryptedBlock<Cipher>::TryDecrypt(std::move(block), _encKey);
+  if (encBlock.get() == nullptr) {
+    //TODO Think about how to do logging
+
+  }
+  return std::move(encBlock);
 }
 
 template<class Cipher>

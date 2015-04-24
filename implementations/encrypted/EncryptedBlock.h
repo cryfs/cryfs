@@ -8,6 +8,7 @@
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
+#include <boost/optional.hpp>
 
 namespace blockstore {
 namespace encrypted {
@@ -19,9 +20,9 @@ template<class Cipher>
 class EncryptedBlock: public Block {
 public:
   static std::unique_ptr<EncryptedBlock> TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const typename Cipher::EncryptionKey &encKey);
+  static std::unique_ptr<EncryptedBlock> TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
-  EncryptedBlock(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key);
   EncryptedBlock(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key, Data plaintextData);
   virtual ~EncryptedBlock();
 
@@ -40,7 +41,6 @@ private:
   bool _dataChanged;
 
   void _encryptToBaseBlock();
-  void _decryptFromBaseBlock();
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlock);
 };
@@ -49,8 +49,7 @@ private:
 
 template<class Cipher>
 std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, Data data, const typename Cipher::EncryptionKey &encKey) {
-  Data encrypted(Cipher::ciphertextSize(data.size()));
-  Cipher::encrypt((byte*)data.data(), data.size(), (byte*)encrypted.data(), encKey);
+  Data encrypted = Cipher::encrypt((byte*)data.data(), data.size(), encKey);
   auto baseBlock = baseBlockStore->tryCreate(key, std::move(encrypted));
   if (baseBlock.get() == nullptr) {
     //TODO Test this code branch
@@ -61,9 +60,13 @@ std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryCreateNew(Blo
 }
 
 template<class Cipher>
-EncryptedBlock<Cipher>::EncryptedBlock(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &encKey)
-    :EncryptedBlock(std::move(baseBlock), encKey, Data(Cipher::plaintextSize(baseBlock->size()))) {
-  _decryptFromBaseBlock();
+std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &encKey) {
+  //TODO Change BlockStore so we can read their "class Data" objects instead of "void *data()", and then we can change the Cipher interface to take Data objects instead of "byte *" + size
+  boost::optional<Data> plaintext = Cipher::decrypt((byte*)baseBlock->data(), baseBlock->size(), encKey);
+  if(!plaintext) {
+    return nullptr;
+  }
+  return std::make_unique<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintext));
 }
 
 template<class Cipher>
@@ -104,16 +107,9 @@ size_t EncryptedBlock<Cipher>::size() const {
 }
 
 template<class Cipher>
-void EncryptedBlock<Cipher>::_decryptFromBaseBlock() {
-  //TODO Change BlockStore so we can read their "class Data" objects instead of "void *data()", and then we can change the Cipher interface to take Data objects instead of "byte *" + size
-  Cipher::decrypt((byte*)_baseBlock->data(), (byte*)_plaintextData.data(), _plaintextData.size(), _encKey);
-}
-
-template<class Cipher>
 void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
   if (_dataChanged) {
-    Data encrypted(Cipher::ciphertextSize(_plaintextData.size()));
-    Cipher::encrypt((byte*)_plaintextData.data(), _plaintextData.size(), (byte*)encrypted.data(), _encKey);
+    Data encrypted = Cipher::encrypt((byte*)_plaintextData.data(), _plaintextData.size(), _encKey);
     _baseBlock->write(encrypted.data(), 0, encrypted.size());
     _dataChanged = false;
   }
