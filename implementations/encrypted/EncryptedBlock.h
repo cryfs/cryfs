@@ -3,7 +3,6 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 
 #include "../../interface/Block.h"
-#include "Cipher.h"
 #include "../../utils/Data.h"
 #include "../../interface/BlockStore.h"
 

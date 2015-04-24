@@ -5,7 +5,6 @@
 #include "../../interface/BlockStore.h"
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/pointer.h>
-#include "Cipher.h"
 #include "EncryptedBlock.h"
 
 namespace blockstore {

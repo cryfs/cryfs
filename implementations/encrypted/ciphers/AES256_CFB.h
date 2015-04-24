@@ -8,6 +8,7 @@
 namespace blockstore {
 namespace encrypted {
 
+//TODO Add contract/interface for ciphers
 class AES256_CFB {
 public:
   using EncryptionKey = FixedSizeData<32>;
