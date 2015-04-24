@@ -7,7 +7,7 @@
 #include "CryConfig.h"
 
 #include <boost/filesystem.hpp>
-#include <messmer/blockstore/implementations/encrypted/ciphers/AES256_CFB.h>
+#include <messmer/blockstore/implementations/encrypted/ciphers/AES256_GCM.h>
 #include <messmer/fspp/fs_interface/Device.h>
 
 #include "messmer/cpp-utils/macros.h"
@@ -21,7 +21,7 @@ class CryDevice: public fspp::Device {
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
 
-  using Cipher = blockstore::encrypted::AES256_CFB;
+  using Cipher = blockstore::encrypted::AES256_GCM;
 
   CryDevice(std::unique_ptr<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
