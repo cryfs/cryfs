@@ -9,7 +9,7 @@
 
 namespace blockstore {
 
-template<int SIZE>
+template<unsigned int SIZE>
 class FixedSizeData {
 public:
   //Non-virtual destructor because we want objects to be small
@@ -35,28 +35,28 @@ private:
   unsigned char _data[BINARY_LENGTH];
 };
 
-template<int SIZE> bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
-template<int SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
+template<unsigned int SIZE> bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
+template<unsigned int SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
 
 // ----- Implementation -----
 
-template<int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_LENGTH;
-template<int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
+template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_LENGTH;
+template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
 
-template<int SIZE>
+template<unsigned int SIZE>
 CryptoPP::AutoSeededRandomPool &FixedSizeData<SIZE>::RandomPool() {
   static CryptoPP::AutoSeededRandomPool singleton;
   return singleton;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateRandom() {
   FixedSizeData<SIZE> result;
   RandomPool().GenerateBlock(result._data, BINARY_LENGTH);
   return result;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
   assert(data.size() == STRING_LENGTH);
   FixedSizeData<SIZE> result;
@@ -68,7 +68,7 @@ FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
   return result;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 std::string FixedSizeData<SIZE>::ToString() const {
   std::string result;
   CryptoPP::ArraySource(_data, BINARY_LENGTH, true,
@@ -80,29 +80,29 @@ std::string FixedSizeData<SIZE>::ToString() const {
   return result;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 const unsigned char *FixedSizeData<SIZE>::data() const {
   return _data;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 void FixedSizeData<SIZE>::ToBinary(void *target) const {
   std::memcpy(target, _data, BINARY_LENGTH);
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromBinary(const void *source) {
   FixedSizeData<SIZE> result;
   std::memcpy(result._data, source, BINARY_LENGTH);
   return result;
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
   return 0 == std::memcmp(lhs.data(), rhs.data(), FixedSizeData<SIZE>::BINARY_LENGTH);
 }
 
-template<int SIZE>
+template<unsigned int SIZE>
 bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
   return !operator==(lhs, rhs);
 }
