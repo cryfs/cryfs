@@ -23,12 +23,12 @@ public:
   virtual uint64_t numBlocks() const = 0;
 
   std::unique_ptr<Block> create(const Data &data) {
-	std::unique_ptr<Block> block(nullptr);
-	while(block.get() == nullptr) {
-	  //TODO Copy necessary?
-	  block = tryCreate(createKey(), data.copy());
-	}
-	return block;
+    std::unique_ptr<Block> block(nullptr);
+    while(block.get() == nullptr) {
+      //TODO Copy necessary?
+      block = tryCreate(createKey(), data.copy());
+    }
+    return block;
   }
 };
 

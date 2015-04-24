@@ -13,7 +13,6 @@ namespace caching {
 class PeriodicTask;
 
 //TODO Test
-//TODO Also throw blocks out after a timeout
 
 class Cache {
 public:

@@ -8,7 +8,6 @@
 namespace blockstore {
 namespace caching {
 
-//TODO Rename this to CachingBlockStore and the other one to something else
 //TODO Check that this blockstore allows parallel destructing of blocks (otherwise we won't encrypt blocks in parallel)
 class CachingBlockStore: public BlockStore {
 public:

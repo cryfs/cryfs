@@ -52,7 +52,6 @@ void CachingBlockStore::remove(std::unique_ptr<Block> block) {
 }
 
 uint64_t CachingBlockStore::numBlocks() const {
-  //TODO Add number of NewBlock instances
   return _baseBlockStore->numBlocks() + _numNewBlocks;
 }
 
