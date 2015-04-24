@@ -8,6 +8,7 @@ using CryptoPP::AuthenticatedDecryptionFilter;
 using CryptoPP::ArraySource;
 using CryptoPP::ArraySink;
 using CryptoPP::GCM_64K_Tables;
+using CryptoPP::HashVerificationFilter;
 
 namespace blockstore {
 namespace encrypted {
@@ -31,18 +32,26 @@ Data AES256_GCM::encrypt(const byte *plaintext, unsigned int plaintextSize, cons
 }
 
 boost::optional<Data> AES256_GCM::decrypt(const byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
+  if (ciphertextSize < IV_SIZE + TAG_SIZE) {
+    return boost::none;
+  }
+
   const byte *ciphertextIV = ciphertext;
   const byte *ciphertextData = ciphertext + IV_SIZE;
   GCM<AES, GCM_64K_Tables>::Decryption decryption;
   decryption.SetKeyWithIV((byte*)encKey.data(), encKey.BINARY_LENGTH, ciphertextIV, IV_SIZE);
   Data plaintext(plaintextSize(ciphertextSize));
 
-  ArraySource((byte*)ciphertextData, ciphertextSize - IV_SIZE, true,
-    new AuthenticatedDecryptionFilter(decryption,
-      new ArraySink((byte*)plaintext.data(), plaintext.size())
-    )
-  );
-  return std::move(plaintext);
+  try {
+    ArraySource((byte*)ciphertextData, ciphertextSize - IV_SIZE, true,
+      new AuthenticatedDecryptionFilter(decryption,
+        new ArraySink((byte*)plaintext.data(), plaintext.size())
+      )
+    );
+    return std::move(plaintext);
+  } catch (const HashVerificationFilter::HashVerificationFailed &e) {
+    return boost::none;
+  }
 }
 
 }

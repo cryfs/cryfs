@@ -6,6 +6,8 @@
 #include "../../testutils/DataBlockFixture.h"
 #include "../../../utils/Data.h"
 
+ #include <boost/optional/optional_io.hpp>
+
 using namespace blockstore::encrypted;
 using blockstore::Data;
 
@@ -46,13 +48,13 @@ public:
     return Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), this->encKey).value();
   }
 
-  Data CreateZeroes(unsigned int size) {
+  static Data CreateZeroes(unsigned int size) {
     Data zeroes(size);
     zeroes.FillWithZeroes();
     return zeroes;
   }
 
-  Data CreateData(unsigned int size, unsigned int seed = 0) {
+  static Data CreateData(unsigned int size, unsigned int seed = 0) {
     DataBlockFixture data(size, seed);
     Data result(size);
     std::memcpy(result.data(), data.data(), size);
@@ -115,7 +117,112 @@ REGISTER_TYPED_TEST_CASE_P(CipherTest,
     EncryptedSize
 );
 
-//TODO For authenticated ciphers, we need test cases checking that authentication fails on manipulations
+template<class Cipher>
+class AuthenticatedCipherTest: public CipherTest<Cipher> {
+public:
+  void ExpectDoesntDecrypt(const Data &ciphertext) {
+    auto decrypted = Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), this->encKey);
+    EXPECT_FALSE(decrypted);
+  }
+
+  Data zeroes1 = CipherTest<Cipher>::CreateZeroes(1);
+  Data plaintext1 = CipherTest<Cipher>::CreateData(1);
+  Data zeroes2 = CipherTest<Cipher>::CreateZeroes(100 * 1024);
+  Data plaintext2 = CipherTest<Cipher>::CreateData(100 * 1024);
+};
+
+TYPED_TEST_CASE_P(AuthenticatedCipherTest);
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Zeroes_Size1) {
+  Data ciphertext = this->Encrypt(this->zeroes1);
+  *(byte*)ciphertext.data() = *(byte*)ciphertext.data() + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Data_Size1) {
+  Data ciphertext = this->Encrypt(this->plaintext1);
+  *(byte*)ciphertext.data() = *(byte*)ciphertext.data() + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Zeroes) {
+  Data ciphertext = this->Encrypt(this->zeroes2);
+  *(byte*)ciphertext.data() = *(byte*)ciphertext.data() + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Data) {
+  Data ciphertext = this->Encrypt(this->plaintext2);
+  *(byte*)ciphertext.data() = *(byte*)ciphertext.data() + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyLastByte_Zeroes) {
+  Data ciphertext = this->Encrypt(this->zeroes2);
+  ((byte*)ciphertext.data())[ciphertext.size() - 1] = ((byte*)ciphertext.data())[ciphertext.size() - 1] + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyLastByte_Data) {
+  Data ciphertext = this->Encrypt(this->plaintext2);
+  ((byte*)ciphertext.data())[ciphertext.size() - 1] = ((byte*)ciphertext.data())[ciphertext.size() - 1] + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyMiddleByte_Zeroes) {
+  Data ciphertext = this->Encrypt(this->zeroes2);
+  ((byte*)ciphertext.data())[ciphertext.size()/2] = ((byte*)ciphertext.data())[ciphertext.size()/2] + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, ModifyMiddleByte_Data) {
+  Data ciphertext = this->Encrypt(this->plaintext2);
+  ((byte*)ciphertext.data())[ciphertext.size()/2] = ((byte*)ciphertext.data())[ciphertext.size()/2] + 1;
+  this->ExpectDoesntDecrypt(ciphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptZeroesData) {
+  this->ExpectDoesntDecrypt(this->zeroes2);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptRandomData) {
+  this->ExpectDoesntDecrypt(this->plaintext2);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsTooSmall) {
+  Data tooSmallCiphertext(TypeParam::ciphertextSize(0) - 1);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsMuchTooSmall_0) {
+  static_assert(TypeParam::ciphertextSize(0) > 0, "If this fails, the test case doesn't make sense.");
+  Data tooSmallCiphertext(0);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
+TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsMuchTooSmall_1) {
+  static_assert(TypeParam::ciphertextSize(0) > 1, "If this fails, the test case doesn't make sense.");
+  Data tooSmallCiphertext(1);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
+REGISTER_TYPED_TEST_CASE_P(AuthenticatedCipherTest,
+  ModifyFirstByte_Zeroes_Size1,
+  ModifyFirstByte_Zeroes,
+  ModifyFirstByte_Data_Size1,
+  ModifyFirstByte_Data,
+  ModifyLastByte_Zeroes,
+  ModifyLastByte_Data,
+  ModifyMiddleByte_Zeroes,
+  ModifyMiddleByte_Data,
+  TryDecryptZeroesData,
+  TryDecryptRandomData,
+  TryDecryptDataThatIsTooSmall,
+  TryDecryptDataThatIsMuchTooSmall_0,
+  TryDecryptDataThatIsMuchTooSmall_1
+);
+
 
 INSTANTIATE_TYPED_TEST_CASE_P(AES256_CFB, CipherTest, AES256_CFB);
 INSTANTIATE_TYPED_TEST_CASE_P(AES256_GCM, CipherTest, AES256_GCM);
+INSTANTIATE_TYPED_TEST_CASE_P(AES256_GCM, AuthenticatedCipherTest, AES256_GCM);
