@@ -4,14 +4,14 @@
 
 #include <google/gtest/gtest.h>
 
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 // A data fixture containing data for a leaf.
 // The class can fill this data into a given leaf
 // and check, whether the data stored in a given leaf is correct.
 class LeafDataFixture {
 public:
-  LeafDataFixture(int size, int iv = 0): _data(size, iv) {}
+  LeafDataFixture(int size, int iv = 0): _data(cpputils::DataFixture::generate(size, iv)) {}
 
   void FillInto(blobstore::onblocks::datanodestore::DataLeafNode *leaf) const {
     leaf->resize(_data.size());
@@ -34,7 +34,7 @@ private:
     leaf.read(data.data(), 0, leaf.numBytes());
     return data;
   }
-  cpputils::DataBlockFixture _data;
+  cpputils::Data _data;
 };
 
 #endif

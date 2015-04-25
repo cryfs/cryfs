@@ -1,6 +1,6 @@
 #include "testutils/BlobStoreTest.h"
 #include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "../../../implementations/onblocks/datanodestore/DataNodeView.h"
 
 using std::unique_ptr;
@@ -11,7 +11,7 @@ using namespace blobstore;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::Key;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 
 class BlobReadWriteTest: public BlobStoreTest {
 public:
@@ -19,7 +19,7 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   BlobReadWriteTest()
-    :randomData(LARGE_SIZE),
+    :randomData(DataFixture::generate(LARGE_SIZE)),
      blob(blobStore->create()) {
   }
 
@@ -36,7 +36,7 @@ public:
     EXPECT_EQ(0, std::memcmp(expected.data(), read.data(), size));
   }
 
-  DataBlockFixture randomData;
+  Data randomData;
   unique_ptr<Blob> blob;
 };
 constexpr uint32_t BlobReadWriteTest::LARGE_SIZE;
@@ -64,13 +64,13 @@ struct DataRange {
 };
 class BlobReadWriteDataTest: public BlobReadWriteTest, public WithParamInterface<DataRange> {
 public:
-  DataBlockFixture foregroundData;
-  DataBlockFixture backgroundData;
+  Data foregroundData;
+  Data backgroundData;
 
   BlobReadWriteDataTest()
-    : foregroundData(GetParam().count),
-      backgroundData(GetParam().blobsize) {
-      }
+    : foregroundData(DataFixture::generate(GetParam().count, 0)),
+      backgroundData(DataFixture::generate(GetParam().blobsize, 1)) {
+  }
 
   template<class DataClass>
   void EXPECT_DATA_READS_AS_OUTSIDE_OF(const DataClass &expected, const Blob &blob, off_t start, size_t count) {
@@ -146,7 +146,7 @@ TEST_P(BlobReadWriteDataTest, WriteWholeAndReadPart) {
   blob->write(this->backgroundData.data(), 0, GetParam().blobsize);
   Data read(GetParam().count);
   blob->read(read.data(), GetParam().offset, GetParam().count);
-  EXPECT_EQ(0, std::memcmp(read.data(), this->backgroundData.data()+GetParam().offset, GetParam().count));
+  EXPECT_EQ(0, std::memcmp(read.data(), (uint8_t*)this->backgroundData.data()+GetParam().offset, GetParam().count));
 }
 
 TEST_P(BlobReadWriteDataTest, WritePartAndReadWhole) {

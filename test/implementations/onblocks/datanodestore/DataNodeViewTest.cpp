@@ -4,7 +4,7 @@
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
 #include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
@@ -16,7 +16,7 @@ using std::string;
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
@@ -60,7 +60,7 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
 }
 
 TEST_F(DataNodeViewTest, DataIsStored) {
-  DataBlockFixture randomData(DATASIZE_BYTES);
+  Data randomData = DataFixture::generate(DATASIZE_BYTES);
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
@@ -72,7 +72,7 @@ TEST_F(DataNodeViewTest, DataIsStored) {
 }
 
 TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
-  DataBlockFixture randomData(DATASIZE_BYTES);
+  Data randomData = DataFixture::generate(DATASIZE_BYTES);
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {

@@ -8,7 +8,7 @@
 
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
@@ -17,7 +17,7 @@ using ::testing::Combine;
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 
 //TODO Split into multiple files
 
@@ -49,7 +49,7 @@ public:
 
     ZEROES.FillWithZeroes();
 
-    DataBlockFixture dataFixture(nodeStore->layout().maxBytesPerLeaf());
+    Data dataFixture(DataFixture::generate(nodeStore->layout().maxBytesPerLeaf()));
 
     std::memcpy(randomData.data(), dataFixture.data(), randomData.size());
   }
@@ -282,11 +282,9 @@ public:
   Data foregroundData;
   Data backgroundData;
 
-  DataLeafNodeDataTest(): foregroundData(GetParam().count), backgroundData(GetParam().leafsize) {
-    DataBlockFixture _foregroundData(GetParam().count);
-    DataBlockFixture _backgroundData(GetParam().leafsize);
-    std::memcpy(foregroundData.data(), _foregroundData.data(), foregroundData.size());
-    std::memcpy(backgroundData.data(), _backgroundData.data(), backgroundData.size());
+  DataLeafNodeDataTest():
+    foregroundData(DataFixture::generate(GetParam().count, 0)),
+    backgroundData(DataFixture::generate(GetParam().leafsize, 1)) {
   }
 
   void EXPECT_DATA_EQ(const Data &expected, const Data &actual) {

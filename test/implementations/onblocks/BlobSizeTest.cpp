@@ -1,13 +1,13 @@
 #include "testutils/BlobStoreTest.h"
 #include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 using std::unique_ptr;
 
 using namespace blobstore;
 using blockstore::Key;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 
 class BlobSizeTest: public BlobStoreTest {
 public:
@@ -122,7 +122,7 @@ class BlobSizeDataTest: public BlobSizeTest {
 public:
   BlobSizeDataTest()
     :ZEROES(LARGE_SIZE),
-     randomData(LARGE_SIZE) {
+     randomData(DataFixture::generate(LARGE_SIZE)) {
     ZEROES.FillWithZeroes();
   }
 
@@ -133,7 +133,7 @@ public:
   }
 
   Data ZEROES;
-  DataBlockFixture randomData;
+  Data randomData;
 };
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
