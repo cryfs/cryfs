@@ -26,14 +26,13 @@ public:
   void CheckEncryptThenDecryptIsIdentity(const Data &plaintext) {
     Data ciphertext = Encrypt(plaintext);
     Data decrypted = Decrypt(ciphertext);
-    EXPECT_EQ(plaintext.size(), decrypted.size());
-    EXPECT_EQ(0, std::memcmp(plaintext.data(), decrypted.data(), plaintext.size()));
+    EXPECT_EQ(plaintext, decrypted);
   }
 
   void CheckEncryptIsIndeterministic(const Data &plaintext) {
     Data ciphertext = Encrypt(plaintext);
     Data ciphertext2 = Encrypt(plaintext);
-    EXPECT_NE(0, std::memcmp(ciphertext.data(), ciphertext2.data(), ciphertext.size()));
+    EXPECT_NE(ciphertext, ciphertext2);
   }
 
   void CheckEncryptedSize(const Data &plaintext) {

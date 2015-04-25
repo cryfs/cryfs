@@ -38,17 +38,13 @@ public:
 
   unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      Data data(randomData.size());
-      std::memcpy(data.data(), randomData.data(), randomData.size());
-      auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+      OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
     }
     return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
   unique_ptr<OnDiskBlock> CreateBlock() {
-	Data data(randomData.size());
-	std::memcpy(data.data(), randomData.data(), randomData.size());
-    return OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
   }
 
   void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {
@@ -62,8 +58,7 @@ public:
 
   void EXPECT_STORED_FILE_DATA_CORRECT() {
     Data actual = Data::LoadFromFile(file.path()).value();
-    EXPECT_EQ(randomData.size(), actual.size());
-    EXPECT_EQ(0, std::memcmp(randomData.data(), actual.data(), randomData.size()));
+    EXPECT_EQ(randomData, actual);
   }
 };
 INSTANTIATE_TEST_CASE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));

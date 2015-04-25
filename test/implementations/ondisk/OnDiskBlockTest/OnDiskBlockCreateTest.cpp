@@ -69,7 +69,7 @@ TEST_P(OnDiskBlockCreateSizeTest, OnDiskSizeIsCorrect) {
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskBlockIsZeroedOut) {
   Data fileContent = Data::LoadFromFile(file.path()).value();
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), fileContent.data(), fileContent.size()));
+  EXPECT_EQ(ZEROES, fileContent);
 }
 
 // This test is also tested by OnDiskBlockStoreTest, but there the block is created using the BlockStore interface.

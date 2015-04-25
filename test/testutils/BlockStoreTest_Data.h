@@ -46,11 +46,6 @@ private:
   cpputils::Data foregroundData;
   cpputils::Data backgroundData;
 
-  void EXPECT_DATA_EQ(const cpputils::Data &expected, const cpputils::Data &actual) {
-    EXPECT_EQ(expected.size(), actual.size());
-    EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
-  }
-
   blockstore::Key CreateBlockWriteToItAndReturnKey(const cpputils::Data &to_write) {
     auto newblock = blockStore->create(cpputils::Data(testData.blocksize).FillWithZeroes());
 
@@ -61,7 +56,7 @@ private:
   void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
     cpputils::Data read(count);
     std::memcpy(read.data(), (uint8_t*)block.data() + offset, count);
-    EXPECT_DATA_EQ(expected, read);
+    EXPECT_EQ(expected, read);
   }
 
   void EXPECT_DATA_READS_AS_OUTSIDE_OF(const cpputils::Data &expected, const blockstore::Block &block, off_t start, size_t count) {
