@@ -4,7 +4,7 @@
 //TODO Remove and replace with exception hierarchy
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 
-#include <messmer/blockstore/utils/Data.h>
+#include <messmer/cpp-utils/data/Data.h>
 #include <messmer/blobstore/implementations/onblocks/utils/Math.h>
 #include "MagicNumbers.h"
 #include "../CryDevice.h"
@@ -20,7 +20,7 @@ using std::make_pair;
 
 using blobstore::Blob;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
 
 namespace cryfs {
 

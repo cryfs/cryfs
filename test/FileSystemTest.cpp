@@ -1,6 +1,6 @@
 #include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
 #include <messmer/fspp/fstest/FsTest.h>
-#include <messmer/tempfile/src/TempFile.h>
+#include <messmer/cpp-utils/tempfile/TempFile.h>
 
 #include "../src/CryDevice.h"
 
@@ -25,7 +25,7 @@ public:
     return make_unique<CryDevice>(std::move(config), std::move(blockStore));
   }
 
-  tempfile::TempFile configFile;
+  cpputils::TempFile configFile;
 };
 
 FSPP_ADD_FILESYTEM_TESTS(CryFS, CryFsTestFixture);
