@@ -2,7 +2,7 @@
 #include "../../data/Data.h"
 #include "google/gtest/gtest.h"
 
-#include "messmer/tempfile/src/TempFile.h"
+#include "../../tempfile/TempFile.h"
 
 #include <fstream>
 
@@ -10,7 +10,7 @@ using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using tempfile::TempFile;
+using cpputils::TempFile;
 
 using std::ifstream;
 using std::ofstream;
