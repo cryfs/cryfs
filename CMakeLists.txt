@@ -5,6 +5,8 @@ ADD_BII_TARGETS()
 
 ACTIVATE_CPP14()
 
+ADD_BOOST(filesystem)
+
 # You can safely delete lines from here...
 
 ###############################################################################
