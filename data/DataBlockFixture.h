@@ -6,6 +6,9 @@
 
 namespace cpputils {
 
+//TODO Rewrite to using cpputils::Data (but take care that the cpputils::Data tests actually still test something, they use DataBlockFixture)
+//TODO Add tests
+
 class DataBlockFixture {
 public:
   DataBlockFixture(size_t size, long long int IV = 1);
