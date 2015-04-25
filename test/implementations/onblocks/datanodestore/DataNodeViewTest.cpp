@@ -4,7 +4,7 @@
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
 #include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include "../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
@@ -15,7 +15,8 @@ using std::string;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
-using blockstore::Data;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;

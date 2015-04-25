@@ -1,12 +1,13 @@
 #include "testutils/BlobStoreTest.h"
-#include <messmer/blockstore/utils/Data.h>
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 
 using std::unique_ptr;
 
 using namespace blobstore;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 
 class BlobSizeTest: public BlobStoreTest {
 public:

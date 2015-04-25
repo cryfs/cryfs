@@ -4,7 +4,7 @@
 
 #include <google/gtest/gtest.h>
 
-#include "../../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 
 // A data fixture containing data for a leaf.
 // The class can fill this data into a given leaf
@@ -29,12 +29,12 @@ public:
   }
 
 private:
-  static blockstore::Data loadData(const blobstore::onblocks::datanodestore::DataLeafNode &leaf) {
-    blockstore::Data data(leaf.numBytes());
+  static cpputils::Data loadData(const blobstore::onblocks::datanodestore::DataLeafNode &leaf) {
+    cpputils::Data data(leaf.numBytes());
     leaf.read(data.data(), 0, leaf.numBytes());
     return data;
   }
-  DataBlockFixture _data;
+  cpputils::DataBlockFixture _data;
 };
 
 #endif

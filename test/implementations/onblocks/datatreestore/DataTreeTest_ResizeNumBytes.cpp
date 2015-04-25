@@ -1,7 +1,7 @@
 #include "testutils/DataTreeTest.h"
 #include "testutils/TwoLevelDataFixture.h"
 #include "../../../../implementations/onblocks/utils/Math.h"
-#include <messmer/blockstore/utils/Data.h>
+#include <messmer/cpp-utils/data/Data.h>
 
 #include <tuple>
 
@@ -21,7 +21,7 @@ using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::utils::ceilDivision;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
 
 using std::unique_ptr;
 

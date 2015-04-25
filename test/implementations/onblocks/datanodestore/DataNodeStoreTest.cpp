@@ -16,7 +16,7 @@ using std::string;
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;

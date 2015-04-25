@@ -8,7 +8,7 @@
 
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
-#include "../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
@@ -17,13 +17,14 @@ using ::testing::Combine;
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
+using cpputils::DataBlockFixture;
 
 //TODO Split into multiple files
 
 using cpputils::dynamic_pointer_move;
 
 using blockstore::BlockStore;
-using blockstore::Data;
+using cpputils::Data;
 using blockstore::Key;
 using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;

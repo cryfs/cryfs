@@ -1,6 +1,6 @@
 #include "testutils/BlobStoreTest.h"
-#include <messmer/blockstore/utils/Data.h>
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 #include "../../../implementations/onblocks/datanodestore/DataNodeView.h"
 
 using std::unique_ptr;
@@ -10,7 +10,8 @@ using ::testing::Values;
 using namespace blobstore;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 
 class BlobReadWriteTest: public BlobStoreTest {
 public:

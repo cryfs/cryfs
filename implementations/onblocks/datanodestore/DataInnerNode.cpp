@@ -4,7 +4,7 @@
 using std::unique_ptr;
 using std::make_unique;
 using blockstore::Block;
-using blockstore::Data;
+using cpputils::Data;
 using blockstore::Key;
 
 namespace blobstore {

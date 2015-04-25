@@ -9,7 +9,7 @@
 using blockstore::BlockStore;
 using blockstore::Block;
 using blockstore::Key;
-using blockstore::Data;
+using cpputils::Data;
 using std::unique_ptr;
 using std::make_unique;
 using std::runtime_error;
