@@ -150,7 +150,7 @@ TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBlock) {
   auto loaded = LoadLeafNode(key);
 
   EXPECT_EQ(randomData.size(), loaded->numBytes());
-  EXPECT_EQ(0, std::memcmp(randomData.data(), loadData(*loaded).data(), randomData.size()));
+  EXPECT_EQ(randomData, loadData(*loaded));
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
@@ -287,11 +287,6 @@ public:
     backgroundData(DataFixture::generate(GetParam().leafsize, 1)) {
   }
 
-  void EXPECT_DATA_EQ(const Data &expected, const Data &actual) {
-    EXPECT_EQ(expected.size(), actual.size());
-    EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
-  }
-
   Key CreateLeafWriteToItAndReturnKey(const Data &to_write) {
     auto newleaf = nodeStore->createNewLeafNode();
 
@@ -303,7 +298,7 @@ public:
   void EXPECT_DATA_READS_AS(const Data &expected, const DataLeafNode &leaf, off_t offset, size_t count) {
     Data read(count);
     leaf.read(read.data(), offset, count);
-    EXPECT_DATA_EQ(expected, read);
+    EXPECT_EQ(expected, read);
   }
 
   void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataLeafNode &leaf, off_t start, size_t count) {
