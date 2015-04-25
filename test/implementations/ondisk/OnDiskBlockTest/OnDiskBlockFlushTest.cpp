@@ -1,6 +1,6 @@
 #include "../../../../implementations/ondisk/FileAlreadyExistsException.h"
 #include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "google/gtest/gtest.h"
 
 #include <messmer/cpp-utils/tempfile/TempFile.h>
@@ -12,7 +12,7 @@ using ::testing::Values;
 
 using std::unique_ptr;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 using cpputils::TempFile;
 using cpputils::TempDir;
 
@@ -28,13 +28,13 @@ public:
   : dir(),
     key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
     file(dir.path() / key.ToString(), false),
-    randomData(GetParam()) {
+    randomData(DataFixture::generate(GetParam())) {
   }
   TempDir dir;
   Key key;
   TempFile file;
 
-  DataBlockFixture randomData;
+  Data randomData;
 
   unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {

@@ -1,5 +1,5 @@
 #include "../../implementations/testfake/FakeBlockStore.h"
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "../../utils/BlockStoreUtils.h"
 #include "google/gtest/gtest.h"
 
@@ -12,7 +12,7 @@ using ::testing::Values;
 using std::make_unique;
 using std::unique_ptr;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 
 using namespace blockstore;
 using namespace blockstore::utils;
@@ -24,13 +24,13 @@ public:
   unsigned int SIZE = 1024 * 1024;
   BlockStoreUtilsTest():
     ZEROES(SIZE),
-    dataFixture(SIZE),
+    dataFixture(DataFixture::generate(SIZE)),
     blockStore(make_unique<FakeBlockStore>()) {
     ZEROES.FillWithZeroes();
   }
 
   Data ZEROES;
-  DataBlockFixture dataFixture;
+  Data dataFixture;
   unique_ptr<BlockStore> blockStore;
 };
 

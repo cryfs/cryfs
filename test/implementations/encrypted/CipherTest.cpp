@@ -3,14 +3,14 @@
 #include "../../../implementations/encrypted/ciphers/AES256_GCM.h"
 #include "../../../implementations/encrypted/ciphers/Cipher.h"
 
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include <messmer/cpp-utils/data/Data.h>
 
  #include <boost/optional/optional_io.hpp>
 
 using namespace blockstore::encrypted;
 using cpputils::Data;
-using cpputils::DataBlockFixture;
+using cpputils::DataFixture;
 
 template<class Cipher>
 class CipherTest: public ::testing::Test {
@@ -19,7 +19,7 @@ public:
   typename Cipher::EncryptionKey encKey = createRandomKey();
 
   static typename Cipher::EncryptionKey createRandomKey(int seed = 0) {
-    DataBlockFixture data(Cipher::EncryptionKey::BINARY_LENGTH, seed);
+    Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
     return Cipher::EncryptionKey::FromBinary(data.data());
   }
 
@@ -50,16 +50,11 @@ public:
   }
 
   static Data CreateZeroes(unsigned int size) {
-    Data zeroes(size);
-    zeroes.FillWithZeroes();
-    return zeroes;
+    return std::move(Data(size).FillWithZeroes());
   }
 
   static Data CreateData(unsigned int size, unsigned int seed = 0) {
-    DataBlockFixture data(size, seed);
-    Data result(size);
-    std::memcpy(result.data(), data.data(), size);
-    return result;
+    return DataFixture::generate(size, seed);
   }
 };
 

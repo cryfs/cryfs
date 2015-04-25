@@ -12,11 +12,8 @@ public:
   BlockStoreDataParametrizedTest(std::unique_ptr<blockstore::BlockStore> blockStore_, const DataRange &testData_)
     : blockStore(std::move(blockStore_)),
       testData(testData_),
-      foregroundData(testData.count), backgroundData(testData.blocksize) {
-    cpputils::DataBlockFixture _foregroundData(testData.count);
-    cpputils::DataBlockFixture _backgroundData(testData.blocksize);
-    std::memcpy(foregroundData.data(), _foregroundData.data(), foregroundData.size());
-    std::memcpy(backgroundData.data(), _backgroundData.data(), backgroundData.size());
+      foregroundData(cpputils::DataFixture::generate(testData.count, 0)),
+      backgroundData(cpputils::DataFixture::generate(testData.blocksize, 1)) {
   }
 
   void TestWriteAndReadImmediately() {
