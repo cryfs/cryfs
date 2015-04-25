@@ -12,7 +12,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include <messmer/tempfile/src/TempDir.h>
+#include <messmer/cpp-utils/tempfile/TempDir.h>
 #include "FuseThread.h"
 
 #define MOCK_PATH_METHOD1(NAME, RETURNTYPE)                        \
@@ -95,7 +95,7 @@ public:
   public:
     const boost::filesystem::path &mountDir() const;
   private:
-    tempfile::TempDir _mountDir;
+    cpputils::TempDir _mountDir;
     fspp::fuse::Fuse _fuse;
     FuseThread _fuse_thread;
   };
