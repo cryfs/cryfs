@@ -13,8 +13,11 @@ namespace cpputils {
 class Data {
 public:
   explicit Data(size_t size);
-  Data(Data &&rhs); // move constructor
   virtual ~Data();
+
+  Data(Data &&rhs); // move constructor
+  //TODO Test move assignment (and if not tested yet, also move constructor)
+  Data &operator=(Data &&rhs); // move assignment
 
   Data copy() const;
 

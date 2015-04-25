@@ -24,6 +24,17 @@ Data::Data(Data &&rhs)
 : _size(rhs._size), _data(rhs._data) {
   // Make rhs invalid, so the memory doesn't get freed in its destructor.
   rhs._data = nullptr;
+  rhs._size = 0;
+}
+
+Data &Data::operator=(Data &&rhs) {
+  std::free(_data);
+  _data = rhs._data;
+  _size = rhs._size;
+  rhs._data = nullptr;
+  rhs._size = 0;
+
+  return *this;
 }
 
 Data::~Data() {
