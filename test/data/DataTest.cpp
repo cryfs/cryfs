@@ -114,6 +114,14 @@ TEST_P(DataTestWithSizeParam, Copy) {
   EXPECT_EQ(randomData, copy);
 }
 
+TEST_F(DataTest, ChangingCopyDoesntChangeOriginal) {
+  Data original = DataFixture::generate(1024);
+  Data copy = original.copy();
+  ((uint8_t*)copy.data())[0] = ((uint8_t*)copy.data())[0] + 1;
+  EXPECT_EQ(DataFixture::generate(1024), original);
+  EXPECT_NE(copy, original);
+}
+
 TEST_F(DataTest, InitializeWithZeroes) {
   Data data(10*1024);
   data.FillWithZeroes();
@@ -126,6 +134,61 @@ TEST_F(DataTest, FillModifiedDataWithZeroes) {
 
   data.FillWithZeroes();
   EXPECT_TRUE(DataIsZeroes(data));
+}
+
+TEST_F(DataTest, MoveConstructor) {
+  Data original = DataFixture::generate(1024);
+  Data copy(std::move(original));
+  EXPECT_EQ(DataFixture::generate(1024), copy);
+  EXPECT_EQ(nullptr, original.data());
+  EXPECT_EQ(0, original.size());
+}
+
+TEST_F(DataTest, MoveAssignment) {
+  Data original = DataFixture::generate(1024);
+  Data copy(0);
+  copy = std::move(original);
+  EXPECT_EQ(DataFixture::generate(1024), copy);
+  EXPECT_EQ(nullptr, original.data());
+  EXPECT_EQ(0, original.size());
+}
+
+TEST_F(DataTest, Equality) {
+  Data data1 = DataFixture::generate(1024);
+  Data data2 = DataFixture::generate(1024);
+  EXPECT_TRUE(data1 == data2);
+  EXPECT_FALSE(data1 != data2);
+}
+
+TEST_F(DataTest, Inequality_DifferentSize) {
+  Data data1 = DataFixture::generate(1024);
+  Data data2 = DataFixture::generate(1023);
+  EXPECT_FALSE(data1 == data2);
+  EXPECT_TRUE(data1 != data2);
+}
+
+TEST_F(DataTest, Inequality_DifferentFirstByte) {
+  Data data1 = DataFixture::generate(1024);
+  Data data2 = DataFixture::generate(1024);
+  ((uint8_t*)data2.data())[0] = ((uint8_t*)data2.data())[0] + 1;
+  EXPECT_FALSE(data1 == data2);
+  EXPECT_TRUE(data1 != data2);
+}
+
+TEST_F(DataTest, Inequality_DifferentMiddleByte) {
+  Data data1 = DataFixture::generate(1024);
+  Data data2 = DataFixture::generate(1024);
+  ((uint8_t*)data2.data())[500] = ((uint8_t*)data2.data())[500] + 1;
+  EXPECT_FALSE(data1 == data2);
+  EXPECT_TRUE(data1 != data2);
+}
+
+TEST_F(DataTest, Inequality_DifferentLastByte) {
+  Data data1 = DataFixture::generate(1024);
+  Data data2 = DataFixture::generate(1024);
+  ((uint8_t*)data2.data())[1023] = ((uint8_t*)data2.data())[1023] + 1;
+  EXPECT_FALSE(data1 == data2);
+  EXPECT_TRUE(data1 != data2);
 }
 
 //Needs 64bit for representation. This value isn't in the size param list, because the list is also used for read/write checks.

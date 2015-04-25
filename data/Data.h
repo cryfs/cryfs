@@ -16,7 +16,6 @@ public:
   virtual ~Data();
 
   Data(Data &&rhs); // move constructor
-  //TODO Test move assignment (and if not tested yet, also move constructor)
   Data &operator=(Data &&rhs); // move assignment
 
   Data copy() const;
@@ -41,7 +40,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
 
-//TODO Test operator== and operator!=
 bool operator==(const Data &lhs, const Data &rhs);
 bool operator!=(const Data &lhs, const Data &rhs);
 
