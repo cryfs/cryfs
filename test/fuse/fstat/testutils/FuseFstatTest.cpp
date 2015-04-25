@@ -30,5 +30,5 @@ int FuseFstatTest::CreateFileAllowErrors(const TempTestFS *fs, const std::string
 }
 
 void FuseFstatTest::OnCreateAndOpenReturnFileDescriptor(const char *filename, int descriptor) {
-  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(filename), _)).Times(1).WillOnce(Return(descriptor));
+  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(filename), _, _, _)).Times(1).WillOnce(Return(descriptor));
 }

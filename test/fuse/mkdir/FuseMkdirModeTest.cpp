@@ -13,7 +13,7 @@ INSTANTIATE_TEST_CASE_P(FuseMkdirModeTest, FuseMkdirModeTest, Values(0, S_IRUSR,
 
 TEST_P(FuseMkdirModeTest, Mkdir) {
   ReturnDoesntExistOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, mkdir(StrEq(DIRNAME), GetParam()))
+  EXPECT_CALL(fsimpl, mkdir(StrEq(DIRNAME), GetParam(), _, _))
     .Times(1).WillOnce(FromNowOnReturnIsDirOnLstat());
 
   Mkdir(DIRNAME, GetParam());

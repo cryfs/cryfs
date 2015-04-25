@@ -1,4 +1,4 @@
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 #include "testutils/FuseWriteTest.h"
 
 #include "../../../fuse/FuseErrnoException.h"
@@ -11,6 +11,8 @@ using ::testing::Invoke;
 using ::testing::Action;
 
 using std::min;
+using cpputils::DataBlockFixture;
+using cpputils::DataBlockFixtureWriteable;
 
 using namespace fspp::fuse;
 

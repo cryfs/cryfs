@@ -39,7 +39,7 @@ public:
   }
 
   void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, const fspp::OpenFile &file) {
-	blockstore::Data data(expectedSize);
+	cpputils::Data data(expectedSize);
 	//Try to read one byte more than the expected size
 	ssize_t readBytes = file.read(data.data(), expectedSize+1, 0);
 	//and check that it only read the expected size (but also not less)

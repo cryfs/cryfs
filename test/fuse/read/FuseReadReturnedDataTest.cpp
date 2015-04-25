@@ -1,4 +1,4 @@
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 #include "testutils/FuseReadTest.h"
 
 #include "../../../fuse/FuseErrnoException.h"
@@ -21,6 +21,7 @@ using std::get;
 using std::min;
 using std::unique_ptr;
 using std::make_unique;
+using cpputils::DataBlockFixture;
 
 using namespace fspp::fuse;
 

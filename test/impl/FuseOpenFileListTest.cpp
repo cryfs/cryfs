@@ -20,7 +20,7 @@ public:
 
   MOCK_CONST_METHOD1(stat, void(struct ::stat*));
   MOCK_CONST_METHOD1(truncate, void(off_t));
-  MOCK_METHOD3(read, ssize_t(void*, size_t, off_t));
+  MOCK_CONST_METHOD3(read, ssize_t(void*, size_t, off_t));
   MOCK_METHOD3(write, void(const void*, size_t, off_t));
   MOCK_METHOD0(flush, void());
   MOCK_METHOD0(fsync, void());

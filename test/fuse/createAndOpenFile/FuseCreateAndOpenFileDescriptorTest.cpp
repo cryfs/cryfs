@@ -31,7 +31,7 @@ INSTANTIATE_TEST_CASE_P(FuseCreateAndOpenFileDescriptorTest, FuseCreateAndOpenFi
 
 TEST_P(FuseCreateAndOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnDoesntExistOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _))
+  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _, _, _))
     .Times(1).WillOnce(Return(GetParam()));
   EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(0));
   //For the syscall to succeed, we also need to give an fstat implementation.

@@ -6,10 +6,6 @@
 
 #include "testutils/FileTest.h"
 
-//TODO I don't really want a dependency fspp -> blockstore. I probably should take the blockstore::Data class
-//     (which is the only reason for the dependency here) and put it into a different package (cpp-utils?)
-#include <messmer/blockstore/utils/Data.h>
-
 template<class ConcreteFileSystemTestFixture>
 class FsppFileTest: public FileTest<ConcreteFileSystemTestFixture> {
 public:
