@@ -41,8 +41,9 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
 
-//TODO Test operator==
+//TODO Test operator== and operator!=
 bool operator==(const Data &lhs, const Data &rhs);
+bool operator!=(const Data &lhs, const Data &rhs);
 
 }
 

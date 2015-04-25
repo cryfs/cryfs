@@ -104,4 +104,7 @@ bool operator==(const Data &lhs, const Data &rhs) {
   return lhs.size() == rhs.size() && 0 == memcmp(lhs.data(), rhs.data(), lhs.size());
 }
 
+bool operator!=(const Data &lhs, const Data &rhs) {
+  return !operator==(lhs, rhs);
+}
 }
