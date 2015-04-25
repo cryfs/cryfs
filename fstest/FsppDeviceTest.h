@@ -5,14 +5,14 @@ template<class ConcreteFileSystemTestFixture>
 class FsppDeviceTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
   void InitDirStructure() {
-    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC);
-    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
-    this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC);
-    this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC);
-    this->LoadDir("/mydir")->createAndOpenFile("myfile2", this->MODE_PUBLIC);
-    this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC);
-    this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", this->MODE_PUBLIC);
-    this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", this->MODE_PUBLIC);
+    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/mydir")->createAndOpenFile("myfile2", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", this->MODE_PUBLIC, 0, 0);
   }
 };
 
@@ -96,6 +96,8 @@ TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting2) {
 }
 
 //TODO Test statfs
+
+//TODO Test class for symlink tests (like FsppDirTest, FsppFileTest, ...)
 
 REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest,
   InitFilesystem,

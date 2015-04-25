@@ -2,6 +2,7 @@
 #define MESSMER_FSPP_FSTEST_TESTUTILS_FILETEST_H_
 
 #include "FileSystemTest.h"
+#include <messmer/cpp-utils/data/Data.h>
 
 #include <memory>
 
@@ -9,11 +10,11 @@ template<class ConcreteFileSystemTestFixture>
 class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
   FileTest() {
-	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC);
+	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
 	file_root = this->LoadFile("/myfile");
 
-	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC);
-	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC);
+	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
 	file_nested = this->LoadFile("/mydir/mynestedfile");
   }
   std::unique_ptr<fspp::File> file_root;

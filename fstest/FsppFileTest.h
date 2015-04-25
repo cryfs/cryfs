@@ -169,6 +169,9 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
 //TODO rename
 //TODO utimens
 //TODO unlink
+//TODO chmod
+//TODO chown
+//TODO createAndOpenFile with uid/gid
 
 //TODO Test permission flags
 
