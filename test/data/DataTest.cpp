@@ -1,4 +1,4 @@
-#include "../../data/DataBlockFixture.h"
+#include "../../data/DataFixture.h"
 #include "../../data/Data.h"
 #include "google/gtest/gtest.h"
 
@@ -29,58 +29,46 @@ public:
     }
     return true;
   }
-
-  void FillData(const DataBlockFixture &fillData, Data *data) {
-    ASSERT_EQ(fillData.size(), data->size());
-    std::memcpy(data->data(), fillData.data(), fillData.size());
-  }
-
-  void EXPECT_DATA_CORRECT(const DataBlockFixture &expectedData, const Data &data) {
-    ASSERT_EQ(expectedData.size(), data.size());
-    EXPECT_EQ(0, std::memcmp(expectedData.data(), data.data(), expectedData.size()));
-  }
 };
 
 class DataTestWithSizeParam: public DataTest, public WithParamInterface<size_t> {
 public:
-  DataBlockFixture randomData;
+  Data randomData;
 
-  DataTestWithSizeParam(): randomData(GetParam()) {}
+  DataTestWithSizeParam(): randomData(DataFixture::generate(GetParam())) {}
 
-  void FillData(Data *data) {
-    DataTest::FillData(randomData, data);
-  }
-
-  void StoreData(const bf::path &filepath) {
+  static void StoreData(const Data &data, const bf::path &filepath) {
     ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
-    file.write(randomData.data(), randomData.size());
+    file.write((char*)data.data(), data.size());
   }
 
-  void EXPECT_STORED_FILE_DATA_CORRECT(const bf::path &filepath) {
-    EXPECT_EQ(randomData.size(), bf::file_size(filepath));
+  static void EXPECT_STORED_FILE_DATA_CORRECT(const Data &data, const bf::path &filepath) {
+    EXPECT_EQ(data.size(), bf::file_size(filepath));
 
     ifstream file(filepath.c_str(), std::ios::binary);
-    char *read_data = new char[randomData.size()];
-    file.read(read_data, randomData.size());
+    char *read_data = new char[data.size()];
+    file.read(read_data, data.size());
 
-    EXPECT_EQ(0, std::memcmp(randomData.data(), read_data, randomData.size()));
+    EXPECT_EQ(0, std::memcmp(data.data(), read_data, data.size()));
     delete[] read_data;
-  }
-
-  void EXPECT_DATA_CORRECT(const Data &data) {
-    DataTest::EXPECT_DATA_CORRECT(randomData, data);
   }
 };
 
 INSTANTIATE_TEST_CASE_P(DataTestWithSizeParam, DataTestWithSizeParam, Values(0, 1, 2, 1024, 4096, 10*1024*1024));
 
+TEST_P(DataTestWithSizeParam, ZeroInitializedDataIsDifferentToRandomData) {
+  if (GetParam() != 0) {
+    Data data(GetParam());
+    data.FillWithZeroes();
+    EXPECT_NE(randomData, data);
+  }
+}
+
 // Working on a large data area without a crash is a good indicator that we
 // are actually working on memory that was validly allocated for us.
 TEST_P(DataTestWithSizeParam, WriteAndCheck) {
-  Data data(GetParam());
-
-  FillData(&data);
-  EXPECT_DATA_CORRECT(data);
+  Data data = randomData.copy();
+  EXPECT_EQ(randomData, data);
 }
 
 TEST_P(DataTestWithSizeParam, Size) {
@@ -89,52 +77,41 @@ TEST_P(DataTestWithSizeParam, Size) {
 }
 
 TEST_P(DataTestWithSizeParam, CheckStoredFile) {
-  Data data(GetParam());
-  FillData(&data);
-
   TempFile file;
-  data.StoreToFile(file.path());
+  randomData.StoreToFile(file.path());
 
-  EXPECT_STORED_FILE_DATA_CORRECT(file.path());
+  EXPECT_STORED_FILE_DATA_CORRECT(randomData, file.path());
 }
 
 TEST_P(DataTestWithSizeParam, CheckLoadedData) {
   TempFile file;
-  StoreData(file.path());
+  StoreData(randomData, file.path());
 
   Data data = Data::LoadFromFile(file.path()).value();
 
-  EXPECT_DATA_CORRECT(data);
+  EXPECT_EQ(randomData, data);
 }
 
 TEST_P(DataTestWithSizeParam, StoreDoesntChangeData) {
-  Data data(GetParam());
-  FillData(&data);
+  Data data = randomData.copy();
 
   TempFile file;
   data.StoreToFile(file.path());
 
-  EXPECT_DATA_CORRECT(data);
+  EXPECT_EQ(randomData, data);
 }
 
 TEST_P(DataTestWithSizeParam, StoreAndLoad) {
-  Data data(GetParam());
-  FillData(&data);
-
   TempFile file;
-  data.StoreToFile(file.path());
+  randomData.StoreToFile(file.path());
   Data loaded_data = Data::LoadFromFile(file.path()).value();
 
-  EXPECT_DATA_CORRECT(loaded_data);
+  EXPECT_EQ(randomData, loaded_data);
 }
 
 TEST_P(DataTestWithSizeParam, Copy) {
-  Data data(GetParam());
-  FillData(&data);
-
-  Data copy = data.copy();
-
-  EXPECT_DATA_CORRECT(copy);
+  Data copy = randomData.copy();
+  EXPECT_EQ(randomData, copy);
 }
 
 TEST_F(DataTest, InitializeWithZeroes) {
@@ -144,9 +121,7 @@ TEST_F(DataTest, InitializeWithZeroes) {
 }
 
 TEST_F(DataTest, FillModifiedDataWithZeroes) {
-  Data data(10*1024);
-  DataBlockFixture randomData(10*1024);
-  FillData(randomData, &data);
+  Data data = DataFixture::generate(10*1024);
   EXPECT_FALSE(DataIsZeroes(data));
 
   data.FillWithZeroes();

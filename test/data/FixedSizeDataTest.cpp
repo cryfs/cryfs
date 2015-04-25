@@ -1,4 +1,4 @@
-#include "../../data/DataBlockFixture.h"
+#include "../../data/DataFixture.h"
 #include "../../data/FixedSizeData.h"
 #include "../../data/Data.h"
 #include "google/gtest/gtest.h"
@@ -19,18 +19,13 @@ public:
   const string DATA1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";
   const string DATA2_AS_STRING = "272EE5517627CFA147A971A8E6E747E0";
 
-  const DataBlockFixture DATA3_AS_BINARY;
-  const DataBlockFixture DATA4_AS_BINARY;
+  const Data DATA3_AS_BINARY;
+  const Data DATA4_AS_BINARY;
 
-  FixedSizeDataTest() : DATA3_AS_BINARY(FixedSizeData<SIZE>::BINARY_LENGTH, 1), DATA4_AS_BINARY(FixedSizeData<SIZE>::BINARY_LENGTH, 2) {}
-
-  void EXPECT_DATA_EQ(const DataBlockFixture &expected, const Data &actual) {
-    EXPECT_EQ(expected.size(), actual.size());
-    EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
-  }
+  FixedSizeDataTest() : DATA3_AS_BINARY(DataFixture::generate(SIZE, 1)), DATA4_AS_BINARY(DataFixture::generate(SIZE, 2)) {}
 
   template<unsigned int SIZE>
-  void EXPECT_DATA_EQ(const DataBlockFixture &expected, const FixedSizeData<SIZE> &actual) {
+  void EXPECT_DATA_EQ(const Data &expected, const FixedSizeData<SIZE> &actual) {
     EXPECT_EQ(expected.size(), SIZE);
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), SIZE));
   }
@@ -93,13 +88,13 @@ TEST_P(FixedSizeDataTestWithStringParam, ToAndFromString) {
   EXPECT_EQ(data, data2);
 }
 
-class FixedSizeDataTestWithBinaryParam: public FixedSizeDataTest, public WithParamInterface<const DataBlockFixture*> {
+class FixedSizeDataTestWithBinaryParam: public FixedSizeDataTest, public WithParamInterface<const Data*> {
 public:
-  static const DataBlockFixture VALUE1;
-  static const DataBlockFixture VALUE2;
+  static const Data VALUE1;
+  static const Data VALUE2;
 };
-const DataBlockFixture FixedSizeDataTestWithBinaryParam::VALUE1(FixedSizeData<SIZE>::BINARY_LENGTH, 3);
-const DataBlockFixture FixedSizeDataTestWithBinaryParam::VALUE2(FixedSizeData<SIZE>::BINARY_LENGTH, 4);
+const Data FixedSizeDataTestWithBinaryParam::VALUE1(DataFixture::generate(SIZE, 3));
+const Data FixedSizeDataTestWithBinaryParam::VALUE2(DataFixture::generate(SIZE, 4));
 INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromBinary) {
@@ -111,7 +106,7 @@ TEST_P(FixedSizeDataTestWithBinaryParam, FromAndToBinary) {
   FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
   Data output(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(output.data());
-  EXPECT_DATA_EQ(*GetParam(), output);
+  EXPECT_EQ(*GetParam(), output);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, ToAndFromBinary) {
