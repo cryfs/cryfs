@@ -15,8 +15,8 @@ public:
     same_type(UINT32_C(0), X::ciphertextSize(UINT32_C(5)));
     same_type(UINT32_C(0), X::plaintextSize(UINT32_C(5)));
     typename X::EncryptionKey key = X::EncryptionKey::CreateRandom();
-    same_type(Data(0), X::encrypt((byte*)nullptr, UINT32_C(0), key));
-    same_type(boost::optional<Data>(Data(0)), X::decrypt((byte*)nullptr, UINT32_C(0), key));
+    same_type(cpputils::Data(0), X::encrypt((byte*)nullptr, UINT32_C(0), key));
+    same_type(boost::optional<cpputils::Data>(cpputils::Data(0)), X::decrypt((byte*)nullptr, UINT32_C(0), key));
   }
 
 private:

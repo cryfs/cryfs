@@ -15,7 +15,7 @@ public:
   ParallelAccessBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
   Key createKey() override;
-  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
+  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;

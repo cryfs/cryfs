@@ -17,7 +17,7 @@ public:
   EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 
   Key createKey() override;
-  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
+  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
@@ -42,7 +42,7 @@ Key EncryptedBlockStore<Cipher>::createKey() {
 }
 
 template<class Cipher>
-std::unique_ptr<Block> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, Data data) {
+std::unique_ptr<Block> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, cpputils::Data data) {
   return EncryptedBlock<Cipher>::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
 }
 

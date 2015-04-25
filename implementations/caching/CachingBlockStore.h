@@ -14,14 +14,14 @@ public:
   CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
   Key createKey() override;
-  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
+  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
   void release(std::unique_ptr<Block> block);
 
-  std::unique_ptr<Block> tryCreateInBaseStore(const Key &key, Data data);
+  std::unique_ptr<Block> tryCreateInBaseStore(const Key &key, cpputils::Data data);
   void removeFromBaseStore(std::unique_ptr<Block> block);
 
 private:

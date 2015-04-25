@@ -4,7 +4,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include "../../interface/Block.h"
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 #include <iostream>
 
 #include "messmer/cpp-utils/macros.h"
@@ -18,7 +18,7 @@ public:
   virtual ~OnDiskBlock();
 
   static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
-  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, Data data);
+  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 
   const void *data() const override;
@@ -30,10 +30,10 @@ public:
 
 private:
   const boost::filesystem::path _filepath;
-  Data _data;
+  cpputils::Data _data;
   bool _dataChanged;
 
-  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, Data data);
+  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
 
   void _fillDataWithZeroes();
   void _storeToDisk() const;

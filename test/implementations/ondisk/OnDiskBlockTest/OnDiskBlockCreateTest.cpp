@@ -2,17 +2,17 @@
 #include "../../../../implementations/ondisk/OnDiskBlock.h"
 #include "google/gtest/gtest.h"
 
-#include "messmer/tempfile/src/TempFile.h"
-#include "messmer/tempfile/src/TempDir.h"
+#include <messmer/cpp-utils/tempfile/TempFile.h>
+#include <messmer/cpp-utils/tempfile/TempDir.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using tempfile::TempFile;
-using tempfile::TempDir;
-
 using std::unique_ptr;
+using cpputils::Data;
+using cpputils::TempFile;
+using cpputils::TempDir;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -63,12 +63,12 @@ public:
 INSTANTIATE_TEST_CASE_P(OnDiskBlockCreateSizeTest, OnDiskBlockCreateSizeTest, Values(0, 1, 5, 1024, 10*1024*1024));
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskSizeIsCorrect) {
-  Data fileContent = Data::LoadFromFile(file.path());
+  Data fileContent = Data::LoadFromFile(file.path()).value();
   EXPECT_EQ(GetParam(), fileContent.size());
 }
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskBlockIsZeroedOut) {
-  Data fileContent = Data::LoadFromFile(file.path());
+  Data fileContent = Data::LoadFromFile(file.path()).value();
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), fileContent.data(), fileContent.size()));
 }
 

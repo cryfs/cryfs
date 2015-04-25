@@ -3,7 +3,6 @@
 #define TEST_BLOCKSTORE_IMPLEMENTATIONS_TESTUTILS_BLOCKSTOREWITHRANDOMKEYSTEST_H_
 
 #include <google/gtest/gtest.h>
-#include "DataBlockFixture.h"
 
 #include "../../interface/BlockStore.h"
 
@@ -31,45 +30,45 @@ TYPED_TEST_CASE_P(BlockStoreWithRandomKeysTest);
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSameSize) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->tryCreate(this->key, blockstore::Data(1024));
+  auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
   block->flush();
-  auto block2 = blockStore->tryCreate(this->key, blockstore::Data(1024));
+  auto block2 = blockStore->tryCreate(this->key, cpputils::Data(1024));
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndDifferentSize) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->tryCreate(this->key, blockstore::Data(1024));
+  auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
   block->flush();
-  auto block2 = blockStore->tryCreate(this->key, blockstore::Data(4096));
+  auto block2 = blockStore->tryCreate(this->key, cpputils::Data(4096));
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndFirstNullSize) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->tryCreate(this->key, blockstore::Data(0));
+  auto block = blockStore->tryCreate(this->key, cpputils::Data(0));
   block->flush();
-  auto block2 = blockStore->tryCreate(this->key, blockstore::Data(1024));
+  auto block2 = blockStore->tryCreate(this->key, cpputils::Data(1024));
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSecondNullSize) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->tryCreate(this->key, blockstore::Data(1024));
+  auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
   block->flush();
-  auto block2 = blockStore->tryCreate(this->key, blockstore::Data(0));
+  auto block2 = blockStore->tryCreate(this->key, cpputils::Data(0));
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndBothNullSize) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->tryCreate(this->key, blockstore::Data(0));
+  auto block = blockStore->tryCreate(this->key, cpputils::Data(0));
   block->flush();
-  auto block2 = blockStore->tryCreate(this->key, blockstore::Data(0));
+  auto block2 = blockStore->tryCreate(this->key, cpputils::Data(0));
   EXPECT_TRUE((bool)block);
   EXPECT_FALSE((bool)block2);
 }

@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHING_NEWBLOCK_H_
 
 #include "../../interface/BlockStore.h"
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
@@ -20,7 +20,7 @@ class CachingBlockStore;
 // It only exists in the cache and it is created in the base block store when destructed.
 class NewBlock: public Block {
 public:
-  NewBlock(const Key &key, Data data, CachingBlockStore *blockStore);
+  NewBlock(const Key &key, cpputils::Data data, CachingBlockStore *blockStore);
   virtual ~NewBlock();
 
   const void *data() const override;
@@ -35,7 +35,7 @@ public:
 
 private:
   CachingBlockStore *_blockStore;
-  Data _data;
+  cpputils::Data _data;
   std::unique_ptr<Block> _baseBlock;
   bool _dataChanged;
 

@@ -9,6 +9,8 @@ using CryptoPP::ArraySource;
 using CryptoPP::ArraySink;
 using CryptoPP::GCM_64K_Tables;
 using CryptoPP::HashVerificationFilter;
+using cpputils::Data;
+using cpputils::FixedSizeData;
 
 namespace blockstore {
 namespace encrypted {

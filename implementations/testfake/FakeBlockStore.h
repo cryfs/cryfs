@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCKSTORE_H_
 
 #include "../../interface/helpers/BlockStoreWithRandomKeys.h"
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 #include "messmer/cpp-utils/macros.h"
 
 #include <mutex>
@@ -31,24 +31,24 @@ class FakeBlockStore: public BlockStoreWithRandomKeys {
 public:
   FakeBlockStore();
 
-  std::unique_ptr<Block> tryCreate(const Key &key, Data data) override;
+  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
-  void updateData(const Key &key, const Data &data);
+  void updateData(const Key &key, const cpputils::Data &data);
 
 private:
-  std::map<std::string, Data> _blocks;
+  std::map<std::string, cpputils::Data> _blocks;
 
   //This vector keeps a handle of the data regions for all created FakeBlock objects.
   //This way, it is ensured that no two created FakeBlock objects will work on the
   //same data region. Without this, it could happen that a test case creates a FakeBlock,
   //destructs it, creates another one, and the new one gets the same memory region.
   //We want to avoid this for the reasons mentioned above (overflow data).
-  std::vector<std::shared_ptr<Data>> _used_dataregions_for_blocks;
+  std::vector<std::shared_ptr<cpputils::Data>> _used_dataregions_for_blocks;
 
-  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const Data &data, bool dirty);
+  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const cpputils::Data &data, bool dirty);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };

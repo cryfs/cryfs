@@ -3,12 +3,12 @@
 #define BLOCKSTORE_UTILS_KEY_H_
 
 #include <string>
-#include "FixedSizeData.h"
+#include <messmer/cpp-utils/data/FixedSizeData.h>
 
 namespace blockstore {
 
 // A key here is NOT a key for encryption, but a key as used in key->value mappings ("access handle for a block").
-using Key = FixedSizeData<16>;
+using Key = cpputils::FixedSizeData<16>;
 
 }
 

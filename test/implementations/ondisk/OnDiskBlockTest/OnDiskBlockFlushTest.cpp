@@ -1,19 +1,20 @@
 #include "../../../../implementations/ondisk/FileAlreadyExistsException.h"
 #include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include "../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 #include "google/gtest/gtest.h"
 
-#include "messmer/tempfile/src/TempFile.h"
-#include "messmer/tempfile/src/TempDir.h"
+#include <messmer/cpp-utils/tempfile/TempFile.h>
+#include <messmer/cpp-utils/tempfile/TempDir.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using tempfile::TempFile;
-using tempfile::TempDir;
-
 using std::unique_ptr;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
+using cpputils::TempFile;
+using cpputils::TempDir;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -60,7 +61,7 @@ public:
   }
 
   void EXPECT_STORED_FILE_DATA_CORRECT() {
-    Data actual = Data::LoadFromFile(file.path());
+    Data actual = Data::LoadFromFile(file.path()).value();
     EXPECT_EQ(randomData.size(), actual.size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), actual.data(), randomData.size()));
   }

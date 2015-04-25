@@ -4,6 +4,7 @@
 using std::unique_ptr;
 using std::make_unique;
 using std::string;
+using cpputils::Data;
 
 namespace bf = boost::filesystem;
 

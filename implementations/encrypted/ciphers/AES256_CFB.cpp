@@ -3,6 +3,8 @@
 
 using CryptoPP::CFB_Mode;
 using CryptoPP::AES;
+using cpputils::Data;
+using cpputils::FixedSizeData;
 
 namespace blockstore {
 namespace encrypted {

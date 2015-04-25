@@ -9,6 +9,7 @@ using std::ostream;
 using std::ifstream;
 using std::ofstream;
 using std::ios;
+using cpputils::Data;
 
 namespace blockstore {
 namespace inmemory {

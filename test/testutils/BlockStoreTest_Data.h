@@ -13,14 +13,14 @@ public:
     : blockStore(std::move(blockStore_)),
       testData(testData_),
       foregroundData(testData.count), backgroundData(testData.blocksize) {
-    DataBlockFixture _foregroundData(testData.count);
-    DataBlockFixture _backgroundData(testData.blocksize);
+    cpputils::DataBlockFixture _foregroundData(testData.count);
+    cpputils::DataBlockFixture _backgroundData(testData.blocksize);
     std::memcpy(foregroundData.data(), _foregroundData.data(), foregroundData.size());
     std::memcpy(backgroundData.data(), _backgroundData.data(), backgroundData.size());
   }
 
   void TestWriteAndReadImmediately() {
-    auto block = blockStore->create(blockstore::Data(testData.blocksize).FillWithZeroes());
+    auto block = blockStore->create(cpputils::Data(testData.blocksize).FillWithZeroes());
     block->write(foregroundData.data(), testData.offset, testData.count);
 
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
@@ -36,7 +36,7 @@ public:
   }
 
   void TestOverwriteAndRead() {
-    auto block = blockStore->create(blockstore::Data(testData.blocksize));
+    auto block = blockStore->create(cpputils::Data(testData.blocksize));
     block->write(backgroundData.data(), 0, testData.blocksize);
     block->write(foregroundData.data(), testData.offset, testData.count);
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
@@ -46,30 +46,30 @@ public:
 private:
   std::unique_ptr<blockstore::BlockStore> blockStore;
   DataRange testData;
-  blockstore::Data foregroundData;
-  blockstore::Data backgroundData;
+  cpputils::Data foregroundData;
+  cpputils::Data backgroundData;
 
-  void EXPECT_DATA_EQ(const blockstore::Data &expected, const blockstore::Data &actual) {
+  void EXPECT_DATA_EQ(const cpputils::Data &expected, const cpputils::Data &actual) {
     EXPECT_EQ(expected.size(), actual.size());
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
   }
 
-  blockstore::Key CreateBlockWriteToItAndReturnKey(const blockstore::Data &to_write) {
-    auto newblock = blockStore->create(blockstore::Data(testData.blocksize).FillWithZeroes());
+  blockstore::Key CreateBlockWriteToItAndReturnKey(const cpputils::Data &to_write) {
+    auto newblock = blockStore->create(cpputils::Data(testData.blocksize).FillWithZeroes());
 
     newblock->write(to_write.data(), testData.offset, testData.count);
     return newblock->key();
   }
 
-  void EXPECT_DATA_READS_AS(const blockstore::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
-    blockstore::Data read(count);
+  void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
+    cpputils::Data read(count);
     std::memcpy(read.data(), (uint8_t*)block.data() + offset, count);
     EXPECT_DATA_EQ(expected, read);
   }
 
-  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const blockstore::Data &expected, const blockstore::Block &block, off_t start, size_t count) {
-    blockstore::Data begin(start);
-    blockstore::Data end(testData.blocksize - count - start);
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const cpputils::Data &expected, const blockstore::Block &block, off_t start, size_t count) {
+    cpputils::Data begin(start);
+    cpputils::Data end(testData.blocksize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
     std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
@@ -79,7 +79,7 @@ private:
   }
 
   void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const blockstore::Block &block, off_t start, size_t count) {
-    blockstore::Data ZEROES(testData.blocksize);
+    cpputils::Data ZEROES(testData.blocksize);
     ZEROES.FillWithZeroes();
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, block, start, count);
   }

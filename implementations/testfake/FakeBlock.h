@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 
 #include "../../interface/Block.h"
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 
 #include "messmer/cpp-utils/macros.h"
 
@@ -13,7 +13,7 @@ class FakeBlockStore;
 
 class FakeBlock: public Block {
 public:
-  FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<Data> data, bool dirty);
+  FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<cpputils::Data> data, bool dirty);
   virtual ~FakeBlock();
 
   const void *data() const override;
@@ -25,7 +25,7 @@ public:
 
 private:
   FakeBlockStore *_store;
-  std::shared_ptr<Data> _data;
+  std::shared_ptr<cpputils::Data> _data;
   bool _dataChanged;
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlock);

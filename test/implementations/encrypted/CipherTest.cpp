@@ -3,13 +3,14 @@
 #include "../../../implementations/encrypted/ciphers/AES256_GCM.h"
 #include "../../../implementations/encrypted/ciphers/Cipher.h"
 
-#include "../../testutils/DataBlockFixture.h"
-#include "../../../utils/Data.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/Data.h>
 
  #include <boost/optional/optional_io.hpp>
 
 using namespace blockstore::encrypted;
-using blockstore::Data;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 
 template<class Cipher>
 class CipherTest: public ::testing::Test {

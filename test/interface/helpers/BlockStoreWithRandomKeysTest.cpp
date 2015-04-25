@@ -1,7 +1,7 @@
 #include "../../../interface/helpers/BlockStoreWithRandomKeys.h"
 #include "google/gtest/gtest.h"
 #include "google/gmock/gmock.h"
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 
 using ::testing::Test;
 using ::testing::_;
@@ -13,6 +13,8 @@ using ::testing::ByRef;
 using std::string;
 using std::unique_ptr;
 using std::make_unique;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 
 using namespace blockstore;
 

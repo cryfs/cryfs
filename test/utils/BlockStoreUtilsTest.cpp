@@ -1,5 +1,5 @@
 #include "../../implementations/testfake/FakeBlockStore.h"
-#include "../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataBlockFixture.h>
 #include "../../utils/BlockStoreUtils.h"
 #include "google/gtest/gtest.h"
 
@@ -11,6 +11,8 @@ using ::testing::Values;
 
 using std::make_unique;
 using std::unique_ptr;
+using cpputils::Data;
+using cpputils::DataBlockFixture;
 
 using namespace blockstore;
 using namespace blockstore::utils;

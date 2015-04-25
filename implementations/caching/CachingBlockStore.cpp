@@ -9,6 +9,7 @@
 using std::unique_ptr;
 using std::make_unique;
 using cpputils::dynamic_pointer_move;
+using cpputils::Data;
 
 namespace blockstore {
 namespace caching {
