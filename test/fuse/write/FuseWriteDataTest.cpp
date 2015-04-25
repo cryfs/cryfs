@@ -1,5 +1,6 @@
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "testutils/FuseWriteTest.h"
+#include "../../testutils/InMemoryFile.h"
 
 #include "../../../fuse/FuseErrnoException.h"
 
@@ -21,8 +22,8 @@ using std::get;
 using std::min;
 using std::unique_ptr;
 using std::make_unique;
-using cpputils::DataBlockFixture;
-using cpputils::DataBlockFixtureWriteable;
+using cpputils::Data;
+using cpputils::DataFixture;
 
 using namespace fspp::fuse;
 
@@ -45,13 +46,11 @@ struct TestData {
 // memory region and check methods to check for data equality of a region.
 class FuseWriteDataTest: public FuseWriteTest, public WithParamInterface<tuple<size_t, off_t, size_t>> {
 public:
-  unique_ptr<DataBlockFixtureWriteable> testFile;
+  std::unique_ptr<WriteableInMemoryFile> testFile;
   TestData testData;
 
-  FuseWriteDataTest() {
-    testData = GetParam();
-    testFile = make_unique<DataBlockFixtureWriteable>(testData.fileSize(), 1);
-
+  FuseWriteDataTest(): testFile(nullptr), testData(GetParam()) {
+    testFile = make_unique<WriteableInMemoryFile>(DataFixture::generate(testData.fileSize(), 1));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
     EXPECT_CALL(fsimpl, write(0, _, _, _))
@@ -67,14 +66,14 @@ INSTANTIATE_TEST_CASE_P(FuseWriteDataTest, FuseWriteDataTest, Combine(Values(0,1
 
 
 TEST_P(FuseWriteDataTest, DataWasCorrectlyWritten) {
-  DataBlockFixture randomWriteData(testData.count, 2);
+  Data randomWriteData = DataFixture::generate(testData.count, 2);
   WriteFile(FILENAME, randomWriteData.data(), testData.count, testData.offset);
 
-  EXPECT_TRUE(testFile->fileContentEqual(randomWriteData.data(), testData.count, testData.offset));
+  EXPECT_TRUE(testFile->fileContentEquals(randomWriteData, testData.offset));
 }
 
 TEST_P(FuseWriteDataTest, RestOfFileIsUnchanged) {
-  DataBlockFixture randomWriteData(testData.count, 2);
+  Data randomWriteData = DataFixture::generate(testData.count, 2);
   WriteFile(FILENAME, randomWriteData.data(), testData.count, testData.offset);
 
   EXPECT_TRUE(testFile->sizeUnchanged());

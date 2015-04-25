@@ -1,4 +1,6 @@
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
+#include <messmer/cpp-utils/data/Data.h>
+#include "../../testutils/InMemoryFile.h"
 #include "testutils/FuseReadTest.h"
 
 #include "../../../fuse/FuseErrnoException.h"
@@ -21,7 +23,8 @@ using std::get;
 using std::min;
 using std::unique_ptr;
 using std::make_unique;
-using cpputils::DataBlockFixture;
+using cpputils::Data;
+using cpputils::DataFixture;
 
 using namespace fspp::fuse;
 
@@ -45,20 +48,18 @@ struct TestData {
 // memory region and check methods to check for data equality of a region.
 class FuseReadReturnedDataTest: public FuseReadTest, public WithParamInterface<tuple<size_t, off_t, size_t>> {
 public:
-  unique_ptr<DataBlockFixture> testFile;
+  std::unique_ptr<InMemoryFile> testFile;
   TestData testData;
 
-  FuseReadReturnedDataTest() {
-    testData = GetParam();
-    testFile = make_unique<DataBlockFixture>(testData.fileSize());
-
+  FuseReadReturnedDataTest(): testFile(nullptr), testData(GetParam()) {
+    testFile = make_unique<InMemoryFile>(DataFixture::generate(testData.fileSize()));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
     EXPECT_CALL(fsimpl, read(0, _, _, _))
       .WillRepeatedly(ReadFromFile);
   }
 
-  // This read() mock implementation reads from the stored virtual file.
+  // This read() mock implementation reads from the stored virtual file (testFile).
   Action<int(int, void*, size_t, off_t)> ReadFromFile = Invoke([this](int, void *buf, size_t count, off_t offset) {
     return testFile->read(buf, count, offset);
   });
@@ -67,8 +68,7 @@ INSTANTIATE_TEST_CASE_P(FuseReadReturnedDataTest, FuseReadReturnedDataTest, Comb
 
 
 TEST_P(FuseReadReturnedDataTest, ReturnedDataRangeIsCorrect) {
-  char *buf = new char[testData.count];
-  ReadFile(FILENAME, buf, testData.count, testData.offset);
-  EXPECT_TRUE(testFile->fileContentEqual(buf, testData.count, testData.offset));
-  delete[] buf;
+  Data buf(testData.count);
+  ReadFile(FILENAME, buf.data(), testData.count, testData.offset);
+  EXPECT_TRUE(testFile->fileContentEquals(buf, testData.offset));
 }

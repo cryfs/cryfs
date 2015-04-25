@@ -1,5 +1,6 @@
-#include <messmer/cpp-utils/data/DataBlockFixture.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "testutils/FuseWriteTest.h"
+#include "../../testutils/InMemoryFile.h"
 
 #include "../../../fuse/FuseErrnoException.h"
 
@@ -11,8 +12,8 @@ using ::testing::Invoke;
 using ::testing::Action;
 
 using std::min;
-using cpputils::DataBlockFixture;
-using cpputils::DataBlockFixtureWriteable;
+using cpputils::DataFixture;
+using cpputils::Data;
 
 using namespace fspp::fuse;
 
@@ -22,11 +23,11 @@ public:
   size_t WRITESIZE;
   size_t OFFSET;
 
-  DataBlockFixtureWriteable testFile;
-  DataBlockFixture writeData;
+  WriteableInMemoryFile testFile;
+  Data writeData;
 
   FuseWriteOverflowTest(size_t filesize, size_t writesize, size_t offset)
-  : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(FILESIZE), writeData(WRITESIZE) {
+  : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(DataFixture::generate(FILESIZE)), writeData(DataFixture::generate(WRITESIZE)) {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
     EXPECT_CALL(fsimpl, write(0, _, _, _)).WillRepeatedly(WriteToFile);
@@ -48,7 +49,7 @@ TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteMoreThanFileSizeFromBeginning
   WriteFile(FILENAME, writeData.data(), WRITESIZE, 0);
 
   EXPECT_EQ(WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.fileContentEqual(writeData.data(), WRITESIZE, 0));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, 0));
 }
 
 TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteMoreThanFileSizeFromMiddle) {
@@ -56,7 +57,7 @@ TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteMoreThanFileSizeFromMiddle) {
 
   EXPECT_EQ(OFFSET + WRITESIZE, testFile.size());
   EXPECT_TRUE(testFile.regionUnchanged(0, OFFSET));
-  EXPECT_TRUE(testFile.fileContentEqual(writeData.data(), WRITESIZE, OFFSET));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, OFFSET));
 }
 
 TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteAfterFileEnd) {
@@ -64,7 +65,7 @@ TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteAfterFileEnd) {
 
   EXPECT_EQ(FILESIZE + OFFSET + WRITESIZE, testFile.size());
   EXPECT_TRUE(testFile.regionUnchanged(0, FILESIZE));
-  EXPECT_TRUE(testFile.fileContentEqual(writeData.data(), WRITESIZE, FILESIZE + OFFSET));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, FILESIZE + OFFSET));
 }
 
 class FuseWriteOverflowTestWithEmptyFile: public FuseWriteOverflowTest {
@@ -76,12 +77,12 @@ TEST_F(FuseWriteOverflowTestWithEmptyFile, WriteToBeginOfEmptyFile) {
   WriteFile(FILENAME, writeData.data(), WRITESIZE, 0);
 
   EXPECT_EQ(WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.fileContentEqual(writeData.data(), WRITESIZE, 0));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, 0));
 }
 
 TEST_F(FuseWriteOverflowTestWithEmptyFile, WriteAfterFileEnd) {
   WriteFile(FILENAME, writeData.data(), WRITESIZE, OFFSET);
 
   EXPECT_EQ(OFFSET + WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.fileContentEqual(writeData.data(), WRITESIZE, OFFSET));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, OFFSET));
 }
