@@ -135,3 +135,5 @@ TEST_F(QueueMapTest, Size_AfterPushingOnePoppingOnePerKeyPushingSame) {
 //TODO Popping from empty
 //TODO Popping invalid key
 //TODO Test that in all cases, destructors of Value are called correctly in QueueMap when [a] pop() [b] pop(key) [c] ~QueueMap()
+//TODO Test that pushing and popping a copy-and-move-constructible object only called 1 copy constructor
+//TODO Test that pushing and popping doesn't invalidate objects (e.g, calls too many destructors)
