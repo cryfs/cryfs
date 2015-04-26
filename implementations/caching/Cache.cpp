@@ -27,7 +27,7 @@ Cache::~Cache() {
 unique_ptr<Block> Cache::pop(const Key &key) {
   lock_guard<mutex> lock(_mutex);
   auto found = _cachedBlocks.pop(key);
-  if (found.get() == nullptr) {
+  if (!found) {
     return nullptr;
   }
   auto block = found->releaseBlock();
@@ -42,7 +42,7 @@ void Cache::push(unique_ptr<Block> block) {
     assert(_cachedBlocks.size() == MAX_ENTRIES-1);
   }
   Key key = block->key();
-  _cachedBlocks.push(key, make_unique<CacheEntry>(std::move(block)));
+  _cachedBlocks.push(key, std::move(block));
 }
 
 void Cache::_popOldEntries() {

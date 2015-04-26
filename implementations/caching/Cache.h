@@ -31,7 +31,6 @@ public:
 private:
   void _popOldEntries();
 
-
   mutable std::mutex _mutex;
   QueueMap<Key, CacheEntry> _cachedBlocks;
   std::unique_ptr<PeriodicTask> _timeoutFlusher;

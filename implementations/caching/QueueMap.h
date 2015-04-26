@@ -5,6 +5,8 @@
 #include <memory>
 #include <unordered_map>
 #include <cassert>
+#include <boost/optional.hpp>
+#include <messmer/cpp-utils/macros.h>
 
 namespace blockstore {
 namespace caching {
@@ -14,35 +16,43 @@ namespace caching {
 template<class Key, class Value>
 class QueueMap {
 public:
-  QueueMap(): _entries(), _sentinel(nullptr, nullptr, &_sentinel, &_sentinel) {
+  QueueMap(): _entries(), _sentinel(&_sentinel, &_sentinel) {
   }
-  virtual ~QueueMap() {}
-
-  void push(const Key &key, std::unique_ptr<Value> value) {
-    auto newEntry = std::make_unique<Entry>(&key, std::move(value), _sentinel.prev, &_sentinel);
-    _sentinel.prev->next = newEntry.get();
-    _sentinel.prev = newEntry.get();
-    auto insertResult = _entries.emplace(key, std::move(newEntry));
-    assert(insertResult.second == true);
+  virtual ~QueueMap() {
+    for (auto &entry : _entries) {
+      entry.second.release();
+    }
   }
 
-  std::unique_ptr<Value> pop(const Key &key) {
+  void push(const Key &key, Value value) {
+    auto newEntry = _entries.emplace(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(_sentinel.prev, &_sentinel));
+    assert(newEntry.second == true);
+    newEntry.first->second.init(&newEntry.first->first, std::move(value));
+    //The following is ok, because std::unordered_map never invalidates pointers to its entries
+    _sentinel.prev->next = &newEntry.first->second;
+    _sentinel.prev = &newEntry.first->second;
+  }
+
+  boost::optional<Value> pop(const Key &key) {
     auto found = _entries.find(key);
     if (found == _entries.end()) {
-      return nullptr;
+      return boost::none;
     }
-    _removeFromQueue(found->second.get());
-    auto value = std::move(found->second->value);
+    _removeFromQueue(found->second);
+    auto value = found->second.release();
     _entries.erase(found);
-    return value;
+    return std::move(value);
   }
 
-  std::unique_ptr<Value> pop() {
+  boost::optional<Value> pop() {
+    if(_sentinel.next == &_sentinel) {
+      return boost::none;
+    }
     return pop(*_sentinel.next->key);
   }
 
   const Value &peek() {
-	return *_sentinel.next->value;
+    return _sentinel.next->value();
   }
 
   uint32_t size() {
@@ -50,26 +60,39 @@ public:
   }
 
 private:
-  struct Entry {
-    Entry(const Key *key_, std::unique_ptr<Value> value_, Entry *prev_, Entry *next_): key(nullptr), value(std::move(value_)), prev(prev_), next(next_) {
-      if (key_ != nullptr) {
-        key = std::make_unique<Key>(*key_);
-      }
+  class Entry {
+  public:
+    Entry(Entry *prev_, Entry *next_): prev(prev_), next(next_), key(nullptr), _value() {
     }
-    std::unique_ptr<Key> key;
-    std::unique_ptr<Value> value;
+    void init(const Key *key_, Value value_) {
+      key = key_;
+      new(_value) Value(std::move(value_));
+    }
+    Value release() {
+      Value value = std::move(*reinterpret_cast<Value*>(_value));
+      reinterpret_cast<Value*>(_value)->~Value();
+      return value;
+    }
+    const Value &value() {
+      return *reinterpret_cast<Value*>(_value);
+    }
     Entry *prev;
     Entry *next;
+    const Key *key;
+  private:
+    alignas(Value) char _value[sizeof(Value)];
+    DISALLOW_COPY_AND_ASSIGN(Entry);
   };
 
-  void _removeFromQueue(Entry *entry) {
-    entry->prev->next = entry->next;
-    entry->next->prev = entry->prev;
+  void _removeFromQueue(const Entry &entry) {
+    entry.prev->next = entry.next;
+    entry.next->prev = entry.prev;
   }
 
-  //TODO Double indirection unique_ptr<Entry> and Entry has unique_ptr<Value>. Necessary?
-  std::unordered_map<Key, std::unique_ptr<Entry>> _entries;
+  std::unordered_map<Key, Entry> _entries;
   Entry _sentinel;
+
+  DISALLOW_COPY_AND_ASSIGN(QueueMap);
 };
 
 }
