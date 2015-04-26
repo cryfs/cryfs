@@ -72,10 +72,14 @@ std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryDecrypt(std::
   boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data(), baseBlock->size(), encKey);
   if(!plaintextWithHeader) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
+    //TODO Think about logging
+    std::cerr << "Decrypting block " << baseBlock->key() << " failed. Was the block modified by an attacker?" << std::endl;
     return nullptr;
   }
   if(!_keyHeaderIsCorrect(baseBlock->key(), *plaintextWithHeader)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
+    //TODO Think about logging
+    std::cerr << "Decrypting block " << baseBlock->key() << " failed due to invalid block key. Was the block modified by an attacker?" << std::endl;
     return nullptr;
   }
   return std::make_unique<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));
