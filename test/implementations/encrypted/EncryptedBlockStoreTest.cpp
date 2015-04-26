@@ -22,4 +22,7 @@ public:
 
 INSTANTIATE_TYPED_TEST_CASE_P(Encrypted, BlockStoreTest, EncryptedBlockStoreTestFixture);
 
-//TODO Add specific tests, for example loading it with a different key doesn't work
+//TODO Add specific tests, for example
+// - loading it with a different encKey doesn't work
+// - loading it with a different blockstore::Key will fail (because it stores its key in a header)
+// - when using an authenticated cipher, loading a modified block will fail
