@@ -73,7 +73,6 @@ void Data::StoreToFile(const bf::path &filepath) const {
 boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   ifstream file(filepath.c_str(), ios::binary);
   if (!file.good()) {
-    //TODO Test this path
     return boost::none;
   }
   size_t size = _getStreamSize(file);
