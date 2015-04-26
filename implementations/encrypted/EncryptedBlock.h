@@ -8,6 +8,7 @@
 
 #include "messmer/cpp-utils/macros.h"
 #include <memory>
+#include <iostream>
 #include <boost/optional.hpp>
 #include "ciphers/Cipher.h"
 
@@ -73,13 +74,13 @@ std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryDecrypt(std::
   if(!plaintextWithHeader) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
     //TODO Think about logging
-    std::cerr << "Decrypting block " << baseBlock->key() << " failed. Was the block modified by an attacker?" << std::endl;
+    std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?" << std::endl;
     return nullptr;
   }
   if(!_keyHeaderIsCorrect(baseBlock->key(), *plaintextWithHeader)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
     //TODO Think about logging
-    std::cerr << "Decrypting block " << baseBlock->key() << " failed due to invalid block key. Was the block modified by an attacker?" << std::endl;
+    std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed due to invalid block key. Was the block modified by an attacker?" << std::endl;
     return nullptr;
   }
   return std::make_unique<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));
