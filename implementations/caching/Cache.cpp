@@ -47,7 +47,7 @@ void Cache::push(unique_ptr<Block> block) {
 
 void Cache::_popOldEntries() {
   lock_guard<mutex> lock(_mutex);
-  while(_cachedBlocks.size() > 0 && _cachedBlocks.peek().ageSeconds() > PURGE_LIFETIME_SEC) {
+  while(_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
 	_cachedBlocks.pop();
   }
 }
