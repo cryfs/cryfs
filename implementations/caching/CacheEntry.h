@@ -26,18 +26,9 @@ public:
     return std::move(_block);
   }
 
-  void setNextEntry(const CacheEntry *entry) {
-    _nextEntry = entry;
-  }
-
-  const CacheEntry *nextEntry() {
-    return _nextEntry;
-  }
-
 private:
   boost::posix_time::ptime _lastAccess;
   std::unique_ptr<Block> _block;
-  const CacheEntry *_nextEntry;
 
   static boost::posix_time::ptime currentTime() {
 	return boost::posix_time::microsec_clock::local_time();
