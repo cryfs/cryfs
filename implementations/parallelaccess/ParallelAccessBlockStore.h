@@ -12,7 +12,7 @@ namespace parallelaccess {
 //TODO Check that this blockstore allows parallel destructing of blocks (otherwise we won't encrypt blocks in parallel)
 class ParallelAccessBlockStore: public BlockStore {
 public:
-  ParallelAccessBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
+  explicit ParallelAccessBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
 
   Key createKey() override;
   std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;

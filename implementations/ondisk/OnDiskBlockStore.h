@@ -12,7 +12,7 @@ namespace ondisk {
 
 class OnDiskBlockStore: public BlockStoreWithRandomKeys {
 public:
-  OnDiskBlockStore(const boost::filesystem::path &rootdir);
+  explicit OnDiskBlockStore(const boost::filesystem::path &rootdir);
 
   std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;

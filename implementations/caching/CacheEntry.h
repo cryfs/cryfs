@@ -13,7 +13,7 @@ namespace caching {
 
 class CacheEntry {
 public:
-  CacheEntry(std::unique_ptr<Block> block): _lastAccess(currentTime()), _block(std::move(block)) {
+  explicit CacheEntry(std::unique_ptr<Block> block): _lastAccess(currentTime()), _block(std::move(block)) {
   }
 
   CacheEntry(CacheEntry &&) = default;

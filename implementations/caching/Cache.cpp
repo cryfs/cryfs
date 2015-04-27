@@ -42,7 +42,7 @@ void Cache::push(unique_ptr<Block> block) {
     assert(_cachedBlocks.size() == MAX_ENTRIES-1);
   }
   Key key = block->key();
-  _cachedBlocks.push(key, std::move(block));
+  _cachedBlocks.push(key, CacheEntry(std::move(block)));
 }
 
 void Cache::_popOldEntries() {

@@ -9,9 +9,10 @@
 namespace blockstore {
 namespace ondisk {
 
+//TODO We probably don't want an exception for that
 class FileAlreadyExistsException: public std::runtime_error {
 public:
-  FileAlreadyExistsException(const boost::filesystem::path &filepath);
+  explicit FileAlreadyExistsException(const boost::filesystem::path &filepath);
   virtual ~FileAlreadyExistsException();
 };
 
