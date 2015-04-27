@@ -5,6 +5,8 @@
 #include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include "../src/CryDevice.h"
 #include "../src/CryDir.h"
+#include "../src/CryFile.h"
+#include "../src/CryOpenFile.h"
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -28,8 +30,8 @@ public:
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
     CryDevice dev(make_unique<CryConfig>(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
-    dev.Load(bf::path("/"));
   }
   CryDevice dev(make_unique<CryConfig>(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
-  dev.Load(bf::path("/"));
+  auto root = dev.Load(bf::path("/"));
+  dynamic_pointer_move<CryDir>(root)->children();
 }

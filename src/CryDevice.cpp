@@ -56,6 +56,8 @@ CryDevice::Cipher::EncryptionKey CryDevice::GetOrCreateEncryptionKey(CryConfig *
     config->SetEncryptionKey(new_key.ToString());
     return new_key;
   }
+
+  return Cipher::EncryptionKey::FromString(encryption_key);
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
