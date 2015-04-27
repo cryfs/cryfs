@@ -10,7 +10,7 @@ namespace cryfs {
 
 class CryConfig {
 public:
-  CryConfig(const boost::filesystem::path &configfile);
+  explicit CryConfig(const boost::filesystem::path &configfile);
   virtual ~CryConfig();
 
   const std::string &RootBlob() const;

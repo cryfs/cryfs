@@ -11,7 +11,7 @@ class FileBlob;
 
 class CryOpenFile: public fspp::OpenFile {
 public:
-  CryOpenFile(std::unique_ptr<FileBlob> fileBlob);
+  explicit CryOpenFile(std::unique_ptr<FileBlob> fileBlob);
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
