@@ -25,7 +25,9 @@ public:
 
   void push(const Key &key, Value value) {
     auto newEntry = _entries.emplace(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(_sentinel.prev, &_sentinel));
-    assert(newEntry.second == true);
+    if(newEntry.second != true) {
+      throw std::logic_error("There is already an element with this key");
+    }
     newEntry.first->second.init(&newEntry.first->first, std::move(value));
     //The following is ok, because std::unordered_map never invalidates pointers to its entries
     _sentinel.prev->next = &newEntry.first->second;

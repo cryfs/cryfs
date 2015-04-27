@@ -398,6 +398,34 @@ TEST_F(QueueMapValueTest, PushingSomePoppingLastPerKey) {
   EXPECT_EQ(boost::none, pop());
 }
 
+//This test forces the underlying datastructure (std::map or std::unordered_map) to grow and reallocate memory.
+//So it tests, that QueueMap still works after reallocating memory.
+TEST_F(QueueMapValueTest, ManyValues) {
+  //Push 1 million entries
+  for (int i = 0; i < 1000000; ++i) {
+    push(i, 2*i);
+  }
+  //pop every other one by key
+  for (int i = 0; i < 1000000; i += 2) {
+    EXPECT_EQ(2*i, pop(i).value());
+  }
+  //pop the rest in queue order
+  for (int i = 1; i < 1000000; i += 2) {
+    EXPECT_EQ(2*i, peek().value());
+    EXPECT_EQ(2*i, pop().value());
+  }
+  EXPECT_EQ(0, size());
+  EXPECT_EQ(boost::none, pop());
+  EXPECT_EQ(boost::none, peek());
+}
+
+TEST_F(QueueMapValueTest, PushAlreadyExistingValue) {
+  push(2, 3);
+  EXPECT_ANY_THROW(
+    push(2, 4);
+  );
+}
+
 class QueueMapPeekTest: public QueueMapTest {};
 
 TEST_F(QueueMapPeekTest, PoppingFromEmpty) {
@@ -483,5 +511,3 @@ TEST_F(QueueMapMoveConstructorTest, PushingAndPoppingPerKey_CopyIntoMap) {
   CopyableValueType val = map->pop(MinimalKeyType::create(0)).value();
   EXPECT_EQ(1, CopyableValueType::numCopyConstructorCalled);
 }
-
-//TODO Pushing the same key twice
