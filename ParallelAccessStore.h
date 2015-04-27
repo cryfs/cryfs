@@ -20,7 +20,7 @@ namespace parallelaccessstore {
 template<class Resource, class ResourceRef, class Key>
 class ParallelAccessStore {
 public:
-  ParallelAccessStore(std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> baseStore);
+  explicit ParallelAccessStore(std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> baseStore);
 
   class ResourceRefBase {
   public:
