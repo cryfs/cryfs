@@ -1,6 +1,6 @@
 #include <google/gtest/gtest.h>
 
-#include "../../../implementations/caching/PeriodicTask.h"
+#include "../../../../implementations/caching/cache/PeriodicTask.h"
 
 #include <mutex>
 #include <condition_variable>

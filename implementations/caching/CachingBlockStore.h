@@ -2,7 +2,7 @@
 #ifndef BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHINGBLOCKSTORE_H_
 #define BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHINGBLOCKSTORE_H_
 
-#include "Cache.h"
+#include "cache/Cache.h"
 #include "../../interface/BlockStore.h"
 
 namespace blockstore {
@@ -26,7 +26,7 @@ public:
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  Cache _cache;
+  Cache<Key, std::unique_ptr<Block>> _cache;
   uint32_t _numNewBlocks;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);

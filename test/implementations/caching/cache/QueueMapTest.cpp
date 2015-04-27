@@ -1,6 +1,6 @@
 #include <google/gtest/gtest.h>
 #include <messmer/cpp-utils/macros.h>
-#include "../../../implementations/caching/QueueMap.h"
+#include "../../../../implementations/caching/cache/QueueMap.h"
 #include <memory>
 #include <boost/optional/optional_io.hpp>
 
