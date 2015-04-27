@@ -47,7 +47,8 @@ boost::optional<Data> AES256_GCM::decrypt(const byte *ciphertext, unsigned int c
   try {
     ArraySource((byte*)ciphertextData, ciphertextSize - IV_SIZE, true,
       new AuthenticatedDecryptionFilter(decryption,
-        new ArraySink((byte*)plaintext.data(), plaintext.size())
+        new ArraySink((byte*)plaintext.data(), plaintext.size()),
+        AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE
       )
     );
     return std::move(plaintext);

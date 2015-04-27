@@ -52,12 +52,7 @@ std::unique_ptr<Block> EncryptedBlockStore<Cipher>::load(const Key &key) {
   if (block.get() == nullptr) {
     return nullptr;
   }
-  auto encBlock = EncryptedBlock<Cipher>::TryDecrypt(std::move(block), _encKey);
-  if (encBlock.get() == nullptr) {
-    //TODO Think about how to do logging
-
-  }
-  return std::move(encBlock);
+  return EncryptedBlock<Cipher>::TryDecrypt(std::move(block), _encKey);
 }
 
 template<class Cipher>
