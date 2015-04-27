@@ -11,8 +11,7 @@
 namespace blockstore {
 namespace caching {
 
-//TODO Test
-//TODO Move to utils
+// A class that is a queue and a map at the same time. We could also see it as an addressable queue.
 template<class Key, class Value>
 class QueueMap {
 public:
