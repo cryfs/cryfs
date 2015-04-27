@@ -10,3 +10,5 @@ class CacheTest: public Test {
 public:
   Cache<int, int> cache;
 };
+
+//TODO Write test cases

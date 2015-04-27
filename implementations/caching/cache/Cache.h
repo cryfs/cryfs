@@ -12,8 +12,6 @@
 namespace blockstore {
 namespace caching {
 
-//TODO Test
-
 template<class Key, class Value>
 class Cache {
 public:
