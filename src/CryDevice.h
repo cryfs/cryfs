@@ -15,8 +15,6 @@
 namespace cryfs {
 class DirBlob;
 
-namespace bf = boost::filesystem;
-
 class CryDevice: public fspp::Device {
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
@@ -32,9 +30,9 @@ public:
   std::unique_ptr<blobstore::Blob> LoadBlob(const blockstore::Key &key);
   void RemoveBlob(const blockstore::Key &key);
 
-  std::unique_ptr<fspp::Node> Load(const bf::path &path) override;
+  std::unique_ptr<fspp::Node> Load(const boost::filesystem::path &path) override;
 
-  std::unique_ptr<DirBlob> LoadDirBlob(const bf::path &path);
+  std::unique_ptr<DirBlob> LoadDirBlob(const boost::filesystem::path &path);
 
 private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);

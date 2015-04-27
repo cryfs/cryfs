@@ -28,6 +28,8 @@ using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
 
+namespace bf = boost::filesystem;
+
 namespace cryfs {
 
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
