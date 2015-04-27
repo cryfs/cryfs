@@ -17,7 +17,7 @@ class Filesystem;
 
 class Fuse {
 public:
-  Fuse(Filesystem *fs);
+  explicit Fuse(Filesystem *fs);
 	virtual ~Fuse();
 
 	void run(int argc, char **argv);

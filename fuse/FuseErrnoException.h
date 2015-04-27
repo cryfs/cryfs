@@ -10,7 +10,7 @@ namespace fuse{
 
 class FuseErrnoException: public std::runtime_error {
 public:
-  FuseErrnoException(int errno_);
+  explicit FuseErrnoException(int errno_);
   virtual ~FuseErrnoException();
 
   int getErrno() const;

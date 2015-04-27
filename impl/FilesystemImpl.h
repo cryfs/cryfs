@@ -15,7 +15,7 @@ class OpenFile;
 
 class FilesystemImpl: public fuse::Filesystem {
 public:
-  FilesystemImpl(Device *device);
+  explicit FilesystemImpl(Device *device);
 	virtual ~FilesystemImpl();
 
 	int openFile(const boost::filesystem::path &path, int flags) override;
