@@ -1,7 +1,6 @@
 #include <cstring>
 #include <fstream>
 #include <boost/filesystem.hpp>
-#include "FileAlreadyExistsException.h"
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 #include "../../utils/FileDoesntExistException.h"
