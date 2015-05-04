@@ -17,7 +17,8 @@ install:
 before_build:
   - cmd: bii init -L
     # copy files and folders
-  - cmd: xcopy "%APPVEYOR_BUILD_FOLDER%" blocks\%block_user%\%block_name%\ /e
+  - cmd: dir
+  - cmd: echo xcopy "%APPVEYOR_BUILD_FOLDER%" blocks\%block_user%\%block_name%\ /e
   - cmd: bii configure -G "Visual Studio 12"
  
 build_script:
