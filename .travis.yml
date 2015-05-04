@@ -17,6 +17,7 @@ script:
 #The configure line is needed as a workaround for the following link, otherwise we wouldn't need "bii configure" at all because "bii build" calls it: http://forum.biicode.com/t/error-could-not-find-the-following-static-boost-libraries-boost-thread/374
 - bii cpp:configure || bii cpp:configure
 - bii cpp:build -- -j2
+- bii cpp:build --target messmer_cryfs_test_main -- -j2
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
   && chmod +x run_with_fuse.sh
   && ./run_with_fuse.sh "./bin/messmer_cryfs_test_main"
