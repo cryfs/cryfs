@@ -2,7 +2,7 @@ version: 0.9.{build}
 os: Visual Studio 2015 RC
  
 install:
-  - ps: wget https://s3.amazonaws.com/biibinaries/thirdparty/cmake-3.0.2-win32-x86.zip -OutFile cmake.zip
+  - ps: wget http://www.cmake.org/files/v3.2/cmake-3.2.2-win32-x86.zip -OutFile cmake.zip
   - cmd: echo "Unzipping cmake..."
   - cmd: 7z x cmake.zip -o"C:\Program Files (x86)\" -y > nul
   - cmd: set PATH=%PATH:CMake 2.8\bin=%;C:\Program Files (x86)\cmake-3.0.2-win32-x86\bin
@@ -20,7 +20,7 @@ before_build:
     # copy files and folders
   - cmd: dir
 #  - cmd: echo xcopy "%APPVEYOR_BUILD_FOLDER%" blocks\%block_user%\%block_name%\ /e
-  - cmd: bii configure -G "Visual Studio 12"
+  - cmd: bii configure -G "Visual Studio 14 2015"
  
 build_script:
   - cmd: bii build
