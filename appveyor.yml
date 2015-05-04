@@ -1,4 +1,5 @@
 version: 0.9.{build}
+os: Visual Studio 2015 RC
  
 install:
   - ps: wget https://s3.amazonaws.com/biibinaries/thirdparty/cmake-3.0.2-win32-x86.zip -OutFile cmake.zip
@@ -18,7 +19,7 @@ before_build:
   - cmd: bii init -L
     # copy files and folders
   - cmd: dir
-  - cmd: echo xcopy "%APPVEYOR_BUILD_FOLDER%" blocks\%block_user%\%block_name%\ /e
+#  - cmd: echo xcopy "%APPVEYOR_BUILD_FOLDER%" blocks\%block_user%\%block_name%\ /e
   - cmd: bii configure -G "Visual Studio 12"
  
 build_script:
