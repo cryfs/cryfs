@@ -21,6 +21,10 @@ Data AES256_CFB::encrypt(const byte *plaintext, unsigned int plaintextSize, cons
 }
 
 boost::optional<Data> AES256_CFB::decrypt(const byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
+  if (ciphertextSize < IV_SIZE) {
+    return boost::none;
+  }
+
   const byte *ciphertextIV = ciphertext;
   const byte *ciphertextData = ciphertext + IV_SIZE;
   auto decryption = CFB_Mode<AES>::Decryption((byte*)encKey.data(), encKey.BINARY_LENGTH, ciphertextIV);

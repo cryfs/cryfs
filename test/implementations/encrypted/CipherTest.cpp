@@ -1,7 +1,8 @@
 #include <google/gtest/gtest.h>
+#include "../../../implementations/encrypted/ciphers/Cipher.h"
 #include "../../../implementations/encrypted/ciphers/AES256_CFB.h"
 #include "../../../implementations/encrypted/ciphers/AES256_GCM.h"
-#include "../../../implementations/encrypted/ciphers/Cipher.h"
+#include "testutils/FakeAuthenticatedCipher.h"
 
 #include <messmer/cpp-utils/data/DataFixture.h>
 #include <messmer/cpp-utils/data/Data.h>
@@ -16,9 +17,9 @@ template<class Cipher>
 class CipherTest: public ::testing::Test {
 public:
   BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
-  typename Cipher::EncryptionKey encKey = createRandomKey();
+  typename Cipher::EncryptionKey encKey = createKeyFixture();
 
-  static typename Cipher::EncryptionKey createRandomKey(int seed = 0) {
+  static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
     Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
     return Cipher::EncryptionKey::FromBinary(data.data());
   }
@@ -38,6 +39,11 @@ public:
   void CheckEncryptedSize(const Data &plaintext) {
     Data ciphertext = Encrypt(plaintext);
     EXPECT_EQ(Cipher::ciphertextSize(plaintext.size()), ciphertext.size());
+  }
+
+  void ExpectDoesntDecrypt(const Data &ciphertext) {
+    auto decrypted = Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), this->encKey);
+    EXPECT_FALSE(decrypted);
   }
 
   Data Encrypt(const Data &plaintext) {
@@ -103,23 +109,38 @@ TYPED_TEST_P(CipherTest, EncryptedSize) {
   }
 }
 
+TYPED_TEST_P(CipherTest, TryDecryptDataThatIsTooSmall) {
+  Data tooSmallCiphertext(TypeParam::ciphertextSize(0) - 1);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
+TYPED_TEST_P(CipherTest, TryDecryptDataThatIsMuchTooSmall_0) {
+  static_assert(TypeParam::ciphertextSize(0) > 0, "If this fails, the test case doesn't make sense.");
+  Data tooSmallCiphertext(0);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
+TYPED_TEST_P(CipherTest, TryDecryptDataThatIsMuchTooSmall_1) {
+  static_assert(TypeParam::ciphertextSize(0) > 1, "If this fails, the test case doesn't make sense.");
+  Data tooSmallCiphertext(1);
+  this->ExpectDoesntDecrypt(tooSmallCiphertext);
+}
+
 REGISTER_TYPED_TEST_CASE_P(CipherTest,
     Size,
     EncryptThenDecrypt_Zeroes,
     EncryptThenDecrypt_Data,
     EncryptIsIndeterministic_Zeroes,
     EncryptIsIndeterministic_Data,
-    EncryptedSize
+    EncryptedSize,
+    TryDecryptDataThatIsTooSmall,
+    TryDecryptDataThatIsMuchTooSmall_0,
+    TryDecryptDataThatIsMuchTooSmall_1
 );
 
 template<class Cipher>
 class AuthenticatedCipherTest: public CipherTest<Cipher> {
 public:
-  void ExpectDoesntDecrypt(const Data &ciphertext) {
-    auto decrypted = Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), this->encKey);
-    EXPECT_FALSE(decrypted);
-  }
-
   Data zeroes1 = CipherTest<Cipher>::CreateZeroes(1);
   Data plaintext1 = CipherTest<Cipher>::CreateData(1);
   Data zeroes2 = CipherTest<Cipher>::CreateZeroes(100 * 1024);
@@ -184,23 +205,6 @@ TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptRandomData) {
   this->ExpectDoesntDecrypt(this->plaintext2);
 }
 
-TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsTooSmall) {
-  Data tooSmallCiphertext(TypeParam::ciphertextSize(0) - 1);
-  this->ExpectDoesntDecrypt(tooSmallCiphertext);
-}
-
-TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsMuchTooSmall_0) {
-  static_assert(TypeParam::ciphertextSize(0) > 0, "If this fails, the test case doesn't make sense.");
-  Data tooSmallCiphertext(0);
-  this->ExpectDoesntDecrypt(tooSmallCiphertext);
-}
-
-TYPED_TEST_P(AuthenticatedCipherTest, TryDecryptDataThatIsMuchTooSmall_1) {
-  static_assert(TypeParam::ciphertextSize(0) > 1, "If this fails, the test case doesn't make sense.");
-  Data tooSmallCiphertext(1);
-  this->ExpectDoesntDecrypt(tooSmallCiphertext);
-}
-
 REGISTER_TYPED_TEST_CASE_P(AuthenticatedCipherTest,
   ModifyFirstByte_Zeroes_Size1,
   ModifyFirstByte_Zeroes,
@@ -211,13 +215,12 @@ REGISTER_TYPED_TEST_CASE_P(AuthenticatedCipherTest,
   ModifyMiddleByte_Zeroes,
   ModifyMiddleByte_Data,
   TryDecryptZeroesData,
-  TryDecryptRandomData,
-  TryDecryptDataThatIsTooSmall,
-  TryDecryptDataThatIsMuchTooSmall_0,
-  TryDecryptDataThatIsMuchTooSmall_1
+  TryDecryptRandomData
 );
 
 
-INSTANTIATE_TYPED_TEST_CASE_P(AES256_CFB, CipherTest, AES256_CFB);
+INSTANTIATE_TYPED_TEST_CASE_P(Fake, CipherTest, FakeAuthenticatedCipher);
+INSTANTIATE_TYPED_TEST_CASE_P(Fake, AuthenticatedCipherTest, FakeAuthenticatedCipher);
+INSTANTIATE_TYPED_TEST_CASE_P(AES256_CFB, CipherTest, AES256_CFB); //CFB mode is not authenticated
 INSTANTIATE_TYPED_TEST_CASE_P(AES256_GCM, CipherTest, AES256_GCM);
 INSTANTIATE_TYPED_TEST_CASE_P(AES256_GCM, AuthenticatedCipherTest, AES256_GCM);
