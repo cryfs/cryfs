@@ -22,6 +22,9 @@ public:
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
 
+  //This function should only be used by test cases
+  void __setKey(const typename Cipher::EncryptionKey &encKey);
+
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
   typename Cipher::EncryptionKey _encKey;
@@ -64,6 +67,11 @@ void EncryptedBlockStore<Cipher>::remove(std::unique_ptr<Block> block) {
 template<class Cipher>
 uint64_t EncryptedBlockStore<Cipher>::numBlocks() const {
   return _baseBlockStore->numBlocks();
+}
+
+template<class Cipher>
+void EncryptedBlockStore<Cipher>::__setKey(const typename Cipher::EncryptionKey &encKey) {
+  _encKey = encKey;
 }
 
 }
