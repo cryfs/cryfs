@@ -16,6 +16,7 @@ class EncryptedBlockStore: public BlockStore {
 public:
   EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 
+  //TODO Are createKey() tests included in generic BlockStoreTest? If not, add it!
   Key createKey() override;
   std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
@@ -46,6 +47,7 @@ Key EncryptedBlockStore<Cipher>::createKey() {
 
 template<class Cipher>
 std::unique_ptr<Block> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, cpputils::Data data) {
+  //TODO Test that this returns nullptr when base blockstore returns nullptr  (for all pass-through-blockstores)
   return EncryptedBlock<Cipher>::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
 }
 
@@ -53,6 +55,7 @@ template<class Cipher>
 std::unique_ptr<Block> EncryptedBlockStore<Cipher>::load(const Key &key) {
   auto block = _baseBlockStore->load(key);
   if (block.get() == nullptr) {
+    //TODO Test this path (for all pass-through-blockstores)
     return nullptr;
   }
   return EncryptedBlock<Cipher>::TryDecrypt(std::move(block), _encKey);

@@ -16,6 +16,8 @@ namespace blockstore {
 namespace encrypted {
 template<class Cipher> class EncryptedBlockStore;
 
+//TODO Test EncryptedBlock
+
 template<class Cipher>
 class EncryptedBlock: public Block {
 public:
