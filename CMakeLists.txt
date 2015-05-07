@@ -7,6 +7,8 @@ ACTIVATE_CPP14()
 
 ADD_BOOST(filesystem system)
 
+ENABLE_STYLE_WARNINGS()
+
 # You can safely delete lines from here...
 
 ###############################################################################
