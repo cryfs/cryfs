@@ -45,7 +45,7 @@ public:
   }
 
   void EXPECT_TRAVERSE_ALL_CHILDREN_OF(const DataInnerNode &node, uint32_t firstLeafIndex) {
-    for (int i = 0; i < node.numChildren(); ++i) {
+    for (unsigned int i = 0; i < node.numChildren(); ++i) {
       EXPECT_TRAVERSE_LEAF(node.getChild(i)->key(), firstLeafIndex+i);
     }
   }
@@ -166,7 +166,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstChildOfThreelevelMinDataTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  for (int i = 0; i < 5; ++i) {
+  for (unsigned int i = 0; i < 5; ++i) {
     EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
   }
 
@@ -175,7 +175,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfFullTwolevelTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  for (int i = 5; i < 10; ++i) {
+  for (unsigned int i = 5; i < 10; ++i) {
     EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
   }
 
@@ -184,7 +184,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfFullTwolevelTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  for (int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
+  for (unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
   }
 
@@ -194,7 +194,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfFullTwolevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
   auto node = LoadInnerNode(root->getChild(0)->key());
-  for (int i = 0; i < 5; ++i) {
+  for (unsigned int i = 0; i < 5; ++i) {
     EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
   }
 
@@ -204,7 +204,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelMinDataTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
   auto node = LoadInnerNode(root->getChild(0)->key());
-  for (int i = 5; i < 10; ++i) {
+  for (unsigned int i = 5; i < 10; ++i) {
     EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
   }
 
@@ -214,7 +214,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfThreelevelMinDataTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
   auto node = LoadInnerNode(root->getChild(0)->key());
-  for (int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
+  for (unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
   }
   EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(1)->key())->getChild(0)->key(), nodeStore->layout().maxChildrenPerInnerNode());
@@ -248,12 +248,12 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddleLeafOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse all leaves in the first two children of the root
-  for(int i = 0; i < 2; ++i) {
+  for(unsigned int i = 0; i < 2; ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the third child of the root
   auto child = LoadInnerNode(root->getChild(2)->key());
-  for(int i = 0; i < 5; ++i) {
+  for(unsigned int i = 0; i < 5; ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
@@ -264,16 +264,16 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_OnlyFullC
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
   auto child = LoadInnerNode(root->getChild(1)->key());
-  for(int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
+  for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third and fourth child of the root
-  for(int i = 2; i < 4; ++i) {
+  for(unsigned int i = 2; i < 4; ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the fifth child of the root
   child = LoadInnerNode(root->getChild(4)->key());
-  for(int i = 0; i < 5; ++i) {
+  for(unsigned int i = 0; i < 5; ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 4 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
@@ -284,16 +284,16 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_AlsoLastN
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
   auto child = LoadInnerNode(root->getChild(1)->key());
-  for(int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
+  for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third, fourth and fifth child of the root
-  for(int i = 2; i < 5; ++i) {
+  for(unsigned int i = 2; i < 5; ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the sixth child of the root
   child = LoadInnerNode(root->getChild(5)->key());
-  for(int i = 0; i < 2; ++i) {
+  for(unsigned int i = 0; i < 2; ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
@@ -304,16 +304,16 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
   auto child = LoadInnerNode(root->getChild(1)->key());
-  for(int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
+  for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third, fourth and fifth child of the root
-  for(int i = 2; i < 5; ++i) {
+  for(unsigned int i = 2; i < 5; ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all of the leaves in the sixth child of the root
   child = LoadInnerNode(root->getChild(5)->key());
-  for(int i = 0; i < child->numChildren(); ++i) {
+  for(unsigned int i = 0; i < child->numChildren(); ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
@@ -323,12 +323,12 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse all leaves in the third, fourth and fifth child of the root
-  for(int i = 0; i < 5; ++i) {
+  for(unsigned int i = 0; i < 5; ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all of the leaves in the sixth child of the root
   auto child = LoadInnerNode(root->getChild(5)->key());
-  for(int i = 0; i < child->numChildren(); ++i) {
+  for(unsigned int i = 0; i < child->numChildren(); ++i) {
     EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
@@ -339,12 +339,12 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfFourLevelTree) {
   auto root = CreateFourLevel();
   //Traverse all leaves of the full threelevel tree in the first child
   auto firstChild = LoadInnerNode(root->getChild(0)->key());
-  for(int i = 0; i < firstChild->numChildren(); ++i) {
+  for(unsigned int i = 0; i < firstChild->numChildren(); ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the full threelevel tree in the second child
   auto secondChild = LoadInnerNode(root->getChild(1)->key());
-  for(int i = 0; i < secondChild->numChildren(); ++i) {
+  for(unsigned int i = 0; i < secondChild->numChildren(); ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->getChild(i)->key()), (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the non-full threelevel tree in the third child
@@ -360,21 +360,21 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfFourLevelTree) {
   //Traverse some leaves of the full threelevel tree in the first child
   auto firstChild = LoadInnerNode(root->getChild(0)->key());
   auto secondChildOfFirstChild = LoadInnerNode(firstChild->getChild(1)->key());
-  for(int i = 5; i < secondChildOfFirstChild->numChildren(); ++i) {
+  for(unsigned int i = 5; i < secondChildOfFirstChild->numChildren(); ++i) {
     EXPECT_TRAVERSE_LEAF(secondChildOfFirstChild->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode()+i);
   }
-  for(int i = 2; i < firstChild->numChildren(); ++i) {
+  for(unsigned int i = 2; i < firstChild->numChildren(); ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the full threelevel tree in the second child
   auto secondChild = LoadInnerNode(root->getChild(1)->key());
-  for(int i = 0; i < secondChild->numChildren(); ++i) {
+  for(unsigned int i = 0; i < secondChild->numChildren(); ++i) {
     EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->getChild(i)->key()), (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some leaves of the non-full threelevel tree in the third child
   auto thirdChild = LoadInnerNode(root->getChild(2)->key());
   auto firstChildOfThirdChild = LoadInnerNode(thirdChild->getChild(0)->key());
-  for(int i = 0; i < firstChildOfThirdChild->numChildren()-1; ++i) {
+  for(unsigned int i = 0; i < firstChildOfThirdChild->numChildren()-1; ++i) {
     EXPECT_TRAVERSE_LEAF(firstChildOfThirdChild->getChild(i)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode()+i);
   }
 

@@ -43,8 +43,8 @@ public:
     _blockStore(make_unique<FakeBlockStore>()),
     blockStore(_blockStore.get()),
     nodeStore(make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
-    randomData(nodeStore->layout().maxBytesPerLeaf()),
     ZEROES(nodeStore->layout().maxBytesPerLeaf()),
+    randomData(nodeStore->layout().maxBytesPerLeaf()),
     leaf(nodeStore->createNewLeafNode()) {
 
     ZEROES.FillWithZeroes();
