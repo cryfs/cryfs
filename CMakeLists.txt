@@ -9,6 +9,8 @@ ACTIVATE_CPP14()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
+ENABLE_STYLE_WARNINGS()
+
 # You can safely delete lines from here...
 
 ###############################################################################

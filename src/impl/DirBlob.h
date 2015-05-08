@@ -24,16 +24,19 @@ public:
       case fspp::Dir::EntryType::DIR:
         mode |= S_IFDIR;
         break;
+      case fspp::Dir::EntryType::SYMLINK:
+        mode |= S_IFLNK;
+        break;
       }
-      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR) || (type == fspp::Dir::EntryType::SYMLINK));
+      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR) || (S_ISLNK(mode) && type == fspp::Dir::EntryType::SYMLINK));
     }
 
     fspp::Dir::EntryType type;
     std::string name;
     blockstore::Key key;
+    mode_t mode;
     uid_t uid;
     gid_t gid;
-    mode_t mode;
   };
 
   static std::unique_ptr<DirBlob> InitializeEmptyDir(std::unique_ptr<blobstore::Blob> blob, CryDevice *device);
