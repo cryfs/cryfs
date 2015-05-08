@@ -3,6 +3,7 @@ INCLUDE(messmer/cmake/tools)
 ADD_BII_TARGETS()
 
 ACTIVATE_CPP14()
+ENABLE_STYLE_WARNINGS()
 
 # You can safely delete lines from here...
 
