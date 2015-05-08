@@ -8,6 +8,7 @@ ADD_BOOST(filesystem system thread)
 TARGET_LINK_LIBRARIES(${BII_BLOCK_TARGET} INTERFACE rt)
 
 ACTIVATE_CPP14()
+ENABLE_STYLE_WARNINGS()
 
 # You can safely delete lines from here...
 

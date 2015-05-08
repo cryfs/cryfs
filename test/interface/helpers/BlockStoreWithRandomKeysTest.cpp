@@ -28,7 +28,7 @@ public:
     return unique_ptr<Block>(do_load(key));
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
-  void remove(unique_ptr<Block> block) {}
+  void remove(unique_ptr<Block> block) {UNUSED(block);}
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
 };
 

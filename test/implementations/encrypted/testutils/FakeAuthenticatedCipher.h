@@ -93,7 +93,7 @@ private:
   }
 
   static void _caesar(byte *dst, const byte *src, unsigned int size, uint8_t key) {
-    for (int i = 0; i < size; ++i) {
+    for (unsigned int i = 0; i < size; ++i) {
       dst[i] = src[i] + key;
     }
   }
