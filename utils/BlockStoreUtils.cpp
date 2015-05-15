@@ -1,10 +1,11 @@
 #include "../interface/BlockStore.h"
 #include "BlockStoreUtils.h"
-#include "Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 #include <memory>
 #include <cassert>
 
 using std::unique_ptr;
+using cpputils::Data;
 
 namespace blockstore {
 namespace utils {

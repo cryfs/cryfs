@@ -1,23 +1,24 @@
 #include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include "../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "../../../../utils/FileDoesntExistException.h"
 #include "google/gtest/gtest.h"
 
-#include "../../../../utils/Data.h"
-#include "messmer/tempfile/src/TempFile.h"
-#include "messmer/tempfile/src/TempDir.h"
+#include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/tempfile/TempFile.h>
+#include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <fstream>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using tempfile::TempFile;
-using tempfile::TempDir;
-
 using std::ofstream;
 using std::unique_ptr;
 using std::ios;
+using cpputils::Data;
+using cpputils::DataFixture;
+using cpputils::TempFile;
+using cpputils::TempDir;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -40,18 +41,15 @@ public:
     data.StoreToFile(file.path());
   }
 
-  void StoreData(const DataBlockFixture &data) {
-    //TODO Implement data.StoreToFile(filepath) instead
-    Data dataobj(data.size());
-    std::memcpy(dataobj.data(), data.data(), data.size());
-    dataobj.StoreToFile(file.path());
+  void StoreData(const Data &data) {
+    data.StoreToFile(file.path());
   }
 
   unique_ptr<OnDiskBlock> LoadBlock() {
     return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
-  void EXPECT_BLOCK_DATA_EQ(const DataBlockFixture &expected, const OnDiskBlock &actual) {
+  void EXPECT_BLOCK_DATA_EQ(const Data &expected, const OnDiskBlock &actual) {
     EXPECT_EQ(expected.size(), actual.size());
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
   }
@@ -67,7 +65,7 @@ TEST_P(OnDiskBlockLoadTest, FileSizeIsCorrect) {
 }
 
 TEST_P(OnDiskBlockLoadTest, LoadedDataIsCorrect) {
-  DataBlockFixture randomData(GetParam());
+  Data randomData = DataFixture::generate(GetParam());
   StoreData(randomData);
 
   auto block = LoadBlock();

@@ -9,6 +9,7 @@ using std::mutex;
 using std::lock_guard;
 using std::piecewise_construct;
 using std::make_tuple;
+using cpputils::Data;
 
 namespace blockstore {
 namespace inmemory {

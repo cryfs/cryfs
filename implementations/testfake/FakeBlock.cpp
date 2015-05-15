@@ -10,6 +10,7 @@ using std::ifstream;
 using std::ofstream;
 using std::ios;
 using std::string;
+using cpputils::Data;
 
 namespace blockstore {
 namespace testfake {

@@ -10,7 +10,7 @@ namespace parallelaccess {
 
 class ParallelAccessBlockStoreAdapter: public parallelaccessstore::ParallelAccessBaseStore<Block, Key> {
 public:
-  ParallelAccessBlockStoreAdapter(BlockStore *baseBlockStore)
+  explicit ParallelAccessBlockStoreAdapter(BlockStore *baseBlockStore)
     :_baseBlockStore(std::move(baseBlockStore)) {
   }
 

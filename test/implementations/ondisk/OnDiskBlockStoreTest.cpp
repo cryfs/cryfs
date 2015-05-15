@@ -4,7 +4,7 @@
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include "google/gtest/gtest.h"
 
-#include "messmer/tempfile/src/TempDir.h"
+#include "messmer/cpp-utils/tempfile/TempDir.h"
 
 
 using blockstore::BlockStore;
@@ -14,7 +14,7 @@ using blockstore::ondisk::OnDiskBlockStore;
 using std::unique_ptr;
 using std::make_unique;
 
-using tempfile::TempDir;
+using cpputils::TempDir;
 
 class OnDiskBlockStoreTestFixture: public BlockStoreTestFixture {
 public:

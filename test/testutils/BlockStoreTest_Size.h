@@ -1,6 +1,7 @@
 // This file is meant to be included by BlockStoreTest.h only
 
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 class BlockStoreSizeParameterizedTest {
 public:
@@ -18,39 +19,34 @@ public:
   }
 
   void TestCreatedBlockData() {
-	DataBlockFixture dataFixture(size);
-	blockstore::Data data(size);
-	std::memcpy(data.data(), dataFixture.data(), size);
-	auto block = blockStore->create(data);
-	EXPECT_EQ(0, std::memcmp(dataFixture.data(), block->data(), size));
-
+    cpputils::Data data = cpputils::DataFixture::generate(size);
+    auto block = blockStore->create(data);
+    EXPECT_EQ(0, std::memcmp(data.data(), block->data(), size));
   }
 
   void TestLoadingUnchangedBlockData() {
-	DataBlockFixture dataFixture(size);
-	blockstore::Data data(size);
-	std::memcpy(data.data(), dataFixture.data(), size);
-	blockstore::Key key = blockStore->create(data)->key();
+    cpputils::Data data = cpputils::DataFixture::generate(size);
+    blockstore::Key key = blockStore->create(data)->key();
     auto loaded_block = blockStore->load(key);
-    EXPECT_EQ(0, std::memcmp(dataFixture.data(), loaded_block->data(), size));
+    EXPECT_EQ(0, std::memcmp(data.data(), loaded_block->data(), size));
   }
 
   void TestLoadedBlockIsCorrect() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto loaded_block = StoreDataToBlockAndLoadIt(randomData);
     EXPECT_EQ(size, loaded_block->size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), loaded_block->data(), size));
   }
 
   void TestLoadedBlockIsCorrectWhenLoadedDirectlyAfterFlushing() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto loaded_block = StoreDataToBlockAndLoadItDirectlyAfterFlushing(randomData);
     EXPECT_EQ(size, loaded_block->size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), loaded_block->data(), size));
   }
 
   void TestAfterCreate_FlushingDoesntChangeBlock() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto block =  CreateBlock();
     WriteDataToBlock(block.get(), randomData);
     block->flush();
@@ -59,7 +55,7 @@ public:
   }
 
   void TestAfterLoad_FlushingDoesntChangeBlock() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto block =  CreateBlockAndLoadIt();
     WriteDataToBlock(block.get(), randomData);
     block->flush();
@@ -68,10 +64,10 @@ public:
   }
 
   void TestAfterCreate_FlushesWhenDestructed() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     blockstore::Key key = key;
     {
-      auto block = blockStore->create(blockstore::Data(size));
+      auto block = blockStore->create(cpputils::Data(size));
       key = block->key();
       WriteDataToBlock(block.get(), randomData);
     }
@@ -80,7 +76,7 @@ public:
   }
 
   void TestAfterLoad_FlushesWhenDestructed() {
-    DataBlockFixture randomData(size);
+    cpputils::Data randomData = cpputils::DataFixture::generate(size);
     blockstore::Key key = key;
     {
       key = CreateBlock()->key();
@@ -102,26 +98,22 @@ private:
   std::unique_ptr<blockstore::BlockStore> blockStore;
   size_t size;
 
-  blockstore::Data ZEROES(size_t size) {
-    blockstore::Data ZEROES(size);
+  cpputils::Data ZEROES(size_t size) {
+    cpputils::Data ZEROES(size);
     ZEROES.FillWithZeroes();
     return ZEROES;
   }
 
-  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadIt(const DataBlockFixture &data) {
+  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadIt(const cpputils::Data &data) {
     blockstore::Key key = StoreDataToBlockAndGetKey(data);
     return blockStore->load(key);
   }
 
-  blockstore::Key StoreDataToBlockAndGetKey(const DataBlockFixture &dataFixture) {
-	blockstore::Data data(dataFixture.size());
-	std::memcpy(data.data(), dataFixture.data(), dataFixture.size());
+  blockstore::Key StoreDataToBlockAndGetKey(const cpputils::Data &data) {
     return blockStore->create(data)->key();
   }
 
-  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const DataBlockFixture &dataFixture) {
-	blockstore::Data data(dataFixture.size());
-	std::memcpy(data.data(), dataFixture.data(), dataFixture.size());
+  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const cpputils::Data &data) {
     auto block = blockStore->create(data);
     block->flush();
     return blockStore->load(block->key());
@@ -133,14 +125,14 @@ private:
   }
 
   std::unique_ptr<blockstore::Block> CreateBlock() {
-    return blockStore->create(blockstore::Data(size));
+    return blockStore->create(cpputils::Data(size));
   }
 
-  void WriteDataToBlock(blockstore::Block *block, const DataBlockFixture &randomData) {
+  void WriteDataToBlock(blockstore::Block *block, const cpputils::Data &randomData) {
     block->write(randomData.data(), 0, randomData.size());
   }
 
-  void EXPECT_BLOCK_DATA_CORRECT(const blockstore::Block &block, const DataBlockFixture &randomData) {
+  void EXPECT_BLOCK_DATA_CORRECT(const blockstore::Block &block, const cpputils::Data &randomData) {
     EXPECT_EQ(randomData.size(), block.size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), block.data(), randomData.size()));
   }

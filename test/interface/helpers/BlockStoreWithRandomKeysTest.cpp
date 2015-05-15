@@ -1,7 +1,7 @@
 #include "../../../interface/helpers/BlockStoreWithRandomKeys.h"
 #include "google/gtest/gtest.h"
 #include "google/gmock/gmock.h"
-#include "../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::_;
@@ -13,6 +13,8 @@ using ::testing::ByRef;
 using std::string;
 using std::unique_ptr;
 using std::make_unique;
+using cpputils::Data;
+using cpputils::DataFixture;
 
 using namespace blockstore;
 
@@ -26,7 +28,7 @@ public:
     return unique_ptr<Block>(do_load(key));
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
-  void remove(unique_ptr<Block> block) {}
+  void remove(unique_ptr<Block> block) {UNUSED(block);}
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
 };
 
@@ -47,7 +49,7 @@ public:
   const blockstore::Key key = Key::FromString("1491BB4932A389EE14BC7090AC772972");
 
   Data createDataWithSize(size_t size) {
-	DataBlockFixture fixture(size);
+	Data fixture(DataFixture::generate(size));
 	Data data(size);
 	std::memcpy(data.data(), fixture.data(), size);
 	return data;

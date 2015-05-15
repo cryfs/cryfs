@@ -10,7 +10,7 @@ namespace blockstore {
 
 class FileDoesntExistException: public std::runtime_error {
 public:
-  FileDoesntExistException(const boost::filesystem::path &filepath);
+  explicit FileDoesntExistException(const boost::filesystem::path &filepath);
   virtual ~FileDoesntExistException();
 };
 

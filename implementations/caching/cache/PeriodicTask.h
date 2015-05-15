@@ -7,7 +7,6 @@
 namespace blockstore {
 namespace caching {
 
-//TODO Test cases
 class PeriodicTask {
 public:
 	PeriodicTask(std::function<void ()> task, double intervalSec);

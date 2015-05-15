@@ -24,7 +24,7 @@ Key ParallelAccessBlockStore::createKey() {
   return _baseBlockStore->createKey();
 }
 
-unique_ptr<Block> ParallelAccessBlockStore::tryCreate(const Key &key, Data data) {
+unique_ptr<Block> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
   auto block = _baseBlockStore->tryCreate(key, std::move(data));
   if (block.get() == nullptr) {
 	//TODO Test this code branch

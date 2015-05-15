@@ -1,19 +1,19 @@
-#include "../../../../implementations/ondisk/FileAlreadyExistsException.h"
 #include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include "../../../testutils/DataBlockFixture.h"
+#include <messmer/cpp-utils/data/DataFixture.h>
 #include "google/gtest/gtest.h"
 
-#include "messmer/tempfile/src/TempFile.h"
-#include "messmer/tempfile/src/TempDir.h"
+#include <messmer/cpp-utils/tempfile/TempFile.h>
+#include <messmer/cpp-utils/tempfile/TempDir.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using tempfile::TempFile;
-using tempfile::TempDir;
-
 using std::unique_ptr;
+using cpputils::Data;
+using cpputils::DataFixture;
+using cpputils::TempFile;
+using cpputils::TempDir;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -27,27 +27,23 @@ public:
   : dir(),
     key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
     file(dir.path() / key.ToString(), false),
-    randomData(GetParam()) {
+    randomData(DataFixture::generate(GetParam())) {
   }
   TempDir dir;
   Key key;
   TempFile file;
 
-  DataBlockFixture randomData;
+  Data randomData;
 
   unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      Data data(randomData.size());
-      std::memcpy(data.data(), randomData.data(), randomData.size());
-      auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+      OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
     }
     return OnDiskBlock::LoadFromDisk(dir.path(), key);
   }
 
   unique_ptr<OnDiskBlock> CreateBlock() {
-	Data data(randomData.size());
-	std::memcpy(data.data(), randomData.data(), randomData.size());
-    return OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
   }
 
   void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {
@@ -60,9 +56,8 @@ public:
   }
 
   void EXPECT_STORED_FILE_DATA_CORRECT() {
-    Data actual = Data::LoadFromFile(file.path());
-    EXPECT_EQ(randomData.size(), actual.size());
-    EXPECT_EQ(0, std::memcmp(randomData.data(), actual.data(), randomData.size()));
+    Data actual = Data::LoadFromFile(file.path()).value();
+    EXPECT_EQ(randomData, actual);
   }
 };
 INSTANTIATE_TEST_CASE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));

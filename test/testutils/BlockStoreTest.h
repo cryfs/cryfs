@@ -4,8 +4,6 @@
 
 #include "google/gtest/gtest.h"
 
-#include "DataBlockFixture.h"
-
 #include "../../interface/BlockStore.h"
 
 class BlockStoreTestFixture {
@@ -28,14 +26,14 @@ TYPED_TEST_CASE_P(BlockStoreTest);
 
 TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block1 = blockStore->create(blockstore::Data(1024));
-  auto block2 = blockStore->create(blockstore::Data(1024));
+  auto block1 = blockStore->create(cpputils::Data(1024));
+  auto block2 = blockStore->create(cpputils::Data(1024));
   EXPECT_NE(block1->key(), block2->key());
 }
 
 TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
   auto blockStore = this->fixture.createBlockStore();
-  auto blockkey = blockStore->create(blockstore::Data(1024))->key();
+  auto blockkey = blockStore->create(cpputils::Data(1024))->key();
   auto block = blockStore->load(blockkey);
   EXPECT_NE(nullptr, block.get());
   blockStore->remove(std::move(block));
@@ -49,55 +47,55 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->create(blockstore::Data(1));
+  auto block = blockStore->create(cpputils::Data(1));
   EXPECT_EQ(1, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockStore->create(blockstore::Data(1));
+  blockStore->create(cpputils::Data(1));
   EXPECT_EQ(1, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->create(blockstore::Data(1));
+  auto block = blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
   EXPECT_EQ(0, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block1 = blockStore->create(blockstore::Data(1));
-  auto block2 = blockStore->create(blockstore::Data(0));
+  auto block1 = blockStore->create(cpputils::Data(1));
+  auto block2 = blockStore->create(cpputils::Data(0));
   EXPECT_EQ(2, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockStore->create(blockstore::Data(1));
-  auto block2 = blockStore->create(blockstore::Data(0));
+  blockStore->create(cpputils::Data(1));
+  auto block2 = blockStore->create(cpputils::Data(0));
   EXPECT_EQ(2, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block1 = blockStore->create(blockstore::Data(1));
-  blockStore->create(blockstore::Data(0));
+  auto block1 = blockStore->create(cpputils::Data(1));
+  blockStore->create(cpputils::Data(0));
   EXPECT_EQ(2, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks) {
   auto blockStore = this->fixture.createBlockStore();
-  blockStore->create(blockstore::Data(1));
-  blockStore->create(blockstore::Data(0));
+  blockStore->create(cpputils::Data(1));
+  blockStore->create(cpputils::Data(0));
   EXPECT_EQ(2, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto block = blockStore->create(blockstore::Data(1));
-  blockStore->create(blockstore::Data(1));
+  auto block = blockStore->create(cpputils::Data(1));
+  blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
   EXPECT_EQ(1, blockStore->numBlocks());
 }

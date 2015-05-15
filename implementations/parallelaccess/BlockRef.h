@@ -14,7 +14,7 @@ class ParallelAccessBlockStore;
 class BlockRef: public Block, public parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key>::ResourceRefBase {
 public:
   //TODO Unneccessarily storing Key twice here (in parent class and in _baseBlock).
-  BlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}
+  explicit BlockRef(Block *baseBlock): Block(baseBlock->key()), _baseBlock(baseBlock) {}
 
   const void *data() const override {
 	return _baseBlock->data();

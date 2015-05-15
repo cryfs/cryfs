@@ -9,6 +9,7 @@
 using std::unique_ptr;
 using std::make_unique;
 using cpputils::dynamic_pointer_move;
+using cpputils::Data;
 
 namespace blockstore {
 namespace caching {
@@ -27,13 +28,16 @@ unique_ptr<Block> CachingBlockStore::tryCreate(const Key &key, Data data) {
 }
 
 unique_ptr<Block> CachingBlockStore::load(const Key &key) {
-  auto block = _cache.pop(key);
-  if (block.get() != nullptr) {
-    return make_unique<CachedBlock>(std::move(block), this);
-  }
-  block = _baseBlockStore->load(key);
-  if (block.get() == nullptr) {
-    return nullptr;
+  boost::optional<unique_ptr<Block>> optBlock = _cache.pop(key);
+  unique_ptr<Block> block;
+  //TODO an optional<> class with .getOrElse() would make this code simpler. boost::optional<>::value_or_eval didn't seem to work with unique_ptr members.
+  if (optBlock) {
+    block = std::move(*optBlock);
+  } else {
+    block = _baseBlockStore->load(key);
+    if (block.get() == nullptr) {
+      return nullptr;
+    }
   }
   return make_unique<CachedBlock>(std::move(block), this);
 }
@@ -52,12 +56,12 @@ void CachingBlockStore::remove(std::unique_ptr<Block> block) {
 }
 
 uint64_t CachingBlockStore::numBlocks() const {
-  //TODO Add number of NewBlock instances
   return _baseBlockStore->numBlocks() + _numNewBlocks;
 }
 
 void CachingBlockStore::release(unique_ptr<Block> block) {
-  _cache.push(std::move(block));
+  Key key = block->key();
+  _cache.push(key, std::move(block));
 }
 
 std::unique_ptr<Block> CachingBlockStore::tryCreateInBaseStore(const Key &key, Data data) {

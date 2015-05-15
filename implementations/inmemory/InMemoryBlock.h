@@ -3,7 +3,7 @@
 #define BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 
 #include "../../interface/Block.h"
-#include "../../utils/Data.h"
+#include <messmer/cpp-utils/data/Data.h>
 
 namespace blockstore {
 namespace inmemory {
@@ -11,7 +11,7 @@ class InMemoryBlockStore;
 
 class InMemoryBlock: public Block {
 public:
-  InMemoryBlock(const Key &key, Data size);
+  InMemoryBlock(const Key &key, cpputils::Data size);
   InMemoryBlock(const InMemoryBlock &rhs);
   virtual ~InMemoryBlock();
 
@@ -23,7 +23,7 @@ public:
   size_t size() const override;
 
 private:
-  std::shared_ptr<Data> _data;
+  std::shared_ptr<cpputils::Data> _data;
 };
 
 }

@@ -1,7 +1,6 @@
 #include <cstring>
 #include <fstream>
 #include <boost/filesystem.hpp>
-#include "FileAlreadyExistsException.h"
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 #include "../../utils/FileDoesntExistException.h"
@@ -13,6 +12,7 @@ using std::ostream;
 using std::ifstream;
 using std::ofstream;
 using std::ios;
+using cpputils::Data;
 
 namespace bf = boost::filesystem;
 
@@ -47,11 +47,15 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
     //If it isn't a file, Data::LoadFromFile() would usually also crash. We still need this extra check
     //upfront, because Data::LoadFromFile() doesn't crash if we give it the path of a directory
     //instead the path of a file.
+    //TODO Data::LoadFromFile now returns boost::optional. Do we then still need this?
     if(!bf::is_regular_file(filepath)) {
       return nullptr;
     }
-    Data data = Data::LoadFromFile(filepath);
-    return unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, std::move(data)));
+    boost::optional<Data> data = Data::LoadFromFile(filepath);
+    if (!data) {
+      return nullptr;
+    }
+    return unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, std::move(*data)));
   } catch (const FileDoesntExistException &e) {
     return nullptr;
   }
