@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <boost/optional.hpp>
+#include <future>
 
 namespace blockstore {
 namespace caching {
@@ -29,6 +30,7 @@ public:
 
 private:
   void _popOldEntries();
+  static void _destructElementsInParallel(std::vector<CacheEntry<Key, Value>> *list);
 
   mutable std::mutex _mutex;
   QueueMap<Key, CacheEntry<Key, Value>> _cachedBlocks;
@@ -75,9 +77,28 @@ void Cache<Key, Value>::push(const Key &key, Value value) {
 template<class Key, class Value>
 void Cache<Key, Value>::_popOldEntries() {
   std::lock_guard<std::mutex> lock(_mutex);
+  std::vector<CacheEntry<Key, Value>> entriesToDelete;
   while(_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
-    _cachedBlocks.pop();
+	entriesToDelete.push_back(*_cachedBlocks.pop());
   }
+  _destructElementsInParallel(&entriesToDelete);
+}
+
+template<class Key, class Value>
+void Cache<Key, Value>::_destructElementsInParallel(std::vector<CacheEntry<Key, Value>> *list) {
+  //TODO Check whether this parallel destruction below works (just comment it in but keep the list->clear()) and check performance impacts. Is it better to have a lower parallelity level, i.e. #core threads?
+  /*
+  std::vector<std::future<void>> waitHandles;
+  for (auto & entry : *list) {
+	waitHandles.push_back(std::async(std::launch::async, [&entry] {
+	  entry.releaseValue();
+	}));
+  }
+  for (auto & waitHandle : waitHandles) {
+	waitHandle.wait();
+  }
+  */
+  list->clear();
 }
 
 }
