@@ -202,8 +202,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
   result->st_nlink = 1;
   //TODO Handle file access times
-  clock_gettime(CLOCK_REALTIME, &result->st_atim);
-  result->st_mtim = result->st_ctim = result->st_atim;
+  result->st_mtime = result->st_ctime = result->st_atime = 0;
   if (child.type == fspp::Dir::EntryType::FILE) {
     result->st_size = FileBlob(_device->LoadBlob(key)).size();
   } else if (child.type == fspp::Dir::EntryType::DIR) {
