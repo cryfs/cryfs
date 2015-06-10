@@ -13,6 +13,14 @@ TARGET_LINK_LIBRARIES(${BII_BLOCK_TARGET} INTERFACE fuse)
 
 ENABLE_STYLE_WARNINGS()
 
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  IF(EXISTS "/usr/local/include/osxfuse")
+    TARGET_INCLUDE_DIRECTORIES(${BII_LIB_TARGET} PUBLIC /usr/local/include/osxfuse)
+  ELSE()
+    MESSAGE(FATAL_ERROR "Osxfuse not found. Please install osxfuse.")
+  ENDIF(EXISTS "/usr/local/include/osxfuse")
+ENDIF(CMAKE_SYSTEM_NAME)
+
 # You can safely delete lines from here...
 
 ###############################################################################
