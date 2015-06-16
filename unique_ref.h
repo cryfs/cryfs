@@ -43,10 +43,6 @@ public:
         return _target.get();
     }
 
-    T* release() {
-        return _target.release();
-    }
-
     void swap(unique_ref&& rhs) {
         _target.swap(rhs._target);
     }
