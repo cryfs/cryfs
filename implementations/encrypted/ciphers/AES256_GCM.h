@@ -14,6 +14,7 @@ class AES256_GCM {
 public:
   BOOST_CONCEPT_ASSERT((CipherConcept<AES256_GCM>));
 
+  //TODO Does EncryptionKey::GenerateRandom() use a PseudoRandomGenerator? Would be better to use real randomness. This is true for all ciphers - we should offer a CreateKey() method in Ciphers.
   using EncryptionKey = cpputils::FixedSizeData<32>;
   static_assert(32 == CryptoPP::AES::MAX_KEYLENGTH, "If AES offered larger keys, we should offer a variant with it");
 
