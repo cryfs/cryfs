@@ -12,7 +12,7 @@ namespace encrypted {
 constexpr unsigned int AES256_CFB::IV_SIZE;
 
 Data AES256_CFB::encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
-  FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreateRandom();
+  FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreatePseudoRandom();
   auto encryption = CFB_Mode<AES>::Encryption(encKey.data(), encKey.BINARY_LENGTH, iv.data());
   Data ciphertext(ciphertextSize(plaintextSize));
   std::memcpy(ciphertext.data(), iv.data(), IV_SIZE);

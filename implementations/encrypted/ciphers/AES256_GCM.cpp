@@ -18,7 +18,7 @@ namespace encrypted {
 constexpr unsigned int AES256_GCM::IV_SIZE;
 
 Data AES256_GCM::encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
-  FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreateRandom();
+  FixedSizeData<IV_SIZE> iv = FixedSizeData<IV_SIZE>::CreatePseudoRandom();
   GCM<AES, GCM_64K_Tables>::Encryption encryption;
   encryption.SetKeyWithIV(encKey.data(), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
   Data ciphertext(ciphertextSize(plaintextSize));

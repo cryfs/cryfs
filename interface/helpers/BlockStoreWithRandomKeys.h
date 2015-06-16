@@ -13,7 +13,7 @@ namespace blockstore {
 class BlockStoreWithRandomKeys: public BlockStore {
 public:
   Key createKey() final {
-	return Key::CreateRandom();
+    return Key::CreatePseudoRandom();
   }
 };
 
