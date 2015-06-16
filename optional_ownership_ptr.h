@@ -3,6 +3,7 @@
 #define MESSMER_CPP_UTILS_OPTIONALOWNERSHIPPOINTER_H_
 
 #include <memory>
+#include <functional>
 
 /**
  * optional_ownership_ptr can be used to hold a pointer to an instance of an object.
