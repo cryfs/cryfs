@@ -8,6 +8,7 @@
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
 #include "CryDevice.h"
+#include "CryConfigLoader.h"
 
 namespace bf = boost::filesystem;
 
@@ -19,7 +20,7 @@ using std::make_unique;
 int main (int argc, char *argv[])
 {
   auto blockStore = make_unique<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
-  auto config = make_unique<cryfs::CryConfig>(bf::path("/home/heinzi/cryfstest/config.json"));
+  auto config = cryfs::CryConfigLoader::loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
   cryfs::CryDevice device(std::move(config), std::move(blockStore));
   fspp::FilesystemImpl fsimpl(&device);
   fspp::fuse::Fuse fuse(&fsimpl);

@@ -35,7 +35,7 @@ namespace cryfs {
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ptr<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetOrCreateEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+: _blobStore(make_unique<BlobStoreOnBlocks>(make_unique<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
@@ -43,25 +43,15 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
   if (root_key == "") {
     auto new_key = CreateRootBlobAndReturnKey();
     config->SetRootBlob(new_key.ToString());
+    config->save();
     return new_key;
   }
 
   return Key::FromString(root_key);
 }
 
-CryDevice::Cipher::EncryptionKey CryDevice::GetOrCreateEncryptionKey(CryConfig *config) {
-  string encryption_key = config->EncryptionKey();
-  if (encryption_key == "") {
-    printf("Generating secure encryption key...");
-    fflush(stdout);
-    auto new_key = Cipher::EncryptionKey::CreateOSRandom();
-    printf("done\n");
-    fflush(stdout);
-    config->SetEncryptionKey(new_key.ToString());
-    return new_key;
-  }
-
-  return Cipher::EncryptionKey::FromString(encryption_key);
+CryDevice::Cipher::EncryptionKey CryDevice::GetEncryptionKey(CryConfig *config) {
+  return Cipher::EncryptionKey::FromString(config->EncryptionKey());
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {

@@ -19,11 +19,12 @@ public:
   const std::string &EncryptionKey() const;
   void SetEncryptionKey(const std::string &value);
 
+  void save() const;
+
 private:
   boost::filesystem::path _configfile;
 
   void load();
-  void save() const;
 
   std::string _rootBlob;
   std::string _encKey;
