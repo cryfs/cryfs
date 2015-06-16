@@ -25,7 +25,7 @@ public:
   class ResourceRefBase {
   public:
     //TODO Better way to initialize
-    ResourceRefBase(): _cachingStore(nullptr), _key(Key::CreateRandom()) {}
+    ResourceRefBase(): _cachingStore(nullptr), _key(Key::CreatePseudoRandom()) {}
     void init(ParallelAccessStore *cachingStore, const Key &key) {
       _cachingStore = cachingStore;
       _key = key;
