@@ -52,7 +52,11 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
 CryDevice::Cipher::EncryptionKey CryDevice::GetOrCreateEncryptionKey(CryConfig *config) {
   string encryption_key = config->EncryptionKey();
   if (encryption_key == "") {
-    auto new_key = Cipher::EncryptionKey::CreateRandom();
+    printf("Generating secure encryption key...");
+    fflush(stdout);
+    auto new_key = Cipher::EncryptionKey::CreateOSRandom();
+    printf("done\n");
+    fflush(stdout);
     config->SetEncryptionKey(new_key.ToString());
     return new_key;
   }
