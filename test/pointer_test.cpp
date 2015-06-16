@@ -13,6 +13,8 @@ public:
 class Child: public Parent {};
 class Child2: public Parent {};
 
+//TODO Add test cases that the correct (virtual) destructor is called
+
 TEST(DynamicPointerMoveTest, NullPtrParentToChildCast) {
   unique_ptr<Parent> source(nullptr);
   unique_ptr<Child> casted = dynamic_pointer_move<Child>(source);

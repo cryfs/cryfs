@@ -34,11 +34,11 @@ public:
 constexpr unsigned int FixedSizeDataTest::SIZE;
 
 TEST_F(FixedSizeDataTest, CanGenerateRandomDataWithoutCrashing) {
-  FixedSizeData<SIZE> result = FixedSizeData<SIZE>::CreateRandom();
+  FixedSizeData<SIZE> result = FixedSizeData<SIZE>::CreatePseudoRandom();
 }
 
 TEST_F(FixedSizeDataTest, CreatedRandomDatasHaveCorrectLength) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::CreateRandom();
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::CreatePseudoRandom();
   EXPECT_EQ(FixedSizeData<SIZE>::STRING_LENGTH, data.ToString().size());
 }
 
