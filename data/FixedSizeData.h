@@ -18,7 +18,8 @@ public:
   static constexpr unsigned int BINARY_LENGTH = SIZE;
   static constexpr unsigned int STRING_LENGTH = 2 * BINARY_LENGTH; // Hex encoding
 
-  static FixedSizeData<SIZE> CreateRandom();
+  static FixedSizeData<SIZE> CreatePseudoRandom();
+  static FixedSizeData<SIZE> CreateOSRandom();
 
   static FixedSizeData<SIZE> FromString(const std::string &data);
   std::string ToString() const;
@@ -30,7 +31,7 @@ public:
 
 private:
   FixedSizeData() {}
-  static CryptoPP::AutoSeededRandomPool &RandomPool();
+  static CryptoPP::AutoSeededRandomPool &PseudoRandomPool();
 
   unsigned char _data[BINARY_LENGTH];
 };
@@ -44,15 +45,23 @@ template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_L
 template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
 
 template<unsigned int SIZE>
-CryptoPP::AutoSeededRandomPool &FixedSizeData<SIZE>::RandomPool() {
+CryptoPP::AutoSeededRandomPool &FixedSizeData<SIZE>::PseudoRandomPool() {
+  //TODO Make seeding use blocking=true (aka /dev/random instead of /dev/urandom) or offer a configuration option?
   static CryptoPP::AutoSeededRandomPool singleton;
   return singleton;
 }
 
 template<unsigned int SIZE>
-FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateRandom() {
+FixedSizeData<SIZE> FixedSizeData<SIZE>::CreatePseudoRandom() {
   FixedSizeData<SIZE> result;
-  RandomPool().GenerateBlock(result._data, BINARY_LENGTH);
+  PseudoRandomPool().GenerateBlock(result._data, BINARY_LENGTH);
+  return result;
+}
+
+template<unsigned int SIZE>
+FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateOSRandom() {
+  FixedSizeData<SIZE> result;
+  CryptoPP::OS_GenerateRandomBlock(true, result._data, BINARY_LENGTH);
   return result;
 }
 
