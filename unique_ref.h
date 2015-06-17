@@ -28,7 +28,8 @@ public:
     unique_ref(unique_ref&& from): _target(std::move(from._target)) {}
 
     unique_ref& operator=(unique_ref&& from) {
-        _target = from._target;
+        _target = std::move(from._target);
+        return *this;
     }
 
     typename std::add_lvalue_reference<T>::type operator*() const {
@@ -43,8 +44,8 @@ public:
         return _target.get();
     }
 
-    void swap(unique_ref&& rhs) {
-        _target.swap(rhs._target);
+    void swap(unique_ref& rhs) {
+        std::swap(_target, rhs._target);
     }
 
 private:
@@ -70,34 +71,14 @@ inline boost::optional<unique_ref<T>> nullcheck(std::unique_ptr<T> ptr) {
     return boost::none;
 }
 
-template<typename T1, typename T2>
-inline bool operator==(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return lhs.get() == rhs.get();
+template<typename T>
+inline bool operator==(const unique_ref<T> &lhs, const unique_ref<T> &rhs) {
+    return lhs.get() == rhs.get();
 }
 
-template<typename T1, typename T2>
-inline bool operator!=(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return !operator==(lhs, rhs);
-}
-
-template<typename T1, typename T2>
-inline bool operator<(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return lhs.get() < rhs.get();
-}
-
-template<typename T1, typename T2>
-inline bool operator<=(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return !operator<(rhs, lhs);
-}
-
-template<typename T1, typename T2>
-inline bool operator>(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return operator<(rhs, lhs);
-}
-
-template<typename T1, typename T2>
-inline bool operator>=(const unique_ref<T1>& lhs, const unique_ref<T2>& rhs) {
-   return !operator<(lhs, rhs);
+template<typename T>
+inline bool operator!=(const unique_ref<T> &lhs, const unique_ref<T> &rhs) {
+    return !operator==(lhs, rhs);
 }
 
 }
@@ -117,6 +98,20 @@ namespace std {
     inline void swap(cpputils::unique_ref<T>& lhs, cpputils::unique_ref<T>&& rhs) {
         lhs.swap(rhs);
     }
+
+    // Allow using it in std::unordered_set / std::unordered_map
+    template<typename T> struct hash<cpputils::unique_ref<T>> {
+        size_t operator()(const cpputils::unique_ref<T> &ref) const {
+            return (size_t)ref.get();
+        }
+    };
+
+    // Allow using it in std::map / std::set
+    template <typename T> struct less<cpputils::unique_ref<T>> {
+        bool operator()(const cpputils::unique_ref<T> &lhs, const cpputils::unique_ref<T> &rhs) const {
+            return lhs.get() < rhs.get();
+        }
+    };
 }
 
 #endif

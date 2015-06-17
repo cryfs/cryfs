@@ -1,5 +1,10 @@
 #include <google/gtest/gtest.h>
 #include "../unique_ref.h"
+#include <vector>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
 
 using namespace cpputils;
 
@@ -17,6 +22,7 @@ public:
   int param1;
   int param2;
 };
+using SomeClass = SomeClass0Parameters;
 
 TEST(MakeUniqueRefTest, Primitive) {
   unique_ref<int> var = make_unique_ref<int>(3);
@@ -89,7 +95,7 @@ TEST(NullcheckTest, OptionIsResolvable_Primitive) {
 }
 
 TEST(NullcheckTest, OptionIsResolvable_Object) {
-  boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass0Parameters>());
+  boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass>());
   unique_ref<SomeClass0Parameters> resolved = std::move(*var);
 }
 
@@ -99,6 +105,300 @@ TEST(NullcheckTest, OptionIsAutoResolvable_Primitive) {
 }
 
 TEST(NullcheckTest, OptionIsAutoResolvable_Object) {
-  auto var = nullcheck(std::make_unique<SomeClass0Parameters>());
+  auto var = nullcheck(std::make_unique<SomeClass>());
   auto resolved = std::move(*var);
+}
+
+class UniqueRefTest: public ::testing::Test {
+public:
+  template<typename T> void makeInvalid(unique_ref<T> ref) {
+    UNUSED(ref);
+    //ref is moved in here and then destructed
+  }
+};
+
+TEST_F(UniqueRefTest, Get_Primitive) {
+  unique_ref<int> obj = make_unique_ref<int>(3);
+  EXPECT_EQ(3, *obj.get());
+}
+
+TEST_F(UniqueRefTest, Get_Object) {
+  unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(5);
+  EXPECT_EQ(5, obj.get()->param);
+}
+
+TEST_F(UniqueRefTest, Deref_Primitive) {
+  unique_ref<int> obj = make_unique_ref<int>(3);
+  EXPECT_EQ(3, *obj);
+}
+
+TEST_F(UniqueRefTest, Deref_Object) {
+  unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(5);
+  EXPECT_EQ(5, (*obj).param);
+}
+
+TEST_F(UniqueRefTest, DerefArrow) {
+  unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(3);
+  EXPECT_EQ(3, obj->param);
+}
+
+TEST_F(UniqueRefTest, Assignment) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+  EXPECT_EQ(nullptr, obj1.get());
+}
+
+TEST_F(UniqueRefTest, MoveConstructor) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  unique_ref<SomeClass> obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+  EXPECT_EQ(nullptr, obj1.get());
+}
+
+TEST_F(UniqueRefTest, Swap) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  SomeClass *obj2ptr = obj2.get();
+  std::swap(obj1, obj2);
+  EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, SwapFromInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  makeInvalid(std::move(obj1));
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  SomeClass *obj2ptr = obj2.get();
+  std::swap(obj1, obj2);
+  EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_EQ(nullptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, SwapWithInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  makeInvalid(std::move(obj2));
+  SomeClass *obj1ptr = obj1.get();
+  std::swap(obj1, obj2);
+  EXPECT_EQ(nullptr, obj1.get());
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, SwapInvalidWithInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  makeInvalid(std::move(obj1));
+  makeInvalid(std::move(obj2));
+  std::swap(obj1, obj2);
+  EXPECT_EQ(nullptr, obj1.get());
+  EXPECT_EQ(nullptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, SwapFromRValue) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  SomeClass *obj2ptr = obj2.get();
+  std::swap(std::move(obj1), obj2);
+  EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, SwapWithRValue) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  SomeClass *obj2ptr = obj2.get();
+  std::swap(obj1, std::move(obj2));
+  EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, CanBePutInContainer_Primitive) {
+  std::vector<unique_ref<int>> vec;
+  vec.push_back(make_unique_ref<int>(3));
+  EXPECT_EQ(3, *vec[0]);
+}
+
+TEST_F(UniqueRefTest, CanBePutInContainer_Object) {
+  std::vector<unique_ref<SomeClass1Parameter>> vec;
+  vec.push_back(make_unique_ref<SomeClass1Parameter>(5));
+  EXPECT_EQ(5, vec[0]->param);
+}
+
+TEST_F(UniqueRefTest, CanBePutInContainer_Nullcheck) {
+  std::vector<unique_ref<int>> vec;
+  vec.push_back(*nullcheck(std::make_unique<int>(3)));
+  EXPECT_EQ(3, *vec[0]);
+}
+
+TEST_F(UniqueRefTest, CanBePutInSet_Primitive) {
+  std::set<unique_ref<int>> set;
+  set.insert(make_unique_ref<int>(3));
+  EXPECT_EQ(3, **set.begin());
+}
+
+TEST_F(UniqueRefTest, CanBePutInSet_Object) {
+  std::set<unique_ref<SomeClass1Parameter>> set;
+  set.insert(make_unique_ref<SomeClass1Parameter>(5));
+  EXPECT_EQ(5, (*set.begin())->param);
+}
+
+TEST_F(UniqueRefTest, CanBePutInSet_Nullcheck) {
+  std::set<unique_ref<int>> set;
+  set.insert(*nullcheck(std::make_unique<int>(3)));
+  EXPECT_EQ(3, **set.begin());
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedSet_Primitive) {
+  std::unordered_set<unique_ref<int>> set;
+  set.insert(make_unique_ref<int>(3));
+  EXPECT_EQ(3, **set.begin());
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedSet_Object) {
+  std::unordered_set<unique_ref<SomeClass1Parameter>> set;
+  set.insert(make_unique_ref<SomeClass1Parameter>(5));
+  EXPECT_EQ(5, (*set.begin())->param);
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedSet_Nullcheck) {
+  std::unordered_set<unique_ref<int>> set;
+  set.insert(*nullcheck(std::make_unique<int>(3)));
+  EXPECT_EQ(3, **set.begin());
+}
+
+TEST_F(UniqueRefTest, CanBePutInMap_Primitive) {
+  std::map<unique_ref<int>, unique_ref<int>> map;
+  map.insert(std::make_pair(make_unique_ref<int>(3), make_unique_ref<int>(5)));
+  EXPECT_EQ(3, *map.begin()->first);
+  EXPECT_EQ(5, *map.begin()->second);
+}
+
+TEST_F(UniqueRefTest, CanBePutInMap_Object) {
+  std::map<unique_ref<SomeClass1Parameter>, unique_ref<SomeClass1Parameter>> map;
+  map.insert(std::make_pair(make_unique_ref<SomeClass1Parameter>(5), make_unique_ref<SomeClass1Parameter>(3)));
+  EXPECT_EQ(5, map.begin()->first->param);
+  EXPECT_EQ(3, map.begin()->second->param);
+}
+
+TEST_F(UniqueRefTest, CanBePutInMap_Nullcheck) {
+  std::map<unique_ref<int>, unique_ref<int>> map;
+  map.insert(std::make_pair(*nullcheck(std::make_unique<int>(3)), *nullcheck(std::make_unique<int>(5))));
+  EXPECT_EQ(3, *map.begin()->first);
+  EXPECT_EQ(5, *map.begin()->second);
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedMap_Primitive) {
+  std::unordered_map<unique_ref<int>, unique_ref<int>> map;
+  map.insert(std::make_pair(make_unique_ref<int>(3), make_unique_ref<int>(5)));
+  EXPECT_EQ(3, *map.begin()->first);
+  EXPECT_EQ(5, *map.begin()->second);
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedMap_Object) {
+  std::unordered_map<unique_ref<SomeClass1Parameter>, unique_ref<SomeClass1Parameter>> map;
+  map.insert(std::make_pair(make_unique_ref<SomeClass1Parameter>(5), make_unique_ref<SomeClass1Parameter>(3)));
+  EXPECT_EQ(5, map.begin()->first->param);
+  EXPECT_EQ(3, map.begin()->second->param);
+}
+
+TEST_F(UniqueRefTest, CanBePutInUnorderedMap_Nullcheck) {
+  std::unordered_map<unique_ref<int>, unique_ref<int>> map;
+  map.insert(std::make_pair(*nullcheck(std::make_unique<int>(3)), *nullcheck(std::make_unique<int>(5))));
+  EXPECT_EQ(3, *map.begin()->first);
+  EXPECT_EQ(5, *map.begin()->second);
+}
+
+TEST_F(UniqueRefTest, Equality_Nullptr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(4);
+  makeInvalid(std::move(var1));
+  makeInvalid(std::move(var2));
+  EXPECT_TRUE(var1 == var2);
+  EXPECT_FALSE(var1 != var2);
+}
+
+TEST_F(UniqueRefTest, Nonequality) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  EXPECT_TRUE(var1 != var2);
+  EXPECT_FALSE(var1 == var2);
+}
+
+TEST_F(UniqueRefTest, Nonequality_NullptrLeft) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  EXPECT_TRUE(var1 != var2);
+  EXPECT_FALSE(var1 == var2);
+}
+
+TEST_F(UniqueRefTest, Nonequality_NullptrRight) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var2));
+  EXPECT_TRUE(var1 != var2);
+  EXPECT_FALSE(var1 == var2);
+}
+
+TEST_F(UniqueRefTest, HashIsDifferent) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+}
+
+TEST_F(UniqueRefTest, HashIsDifferent_NullptrLeft) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+}
+
+TEST_F(UniqueRefTest, HashIsDifferent_NullptrRight) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var2));
+  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+}
+
+TEST_F(UniqueRefTest, HashIsSame_BothNullptr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  makeInvalid(std::move(var2));
+  EXPECT_EQ(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+}
+
+TEST_F(UniqueRefTest, OneIsLess) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  EXPECT_TRUE(std::less<unique_ref<int>>()(var1, var2) != std::less<unique_ref<int>>()(var2, var1));
+}
+
+TEST_F(UniqueRefTest, NullptrIsLess1) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  EXPECT_TRUE(std::less<unique_ref<int>>()(var1, var2));
+}
+
+TEST_F(UniqueRefTest, NullptrIsLess2) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var2));
+  EXPECT_TRUE(std::less<unique_ref<int>>()(var2, var1));
+}
+
+TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  makeInvalid(std::move(var2));
+  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
 }
