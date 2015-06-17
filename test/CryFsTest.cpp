@@ -29,9 +29,27 @@ public:
 
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(make_unique<CryConfig>(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+    CryDevice dev(CryConfigLoader::createNewWithWeakKey(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
   }
-  CryDevice dev(make_unique<CryConfig>(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+  CryDevice dev(CryConfigLoader::loadExisting(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+  auto root = dev.Load(bf::path("/"));
+  dynamic_pointer_move<CryDir>(root)->children();
+}
+
+TEST_F(CryFsTest, UsingStrongKey1_CreatedRootdirIsLoadableAfterClosing) {
+  {
+    CryDevice dev(CryConfigLoader::createNew(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+  }
+  CryDevice dev(CryConfigLoader::loadExisting(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+  auto root = dev.Load(bf::path("/"));
+  dynamic_pointer_move<CryDir>(root)->children();
+}
+
+TEST_F(CryFsTest, UsingStrongKey2_CreatedRootdirIsLoadableAfterClosing) {
+  {
+    CryDevice dev(CryConfigLoader::loadOrCreate(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
+  }
+  CryDevice dev(CryConfigLoader::loadOrCreate(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
   auto root = dev.Load(bf::path("/"));
   dynamic_pointer_move<CryDir>(root)->children();
 }

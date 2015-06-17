@@ -27,6 +27,11 @@ void CryConfigLoader::_initializeConfig(CryConfig *config) {
   _generateRootBlobKey(config);
 }
 
+void CryConfigLoader::_initializeConfigWithWeakKey(CryConfig *config) {
+  _generateWeakEncKey(config);
+  _generateRootBlobKey(config);
+}
+
 void CryConfigLoader::_generateEncKey(CryConfig *config) {
   printf("Generating secure encryption key...");
   fflush(stdout);
@@ -34,6 +39,11 @@ void CryConfigLoader::_generateEncKey(CryConfig *config) {
   config->SetEncryptionKey(new_key.ToString());
   printf("done\n");
   fflush(stdout);
+}
+
+void CryConfigLoader::_generateWeakEncKey(CryConfig *config) {
+  auto new_key = Cipher::EncryptionKey::CreatePseudoRandom();
+  config->SetEncryptionKey(new_key.ToString());
 }
 
 void CryConfigLoader::_generateRootBlobKey(CryConfig *config) {
@@ -46,6 +56,21 @@ unique_ptr<CryConfig> CryConfigLoader::loadExisting(const bf::path &filename) {
     return make_unique<CryConfig>(filename);
   }
   return nullptr;
+}
+
+unique_ptr<CryConfig> CryConfigLoader::loadOrCreateWithWeakKey(const bf::path &filename) {
+  auto config = loadExisting(filename);
+  if (config.get() != nullptr) {
+    return config;
+  }
+  return createNewWithWeakKey(filename);
+}
+
+unique_ptr<CryConfig> CryConfigLoader::createNewWithWeakKey(const bf::path &filename) {
+  auto config = make_unique<CryConfig>(filename);
+  _initializeConfigWithWeakKey(config.get());
+  config->save();
+  return config;
 }
 
 }

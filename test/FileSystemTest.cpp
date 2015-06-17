@@ -21,7 +21,7 @@ public:
 
   unique_ptr<Device> createDevice() override {
     auto blockStore = make_unique<FakeBlockStore>();
-    auto config = make_unique<CryConfig>(configFile.path());
+    auto config = CryConfigLoader::loadOrCreateWithWeakKey(configFile.path());
     return make_unique<CryDevice>(std::move(config), std::move(blockStore));
   }
 
