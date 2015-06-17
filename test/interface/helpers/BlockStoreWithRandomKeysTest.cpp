@@ -34,7 +34,7 @@ public:
 
 class BlockMock: public Block {
 public:
-  BlockMock(): Block(Key::CreateRandom()) {}
+  BlockMock(): Block(Key::CreateOSRandom()) {}
   MOCK_CONST_METHOD0(data, const void*());
   MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
   MOCK_METHOD0(flush, void());

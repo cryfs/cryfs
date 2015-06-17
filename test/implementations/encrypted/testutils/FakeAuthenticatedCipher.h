@@ -7,7 +7,7 @@
 
 struct FakeKey {
   FakeKey(uint8_t value_):value(value_) {}
-  static FakeKey CreateRandom() {
+  static FakeKey CreateOSRandom() {
     return FakeKey(rand());
   }
   static FakeKey FromBinary(const void *data) {
