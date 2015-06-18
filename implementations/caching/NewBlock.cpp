@@ -2,7 +2,6 @@
 #include "CachingBlockStore.h"
 
 using std::unique_ptr;
-using std::make_unique;
 using cpputils::Data;
 
 namespace blockstore {
