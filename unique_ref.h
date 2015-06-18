@@ -4,6 +4,7 @@
 #include <memory>
 #include <boost/optional.hpp>
 #include "macros.h"
+#include "pointer.h"
 
 namespace cpputils {
 
@@ -26,6 +27,8 @@ class unique_ref {
 public:
 
     unique_ref(unique_ref&& from): _target(std::move(from._target)) {}
+    // TODO Test this dynamic-cast-allowing move constructor
+    template<typename U> unique_ref(unique_ref<U>&& from): _target(std::move(from._target)) {}
 
     unique_ref& operator=(unique_ref&& from) {
         _target = std::move(from._target);
@@ -52,6 +55,8 @@ private:
     unique_ref(std::unique_ptr<T> target): _target(std::move(target)) {}
     template<typename U, typename... Args> friend unique_ref<U> make_unique_ref(Args&&... args);
     template<typename U> friend boost::optional<unique_ref<U>> nullcheck(std::unique_ptr<U> ptr);
+    template<typename DST, typename SRC> friend unique_ref<DST> dynamic_pointer_move(unique_ref<SRC> &source);
+    template<typename U> friend class unique_ref;
 
     std::unique_ptr<T> _target;
 
@@ -69,6 +74,13 @@ inline boost::optional<unique_ref<T>> nullcheck(std::unique_ptr<T> ptr) {
         return unique_ref<T>(std::move(ptr));
     }
     return boost::none;
+}
+
+//TODO Write test cases for dynamic_pointer_move
+//TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
+template<typename DST, typename SRC>
+inline unique_ref<DST> dynamic_pointer_move(unique_ref<SRC> &source) {
+    return unique_ref<DST>(dynamic_pointer_move<DST>(source._target));
 }
 
 template<typename T>

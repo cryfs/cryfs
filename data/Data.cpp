@@ -7,7 +7,6 @@ using std::ofstream;
 using std::ifstream;
 using std::ios;
 using std::unique_ptr;
-using std::make_unique;
 
 namespace bf = boost::filesystem;
 

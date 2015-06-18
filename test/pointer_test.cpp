@@ -4,7 +4,6 @@
 using namespace cpputils;
 
 using std::unique_ptr;
-using std::make_unique;
 
 class Parent {
 public:
