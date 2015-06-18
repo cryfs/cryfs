@@ -3,10 +3,9 @@
 #define FSPP_FUSE_IDLIST_H_
 
 #include <map>
-#include <memory>
 #include <mutex>
 #include <stdexcept>
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/unique_ref.h>
 
 namespace fspp {
 
@@ -16,12 +15,12 @@ public:
   IdList();
   virtual ~IdList();
 
-  int add(std::unique_ptr<Entry> entry);
+  int add(cpputils::unique_ref<Entry> entry);
   Entry *get(int id);
   const Entry *get(int id) const;
   void remove(int id);
 private:
-  std::map<int, std::unique_ptr<Entry>> _entries;
+  std::map<int, cpputils::unique_ref<Entry>> _entries;
   int _id_counter;
   mutable std::mutex _mutex;
 
@@ -38,11 +37,11 @@ IdList<Entry>::~IdList() {
 }
 
 template<class Entry>
-int IdList<Entry>::add(std::unique_ptr<Entry> entry) {
+int IdList<Entry>::add(cpputils::unique_ref<Entry> entry) {
   std::lock_guard<std::mutex> lock(_mutex);
   //TODO Reuse IDs (ids = descriptors)
   int new_id = ++_id_counter;
-  _entries[new_id] = std::move(entry);
+  _entries.insert(std::make_pair(new_id, std::move(entry)));
   return new_id;
 }
 

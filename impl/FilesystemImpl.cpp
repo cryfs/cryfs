@@ -1,6 +1,5 @@
 #include "FilesystemImpl.h"
 
-#include <memory>
 #include <fcntl.h>
 #include "../fs_interface/Device.h"
 #include "../fs_interface/Dir.h"
@@ -10,15 +9,15 @@
 #include "../fs_interface/File.h"
 
 
-#include "messmer/cpp-utils/pointer.h"
+#include <messmer/cpp-utils/unique_ref.h>
 
 using namespace fspp;
 using cpputils::dynamic_pointer_move;
-
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
+using boost::none;
 
 namespace bf = boost::filesystem;
 
@@ -29,31 +28,40 @@ FilesystemImpl::FilesystemImpl(Device *device)
 FilesystemImpl::~FilesystemImpl() {
 }
 
-unique_ptr<File> FilesystemImpl::LoadFile(const bf::path &path) {
+unique_ref<File> FilesystemImpl::LoadFile(const bf::path &path) {
   auto node = _device->Load(path);
-  auto file = dynamic_pointer_move<File>(node);
-  if (!file) {
+  if (node == none) {
+    throw fuse::FuseErrnoException(EIO);
+  }
+  auto file = dynamic_pointer_move<File>(*node);
+  if (file == none) {
 	  throw fuse::FuseErrnoException(EISDIR);
   }
-  return file;
+  return std::move(*file);
 }
 
-unique_ptr<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
+unique_ref<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   auto node = _device->Load(path);
-  auto dir = dynamic_pointer_move<Dir>(node);
-  if (!dir) {
+  if (node == none) {
+    throw fuse::FuseErrnoException(EIO);
+  }
+  auto dir = dynamic_pointer_move<Dir>(*node);
+  if (dir == none) {
     throw fuse::FuseErrnoException(ENOTDIR);
   }
-  return dir;
+  return std::move(*dir);
 }
 
-unique_ptr<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
+unique_ref<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
   auto node = _device->Load(path);
-  auto dir = dynamic_pointer_move<Symlink>(node);
-  if (!dir) {
+  if (node == none) {
+    throw fuse::FuseErrnoException(EIO);
+  }
+  auto lnk = dynamic_pointer_move<Symlink>(*node);
+  if (lnk == none) {
     throw fuse::FuseErrnoException(ENOTDIR);
   }
-  return dir;
+  return std::move(*lnk);
 }
 
 int FilesystemImpl::openFile(const bf::path &path, int flags) {
@@ -74,7 +82,12 @@ void FilesystemImpl::closeFile(int descriptor) {
 }
 
 void FilesystemImpl::lstat(const bf::path &path, struct ::stat *stbuf) {
-  _device->Load(path)->stat(stbuf);
+  auto node = _device->Load(path);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->stat(stbuf);
+  }
 }
 
 void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
@@ -82,11 +95,21 @@ void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
 }
 
 void FilesystemImpl::chmod(const boost::filesystem::path &path, mode_t mode) {
-  _device->Load(path)->chmod(mode);
+  auto node = _device->Load(path);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->chmod(mode);
+  }
 }
 
 void FilesystemImpl::chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) {
-  _device->Load(path)->chown(uid, gid);
+  auto node = _device->Load(path);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->chown(uid, gid);
+  }
 }
 
 void FilesystemImpl::truncate(const bf::path &path, off_t size) {
@@ -114,7 +137,12 @@ void FilesystemImpl::fdatasync(int descriptor) {
 }
 
 void FilesystemImpl::access(const bf::path &path, int mask) {
-  _device->Load(path)->access(mask);
+  auto node = _device->Load(path);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->access(mask);
+  }
 }
 
 int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
@@ -142,17 +170,25 @@ void FilesystemImpl::unlink(const bf::path &path) {
 
 void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {
   auto node = _device->Load(from);
-  node->rename(to);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->rename(to);
+  }
 }
 
-unique_ptr<vector<Dir::Entry>> FilesystemImpl::readDir(const bf::path &path) {
+unique_ref<vector<Dir::Entry>> FilesystemImpl::readDir(const bf::path &path) {
   auto dir = LoadDir(path);
   return dir->children();
 }
 
 void FilesystemImpl::utimens(const bf::path &path, const timespec times[2]) {
   auto node = _device->Load(path);
-  node->utimens(times);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  } else {
+    (*node)->utimens(times);
+  }
 }
 
 void FilesystemImpl::statfs(const bf::path &path, struct statvfs *fsstat) {

@@ -3,19 +3,18 @@
 
 #include "FileSystemTest.h"
 #include <messmer/cpp-utils/data/Data.h>
-
-#include <memory>
+#include <messmer/cpp-utils/unique_ref.h>
 
 template<class ConcreteFileSystemTestFixture>
 class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
   FileTest() {
 	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-	file_root = this->LoadFile("/myfile");
+	file_root = cpputils::to_unique_ptr(this->LoadFile("/myfile"));
 
 	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
 	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
-	file_nested = this->LoadFile("/mydir/mynestedfile");
+	file_nested = cpputils::to_unique_ptr(this->LoadFile("/mydir/mynestedfile"));
   }
   std::unique_ptr<fspp::File> file_root;
   std::unique_ptr<fspp::File> file_nested;

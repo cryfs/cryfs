@@ -1,7 +1,7 @@
 #include "FuseReadDirTest.h"
 
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
 using std::initializer_list;
@@ -9,12 +9,12 @@ using std::initializer_list;
 using ::testing::Action;
 using ::testing::Return;
 
-unique_ptr<vector<string>> FuseReadDirTest::ReadDir(const char *dirname) {
+unique_ref<vector<string>> FuseReadDirTest::ReadDir(const char *dirname) {
   auto fs = TestFS();
 
   DIR *dir = openDir(fs.get(), dirname);
 
-  auto result = make_unique<vector<string>>();
+  auto result = make_unique_ref<vector<string>>();
   readDirEntries(dir, result.get());
   closeDir(dir);
   return result;
@@ -30,7 +30,7 @@ int FuseReadDirTest::ReadDirReturnError(const char *dirname) {
     return errno;
   }
 
-  auto result = make_unique<vector<string>>();
+  auto result = make_unique_ref<vector<string>>();
   int error = readDirEntriesAllowError(dir, result.get());
   closeDir(dir);
   return error;

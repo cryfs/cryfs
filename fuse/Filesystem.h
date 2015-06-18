@@ -3,7 +3,7 @@
 #define FSPP_IMPL_FILESYSTEM_H_
 
 #include <boost/filesystem.hpp>
-#include <memory>
+#include <messmer/cpp-utils/unique_ref.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include "../fs_interface/Dir.h"
@@ -40,7 +40,7 @@ public:
   virtual void utimens(const boost::filesystem::path &path, const timespec times[2]) = 0;
   virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
   //TODO We shouldn't use Dir::Entry here, that's in another layer
-  virtual std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) = 0;
+  virtual cpputils::unique_ref<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) = 0;
   //TODO Test createSymlink
   virtual void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) = 0;
   //TODO Test readSymlink

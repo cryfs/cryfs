@@ -4,8 +4,6 @@ using ::testing::_;
 using ::testing::StrEq;
 using ::testing::Return;
 
-using std::make_unique;
-using std::unique_ptr;
 using std::vector;
 using std::string;
 

@@ -49,7 +49,9 @@ public:
   std::unique_ptr<WriteableInMemoryFile> testFile;
   TestData testData;
 
-  FuseWriteDataTest(): testFile(nullptr), testData(GetParam()) {
+  FuseWriteDataTest()
+          : testFile(nullptr),
+            testData(GetParam()) {
     testFile = make_unique<WriteableInMemoryFile>(DataFixture::generate(testData.fileSize(), 1));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);

@@ -64,8 +64,8 @@ public:
     return rename(from.c_str(), to.c_str());
   }
   MOCK_METHOD2(rename, void(const char*, const char*));
-  std::unique_ptr<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) {
-    return std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()));
+  cpputils::unique_ref<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) {
+    return std::move(cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).get());
   }
   MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
   void utimens(const boost::filesystem::path &path, const timespec ts[2]) override {
@@ -100,7 +100,7 @@ public:
     FuseThread _fuse_thread;
   };
 
-  std::unique_ptr<TempTestFS> TestFS();
+  cpputils::unique_ref<TempTestFS> TestFS();
 
   MockFilesystem fsimpl;
 

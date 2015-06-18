@@ -5,8 +5,7 @@
 
 #include <stdexcept>
 
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::make_unique_ref;
 
 using namespace fspp;
 
@@ -37,7 +36,7 @@ struct FuseOpenFileListTest: public ::testing::Test {
 
   FuseOpenFileList list;
   int open(int fileid, int flags) {
-    return list.open(make_unique<MockOpenFile>(fileid, flags));
+    return list.open(make_unique_ref<MockOpenFile>(fileid, flags));
   }
   int open() {
     return open(FILEID1, FILEID2);

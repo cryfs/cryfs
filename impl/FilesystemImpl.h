@@ -5,7 +5,7 @@
 #include "FuseOpenFileList.h"
 #include "../fuse/Filesystem.h"
 
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/unique_ref.h>
 
 namespace fspp {
 class Node;
@@ -37,16 +37,16 @@ public:
 	void rmdir(const boost::filesystem::path &path) override;
 	void unlink(const boost::filesystem::path &path) override;
 	void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) override;
-	std::unique_ptr<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) override;
+	cpputils::unique_ref<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) override;
 	void utimens(const boost::filesystem::path &path, const timespec times[2]) override;
 	void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) override;
     void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) override;
     void readSymlink(const boost::filesystem::path &path, char *buf, size_t size) override;
 
 private:
-	std::unique_ptr<File> LoadFile(const boost::filesystem::path &path);
-	std::unique_ptr<Dir> LoadDir(const boost::filesystem::path &path);
-	std::unique_ptr<Symlink> LoadSymlink(const boost::filesystem::path &path);
+	cpputils::unique_ref<File> LoadFile(const boost::filesystem::path &path);
+	cpputils::unique_ref<Dir> LoadDir(const boost::filesystem::path &path);
+	cpputils::unique_ref<Symlink> LoadSymlink(const boost::filesystem::path &path);
 	int openFile(const File &file, int flags);
 
 	Device *_device;

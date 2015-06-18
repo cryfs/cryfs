@@ -7,8 +7,8 @@ using ::testing::Throw;
 using ::testing::Action;
 using ::testing::Invoke;
 
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace bf = boost::filesystem;
 
@@ -44,8 +44,8 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, readSymlink(_,_,_)).WillByDefault(defaultAction);
 }
 
-unique_ptr<FuseTest::TempTestFS> FuseTest::TestFS() {
-  return make_unique<TempTestFS>(&fsimpl);
+unique_ref<FuseTest::TempTestFS> FuseTest::TestFS() {
+  return make_unique_ref<TempTestFS>(&fsimpl);
 }
 
 FuseTest::TempTestFS::TempTestFS(MockFilesystem *fsimpl): _mountDir(), _fuse(fsimpl), _fuse_thread(&_fuse) {

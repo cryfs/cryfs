@@ -2,6 +2,7 @@
 #include <messmer/cpp-utils/data/Data.h>
 #include "../../testutils/InMemoryFile.h"
 #include "testutils/FuseReadTest.h"
+#include <messmer/cpp-utils/unique_ref.h>
 
 #include "../../../fuse/FuseErrnoException.h"
 
@@ -51,7 +52,9 @@ public:
   std::unique_ptr<InMemoryFile> testFile;
   TestData testData;
 
-  FuseReadReturnedDataTest(): testFile(nullptr), testData(GetParam()) {
+  FuseReadReturnedDataTest()
+          : testFile(nullptr),
+            testData(GetParam()) {
     testFile = make_unique<InMemoryFile>(DataFixture::generate(testData.fileSize()));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);

@@ -1,5 +1,5 @@
 #include "testutils/FuseReadDirTest.h"
-
+#include <messmer/cpp-utils/unique_ref.h>
 #include "../../../fuse/FuseErrnoException.h"
 
 using ::testing::_;
@@ -8,16 +8,16 @@ using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using std::make_unique;
-using std::unique_ptr;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
 
 using namespace fspp::fuse;
 using fspp::Dir;
 
-unique_ptr<vector<string>> LARGE_DIR(int num_entries) {
-  auto result = make_unique<vector<string>>();
+unique_ref<vector<string>> LARGE_DIR(int num_entries) {
+  auto result = make_unique_ref<vector<string>>();
   result->reserve(num_entries);
   for(int i=0; i<num_entries; ++i) {
     result->push_back("File "+std::to_string(i)+" file");

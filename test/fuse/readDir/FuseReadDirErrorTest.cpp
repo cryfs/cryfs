@@ -8,8 +8,6 @@ using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using std::make_unique;
-using std::unique_ptr;
 using std::vector;
 using std::string;
 

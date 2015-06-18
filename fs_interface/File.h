@@ -3,7 +3,7 @@
 #define FSPP_FILE_H_
 
 #include "Node.h"
-#include <memory>
+#include <messmer/cpp-utils/unique_ref.h>
 
 namespace fspp {
 class Device;
@@ -13,7 +13,7 @@ class File: public virtual Node {
 public:
   virtual ~File() {}
 
-  virtual std::unique_ptr<OpenFile> open(int flags) const = 0;
+  virtual cpputils::unique_ref<OpenFile> open(int flags) const = 0;
   virtual void truncate(off_t size) const = 0;
 };
 

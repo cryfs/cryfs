@@ -3,7 +3,7 @@
 #include "../../impl/IdList.h"
 #include <stdexcept>
 
-using std::make_unique;
+using cpputils::make_unique_ref;
 
 using namespace fspp;
 
@@ -20,7 +20,7 @@ struct IdListTest: public ::testing::Test {
 
   IdList<MyObj> list;
   int add(int num) {
-    return list.add(make_unique<MyObj>(num));
+    return list.add(make_unique_ref<MyObj>(num));
   }
   int add() {
     return add(OBJ1);

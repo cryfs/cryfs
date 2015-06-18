@@ -3,7 +3,7 @@
 #define FSPP_DIR_H_
 
 #include "Node.h"
-#include <memory>
+#include <messmer/cpp-utils/unique_ref.h>
 #include <string>
 
 namespace fspp {
@@ -26,13 +26,13 @@ public:
     std::string name;
   };
 
-  virtual std::unique_ptr<OpenFile> createAndOpenFile(const std::string &name, mode_t mode, uid_t uid, gid_t gid) = 0;
+  virtual cpputils::unique_ref<OpenFile> createAndOpenFile(const std::string &name, mode_t mode, uid_t uid, gid_t gid) = 0;
   virtual void createDir(const std::string &name, mode_t mode, uid_t uid, gid_t gid) = 0;
   virtual void createSymlink(const std::string &name, const boost::filesystem::path &target, uid_t uid, gid_t gid) = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
   //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
-  virtual std::unique_ptr<std::vector<Entry>> children() const = 0;
+  virtual cpputils::unique_ref<std::vector<Entry>> children() const = 0;
 };
 
 }
