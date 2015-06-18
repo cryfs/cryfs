@@ -1,16 +1,29 @@
 #include "testutils/BlobStoreTest.h"
+#include <boost/optional/optional_io.hpp>
 
 using blockstore::Key;
+using cpputils::unique_ref;
+using blobstore::Blob;
+using boost::none;
+
+
+//gtest/boost::optional workaround for working with optional<unique_ref<T>>
+namespace boost {
+  std::ostream& operator<<(std::ostream& out, const unique_ref<Blob> &ref) {
+    out << "[" << ref->key().ToString() << "]" << ref.get();
+    return out;
+  }
+}
 
 TEST_F(BlobStoreTest, LoadNonexistingKeyOnEmptyBlobstore) {
   const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(nullptr, blobStore->load(key));
+  EXPECT_EQ(none, blobStore->load(key));
 }
 
 TEST_F(BlobStoreTest, LoadNonexistingKeyOnNonEmptyBlobstore) {
   blobStore->create();
   const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(nullptr, blobStore->load(key));
+  EXPECT_EQ(none, blobStore->load(key));
 }
 
 TEST_F(BlobStoreTest, TwoCreatedBlobsHaveDifferentKeys) {
@@ -23,13 +36,13 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteDirectly) {
   auto blob = blobStore->create();
   Key key = blob->key();
   blobStore->remove(std::move(blob));
-  EXPECT_EQ(nullptr, blobStore->load(key).get());
+  EXPECT_FALSE((bool)blobStore->load(key));
 }
 
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
   auto blob = blobStore->create();
   Key key = blob->key();
-  blob.reset();
-  blobStore->remove(blobStore->load(key));
-  EXPECT_EQ(nullptr, blobStore->load(key).get());
+  reset(std::move(blob));
+  blobStore->remove(loadBlob(key));
+  EXPECT_FALSE((bool)blobStore->load(key));
 }

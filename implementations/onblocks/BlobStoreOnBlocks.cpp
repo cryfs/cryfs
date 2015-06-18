@@ -12,10 +12,15 @@
 using std::unique_ptr;
 using std::make_unique;
 
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+
 using blockstore::BlockStore;
 using blockstore::parallelaccess::ParallelAccessBlockStore;
 using blockstore::Key;
 using cpputils::dynamic_pointer_move;
+using boost::optional;
+using boost::none;
 
 namespace blobstore {
 namespace onblocks {
@@ -31,19 +36,19 @@ BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
 }
 
-unique_ptr<Blob> BlobStoreOnBlocks::create() {
-  return make_unique<BlobOnBlocks>(_dataTreeStore->createNewTree());
+unique_ref<Blob> BlobStoreOnBlocks::create() {
+  return make_unique_ref<BlobOnBlocks>(_dataTreeStore->createNewTree());
 }
 
-unique_ptr<Blob> BlobStoreOnBlocks::load(const Key &key) {
+optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
   auto tree = _dataTreeStore->load(key);
   if (tree == nullptr) {
-  	return nullptr;
+  	return none;
   }
-  return make_unique<BlobOnBlocks>(std::move(tree));
+  return optional<unique_ref<Blob>>(make_unique_ref<BlobOnBlocks>(std::move(tree)));
 }
 
-void BlobStoreOnBlocks::remove(unique_ptr<Blob> blob) {
+void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
   auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
   _dataTreeStore->remove(_blob->releaseTree());
 }

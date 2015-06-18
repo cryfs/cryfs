@@ -18,10 +18,10 @@ public:
   BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore, uint32_t blocksizeBytes);
   virtual ~BlobStoreOnBlocks();
 
-  std::unique_ptr<Blob> create() override;
-  std::unique_ptr<Blob> load(const blockstore::Key &key) override;
+  cpputils::unique_ref<Blob> create() override;
+  boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) override;
 
-  void remove(std::unique_ptr<Blob> blob) override;
+  void remove(cpputils::unique_ref<Blob> blob) override;
 
 private:
   std::unique_ptr<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;

@@ -2,12 +2,11 @@
 #include <messmer/cpp-utils/data/Data.h>
 #include <messmer/cpp-utils/data/DataFixture.h>
 
-using std::unique_ptr;
-
 using namespace blobstore;
 using blockstore::Key;
 using cpputils::Data;
 using cpputils::DataFixture;
+using cpputils::unique_ref;
 
 class BlobSizeTest: public BlobStoreTest {
 public:
@@ -16,7 +15,7 @@ public:
   static constexpr uint32_t MEDIUM_SIZE = 5 * 1024 * 1024;
   static constexpr uint32_t LARGE_SIZE = 10 * 1024 * 1024;
 
-  unique_ptr<Blob> blob;
+  unique_ref<Blob> blob;
 };
 constexpr uint32_t BlobSizeTest::MEDIUM_SIZE;
 constexpr uint32_t BlobSizeTest::LARGE_SIZE;
@@ -66,16 +65,16 @@ TEST_F(BlobSizeTest, ResizingToItself_Large) {
 
 TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
   Key key = blob->key();
-  blob.reset();
-  auto loaded = blobStore->load(key);
+  reset(std::move(blob));
+  auto loaded = loadBlob(key);
   EXPECT_EQ(0, loaded->size());
 }
 
 TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
   blob->resize(LARGE_SIZE);
   Key key = blob->key();
-  blob.reset();
-  auto loaded = blobStore->load(key);
+  reset(std::move(blob));
+  auto loaded = loadBlob(key);
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -114,7 +113,7 @@ TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
 
 TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {
   blob->resize(LARGE_SIZE);
-  auto loaded = blobStore->load(blob->key());
+  auto loaded = loadBlob(blob->key());
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -143,7 +142,7 @@ TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowingAndLoading) {
   blob->resize(LARGE_SIZE);
-  auto loaded = blobStore->load(blob->key());
+  auto loaded = loadBlob(blob->key());
   EXPECT_EQ(0, std::memcmp(readBlob(*loaded).data(), ZEROES.data(), LARGE_SIZE)); 
 }
 

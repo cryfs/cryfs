@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "messmer/blockstore/utils/Key.h"
+#include <messmer/cpp-utils/unique_ref.h>
 
 namespace blobstore {
 
@@ -14,11 +15,9 @@ class BlobStore {
 public:
   virtual ~BlobStore() {}
 
-  virtual std::unique_ptr<Blob> create() = 0;
-  //TODO Use boost::optional (if key doesn't exist)
-  // Return nullptr if block with this key doesn't exists
-  virtual std::unique_ptr<Blob> load(const blockstore::Key &key) = 0;
-  virtual void remove(std::unique_ptr<Blob> blob) = 0;
+  virtual cpputils::unique_ref<Blob> create() = 0;
+  virtual boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) = 0;
+  virtual void remove(cpputils::unique_ref<Blob> blob) = 0;
 };
 
 }

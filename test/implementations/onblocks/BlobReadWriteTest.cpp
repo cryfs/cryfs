@@ -3,7 +3,7 @@
 #include <messmer/cpp-utils/data/DataFixture.h>
 #include "../../../implementations/onblocks/datanodestore/DataNodeView.h"
 
-using std::unique_ptr;
+using cpputils::unique_ref;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
@@ -37,7 +37,7 @@ public:
   }
 
   Data randomData;
-  unique_ptr<Blob> blob;
+  unique_ref<Blob> blob;
 };
 constexpr uint32_t BlobReadWriteTest::LARGE_SIZE;
 constexpr DataNodeLayout BlobReadWriteTest::LAYOUT;
@@ -45,14 +45,14 @@ constexpr DataNodeLayout BlobReadWriteTest::LAYOUT;
 TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_SmallSize) {
 	blob->resize(5);
 	blob->write(randomData.data(), 0, 5);
-	auto loaded = blobStore->load(blob->key());
+	auto loaded = loadBlob(blob->key());
 	EXPECT_DATA_READS_AS(randomData, *loaded, 0, 5);
 }
 
 TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
 	blob->resize(LARGE_SIZE);
 	blob->write(randomData.data(), 0, LARGE_SIZE);
-	auto loaded = blobStore->load(blob->key());
+	auto loaded = loadBlob(blob->key());
 	EXPECT_DATA_READS_AS(randomData, *loaded, 0, LARGE_SIZE);
 }
 
@@ -127,7 +127,7 @@ TEST_P(BlobReadWriteDataTest, WriteAndReadImmediately) {
 TEST_P(BlobReadWriteDataTest, WriteAndReadAfterLoading) {
   blob->resize(GetParam().blobsize);
   blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
-  auto loaded = blobStore->load(blob->key());
+  auto loaded = loadBlob(blob->key());
 
   EXPECT_DATA_READS_AS(this->foregroundData, *loaded, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded, GetParam().offset, GetParam().count);
