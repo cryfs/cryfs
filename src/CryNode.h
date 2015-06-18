@@ -27,7 +27,7 @@ protected:
 
   CryDevice *device();
   const CryDevice *device() const;
-  std::unique_ptr<blobstore::Blob> LoadBlob() const;
+  boost::optional<cpputils::unique_ref<blobstore::Blob>> LoadBlob() const;
 
   virtual fspp::Dir::EntryType getType() const = 0;
 

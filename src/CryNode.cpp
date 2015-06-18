@@ -14,6 +14,8 @@ using std::unique_ptr;
 using blockstore::Key;
 using blobstore::Blob;
 using cpputils::dynamic_pointer_move;
+using cpputils::unique_ref;
+using boost::optional;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -67,7 +69,7 @@ const CryDevice *CryNode::device() const {
   return _device;
 }
 
-unique_ptr<Blob> CryNode::LoadBlob() const {
+optional<unique_ref<Blob>> CryNode::LoadBlob() const {
   return _device->LoadBlob(_key);
 }
 

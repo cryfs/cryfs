@@ -23,6 +23,9 @@ using std::string;
 using std::vector;
 
 using blockstore::Key;
+using cpputils::unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace cryfs {
 
@@ -52,8 +55,12 @@ void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
 }
 
 unique_ptr<DirBlob> CryDir::LoadBlob() const {
+  auto blob = CryNode::LoadBlob();
+  if(blob == none) {
+    return nullptr;
+  }
   //TODO Without const_cast?
-  return make_unique<DirBlob>(CryNode::LoadBlob(), const_cast<CryDevice*>(device()));
+  return make_unique<DirBlob>(std::move(*blob), const_cast<CryDevice*>(device()));
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {

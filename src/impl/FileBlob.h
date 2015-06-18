@@ -3,15 +3,16 @@
 #define CRYFS_LIB_IMPL_FILEBLOB_H_
 
 #include <messmer/blobstore/interface/Blob.h>
+#include <messmer/cpp-utils/unique_ref.h>
 #include <memory>
 
 namespace cryfs {
 
 class FileBlob {
 public:
-  static std::unique_ptr<FileBlob> InitializeEmptyFile(std::unique_ptr<blobstore::Blob> blob);
+  static std::unique_ptr<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
 
-  FileBlob(std::unique_ptr<blobstore::Blob> blob);
+  FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
   virtual ~FileBlob();
 
   ssize_t read(void *target, uint64_t offset, uint64_t count) const;
@@ -24,7 +25,7 @@ public:
   blockstore::Key key() const;
 
 private:
-  std::unique_ptr<blobstore::Blob> _blob;
+  cpputils::unique_ref<blobstore::Blob> _blob;
 
   unsigned char magicNumber() const;
 };

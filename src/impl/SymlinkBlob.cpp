@@ -8,12 +8,13 @@ using std::unique_ptr;
 using std::make_unique;
 using std::string;
 using blobstore::Blob;
+using cpputils::unique_ref;
 
 namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-SymlinkBlob::SymlinkBlob(unique_ptr<Blob> blob)
+SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
 : _target(_readTargetFromBlob(*blob)) {
 }
 
@@ -23,7 +24,7 @@ SymlinkBlob::SymlinkBlob(const bf::path &target) :_target(target) {
 SymlinkBlob::~SymlinkBlob() {
 }
 
-unique_ptr<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ptr<Blob> blob, const bf::path &target) {
+unique_ptr<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
   assert(blob.get() != nullptr);
   string targetStr = target.native();
   blob->resize(1 + targetStr.size());

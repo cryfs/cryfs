@@ -4,8 +4,9 @@
 
 #include <messmer/blobstore/interface/Blob.h>
 #include <messmer/blockstore/utils/Key.h>
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/macros.h>
 #include <messmer/fspp/fs_interface/Dir.h>
+#include <messmer/cpp-utils/unique_ref.h>
 
 #include <memory>
 #include <vector>
@@ -39,9 +40,9 @@ public:
     gid_t gid;
   };
 
-  static std::unique_ptr<DirBlob> InitializeEmptyDir(std::unique_ptr<blobstore::Blob> blob, CryDevice *device);
+  static std::unique_ptr<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob, CryDevice *device);
 
-  DirBlob(std::unique_ptr<blobstore::Blob> blob, CryDevice *device);
+  DirBlob(cpputils::unique_ref<blobstore::Blob> blob, CryDevice *device);
   virtual ~DirBlob();
 
   void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
@@ -70,7 +71,7 @@ private:
   std::vector<DirBlob::Entry>::iterator _findChild(const blockstore::Key &key);
 
   CryDevice *_device;
-  std::unique_ptr<blobstore::Blob> _blob;
+  cpputils::unique_ref<blobstore::Blob> _blob;
   std::vector<Entry> _entries;
   bool _changed;
 

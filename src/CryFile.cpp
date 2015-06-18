@@ -15,6 +15,7 @@ using std::unique_ptr;
 using std::make_unique;
 
 using blockstore::Key;
+using boost::none;
 
 namespace cryfs {
 
@@ -27,12 +28,17 @@ CryFile::~CryFile() {
 
 unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
   auto blob = LoadBlob();
-  assert(blob.get() != nullptr);
-  return make_unique<CryOpenFile>(make_unique<FileBlob>(std::move(blob)));
+  assert(blob != none);
+  return make_unique<CryOpenFile>(make_unique<FileBlob>(std::move(*blob)));
 }
 
 void CryFile::truncate(off_t size) const {
-  FileBlob(LoadBlob()).resize(size);
+  auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Log error
+    return;
+  }
+  FileBlob(std::move(*blob)).resize(size);
 }
 
 fspp::Dir::EntryType CryFile::getType() const {

@@ -17,6 +17,7 @@ using std::string;
 using std::vector;
 
 using blockstore::Key;
+using boost::none;
 
 namespace cryfs {
 
@@ -28,7 +29,11 @@ CrySymlink::~CrySymlink() {
 }
 
 unique_ptr<SymlinkBlob> CrySymlink::LoadBlob() const {
-  return make_unique<SymlinkBlob>(CryNode::LoadBlob());
+  auto blob = CryNode::LoadBlob();
+  if (blob == none) {
+    return nullptr;
+  }
+  return make_unique<SymlinkBlob>(std::move(*blob));
 }
 
 fspp::Dir::EntryType CrySymlink::getType() const {

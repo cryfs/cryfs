@@ -21,11 +21,14 @@ using std::make_pair;
 using blobstore::Blob;
 using blockstore::Key;
 using cpputils::Data;
+using cpputils::unique_ref;
+using boost::none;
 
 namespace cryfs {
 
-DirBlob::DirBlob(unique_ptr<Blob> blob, CryDevice *device) :
+DirBlob::DirBlob(unique_ref<Blob> blob, CryDevice *device) :
     _device(device), _blob(std::move(blob)), _entries(), _changed(false) {
+  //TODO generally everywhere: asserts are bad, because they crash the filesystem. Rather return a fuse error!
   assert(magicNumber() == MagicNumbers::DIR);
   _readEntriesFromBlob();
 }
@@ -39,7 +42,7 @@ void DirBlob::flush() {
   _blob->flush();
 }
 
-unique_ptr<DirBlob> DirBlob::InitializeEmptyDir(unique_ptr<Blob> blob, CryDevice *device) {
+unique_ptr<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, CryDevice *device) {
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::DIR;
   blob->write(&magicNumber, 0, 1);
@@ -204,13 +207,23 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   //TODO Handle file access times
   result->st_mtime = result->st_ctime = result->st_atime = 0;
   if (child.type == fspp::Dir::EntryType::FILE) {
-    result->st_size = FileBlob(_device->LoadBlob(key)).size();
+    auto blob = _device->LoadBlob(key);
+    if (blob == none) {
+      //TODO Log error
+    } else {
+      result->st_size = FileBlob(std::move(*blob)).size();
+    }
   } else if (child.type == fspp::Dir::EntryType::DIR) {
 	//TODO Why do dirs have 4096 bytes in size? Does that make sense?
     result->st_size = 4096;
   } else if (child.type == fspp::Dir::EntryType::SYMLINK) {
 	//TODO Necessary with fuse or does fuse set this on symlinks anyhow?
-	result->st_size = SymlinkBlob(_device->LoadBlob(key)).target().native().size();
+    auto blob = _device->LoadBlob(key);
+    if (blob == none) {
+      //TODO Log error
+    } else {
+      result->st_size = SymlinkBlob(std::move(*blob)).target().native().size();
+    }
   } else {
 	assert(false);
   }

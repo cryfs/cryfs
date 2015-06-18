@@ -25,8 +25,8 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  std::unique_ptr<blobstore::Blob> CreateBlob();
-  std::unique_ptr<blobstore::Blob> LoadBlob(const blockstore::Key &key);
+  cpputils::unique_ref<blobstore::Blob> CreateBlob();
+  boost::optional<cpputils::unique_ref<blobstore::Blob>> LoadBlob(const blockstore::Key &key);
   void RemoveBlob(const blockstore::Key &key);
 
   std::unique_ptr<fspp::Node> Load(const boost::filesystem::path &path) override;
