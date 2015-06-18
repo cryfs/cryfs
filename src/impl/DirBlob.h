@@ -40,7 +40,7 @@ public:
     gid_t gid;
   };
 
-  static std::unique_ptr<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob, CryDevice *device);
+  static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob, CryDevice *device);
 
   DirBlob(cpputils::unique_ref<blobstore::Blob> blob, CryDevice *device);
   virtual ~DirBlob();

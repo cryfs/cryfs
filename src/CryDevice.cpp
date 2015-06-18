@@ -28,7 +28,9 @@ using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using boost::optional;
+using boost::none;
 
 namespace bf = boost::filesystem;
 
@@ -71,44 +73,48 @@ unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
 
   if (path.parent_path().empty()) {
     //We are asked to load the root directory '/'.
-    return make_unique<CryDir>(this, nullptr, _rootKey);
+    return make_unique<CryDir>(this, none, _rootKey);
   }
   auto parent = LoadDirBlob(path.parent_path());
-  auto entry = parent->GetChild(path.filename().native());
+  if (parent == none) {
+    //TODO Return correct fuse error
+    return nullptr;
+  }
+  auto entry = (*parent)->GetChild(path.filename().native());
 
   if (entry.type == fspp::Dir::EntryType::DIR) {
-    return make_unique<CryDir>(this, std::move(parent), entry.key);
+    return make_unique<CryDir>(this, std::move(*parent), entry.key);
   } else if (entry.type == fspp::Dir::EntryType::FILE) {
-    return make_unique<CryFile>(this, std::move(parent), entry.key);
+    return make_unique<CryFile>(this, std::move(*parent), entry.key);
   } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
-	return make_unique<CrySymlink>(this, std::move(parent), entry.key);
+	return make_unique<CrySymlink>(this, std::move(*parent), entry.key);
   } else {
     throw FuseErrnoException(EIO);
   }
 }
 
-unique_ptr<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
+optional<unique_ref<DirBlob>> CryDevice::LoadDirBlob(const bf::path &path) {
   auto currentBlob = _blobStore->load(_rootKey);
-  if(!currentBlob) {
+  if(currentBlob == none) {
     //TODO Return correct fuse error
-    return nullptr;
+    return none;
   }
 
   for (const bf::path &component : path.relative_path()) {
     //TODO Check whether the next path component is a dir.
     //     Right now, an assertion in DirBlob constructor will fail if it isn't.
     //     But fuse should rather return the correct error code.
-    unique_ptr<DirBlob> currentDir = make_unique<DirBlob>(std::move(*currentBlob), this);
+    unique_ref<DirBlob> currentDir = make_unique_ref<DirBlob>(std::move(*currentBlob), this);
 
     Key childKey = currentDir->GetChild(component.c_str()).key;
     currentBlob = _blobStore->load(childKey);
-    if(!currentBlob) {
+    if(currentBlob == none) {
       //TODO Return correct fuse error
-      return nullptr;
+      return none;
     }
   }
 
-  return make_unique<DirBlob>(std::move(*currentBlob), this);
+  return make_unique_ref<DirBlob>(std::move(*currentBlob), this);
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {

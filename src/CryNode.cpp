@@ -16,6 +16,7 @@ using blobstore::Blob;
 using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
+using boost::none;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -23,7 +24,7 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlob>> parent, const Key &key)
 : _device(device),
   _parent(std::move(parent)),
   _key(key) {
@@ -39,16 +40,25 @@ void CryNode::access(int mask) const {
 }
 
 void CryNode::rename(const bf::path &to) {
+  if (_parent == none) {
+    //We are the root direcory.
+    //TODO What should we do?
+    throw FuseErrnoException(EIO);
+  }
   //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
   //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
-  auto old = _parent->GetChild(_key);
+  auto old = (*_parent)->GetChild(_key);
   auto mode = old.mode;
   auto uid = old.uid;
   auto gid = old.gid;
-  _parent->RemoveChild(_key);
-  _parent->flush();
+  (*_parent)->RemoveChild(_key);
+  (*_parent)->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
+  if (targetDir == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(ENOSPC);
+  }
+  (*targetDir)->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
 }
 
 void CryNode::utimens(const timespec times[2]) {
@@ -57,7 +67,13 @@ void CryNode::utimens(const timespec times[2]) {
 }
 
 void CryNode::remove() {
-  _parent->RemoveChild(_key);
+  //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
+  if (_parent == none) {
+    //We are the root direcory.
+    //TODO What should we do?
+    throw FuseErrnoException(EIO);
+  }
+  (*_parent)->RemoveChild(_key);
   _device->RemoveBlob(_key);
 }
 
@@ -74,31 +90,31 @@ optional<unique_ref<Blob>> CryNode::LoadBlob() const {
 }
 
 void CryNode::stat(struct ::stat *result) const {
-  if(_parent.get() == nullptr) {
+  if(_parent == none) {
     //We are the root directory.
 	//TODO What should we do?
 	result->st_mode = S_IFDIR;
   } else {
-    _parent->statChild(_key, result);
+    (*_parent)->statChild(_key, result);
   }
 }
 
 void CryNode::chmod(mode_t mode) {
-  if (_parent.get() == nullptr) {
+  if (_parent == none) {
     //We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
-  _parent->chmodChild(_key, mode);
+  (*_parent)->chmodChild(_key, mode);
 }
 
 void CryNode::chown(uid_t uid, gid_t gid) {
-  if (_parent.get() == nullptr) {
+  if (_parent == none) {
 	//We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
-  _parent->chownChild(_key, uid, gid);
+  (*_parent)->chownChild(_key, uid, gid);
 }
 
 }

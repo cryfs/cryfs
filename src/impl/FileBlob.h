@@ -10,7 +10,7 @@ namespace cryfs {
 
 class FileBlob {
 public:
-  static std::unique_ptr<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
+  static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
 
   FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
   virtual ~FileBlob();

@@ -3,7 +3,8 @@
 #define CRYFS_LIB_CRYOPENFILE_H_
 
 #include "messmer/fspp/fs_interface/OpenFile.h"
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/macros.h>
+#include <messmer/cpp-utils/unique_ref.h>
 
 namespace cryfs {
 class CryDevice;
@@ -11,7 +12,7 @@ class FileBlob;
 
 class CryOpenFile: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(std::unique_ptr<FileBlob> fileBlob);
+  explicit CryOpenFile(cpputils::unique_ref<FileBlob> fileBlob);
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
@@ -23,7 +24,7 @@ public:
   void fdatasync() override;
 
 private:
-  std::unique_ptr<FileBlob> _fileBlob;
+  cpputils::unique_ref<FileBlob> _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };

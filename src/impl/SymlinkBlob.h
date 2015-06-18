@@ -11,7 +11,7 @@ namespace cryfs {
 
 class SymlinkBlob {
 public:
-  static std::unique_ptr<SymlinkBlob> InitializeSymlink(cpputils::unique_ref<blobstore::Blob> blob, const boost::filesystem::path &target);
+  static cpputils::unique_ref<SymlinkBlob> InitializeSymlink(cpputils::unique_ref<blobstore::Blob> blob, const boost::filesystem::path &target);
 
   SymlinkBlob(cpputils::unique_ref<blobstore::Blob> blob);
   SymlinkBlob(const boost::filesystem::path &target);

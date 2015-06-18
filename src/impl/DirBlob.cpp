@@ -22,6 +22,7 @@ using blobstore::Blob;
 using blockstore::Key;
 using cpputils::Data;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using boost::none;
 
 namespace cryfs {
@@ -42,11 +43,11 @@ void DirBlob::flush() {
   _blob->flush();
 }
 
-unique_ptr<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, CryDevice *device) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, CryDevice *device) {
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::DIR;
   blob->write(&magicNumber, 0, 1);
-  return make_unique<DirBlob>(std::move(blob), device);
+  return make_unique_ref<DirBlob>(std::move(blob), device);
 }
 
 unsigned char DirBlob::magicNumber() const {

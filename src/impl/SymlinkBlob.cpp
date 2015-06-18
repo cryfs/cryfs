@@ -9,6 +9,7 @@ using std::make_unique;
 using std::string;
 using blobstore::Blob;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace bf = boost::filesystem;
 
@@ -24,14 +25,14 @@ SymlinkBlob::SymlinkBlob(const bf::path &target) :_target(target) {
 SymlinkBlob::~SymlinkBlob() {
 }
 
-unique_ptr<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
+unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
   assert(blob.get() != nullptr);
   string targetStr = target.native();
   blob->resize(1 + targetStr.size());
   unsigned char magicNumber = MagicNumbers::SYMLINK;
   blob->write(&magicNumber, 0, 1);
   blob->write(targetStr.c_str(), 1, targetStr.size());
-  return make_unique<SymlinkBlob>(target);
+  return make_unique_ref<SymlinkBlob>(target);
 }
 
 void SymlinkBlob::_checkMagicNumber(const Blob &blob) {

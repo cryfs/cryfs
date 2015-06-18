@@ -29,7 +29,7 @@ using boost::none;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
+CryDir::CryDir(CryDevice *device, boost::optional<unique_ref<DirBlob>> parent, const Key &key)
 : CryNode(device, std::move(parent), key) {
 }
 

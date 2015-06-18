@@ -12,7 +12,7 @@ namespace cryfs {
 
 class CryNode: public virtual fspp::Node {
 public:
-  CryNode(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
+  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<DirBlob>> parent, const blockstore::Key &key);
   void access(int mask) const override;
   void stat(struct ::stat *result) const override;
   void chmod(mode_t mode) override;
@@ -33,7 +33,7 @@ protected:
 
 private:
   CryDevice *_device;
-  std::unique_ptr<DirBlob> _parent;
+  boost::optional<cpputils::unique_ref<DirBlob>> _parent;
   blockstore::Key _key;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);

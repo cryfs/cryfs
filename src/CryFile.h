@@ -11,7 +11,7 @@ namespace cryfs {
 
 class CryFile: public fspp::File, CryNode {
 public:
-  CryFile(CryDevice *device, std::unique_ptr<DirBlob> parent, const blockstore::Key &key);
+  CryFile(CryDevice *device, cpputils::unique_ref<DirBlob> parent, const blockstore::Key &key);
   virtual ~CryFile();
 
   std::unique_ptr<fspp::OpenFile> open(int flags) const override;

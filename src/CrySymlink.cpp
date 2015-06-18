@@ -18,10 +18,11 @@ using std::vector;
 
 using blockstore::Key;
 using boost::none;
+using cpputils::unique_ref;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
+CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlob> parent, const Key &key)
 : CryNode(device, std::move(parent), key) {
 }
 

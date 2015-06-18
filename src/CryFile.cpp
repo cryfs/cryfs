@@ -16,10 +16,12 @@ using std::make_unique;
 
 using blockstore::Key;
 using boost::none;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ptr<DirBlob> parent, const Key &key)
+CryFile::CryFile(CryDevice *device, unique_ref<DirBlob> parent, const Key &key)
 : CryNode(device, std::move(parent), key) {
 }
 
@@ -29,7 +31,7 @@ CryFile::~CryFile() {
 unique_ptr<fspp::OpenFile> CryFile::open(int flags) const {
   auto blob = LoadBlob();
   assert(blob != none);
-  return make_unique<CryOpenFile>(make_unique<FileBlob>(std::move(*blob)));
+  return make_unique<CryOpenFile>(make_unique_ref<FileBlob>(std::move(*blob)));
 }
 
 void CryFile::truncate(off_t size) const {

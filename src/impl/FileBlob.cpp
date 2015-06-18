@@ -8,6 +8,7 @@ using std::unique_ptr;
 using std::make_unique;
 using blobstore::Blob;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace cryfs {
 
@@ -18,12 +19,12 @@ FileBlob::FileBlob(unique_ref<Blob> blob)
 FileBlob::~FileBlob() {
 }
 
-unique_ptr<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
+unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
   assert(blob.get() != nullptr);
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::FILE;
   blob->write(&magicNumber, 0, 1);
-  return make_unique<FileBlob>(std::move(blob));
+  return make_unique_ref<FileBlob>(std::move(blob));
 }
 
 unsigned char FileBlob::magicNumber() const {

@@ -31,7 +31,7 @@ public:
 
   std::unique_ptr<fspp::Node> Load(const boost::filesystem::path &path) override;
 
-  std::unique_ptr<DirBlob> LoadDirBlob(const boost::filesystem::path &path);
+  boost::optional<cpputils::unique_ref<DirBlob>> LoadDirBlob(const boost::filesystem::path &path);
 
 private:
   blockstore::Key GetOrCreateRootKey(CryConfig *config);
