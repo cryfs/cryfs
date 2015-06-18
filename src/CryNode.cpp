@@ -10,7 +10,6 @@
 
 namespace bf = boost::filesystem;
 
-using std::unique_ptr;
 using blockstore::Key;
 using blobstore::Blob;
 using cpputils::dynamic_pointer_move;

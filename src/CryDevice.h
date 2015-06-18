@@ -20,7 +20,7 @@ public:
 
   using Cipher = CryConfigLoader::Cipher;
 
-  CryDevice(std::unique_ptr<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
+  CryDevice(cpputils::unique_ref<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
@@ -38,7 +38,7 @@ private:
   Cipher::EncryptionKey GetEncryptionKey(CryConfig *config);
   blockstore::Key CreateRootBlobAndReturnKey();
 
-  std::unique_ptr<blobstore::BlobStore> _blobStore;
+  cpputils::unique_ref<blobstore::BlobStore> _blobStore;
 
   blockstore::Key _rootKey;
 

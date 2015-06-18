@@ -19,7 +19,7 @@ public:
   fspp::Dir::EntryType getType() const override;
 
 private:
-  std::unique_ptr<SymlinkBlob> LoadBlob() const;
+  boost::optional<cpputils::unique_ref<SymlinkBlob>> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CrySymlink);
 };

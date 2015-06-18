@@ -18,7 +18,9 @@ using std::vector;
 
 using blockstore::Key;
 using boost::none;
+using boost::optional;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace cryfs {
 
@@ -29,12 +31,12 @@ CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlob> parent, const Key 
 CrySymlink::~CrySymlink() {
 }
 
-unique_ptr<SymlinkBlob> CrySymlink::LoadBlob() const {
+optional<unique_ref<SymlinkBlob>> CrySymlink::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
   if (blob == none) {
-    return nullptr;
+    return none;
   }
-  return make_unique<SymlinkBlob>(std::move(*blob));
+  return make_unique_ref<SymlinkBlob>(std::move(*blob));
 }
 
 fspp::Dir::EntryType CrySymlink::getType() const {
@@ -42,7 +44,12 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 }
 
 bf::path CrySymlink::target() const {
-  return LoadBlob()->target();
+  auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(EIO);
+  }
+  return (*blob)->target();
 }
 
 }

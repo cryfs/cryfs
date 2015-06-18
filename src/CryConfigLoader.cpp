@@ -2,21 +2,23 @@
 #include <boost/filesystem.hpp>
 
 namespace bf = boost::filesystem;
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace cryfs {
 
-unique_ptr<CryConfig> CryConfigLoader::loadOrCreate(const bf::path &filename) {
+unique_ref<CryConfig> CryConfigLoader::loadOrCreate(const bf::path &filename) {
   auto config = loadExisting(filename);
-  if (config.get() != nullptr) {
-    return config;
+  if (config != none) {
+    return std::move(*config);
   }
   return createNew(filename);
 }
 
-unique_ptr<CryConfig> CryConfigLoader::createNew(const bf::path &filename) {
-  auto config = make_unique<CryConfig>(filename);
+unique_ref<CryConfig> CryConfigLoader::createNew(const bf::path &filename) {
+  auto config = make_unique_ref<CryConfig>(filename);
   _initializeConfig(config.get());
   config->save();
   return config;
@@ -51,23 +53,23 @@ void CryConfigLoader::_generateRootBlobKey(CryConfig *config) {
   config->SetRootBlob("");
 }
 
-unique_ptr<CryConfig> CryConfigLoader::loadExisting(const bf::path &filename) {
+optional<unique_ref<CryConfig>> CryConfigLoader::loadExisting(const bf::path &filename) {
   if (bf::exists(filename)) {
-    return make_unique<CryConfig>(filename);
+    return make_unique_ref<CryConfig>(filename);
   }
-  return nullptr;
+  return none;
 }
 
-unique_ptr<CryConfig> CryConfigLoader::loadOrCreateWithWeakKey(const bf::path &filename) {
+unique_ref<CryConfig> CryConfigLoader::loadOrCreateWithWeakKey(const bf::path &filename) {
   auto config = loadExisting(filename);
-  if (config.get() != nullptr) {
-    return config;
+  if (config != none) {
+    return std::move(*config);
   }
   return createNewWithWeakKey(filename);
 }
 
-unique_ptr<CryConfig> CryConfigLoader::createNewWithWeakKey(const bf::path &filename) {
-  auto config = make_unique<CryConfig>(filename);
+unique_ref<CryConfig> CryConfigLoader::createNewWithWeakKey(const bf::path &filename) {
+  auto config = make_unique_ref<CryConfig>(filename);
   _initializeConfigWithWeakKey(config.get());
   config->save();
   return config;

@@ -24,6 +24,7 @@ using std::vector;
 
 using blockstore::Key;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using boost::optional;
 using boost::none;
 
@@ -38,9 +39,13 @@ CryDir::~CryDir() {
 
 unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(EIO);
+  }
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildFile(name, childkey, mode, uid, gid);
+  (*blob)->AddChildFile(name, childkey, mode, uid, gid);
   //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
   auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
   return make_unique<CryOpenFile>(std::move(childblob));
@@ -48,26 +53,35 @@ unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(EIO);
+  }
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildDir(name, childkey, mode, uid, gid);
+  (*blob)->AddChildDir(name, childkey, mode, uid, gid);
   DirBlob::InitializeEmptyDir(std::move(child), device());
 }
 
-unique_ptr<DirBlob> CryDir::LoadBlob() const {
+optional<unique_ref<DirBlob>> CryDir::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
   if(blob == none) {
-    return nullptr;
+    return none;
   }
   //TODO Without const_cast?
-  return make_unique<DirBlob>(std::move(*blob), const_cast<CryDevice*>(device()));
+  return make_unique_ref<DirBlob>(std::move(*blob), const_cast<CryDevice*>(device()));
 }
 
 unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
   auto children = make_unique<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
-  LoadBlob()->AppendChildrenTo(children.get());
+  auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(EIO);
+  }
+  (*blob)->AppendChildrenTo(children.get());
   return children;
 }
 
@@ -77,9 +91,13 @@ fspp::Dir::EntryType CryDir::getType() const {
 
 void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
+  if (blob == none) {
+    //TODO Return correct fuse error
+    throw FuseErrnoException(EIO);
+  }
   auto child = device()->CreateBlob();
   Key childkey = child->key();
-  blob->AddChildSymlink(name, childkey, uid, gid);
+  (*blob)->AddChildSymlink(name, childkey, uid, gid);
   SymlinkBlob::InitializeSymlink(std::move(child), target);
 }
 

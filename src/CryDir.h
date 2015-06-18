@@ -24,7 +24,7 @@ public:
   fspp::Dir::EntryType getType() const override;
 
 private:
-  std::unique_ptr<DirBlob> LoadBlob() const;
+  boost::optional<cpputils::unique_ref<DirBlob>> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };
