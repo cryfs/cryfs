@@ -1,19 +1,10 @@
 #include "testutils/BlobStoreTest.h"
-#include <boost/optional/optional_io.hpp>
+#include <messmer/cpp-utils/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::Key;
 using cpputils::unique_ref;
 using blobstore::Blob;
 using boost::none;
-
-
-//gtest/boost::optional workaround for working with optional<unique_ref<T>>
-namespace boost {
-  std::ostream& operator<<(std::ostream& out, const unique_ref<Blob> &ref) {
-    out << "[" << ref->key().ToString() << "]" << ref.get();
-    return out;
-  }
-}
 
 TEST_F(BlobStoreTest, LoadNonexistingKeyOnEmptyBlobstore) {
   const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");

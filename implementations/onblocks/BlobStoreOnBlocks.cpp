@@ -50,7 +50,8 @@ optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
 
 void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
   auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
-  _dataTreeStore->remove(_blob->releaseTree());
+  assert(_blob != none);
+  _dataTreeStore->remove((*_blob)->releaseTree());
 }
 
 }
