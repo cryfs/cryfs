@@ -4,8 +4,6 @@
 #include <messmer/blockstore/utils/Key.h>
 #include <cassert>
 
-using std::unique_ptr;
-using std::make_unique;
 using blobstore::Blob;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

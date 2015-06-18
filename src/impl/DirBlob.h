@@ -8,7 +8,6 @@
 #include <messmer/fspp/fs_interface/Dir.h>
 #include <messmer/cpp-utils/unique_ref.h>
 
-#include <memory>
 #include <vector>
 
 namespace cryfs{

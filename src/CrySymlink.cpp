@@ -11,8 +11,6 @@ using fspp::fuse::FuseErrnoException;
 
 namespace bf = boost::filesystem;
 
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 using std::vector;
 

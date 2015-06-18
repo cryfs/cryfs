@@ -11,9 +11,6 @@ namespace bf = boost::filesystem;
 using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
-using std::unique_ptr;
-using std::make_unique;
-
 using blockstore::Key;
 using boost::none;
 using cpputils::unique_ref;
