@@ -55,8 +55,9 @@ private:
     unique_ref(std::unique_ptr<T> target): _target(std::move(target)) {}
     template<typename U, typename... Args> friend unique_ref<U> make_unique_ref(Args&&... args);
     template<typename U> friend boost::optional<unique_ref<U>> nullcheck(std::unique_ptr<U> ptr);
-    template<typename DST, typename SRC> friend unique_ref<DST> dynamic_pointer_move(unique_ref<SRC> &source);
+    template<typename DST, typename SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source);
     template<typename U> friend class unique_ref;
+    template<typename U> friend std::unique_ptr<U> to_unique_ptr(unique_ref<U> ref);
 
     std::unique_ptr<T> _target;
 
@@ -79,8 +80,14 @@ inline boost::optional<unique_ref<T>> nullcheck(std::unique_ptr<T> ptr) {
 //TODO Write test cases for dynamic_pointer_move
 //TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
 template<typename DST, typename SRC>
-inline unique_ref<DST> dynamic_pointer_move(unique_ref<SRC> &source) {
-    return unique_ref<DST>(dynamic_pointer_move<DST>(source._target));
+inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) {
+    return nullcheck<DST>(dynamic_pointer_move<DST>(source._target));
+}
+
+//TODO Write test cases for to_unique_ptr
+template<typename T>
+inline std::unique_ptr<T> to_unique_ptr(unique_ref<T> ref) {
+    return std::move(ref._target);
 }
 
 template<typename T>
