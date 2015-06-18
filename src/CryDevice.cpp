@@ -68,26 +68,26 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
 CryDevice::~CryDevice() {
 }
 
-unique_ptr<fspp::Node> CryDevice::Load(const bf::path &path) {
+optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   assert(path.is_absolute());
 
   if (path.parent_path().empty()) {
     //We are asked to load the root directory '/'.
-    return make_unique<CryDir>(this, none, _rootKey);
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, _rootKey));
   }
   auto parent = LoadDirBlob(path.parent_path());
   if (parent == none) {
     //TODO Return correct fuse error
-    return nullptr;
+    return none;
   }
   auto entry = (*parent)->GetChild(path.filename().native());
 
   if (entry.type == fspp::Dir::EntryType::DIR) {
-    return make_unique<CryDir>(this, std::move(*parent), entry.key);
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(*parent), entry.key));
   } else if (entry.type == fspp::Dir::EntryType::FILE) {
-    return make_unique<CryFile>(this, std::move(*parent), entry.key);
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(*parent), entry.key));
   } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
-	return make_unique<CrySymlink>(this, std::move(*parent), entry.key);
+	return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(*parent), entry.key));
   } else {
     throw FuseErrnoException(EIO);
   }

@@ -37,7 +37,7 @@ CryDir::CryDir(CryDevice *device, boost::optional<unique_ref<DirBlob>> parent, c
 CryDir::~CryDir() {
 }
 
-unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
+unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
   if (blob == none) {
     //TODO Return correct fuse error
@@ -48,7 +48,7 @@ unique_ptr<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
   (*blob)->AddChildFile(name, childkey, mode, uid, gid);
   //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
   auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
-  return make_unique<CryOpenFile>(std::move(childblob));
+  return make_unique_ref<CryOpenFile>(std::move(childblob));
 }
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
@@ -72,8 +72,8 @@ optional<unique_ref<DirBlob>> CryDir::LoadBlob() const {
   return make_unique_ref<DirBlob>(std::move(*blob), const_cast<CryDevice*>(device()));
 }
 
-unique_ptr<vector<fspp::Dir::Entry>> CryDir::children() const {
-  auto children = make_unique<vector<fspp::Dir::Entry>>();
+unique_ref<vector<fspp::Dir::Entry>> CryDir::children() const {
+  auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
   auto blob = LoadBlob();

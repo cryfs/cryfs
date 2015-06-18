@@ -29,7 +29,7 @@ public:
   boost::optional<cpputils::unique_ref<blobstore::Blob>> LoadBlob(const blockstore::Key &key);
   void RemoveBlob(const blockstore::Key &key);
 
-  std::unique_ptr<fspp::Node> Load(const boost::filesystem::path &path) override;
+  boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
 
   boost::optional<cpputils::unique_ref<DirBlob>> LoadDirBlob(const boost::filesystem::path &path);
 

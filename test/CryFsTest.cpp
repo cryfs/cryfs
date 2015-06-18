@@ -33,7 +33,7 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   }
   CryDevice dev(std::move(CryConfigLoader::loadExisting(config.path()).get()), make_unique<OnDiskBlockStore>(rootdir.path()));
   auto root = dev.Load(bf::path("/"));
-  dynamic_pointer_move<CryDir>(root)->children();
+  dynamic_pointer_move<CryDir>(root.get()).get()->children();
 }
 
 TEST_F(CryFsTest, UsingStrongKey1_CreatedRootdirIsLoadableAfterClosing) {
@@ -42,7 +42,7 @@ TEST_F(CryFsTest, UsingStrongKey1_CreatedRootdirIsLoadableAfterClosing) {
   }
   CryDevice dev(std::move(CryConfigLoader::loadExisting(config.path()).get()), make_unique<OnDiskBlockStore>(rootdir.path()));
   auto root = dev.Load(bf::path("/"));
-  dynamic_pointer_move<CryDir>(root)->children();
+  dynamic_pointer_move<CryDir>(root.get()).get()->children();
 }
 
 TEST_F(CryFsTest, UsingStrongKey2_CreatedRootdirIsLoadableAfterClosing) {
@@ -51,5 +51,5 @@ TEST_F(CryFsTest, UsingStrongKey2_CreatedRootdirIsLoadableAfterClosing) {
   }
   CryDevice dev(CryConfigLoader::loadOrCreate(config.path()), make_unique<OnDiskBlockStore>(rootdir.path()));
   auto root = dev.Load(bf::path("/"));
-  dynamic_pointer_move<CryDir>(root)->children();
+  dynamic_pointer_move<CryDir>(root.get()).get()->children();
 }

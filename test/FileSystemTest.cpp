@@ -4,8 +4,8 @@
 
 #include "../src/CryDevice.h"
 
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 using fspp::Device;
 
@@ -19,10 +19,10 @@ public:
   // Don't create config tempfile yet
   : configFile(false) {}
 
-  unique_ptr<Device> createDevice() override {
-    auto blockStore = make_unique<FakeBlockStore>();
+  unique_ref<Device> createDevice() override {
+    auto blockStore = std::make_unique<FakeBlockStore>();
     auto config = CryConfigLoader::loadOrCreateWithWeakKey(configFile.path());
-    return make_unique<CryDevice>(std::move(config), std::move(blockStore));
+    return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }
 
   cpputils::TempFile configFile;
