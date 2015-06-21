@@ -8,7 +8,7 @@
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
 
 #include <memory>
-#include "messmer/cpp-utils/pointer.h"
+#include "messmer/cpp-utils/pointer/cast.h"
 
 using ::testing::Test;
 

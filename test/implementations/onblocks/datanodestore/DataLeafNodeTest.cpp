@@ -4,7 +4,7 @@
 #include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
 #include <google/gtest/gtest.h>
 
-#include "messmer/cpp-utils/pointer.h"
+#include "messmer/cpp-utils/pointer/cast.h"
 
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"

@@ -1,7 +1,7 @@
 #include "DataTreeTest.h"
 
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;

@@ -1,5 +1,5 @@
 #include "testutils/BlobStoreTest.h"
-#include <messmer/cpp-utils/unique_ref_boost_optional_gtest_workaround.h>
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::Key;
 using cpputils::unique_ref;

@@ -3,7 +3,7 @@
 #define BLOCKS_MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_TWOLEVELDATAFIXTURE_H_
 
 #include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 #include "LeafDataFixture.h"
 
 //TODO Rename, since we now allow any number of levels

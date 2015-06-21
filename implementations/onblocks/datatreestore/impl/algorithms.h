@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_IMPL_ALGORITHMS_H_
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_IMPL_ALGORITHMS_H_
 
-#include <messmer/cpp-utils/optional_ownership_ptr.h>
+#include <messmer/cpp-utils/pointer/optional_ownership_ptr.h>
 
 namespace blobstore {
 namespace onblocks {

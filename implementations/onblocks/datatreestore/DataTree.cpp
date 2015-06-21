@@ -7,8 +7,8 @@
 
 #include "impl/algorithms.h"
 
-#include "messmer/cpp-utils/pointer.h"
-#include "messmer/cpp-utils/optional_ownership_ptr.h"
+#include "messmer/cpp-utils/pointer/cast.h"
+#include "messmer/cpp-utils/pointer/optional_ownership_ptr.h"
 #include <cmath>
 
 using blockstore::Key;

@@ -1,5 +1,5 @@
 #include "algorithms.h"
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 #include <messmer/blockstore/utils/Key.h>
 
 #include "../../datanodestore/DataInnerNode.h"

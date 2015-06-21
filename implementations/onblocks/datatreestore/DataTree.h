@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/optional_ownership_ptr.h>
+#include <messmer/cpp-utils/pointer/optional_ownership_ptr.h>
 #include "../datanodestore/DataNodeView.h"
 //TODO Replace with C++14 once std::shared_mutex is supported
 #include <boost/thread/shared_mutex.hpp>

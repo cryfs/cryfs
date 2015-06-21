@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "messmer/blockstore/utils/Key.h"
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace blobstore {
 
