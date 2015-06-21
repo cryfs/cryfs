@@ -6,7 +6,7 @@
 #include "CryDir.h"
 #include "CryFile.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 
 namespace bf = boost::filesystem;
 

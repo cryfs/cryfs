@@ -1,7 +1,7 @@
 #include <google/gtest/gtest.h>
 #include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 #include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include "../src/CryDevice.h"
 #include "../src/CryDir.h"

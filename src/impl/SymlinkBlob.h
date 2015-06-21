@@ -4,7 +4,7 @@
 
 #include <messmer/blobstore/interface/Blob.h>
 #include <boost/filesystem/path.hpp>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace cryfs {
 

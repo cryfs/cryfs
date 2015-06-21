@@ -3,7 +3,7 @@
 #define CRYFS_LIB_IMPL_FILEBLOB_H_
 
 #include <messmer/blobstore/interface/Blob.h>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace cryfs {
 

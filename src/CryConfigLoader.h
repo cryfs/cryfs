@@ -2,7 +2,7 @@
 #ifndef MESSMER_CRYFS_SRC_CRYCONFIGLOADER_H_
 #define MESSMER_CRYFS_SRC_CRYCONFIGLOADER_H_
 
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <boost/filesystem/path.hpp>
 #include "CryConfig.h"
 #include <messmer/blockstore/implementations/encrypted/ciphers/AES256_GCM.h>

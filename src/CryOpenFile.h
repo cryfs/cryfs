@@ -4,7 +4,7 @@
 
 #include "messmer/fspp/fs_interface/OpenFile.h"
 #include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace cryfs {
 class CryDevice;
