@@ -3,7 +3,7 @@
 
 #include "FileSystemTest.h"
 #include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 template<class ConcreteFileSystemTestFixture>
 class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {

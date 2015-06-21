@@ -1,5 +1,5 @@
 #include "testutils/FuseReadDirTest.h"
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include "../../../fuse/FuseErrnoException.h"
 
 using ::testing::_;

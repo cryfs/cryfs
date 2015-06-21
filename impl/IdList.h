@@ -5,7 +5,7 @@
 #include <map>
 #include <mutex>
 #include <stdexcept>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace fspp {
 

@@ -5,7 +5,7 @@
 #include "FuseOpenFileList.h"
 #include "../fuse/Filesystem.h"
 
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace fspp {
 class Node;

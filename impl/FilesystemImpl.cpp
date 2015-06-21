@@ -9,7 +9,7 @@
 #include "../fs_interface/File.h"
 
 
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 using namespace fspp;
 using cpputils::dynamic_pointer_move;

@@ -3,7 +3,7 @@
 #define FSPP_DEVICE_H_
 
 #include <boost/filesystem.hpp>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <sys/statvfs.h>
 
 namespace fspp {

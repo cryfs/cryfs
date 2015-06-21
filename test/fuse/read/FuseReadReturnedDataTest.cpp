@@ -2,7 +2,7 @@
 #include <messmer/cpp-utils/data/Data.h>
 #include "../../testutils/InMemoryFile.h"
 #include "testutils/FuseReadTest.h"
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 #include "../../../fuse/FuseErrnoException.h"
 

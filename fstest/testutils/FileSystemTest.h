@@ -4,8 +4,8 @@
 #include <google/gtest/gtest.h>
 #include <type_traits>
 #include <boost/static_assert.hpp>
-#include <messmer/cpp-utils/unique_ref.h>
-#include <messmer/cpp-utils/unique_ref_boost_optional_gtest_workaround.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Dir.h"

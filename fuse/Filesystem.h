@@ -3,7 +3,7 @@
 #define FSPP_IMPL_FILESYSTEM_H_
 
 #include <boost/filesystem.hpp>
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include "../fs_interface/Dir.h"

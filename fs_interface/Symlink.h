@@ -3,7 +3,7 @@
 #define FSPP_SYMLINK_H_
 
 #include "Node.h"
-#include <messmer/cpp-utils/unique_ref.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <string>
 
 namespace fspp {
