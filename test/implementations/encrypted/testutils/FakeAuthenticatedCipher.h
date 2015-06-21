@@ -6,12 +6,11 @@
 #include <messmer/cpp-utils/data/FixedSizeData.h>
 
 struct FakeKey {
-  FakeKey(uint8_t value_):value(value_) {}
   static FakeKey CreateOSRandom() {
-    return FakeKey(rand());
+    return FakeKey{(uint8_t)rand()};
   }
   static FakeKey FromBinary(const void *data) {
-    return FakeKey(*(uint8_t*)data);
+    return FakeKey{*(uint8_t*)data};
   }
   static constexpr unsigned int BINARY_LENGTH = 1;
 
@@ -26,10 +25,10 @@ public:
   using EncryptionKey = FakeKey;
 
   static EncryptionKey Key1() {
-    return FakeKey(5);
+    return FakeKey{5};
   }
   static EncryptionKey Key2() {
-    return FakeKey(63);
+    return FakeKey{63};
   }
 
   static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {

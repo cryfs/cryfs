@@ -1,7 +1,6 @@
 // This file is meant to be included by BlockStoreTest.h only
 
 struct DataRange {
-  constexpr DataRange(size_t blocksize_, off_t offset_, size_t count_): blocksize(blocksize_), offset(offset_), count(count_) {}
   size_t blocksize;
   off_t offset;
   size_t count;
@@ -77,14 +76,14 @@ private:
   }
 };
 constexpr std::initializer_list<DataRange> DATA_RANGES = {
-  DataRange(1024,     0,   1024),     // full size leaf, access beginning to end
-  DataRange(1024,     100, 1024-200), // full size leaf, access middle to middle
-  DataRange(1024,     0,   1024-100), // full size leaf, access beginning to middle
-  DataRange(1024,     100, 1024-100), // full size leaf, access middle to end
-  DataRange(1024-100, 0,   1024-100), // non-full size leaf, access beginning to end
-  DataRange(1024-100, 100, 1024-300), // non-full size leaf, access middle to middle
-  DataRange(1024-100, 0,   1024-200), // non-full size leaf, access beginning to middle
-  DataRange(1024-100, 100, 1024-200)  // non-full size leaf, access middle to end
+  DataRange{1024,     0,   1024},     // full size leaf, access beginning to end
+  DataRange{1024,     100, 1024-200}, // full size leaf, access middle to middle
+  DataRange{1024,     0,   1024-100}, // full size leaf, access beginning to middle
+  DataRange{1024,     100, 1024-100}, // full size leaf, access middle to end
+  DataRange{1024-100, 0,   1024-100}, // non-full size leaf, access beginning to end
+  DataRange{1024-100, 100, 1024-300}, // non-full size leaf, access middle to middle
+  DataRange{1024-100, 0,   1024-200}, // non-full size leaf, access beginning to middle
+  DataRange{1024-100, 100, 1024-200}  // non-full size leaf, access middle to end
 };
 #define TYPED_TEST_P_FOR_ALL_DATA_RANGES(TestName)                                   \
   TYPED_TEST_P(BlockStoreTest, TestName) {                                           \
