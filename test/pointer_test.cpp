@@ -5,14 +5,20 @@ using namespace cpputils;
 
 using std::unique_ptr;
 
-class Parent {
-public:
-  virtual ~Parent() {}
-};
-class Child: public Parent {};
-class Child2: public Parent {};
+// Putting them in an own namespace is needed, so they don't clash with globally defined Parent/Child classes
+namespace testobjs {
+    class Parent {
+    public:
+      virtual ~Parent() { }
+    };
 
-//TODO Add test cases that the correct (virtual) destructor is called
+    class Child : public Parent {
+    };
+
+    class Child2 : public Parent {
+    };
+}
+using namespace testobjs;
 
 TEST(DynamicPointerMoveTest, NullPtrParentToChildCast) {
   unique_ptr<Parent> source(nullptr);
