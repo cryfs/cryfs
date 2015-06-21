@@ -23,7 +23,6 @@ using namespace blobstore::onblocks::datatreestore::algorithms;
 class GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest: public DataTreeTest {
 public:
   struct TestData {
-    TestData(Key rootNode_, Key expectedResult_): rootNode(rootNode_), expectedResult(expectedResult_) {}
     Key rootNode;
     Key expectedResult;
   };
@@ -49,34 +48,34 @@ public:
   TestData CreateThreeRightBorderNodes_LastFull() {
     auto node = CreateFullTwoLevel();
     auto root = CreateInner({node.get()});
-    return TestData(root->key(), node->key());
+    return TestData{root->key(), node->key()};
   }
 
   TestData CreateLargerTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData(root->key(), node->key());
+    return TestData{root->key(), node->key()};
   }
 
   TestData CreateThreeLevelTreeWithRightBorderSingleNodeChain() {
     auto root = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})});
-    return TestData(root->key(), root->key());
+    return TestData{root->key(), root->key()};
   }
 
   TestData CreateThreeLevelTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData(root->key(), node->key());
+    return TestData{root->key(), node->key()};
   }
 
   TestData CreateFullTwoLevelTree() {
     auto node = CreateFullTwoLevel();
-    return TestData(node->key(), node->key());
+    return TestData{node->key(), node->key()};
   }
 
   TestData CreateFullThreeLevelTree() {
     auto root = CreateFullThreeLevel();
-    return TestData(root->key(), root->LastChild()->key());
+    return TestData{root->key(), root->LastChild()->key()};
   }
 };
 

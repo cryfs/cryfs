@@ -23,7 +23,6 @@ using namespace blobstore::onblocks::datatreestore::algorithms;
 class GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest: public DataTreeTest {
 public:
   struct TestData {
-    TestData(Key rootNode_, Key expectedResult_): rootNode(rootNode_), expectedResult(expectedResult_) {}
     Key rootNode;
     Key expectedResult;
   };
@@ -36,24 +35,24 @@ public:
 
   TestData CreateTwoRightBorderNodes() {
     auto node = CreateInner({CreateLeaf()});
-    return TestData(node->key(), node->key());
+    return TestData{node->key(), node->key()};
   }
 
   TestData CreateThreeRightBorderNodes() {
     auto node = CreateInner({CreateLeaf()});
     auto root = CreateInner({node.get()});
-    return TestData(root->key(), node->key());
+    return TestData{root->key(), node->key()};
   }
 
   TestData CreateThreeRightBorderNodes_LastFull() {
     auto root = CreateInner({CreateFullTwoLevel()});
-    return TestData(root->key(), root->key());
+    return TestData{root->key(), root->key()};
   }
 
   TestData CreateLargerTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData(root->key(), node->key());
+    return TestData{root->key(), node->key()};
   }
 };
 

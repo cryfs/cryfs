@@ -271,7 +271,6 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
 
 
 struct DataRange {
-  DataRange(size_t leafsize_, off_t offset_, size_t count_): leafsize(leafsize_), offset(offset_), count(count_) {}
   size_t leafsize;
   off_t offset;
   size_t count;
@@ -319,14 +318,14 @@ public:
   }
 };
 INSTANTIATE_TEST_CASE_P(DataLeafNodeDataTest, DataLeafNodeDataTest, Values(
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()),     // full size leaf, access beginning to end
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200), // full size leaf, access middle to middle
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access beginning to middle
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access middle to end
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100), // non-full size leaf, access beginning to end
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-300), // non-full size leaf, access middle to middle
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200), // non-full size leaf, access beginning to middle
-  DataRange(DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200)  // non-full size leaf, access middle to end
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()},     // full size leaf, access beginning to end
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200}, // full size leaf, access middle to middle
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100}, // full size leaf, access beginning to middle
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100}, // full size leaf, access middle to end
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100}, // non-full size leaf, access beginning to end
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-300}, // non-full size leaf, access middle to middle
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200}, // non-full size leaf, access beginning to middle
+  DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100, 100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200}  // non-full size leaf, access middle to end
 ));
 
 TEST_P(DataLeafNodeDataTest, WriteAndReadImmediately) {

@@ -57,7 +57,6 @@ TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
 }
 
 struct DataRange {
-  DataRange(size_t blobsize_, off_t offset_, size_t count_): blobsize(blobsize_), offset(offset_), count(count_) {}
   size_t blobsize;
   off_t offset;
   size_t count;
@@ -92,22 +91,22 @@ public:
 };
 INSTANTIATE_TEST_CASE_P(BlobReadWriteDataTest, BlobReadWriteDataTest, Values(
   //Blob with only one leaf
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()),     // full size leaf, access beginning to end
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200), // full size leaf, access middle to middle
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access beginning to middle
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100), // full size leaf, access middle to end
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100), // non-full size leaf, access beginning to end
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-300), // non-full size leaf, access middle to middle
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200), // non-full size leaf, access beginning to middle
-  DataRange(BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200),  // non-full size leaf, access middle to end
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()},     // full size leaf, access beginning to end
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200}, // full size leaf, access middle to middle
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100}, // full size leaf, access beginning to middle
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100}, // full size leaf, access middle to end
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100}, // non-full size leaf, access beginning to end
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-300}, // non-full size leaf, access middle to middle
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200}, // non-full size leaf, access beginning to middle
+  DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-100, 100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200},  // non-full size leaf, access middle to end
   //Larger blob
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE),     // access beginning to end
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     100, BlobReadWriteDataTest::LARGE_SIZE-200), // access middle first leaf to middle last leaf
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE-100), // access beginning to middle last leaf
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     100, BlobReadWriteDataTest::LARGE_SIZE-100), // access middle first leaf to end
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     BlobReadWriteDataTest::LARGE_SIZE*1/3, BlobReadWriteDataTest::LARGE_SIZE*1/3), // access middle to middle
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE*2/3), // access beginning to middle
-  DataRange(BlobReadWriteDataTest::LARGE_SIZE,     BlobReadWriteDataTest::LARGE_SIZE*1/3, BlobReadWriteDataTest::LARGE_SIZE*2/3) // access middle to end
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE},     // access beginning to end
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     100, BlobReadWriteDataTest::LARGE_SIZE-200}, // access middle first leaf to middle last leaf
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE-100}, // access beginning to middle last leaf
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     100, BlobReadWriteDataTest::LARGE_SIZE-100}, // access middle first leaf to end
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     BlobReadWriteDataTest::LARGE_SIZE*1/3, BlobReadWriteDataTest::LARGE_SIZE*1/3}, // access middle to middle
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     0,   BlobReadWriteDataTest::LARGE_SIZE*2/3}, // access beginning to middle
+  DataRange{BlobReadWriteDataTest::LARGE_SIZE,     BlobReadWriteDataTest::LARGE_SIZE*1/3, BlobReadWriteDataTest::LARGE_SIZE*2/3} // access middle to end
 ));
 
 TEST_P(BlobReadWriteDataTest, WritingDoesntChangeSize) {
