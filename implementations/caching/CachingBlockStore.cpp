@@ -4,7 +4,7 @@
 #include "../../interface/Block.h"
 
 #include <algorithm>
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 
 using std::unique_ptr;
 using std::make_unique;

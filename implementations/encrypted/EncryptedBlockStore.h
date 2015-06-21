@@ -4,7 +4,7 @@
 
 #include "../../interface/BlockStore.h"
 #include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer.h>
+#include <messmer/cpp-utils/pointer/cast.h>
 #include "EncryptedBlock.h"
 #include <iostream>
 
