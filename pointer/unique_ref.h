@@ -78,7 +78,6 @@ inline boost::optional<unique_ref<T>> nullcheck(std::unique_ptr<T> ptr) {
     return boost::none;
 }
 
-//TODO Write test cases for dynamic_pointer_move
 //TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
 template<typename DST, typename SRC>
 inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) {

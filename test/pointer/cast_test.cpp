@@ -1,47 +1,76 @@
 #include "google/gtest/gtest.h"
 #include "../../pointer/cast.h"
+#include "../../pointer/unique_ref.h"
+#include "../../pointer/unique_ref_boost_optional_gtest_workaround.h"
+#include "google/gmock/gmock.h"
+
+//TODO There is a lot of duplication here, because each test case is there twice - once for unique_ptr, once for unique_ref. Remove redundancy by using generic test cases.
+//TODO Then also move the unique_ref related test cases there - cast_test.cpp should only contain the unique_ptr related ones.
 
 using namespace cpputils;
-
 using std::unique_ptr;
+using std::make_unique;
+using boost::optional;
+using boost::none;
 
-// Putting them in an own namespace is needed, so they don't clash with globally defined Parent/Child classes
-namespace testobjs {
-    class Parent {
-    public:
-      virtual ~Parent() { }
-    };
+class DestructorCallback {
+public:
+  MOCK_CONST_METHOD0(call, void());
+};
 
-    class Child : public Parent {
-    };
+class Parent {
+public:
+  virtual ~Parent() { }
+};
 
-    class Child2 : public Parent {
-    };
-}
-using namespace testobjs;
+class Child : public Parent {
+public:
+  Child(const DestructorCallback *childDestructorCallback) : _destructorCallback(childDestructorCallback) { }
+  Child(): Child(nullptr) {}
 
-TEST(DynamicPointerMoveTest, NullPtrParentToChildCast) {
+  ~Child() {
+    if (_destructorCallback != nullptr) {
+      _destructorCallback->call();
+    }
+  }
+
+private:
+  const DestructorCallback *_destructorCallback;
+};
+
+class Child2 : public Parent {};
+
+
+TEST(UniquePtr_DynamicPointerMoveTest, NullPtrParentToChildCast) {
   unique_ptr<Parent> source(nullptr);
   unique_ptr<Child> casted = dynamic_pointer_move<Child>(source);
   EXPECT_EQ(nullptr, source.get());
   EXPECT_EQ(nullptr, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, NullPtrChildToParentCast) {
+TEST(UniquePtr_DynamicPointerMoveTest, NullPtrChildToParentCast) {
   unique_ptr<Child> source(nullptr);
   unique_ptr<Parent> casted = dynamic_pointer_move<Parent>(source);
   EXPECT_EQ(nullptr, source.get());
   EXPECT_EQ(nullptr, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, NullPtrSelfCast) {
+TEST(UniquePtr_DynamicPointerMoveTest, NullPtrSelfCast) {
   unique_ptr<Parent> source(nullptr);
   unique_ptr<Parent> casted = dynamic_pointer_move<Parent>(source);
   EXPECT_EQ(nullptr, source.get());
   EXPECT_EQ(nullptr, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, ValidParentToChildCast) {
+TEST(UniqueRef_DynamicPointerMoveTest, ValidParentToChildCast) {
+  Child *obj = new Child();
+  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  unique_ref<Child> casted = std::move(dynamic_pointer_move<Child>(source).get());
+  EXPECT_EQ(nullptr, source.get()); // source lost ownership
+  EXPECT_EQ(obj, casted.get());
+}
+
+TEST(UniquePtr_DynamicPointerMoveTest, ValidParentToChildCast) {
   Child *obj = new Child();
   unique_ptr<Parent> source(obj);
   unique_ptr<Child> casted = dynamic_pointer_move<Child>(source);
@@ -49,7 +78,15 @@ TEST(DynamicPointerMoveTest, ValidParentToChildCast) {
   EXPECT_EQ(obj, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, InvalidParentToChildCast1) {
+TEST(UniqueRef_DynamicPointerMoveTest, InvalidParentToChildCast1) {
+  Parent *obj = new Parent();
+  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  optional<unique_ref<Child>> casted = dynamic_pointer_move<Child>(source);
+  EXPECT_EQ(obj, source.get()); // source still has ownership
+  EXPECT_EQ(none, casted);
+}
+
+TEST(UniquePtr_DynamicPointerMoveTest, InvalidParentToChildCast1) {
   Parent *obj = new Parent();
   unique_ptr<Parent> source(obj);
   unique_ptr<Child> casted = dynamic_pointer_move<Child>(source);
@@ -57,7 +94,15 @@ TEST(DynamicPointerMoveTest, InvalidParentToChildCast1) {
   EXPECT_EQ(nullptr, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, InvalidParentToChildCast2) {
+TEST(UniqueRef_DynamicPointerMoveTest, InvalidParentToChildCast2) {
+  Child2 *obj = new Child2();
+  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  optional<unique_ref<Child>> casted = dynamic_pointer_move<Child>(source);
+  EXPECT_EQ(obj, source.get()); // source still has ownership
+  EXPECT_EQ(none, casted);
+}
+
+TEST(UniquePtr_DynamicPointerMoveTest, InvalidParentToChildCast2) {
   Child2 *obj = new Child2();
   unique_ptr<Parent> source(obj);
   unique_ptr<Child> casted = dynamic_pointer_move<Child>(source);
@@ -65,10 +110,75 @@ TEST(DynamicPointerMoveTest, InvalidParentToChildCast2) {
   EXPECT_EQ(nullptr, casted.get());
 }
 
-TEST(DynamicPointerMoveTest, ChildToParentCast) {
+TEST(UniqueRef_DynamicPointerMoveTest, ChildToParentCast) {
+  Child *obj = new Child();
+  unique_ref<Child> source(std::move(nullcheck(unique_ptr<Child>(obj)).get()));
+  unique_ref<Parent> casted = std::move(dynamic_pointer_move<Parent>(source).get());
+  EXPECT_EQ(nullptr, source.get()); // source lost ownership
+  EXPECT_EQ(obj, casted.get());
+}
+
+TEST(UniquePtr_DynamicPointerMoveTest, ChildToParentCast) {
   Child *obj = new Child();
   unique_ptr<Child> source(obj);
   unique_ptr<Parent> casted = dynamic_pointer_move<Parent>(source);
   EXPECT_EQ(nullptr, source.get()); // source lost ownership
   EXPECT_EQ(obj, casted.get());
+}
+
+
+class UniqueRef_DynamicPointerMoveDestructorTest: public ::testing::Test {
+public:
+  DestructorCallback childDestructorCallback;
+  unique_ref<Child> createChild() {
+    return make_unique_ref<Child>(&childDestructorCallback);
+  }
+  void EXPECT_CHILD_DESTRUCTOR_CALLED() {
+    EXPECT_CALL(childDestructorCallback, call()).Times(1);
+  }
+};
+
+class UniquePtr_DynamicPointerMoveDestructorTest: public ::testing::Test {
+public:
+  DestructorCallback childDestructorCallback;
+  unique_ptr<Child> createChild() {
+    return make_unique<Child>(&childDestructorCallback);
+  }
+  void EXPECT_CHILD_DESTRUCTOR_CALLED() {
+    EXPECT_CALL(childDestructorCallback, call()).Times(1);
+  }
+};
+
+TEST_F(UniqueRef_DynamicPointerMoveDestructorTest, ChildInParentPtr) {
+  unique_ref<Parent> parent = createChild();
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
+}
+
+TEST_F(UniquePtr_DynamicPointerMoveDestructorTest, ChildInParentPtr) {
+  unique_ptr<Parent> parent = createChild();
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
+}
+
+TEST_F(UniqueRef_DynamicPointerMoveDestructorTest, ChildToParentCast) {
+  unique_ref<Child> child = createChild();
+  unique_ref<Parent> parent = std::move(dynamic_pointer_move<Parent>(child).get());
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
+}
+
+TEST_F(UniquePtr_DynamicPointerMoveDestructorTest, ChildToParentCast) {
+  unique_ptr<Child> child = createChild();
+  unique_ptr<Parent> parent = dynamic_pointer_move<Parent>(child);
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
+}
+
+TEST_F(UniqueRef_DynamicPointerMoveDestructorTest, ParentToChildCast) {
+  unique_ref<Parent> parent = createChild();
+  unique_ref<Child> child = std::move(dynamic_pointer_move<Child>(parent).get());
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
+}
+
+TEST_F(UniquePtr_DynamicPointerMoveDestructorTest, ParentToChildCast) {
+  unique_ptr<Parent> parent = createChild();
+  unique_ptr<Child> child = dynamic_pointer_move<Child>(parent);
+  EXPECT_CHILD_DESTRUCTOR_CALLED();
 }
