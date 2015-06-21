@@ -1,6 +1,6 @@
 #include "google/gtest/gtest.h"
 #include "google/gmock/gmock.h"
-#include "../pointer.h"
+#include "../../pointer/cast.h"
 
 using namespace cpputils;
 

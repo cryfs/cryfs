@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include "../unique_ref.h"
+#include "../../pointer/unique_ref.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -7,8 +7,6 @@
 #include <unordered_map>
 
 using namespace cpputils;
-
-//TODO Add some test cases
 
 class SomeClass0Parameters {};
 class SomeClass1Parameter {

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPP_UTILS_POINTER_H_
-#define MESSMER_CPP_UTILS_POINTER_H_
+#ifndef MESSMER_CPP_UTILS_POINTER_CAST_H_
+#define MESSMER_CPP_UTILS_POINTER_CAST_H_
 
 #include <memory>
 

@@ -1,10 +1,11 @@
-#ifndef MESSMER_CPP_UTILS_UNIQUE_REF_H
-#define MESSMER_CPP_UTILS_UNIQUE_REF_H
+#pragma once
+#ifndef MESSMER_CPP_UTILS_POINTER_UNIQUE_REF_H
+#define MESSMER_CPP_UTILS_POINTER_UNIQUE_REF_H
 
 #include <memory>
 #include <boost/optional.hpp>
-#include "macros.h"
-#include "pointer.h"
+#include "../macros.h"
+#include "cast.h"
 
 namespace cpputils {
 
@@ -55,8 +56,8 @@ private:
     unique_ref(std::unique_ptr<T> target): _target(std::move(target)) {}
     template<typename U, typename... Args> friend unique_ref<U> make_unique_ref(Args&&... args);
     template<typename U> friend boost::optional<unique_ref<U>> nullcheck(std::unique_ptr<U> ptr);
-    template<typename DST, typename SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source);
     template<typename U> friend class unique_ref;
+    template<typename DST, typename SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source);
     template<typename U> friend std::unique_ptr<U> to_unique_ptr(unique_ref<U> ref);
 
     std::unique_ptr<T> _target;
