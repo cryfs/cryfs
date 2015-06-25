@@ -11,48 +11,61 @@ namespace cpputils {
     public:
         //TODO Try allowing construction with any type that std::is_convertible to Left or Right.
         Either(const Left &left): _side(Side::left) {
-            new(&_left)Left(left);
+            _construct_left(left);
         }
         Either(Left &&left): _side(Side::left) {
-            new(&_left)Left(std::move(left));
+            _construct_left(std::move(left));
         }
         Either(const Right &right): _side(Side::right) {
-            new(&_right)Right(right);
+            _construct_right(right);
         }
         Either(Right &&right): _side(Side::right) {
-            new(&_right)Right(std::move(right));
+            _construct_right(std::move(right));
         }
         //TODO Try allowing copy-construction when Left/Right types are std::is_convertible
         Either(const Either<Left, Right> &rhs): _side(rhs._side) {
             if(_side == Side::left) {
-                new(&_left)Left(rhs._left);
+                _construct_left(rhs._left);
             } else {
-                new(&_right)Right(rhs._right);
+                _construct_right(rhs._right);
             }
         }
         Either(Either<Left, Right> &&rhs): _side(rhs._side) {
             if(_side == Side::left) {
-                new(&_left)Left(std::move(rhs._left));
+                _construct_left(std::move(rhs._left));
             } else {
-                new(&_right)Right(std::move(rhs._right));
+                _construct_right(std::move(rhs._right));
             }
         }
 
         ~Either() {
-            if (_side == Side::left) {
-                _left.~Left();
-            } else {
-                _right.~Right();
-            }
+            _destruct();
         }
 
-        //TODO Test copy assignment operator
-        //TODO Copy assignment operator
-        //TODO Test destruction after copy assignment
+        //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
+        Either<Left, Right> &operator=(const Either<Left, Right> &rhs) {
+            _destruct();
+            _side = rhs._side;
+            if (_side == Side::left) {
+                _construct_left(rhs._left);
+            } else {
+                _construct_right(rhs._right);
+            }
+            return *this;
+        }
 
-        //TODO Test move assignment operator
-        //TODO Move assignment operator
-        //TODO Test destruction after move assignment
+        Either<Left, Right> &operator=(Either<Left, Right> &&rhs) {
+            _destruct();
+            _side = rhs._side;
+            if (_side == Side::left) {
+                _construct_left(std::move(rhs._left));
+            } else {
+                _construct_right(std::move(rhs._right));
+            }
+            return *this;
+        }
+
+        //TODO fold, map_left, map_right, left_or_else(val), right_or_else(val), left_or_else(func), right_or_else(func)
 
         //TODO Test operator<<
         //TODO operator<<(ostream)
@@ -115,6 +128,26 @@ namespace cpputils {
             Right _right;
         };
         enum class Side : unsigned char {left, right} _side;
+
+        void _construct_left(const Left &left) {
+            new(&_left)Left(left);
+        }
+        void _construct_left(Left &&left) {
+            new(&_left)Left(std::move(left));
+        }
+        void _construct_right(const Right &right) {
+            new(&_right)Right(right);
+        }
+        void _construct_right(Right &&right) {
+            new(&_right)Right(std::move(right));
+        }
+        void _destruct() {
+            if (_side == Side::left) {
+                _left.~Left();
+            } else {
+                _right.~Right();
+            }
+        }
     };
 
     template<class Left, class Right>

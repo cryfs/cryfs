@@ -173,6 +173,34 @@ TEST_F(EitherTest, RightCanBeMoved) {
   EXPECT_EQ(5, val2.right().value);
 }
 
+TEST_F(EitherTest, LeftCanBeAssigned) {
+  Either<string, int> val = string("string");
+  Either<string, int> val2 = string("otherstring");
+  val2 = val;
+  EXPECT_LEFT_IS("string", val2);
+}
+
+TEST_F(EitherTest, RightCanBeAssigned) {
+  Either<int, string> val = string("string");
+  Either<int, string> val2 = string("otherstring");
+  val2 = val;
+  EXPECT_RIGHT_IS("string", val2);
+}
+
+TEST_F(EitherTest, LeftCanBeMoveAssigned) {
+  Either<OnlyMoveable, int> val = OnlyMoveable(3);
+  Either<OnlyMoveable, int> val2 = OnlyMoveable(4);
+  val2 = std::move(val);
+  EXPECT_EQ(3, val2.left().value);
+}
+
+TEST_F(EitherTest, RightCanBeMoveAssigned) {
+  Either<int, OnlyMoveable> val = OnlyMoveable(3);
+  Either<int, OnlyMoveable> val2 = OnlyMoveable(4);
+  val2 = std::move(val);
+  EXPECT_EQ(3, val2.right().value);
+}
+
 TEST_F(EitherTest, ModifyLeft) {
   Either<string, int> val = string("mystring1");
   val.left() = "mystring2";
@@ -245,10 +273,15 @@ TEST_F(EitherTest, LeftNotEqualsRight) {
 class DestructorCallback {
 public:
   MOCK_CONST_METHOD0(call, void());
+
+  void EXPECT_CALLED(int times = 1) {
+    EXPECT_CALL(*this, call()).Times(times);
+  }
 };
 class ClassWithDestructorCallback {
 public:
-  ClassWithDestructorCallback(const DestructorCallback *destructorCallback) : _destructorCallback(destructorCallback) { }
+  ClassWithDestructorCallback(const DestructorCallback *destructorCallback) : _destructorCallback(destructorCallback) {}
+  ClassWithDestructorCallback(const ClassWithDestructorCallback &rhs): _destructorCallback(rhs._destructorCallback) {}
 
   ~ClassWithDestructorCallback() {
     _destructorCallback->call();
@@ -272,50 +305,108 @@ private:
 };
 
 class EitherTest_Destructor: public EitherTest {
-public:
-  DestructorCallback destructorCallback;
-
-  void EXPECT_DESTRUCTOR_CALLED(int times = 1) {
-    EXPECT_CALL(destructorCallback, call()).Times(times);
-  }
 };
 
 TEST_F(EitherTest_Destructor, LeftDestructorIsCalled) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(2);  //Once for the temp object, once when the either class destructs
+
   ClassWithDestructorCallback temp(&destructorCallback);
   Either<ClassWithDestructorCallback, string> var = temp;
-  EXPECT_DESTRUCTOR_CALLED(2);  //Once for the temp object, once when the either class destructs
 }
 
 TEST_F(EitherTest_Destructor, RightDestructorIsCalled) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(2);  //Once for the temp object, once when the either class destructs
+
   ClassWithDestructorCallback temp(&destructorCallback);
   Either<string, ClassWithDestructorCallback> var = temp;
-  EXPECT_DESTRUCTOR_CALLED(2);  //Once for the temp object, once when the either class destructs
 }
 
 TEST_F(EitherTest_Destructor, LeftDestructorIsCalledAfterCopying) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
+
   ClassWithDestructorCallback temp(&destructorCallback);
   Either<ClassWithDestructorCallback, string> var1 = temp;
   Either<ClassWithDestructorCallback, string> var2 = var1;
-  EXPECT_DESTRUCTOR_CALLED(3);  //Once for the temp object, once for var1 and once for var2
 }
 
 TEST_F(EitherTest_Destructor, RightDestructorIsCalledAfterCopying) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
+
   ClassWithDestructorCallback temp(&destructorCallback);
   Either<string, ClassWithDestructorCallback> var1 = temp;
   Either<string, ClassWithDestructorCallback> var2 = var1;
-  EXPECT_DESTRUCTOR_CALLED(3);  //Once for the temp object, once for var1 and once for var2
 }
 
 TEST_F(EitherTest_Destructor, LeftDestructorIsCalledAfterMoving) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
+
   OnlyMoveableClassWithDestructorCallback temp(&destructorCallback);
   Either<OnlyMoveableClassWithDestructorCallback, string> var1 = std::move(temp);
   Either<OnlyMoveableClassWithDestructorCallback, string> var2 = std::move(var1);
-  EXPECT_DESTRUCTOR_CALLED(3);  //Once for the temp object, once for var1 and once for var2
 }
 
 TEST_F(EitherTest_Destructor, RightDestructorIsCalledAfterMoving) {
+  DestructorCallback destructorCallback;
+  destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
+
   OnlyMoveableClassWithDestructorCallback temp(&destructorCallback);
   Either<string, OnlyMoveableClassWithDestructorCallback> var1 = std::move(temp);
   Either<string, OnlyMoveableClassWithDestructorCallback> var2 = std::move(var1);
-  EXPECT_DESTRUCTOR_CALLED(3);  //Once for the temp object, once for var1 and once for var2
+}
+
+TEST_F(EitherTest_Destructor, LeftDestructorIsCalledAfterAssignment) {
+  DestructorCallback destructorCallback1;
+  DestructorCallback destructorCallback2;
+  destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
+  destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
+
+  ClassWithDestructorCallback temp1(&destructorCallback1);
+  Either<ClassWithDestructorCallback, string> var1 = temp1;
+  ClassWithDestructorCallback temp2(&destructorCallback2);
+  Either<ClassWithDestructorCallback, string> var2 = temp2;
+  var1 = var2;
+}
+
+TEST_F(EitherTest_Destructor, RightDestructorIsCalledAfterAssignment) {
+  DestructorCallback destructorCallback1;
+  DestructorCallback destructorCallback2;
+  destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
+  destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
+
+  ClassWithDestructorCallback temp1(&destructorCallback1);
+  Either<string, ClassWithDestructorCallback> var1 = temp1;
+  ClassWithDestructorCallback temp2(&destructorCallback2);
+  Either<string, ClassWithDestructorCallback> var2 = temp2;
+  var1 = var2;
+}
+
+TEST_F(EitherTest_Destructor, LeftDestructorIsCalledAfterMoveAssignment) {
+  DestructorCallback destructorCallback1;
+  DestructorCallback destructorCallback2;
+  destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
+  destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
+
+  OnlyMoveableClassWithDestructorCallback temp1(&destructorCallback1);
+  Either<OnlyMoveableClassWithDestructorCallback, string> var1 = std::move(temp1);
+  OnlyMoveableClassWithDestructorCallback temp2(&destructorCallback2);
+  Either<OnlyMoveableClassWithDestructorCallback, string> var2 = std::move(temp2);
+  var1 = std::move(var2);
+}
+
+TEST_F(EitherTest_Destructor, RightDestructorIsCalledAfterMoveAssignment) {
+  DestructorCallback destructorCallback1;
+  DestructorCallback destructorCallback2;
+  destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
+  destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
+
+  OnlyMoveableClassWithDestructorCallback temp1(&destructorCallback1);
+  Either<string, OnlyMoveableClassWithDestructorCallback> var1 = std::move(temp1);
+  OnlyMoveableClassWithDestructorCallback temp2(&destructorCallback2);
+  Either<string, OnlyMoveableClassWithDestructorCallback> var2 = std::move(temp2);
+  var1 = std::move(var2);
 }
