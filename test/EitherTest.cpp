@@ -142,6 +142,51 @@ TEST_F(EitherTest, RightCanBeMoved) {
   EXPECT_EQ(5, val2.right().value);
 }
 
+TEST_F(EitherTest, LeftEquals) {
+  Either<string, int> val1 = string("mystring");
+  Either<string, int> val2 = string("mystring");
+  EXPECT_TRUE(val1 == val2);
+  EXPECT_TRUE(val2 == val1);
+  EXPECT_FALSE(val1 != val2);
+  EXPECT_FALSE(val2 != val1);
+}
+
+TEST_F(EitherTest, LeftNotEquals) {
+  Either<string, int> val1 = string("mystring");
+  Either<string, int> val2 = string("mystring2");
+  EXPECT_TRUE(val1 != val2);
+  EXPECT_TRUE(val2 != val1);
+  EXPECT_FALSE(val1 == val2);
+  EXPECT_FALSE(val2 == val1);
+}
+
+TEST_F(EitherTest, RightEquals) {
+  Either<int, string> val1 = string("mystring");
+  Either<int, string> val2 = string("mystring");
+  EXPECT_TRUE(val1 == val2);
+  EXPECT_TRUE(val2 == val1);
+  EXPECT_FALSE(val1 != val2);
+  EXPECT_FALSE(val2 != val1);
+}
+
+TEST_F(EitherTest, RightNotEquals) {
+  Either<int, string> val1 = string("mystring");
+  Either<int, string> val2 = string("mystring2");
+  EXPECT_TRUE(val1 != val2);
+  EXPECT_TRUE(val2 != val1);
+  EXPECT_FALSE(val1 == val2);
+  EXPECT_FALSE(val2 == val1);
+}
+
+TEST_F(EitherTest, LeftNotEqualsRight) {
+  Either<string, int> val1 = string("mystring");
+  Either<string, int> val2 = 3;
+  EXPECT_TRUE(val1 != val2);
+  EXPECT_TRUE(val2 != val1);
+  EXPECT_FALSE(val1 == val2);
+  EXPECT_FALSE(val2 == val1);
+}
+
 class DestructorCallback {
 public:
   MOCK_CONST_METHOD0(call, void());
