@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPP_UTILS_EITHER_H
 #define MESSMER_CPP_UTILS_EITHER_H
 
-#include <type_traits>
+#include <boost/optional.hpp>
 
 namespace cpputils {
 
@@ -65,21 +65,50 @@ namespace cpputils {
             return _side == Side::right;
         }
 
-        //TODO Also offer a safe version of getting left/right (exceptions? nullptr?)
         const Left &left() const {
             return _left;
+        }
+        Left &left() {
+            return const_cast<Left&>(const_cast<const Either<Left, Right>*>(this)->left());
         }
 
         const Right &right() const {
             return _right;
         }
-
-        Left &left() {
-            return const_cast<Left&>(const_cast<const Either<Left, Right>*>(this)->left());
-        }
         Right &right() {
             return const_cast<Right&>(const_cast<const Either<Left, Right>*>(this)->right());
         }
+
+        boost::optional<const Left&> left_opt() const {
+            if (_side == Side::left) {
+                return _left;
+            } else {
+                return boost::none;
+            }
+        }
+        boost::optional<Left&> left_opt() {
+            if (_side == Side::left) {
+                return _left;
+            } else {
+                return boost::none;
+            }
+        }
+
+        boost::optional<const Right&> right_opt() const {
+            if (_side == Side::right) {
+                return _right;
+            } else {
+                return boost::none;
+            }
+        }
+        boost::optional<Right&> right_opt() {
+            if (_side == Side::right) {
+                return _right;
+            } else {
+                return boost::none;
+            }
+        }
+
     private:
         union {
             Left _left;

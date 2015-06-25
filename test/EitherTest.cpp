@@ -1,7 +1,15 @@
 #include <google/gtest/gtest.h>
 #include <google/gmock/gmock.h>
+#include <boost/optional/optional_io.hpp>
 #include "../either.h"
 #include "../macros.h"
+
+//TODO Go through all test cases and think about whether it makes sense to add the same test case but with primitive types.
+
+using std::string;
+using std::vector;
+using namespace cpputils;
+using ::testing::Test;
 
 class OnlyMoveable {
 public:
@@ -12,9 +20,11 @@ private:
   DISALLOW_COPY_AND_ASSIGN(OnlyMoveable);
 };
 
-using std::string;
-using namespace cpputils;
-using ::testing::Test;
+template<typename T>
+struct StoreWith1ByteFlag {
+  T val;
+  char flag;
+};
 
 class EitherTest: public Test {
 public:
@@ -32,17 +42,38 @@ public:
   void EXPECT_LEFT_IS(const Expected &expected, Either<Left, Right> &value) {
     EXPECT_IS_LEFT(value);
     EXPECT_EQ(expected, value.left());
+    EXPECT_EQ(expected, value.left_opt().get());
+    EXPECT_EQ(boost::none, value.right_opt());
     const Either<Left, Right> &const_value = value;
     EXPECT_EQ(expected, const_value.left());
+    EXPECT_EQ(expected, const_value.left_opt().get());
+    EXPECT_EQ(boost::none, const_value.right_opt());
   }
   template<class Left, class Right, class Expected>
   void EXPECT_RIGHT_IS(const Expected &expected, Either<Left, Right> &value) {
     EXPECT_IS_RIGHT(value);
     EXPECT_EQ(expected, value.right());
+    EXPECT_EQ(expected, value.right_opt().get());
+    EXPECT_EQ(boost::none, value.left_opt());
     const Either<Left, Right> &const_value = value;
     EXPECT_EQ(expected, const_value.right());
+    EXPECT_EQ(expected, const_value.right_opt().get());
+    EXPECT_EQ(boost::none, const_value.left_opt());
   }
 };
+
+template<typename Left, typename Right>
+void TestSpaceUsage() {
+  EXPECT_EQ(std::max(sizeof(StoreWith1ByteFlag<Left>), sizeof(StoreWith1ByteFlag<Right>)), sizeof(Either<Left, Right>));
+}
+
+TEST_F(EitherTest, SpaceUsage) {
+  TestSpaceUsage<char, int>();
+  TestSpaceUsage<int, short>();
+  TestSpaceUsage<char, short>();
+  TestSpaceUsage<int, string>();
+  TestSpaceUsage<string, vector<string>>();
+}
 
 TEST_F(EitherTest, LeftCanBeConstructed) {
   Either<int, string> val = 3;
@@ -140,6 +171,30 @@ TEST_F(EitherTest, RightCanBeMoved) {
   Either<int, OnlyMoveable> val2 = std::move(val);
   EXPECT_IS_RIGHT(val2);
   EXPECT_EQ(5, val2.right().value);
+}
+
+TEST_F(EitherTest, ModifyLeft) {
+  Either<string, int> val = string("mystring1");
+  val.left() = "mystring2";
+  EXPECT_LEFT_IS("mystring2", val);
+}
+
+TEST_F(EitherTest, ModifyRight) {
+  Either<int, string> val = string("mystring1");
+  val.right() = "mystring2";
+  EXPECT_RIGHT_IS("mystring2", val);
+}
+
+TEST_F(EitherTest, ModifyLeftOpt) {
+  Either<string, int> val = string("mystring1");
+  val.left_opt().get() = "mystring2";
+  EXPECT_LEFT_IS("mystring2", val);
+}
+
+TEST_F(EitherTest, ModifyRightOpt) {
+  Either<int, string> val = string("mystring1");
+  val.right_opt().get() = "mystring2";
+  EXPECT_RIGHT_IS("mystring2", val);
 }
 
 TEST_F(EitherTest, LeftEquals) {
