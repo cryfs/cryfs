@@ -67,9 +67,6 @@ namespace cpputils {
 
         //TODO fold, map_left, map_right, left_or_else(val), right_or_else(val), left_or_else(func), right_or_else(func)
 
-        //TODO Test operator<<
-        //TODO operator<<(ostream)
-
         bool is_left() const {
             return _side == Side::left;
         }
@@ -165,6 +162,16 @@ namespace cpputils {
     template<class Left, class Right>
     bool operator!=(const Either<Left, Right> &lhs, const Either<Left, Right> &rhs) {
         return !operator==(lhs, rhs);
+    }
+
+    template<class Left, class Right>
+    std::ostream &operator<<(std::ostream &stream, const Either<Left, Right> &value) {
+        if (value.is_left()) {
+            stream << "Left(" << value.left() << ")";
+        } else {
+            stream << "Right(" << value.right() << ")";
+        }
+        return stream;
     }
 
     //TODO Test make_either<>

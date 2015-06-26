@@ -3,9 +3,11 @@
 #include <boost/optional/optional_io.hpp>
 #include "../either.h"
 #include "../macros.h"
+#include <sstream>
 
 //TODO Go through all test cases and think about whether it makes sense to add the same test case but with primitive types.
 
+using std::ostringstream;
 using std::string;
 using std::vector;
 using namespace cpputils;
@@ -293,6 +295,18 @@ TEST_F(EitherTest, LeftNotEqualsRight) {
   EXPECT_TRUE(val2 != val1);
   EXPECT_FALSE(val1 == val2);
   EXPECT_FALSE(val2 == val1);
+}
+
+TEST_F(EitherTest, OutputLeft) {
+  ostringstream str;
+  str << Either<string, int>("mystring");
+  EXPECT_EQ("Left(mystring)", str.str());
+}
+
+TEST_F(EitherTest, OutputRight) {
+  ostringstream str;
+  str << Either<int, string>("mystring");
+  EXPECT_EQ("Right(mystring)", str.str());
 }
 
 class DestructorCallback {
