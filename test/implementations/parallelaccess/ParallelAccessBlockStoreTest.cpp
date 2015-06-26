@@ -10,11 +10,12 @@ using blockstore::testfake::FakeBlockStore;
 
 using std::unique_ptr;
 using std::make_unique;
+using cpputils::make_unique_ref;
 
 class ParallelAccessBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
   unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<ParallelAccessBlockStore>(make_unique<FakeBlockStore>());
+    return make_unique<ParallelAccessBlockStore>(make_unique_ref<FakeBlockStore>());
   }
 };
 
