@@ -50,7 +50,7 @@ private:
       auto inner = dynamic_cast<blobstore::onblocks::datanodestore::DataInnerNode*>(node);
       int leafIndex = firstLeafIndex;
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-        auto child = _dataNodeStore->load(inner->getChild(i)->key());
+        auto child = std::move(_dataNodeStore->load(inner->getChild(i)->key()).get());
         leafIndex = ForEachLeaf(child.get(), leafIndex, endLeafIndex, action);
       }
       return leafIndex;

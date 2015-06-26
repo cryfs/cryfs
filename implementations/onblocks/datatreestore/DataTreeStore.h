@@ -4,7 +4,9 @@
 
 #include <memory>
 #include <messmer/cpp-utils/macros.h>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/blockstore/utils/Key.h>
+#include <boost/optional.hpp>
 
 namespace blobstore {
 namespace onblocks {
@@ -16,17 +18,17 @@ class DataTree;
 
 class DataTreeStore {
 public:
-  DataTreeStore(std::unique_ptr<datanodestore::DataNodeStore> nodeStore);
+  DataTreeStore(cpputils::unique_ref<datanodestore::DataNodeStore> nodeStore);
   virtual ~DataTreeStore();
 
-  std::unique_ptr<DataTree> load(const blockstore::Key &key);
+  boost::optional<cpputils::unique_ref<DataTree>> load(const blockstore::Key &key);
 
-  std::unique_ptr<DataTree> createNewTree();
+  cpputils::unique_ref<DataTree> createNewTree();
 
-  void remove(std::unique_ptr<DataTree> tree);
+  void remove(cpputils::unique_ref<DataTree> tree);
 
 private:
-  std::unique_ptr<datanodestore::DataNodeStore> _nodeStore;
+  cpputils::unique_ref<datanodestore::DataNodeStore> _nodeStore;
 
   DISALLOW_COPY_AND_ASSIGN(DataTreeStore);
 };

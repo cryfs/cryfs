@@ -21,33 +21,33 @@ class DataInnerNode;
 
 class DataNodeStore {
 public:
-  DataNodeStore(std::unique_ptr<blockstore::BlockStore> blockstore, uint32_t blocksizeBytes);
+  DataNodeStore(cpputils::unique_ref<blockstore::BlockStore> blockstore, uint32_t blocksizeBytes);
   virtual ~DataNodeStore();
 
   static constexpr uint8_t MAX_DEPTH = 10;
 
   DataNodeLayout layout() const;
 
-  std::unique_ptr<DataNode> load(const blockstore::Key &key);
+  boost::optional<cpputils::unique_ref<DataNode>> load(const blockstore::Key &key);
 
-  std::unique_ptr<DataLeafNode> createNewLeafNode();
-  std::unique_ptr<DataInnerNode> createNewInnerNode(const DataNode &first_child);
+  cpputils::unique_ref<DataLeafNode> createNewLeafNode();
+  cpputils::unique_ref<DataInnerNode> createNewInnerNode(const DataNode &first_child);
 
-  std::unique_ptr<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
+  cpputils::unique_ref<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
 
-  std::unique_ptr<DataNode> overwriteNodeWith(std::unique_ptr<DataNode> target, const DataNode &source);
+  cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 
-  void remove(std::unique_ptr<DataNode> node);
+  void remove(cpputils::unique_ref<DataNode> node);
 
-  void removeSubtree(std::unique_ptr<DataNode> node);
+  void removeSubtree(cpputils::unique_ref<DataNode> node);
 
   uint64_t numNodes() const;
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
 private:
-  std::unique_ptr<DataNode> load(std::unique_ptr<blockstore::Block> block);
+  cpputils::unique_ref<DataNode> load(std::unique_ptr<blockstore::Block> block);
 
-  std::unique_ptr<blockstore::BlockStore> _blockstore;
+  cpputils::unique_ref<blockstore::BlockStore> _blockstore;
   const DataNodeLayout _layout;
 
   DISALLOW_COPY_AND_ASSIGN(DataNodeStore);

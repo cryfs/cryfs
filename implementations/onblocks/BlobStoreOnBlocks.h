@@ -15,7 +15,7 @@ class ParallelAccessDataTreeStore;
 
 class BlobStoreOnBlocks: public BlobStore {
 public:
-  BlobStoreOnBlocks(std::unique_ptr<blockstore::BlockStore> blockStore, uint32_t blocksizeBytes);
+  BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint32_t blocksizeBytes);
   virtual ~BlobStoreOnBlocks();
 
   cpputils::unique_ref<Blob> create() override;
@@ -24,7 +24,7 @@ public:
   void remove(cpputils::unique_ref<Blob> blob) override;
 
 private:
-  std::unique_ptr<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;
+  cpputils::unique_ref<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;
 };
 
 }

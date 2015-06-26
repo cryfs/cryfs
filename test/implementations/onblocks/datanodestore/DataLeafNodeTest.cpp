@@ -14,8 +14,8 @@ using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Combine;
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using std::string;
 using cpputils::DataFixture;
 
@@ -40,9 +40,9 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   DataLeafNodeTest():
-    _blockStore(make_unique<FakeBlockStore>()),
+    _blockStore(make_unique_ref<FakeBlockStore>()),
     blockStore(_blockStore.get()),
-    nodeStore(make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
+    nodeStore(make_unique_ref<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
     ZEROES(nodeStore->layout().maxBytesPerLeaf()),
     randomData(nodeStore->layout().maxBytesPerLeaf()),
     leaf(nodeStore->createNewLeafNode()) {
@@ -76,9 +76,9 @@ public:
     leaf_to_fill->write(randomData.data(), 0, randomData.size());
   }
 
-  unique_ptr<DataLeafNode> LoadLeafNode(const Key &key) {
-    auto leaf = nodeStore->load(key);
-    return dynamic_pointer_move<DataLeafNode>(leaf);
+  unique_ref<DataLeafNode> LoadLeafNode(const Key &key) {
+    auto leaf = std::move(nodeStore->load(key).get());
+    return std::move(dynamic_pointer_move<DataLeafNode>(leaf).get());
   }
 
   void ResizeLeaf(const Key &key, size_t size) {
@@ -91,13 +91,13 @@ public:
     auto leaf = nodeStore->createNewLeafNode();
     FillLeafBlockWithData(leaf.get());
     auto child = nodeStore->createNewLeafNode();
-    unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
+    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
     return converted->key();
   }
 
-  unique_ptr<DataLeafNode> CopyLeafNode(const DataLeafNode &node) {
+  unique_ref<DataLeafNode> CopyLeafNode(const DataLeafNode &node) {
     auto copied = nodeStore->createNewNodeAsCopyFrom(node);
-    return dynamic_pointer_move<DataLeafNode>(copied);
+    return std::move(dynamic_pointer_move<DataLeafNode>(copied).get());
   }
 
   Key InitializeLeafGrowAndReturnKey() {
@@ -106,12 +106,12 @@ public:
     return leaf->key();
   }
 
-  unique_ptr<BlockStore> _blockStore;
+  unique_ref<BlockStore> _blockStore;
   BlockStore *blockStore;
-  unique_ptr<DataNodeStore> nodeStore;
+  unique_ref<DataNodeStore> nodeStore;
   Data ZEROES;
   Data randomData;
-  unique_ptr<DataLeafNode> leaf;
+  unique_ref<DataLeafNode> leaf;
 };
 
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
@@ -129,7 +129,7 @@ TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
   Key key = block->key();
   DataLeafNode::InitializeNewNode(std::move(block));
 
-  auto loaded = nodeStore->load(key);
+  auto loaded = std::move(nodeStore->load(key).get());
   EXPECT_EQ(key, loaded->key());
 }
 
@@ -231,7 +231,7 @@ TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
 TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
   auto child = nodeStore->createNewLeafNode();
   Key leaf_key = leaf->key();
-  unique_ptr<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
+  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
 
   EXPECT_EQ(1u, converted->numChildren());
   EXPECT_EQ(child->key(), converted->getChild(0)->key());

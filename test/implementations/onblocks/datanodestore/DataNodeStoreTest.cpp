@@ -7,11 +7,13 @@
 
 #include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
 #include "messmer/blockstore/implementations/testfake/FakeBlock.h"
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using ::testing::Test;
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using std::string;
+using boost::none;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
@@ -25,9 +27,9 @@ class DataNodeStoreTest: public Test {
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
 
-  unique_ptr<BlockStore> _blockStore = make_unique<FakeBlockStore>();
+  unique_ref<BlockStore> _blockStore = make_unique_ref<FakeBlockStore>();
   BlockStore *blockStore = _blockStore.get();
-  unique_ptr<DataNodeStore> nodeStore = make_unique<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES);
+  unique_ref<DataNodeStore> nodeStore = make_unique_ref<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES);
 };
 
 constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
@@ -49,7 +51,7 @@ TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
 TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   Key key = nodeStore->createNewLeafNode()->key();
 
-  auto loaded_node = nodeStore->load(key);
+  auto loaded_node = std::move(nodeStore->load(key).get());
 
   EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
 }
@@ -58,7 +60,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode();
   Key key = nodeStore->createNewInnerNode(*leaf)->key();
 
-  auto loaded_node = nodeStore->load(key);
+  auto loaded_node = std::move(nodeStore->load(key).get());
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
@@ -68,7 +70,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
   auto inner = nodeStore->createNewInnerNode(*leaf);
   Key key = nodeStore->createNewInnerNode(*inner)->key();
 
-  auto loaded_node = nodeStore->load(key);
+  auto loaded_node = std::move(nodeStore->load(key).get());
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
@@ -101,9 +103,9 @@ TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
 TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {
   auto nodekey = nodeStore->createNewLeafNode()->key();
   auto node = nodeStore->load(nodekey);
-  EXPECT_NE(nullptr, node.get());
-  nodeStore->remove(std::move(node));
-  EXPECT_EQ(nullptr, nodeStore->load(nodekey).get());
+  EXPECT_NE(none, node);
+  nodeStore->remove(std::move(*node));
+  EXPECT_EQ(none, nodeStore->load(nodekey));
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {

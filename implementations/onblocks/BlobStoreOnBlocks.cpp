@@ -9,9 +9,6 @@
 #include "BlobOnBlocks.h"
 #include <messmer/cpp-utils/pointer/cast.h>
 
-using std::unique_ptr;
-using std::make_unique;
-
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
@@ -29,8 +26,8 @@ using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
 using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
-BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ptr<BlockStore> blockStore, uint32_t blocksizeBytes)
-: _dataTreeStore(make_unique<ParallelAccessDataTreeStore>(make_unique<DataTreeStore>(make_unique<DataNodeStore>(make_unique<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
+BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint32_t blocksizeBytes)
+: _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
@@ -42,10 +39,10 @@ unique_ref<Blob> BlobStoreOnBlocks::create() {
 
 optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
   auto tree = _dataTreeStore->load(key);
-  if (tree == nullptr) {
+  if (tree == none) {
   	return none;
   }
-  return optional<unique_ref<Blob>>(make_unique_ref<BlobOnBlocks>(std::move(tree)));
+  return optional<unique_ref<Blob>>(make_unique_ref<BlobOnBlocks>(std::move(*tree)));
 }
 
 void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {

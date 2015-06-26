@@ -8,8 +8,6 @@
 #include "../../../../../implementations/onblocks/datatreestore/impl/algorithms.h"
 
 using ::testing::Test;
-using std::unique_ptr;
-using std::make_unique;
 using std::pair;
 using std::make_pair;
 
@@ -28,7 +26,7 @@ public:
   };
 
   void check(const TestData &testData) {
-    auto root = nodeStore->load(testData.rootNode);
+    auto root = std::move(nodeStore->load(testData.rootNode).get());
     auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }
@@ -80,19 +78,19 @@ public:
 };
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, Leaf) {
-  auto leaf = nodeStore->load(CreateLeafOnlyTree());
+  auto leaf = std::move(nodeStore->load(CreateLeafOnlyTree()).get());
   auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, TwoRightBorderNodes) {
-  auto node = nodeStore->load(CreateTwoRightBorderNodes());
+  auto node = std::move(nodeStore->load(CreateTwoRightBorderNodes()).get());
   auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, node.get());
   EXPECT_EQ(nullptr, result.get());
 }
 
 TEST_F(GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest, ThreeRightBorderNodes) {
-  auto node = nodeStore->load(CreateThreeRightBorderNodes());
+  auto node = std::move(nodeStore->load(CreateThreeRightBorderNodes()).get());
   auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, node.get());
   EXPECT_EQ(nullptr, result.get());
 }

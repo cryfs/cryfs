@@ -11,7 +11,7 @@ namespace datanodestore {
 
 class DataInnerNode: public DataNode {
 public:
-  static std::unique_ptr<DataInnerNode> InitializeNewNode(std::unique_ptr<blockstore::Block> block, const DataNode &first_child_key);
+  static cpputils::unique_ref<DataInnerNode> InitializeNewNode(std::unique_ptr<blockstore::Block> block, const DataNode &first_child_key);
 
   DataInnerNode(DataNodeView block);
   virtual ~DataInnerNode();

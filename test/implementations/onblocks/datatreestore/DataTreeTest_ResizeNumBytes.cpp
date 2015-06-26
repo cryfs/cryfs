@@ -22,49 +22,50 @@ using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::utils::ceilDivision;
 using blockstore::Key;
 using cpputils::Data;
+using boost::none;
 
-using std::unique_ptr;
+using cpputils::unique_ref;
 
 class DataTreeTest_ResizeNumBytes: public DataTreeTest {
 public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
-  unique_ptr<DataTree> CreateTree(unique_ptr<DataNode> root) {
+  unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
     Key key = root->key();
-    root.reset();
-    return treeStore.load(key);
+    cpputils::to_unique_ptr(std::move(root)).reset(); // Destruct
+    return std::move(treeStore.load(key).get());
   }
 
-  unique_ptr<DataTree> CreateLeafTreeWithSize(uint32_t size) {
+  unique_ref<DataTree> CreateLeafTreeWithSize(uint32_t size) {
     return CreateTree(CreateLeafWithSize(size));
   }
 
-  unique_ptr<DataTree> CreateTwoLeafTreeWithSecondLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateTwoLeafTreeWithSecondLeafSize(uint32_t size) {
     return CreateTree(CreateTwoLeafWithSecondLeafSize(size));
   }
 
-  unique_ptr<DataTree> CreateFullTwoLevelTreeWithLastLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateFullTwoLevelTreeWithLastLeafSize(uint32_t size) {
     return CreateTree(CreateFullTwoLevelWithLastLeafSize(size));
   }
 
-  unique_ptr<DataTree> CreateThreeLevelTreeWithTwoChildrenAndLastLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateThreeLevelTreeWithTwoChildrenAndLastLeafSize(uint32_t size) {
     return CreateTree(CreateThreeLevelWithTwoChildrenAndLastLeafSize(size));
   }
 
-  unique_ptr<DataTree> CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(uint32_t size) {
     return CreateTree(CreateThreeLevelWithThreeChildrenAndLastLeafSize(size));
   }
 
-  unique_ptr<DataTree> CreateFullThreeLevelTreeWithLastLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateFullThreeLevelTreeWithLastLeafSize(uint32_t size) {
     return CreateTree(CreateFullThreeLevelWithLastLeafSize(size));
   }
 
-  unique_ptr<DataTree> CreateFourLevelMinDataTreeWithLastLeafSize(uint32_t size) {
+  unique_ref<DataTree> CreateFourLevelMinDataTreeWithLastLeafSize(uint32_t size) {
     return CreateTree(CreateFourLevelMinDataWithLastLeafSize(size));
   }
 
   void EXPECT_IS_LEFTMAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key);
+    auto root = std::move(nodeStore->load(key).get());
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
@@ -75,7 +76,7 @@ public:
   }
 
   void EXPECT_IS_MAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key);
+    auto root = std::move(nodeStore->load(key).get());
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
@@ -89,7 +90,7 @@ public:
 };
 constexpr DataNodeLayout DataTreeTest_ResizeNumBytes::LAYOUT;
 
-class DataTreeTest_ResizeNumBytes_P: public DataTreeTest_ResizeNumBytes, public WithParamInterface<tuple<function<unique_ptr<DataTree>(DataTreeTest_ResizeNumBytes*, uint32_t)>, uint32_t, uint32_t, uint32_t>> {
+class DataTreeTest_ResizeNumBytes_P: public DataTreeTest_ResizeNumBytes, public WithParamInterface<tuple<function<unique_ref<DataTree>(DataTreeTest_ResizeNumBytes*, uint32_t)>, uint32_t, uint32_t, uint32_t>> {
 public:
   DataTreeTest_ResizeNumBytes_P()
     : oldLastLeafSize(get<1>(GetParam())),
@@ -103,21 +104,21 @@ public:
   }
 
   void ResizeTree(const Key &key, uint64_t size) {
-    treeStore.load(key)->resizeNumBytes(size);
+    treeStore.load(key).get()->resizeNumBytes(size);
   }
 
-  unique_ptr<DataLeafNode> LastLeaf(const Key &key) {
-    auto root = nodeStore->load(key);
+  unique_ref<DataLeafNode> LastLeaf(const Key &key) {
+    auto root = std::move(nodeStore->load(key).get());
     auto leaf = dynamic_pointer_move<DataLeafNode>(root);
-    if (leaf.get() != nullptr) {
-      return leaf;
+    if (leaf != none) {
+      return std::move(*leaf);
     }
-    auto inner = dynamic_pointer_move<DataInnerNode>(root);
+    auto inner = std::move(dynamic_pointer_move<DataInnerNode>(root).get());
     return LastLeaf(inner->LastChild()->key());
   }
 
   uint32_t oldLastLeafSize;
-  unique_ptr<DataTree> tree;
+  unique_ref<DataTree> tree;
   uint32_t newNumberOfLeaves;
   uint32_t newLastLeafSize;
   uint64_t newSize;
@@ -126,7 +127,7 @@ public:
 INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumBytes_P,
   Combine(
     //Tree we're starting with
-    Values<function<unique_ptr<DataTree>(DataTreeTest_ResizeNumBytes*, uint32_t)>>(
+    Values<function<unique_ref<DataTree>(DataTreeTest_ResizeNumBytes*, uint32_t)>>(
       mem_fn(&DataTreeTest_ResizeNumBytes::CreateLeafTreeWithSize),
       mem_fn(&DataTreeTest_ResizeNumBytes::CreateTwoLeafTreeWithSecondLeafSize),
       mem_fn(&DataTreeTest_ResizeNumBytes::CreateFullTwoLevelTreeWithLastLeafSize),
@@ -193,15 +194,15 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
   uint32_t oldNumberOfLeaves = std::max(1u, ceilDivision(tree->numStoredBytes(), nodeStore->layout().maxBytesPerLeaf()));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   Key key = tree->key();
-  tree.reset();
-  data.FillInto(nodeStore->load(key).get());
+  cpputils::to_unique_ptr(std::move(tree)).reset(); // Call destructor
+  data.FillInto(nodeStore->load(key).get().get());
 
   ResizeTree(key, newSize);
 
   if (oldNumberOfLeaves < newNumberOfLeaves || (oldNumberOfLeaves == newNumberOfLeaves && oldLastLeafSize < newLastLeafSize)) {
-    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get(), oldNumberOfLeaves, oldLastLeafSize);
+    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), oldNumberOfLeaves, oldLastLeafSize);
   } else {
-    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get(), newNumberOfLeaves, newLastLeafSize);
+    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), newNumberOfLeaves, newLastLeafSize);
   }
 }
 
@@ -211,7 +212,7 @@ TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
   tree->resizeNumBytes(0);
   Key key = tree->key();
-  tree.reset();
+  cpputils::to_unique_ptr(std::move(tree)).reset(); // Call destructor
   auto leaf = LoadLeafNode(key);
   EXPECT_EQ(0u, leaf->numBytes());
 }

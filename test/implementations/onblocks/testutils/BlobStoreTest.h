@@ -8,7 +8,7 @@ public:
 
   static constexpr uint32_t BLOCKSIZE_BYTES = 4096;
 
-  std::unique_ptr<blobstore::BlobStore> blobStore;
+  cpputils::unique_ref<blobstore::BlobStore> blobStore;
 
   cpputils::unique_ref<blobstore::Blob> loadBlob(const blockstore::Key &key) {
     auto loaded = blobStore->load(key);

@@ -9,7 +9,7 @@ using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datatreestore::DataTree;
 using blockstore::Key;
 
-using std::unique_ptr;
+using cpputils::unique_ref;
 
 class TraversorMock {
 public:
@@ -22,7 +22,7 @@ MATCHER_P(KeyEq, expected, "node key equals") {
 
 class DataTreeTest_TraverseLeaves: public DataTreeTest {
 public:
-  unique_ptr<DataInnerNode> CreateThreeLevel() {
+  unique_ref<DataInnerNode> CreateThreeLevel() {
     return CreateInner({
       CreateFullTwoLevel(),
       CreateFullTwoLevel(),
@@ -32,7 +32,7 @@ public:
       CreateInner({CreateLeaf(), CreateLeaf(), CreateLeaf()})});
   }
 
-  unique_ptr<DataInnerNode> CreateFourLevel() {
+  unique_ref<DataInnerNode> CreateFourLevel() {
     return CreateInner({
       CreateFullThreeLevel(),
       CreateFullThreeLevel(),
@@ -56,7 +56,7 @@ public:
 
   void TraverseLeaves(DataNode *root, uint32_t beginIndex, uint32_t endIndex) {
     root->flush();
-    auto tree = treeStore.load(root->key());
+    auto tree = std::move(treeStore.load(root->key()).get());
     tree->traverseLeaves(beginIndex, endIndex, [this] (DataLeafNode *leaf, uint32_t nodeIndex) {
       traversor.called(leaf, nodeIndex);
     });

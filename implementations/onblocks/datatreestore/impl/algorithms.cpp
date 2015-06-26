@@ -6,23 +6,26 @@
 #include "../../datanodestore/DataNodeStore.h"
 
 using std::function;
-using std::unique_ptr;
 using cpputils::optional_ownership_ptr;
 using cpputils::dynamic_pointer_move;
+using cpputils::unique_ref;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blockstore::Key;
+using boost::optional;
+using boost::none;
 
 namespace blobstore {
 namespace onblocks {
 namespace datatreestore {
 namespace algorithms {
 
-unique_ptr<DataInnerNode> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
+optional<unique_ref<DataInnerNode>> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
   Key key = node.LastChild()->key();
   auto lastChild = nodeStore->load(key);
-  return dynamic_pointer_move<DataInnerNode>(lastChild);
+  assert(lastChild != none);
+  return dynamic_pointer_move<DataInnerNode>(*lastChild);
 }
 
 //Returns the lowest right border node meeting the condition specified (exclusive the leaf).
@@ -31,11 +34,16 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
   optional_ownership_ptr<DataInnerNode> currentNode = cpputils::WithoutOwnership(dynamic_cast<DataInnerNode*>(rootNode));
   optional_ownership_ptr<DataInnerNode> result = cpputils::null<DataInnerNode>();
   for (unsigned int i=0; i < rootNode->depth(); ++i) {
+    //TODO Don't use to_unique_ptr, but make optional_ownership_ptr work with unique_ref
+    //TODO This unnecessarily loads the leaf node in the last loop run
     auto lastChild = getLastChildAsInnerNode(nodeStore, *currentNode);
     if (condition(*currentNode)) {
       result = std::move(currentNode);
     }
-    currentNode = std::move(lastChild);
+    assert(lastChild != none || static_cast<int>(i) == rootNode->depth()-1);
+    if (lastChild != none) {
+      currentNode = cpputils::to_unique_ptr(std::move(*lastChild));
+    }
   }
 
   return result;

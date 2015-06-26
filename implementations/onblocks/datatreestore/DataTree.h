@@ -23,7 +23,7 @@ namespace datatreestore {
 //TODO It is strange that DataLeafNode is still part in the public interface of DataTree. This should be separated somehow.
 class DataTree {
 public:
-  DataTree(datanodestore::DataNodeStore *nodeStore, std::unique_ptr<datanodestore::DataNode> rootNode);
+  DataTree(datanodestore::DataNodeStore *nodeStore, cpputils::unique_ref<datanodestore::DataNode> rootNode);
   virtual ~DataTree();
 
   const blockstore::Key &key() const;
@@ -40,18 +40,18 @@ public:
 private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
-  std::unique_ptr<datanodestore::DataNode> _rootNode;
+  cpputils::unique_ref<datanodestore::DataNode> _rootNode;
 
-  std::unique_ptr<datanodestore::DataLeafNode> addDataLeaf();
+  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeaf();
   void removeLastDataLeaf();
 
-  std::unique_ptr<datanodestore::DataNode> releaseRootNode();
+  cpputils::unique_ref<datanodestore::DataNode> releaseRootNode();
   friend class DataTreeStore;
 
-  std::unique_ptr<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
+  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
   cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataNode *child);
-  std::unique_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, std::unique_ptr<datanodestore::DataNode> child);
-  std::unique_ptr<datanodestore::DataLeafNode> addDataLeafToFullTree();
+  cpputils::unique_ref<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, cpputils::unique_ref<datanodestore::DataNode> child);
+  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafToFullTree();
 
   void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
@@ -63,10 +63,10 @@ private:
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
   uint32_t _numLeaves(const datanodestore::DataNode &node) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
-  std::unique_ptr<datanodestore::DataLeafNode> LastLeaf(std::unique_ptr<datanodestore::DataNode> root);
+  cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
   datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
-  std::vector<std::unique_ptr<datanodestore::DataNode>> getOrCreateChildren(datanodestore::DataInnerNode *node, uint32_t begin, uint32_t end);
-  std::unique_ptr<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
+  std::vector<cpputils::unique_ref<datanodestore::DataNode>> getOrCreateChildren(datanodestore::DataInnerNode *node, uint32_t begin, uint32_t end);
+  cpputils::unique_ref<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

@@ -2,10 +2,11 @@
 #include "DataInnerNode.h"
 
 using std::unique_ptr;
-using std::make_unique;
 using blockstore::Block;
 using cpputils::Data;
 using blockstore::Key;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 namespace blobstore {
 namespace onblocks {
@@ -20,12 +21,12 @@ DataLeafNode::DataLeafNode(DataNodeView view)
 DataLeafNode::~DataLeafNode() {
 }
 
-unique_ptr<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ptr<Block> block) {
+unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ptr<Block> block) {
   DataNodeView node(std::move(block));
   node.setDepth(0);
   node.setSize(0);
   //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.
-  return make_unique<DataLeafNode>(std::move(node));
+  return make_unique_ref<DataLeafNode>(std::move(node));
 }
 
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {

@@ -4,8 +4,9 @@
 #include "../datanodestore/DataNodeStore.h"
 #include "../datanodestore/DataLeafNode.h"
 
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::optional;
 
 using blobstore::onblocks::datatreestore::DataTreeStore;
 using blockstore::Key;
@@ -16,24 +17,24 @@ using datatreestore::DataTreeStore;
 using datatreestore::DataTree;
 namespace parallelaccessdatatreestore {
 
-ParallelAccessDataTreeStore::ParallelAccessDataTreeStore(unique_ptr<DataTreeStore> dataTreeStore)
-  : _dataTreeStore(std::move(dataTreeStore)), _parallelAccessStore(make_unique<ParallelAccessDataTreeStoreAdapter>(_dataTreeStore.get())) {
+ParallelAccessDataTreeStore::ParallelAccessDataTreeStore(unique_ref<DataTreeStore> dataTreeStore)
+  : _dataTreeStore(std::move(dataTreeStore)), _parallelAccessStore(make_unique_ref<ParallelAccessDataTreeStoreAdapter>(_dataTreeStore.get())) {
 }
 
 ParallelAccessDataTreeStore::~ParallelAccessDataTreeStore() {
 }
 
-unique_ptr<DataTreeRef> ParallelAccessDataTreeStore::load(const blockstore::Key &key) {
+optional<unique_ref<DataTreeRef>> ParallelAccessDataTreeStore::load(const blockstore::Key &key) {
   return _parallelAccessStore.load(key);
 }
 
-unique_ptr<DataTreeRef> ParallelAccessDataTreeStore::createNewTree() {
+unique_ref<DataTreeRef> ParallelAccessDataTreeStore::createNewTree() {
   auto dataTree = _dataTreeStore->createNewTree();
   Key key = dataTree->key();
   return _parallelAccessStore.add(key, std::move(dataTree));
 }
 
-void ParallelAccessDataTreeStore::remove(unique_ptr<DataTreeRef> tree) {
+void ParallelAccessDataTreeStore::remove(unique_ref<DataTreeRef> tree) {
   Key key = tree->key();
   return _parallelAccessStore.remove(key, std::move(tree));
 }

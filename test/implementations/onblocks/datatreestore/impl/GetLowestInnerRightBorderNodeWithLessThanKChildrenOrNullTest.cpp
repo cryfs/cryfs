@@ -8,8 +8,6 @@
 #include "../../../../../implementations/onblocks/datatreestore/impl/algorithms.h"
 
 using ::testing::Test;
-using std::unique_ptr;
-using std::make_unique;
 using std::pair;
 using std::make_pair;
 
@@ -28,7 +26,7 @@ public:
   };
 
   void check(const TestData &testData) {
-    auto root = nodeStore->load(testData.rootNode);
+    auto root = std::move(nodeStore->load(testData.rootNode).get());
     auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }

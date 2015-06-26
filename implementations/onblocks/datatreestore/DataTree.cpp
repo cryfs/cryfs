@@ -18,24 +18,25 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 
-using std::unique_ptr;
 using std::dynamic_pointer_cast;
 using std::function;
 using boost::shared_mutex;
 using boost::shared_lock;
 using boost::unique_lock;
+using boost::none;
 using std::vector;
 
 using cpputils::dynamic_pointer_move;
 using cpputils::optional_ownership_ptr;
 using cpputils::WithOwnership;
 using cpputils::WithoutOwnership;
+using cpputils::unique_ref;
 
 namespace blobstore {
 namespace onblocks {
 namespace datatreestore {
 
-DataTree::DataTree(DataNodeStore *nodeStore, unique_ptr<DataNode> rootNode)
+DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
   : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)) {
 }
 
@@ -56,18 +57,20 @@ void DataTree::ifRootHasOnlyOneChildReplaceRootWithItsChild() {
   assert(rootNode != nullptr);
   if (rootNode->numChildren() == 1) {
     auto child = _nodeStore->load(rootNode->getChild(0)->key());
-    _rootNode = _nodeStore->overwriteNodeWith(std::move(_rootNode), *child);
-    _nodeStore->remove(std::move(child));
+    assert(child != none);
+    _rootNode = _nodeStore->overwriteNodeWith(std::move(_rootNode), **child);
+    _nodeStore->remove(std::move(*child));
   }
 }
 
 void DataTree::deleteLastChildSubtree(DataInnerNode *node) {
   auto lastChild = _nodeStore->load(node->LastChild()->key());
-  _nodeStore->removeSubtree(std::move(lastChild));
+  assert(lastChild != none);
+  _nodeStore->removeSubtree(std::move(*lastChild));
   node->removeLastChild();
 }
 
-unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
+unique_ref<DataLeafNode> DataTree::addDataLeaf() {
   auto insertPosOrNull = algorithms::GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(_nodeStore, _rootNode.get());
   if (insertPosOrNull) {
     return addDataLeafAt(insertPosOrNull.get());
@@ -76,7 +79,7 @@ unique_ptr<DataLeafNode> DataTree::addDataLeaf() {
   }
 }
 
-unique_ptr<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {
+unique_ref<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {
   auto new_leaf = _nodeStore->createNewLeafNode();
   auto chain = createChainOfInnerNodes(insertPos->depth()-1, new_leaf.get());
   insertPos->addChild(*chain);
@@ -84,17 +87,18 @@ unique_ptr<DataLeafNode> DataTree::addDataLeafAt(DataInnerNode *insertPos) {
 }
 
 optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, DataNode *child) {
-  //TODO This function is implemented twice, once with optional_ownership_ptr, once with unique_ptr. Redundancy!
+  //TODO This function is implemented twice, once with optional_ownership_ptr, once with unique_ref. Redundancy!
   optional_ownership_ptr<DataNode> chain = cpputils::WithoutOwnership<DataNode>(child);
   for(unsigned int i=0; i<num; ++i) {
     auto newnode = _nodeStore->createNewInnerNode(*chain);
-    chain = cpputils::WithOwnership<DataNode>(std::move(newnode));
+    //TODO Don't use to_unique_ptr, but make optional_ownership_ptr work with unique_ref
+    chain = cpputils::WithOwnership<DataNode>(cpputils::to_unique_ptr(std::move(newnode)));
   }
   return chain;
 }
 
-unique_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, unique_ptr<DataNode> child) {
-  unique_ptr<DataNode> chain = std::move(child);
+unique_ref<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, unique_ref<DataNode> child) {
+  unique_ref<DataNode> chain = std::move(child);
   for(unsigned int i=0; i<num; ++i) {
     chain = _nodeStore->createNewInnerNode(*chain);
   }
@@ -111,7 +115,7 @@ DataInnerNode* DataTree::increaseTreeDepth(unsigned int levels) {
   return result;
 }
 
-unique_ptr<DataLeafNode> DataTree::addDataLeafToFullTree() {
+unique_ref<DataLeafNode> DataTree::addDataLeafToFullTree() {
   DataInnerNode *rootNode = increaseTreeDepth(1);
   auto newLeaf = addDataLeafAt(rootNode);
   return newLeaf;
@@ -125,7 +129,7 @@ void DataTree::flush() const {
   _rootNode->flush();
 }
 
-unique_ptr<DataNode> DataTree::releaseRootNode() {
+unique_ref<DataNode> DataTree::releaseRootNode() {
   return std::move(_rootNode);
 }
 
@@ -143,7 +147,8 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
   uint64_t numLeavesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
-  uint64_t numLeavesInRightChild = _numLeaves(*lastChild);
+  assert(lastChild != none);
+  uint64_t numLeavesInRightChild = _numLeaves(**lastChild);
 
   return numLeavesInLeftChildren + numLeavesInRightChild;
 }
@@ -199,7 +204,7 @@ void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beg
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
-  vector<unique_ptr<DataNode>> children = getOrCreateChildren(inner, beginChild, endChild);
+  vector<unique_ref<DataNode>> children = getOrCreateChildren(inner, beginChild, endChild);
 
   for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
     uint32_t childOffset = childIndex * leavesPerChild;
@@ -210,11 +215,13 @@ void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beg
   }
 }
 
-vector<unique_ptr<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, uint32_t begin, uint32_t end) {
-  vector<unique_ptr<DataNode>> children;
+vector<unique_ref<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, uint32_t begin, uint32_t end) {
+  vector<unique_ref<DataNode>> children;
   children.reserve(end-begin);
   for (uint32_t childIndex = begin; childIndex < std::min(node->numChildren(), end); ++childIndex) {
-    children.emplace_back(_nodeStore->load(node->getChild(childIndex)->key()));
+    auto child = _nodeStore->load(node->getChild(childIndex)->key());
+    assert(child != none);
+    children.emplace_back(std::move(*child));
   }
   for (uint32_t childIndex = node->numChildren(); childIndex < end; ++childIndex) {
     children.emplace_back(addChildTo(node));
@@ -223,7 +230,7 @@ vector<unique_ptr<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, 
   return children;
 }
 
-unique_ptr<DataNode> DataTree::addChildTo(DataInnerNode *node) {
+unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {
   auto new_leaf = _nodeStore->createNewLeafNode();
   new_leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
   auto chain = createChainOfInnerNodes(node->depth()-1, std::move(new_leaf));
@@ -253,7 +260,8 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
   uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
-  uint64_t numBytesInRightChild = _numStoredBytes(*lastChild);
+  assert(lastChild != none);
+  uint64_t numBytesInRightChild = _numStoredBytes(**lastChild);
 
   return numBytesInLeftChildren + numBytesInRightChild;
 }
@@ -288,16 +296,22 @@ optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
   }
 
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
-  return WithOwnership(LastLeaf(_nodeStore->load(inner->LastChild()->key())));
+  auto lastChild = _nodeStore->load(inner->LastChild()->key());
+  assert(lastChild != none);
+  //TODO Don't use to_unique_ptr but make optional_ownership_ptr work with unique_ref
+  return WithOwnership(cpputils::to_unique_ptr(LastLeaf(std::move(*lastChild))));
 }
 
-unique_ptr<DataLeafNode> DataTree::LastLeaf(unique_ptr<DataNode> root) {
+unique_ref<DataLeafNode> DataTree::LastLeaf(unique_ref<DataNode> root) {
   auto leaf = dynamic_pointer_move<DataLeafNode>(root);
-  if (leaf.get() != nullptr) {
-    return leaf;
+  if (leaf != none) {
+    return std::move(*leaf);
   }
   auto inner = dynamic_pointer_move<DataInnerNode>(root);
-  return LastLeaf(_nodeStore->load(inner->LastChild()->key()));
+  assert(inner != none);
+  auto child = _nodeStore->load((*inner)->LastChild()->key());
+  assert(child != none);
+  return LastLeaf(std::move(*child));
 }
 
 uint32_t DataTree::maxBytesPerLeaf() const {

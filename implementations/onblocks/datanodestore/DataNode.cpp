@@ -7,9 +7,8 @@
 using blockstore::Block;
 using blockstore::Key;
 
-using std::unique_ptr;
-using std::make_unique;
 using std::runtime_error;
+using cpputils::unique_ref;
 
 namespace blobstore {
 namespace onblocks {
@@ -38,7 +37,7 @@ uint8_t DataNode::depth() const {
   return _node.Depth();
 }
 
-unique_ptr<DataInnerNode> DataNode::convertToNewInnerNode(unique_ptr<DataNode> node, const DataNode &first_child) {
+unique_ref<DataInnerNode> DataNode::convertToNewInnerNode(unique_ref<DataNode> node, const DataNode &first_child) {
   Key key = node->key();
   auto block = node->_node.releaseBlock();
   blockstore::utils::fillWithZeroes(block.get());

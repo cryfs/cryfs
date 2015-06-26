@@ -5,8 +5,8 @@
 #include "utils/Math.h"
 #include <cmath>
 
-using std::unique_ptr;
 using std::function;
+using cpputils::unique_ref;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::Key;
@@ -16,7 +16,7 @@ namespace onblocks {
 
 using parallelaccessdatatreestore::DataTreeRef;
 
-BlobOnBlocks::BlobOnBlocks(unique_ptr<DataTreeRef> datatree)
+BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
 : _datatree(std::move(datatree)) {
 }
 
@@ -86,7 +86,7 @@ Key BlobOnBlocks::key() const {
   return _datatree->key();
 }
 
-unique_ptr<DataTreeRef> BlobOnBlocks::releaseTree() {
+unique_ref<DataTreeRef> BlobOnBlocks::releaseTree() {
   return std::move(_datatree);
 }
 

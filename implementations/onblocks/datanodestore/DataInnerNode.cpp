@@ -2,9 +2,10 @@
 #include "DataNodeStore.h"
 
 using std::unique_ptr;
-using std::make_unique;
 using blockstore::Block;
 using cpputils::Data;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using blockstore::Key;
 
 namespace blobstore {
@@ -19,11 +20,11 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-unique_ptr<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ptr<Block> block, const DataNode &first_child) {
+unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ptr<Block> block, const DataNode &first_child) {
   DataNodeView node(std::move(block));
   node.setDepth(first_child.depth() + 1);
   node.setSize(1);
-  auto result = make_unique<DataInnerNode>(std::move(node));
+  auto result = make_unique_ref<DataInnerNode>(std::move(node));
   result->ChildrenBegin()->setKey(first_child.key());
   return result;
 }

@@ -16,11 +16,11 @@ public:
     :_baseDataTreeStore(std::move(baseDataTreeStore)) {
   }
 
-  std::unique_ptr<datatreestore::DataTree> loadFromBaseStore(const blockstore::Key &key) override {
+  boost::optional<cpputils::unique_ref<datatreestore::DataTree>> loadFromBaseStore(const blockstore::Key &key) override {
 	  return _baseDataTreeStore->load(key);
   }
 
-  void removeFromBaseStore(std::unique_ptr<datatreestore::DataTree> dataTree) override {
+  void removeFromBaseStore(cpputils::unique_ref<datatreestore::DataTree> dataTree) override {
 	  return _baseDataTreeStore->remove(std::move(dataTree));
   }
 

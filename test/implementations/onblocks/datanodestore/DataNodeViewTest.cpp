@@ -9,14 +9,14 @@
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using cpputils::Data;
 using cpputils::DataFixture;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
@@ -26,7 +26,7 @@ public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
   static constexpr uint32_t DATASIZE_BYTES = DataNodeLayout(DataNodeViewTest::BLOCKSIZE_BYTES).datasizeBytes();
 
-  unique_ptr<BlockStore> blockStore = make_unique<FakeBlockStore>();
+  unique_ref<BlockStore> blockStore = make_unique_ref<FakeBlockStore>();
 };
 
 class DataNodeViewDepthTest: public DataNodeViewTest, public WithParamInterface<uint8_t> {

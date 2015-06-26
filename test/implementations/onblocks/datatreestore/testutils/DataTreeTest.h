@@ -16,35 +16,35 @@ public:
 
   static constexpr uint32_t BLOCKSIZE_BYTES = 256;
 
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::vector<const blobstore::onblocks::datanodestore::DataNode *> children);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<const blobstore::onblocks::datanodestore::DataNode *> children);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<std::unique_ptr<blobstore::onblocks::datanodestore::DataNode>> children);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeaf();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::vector<const blobstore::onblocks::datanodestore::DataNode *> children);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<const blobstore::onblocks::datanodestore::DataNode *> children);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateInner(std::initializer_list<cpputils::unique_ref<blobstore::onblocks::datanodestore::DataNode>> children);
 
-  std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateLeafOnlyTree();
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeaf();
-  std::unique_ptr<blobstore::onblocks::datatreestore::DataTree> CreateTwoLeafTree();
+  cpputils::unique_ref<blobstore::onblocks::datatreestore::DataTree> CreateLeafOnlyTree();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeaf();
+  cpputils::unique_ref<blobstore::onblocks::datatreestore::DataTree> CreateTwoLeafTree();
   void FillNode(blobstore::onblocks::datanodestore::DataInnerNode *node);
   void FillNodeTwoLevel(blobstore::onblocks::datanodestore::DataInnerNode *node);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevel();
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevel();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevel();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevel();
 
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinData();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinData();
 
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
 
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeafWithSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeafWithSecondLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevelWithLastLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithOneChildAndLastLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithTwoChildrenAndLastLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithThreeChildrenAndLastLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevelWithLastLeafSize(uint32_t size);
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinDataWithLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeafWithSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeafWithSecondLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullTwoLevelWithLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithOneChildAndLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithTwoChildrenAndLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelWithThreeChildrenAndLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevelWithLastLeafSize(uint32_t size);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinDataWithLastLeafSize(uint32_t size);
 
-  std::unique_ptr<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
   blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;
   blobstore::onblocks::datatreestore::DataTreeStore treeStore;
 

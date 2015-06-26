@@ -20,17 +20,17 @@ class DataTreeRef;
 
 class ParallelAccessDataTreeStore {
 public:
-  ParallelAccessDataTreeStore(std::unique_ptr<datatreestore::DataTreeStore> dataTreeStore);
+  ParallelAccessDataTreeStore(cpputils::unique_ref<datatreestore::DataTreeStore> dataTreeStore);
   virtual ~ParallelAccessDataTreeStore();
 
-  std::unique_ptr<DataTreeRef> load(const blockstore::Key &key);
+  boost::optional<cpputils::unique_ref<DataTreeRef>> load(const blockstore::Key &key);
 
-  std::unique_ptr<DataTreeRef> createNewTree();
+  cpputils::unique_ref<DataTreeRef> createNewTree();
 
-  void remove(std::unique_ptr<DataTreeRef> tree);
+  void remove(cpputils::unique_ref<DataTreeRef> tree);
 
 private:
-  std::unique_ptr<datatreestore::DataTreeStore> _dataTreeStore;
+  cpputils::unique_ref<datatreestore::DataTreeStore> _dataTreeStore;
   parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key> _parallelAccessStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessDataTreeStore);

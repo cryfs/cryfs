@@ -19,7 +19,7 @@ public:
 
   uint8_t depth() const;
 
-  static std::unique_ptr<DataInnerNode> convertToNewInnerNode(std::unique_ptr<DataNode> node, const DataNode &first_child);
+  static cpputils::unique_ref<DataInnerNode> convertToNewInnerNode(cpputils::unique_ref<DataNode> node, const DataNode &first_child);
 
   void flush() const;
 
