@@ -24,7 +24,7 @@ namespace cpputils {
  * Never use the old instance after moving!
  */
 template<typename T>
-class unique_ref {
+class unique_ref final {
 public:
 
     unique_ref(unique_ref&& from): _target(std::move(from._target)) {}
