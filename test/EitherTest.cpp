@@ -15,6 +15,9 @@ class OnlyMoveable {
 public:
   OnlyMoveable(int value_): value(value_)  {}
   OnlyMoveable(OnlyMoveable &&source): value(source.value) {source.value = -1;}
+  bool operator==(const OnlyMoveable &rhs) const {
+    return value == rhs.value;
+  }
   int value;
 private:
   DISALLOW_COPY_AND_ASSIGN(OnlyMoveable);
@@ -127,12 +130,12 @@ TEST_F(EitherTest, IsRightWhenMoveContructed) {
 
 TEST_F(EitherTest, LeftIsStoredWhenMoveContructed) {
   Either<OnlyMoveable, string> val = OnlyMoveable(2);
-  EXPECT_EQ(2, val.left().value);
+  EXPECT_LEFT_IS(OnlyMoveable(2), val);
 }
 
 TEST_F(EitherTest, RightIsStoredWhenMoveContructed) {
   Either<string, OnlyMoveable> val = OnlyMoveable(3);
-  EXPECT_EQ(3, val.right().value);
+  EXPECT_RIGHT_IS(OnlyMoveable(3), val);
 }
 
 TEST_F(EitherTest, LeftCanBeCopied) {
@@ -162,15 +165,13 @@ TEST_F(EitherTest, CopyingRightDoesntChangeSource) {
 TEST_F(EitherTest, LeftCanBeMoved) {
   Either<OnlyMoveable, int> val = OnlyMoveable(5);
   Either<OnlyMoveable, int> val2 = std::move(val);
-  EXPECT_IS_LEFT(val2);
-  EXPECT_EQ(5, val2.left().value);
+  EXPECT_LEFT_IS(OnlyMoveable(5), val2);
 }
 
 TEST_F(EitherTest, RightCanBeMoved) {
   Either<int, OnlyMoveable> val = OnlyMoveable(5);
   Either<int, OnlyMoveable> val2 = std::move(val);
-  EXPECT_IS_RIGHT(val2);
-  EXPECT_EQ(5, val2.right().value);
+  EXPECT_RIGHT_IS(OnlyMoveable(5), val2);
 }
 
 TEST_F(EitherTest, LeftCanBeAssigned) {
@@ -191,14 +192,14 @@ TEST_F(EitherTest, LeftCanBeMoveAssigned) {
   Either<OnlyMoveable, int> val = OnlyMoveable(3);
   Either<OnlyMoveable, int> val2 = OnlyMoveable(4);
   val2 = std::move(val);
-  EXPECT_EQ(3, val2.left().value);
+  EXPECT_LEFT_IS(OnlyMoveable(3), val2);
 }
 
 TEST_F(EitherTest, RightCanBeMoveAssigned) {
   Either<int, OnlyMoveable> val = OnlyMoveable(3);
   Either<int, OnlyMoveable> val2 = OnlyMoveable(4);
   val2 = std::move(val);
-  EXPECT_EQ(3, val2.right().value);
+  EXPECT_RIGHT_IS(OnlyMoveable(3), val2);
 }
 
 TEST_F(EitherTest, LeftCanBeDirectlyAssigned) {
@@ -216,13 +217,13 @@ TEST_F(EitherTest, RightCanBeDirectlyAssigned) {
 TEST_F(EitherTest, LeftCanBeDirectlyMoveAssigned) {
   Either<OnlyMoveable, int> val = OnlyMoveable(3);
   val = OnlyMoveable(5);
-  EXPECT_EQ(5, val.left().value);
+  EXPECT_LEFT_IS(OnlyMoveable(5), val);
 }
 
 TEST_F(EitherTest, RightCanBeDirectlyMoveAssigned) {
   Either<int, OnlyMoveable> val = OnlyMoveable(3);
   val = OnlyMoveable(5);
-  EXPECT_EQ(5, val.right().value);
+  EXPECT_RIGHT_IS(OnlyMoveable(5), val);
 }
 
 TEST_F(EitherTest, ModifyLeft) {
