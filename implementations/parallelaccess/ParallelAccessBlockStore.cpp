@@ -14,11 +14,12 @@ using std::promise;
 using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using boost::none;
+using cpputils::unique_ref;
 
 namespace blockstore {
 namespace parallelaccess {
 
-ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ptr<BlockStore> baseBlockStore)
+ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ref<BlockStore> baseBlockStore)
  : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique_ref<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
