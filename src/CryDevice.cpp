@@ -39,7 +39,7 @@ namespace cryfs {
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
