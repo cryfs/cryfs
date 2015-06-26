@@ -20,7 +20,7 @@ namespace parallelaccessstore {
 template<class Resource, class ResourceRef, class Key>
 class ParallelAccessStore {
 public:
-  explicit ParallelAccessStore(std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> baseStore);
+  explicit ParallelAccessStore(cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> baseStore);
 
   class ResourceRefBase {
   public:
@@ -39,14 +39,14 @@ public:
     Key _key;
   };
 
-  std::unique_ptr<ResourceRef> add(const Key &key, std::unique_ptr<Resource> resource);
-  std::unique_ptr<ResourceRef> load(const Key &key);
-  void remove(const Key &key, std::unique_ptr<ResourceRef> block);
+  cpputils::unique_ref<ResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource);
+  boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key);
+  void remove(const Key &key, cpputils::unique_ref<ResourceRef> block);
 
 private:
   class OpenResource {
   public:
-	OpenResource(std::unique_ptr<Resource> resource): _resource(std::move(resource)), _refCount(0) {}
+	OpenResource(cpputils::unique_ref<Resource> resource): _resource(std::move(resource)), _refCount(0) {}
 
 	Resource *getReference() {
 	  ++_refCount;
@@ -61,22 +61,22 @@ private:
 	  return 0 == _refCount;
 	}
 
-	std::unique_ptr<Resource> moveResourceOut() {
+	cpputils::unique_ref<Resource> moveResourceOut() {
 	  return std::move(_resource);
 	}
   private:
-	std::unique_ptr<Resource> _resource;
+	cpputils::unique_ref<Resource> _resource;
 	uint32_t _refCount;
   };
 
   std::mutex _mutex;
-  std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> _baseStore;
+  cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> _baseStore;
 
   std::unordered_map<Key, OpenResource> _openResources;
-  std::map<Key, std::promise<std::unique_ptr<Resource>>> _resourcesToRemove;
+  std::map<Key, std::promise<cpputils::unique_ref<Resource>>> _resourcesToRemove;
 
-  std::unique_ptr<ResourceRef> _add(const Key &key, std::unique_ptr<Resource> resource);
-  std::unique_ptr<ResourceRef> _createResourceRef(Resource *resource, const Key &key);
+  cpputils::unique_ref<ResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource);
+  cpputils::unique_ref<ResourceRef> _createResourceRef(Resource *resource, const Key &key);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -85,7 +85,7 @@ private:
 };
 
 template<class Resource, class ResourceRef, class Key>
-ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(std::unique_ptr<ParallelAccessBaseStore<Resource, Key>> baseStore)
+ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> baseStore)
   : _mutex(),
   _baseStore(std::move(baseStore)),
   _openResources(),
@@ -94,46 +94,46 @@ ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(std::unique
 }
 
 template<class Resource, class ResourceRef, class Key>
-std::unique_ptr<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, std::unique_ptr<Resource> resource) {
+cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, cpputils::unique_ref<Resource> resource) {
   std::lock_guard<std::mutex> lock(_mutex);
   return _add(key, std::move(resource));
 }
 
 template<class Resource, class ResourceRef, class Key>
-std::unique_ptr<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, std::unique_ptr<Resource> resource) {
+cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, cpputils::unique_ref<Resource> resource) {
   auto insertResult = _openResources.emplace(key, std::move(resource));
   assert(true == insertResult.second);
   return _createResourceRef(insertResult.first->second.getReference(), key);
 }
 
 template<class Resource, class ResourceRef, class Key>
-std::unique_ptr<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_createResourceRef(Resource *resource, const Key &key) {
-  auto resourceRef = std::make_unique<ResourceRef>(resource);
+cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_createResourceRef(Resource *resource, const Key &key) {
+  auto resourceRef = cpputils::make_unique_ref<ResourceRef>(resource);
   resourceRef->init(this, key);
   return std::move(resourceRef);
 }
 
 template<class Resource, class ResourceRef, class Key>
-std::unique_ptr<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key) {
+boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key) {
   //TODO This lock doesn't allow loading different blocks in parallel. Can we do something with futures maybe?
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
-	  auto resource = _baseStore->loadFromBaseStore(key);
-	  if (resource.get() == nullptr) {
-  	  return nullptr;
-  	}
-  	return _add(key, std::move(resource));
+    auto resource = _baseStore->loadFromBaseStore(key);
+    if (resource == boost::none) {
+      return boost::none;
+    }
+  	return _add(key, std::move(*resource));
   } else {
-	  return _createResourceRef(found->second.getReference(), key);
+    return _createResourceRef(found->second.getReference(), key);
   }
 }
 
 template<class Resource, class ResourceRef, class Key>
-void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, std::unique_ptr<ResourceRef> resource) {
-  auto insertResult = _resourcesToRemove.emplace(key, std::promise<std::unique_ptr<Resource>>());
+void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpputils::unique_ref<ResourceRef> resource) {
+  auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
   assert(true == insertResult.second);
-  resource.reset();
+  cpputils::to_unique_ptr(std::move(resource)).reset(); // Call destructor
 
   //Wait for last resource user to release it
   auto resourceToRemove = insertResult.first->second.get_future().get();
