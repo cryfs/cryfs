@@ -10,6 +10,8 @@
 using std::ostringstream;
 using std::string;
 using std::vector;
+using std::pair;
+using std::make_pair;
 using namespace cpputils;
 using ::testing::Test;
 
@@ -307,6 +309,36 @@ TEST_F(EitherTest, OutputRight) {
   ostringstream str;
   str << Either<int, string>("mystring");
   EXPECT_EQ("Right(mystring)", str.str());
+}
+
+TEST_F(EitherTest, MakeLeft) {
+  Either<string, int> var = make_left<string, int>("mystring");
+  EXPECT_LEFT_IS("mystring", var);
+}
+
+TEST_F(EitherTest, MakeLeft_OnlyMoveable) {
+  Either<OnlyMoveable, int> var = make_left<OnlyMoveable, int>(4);
+  EXPECT_LEFT_IS(OnlyMoveable(4), var);
+}
+
+TEST_F(EitherTest, MakeLeft_MultiParam) {
+  Either<pair<int, int>, int> var = make_left<pair<int, int>, int>(4, 5);
+  EXPECT_LEFT_IS(make_pair(4,5), var);
+}
+
+TEST_F(EitherTest, MakeRight) {
+  Either<int, string> var = make_right<int, string>("mystring");
+  EXPECT_RIGHT_IS("mystring", var);
+}
+
+TEST_F(EitherTest, MakeRight_OnlyMoveable) {
+  Either<int, OnlyMoveable> var = make_right<int, OnlyMoveable>(4);
+  EXPECT_RIGHT_IS(OnlyMoveable(4), var);
+}
+
+TEST_F(EitherTest, MakeRight_MultiParam) {
+  Either<int, pair<int, int>> var = make_right<int, pair<int, int>>(4, 5);
+  EXPECT_RIGHT_IS(make_pair(4,5), var);
 }
 
 class DestructorCallback {

@@ -126,17 +126,15 @@ namespace cpputils {
         };
         enum class Side : unsigned char {left, right} _side;
 
-        void _construct_left(const Left &left) {
-            new(&_left)Left(left);
+        Either(Side side): _side(side) {}
+
+        template<typename... Args>
+        void _construct_left(Args&&... args) {
+            new(&_left)Left(std::forward<Args>(args)...);
         }
-        void _construct_left(Left &&left) {
-            new(&_left)Left(std::move(left));
-        }
-        void _construct_right(const Right &right) {
-            new(&_right)Right(right);
-        }
-        void _construct_right(Right &&right) {
-            new(&_right)Right(std::move(right));
+        template<typename... Args>
+        void _construct_right(Args&&... args) {
+            new(&_right)Right(std::forward<Args>(args)...);
         }
         void _destruct() {
             if (_side == Side::left) {
@@ -145,6 +143,12 @@ namespace cpputils {
                 _right.~Right();
             }
         }
+
+        template<typename Left_, typename Right_, typename... Args>
+        friend Either<Left_, Right_> make_left(Args&&... args);
+
+        template<typename Left_, typename Right_, typename... Args>
+        friend Either<Left_, Right_> make_right(Args&&... args);
     };
 
     template<class Left, class Right>
@@ -174,8 +178,19 @@ namespace cpputils {
         return stream;
     }
 
-    //TODO Test make_either<>
-    //TODO make_either<>
+    template<typename Left, typename Right, typename... Args>
+    Either<Left, Right> make_left(Args&&... args) {
+        Either<Left, Right> result(Either<Left, Right>::Side::left);
+        result._construct_left(std::forward<Args>(args)...);
+        return result;
+    }
+
+    template<typename Left, typename Right, typename... Args>
+    Either<Left, Right> make_right(Args&&... args) {
+        Either<Left, Right> result(Either<Left, Right>::Side::right);
+        result._construct_right(std::forward<Args>(args)...);
+        return result;
+    }
 }
 
 
