@@ -201,6 +201,30 @@ TEST_F(EitherTest, RightCanBeMoveAssigned) {
   EXPECT_EQ(3, val2.right().value);
 }
 
+TEST_F(EitherTest, LeftCanBeDirectlyAssigned) {
+  Either<string, int> val = string("string");
+  val = string("otherstring");
+  EXPECT_LEFT_IS("otherstring", val);
+}
+
+TEST_F(EitherTest, RightCanBeDirectlyAssigned) {
+  Either<int, string> val = string("string");
+  val = string("otherstring");
+  EXPECT_RIGHT_IS("otherstring", val);
+}
+
+TEST_F(EitherTest, LeftCanBeDirectlyMoveAssigned) {
+  Either<OnlyMoveable, int> val = OnlyMoveable(3);
+  val = OnlyMoveable(5);
+  EXPECT_EQ(5, val.left().value);
+}
+
+TEST_F(EitherTest, RightCanBeDirectlyMoveAssigned) {
+  Either<int, OnlyMoveable> val = OnlyMoveable(3);
+  val = OnlyMoveable(5);
+  EXPECT_EQ(5, val.right().value);
+}
+
 TEST_F(EitherTest, ModifyLeft) {
   Either<string, int> val = string("mystring1");
   val.left() = "mystring2";
