@@ -14,12 +14,14 @@ public:
     :_baseBlockStore(std::move(baseBlockStore)) {
   }
 
-  std::unique_ptr<Block> loadFromBaseStore(const Key &key) override {
-	return _baseBlockStore->load(key);
+  boost::optional<cpputils::unique_ref<Block>> loadFromBaseStore(const Key &key) override {
+    //TODO Don't use nullcheck but make blockstore use unique_ref
+	return cpputils::nullcheck(_baseBlockStore->load(key));
   }
 
-  void removeFromBaseStore(std::unique_ptr<Block> block) override {
-	return _baseBlockStore->remove(std::move(block));
+  void removeFromBaseStore(cpputils::unique_ref<Block> block) override {
+    //TODO Don't use to_unique_ptr but make blockstore use unique_ref
+	return _baseBlockStore->remove(cpputils::to_unique_ptr(std::move(block)));
   }
 
 private:

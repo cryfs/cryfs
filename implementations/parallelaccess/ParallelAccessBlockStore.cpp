@@ -12,12 +12,14 @@ using std::mutex;
 using std::lock_guard;
 using std::promise;
 using cpputils::dynamic_pointer_move;
+using cpputils::make_unique_ref;
+using boost::none;
 
 namespace blockstore {
 namespace parallelaccess {
 
 ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ptr<BlockStore> baseBlockStore)
- : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
+ : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique_ref<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
 Key ParallelAccessBlockStore::createKey() {
@@ -25,22 +27,29 @@ Key ParallelAccessBlockStore::createKey() {
 }
 
 unique_ptr<Block> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
-  auto block = _baseBlockStore->tryCreate(key, std::move(data));
-  if (block.get() == nullptr) {
+  //TODO Don't use nullcheck/to_unique_ptr but make blockstore use unique_ref
+  auto block = cpputils::nullcheck(_baseBlockStore->tryCreate(key, std::move(data)));
+  if (block == none) {
 	//TODO Test this code branch
 	return nullptr;
   }
-  return _parallelAccessStore.add(key, std::move(block));
+  return cpputils::to_unique_ptr(_parallelAccessStore.add(key, std::move(*block)));
 }
 
 unique_ptr<Block> ParallelAccessBlockStore::load(const Key &key) {
-  return _parallelAccessStore.load(key);
+  auto block = _parallelAccessStore.load(key);
+  if (block == none) {
+    return nullptr;
+  }
+  //TODO Don't use to_unique_ptr but make blockstore use unique_ref
+  return cpputils::to_unique_ptr(std::move(*block));
 }
 
 
 void ParallelAccessBlockStore::remove(unique_ptr<Block> block) {
   Key key = block->key();
-  return _parallelAccessStore.remove(key, dynamic_pointer_move<BlockRef>(block));
+  //TODO Don't use nullcheck but make blockstore use unique_ref
+  return _parallelAccessStore.remove(key, std::move(dynamic_pointer_move<BlockRef>(cpputils::nullcheck(std::move(block)).get()).get()));
 }
 
 uint64_t ParallelAccessBlockStore::numBlocks() const {
