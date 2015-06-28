@@ -33,7 +33,7 @@ public:
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
     Key key = root->key();
     cpputils::to_unique_ptr(std::move(root)).reset(); // Destruct
-    return std::move(treeStore.load(key).get());
+    return treeStore.load(key).value();
   }
 
   unique_ref<DataTree> CreateLeafTreeWithSize(uint32_t size) {
@@ -65,7 +65,7 @@ public:
   }
 
   void EXPECT_IS_LEFTMAXDATA_TREE(const Key &key) {
-    auto root = std::move(nodeStore->load(key).get());
+    auto root = nodeStore->load(key).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
@@ -76,7 +76,7 @@ public:
   }
 
   void EXPECT_IS_MAXDATA_TREE(const Key &key) {
-    auto root = std::move(nodeStore->load(key).get());
+    auto root = nodeStore->load(key).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
@@ -108,7 +108,7 @@ public:
   }
 
   unique_ref<DataLeafNode> LastLeaf(const Key &key) {
-    auto root = std::move(nodeStore->load(key).get());
+    auto root = nodeStore->load(key).value();
     auto leaf = dynamic_pointer_move<DataLeafNode>(root);
     if (leaf != none) {
       return std::move(*leaf);

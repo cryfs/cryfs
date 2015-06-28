@@ -56,7 +56,7 @@ public:
 
   void TraverseLeaves(DataNode *root, uint32_t beginIndex, uint32_t endIndex) {
     root->flush();
-    auto tree = std::move(treeStore.load(root->key()).get());
+    auto tree = treeStore.load(root->key()).value();
     tree->traverseLeaves(beginIndex, endIndex, [this] (DataLeafNode *leaf, uint32_t nodeIndex) {
       traversor.called(leaf, nodeIndex);
     });

@@ -51,7 +51,7 @@ unique_ref<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> chil
 
 unique_ref<DataTree> DataTreeTest::CreateLeafOnlyTree() {
   auto key = CreateLeaf()->key();
-  return std::move(treeStore.load(key).get());
+  return treeStore.load(key).value();
 }
 
 void DataTreeTest::FillNode(DataInnerNode *node) {
@@ -93,14 +93,14 @@ unique_ref<DataInnerNode> DataTreeTest::CreateFullThreeLevel() {
 }
 
 unique_ref<DataInnerNode> DataTreeTest::LoadInnerNode(const Key &key) {
-  auto node = std::move(nodeStore->load(key).get());
+  auto node = nodeStore->load(key).value();
   auto casted = dynamic_pointer_move<DataInnerNode>(node);
   EXPECT_NE(none, casted) << "Is not an inner node";
   return std::move(*casted);
 }
 
 unique_ref<DataLeafNode> DataTreeTest::LoadLeafNode(const Key &key) {
-  auto node = std::move(nodeStore->load(key).get());
+  auto node = nodeStore->load(key).value();
   auto casted =  dynamic_pointer_move<DataLeafNode>(node);
   EXPECT_NE(none, casted) << "Is not a leaf node";
   return std::move(*casted);
@@ -112,7 +112,7 @@ unique_ref<DataInnerNode> DataTreeTest::CreateTwoLeaf() {
 
 unique_ref<DataTree> DataTreeTest::CreateTwoLeafTree() {
   auto key = CreateTwoLeaf()->key();
-  return std::move(treeStore.load(key).get());
+  return treeStore.load(key).value();
 }
 
 unique_ref<DataLeafNode> DataTreeTest::CreateLeafWithSize(uint32_t size) {

@@ -41,7 +41,7 @@ public:
   }
 
   unique_ref<DataInnerNode> LoadInnerNode(const Key &key) {
-    auto node = std::move(nodeStore->load(key).get());
+    auto node = nodeStore->load(key).value();
     return dynamic_pointer_move<DataInnerNode>(node).value();
   }
 
@@ -122,7 +122,7 @@ TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
   Key key = block->key();
   DataInnerNode::InitializeNewNode(std::move(block), *leaf);
 
-  auto loaded = std::move(nodeStore->load(key).get());
+  auto loaded = nodeStore->load(key).value();
   EXPECT_EQ(key, loaded->key());
 }
 

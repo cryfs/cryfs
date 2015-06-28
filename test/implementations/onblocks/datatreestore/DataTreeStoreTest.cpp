@@ -17,7 +17,7 @@ class DataTreeStoreTest: public DataTreeTest {
 
 TEST_F(DataTreeStoreTest, CorrectKeyReturned) {
   Key key = treeStore.createNewTree()->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(key, tree->key());
 }
 
@@ -43,7 +43,7 @@ TEST_F(DataTreeStoreTest, TreeIsNotLoadableAfterRemove) {
 
 TEST_F(DataTreeStoreTest, RemovingTreeRemovesAllNodesOfTheTree) {
   auto key = CreateThreeLevelMinData()->key();
-  auto tree1 = std::move(treeStore.load(key).get());
+  auto tree1 = treeStore.load(key).value();
   auto tree2_key = treeStore.createNewTree()->key();
 
   treeStore.remove(std::move(tree1));

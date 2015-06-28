@@ -77,7 +77,7 @@ public:
   }
 
   unique_ref<DataLeafNode> LoadLeafNode(const Key &key) {
-    auto leaf = std::move(nodeStore->load(key).get());
+    auto leaf = nodeStore->load(key).value();
     return dynamic_pointer_move<DataLeafNode>(leaf).value();
   }
 
@@ -129,7 +129,7 @@ TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
   Key key = block->key();
   DataLeafNode::InitializeNewNode(std::move(block));
 
-  auto loaded = std::move(nodeStore->load(key).get());
+  auto loaded = nodeStore->load(key).value();
   EXPECT_EQ(key, loaded->key());
 }
 

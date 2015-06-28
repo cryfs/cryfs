@@ -51,7 +51,7 @@ TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
 TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
   Key key = nodeStore->createNewLeafNode()->key();
 
-  auto loaded_node = std::move(nodeStore->load(key).get());
+  auto loaded_node = nodeStore->load(key).value();
 
   EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
 }
@@ -60,7 +60,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode();
   Key key = nodeStore->createNewInnerNode(*leaf)->key();
 
-  auto loaded_node = std::move(nodeStore->load(key).get());
+  auto loaded_node = nodeStore->load(key).value();
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }
@@ -70,7 +70,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
   auto inner = nodeStore->createNewInnerNode(*leaf);
   Key key = nodeStore->createNewInnerNode(*inner)->key();
 
-  auto loaded_node = std::move(nodeStore->load(key).get());
+  auto loaded_node = nodeStore->load(key).value();
 
   EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
 }

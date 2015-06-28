@@ -28,48 +28,48 @@ INSTANTIATE_TEST_CASE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(Data
 
 TEST_P(DataTreeTest_NumStoredBytes_P, SingleLeaf) {
   Key key = CreateLeafWithSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, TwoLeafTree) {
   Key key = CreateTwoLeafWithSecondLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FullTwolevelTree) {
   Key key = CreateFullTwoLevelWithLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithOneChild) {
   Key key = CreateThreeLevelWithOneChildAndLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithTwoChildren) {
   Key key = CreateThreeLevelWithTwoChildrenAndLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithThreeChildren) {
   Key key = CreateThreeLevelWithThreeChildrenAndLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(2*nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FullThreeLevelTree) {
   Key key = CreateFullThreeLevelWithLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + nodeStore->layout().maxBytesPerLeaf()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + GetParam(), tree->numStoredBytes());
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FourLevelMinDataTree) {
   Key key = CreateFourLevelMinDataWithLastLeafSize(GetParam())->key();
-  auto tree = std::move(treeStore.load(key).get());
+  auto tree = treeStore.load(key).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + GetParam(), tree->numStoredBytes());
 }

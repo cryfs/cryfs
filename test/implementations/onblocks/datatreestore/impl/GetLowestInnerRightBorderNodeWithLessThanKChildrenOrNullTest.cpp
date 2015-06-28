@@ -26,7 +26,7 @@ public:
   };
 
   void check(const TestData &testData) {
-    auto root = std::move(nodeStore->load(testData.rootNode).get());
+    auto root = nodeStore->load(testData.rootNode).value();
     auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
     EXPECT_EQ(testData.expectedResult, result->key());
   }
