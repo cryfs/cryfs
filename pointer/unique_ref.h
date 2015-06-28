@@ -28,10 +28,15 @@ class unique_ref final {
 public:
 
     unique_ref(unique_ref&& from): _target(std::move(from._target)) {}
-    // TODO Test this dynamic-cast-allowing move constructor
+    // TODO Test this upcast-allowing move constructor
     template<typename U> unique_ref(unique_ref<U>&& from): _target(std::move(from._target)) {}
 
     unique_ref& operator=(unique_ref&& from) {
+        _target = std::move(from._target);
+        return *this;
+    }
+    // TODO Test this upcast-allowing assignment
+    template<typename U> unique_ref& operator=(unique_ref<U>&& from) {
         _target = std::move(from._target);
         return *this;
     }
