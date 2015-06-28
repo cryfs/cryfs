@@ -75,45 +75,65 @@ namespace cpputils {
             return _side == Side::right;
         }
 
-        const Left &left() const {
+        const Left &left() const& {
             return _left;
         }
-        Left &left() {
+        Left &left() & {
             return const_cast<Left&>(const_cast<const Either<Left, Right>*>(this)->left());
         }
+        Left &&left() && {
+            return std::move(left());
+        }
 
-        const Right &right() const {
+        const Right &right() const& {
             return _right;
         }
-        Right &right() {
+        Right &right() & {
             return const_cast<Right&>(const_cast<const Either<Left, Right>*>(this)->right());
         }
+        Right &&right() && {
+            return std::move(right());
+        }
 
-        boost::optional<const Left&> left_opt() const {
+        boost::optional<const Left&> left_opt() const& {
             if (_side == Side::left) {
                 return _left;
             } else {
                 return boost::none;
             }
         }
-        boost::optional<Left&> left_opt() {
+        boost::optional<Left&> left_opt() & {
             if (_side == Side::left) {
                 return _left;
             } else {
                 return boost::none;
             }
         }
+        boost::optional<Left> left_opt() && {
+            if (_side == Side::left) {
+                return std::move(_left);
+            } else {
+                return boost::none;
+            }
+        }
 
-        boost::optional<const Right&> right_opt() const {
+        boost::optional<const Right&> right_opt() const& {
             if (_side == Side::right) {
                 return _right;
             } else {
                 return boost::none;
             }
         }
-        boost::optional<Right&> right_opt() {
+        boost::optional<Right&> right_opt() & {
             if (_side == Side::right) {
                 return _right;
+            } else {
+                return boost::none;
+            }
+        }
+        boost::optional<Right> right_opt() && {
+            if (_side == Side::right) {
+                return std::move(_right);
             } else {
                 return boost::none;
             }

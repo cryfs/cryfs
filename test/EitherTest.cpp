@@ -341,6 +341,26 @@ TEST_F(EitherTest, MakeRight_MultiParam) {
   EXPECT_RIGHT_IS(make_pair(4,5), var);
 }
 
+TEST_F(EitherTest, LeftCanBeQueriedAsRvalue) {
+  OnlyMoveable val = make_left<OnlyMoveable, int>(3).left();
+  EXPECT_EQ(OnlyMoveable(3), val);
+}
+
+TEST_F(EitherTest, RightCanBeQueriedAsRvalue) {
+  OnlyMoveable val = make_right<int, OnlyMoveable>(3).right();
+  EXPECT_EQ(OnlyMoveable(3), val);
+}
+
+TEST_F(EitherTest, LeftOptCanBeQueriedAsRvalue) {
+  OnlyMoveable val = make_left<OnlyMoveable, int>(3).left_opt().value();
+  EXPECT_EQ(OnlyMoveable(3), val);
+}
+
+TEST_F(EitherTest, RightOptCanBeQueriedAsRvalue) {
+  OnlyMoveable val = make_right<int, OnlyMoveable>(3).right_opt().value();
+  EXPECT_EQ(OnlyMoveable(3), val);
+}
+
 class DestructorCallback {
 public:
   MOCK_CONST_METHOD0(call, void());
