@@ -36,8 +36,11 @@ public:
         return *this;
     }
 
-    typename std::add_lvalue_reference<T>::type operator*() const {
+    typename std::add_lvalue_reference<T>::type operator*() const& {
         return *_target;
+    }
+    typename std::add_rvalue_reference<T>::type operator*() && {
+        return std::move(*_target);
     }
 
     T* operator->() const {

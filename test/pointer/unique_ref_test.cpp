@@ -89,22 +89,22 @@ TEST(NullcheckTest, ClassWith2Parameters) {
 
 TEST(NullcheckTest, OptionIsResolvable_Primitive) {
   boost::optional<unique_ref<int>> var = nullcheck(std::make_unique<int>(3));
-  unique_ref<int> resolved = std::move(*var);
+  unique_ref<int> resolved = std::move(var).value();
 }
 
 TEST(NullcheckTest, OptionIsResolvable_Object) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass>());
-  unique_ref<SomeClass0Parameters> resolved = std::move(*var);
+  unique_ref<SomeClass0Parameters> resolved = std::move(var).value();
 }
 
 TEST(NullcheckTest, OptionIsAutoResolvable_Primitive) {
   auto var = nullcheck(std::make_unique<int>(3));
-  auto resolved = std::move(*var);
+  auto resolved = std::move(var).value();
 }
 
 TEST(NullcheckTest, OptionIsAutoResolvable_Object) {
   auto var = nullcheck(std::make_unique<SomeClass>());
-  auto resolved = std::move(*var);
+  auto resolved = std::move(var).value();
 }
 
 class UniqueRefTest: public ::testing::Test {
@@ -399,4 +399,21 @@ TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
   makeInvalid(std::move(var1));
   makeInvalid(std::move(var2));
   EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
+}
+
+class OnlyMoveable {
+public:
+  OnlyMoveable(int value_): value(value_)  {}
+  OnlyMoveable(OnlyMoveable &&source): value(source.value) {source.value = -1;}
+  bool operator==(const OnlyMoveable &rhs) const {
+    return value == rhs.value;
+  }
+  int value;
+private:
+  DISALLOW_COPY_AND_ASSIGN(OnlyMoveable);
+};
+
+TEST_F(UniqueRefTest, AllowsDerefOnRvalue) {
+  OnlyMoveable val = *make_unique_ref<OnlyMoveable>(5);
+  EXPECT_EQ(OnlyMoveable(5), val);
 }
