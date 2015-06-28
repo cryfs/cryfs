@@ -50,7 +50,8 @@ unique_ptr<Block> ParallelAccessBlockStore::load(const Key &key) {
 void ParallelAccessBlockStore::remove(unique_ptr<Block> block) {
   Key key = block->key();
   //TODO Don't use nullcheck but make blockstore use unique_ref
-  return _parallelAccessStore.remove(key, std::move(dynamic_pointer_move<BlockRef>(cpputils::nullcheck(std::move(block)).get()).get()));
+  auto block_ref = cpputils::nullcheck(std::move(block)).value();
+  return _parallelAccessStore.remove(key, dynamic_pointer_move<BlockRef>(block_ref).value());
 }
 
 uint64_t ParallelAccessBlockStore::numBlocks() const {
