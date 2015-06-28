@@ -42,7 +42,7 @@ public:
 
   unique_ref<DataInnerNode> LoadInnerNode(const Key &key) {
     auto node = std::move(nodeStore->load(key).get());
-    return std::move(dynamic_pointer_move<DataInnerNode>(node).get());
+    return dynamic_pointer_move<DataInnerNode>(node).value();
   }
 
   Key CreateNewInnerNodeReturnKey(const DataNode &firstChild) {
@@ -91,7 +91,7 @@ public:
 
   unique_ref<DataInnerNode> CopyInnerNode(const DataInnerNode &node) {
     auto copied = nodeStore->createNewNodeAsCopyFrom(node);
-    return std::move(dynamic_pointer_move<DataInnerNode>(copied).get());
+    return dynamic_pointer_move<DataInnerNode>(copied).value();
   }
 
   Key InitializeInnerNodeAddLeafReturnKey() {

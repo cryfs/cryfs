@@ -78,7 +78,7 @@ public:
 
   unique_ref<DataLeafNode> LoadLeafNode(const Key &key) {
     auto leaf = std::move(nodeStore->load(key).get());
-    return std::move(dynamic_pointer_move<DataLeafNode>(leaf).get());
+    return dynamic_pointer_move<DataLeafNode>(leaf).value();
   }
 
   void ResizeLeaf(const Key &key, size_t size) {
@@ -97,7 +97,7 @@ public:
 
   unique_ref<DataLeafNode> CopyLeafNode(const DataLeafNode &node) {
     auto copied = nodeStore->createNewNodeAsCopyFrom(node);
-    return std::move(dynamic_pointer_move<DataLeafNode>(copied).get());
+    return dynamic_pointer_move<DataLeafNode>(copied).value();
   }
 
   Key InitializeLeafGrowAndReturnKey() {

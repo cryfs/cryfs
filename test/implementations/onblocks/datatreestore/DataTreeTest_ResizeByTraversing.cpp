@@ -121,7 +121,7 @@ public:
     if (leaf != none) {
       return std::move(*leaf);
     }
-    auto inner = std::move(dynamic_pointer_move<DataInnerNode>(root).get());
+    auto inner = dynamic_pointer_move<DataInnerNode>(root).value();
     return LastLeaf(inner->LastChild()->key());
   }
 
