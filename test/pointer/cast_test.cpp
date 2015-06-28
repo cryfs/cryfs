@@ -64,7 +64,7 @@ TEST(UniquePtr_DynamicPointerMoveTest, NullPtrSelfCast) {
 
 TEST(UniqueRef_DynamicPointerMoveTest, ValidParentToChildCast) {
   Child *obj = new Child();
-  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  unique_ref<Parent> source(nullcheck(unique_ptr<Parent>(obj)).value());
   unique_ref<Child> casted = dynamic_pointer_move<Child>(source).value();
   EXPECT_EQ(nullptr, source.get()); // source lost ownership
   EXPECT_EQ(obj, casted.get());
@@ -80,7 +80,7 @@ TEST(UniquePtr_DynamicPointerMoveTest, ValidParentToChildCast) {
 
 TEST(UniqueRef_DynamicPointerMoveTest, InvalidParentToChildCast1) {
   Parent *obj = new Parent();
-  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  unique_ref<Parent> source(nullcheck(unique_ptr<Parent>(obj)).value());
   optional<unique_ref<Child>> casted = dynamic_pointer_move<Child>(source);
   EXPECT_EQ(obj, source.get()); // source still has ownership
   EXPECT_EQ(none, casted);
@@ -96,7 +96,7 @@ TEST(UniquePtr_DynamicPointerMoveTest, InvalidParentToChildCast1) {
 
 TEST(UniqueRef_DynamicPointerMoveTest, InvalidParentToChildCast2) {
   Child2 *obj = new Child2();
-  unique_ref<Parent> source(std::move(nullcheck(unique_ptr<Parent>(obj)).get()));
+  unique_ref<Parent> source(nullcheck(unique_ptr<Parent>(obj)).value());
   optional<unique_ref<Child>> casted = dynamic_pointer_move<Child>(source);
   EXPECT_EQ(obj, source.get()); // source still has ownership
   EXPECT_EQ(none, casted);
@@ -112,7 +112,7 @@ TEST(UniquePtr_DynamicPointerMoveTest, InvalidParentToChildCast2) {
 
 TEST(UniqueRef_DynamicPointerMoveTest, ChildToParentCast) {
   Child *obj = new Child();
-  unique_ref<Child> source(std::move(nullcheck(unique_ptr<Child>(obj)).get()));
+  unique_ref<Child> source(nullcheck(unique_ptr<Child>(obj)).value());
   unique_ref<Parent> casted = dynamic_pointer_move<Parent>(source).value();
   EXPECT_EQ(nullptr, source.get()); // source lost ownership
   EXPECT_EQ(obj, casted.get());
