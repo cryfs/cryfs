@@ -65,7 +65,7 @@ public:
   }
   MOCK_METHOD2(rename, void(const char*, const char*));
   cpputils::unique_ref<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) {
-    return std::move(cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).get());
+    return cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).value();
   }
   MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
   void utimens(const boost::filesystem::path &path, const timespec ts[2]) override {
