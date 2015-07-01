@@ -19,6 +19,9 @@ public:
   const std::string &EncryptionKey() const;
   void SetEncryptionKey(const std::string &value);
 
+  const std::string &Cipher() const;
+  void SetCipher(const std::string &value);
+
   void save() const;
 
 private:
@@ -28,6 +31,7 @@ private:
 
   std::string _rootBlob;
   std::string _encKey;
+  std::string _cipher;
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };

@@ -1,11 +1,14 @@
 #include "CryConfigLoader.h"
 #include <boost/filesystem.hpp>
+#include "utils/Console.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::optional;
 using boost::none;
+using std::vector;
+using std::string;
 
 namespace cryfs {
 
@@ -25,13 +28,25 @@ unique_ref<CryConfig> CryConfigLoader::createNew(const bf::path &filename) {
 }
 
 void CryConfigLoader::_initializeConfig(CryConfig *config) {
+  _generateCipher(config);
   _generateEncKey(config);
   _generateRootBlobKey(config);
 }
 
 void CryConfigLoader::_initializeConfigWithWeakKey(CryConfig *config) {
+  _generateTestCipher(config);
   _generateWeakEncKey(config);
   _generateRootBlobKey(config);
+}
+
+void CryConfigLoader::_generateCipher(CryConfig *config) {
+  vector<string> ciphers = {"aes-256-gcm", "aes-256-cfb"};
+  int cipherIndex = Console().ask("Which block cipher do you want to use?", ciphers);
+  config->SetCipher(ciphers[cipherIndex]);
+}
+
+void CryConfigLoader::_generateTestCipher(CryConfig *config) {
+  config->SetCipher("aes-256-gcm");
 }
 
 void CryConfigLoader::_generateEncKey(CryConfig *config) {

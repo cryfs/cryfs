@@ -24,11 +24,13 @@ public:
 
 private:
   static void _initializeConfig(CryConfig *config);
+  static void _generateCipher(CryConfig *config);
   static void _generateEncKey(CryConfig *config);
   static void _generateRootBlobKey(CryConfig *config);
 
-  static void _initializeConfigWithWeakKey(CryConfig *config);
-  static void _generateWeakEncKey(CryConfig *config);
+  static void _initializeConfigWithWeakKey(CryConfig *config);  // TODO Rename to _initializeConfigForTest
+  static void _generateWeakEncKey(CryConfig *config); // TODO Rename to _generateTestEncKey
+  static void _generateTestCipher(CryConfig *config);
 };
 
 }

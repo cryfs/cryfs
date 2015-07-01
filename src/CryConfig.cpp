@@ -24,6 +24,7 @@ void CryConfig::load() {
 
   _rootBlob = pt.get("cryfs.rootblob", "");
   _encKey = pt.get("cryfs.key", "");
+  _cipher = pt.get("cryfs.cipher", "");
 }
 
 void CryConfig::save() const {
@@ -31,6 +32,7 @@ void CryConfig::save() const {
 
   pt.put("cryfs.rootblob", _rootBlob);
   pt.put("cryfs.key", _encKey);
+  pt.put("cryfs.cipher", _cipher);
 
   write_json(_configfile.native(), pt);
 }
@@ -49,6 +51,14 @@ const string &CryConfig::EncryptionKey() const {
 
 void CryConfig::SetEncryptionKey(const std::string &value) {
   _encKey = value;
+}
+
+const std::string &CryConfig::Cipher() const {
+  return _cipher;
+};
+
+void CryConfig::SetCipher(const std::string &value) {
+  _cipher = value;
 }
 
 CryConfig::~CryConfig() {
