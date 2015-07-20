@@ -4,7 +4,8 @@
 
 #include "Block.h"
 #include <string>
-#include <memory>
+#include <boost/optional.hpp>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/cpp-utils/data/Data.h>
 
 namespace blockstore {
@@ -14,21 +15,22 @@ public:
   virtual ~BlockStore() {}
 
   virtual Key createKey() = 0;
-  //Returns nullptr if key already exists
-  virtual std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) = 0;
+  //Returns boost::none if key already exists
+  virtual boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) = 0;
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual std::unique_ptr<Block> load(const Key &key) = 0;
   virtual void remove(std::unique_ptr<Block> block) = 0;
   virtual uint64_t numBlocks() const = 0;
 
-  std::unique_ptr<Block> create(const cpputils::Data &data) {
-    std::unique_ptr<Block> block(nullptr);
-    while(block.get() == nullptr) {
-      //TODO Copy necessary?
-      block = tryCreate(createKey(), data.copy());
+  cpputils::unique_ref<Block> create(const cpputils::Data &data) {
+    while(true) {
+      //TODO Copy (data.copy()) necessary?
+      auto block = tryCreate(createKey(), data.copy());
+      if (block != boost::none) {
+        return std::move(*block);
+      }
     }
-    return block;
   }
 };
 

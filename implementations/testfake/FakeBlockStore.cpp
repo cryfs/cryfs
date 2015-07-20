@@ -8,6 +8,10 @@ using std::string;
 using std::mutex;
 using std::lock_guard;
 using cpputils::Data;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace blockstore {
 namespace testfake {
@@ -15,15 +19,16 @@ namespace testfake {
 FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks() {}
 
-unique_ptr<Block> FakeBlockStore::tryCreate(const Key &key, Data data) {
+optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data) {
   auto insert_result = _blocks.emplace(key.ToString(), std::move(data));
 
   if (!insert_result.second) {
-    return nullptr;
+    return none;
   }
 
   //Return a copy of the stored data
-  return load(key);
+  //TODO Don't use nullcheck but make load() use unique_ref
+  return cpputils::nullcheck(load(key));
 }
 
 unique_ptr<Block> FakeBlockStore::load(const Key &key) {

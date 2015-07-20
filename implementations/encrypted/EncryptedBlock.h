@@ -22,7 +22,7 @@ template<class Cipher>
 class EncryptedBlock: public Block {
 public:
   BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
-  static std::unique_ptr<EncryptedBlock> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
+  static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
   static std::unique_ptr<EncryptedBlock> TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
@@ -57,16 +57,17 @@ constexpr unsigned int EncryptedBlock<Cipher>::HEADER_LENGTH;
 
 
 template<class Cipher>
-std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
+boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
   cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, std::move(data));
   cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
   auto baseBlock = baseBlockStore->tryCreate(key, std::move(encrypted));
-  if (baseBlock.get() == nullptr) {
+  if (baseBlock == boost::none) {
     //TODO Test this code branch
-    return nullptr;
+    return boost::none;
   }
 
-  return std::make_unique<EncryptedBlock>(std::move(baseBlock), encKey, std::move(plaintextWithHeader));
+  //TODO Don't use to_unique_ptr
+  return cpputils::make_unique_ref<EncryptedBlock>(cpputils::to_unique_ptr(std::move(*baseBlock)), encKey, std::move(plaintextWithHeader));
 }
 
 template<class Cipher>

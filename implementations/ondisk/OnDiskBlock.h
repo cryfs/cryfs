@@ -7,7 +7,7 @@
 #include <messmer/cpp-utils/data/Data.h>
 #include <iostream>
 
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 namespace blockstore {
 namespace ondisk {
@@ -15,10 +15,11 @@ class OnDiskBlockStore;
 
 class OnDiskBlock: public Block {
 public:
+  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
   virtual ~OnDiskBlock();
 
   static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
-  static std::unique_ptr<OnDiskBlock> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
+  static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 
   const void *data() const override;
@@ -32,8 +33,6 @@ private:
   const boost::filesystem::path _filepath;
   cpputils::Data _data;
   bool _dataChanged;
-
-  OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
 
   void _fillDataWithZeroes();
   void _storeToDisk() const;

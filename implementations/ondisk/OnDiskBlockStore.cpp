@@ -5,6 +5,9 @@ using std::unique_ptr;
 using std::make_unique;
 using std::string;
 using cpputils::Data;
+using cpputils::unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace bf = boost::filesystem;
 
@@ -14,13 +17,13 @@ namespace ondisk {
 OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
-unique_ptr<Block> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
-  auto block = OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data));
-
-  if (!block) {
-    return nullptr;
+optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
+  //TODO Easier implementation? This is only so complicated because of the cast OnDiskBlock -> Block
+  auto result = std::move(OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data)));
+  if (result == boost::none) {
+    return boost::none;
   }
-  return std::move(block);
+  return unique_ref<Block>(std::move(*result));
 }
 
 unique_ptr<Block> OnDiskBlockStore::load(const Key &key) {

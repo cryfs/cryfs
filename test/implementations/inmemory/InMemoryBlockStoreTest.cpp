@@ -3,6 +3,7 @@
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include "google/gtest/gtest.h"
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 
 using blockstore::BlockStore;

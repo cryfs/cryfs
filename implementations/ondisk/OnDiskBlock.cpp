@@ -13,6 +13,10 @@ using std::ifstream;
 using std::ofstream;
 using std::ios;
 using cpputils::Data;
+using cpputils::make_unique_ref;
+using cpputils::unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace bf = boost::filesystem;
 
@@ -61,15 +65,15 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
   }
 }
 
-unique_ptr<OnDiskBlock> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
+optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
   auto filepath = rootdir / key.ToString();
   if (bf::exists(filepath)) {
-    return nullptr;
+    return none;
   }
 
-  auto block = unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, std::move(data)));
+  auto block = make_unique_ref<OnDiskBlock>(key, filepath, std::move(data));
   block->_storeToDisk();
-  return block;
+  return std::move(block);
 }
 
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {

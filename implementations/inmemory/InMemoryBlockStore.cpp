@@ -10,6 +10,10 @@ using std::lock_guard;
 using std::piecewise_construct;
 using std::make_tuple;
 using cpputils::Data;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace blockstore {
 namespace inmemory {
@@ -17,15 +21,15 @@ namespace inmemory {
 InMemoryBlockStore::InMemoryBlockStore()
  : _blocks() {}
 
-unique_ptr<Block> InMemoryBlockStore::tryCreate(const Key &key, Data data) {
+optional<unique_ref<Block>> InMemoryBlockStore::tryCreate(const Key &key, Data data) {
   auto insert_result = _blocks.emplace(piecewise_construct, make_tuple(key.ToString()), make_tuple(key, std::move(data)));
 
   if (!insert_result.second) {
-    return nullptr;
+    return none;
   }
 
   //Return a pointer to the stored InMemoryBlock
-  return make_unique<InMemoryBlock>(insert_result.first->second);
+  return optional<unique_ref<Block>>(make_unique_ref<InMemoryBlock>(insert_result.first->second));
 }
 
 unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {

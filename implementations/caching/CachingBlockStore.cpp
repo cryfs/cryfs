@@ -10,6 +10,10 @@ using std::unique_ptr;
 using std::make_unique;
 using cpputils::dynamic_pointer_move;
 using cpputils::Data;
+using boost::optional;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::none;
 
 namespace blockstore {
 namespace caching {
@@ -22,9 +26,10 @@ Key CachingBlockStore::createKey() {
   return _baseBlockStore->createKey();
 }
 
-unique_ptr<Block> CachingBlockStore::tryCreate(const Key &key, Data data) {
+optional<unique_ref<Block>> CachingBlockStore::tryCreate(const Key &key, Data data) {
+  //TODO Shouldn't we return boost::none if the key already exists?
   ++_numNewBlocks;
-  return make_unique<CachedBlock>(make_unique<NewBlock>(key, std::move(data), this), this);
+  return unique_ref<Block>(make_unique_ref<CachedBlock>(make_unique<NewBlock>(key, std::move(data), this), this));
 }
 
 unique_ptr<Block> CachingBlockStore::load(const Key &key) {
@@ -64,9 +69,9 @@ void CachingBlockStore::release(unique_ptr<Block> block) {
   _cache.push(key, std::move(block));
 }
 
-std::unique_ptr<Block> CachingBlockStore::tryCreateInBaseStore(const Key &key, Data data) {
+optional<unique_ref<Block>> CachingBlockStore::tryCreateInBaseStore(const Key &key, Data data) {
   auto block = _baseBlockStore->tryCreate(key, std::move(data));
-  if (block.get() != nullptr) {
+  if (block != none) {
 	--_numNewBlocks;
   }
   return block;

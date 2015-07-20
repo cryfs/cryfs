@@ -124,7 +124,7 @@ private:
     return blockStore->load(key);
   }
 
-  std::unique_ptr<blockstore::Block> CreateBlock() {
+  cpputils::unique_ref<blockstore::Block> CreateBlock() {
     return blockStore->create(cpputils::Data(size));
   }
 

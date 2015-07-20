@@ -15,13 +15,15 @@ using std::unique_ptr;
 using std::make_unique;
 using cpputils::Data;
 using cpputils::DataFixture;
+using cpputils::unique_ref;
+using boost::optional;
 
 using namespace blockstore;
 
 class BlockStoreWithRandomKeysMock: public BlockStoreWithRandomKeys {
 public:
-  unique_ptr<Block> tryCreate(const Key &key, Data data) {
-    return unique_ptr<Block>(do_create(key, data));
+  optional<unique_ref<Block>> tryCreate(const Key &key, Data data) {
+    return cpputils::nullcheck(unique_ptr<Block>(do_create(key, data)));
   }
   MOCK_METHOD2(do_create, Block*(const Key &, const Data &data));
   unique_ptr<Block> load(const Key &key) {

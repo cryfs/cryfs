@@ -14,6 +14,7 @@ using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::TempFile;
 using cpputils::TempDir;
+using cpputils::unique_ref;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -35,22 +36,23 @@ public:
 
   Data randomData;
 
-  unique_ptr<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
+  unique_ref<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
+      OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy()).value();
     }
-    return OnDiskBlock::LoadFromDisk(dir.path(), key);
+    //TODO Don't use nullcheck
+    return cpputils::nullcheck(OnDiskBlock::LoadFromDisk(dir.path(), key)).value();
   }
 
-  unique_ptr<OnDiskBlock> CreateBlock() {
-    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy());
+  unique_ref<OnDiskBlock> CreateBlock() {
+    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy()).value();
   }
 
-  void WriteDataToBlock(const unique_ptr<OnDiskBlock> &block) {
+  void WriteDataToBlock(const unique_ref<OnDiskBlock> &block) {
     block->write(randomData.data(), 0, randomData.size());
   }
 
-  void EXPECT_BLOCK_DATA_CORRECT(const unique_ptr<OnDiskBlock> &block) {
+  void EXPECT_BLOCK_DATA_CORRECT(const unique_ref<OnDiskBlock> &block) {
     EXPECT_EQ(randomData.size(), block->size());
     EXPECT_EQ(0, std::memcmp(randomData.data(), block->data(), randomData.size()));
   }

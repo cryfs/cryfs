@@ -12,6 +12,7 @@ using std::unique_ptr;
 using cpputils::Data;
 using cpputils::TempFile;
 using cpputils::TempDir;
+using cpputils::unique_ref;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -49,11 +50,11 @@ TEST_F(OnDiskBlockCreateTest, CreatingExistingBlockReturnsNull) {
 
 class OnDiskBlockCreateSizeTest: public OnDiskBlockCreateTest, public WithParamInterface<size_t> {
 public:
-  unique_ptr<OnDiskBlock> block;
+  unique_ref<OnDiskBlock> block;
   Data ZEROES;
 
   OnDiskBlockCreateSizeTest():
-    block(OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(Data(GetParam()).FillWithZeroes()))),
+    block(OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(Data(GetParam()).FillWithZeroes())).value()),
     ZEROES(block->size())
   {
     ZEROES.FillWithZeroes();

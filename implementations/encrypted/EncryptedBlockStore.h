@@ -18,7 +18,7 @@ public:
 
   //TODO Are createKey() tests included in generic BlockStoreTest? If not, add it!
   Key createKey() override;
-  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
+  boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;
@@ -46,9 +46,14 @@ Key EncryptedBlockStore<Cipher>::createKey() {
 }
 
 template<class Cipher>
-std::unique_ptr<Block> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, cpputils::Data data) {
-  //TODO Test that this returns nullptr when base blockstore returns nullptr  (for all pass-through-blockstores)
-  return EncryptedBlock<Cipher>::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
+boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, cpputils::Data data) {
+  //TODO Test that this returns boost::none when base blockstore returns nullptr  (for all pass-through-blockstores)
+  //TODO Easier implementation? This is only so complicated because of the case EncryptedBlock -> Block
+  auto result = EncryptedBlock<Cipher>::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
+  if (result == boost::none) {
+    return boost::none;
+  }
+  return cpputils::unique_ref<Block>(std::move(*result));
 }
 
 template<class Cipher>

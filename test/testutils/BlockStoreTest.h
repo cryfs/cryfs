@@ -60,7 +60,8 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingB
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
-  blockStore->remove(std::move(block));
+  //TODO Don't use to_unique_ptr
+  blockStore->remove(cpputils::to_unique_ptr(std::move(block)));
   EXPECT_EQ(0, blockStore->numBlocks());
 }
 
@@ -96,7 +97,8 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
-  blockStore->remove(std::move(block));
+  // TODO Don't use to_unique_ptr
+  blockStore->remove(cpputils::to_unique_ptr(std::move(block)));
   EXPECT_EQ(1, blockStore->numBlocks());
 }
 

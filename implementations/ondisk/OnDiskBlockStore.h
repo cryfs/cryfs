@@ -14,7 +14,7 @@ class OnDiskBlockStore: public BlockStoreWithRandomKeys {
 public:
   explicit OnDiskBlockStore(const boost::filesystem::path &rootdir);
 
-  std::unique_ptr<Block> tryCreate(const Key &key, cpputils::Data data) override;
+  boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
   std::unique_ptr<Block> load(const Key &key) override;
   void remove(std::unique_ptr<Block> block) override;
   uint64_t numBlocks() const override;

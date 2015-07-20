@@ -15,6 +15,9 @@ using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using boost::none;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using boost::optional;
+using boost::none;
 
 namespace blockstore {
 namespace parallelaccess {
@@ -27,14 +30,13 @@ Key ParallelAccessBlockStore::createKey() {
   return _baseBlockStore->createKey();
 }
 
-unique_ptr<Block> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
-  //TODO Don't use nullcheck/to_unique_ptr but make blockstore use unique_ref
-  auto block = cpputils::nullcheck(_baseBlockStore->tryCreate(key, std::move(data)));
+optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
+  auto block = _baseBlockStore->tryCreate(key, std::move(data));
   if (block == none) {
 	//TODO Test this code branch
-	return nullptr;
+	return none;
   }
-  return cpputils::to_unique_ptr(_parallelAccessStore.add(key, std::move(*block)));
+  return unique_ref<Block>(_parallelAccessStore.add(key, std::move(*block)));
 }
 
 unique_ptr<Block> ParallelAccessBlockStore::load(const Key &key) {

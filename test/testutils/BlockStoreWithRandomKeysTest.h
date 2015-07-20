@@ -31,46 +31,46 @@ TYPED_TEST_CASE_P(BlockStoreWithRandomKeysTest);
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSameSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
-  block->flush();
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
   auto block2 = blockStore->tryCreate(this->key, cpputils::Data(1024));
-  EXPECT_TRUE((bool)block);
-  EXPECT_FALSE((bool)block2);
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndDifferentSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
-  block->flush();
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
   auto block2 = blockStore->tryCreate(this->key, cpputils::Data(4096));
-  EXPECT_TRUE((bool)block);
-  EXPECT_FALSE((bool)block2);
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndFirstNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->tryCreate(this->key, cpputils::Data(0));
-  block->flush();
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
   auto block2 = blockStore->tryCreate(this->key, cpputils::Data(1024));
-  EXPECT_TRUE((bool)block);
-  EXPECT_FALSE((bool)block2);
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndSecondNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->tryCreate(this->key, cpputils::Data(1024));
-  block->flush();
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
   auto block2 = blockStore->tryCreate(this->key, cpputils::Data(0));
-  EXPECT_TRUE((bool)block);
-  EXPECT_FALSE((bool)block2);
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
 }
 
 TYPED_TEST_P(BlockStoreWithRandomKeysTest, CreateTwoBlocksWithSameKeyAndBothNullSize) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->tryCreate(this->key, cpputils::Data(0));
-  block->flush();
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
   auto block2 = blockStore->tryCreate(this->key, cpputils::Data(0));
-  EXPECT_TRUE((bool)block);
-  EXPECT_FALSE((bool)block2);
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
 }
 
 REGISTER_TYPED_TEST_CASE_P(BlockStoreWithRandomKeysTest,

@@ -32,9 +32,11 @@ void NewBlock::write(const void *source, uint64_t offset, uint64_t size) {
 void NewBlock::writeToBaseBlockIfChanged() {
   if (_dataChanged) {
     if (_baseBlock.get() == nullptr) {
-	  //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
       //TODO _data.copy() necessary?
-      _baseBlock = _blockStore->tryCreateInBaseStore(key(), _data.copy());
+      auto newBase = _blockStore->tryCreateInBaseStore(key(), _data.copy());
+      assert(newBase != boost::none); //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
+      //TODO Don't use to_unique_ptr but make _baseBlock a unique_ref
+      _baseBlock = cpputils::to_unique_ptr(std::move(*newBase));
     } else {
 	  _baseBlock->write(_data.data(), 0, _data.size());
     }
