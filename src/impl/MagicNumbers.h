@@ -4,6 +4,7 @@
 
 namespace cryfs {
 
+//TODO enum class
 enum MagicNumbers {
   DIR = 0x00,
   FILE = 0x01,

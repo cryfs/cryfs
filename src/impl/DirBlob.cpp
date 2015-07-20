@@ -60,7 +60,7 @@ void DirBlob::_writeEntriesToBlob() {
     _blob->resize(1);
     unsigned int offset = 1;
     for (const auto &entry : _entries) {
-	  unsigned char entryTypeMagicNumber = static_cast<unsigned char>(entry.type);
+	  uint8_t entryTypeMagicNumber = static_cast<uint8_t>(entry.type);
 	  _blob->write(&entryTypeMagicNumber, offset, 1);
 	  offset += 1;
 	  _blob->write(entry.name.c_str(), offset, entry.name.size() + 1);
