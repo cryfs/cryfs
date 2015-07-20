@@ -11,7 +11,7 @@ class DataInnerNode;
 
 class DataLeafNode: public DataNode {
 public:
-  static cpputils::unique_ref<DataLeafNode> InitializeNewNode(std::unique_ptr<blockstore::Block> block);
+  static cpputils::unique_ref<DataLeafNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block);
 
   DataLeafNode(DataNodeView block);
   virtual ~DataLeafNode();

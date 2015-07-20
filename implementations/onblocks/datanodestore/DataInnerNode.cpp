@@ -20,7 +20,7 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ptr<Block> block, const DataNode &first_child) {
+unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNode &first_child) {
   DataNodeView node(std::move(block));
   node.setDepth(first_child.depth() + 1);
   node.setSize(1);

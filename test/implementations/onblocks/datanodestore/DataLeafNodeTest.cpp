@@ -140,7 +140,8 @@ TEST_F(DataLeafNodeTest, InitializesCorrectly) {
 
 TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
   auto key = InitializeLeafGrowAndReturnKey();
-  auto leaf = DataLeafNode::InitializeNewNode(blockStore->load(key));
+  //TODO Don't use nullcheck
+  auto leaf = DataLeafNode::InitializeNewNode(cpputils::nullcheck(blockStore->load(key)).value());
   EXPECT_EQ(0u, leaf->numBytes());
 }
 

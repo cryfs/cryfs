@@ -6,7 +6,7 @@
 #include "../BlobStoreOnBlocks.h"
 #include "DataInnerNode_ChildEntry.h"
 
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 
 #include <memory>
 #include <stdexcept>
@@ -59,7 +59,7 @@ private:
 
 class DataNodeView {
 public:
-  DataNodeView(std::unique_ptr<blockstore::Block> block): _block(std::move(block)) {
+  DataNodeView(cpputils::unique_ref<blockstore::Block> block): _block(std::move(block)) {
   }
   virtual ~DataNodeView() {}
 
@@ -104,7 +104,7 @@ public:
     return DataNodeLayout(_block->size());
   }
 
-  std::unique_ptr<blockstore::Block> releaseBlock() {
+  cpputils::unique_ref<blockstore::Block> releaseBlock() {
     return std::move(_block);
   }
 
@@ -126,7 +126,7 @@ private:
     return (Type*)(((const int8_t*)_block->data())+offset);
   }
 
-  std::unique_ptr<blockstore::Block> _block;
+  cpputils::unique_ref<blockstore::Block> _block;
 
   DISALLOW_COPY_AND_ASSIGN(DataNodeView);
 

@@ -21,7 +21,7 @@ DataLeafNode::DataLeafNode(DataNodeView view)
 DataLeafNode::~DataLeafNode() {
 }
 
-unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ptr<Block> block) {
+unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ref<Block> block) {
   DataNodeView node(std::move(block));
   node.setDepth(0);
   node.setSize(0);

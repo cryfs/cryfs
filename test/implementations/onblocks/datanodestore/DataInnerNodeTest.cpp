@@ -135,7 +135,8 @@ TEST_F(DataInnerNodeTest, InitializesCorrectly) {
 
 TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
   auto key = InitializeInnerNodeAddLeafReturnKey();
-  auto node = DataInnerNode::InitializeNewNode(blockStore->load(key), *leaf);
+  //TODO Don't use cpputils::nullcheck
+  auto node = DataInnerNode::InitializeNewNode(cpputils::nullcheck(blockStore->load(key)).value(), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
