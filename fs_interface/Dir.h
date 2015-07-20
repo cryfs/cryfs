@@ -14,10 +14,10 @@ class Dir: public virtual Node {
 public:
   virtual ~Dir() {}
 
-  enum class EntryType {
-    DIR = 0,
-    FILE = 1,
-    SYMLINK = 2
+  enum class EntryType: uint8_t {
+    DIR = 0x00,
+    FILE = 0x01,
+    SYMLINK = 0x02
   };
 
   struct Entry {
