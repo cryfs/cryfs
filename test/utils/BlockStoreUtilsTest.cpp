@@ -9,10 +9,10 @@ using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using std::make_unique;
-using std::unique_ptr;
 using cpputils::Data;
 using cpputils::DataFixture;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 using namespace blockstore;
 using namespace blockstore::utils;
@@ -25,13 +25,13 @@ public:
   BlockStoreUtilsTest():
     ZEROES(SIZE),
     dataFixture(DataFixture::generate(SIZE)),
-    blockStore(make_unique<FakeBlockStore>()) {
+    blockStore(make_unique_ref<FakeBlockStore>()) {
     ZEROES.FillWithZeroes();
   }
 
   Data ZEROES;
   Data dataFixture;
-  unique_ptr<BlockStore> blockStore;
+  unique_ref<BlockStore> blockStore;
 };
 
 TEST_F(BlockStoreUtilsTest, FillWithZeroes) {

@@ -14,7 +14,7 @@ namespace encrypted {
 template<class Cipher>
 class EncryptedBlockStore: public BlockStore {
 public:
-  EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
+  EncryptedBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 
   //TODO Are createKey() tests included in generic BlockStoreTest? If not, add it!
   Key createKey() override;
@@ -27,7 +27,7 @@ public:
   void __setKey(const typename Cipher::EncryptionKey &encKey);
 
 private:
-  std::unique_ptr<BlockStore> _baseBlockStore;
+  cpputils::unique_ref<BlockStore> _baseBlockStore;
   typename Cipher::EncryptionKey _encKey;
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlockStore);
@@ -36,7 +36,7 @@ private:
 
 
 template<class Cipher>
-EncryptedBlockStore<Cipher>::EncryptedBlockStore(std::unique_ptr<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey)
+EncryptedBlockStore<Cipher>::EncryptedBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey)
  : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey) {
 }
 

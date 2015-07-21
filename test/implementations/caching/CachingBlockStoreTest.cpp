@@ -7,14 +7,13 @@
 using blockstore::BlockStore;
 using blockstore::caching::CachingBlockStore;
 using blockstore::testfake::FakeBlockStore;
-
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 class CachingBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<CachingBlockStore>(make_unique<FakeBlockStore>());
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<CachingBlockStore>(make_unique_ref<FakeBlockStore>());
   }
 };
 

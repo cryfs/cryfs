@@ -1,8 +1,6 @@
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 using cpputils::Data;
 using cpputils::unique_ref;
@@ -32,7 +30,7 @@ optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
 
 void OnDiskBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  cpputils::to_unique_ptr(std::move(block)).reset(); // Call destructor
+  cpputils::destruct(std::move(block));
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 

@@ -5,7 +5,7 @@
 
 class BlockStoreSizeParameterizedTest {
 public:
-  BlockStoreSizeParameterizedTest(std::unique_ptr<blockstore::BlockStore> blockStore_, size_t size_): blockStore(std::move(blockStore_)), size(size_) {}
+  BlockStoreSizeParameterizedTest(cpputils::unique_ref<blockstore::BlockStore> blockStore_, size_t size_): blockStore(std::move(blockStore_)), size(size_) {}
 
   void TestCreatedBlockHasCorrectSize() {
     auto block = CreateBlock();
@@ -93,7 +93,7 @@ public:
 
 private:
   const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  std::unique_ptr<blockstore::BlockStore> blockStore;
+  cpputils::unique_ref<blockstore::BlockStore> blockStore;
   size_t size;
 
   cpputils::Data ZEROES(size_t size) {

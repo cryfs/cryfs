@@ -1,8 +1,6 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
 
-using std::unique_ptr;
-using std::make_unique;
 using std::make_shared;
 using std::string;
 using std::mutex;
@@ -42,7 +40,7 @@ optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
 
 void FakeBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  cpputils::to_unique_ptr(std::move(block)).reset(); // Call destructor
+  cpputils::destruct(std::move(block));
   int numRemoved = _blocks.erase(key.ToString());
   assert(numRemoved == 1);
 }

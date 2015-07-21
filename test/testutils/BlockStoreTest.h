@@ -8,7 +8,7 @@
 
 class BlockStoreTestFixture {
 public:
-  virtual std::unique_ptr<blockstore::BlockStore> createBlockStore() = 0;
+  virtual cpputils::unique_ref<blockstore::BlockStore> createBlockStore() = 0;
 };
 
 template<class ConcreteBlockStoreTestFixture>

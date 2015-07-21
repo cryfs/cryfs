@@ -4,9 +4,6 @@
 #include <cassert>
 #include <messmer/cpp-utils/pointer/cast.h>
 
-
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 using std::mutex;
 using std::lock_guard;

@@ -11,15 +11,14 @@ using blockstore::BlockStore;
 using blockstore::BlockStoreWithRandomKeys;
 using blockstore::ondisk::OnDiskBlockStore;
 
-using std::unique_ptr;
-using std::make_unique;
-
 using cpputils::TempDir;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 class OnDiskBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<OnDiskBlockStore>(tempdir.path());
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<OnDiskBlockStore>(tempdir.path());
   }
 private:
   TempDir tempdir;
@@ -29,8 +28,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixtur
 
 class OnDiskBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
-  unique_ptr<BlockStoreWithRandomKeys> createBlockStore() override {
-    return make_unique<OnDiskBlockStore>(tempdir.path());
+  unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
+    return make_unique_ref<OnDiskBlockStore>(tempdir.path());
   }
 private:
   TempDir tempdir;

@@ -9,7 +9,6 @@ using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using std::unique_ptr;
 using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::TempFile;

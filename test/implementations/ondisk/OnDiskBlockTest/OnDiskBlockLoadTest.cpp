@@ -14,7 +14,6 @@ using ::testing::WithParamInterface;
 using ::testing::Values;
 
 using std::ofstream;
-using std::unique_ptr;
 using std::ios;
 using cpputils::Data;
 using cpputils::DataFixture;

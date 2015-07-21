@@ -11,7 +11,7 @@ namespace caching {
 //TODO Check that this blockstore allows parallel destructing of blocks (otherwise we won't encrypt blocks in parallel)
 class CachingBlockStore: public BlockStore {
 public:
-  explicit CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore);
+  explicit CachingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
@@ -25,7 +25,7 @@ public:
   void removeFromBaseStore(cpputils::unique_ref<Block> block);
 
 private:
-  std::unique_ptr<BlockStore> _baseBlockStore;
+  cpputils::unique_ref<BlockStore> _baseBlockStore;
   Cache<Key, cpputils::unique_ref<Block>> _cache;
   uint32_t _numNewBlocks;
 

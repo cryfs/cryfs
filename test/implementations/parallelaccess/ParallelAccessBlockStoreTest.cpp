@@ -8,14 +8,13 @@ using blockstore::BlockStore;
 using blockstore::parallelaccess::ParallelAccessBlockStore;
 using blockstore::testfake::FakeBlockStore;
 
-using std::unique_ptr;
-using std::make_unique;
 using cpputils::make_unique_ref;
+using cpputils::unique_ref;
 
 class ParallelAccessBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<ParallelAccessBlockStore>(make_unique_ref<FakeBlockStore>());
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<ParallelAccessBlockStore>(make_unique_ref<FakeBlockStore>());
   }
 };
 

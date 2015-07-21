@@ -8,14 +8,13 @@
 using blockstore::BlockStore;
 using blockstore::BlockStoreWithRandomKeys;
 using blockstore::testfake::FakeBlockStore;
-
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 class FakeBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<FakeBlockStore>();
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<FakeBlockStore>();
   }
 };
 
@@ -23,8 +22,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(TestFake, BlockStoreTest, FakeBlockStoreTestFixtur
 
 class FakeBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
-  unique_ptr<BlockStoreWithRandomKeys> createBlockStore() override {
-    return make_unique<FakeBlockStore>();
+  unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
+    return make_unique_ref<FakeBlockStore>();
   }
 };
 

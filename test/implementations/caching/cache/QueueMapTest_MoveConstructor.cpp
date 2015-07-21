@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include <memory>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include "../../../../implementations/caching/cache/QueueMap.h"
 #include "testutils/MinimalKeyType.h"
 #include "testutils/CopyableMovableValueType.h"
@@ -7,17 +7,16 @@
 using namespace blockstore::caching;
 
 using ::testing::Test;
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 //Test that QueueMap uses a move constructor for Value if possible
 class QueueMapTest_MoveConstructor: public Test {
 public:
-  QueueMapTest_MoveConstructor() {
+  QueueMapTest_MoveConstructor(): map(make_unique_ref<QueueMap<MinimalKeyType, CopyableMovableValueType>>()) {
     CopyableMovableValueType::numCopyConstructorCalled = 0;
-    map = make_unique<QueueMap<MinimalKeyType, CopyableMovableValueType>>();
   }
-  unique_ptr<QueueMap<MinimalKeyType, CopyableMovableValueType>> map;
+  unique_ref<QueueMap<MinimalKeyType, CopyableMovableValueType>> map;
 };
 
 TEST_F(QueueMapTest_MoveConstructor, PushingAndPopping_MoveIntoMap) {

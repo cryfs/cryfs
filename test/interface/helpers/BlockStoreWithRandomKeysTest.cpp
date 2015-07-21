@@ -11,8 +11,6 @@ using ::testing::Eq;
 using ::testing::ByRef;
 
 using std::string;
-using std::unique_ptr;
-using std::make_unique;
 using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::unique_ref;
@@ -23,11 +21,11 @@ using namespace blockstore;
 class BlockStoreWithRandomKeysMock: public BlockStoreWithRandomKeys {
 public:
   optional<unique_ref<Block>> tryCreate(const Key &key, Data data) {
-    return cpputils::nullcheck(unique_ptr<Block>(do_create(key, data)));
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_create(key, data)));
   }
   MOCK_METHOD2(do_create, Block*(const Key &, const Data &data));
   optional<unique_ref<Block>> load(const Key &key) {
-    return cpputils::nullcheck(unique_ptr<Block>(do_load(key)));
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_load(key)));
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
   void remove(unique_ref<Block> block) {UNUSED(block);}

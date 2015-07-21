@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <messmer/cpp-utils/pointer/cast.h>
 
-using std::unique_ptr;
-using std::make_unique;
 using cpputils::dynamic_pointer_move;
 using cpputils::Data;
 using boost::optional;
@@ -18,7 +16,7 @@ using boost::none;
 namespace blockstore {
 namespace caching {
 
-CachingBlockStore::CachingBlockStore(std::unique_ptr<BlockStore> baseBlockStore)
+CachingBlockStore::CachingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore)
   :_baseBlockStore(std::move(baseBlockStore)), _cache(), _numNewBlocks(0) {
 }
 

@@ -8,7 +8,7 @@
 
 class BlockStoreWithRandomKeysTestFixture {
 public:
-  virtual std::unique_ptr<blockstore::BlockStoreWithRandomKeys> createBlockStore() = 0;
+  virtual cpputils::unique_ref<blockstore::BlockStoreWithRandomKeys> createBlockStore() = 0;
 };
 
 template<class ConcreteBlockStoreWithRandomKeysTestFixture>

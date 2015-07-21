@@ -1,13 +1,12 @@
 #include "QueueMapTest.h"
 
-QueueMapTest::QueueMapTest() {
+QueueMapTest::QueueMapTest(): _map(cpputils::make_unique_ref<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>>()) {
   MinimalKeyType::instances = 0;
   MinimalValueType::instances = 0;
-  _map = std::make_unique<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>>();
 }
 
 QueueMapTest::~QueueMapTest() {
-  _map.reset();
+  cpputils::destruct(std::move(_map));
   EXPECT_EQ(0, MinimalKeyType::instances);
   EXPECT_EQ(0, MinimalValueType::instances);
 }

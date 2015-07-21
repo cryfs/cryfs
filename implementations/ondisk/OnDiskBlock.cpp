@@ -5,8 +5,6 @@
 #include "OnDiskBlockStore.h"
 #include "../../utils/FileDoesntExistException.h"
 
-using std::unique_ptr;
-using std::make_unique;
 using std::istream;
 using std::ostream;
 using std::ifstream;

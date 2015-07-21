@@ -2,7 +2,6 @@
 #include "InMemoryBlockStore.h"
 #include <cstring>
 
-using std::unique_ptr;
 using std::make_shared;
 using std::istream;
 using std::ostream;

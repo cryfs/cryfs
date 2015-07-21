@@ -8,7 +8,7 @@ struct DataRange {
 
 class BlockStoreDataParametrizedTest {
 public:
-  BlockStoreDataParametrizedTest(std::unique_ptr<blockstore::BlockStore> blockStore_, const DataRange &testData_)
+  BlockStoreDataParametrizedTest(cpputils::unique_ref<blockstore::BlockStore> blockStore_, const DataRange &testData_)
     : blockStore(std::move(blockStore_)),
       testData(testData_),
       foregroundData(cpputils::DataFixture::generate(testData.count, 0)),
@@ -40,7 +40,7 @@ public:
   }
 
 private:
-  std::unique_ptr<blockstore::BlockStore> blockStore;
+  cpputils::unique_ref<blockstore::BlockStore> blockStore;
   DataRange testData;
   cpputils::Data foregroundData;
   cpputils::Data backgroundData;

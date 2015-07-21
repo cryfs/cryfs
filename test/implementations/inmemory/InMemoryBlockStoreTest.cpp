@@ -9,14 +9,13 @@
 using blockstore::BlockStore;
 using blockstore::BlockStoreWithRandomKeys;
 using blockstore::inmemory::InMemoryBlockStore;
-
-using std::unique_ptr;
-using std::make_unique;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 class InMemoryBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<InMemoryBlockStore>();
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<InMemoryBlockStore>();
   }
 };
 
@@ -24,8 +23,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(InMemory, BlockStoreTest, InMemoryBlockStoreTestFi
 
 class InMemoryBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
-  unique_ptr<BlockStoreWithRandomKeys> createBlockStore() override {
-    return make_unique<InMemoryBlockStore>();
+  unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
+    return make_unique_ref<InMemoryBlockStore>();
   }
 };
 

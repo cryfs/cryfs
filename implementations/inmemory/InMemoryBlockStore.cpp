@@ -2,7 +2,6 @@
 #include "InMemoryBlockStore.h"
 #include <memory>
 
-using std::unique_ptr;
 using std::make_unique;
 using std::string;
 using std::mutex;
@@ -43,7 +42,7 @@ optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
 
 void InMemoryBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  cpputils::to_unique_ptr(std::move(block)).reset(); // Call destructor
+  cpputils::destruct(std::move(block));
   int numRemoved = _blocks.erase(key.ToString());
   assert(1==numRemoved);
 }

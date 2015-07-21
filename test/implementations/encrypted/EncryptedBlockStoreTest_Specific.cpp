@@ -7,11 +7,10 @@
 
 using ::testing::Test;
 
-using std::unique_ptr;
-using std::make_unique;
-
 using cpputils::DataFixture;
 using cpputils::Data;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 using blockstore::testfake::FakeBlockStore;
 
@@ -21,14 +20,12 @@ class EncryptedBlockStoreTest: public Test {
 public:
   static constexpr unsigned int BLOCKSIZE = 1024;
   EncryptedBlockStoreTest():
-    _baseBlockStore(make_unique<FakeBlockStore>()),
-    baseBlockStore(_baseBlockStore.get()),
-    blockStore(make_unique<EncryptedBlockStore<FakeAuthenticatedCipher>>(std::move(_baseBlockStore), FakeAuthenticatedCipher::Key1())),
+    baseBlockStore(new FakeBlockStore),
+    blockStore(make_unique_ref<EncryptedBlockStore<FakeAuthenticatedCipher>>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), FakeAuthenticatedCipher::Key1())),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
-  unique_ptr<FakeBlockStore> _baseBlockStore;
   FakeBlockStore *baseBlockStore;
-  unique_ptr<EncryptedBlockStore<FakeAuthenticatedCipher>> blockStore;
+  unique_ref<EncryptedBlockStore<FakeAuthenticatedCipher>> blockStore;
   Data data;
 
   blockstore::Key CreateBlockDirectlyWithFixtureAndReturnKey() {

@@ -1,23 +1,22 @@
 #include <google/gtest/gtest.h>
-#include <memory>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include "../../../../implementations/caching/cache/Cache.h"
 #include "testutils/MinimalKeyType.h"
 #include "testutils/CopyableMovableValueType.h"
 
 using namespace blockstore::caching;
 
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using ::testing::Test;
-using std::unique_ptr;
-using std::make_unique;
 
 //Test that Cache uses a move constructor for Value if possible
 class CacheTest_MoveConstructor: public Test {
 public:
-  CacheTest_MoveConstructor() {
+  CacheTest_MoveConstructor(): cache(make_unique_ref<Cache<MinimalKeyType, CopyableMovableValueType>>()) {
     CopyableMovableValueType::numCopyConstructorCalled = 0;
-    cache = make_unique<Cache<MinimalKeyType, CopyableMovableValueType>>();
   }
-  unique_ptr<Cache<MinimalKeyType, CopyableMovableValueType>> cache;
+  unique_ref<Cache<MinimalKeyType, CopyableMovableValueType>> cache;
 };
 
 TEST_F(CacheTest_MoveConstructor, MoveIntoCache) {

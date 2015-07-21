@@ -15,17 +15,16 @@ using blockstore::testfake::FakeBlockStore;
 using blockstore::encrypted::AES256_GCM;
 using blockstore::encrypted::AES256_CFB;
 
-using std::unique_ptr;
-using std::make_unique;
-
 using cpputils::Data;
 using cpputils::DataFixture;
+using cpputils::make_unique_ref;
+using cpputils::unique_ref;
 
 template<class Cipher>
 class EncryptedBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
-  unique_ptr<BlockStore> createBlockStore() override {
-    return make_unique<EncryptedBlockStore<Cipher>>(make_unique<FakeBlockStore>(), createKeyFixture());
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<EncryptedBlockStore<Cipher>>(make_unique_ref<FakeBlockStore>(), createKeyFixture());
   }
 
 private:

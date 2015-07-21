@@ -1,7 +1,6 @@
 #include "NewBlock.h"
 #include "CachingBlockStore.h"
 
-using std::unique_ptr;
 using cpputils::Data;
 using boost::none;
 

@@ -2,7 +2,6 @@
 #include "FakeBlockStore.h"
 #include <cstring>
 
-using std::unique_ptr;
 using std::shared_ptr;
 using std::istream;
 using std::ostream;

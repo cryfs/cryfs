@@ -1,7 +1,6 @@
 #include "CachedBlock.h"
 #include "CachingBlockStore.h"
 
-using std::unique_ptr;
 using cpputils::unique_ref;
 
 namespace blockstore {

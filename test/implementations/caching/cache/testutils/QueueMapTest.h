@@ -3,7 +3,7 @@
 #define BLOCKS_MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_QUEUEMAPTEST_H_
 
 #include <google/gtest/gtest.h>
-#include <memory>
+#include <messmer/cpp-utils/pointer/unique_ref.h>
 #include "../../../../../implementations/caching/cache/QueueMap.h"
 #include "MinimalKeyType.h"
 #include "MinimalValueType.h"
@@ -24,9 +24,8 @@ public:
   int size();
 
 private:
-  std::unique_ptr<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>> _map;
+  cpputils::unique_ref<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>> _map;
 };
-
 
 
 #endif
