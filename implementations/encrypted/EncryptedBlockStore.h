@@ -19,8 +19,8 @@ public:
   //TODO Are createKey() tests included in generic BlockStoreTest? If not, add it!
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  std::unique_ptr<Block> load(const Key &key) override;
-  void remove(std::unique_ptr<Block> block) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
+  void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
 
   //This function should only be used by test cases
@@ -57,18 +57,20 @@ boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::tryCre
 }
 
 template<class Cipher>
-std::unique_ptr<Block> EncryptedBlockStore<Cipher>::load(const Key &key) {
+boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::load(const Key &key) {
   auto block = _baseBlockStore->load(key);
-  if (block.get() == nullptr) {
+  if (block == boost::none) {
     //TODO Test this path (for all pass-through-blockstores)
-    return nullptr;
+    return boost::none;
   }
-  return EncryptedBlock<Cipher>::TryDecrypt(std::move(block), _encKey);
+  return boost::optional<cpputils::unique_ref<Block>>(EncryptedBlock<Cipher>::TryDecrypt(std::move(*block), _encKey));
 }
 
 template<class Cipher>
-void EncryptedBlockStore<Cipher>::remove(std::unique_ptr<Block> block) {
-  auto baseBlock = cpputils::dynamic_pointer_move<EncryptedBlock<Cipher>>(block)->releaseBlock();
+void EncryptedBlockStore<Cipher>::remove(cpputils::unique_ref<Block> block) {
+  auto encryptedBlock = cpputils::dynamic_pointer_move<EncryptedBlock<Cipher>>(block);
+  assert(encryptedBlock != boost::none);
+  auto baseBlock = (*encryptedBlock)->releaseBlock();
   return _baseBlockStore->remove(std::move(baseBlock));
 }
 

@@ -15,18 +15,18 @@ public:
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  std::unique_ptr<Block> load(const Key &key) override;
-  void remove(std::unique_ptr<Block> block) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
+  void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
 
-  void release(std::unique_ptr<Block> block);
+  void release(cpputils::unique_ref<Block> block);
 
   boost::optional<cpputils::unique_ref<Block>> tryCreateInBaseStore(const Key &key, cpputils::Data data);
-  void removeFromBaseStore(std::unique_ptr<Block> block);
+  void removeFromBaseStore(cpputils::unique_ref<Block> block);
 
 private:
   std::unique_ptr<BlockStore> _baseBlockStore;
-  Cache<Key, std::unique_ptr<Block>> _cache;
+  Cache<Key, cpputils::unique_ref<Block>> _cache;
   uint32_t _numNewBlocks;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);

@@ -14,7 +14,7 @@ public:
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
     blockstore::Key key = CreateBlock()->key();
-    auto loaded_block = blockStore->load(key);
+    auto loaded_block = blockStore->load(key).value();
     EXPECT_EQ(size, loaded_block->size());
   }
 
@@ -27,7 +27,7 @@ public:
   void TestLoadingUnchangedBlockData() {
     cpputils::Data data = cpputils::DataFixture::generate(size);
     blockstore::Key key = blockStore->create(data)->key();
-    auto loaded_block = blockStore->load(key);
+    auto loaded_block = blockStore->load(key).value();
     EXPECT_EQ(0, std::memcmp(data.data(), loaded_block->data(), size));
   }
 
@@ -71,7 +71,7 @@ public:
       key = block->key();
       WriteDataToBlock(block.get(), randomData);
     }
-    auto loaded_block = blockStore->load(key);
+    auto loaded_block = blockStore->load(key).value();
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
   }
 
@@ -80,17 +80,15 @@ public:
     blockstore::Key key = key;
     {
       key = CreateBlock()->key();
-      auto block = blockStore->load(key);
+      auto block = blockStore->load(key).value();
       WriteDataToBlock(block.get(), randomData);
     }
-    auto loaded_block = blockStore->load(key);
+    auto loaded_block = blockStore->load(key).value();
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
   }
 
   void TestLoadNonExistingBlock() {
-    EXPECT_FALSE(
-        (bool)blockStore->load(key)
-    );
+    EXPECT_EQ(boost::none, blockStore->load(key));
   }
 
 private:
@@ -104,24 +102,24 @@ private:
     return ZEROES;
   }
 
-  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadIt(const cpputils::Data &data) {
+  cpputils::unique_ref<blockstore::Block> StoreDataToBlockAndLoadIt(const cpputils::Data &data) {
     blockstore::Key key = StoreDataToBlockAndGetKey(data);
-    return blockStore->load(key);
+    return blockStore->load(key).value();
   }
 
   blockstore::Key StoreDataToBlockAndGetKey(const cpputils::Data &data) {
     return blockStore->create(data)->key();
   }
 
-  std::unique_ptr<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const cpputils::Data &data) {
+  cpputils::unique_ref<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const cpputils::Data &data) {
     auto block = blockStore->create(data);
     block->flush();
-    return blockStore->load(block->key());
+    return blockStore->load(block->key()).value();
   }
 
-  std::unique_ptr<blockstore::Block> CreateBlockAndLoadIt() {
+  cpputils::unique_ref<blockstore::Block> CreateBlockAndLoadIt() {
     blockstore::Key key = CreateBlock()->key();
-    return blockStore->load(key);
+    return blockStore->load(key).value();
   }
 
   cpputils::unique_ref<blockstore::Block> CreateBlock() {

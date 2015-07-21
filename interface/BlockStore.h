@@ -19,8 +19,8 @@ public:
   virtual boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) = 0;
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
-  virtual std::unique_ptr<Block> load(const Key &key) = 0;
-  virtual void remove(std::unique_ptr<Block> block) = 0;
+  virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
+  virtual void remove(cpputils::unique_ref<Block> block) = 0;
   virtual uint64_t numBlocks() const = 0;
 
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {

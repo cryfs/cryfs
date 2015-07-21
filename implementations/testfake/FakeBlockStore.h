@@ -32,8 +32,8 @@ public:
   FakeBlockStore();
 
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  std::unique_ptr<Block> load(const Key &key) override;
-  void remove(std::unique_ptr<Block> block) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
+  void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
 
   void updateData(const Key &key, const cpputils::Data &data);
@@ -48,7 +48,7 @@ private:
   //We want to avoid this for the reasons mentioned above (overflow data).
   std::vector<std::shared_ptr<cpputils::Data>> _used_dataregions_for_blocks;
 
-  std::unique_ptr<Block> makeFakeBlockFromData(const Key &key, const cpputils::Data &data, bool dirty);
+  cpputils::unique_ref<Block> makeFakeBlockFromData(const Key &key, const cpputils::Data &data, bool dirty);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };

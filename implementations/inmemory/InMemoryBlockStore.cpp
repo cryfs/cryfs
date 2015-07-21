@@ -32,18 +32,19 @@ optional<unique_ref<Block>> InMemoryBlockStore::tryCreate(const Key &key, Data d
   return optional<unique_ref<Block>>(make_unique_ref<InMemoryBlock>(insert_result.first->second));
 }
 
-unique_ptr<Block> InMemoryBlockStore::load(const Key &key) {
+optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
   //Return a pointer to the stored InMemoryBlock
   try {
-    return make_unique<InMemoryBlock>(_blocks.at(key.ToString()));
+    return optional<unique_ref<Block>>(make_unique_ref<InMemoryBlock>(_blocks.at(key.ToString())));
   } catch (const std::out_of_range &e) {
-    return nullptr;
+    return none;
   }
 }
 
-void InMemoryBlockStore::remove(unique_ptr<Block> block) {
+void InMemoryBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  block.reset();
+  //TODO Better way to destruct?
+  cpputils::to_unique_ptr(std::move(block)); // Destruct
   int numRemoved = _blocks.erase(key.ToString());
   assert(1==numRemoved);
 }

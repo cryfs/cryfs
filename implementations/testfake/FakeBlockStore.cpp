@@ -27,31 +27,31 @@ optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data)
   }
 
   //Return a copy of the stored data
-  //TODO Don't use nullcheck but make load() use unique_ref
-  return cpputils::nullcheck(load(key));
+  return load(key);
 }
 
-unique_ptr<Block> FakeBlockStore::load(const Key &key) {
+optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
   //Return a copy of the stored data
   string key_string = key.ToString();
   try {
     return makeFakeBlockFromData(key, _blocks.at(key_string), false);
   } catch (const std::out_of_range &e) {
-    return nullptr;
+    return none;
   }
 }
 
-void FakeBlockStore::remove(unique_ptr<Block> block) {
+void FakeBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  block.reset();
+  //TODO Better way to destruct
+  cpputils::to_unique_ptr(std::move(block)); // Destruct
   int numRemoved = _blocks.erase(key.ToString());
   assert(numRemoved == 1);
 }
 
-unique_ptr<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
+unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
   auto newdata = make_shared<Data>(data.copy());
   _used_dataregions_for_blocks.push_back(newdata);
-  return make_unique<FakeBlock>(this, key, newdata, dirty);
+  return make_unique_ref<FakeBlock>(this, key, newdata, dirty);
 }
 
 void FakeBlockStore::updateData(const Key &key, const Data &data) {

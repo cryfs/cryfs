@@ -39,21 +39,20 @@ optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, 
   return unique_ref<Block>(_parallelAccessStore.add(key, std::move(*block)));
 }
 
-unique_ptr<Block> ParallelAccessBlockStore::load(const Key &key) {
+optional<unique_ref<Block>> ParallelAccessBlockStore::load(const Key &key) {
   auto block = _parallelAccessStore.load(key);
   if (block == none) {
-    return nullptr;
+    return none;
   }
-  //TODO Don't use to_unique_ptr but make blockstore use unique_ref
-  return cpputils::to_unique_ptr(std::move(*block));
+  return unique_ref<Block>(std::move(*block));
 }
 
 
-void ParallelAccessBlockStore::remove(unique_ptr<Block> block) {
+void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  //TODO Don't use nullcheck but make blockstore use unique_ref
-  auto block_ref = cpputils::nullcheck(std::move(block)).value();
-  return _parallelAccessStore.remove(key, dynamic_pointer_move<BlockRef>(block_ref).value());
+  auto block_ref = dynamic_pointer_move<BlockRef>(block);
+  assert(block_ref != none);
+  return _parallelAccessStore.remove(key, std::move(*block_ref));
 }
 
 uint64_t ParallelAccessBlockStore::numBlocks() const {

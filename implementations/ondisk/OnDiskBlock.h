@@ -18,7 +18,7 @@ public:
   OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
   virtual ~OnDiskBlock();
 
-  static std::unique_ptr<OnDiskBlock> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
+  static boost::optional<cpputils::unique_ref<OnDiskBlock>> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 

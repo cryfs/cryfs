@@ -3,6 +3,7 @@
 
 using std::unique_ptr;
 using cpputils::Data;
+using boost::none;
 
 namespace blockstore {
 namespace caching {
@@ -11,7 +12,7 @@ NewBlock::NewBlock(const Key &key, Data data, CachingBlockStore *blockStore)
     :Block(key),
      _blockStore(blockStore),
      _data(std::move(data)),
-     _baseBlock(nullptr),
+     _baseBlock(none),
      _dataChanged(true) {
 }
 
@@ -31,29 +32,29 @@ void NewBlock::write(const void *source, uint64_t offset, uint64_t size) {
 
 void NewBlock::writeToBaseBlockIfChanged() {
   if (_dataChanged) {
-    if (_baseBlock.get() == nullptr) {
+    if (_baseBlock == none) {
       //TODO _data.copy() necessary?
       auto newBase = _blockStore->tryCreateInBaseStore(key(), _data.copy());
       assert(newBase != boost::none); //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
-      //TODO Don't use to_unique_ptr but make _baseBlock a unique_ref
-      _baseBlock = cpputils::to_unique_ptr(std::move(*newBase));
+      _baseBlock = std::move(*newBase);
     } else {
-	  _baseBlock->write(_data.data(), 0, _data.size());
+        (*_baseBlock)->write(_data.data(), 0, _data.size());
     }
 	_dataChanged = false;
   }
 }
 
 void NewBlock::remove() {
-  if (_baseBlock.get() != nullptr) {
-	_blockStore->removeFromBaseStore(std::move(_baseBlock));
+  if (_baseBlock != none) {
+	_blockStore->removeFromBaseStore(std::move(*_baseBlock));
   }
   _dataChanged = false;
 }
 
 void NewBlock::flush() {
   writeToBaseBlockIfChanged();
-  _baseBlock->flush();
+  assert(_baseBlock != none);
+  (*_baseBlock)->flush();
 }
 
 size_t NewBlock::size() const {
@@ -61,7 +62,7 @@ size_t NewBlock::size() const {
 }
 
 bool NewBlock::alreadyExistsInBaseStore() const {
-  return _baseBlock.get() != nullptr;
+  return _baseBlock != none;
 }
 
 }

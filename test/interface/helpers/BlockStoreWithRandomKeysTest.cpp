@@ -26,11 +26,11 @@ public:
     return cpputils::nullcheck(unique_ptr<Block>(do_create(key, data)));
   }
   MOCK_METHOD2(do_create, Block*(const Key &, const Data &data));
-  unique_ptr<Block> load(const Key &key) {
-    return unique_ptr<Block>(do_load(key));
+  optional<unique_ref<Block>> load(const Key &key) {
+    return cpputils::nullcheck(unique_ptr<Block>(do_load(key)));
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
-  void remove(unique_ptr<Block> block) {UNUSED(block);}
+  void remove(unique_ref<Block> block) {UNUSED(block);}
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
 };
 

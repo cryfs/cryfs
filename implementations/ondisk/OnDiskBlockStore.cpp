@@ -26,13 +26,14 @@ optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data dat
   return unique_ref<Block>(std::move(*result));
 }
 
-unique_ptr<Block> OnDiskBlockStore::load(const Key &key) {
-  return OnDiskBlock::LoadFromDisk(_rootdir, key);
+optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
+  return optional<unique_ref<Block>>(OnDiskBlock::LoadFromDisk(_rootdir, key));
 }
 
-void OnDiskBlockStore::remove(unique_ptr<Block> block) {
+void OnDiskBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  block.reset();
+  //TODO Better way to destruct?
+  cpputils::to_unique_ptr(std::move(block)); // Destruct
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 

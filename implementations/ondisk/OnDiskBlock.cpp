@@ -45,7 +45,7 @@ size_t OnDiskBlock::size() const {
   return _data.size();
 }
 
-unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const Key &key) {
+optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const Key &key) {
   auto filepath = rootdir / key.ToString();
   try {
     //If it isn't a file, Data::LoadFromFile() would usually also crash. We still need this extra check
@@ -53,15 +53,15 @@ unique_ptr<OnDiskBlock> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const
     //instead the path of a file.
     //TODO Data::LoadFromFile now returns boost::optional. Do we then still need this?
     if(!bf::is_regular_file(filepath)) {
-      return nullptr;
+      return none;
     }
     boost::optional<Data> data = Data::LoadFromFile(filepath);
     if (!data) {
-      return nullptr;
+      return none;
     }
-    return unique_ptr<OnDiskBlock>(new OnDiskBlock(key, filepath, std::move(*data)));
+    return make_unique_ref<OnDiskBlock>(key, filepath, std::move(*data));
   } catch (const FileDoesntExistException &e) {
-    return nullptr;
+    return none;
   }
 }
 

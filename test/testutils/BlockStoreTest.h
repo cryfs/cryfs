@@ -35,9 +35,9 @@ TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
   auto blockStore = this->fixture.createBlockStore();
   auto blockkey = blockStore->create(cpputils::Data(1024))->key();
   auto block = blockStore->load(blockkey);
-  EXPECT_NE(nullptr, block.get());
-  blockStore->remove(std::move(block));
-  EXPECT_EQ(nullptr, blockStore->load(blockkey).get());
+  EXPECT_NE(boost::none, block);
+  blockStore->remove(std::move(*block));
+  EXPECT_EQ(boost::none, blockStore->load(blockkey));
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
@@ -60,8 +60,7 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingB
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
-  //TODO Don't use to_unique_ptr
-  blockStore->remove(cpputils::to_unique_ptr(std::move(block)));
+  blockStore->remove(std::move(block));
   EXPECT_EQ(0, blockStore->numBlocks());
 }
 
@@ -97,8 +96,7 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
-  // TODO Don't use to_unique_ptr
-  blockStore->remove(cpputils::to_unique_ptr(std::move(block)));
+  blockStore->remove(std::move(block));
   EXPECT_EQ(1, blockStore->numBlocks());
 }
 

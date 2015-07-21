@@ -26,7 +26,7 @@ public:
   void TestWriteAndReadAfterLoading() {
     blockstore::Key key = CreateBlockWriteToItAndReturnKey(foregroundData);
 
-    auto loaded_block = blockStore->load(key);
+    auto loaded_block = blockStore->load(key).value();
     EXPECT_DATA_READS_AS(foregroundData, *loaded_block, testData.offset, testData.count);
     EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_block, testData.offset, testData.count);
   }

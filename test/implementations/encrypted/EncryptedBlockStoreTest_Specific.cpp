@@ -42,14 +42,14 @@ public:
   }
 
   void ModifyBaseBlock(const blockstore::Key &key) {
-    auto block = baseBlockStore->load(key);
+    auto block = baseBlockStore->load(key).value();
     uint8_t middle_byte = ((byte*)block->data())[10];
     uint8_t new_middle_byte = middle_byte + 1;
     block->write(&new_middle_byte, 10, 1);
   }
 
   blockstore::Key CopyBaseBlock(const blockstore::Key &key) {
-    auto source = baseBlockStore->load(key);
+    auto source = baseBlockStore->load(key).value();
     return blockstore::utils::copyToNewBlock(baseBlockStore, *source)->key();
   }
 };
@@ -57,57 +57,57 @@ public:
 TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteOnCreate) {
   auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
   auto loaded = blockStore->load(key);
-  EXPECT_NE(nullptr, loaded.get());
-  EXPECT_EQ(data.size(), loaded->size());
-  EXPECT_EQ(0, std::memcmp(data.data(), loaded->data(), data.size()));
+  EXPECT_NE(boost::none, loaded);
+  EXPECT_EQ(data.size(), (*loaded)->size());
+  EXPECT_EQ(0, std::memcmp(data.data(), (*loaded)->data(), data.size()));
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteSeparately) {
   auto key = CreateBlockWriteFixtureToItAndReturnKey();
   auto loaded = blockStore->load(key);
-  EXPECT_NE(nullptr, loaded.get());
-  EXPECT_EQ(data.size(), loaded->size());
-  EXPECT_EQ(0, std::memcmp(data.data(), loaded->data(), data.size()));
+  EXPECT_NE(boost::none, loaded);
+  EXPECT_EQ(data.size(), (*loaded)->size());
+  EXPECT_EQ(0, std::memcmp(data.data(), (*loaded)->data(), data.size()));
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteOnCreate) {
   auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
   blockStore->__setKey(FakeAuthenticatedCipher::Key2());
   auto loaded = blockStore->load(key);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteSeparately) {
   auto key = CreateBlockWriteFixtureToItAndReturnKey();
   blockStore->__setKey(FakeAuthenticatedCipher::Key2());
   auto loaded = blockStore->load(key);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingModifiedBlockFails_WriteOnCreate) {
   auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
   ModifyBaseBlock(key);
   auto loaded = blockStore->load(key);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingModifiedBlockFails_WriteSeparately) {
   auto key = CreateBlockWriteFixtureToItAndReturnKey();
   ModifyBaseBlock(key);
   auto loaded = blockStore->load(key);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentBlockIdFails_WriteOnCreate) {
   auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
   auto key2 = CopyBaseBlock(key);
   auto loaded = blockStore->load(key2);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentBlockIdFails_WriteSeparately) {
   auto key = CreateBlockWriteFixtureToItAndReturnKey();
   auto key2 = CopyBaseBlock(key);
   auto loaded = blockStore->load(key2);
-  EXPECT_EQ(nullptr, loaded.get());
+  EXPECT_EQ(boost::none, loaded);
 }

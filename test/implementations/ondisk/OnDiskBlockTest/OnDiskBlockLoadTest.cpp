@@ -6,6 +6,7 @@
 #include <messmer/cpp-utils/data/Data.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/tempfile/TempDir.h>
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <fstream>
 
 using ::testing::Test;
@@ -19,6 +20,7 @@ using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::TempFile;
 using cpputils::TempDir;
+using cpputils::unique_ref;
 
 using namespace blockstore;
 using namespace blockstore::ondisk;
@@ -45,8 +47,8 @@ public:
     data.StoreToFile(file.path());
   }
 
-  unique_ptr<OnDiskBlock> LoadBlock() {
-    return OnDiskBlock::LoadFromDisk(dir.path(), key);
+  unique_ref<OnDiskBlock> LoadBlock() {
+    return OnDiskBlock::LoadFromDisk(dir.path(), key).value();
   }
 
   void EXPECT_BLOCK_DATA_EQ(const Data &expected, const OnDiskBlock &actual) {
@@ -75,7 +77,5 @@ TEST_P(OnDiskBlockLoadTest, LoadedDataIsCorrect) {
 
 TEST_F(OnDiskBlockLoadTest, LoadNotExistingBlock) {
   Key key2 = Key::FromString("272EE5517627CFA147A971A8E6E747E0");
-  EXPECT_FALSE(
-      (bool)OnDiskBlock::LoadFromDisk(dir.path(), key2)
-  );
+  EXPECT_EQ(boost::none, OnDiskBlock::LoadFromDisk(dir.path(), key2));
 }

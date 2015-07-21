@@ -29,32 +29,34 @@ Key CachingBlockStore::createKey() {
 optional<unique_ref<Block>> CachingBlockStore::tryCreate(const Key &key, Data data) {
   //TODO Shouldn't we return boost::none if the key already exists?
   ++_numNewBlocks;
-  return unique_ref<Block>(make_unique_ref<CachedBlock>(make_unique<NewBlock>(key, std::move(data), this), this));
+  return unique_ref<Block>(make_unique_ref<CachedBlock>(make_unique_ref<NewBlock>(key, std::move(data), this), this));
 }
 
-unique_ptr<Block> CachingBlockStore::load(const Key &key) {
-  boost::optional<unique_ptr<Block>> optBlock = _cache.pop(key);
-  unique_ptr<Block> block;
+optional<unique_ref<Block>> CachingBlockStore::load(const Key &key) {
+  optional<unique_ref<Block>> optBlock = _cache.pop(key);
   //TODO an optional<> class with .getOrElse() would make this code simpler. boost::optional<>::value_or_eval didn't seem to work with unique_ptr members.
-  if (optBlock) {
-    block = std::move(*optBlock);
+  if (optBlock != none) {
+    return optional<unique_ref<Block>>(make_unique_ref<CachedBlock>(std::move(*optBlock), this));
   } else {
-    block = _baseBlockStore->load(key);
-    if (block.get() == nullptr) {
-      return nullptr;
+    auto block = _baseBlockStore->load(key);
+    if (block == none) {
+      return none;
+    } else {
+      return optional<unique_ref<Block>>(make_unique_ref<CachedBlock>(std::move(*block), this));
     }
   }
-  return make_unique<CachedBlock>(std::move(block), this);
 }
 
-void CachingBlockStore::remove(std::unique_ptr<Block> block) {
-  auto baseBlock = dynamic_pointer_move<CachedBlock>(block)->releaseBlock();
+void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
+  auto cached_block = dynamic_pointer_move<CachedBlock>(block);
+  assert(cached_block != none);
+  auto baseBlock = (*cached_block)->releaseBlock();
   auto baseNewBlock = dynamic_pointer_move<NewBlock>(baseBlock);
-  if (baseNewBlock.get() != nullptr) {
-	if(!baseNewBlock->alreadyExistsInBaseStore()) {
+  if (baseNewBlock != none) {
+	if(!(*baseNewBlock)->alreadyExistsInBaseStore()) {
 	  --_numNewBlocks;
 	}
-	baseNewBlock->remove();
+    (*baseNewBlock)->remove();
   } else {
     _baseBlockStore->remove(std::move(baseBlock));
   }
@@ -64,7 +66,7 @@ uint64_t CachingBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks() + _numNewBlocks;
 }
 
-void CachingBlockStore::release(unique_ptr<Block> block) {
+void CachingBlockStore::release(unique_ref<Block> block) {
   Key key = block->key();
   _cache.push(key, std::move(block));
 }
@@ -77,7 +79,7 @@ optional<unique_ref<Block>> CachingBlockStore::tryCreateInBaseStore(const Key &k
   return block;
 }
 
-void CachingBlockStore::removeFromBaseStore(std::unique_ptr<Block> block) {
+void CachingBlockStore::removeFromBaseStore(cpputils::unique_ref<Block> block) {
   _baseBlockStore->remove(std::move(block));
 }
 

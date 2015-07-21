@@ -23,10 +23,10 @@ class EncryptedBlock: public Block {
 public:
   BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
-  static std::unique_ptr<EncryptedBlock> TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key);
+  static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
-  EncryptedBlock(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &key, cpputils::Data plaintextWithHeader);
+  EncryptedBlock(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key, cpputils::Data plaintextWithHeader);
   virtual ~EncryptedBlock();
 
   const void *data() const override;
@@ -35,10 +35,10 @@ public:
 
   size_t size() const override;
 
-  std::unique_ptr<Block> releaseBlock();
+  cpputils::unique_ref<Block> releaseBlock();
 
 private:
-  std::unique_ptr<Block> _baseBlock;
+  cpputils::unique_ref<Block> _baseBlock;
   cpputils::Data _plaintextWithHeader;
   typename Cipher::EncryptionKey _encKey;
   bool _dataChanged;
@@ -66,27 +66,26 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
     return boost::none;
   }
 
-  //TODO Don't use to_unique_ptr
-  return cpputils::make_unique_ref<EncryptedBlock>(cpputils::to_unique_ptr(std::move(*baseBlock)), encKey, std::move(plaintextWithHeader));
+  return cpputils::make_unique_ref<EncryptedBlock>(std::move(*baseBlock), encKey, std::move(plaintextWithHeader));
 }
 
 template<class Cipher>
-std::unique_ptr<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::TryDecrypt(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &encKey) {
+boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &encKey) {
   //TODO Change BlockStore so we can read their "class Data" objects instead of "void *data()", and then we can change the Cipher interface to take Data objects instead of "byte *" + size
   boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data(), baseBlock->size(), encKey);
-  if(!plaintextWithHeader) {
+  if(plaintextWithHeader == boost::none) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
     //TODO Think about logging
     std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?" << std::endl;
-    return nullptr;
+    return boost::none;
   }
   if(!_keyHeaderIsCorrect(baseBlock->key(), *plaintextWithHeader)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
     //TODO Think about logging
     std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed due to invalid block key. Was the block modified by an attacker?" << std::endl;
-    return nullptr;
+    return boost::none;
   }
-  return std::make_unique<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));
+  return cpputils::make_unique_ref<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));
 }
 
 template<class Cipher>
@@ -104,7 +103,7 @@ bool EncryptedBlock<Cipher>::_keyHeaderIsCorrect(const Key &key, const cpputils:
 }
 
 template<class Cipher>
-EncryptedBlock<Cipher>::EncryptedBlock(std::unique_ptr<Block> baseBlock, const typename Cipher::EncryptionKey &encKey, cpputils::Data plaintextWithHeader)
+EncryptedBlock<Cipher>::EncryptedBlock(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &encKey, cpputils::Data plaintextWithHeader)
     :Block(baseBlock->key()),
    _baseBlock(std::move(baseBlock)),
    _plaintextWithHeader(std::move(plaintextWithHeader)),
@@ -150,7 +149,7 @@ void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
 }
 
 template<class Cipher>
-std::unique_ptr<Block> EncryptedBlock<Cipher>::releaseBlock() {
+cpputils::unique_ref<Block> EncryptedBlock<Cipher>::releaseBlock() {
   return std::move(_baseBlock);
 }
 

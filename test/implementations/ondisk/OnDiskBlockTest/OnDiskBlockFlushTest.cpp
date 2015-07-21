@@ -40,8 +40,7 @@ public:
     {
       OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy()).value();
     }
-    //TODO Don't use nullcheck
-    return cpputils::nullcheck(OnDiskBlock::LoadFromDisk(dir.path(), key)).value();
+    return OnDiskBlock::LoadFromDisk(dir.path(), key).value();
   }
 
   unique_ref<OnDiskBlock> CreateBlock() {

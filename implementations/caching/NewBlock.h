@@ -36,7 +36,7 @@ public:
 private:
   CachingBlockStore *_blockStore;
   cpputils::Data _data;
-  std::unique_ptr<Block> _baseBlock;
+  boost::optional<cpputils::unique_ref<Block>> _baseBlock;
   bool _dataChanged;
 
   void writeToBaseBlockIfChanged();

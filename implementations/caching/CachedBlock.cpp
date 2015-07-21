@@ -2,11 +2,12 @@
 #include "CachingBlockStore.h"
 
 using std::unique_ptr;
+using cpputils::unique_ref;
 
 namespace blockstore {
 namespace caching {
 
-CachedBlock::CachedBlock(std::unique_ptr<Block> baseBlock, CachingBlockStore *blockStore)
+CachedBlock::CachedBlock(unique_ref<Block> baseBlock, CachingBlockStore *blockStore)
     :Block(baseBlock->key()),
      _blockStore(blockStore),
      _baseBlock(std::move(baseBlock)) {
@@ -34,7 +35,7 @@ size_t CachedBlock::size() const {
   return _baseBlock->size();
 }
 
-unique_ptr<Block> CachedBlock::releaseBlock() {
+unique_ref<Block> CachedBlock::releaseBlock() {
   return std::move(_baseBlock);
 }
 
