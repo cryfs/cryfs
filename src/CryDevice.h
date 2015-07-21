@@ -20,7 +20,7 @@ public:
 
   using Cipher = CryConfigLoader::Cipher;
 
-  CryDevice(cpputils::unique_ref<CryConfig> config, std::unique_ptr<blockstore::BlockStore> blockStore);
+  CryDevice(cpputils::unique_ref<CryConfig> config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;

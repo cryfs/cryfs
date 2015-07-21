@@ -12,8 +12,6 @@
 #include "messmer/blobstore/implementations/onblocks/BlobOnBlocks.h"
 #include "messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h"
 
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 
 //TODO Get rid of this in favor of exception hierarchy
@@ -38,8 +36,8 @@ namespace cryfs {
 
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
-CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ptr<BlockStore> blockStore)
-: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(make_unique<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ref<BlockStore> blockStore)
+: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
