@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPP_UTILS_POINTER_OPTIONALOWNERSHIPPOINTER_H_
 #define MESSMER_CPP_UTILS_POINTER_OPTIONALOWNERSHIPPOINTER_H_
 
-#include <memory>
+#include "unique_ref.h"
 #include <functional>
 
 /**
@@ -27,6 +27,11 @@ template<typename T>
 optional_ownership_ptr<T> WithOwnership(std::unique_ptr<T> obj) {
   auto deleter = obj.get_deleter();
   return optional_ownership_ptr<T>(obj.release(), [deleter](T* obj){deleter(obj);});
+}
+
+template <typename T>
+optional_ownership_ptr<T> WithOwnership(unique_ref<T> obj) {
+  return WithOwnership(to_unique_ptr(std::move(obj)));
 }
 
 template<typename T>

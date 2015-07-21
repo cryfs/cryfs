@@ -7,6 +7,8 @@
  * Without including this file, the linker will fail.
  */
 
+//TODO Test that this solves the problem (add test unit file that doesn't compile without)
+
 #include "unique_ref.h"
 #include <boost/optional/optional_io.hpp>
 //gtest/boost::optional workaround for working with optional<unique_ref<T>>
@@ -18,4 +20,4 @@ namespace boost {
     }
 }
 
-#endif //CRYFS_UNIQUE_REF_BOOST_OPTIONAL_GTEST_WORKAROUND_H
+#endif
