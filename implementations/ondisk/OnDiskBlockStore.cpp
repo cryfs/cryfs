@@ -32,8 +32,7 @@ optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
 
 void OnDiskBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  //TODO Better way to destruct?
-  cpputils::to_unique_ptr(std::move(block)); // Destruct
+  cpputils::to_unique_ptr(std::move(block)).reset(); // Call destructor
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 

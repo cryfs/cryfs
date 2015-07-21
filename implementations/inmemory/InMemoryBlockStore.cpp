@@ -43,8 +43,7 @@ optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
 
 void InMemoryBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
-  //TODO Better way to destruct?
-  cpputils::to_unique_ptr(std::move(block)); // Destruct
+  cpputils::to_unique_ptr(std::move(block)).reset(); // Call destructor
   int numRemoved = _blocks.erase(key.ToString());
   assert(1==numRemoved);
 }
