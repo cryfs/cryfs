@@ -86,6 +86,10 @@ inline boost::optional<unique_ref<T>> nullcheck(std::unique_ptr<T> ptr) {
     return boost::none;
 }
 
+template<typename T> inline void destruct(unique_ref<T> ptr) {
+   to_unique_ptr(ptr).reset();
+}
+
 //TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
 template<typename DST, typename SRC>
 inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) {

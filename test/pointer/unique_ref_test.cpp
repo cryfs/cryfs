@@ -8,6 +8,9 @@
 
 using namespace cpputils;
 
+//TODO Test unique_ref destructor
+//TODO Test cpputils::destruct()
+
 class SomeClass0Parameters {};
 class SomeClass1Parameter {
 public:
