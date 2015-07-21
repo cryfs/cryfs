@@ -37,7 +37,7 @@ unique_ref<DataTree> DataTreeStore::createNewTree() {
 
 void DataTreeStore::remove(unique_ref<DataTree> tree) {
   auto root = tree->releaseRootNode();
-  to_unique_ptr(std::move(tree)).reset(); // Destruct tree
+  cpputils::destruct(std::move(tree)); // Destruct tree
   _nodeStore->removeSubtree(std::move(root));
 }
 

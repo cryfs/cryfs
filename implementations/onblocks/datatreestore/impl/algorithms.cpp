@@ -34,7 +34,6 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
   optional_ownership_ptr<DataInnerNode> currentNode = cpputils::WithoutOwnership(dynamic_cast<DataInnerNode*>(rootNode));
   optional_ownership_ptr<DataInnerNode> result = cpputils::null<DataInnerNode>();
   for (unsigned int i=0; i < rootNode->depth(); ++i) {
-    //TODO Don't use to_unique_ptr, but make optional_ownership_ptr work with unique_ref
     //TODO This unnecessarily loads the leaf node in the last loop run
     auto lastChild = getLastChildAsInnerNode(nodeStore, *currentNode);
     if (condition(*currentNode)) {
@@ -42,7 +41,7 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
     }
     assert(lastChild != none || static_cast<int>(i) == rootNode->depth()-1);
     if (lastChild != none) {
-      currentNode = cpputils::to_unique_ptr(std::move(*lastChild));
+      currentNode = cpputils::WithOwnership(std::move(*lastChild));
     }
   }
 

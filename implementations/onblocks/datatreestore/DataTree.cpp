@@ -91,8 +91,7 @@ optional_ownership_ptr<DataNode> DataTree::createChainOfInnerNodes(unsigned int 
   optional_ownership_ptr<DataNode> chain = cpputils::WithoutOwnership<DataNode>(child);
   for(unsigned int i=0; i<num; ++i) {
     auto newnode = _nodeStore->createNewInnerNode(*chain);
-    //TODO Don't use to_unique_ptr, but make optional_ownership_ptr work with unique_ref
-    chain = cpputils::WithOwnership<DataNode>(cpputils::to_unique_ptr(std::move(newnode)));
+    chain = cpputils::WithOwnership<DataNode>(std::move(newnode));
   }
   return chain;
 }
@@ -298,8 +297,7 @@ optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
   auto lastChild = _nodeStore->load(inner->LastChild()->key());
   assert(lastChild != none);
-  //TODO Don't use to_unique_ptr but make optional_ownership_ptr work with unique_ref
-  return WithOwnership(cpputils::to_unique_ptr(LastLeaf(std::move(*lastChild))));
+  return WithOwnership(LastLeaf(std::move(*lastChild)));
 }
 
 unique_ref<DataLeafNode> DataTree::LastLeaf(unique_ref<DataNode> root) {

@@ -32,7 +32,7 @@ public:
 
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
     Key key = root->key();
-    cpputils::to_unique_ptr(std::move(root)).reset(); //Destruct
+    cpputils::destruct(std::move(root));
     return treeStore.load(key).value();
   }
 
@@ -192,7 +192,7 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
   uint32_t oldNumberOfLeaves = std::max(1u, ceilDivision(tree->numStoredBytes(), nodeStore->layout().maxBytesPerLeaf()));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   Key key = tree->key();
-  cpputils::to_unique_ptr(std::move(tree)).reset(); // Call destructor
+  cpputils::destruct(std::move(tree));
   data.FillInto(nodeStore->load(key).get().get());
 
   GrowTree(key, newNumberOfLeaves);

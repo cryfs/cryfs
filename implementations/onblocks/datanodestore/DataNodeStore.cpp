@@ -74,7 +74,7 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
   Key key = target->key();
   {
     auto targetBlock = target->node().releaseBlock();
-    cpputils::to_unique_ptr(std::move(target)).reset(); // Call destructor
+    cpputils::destruct(std::move(target)); // Call destructor
     blockstore::utils::copyTo(targetBlock.get(), source.node().block());
   }
   auto loaded = load(key);
@@ -84,7 +84,7 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
   auto block = node->node().releaseBlock();
-  cpputils::to_unique_ptr(std::move(node)).reset(); // Call destructor
+  cpputils::destruct(std::move(node)); // Call destructor
   _blockstore->remove(std::move(block));
 }
 
