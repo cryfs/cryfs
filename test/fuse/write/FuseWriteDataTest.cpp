@@ -50,7 +50,7 @@ public:
   FuseWriteDataTest()
           : testFile(nullptr),
             testData(GetParam()) {
-    testFile = make_unique<WriteableInMemoryFile>(DataFixture::generate(testData.fileSize(), 1));
+    testFile = std::make_unique<WriteableInMemoryFile>(DataFixture::generate(testData.fileSize(), 1));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
     EXPECT_CALL(fsimpl, write(0, _, _, _))
