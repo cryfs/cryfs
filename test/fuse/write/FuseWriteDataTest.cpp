@@ -20,8 +20,6 @@ using ::testing::Action;
 using std::tuple;
 using std::get;
 using std::min;
-using std::unique_ptr;
-using std::make_unique;
 using cpputils::Data;
 using cpputils::DataFixture;
 

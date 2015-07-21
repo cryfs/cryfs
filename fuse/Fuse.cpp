@@ -5,8 +5,6 @@
 #include "FuseErrnoException.h"
 #include "Filesystem.h"
 
-using std::unique_ptr;
-using std::make_unique;
 using std::string;
 
 namespace bf = boost::filesystem;
@@ -157,10 +155,10 @@ int fusepp_flock(const char*, fuse_file_info*, int op)
 int fusepp_fallocate(const char*, int, off_t, off_t, fuse_file_info*)*/
 
 fuse_operations *operations() {
-  static unique_ptr<fuse_operations> singleton(nullptr);
+  static std::unique_ptr<fuse_operations> singleton(nullptr);
 
   if (!singleton) {
-    singleton = make_unique<fuse_operations>();
+    singleton = std::make_unique<fuse_operations>();
     singleton->getattr = &fusepp_getattr;
     singleton->fgetattr = &fusepp_fgetattr;
     singleton->readlink = &fusepp_readlink;
