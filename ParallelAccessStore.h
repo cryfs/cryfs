@@ -133,7 +133,7 @@ template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpputils::unique_ref<ResourceRef> resource) {
   auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
   assert(true == insertResult.second);
-  cpputils::to_unique_ptr(std::move(resource)).reset(); // Call destructor
+  cpputils::destruct(std::move(resource));
 
   //Wait for last resource user to release it
   auto resourceToRemove = insertResult.first->second.get_future().get();
