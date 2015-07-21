@@ -3,7 +3,9 @@
 #include <cassert>
 
 #include "FuseErrnoException.h"
+#include "../utils/IOException.h"
 #include "Filesystem.h"
+#include <iostream>
 
 using std::string;
 
@@ -221,6 +223,9 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   try {
     _fs->lstat(path, stbuf);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::getattr: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -240,7 +245,10 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
 
   try {
     _fs->fstat(fileinfo->fh, stbuf);
-  return 0;
+    return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::fgetattr: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -251,6 +259,9 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
   try {
     _fs->readSymlink(path, buf, size);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::readlink: " << e.what() << std::endl;
+    return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -270,6 +281,9 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
     auto context = fuse_get_context();
     _fs->mkdir(path, mode, context->uid, context->gid);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::mkdir: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -280,6 +294,9 @@ int Fuse::unlink(const bf::path &path) {
   try {
     _fs->unlink(path);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::unlink: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -289,6 +306,9 @@ int Fuse::rmdir(const bf::path &path) {
   try {
     _fs->rmdir(path);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::rmdir: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -300,6 +320,9 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
 	auto context = fuse_get_context();
     _fs->createSymlink(from, to, context->uid, context->gid);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::symlink: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -310,6 +333,9 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   try {
     _fs->rename(from, to);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::rename: " << e.what() << std::endl;
+    return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -329,6 +355,9 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
   try {
 	_fs->chmod(path, mode);
 	return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::chmod: " << e.what() << std::endl;
+    return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
   }
@@ -338,6 +367,9 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
   try {
 	_fs->chown(path, uid, gid);
 	return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::chown: " << e.what() << std::endl;
+    return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
   }
@@ -348,6 +380,9 @@ int Fuse::truncate(const bf::path &path, off_t size) {
   try {
     _fs->truncate(path, size);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::truncate: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -359,6 +394,9 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
   try {
     _fs->ftruncate(fileinfo->fh, size);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::ftruncate: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -370,6 +408,9 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
   try {
     _fs->utimens(path, times);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::utimens: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -380,6 +421,9 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
   try {
     fileinfo->fh = _fs->openFile(path, fileinfo->flags);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::open: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -391,6 +435,9 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
   try {
     _fs->closeFile(fileinfo->fh);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::release: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -401,6 +448,9 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   UNUSED(path);
   try {
     return _fs->read(fileinfo->fh, buf, size, offset);
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::read: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -412,6 +462,9 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
   try {
     _fs->write(fileinfo->fh, buf, size, offset);
     return size;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::write: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -423,6 +476,9 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
   try {
     _fs->statfs(path, fsstat);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::statfs: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -435,6 +491,9 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
   try {
     _fs->flush(fileinfo->fh);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::flush: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -450,6 +509,9 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
       _fs->fsync(fileinfo->fh);
     }
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::fsync: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -489,6 +551,9 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
       }
     }
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::readdir: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -527,6 +592,9 @@ int Fuse::access(const bf::path &path, int mask) {
   try {
     _fs->access(path, mask);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::access: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
@@ -538,6 +606,9 @@ int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
     auto context = fuse_get_context();
     fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
     return 0;
+  } catch(const fspp::IOException &e) {
+    std::cerr << "IOException in Fuse::create: " << e.what() << std::endl;
+    return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
   }
