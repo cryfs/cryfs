@@ -140,8 +140,7 @@ TEST_F(DataLeafNodeTest, InitializesCorrectly) {
 
 TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
   auto key = InitializeLeafGrowAndReturnKey();
-  //TODO Don't use nullcheck
-  auto leaf = DataLeafNode::InitializeNewNode(cpputils::nullcheck(blockStore->load(key)).value());
+  auto leaf = DataLeafNode::InitializeNewNode(blockStore->load(key).value());
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
@@ -208,14 +207,14 @@ TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
   uint32_t smaller_size = randomData.size() - 100;
   {
     //At first, we expect there to be random data in the underlying data block
-    auto block = blockStore->load(key);
+    auto block = blockStore->load(key).value();
     EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 
   //After shrinking, we expect there to be zeroes in the underlying data block
   ResizeLeaf(key, smaller_size);
   {
-    auto block = blockStore->load(key);
+    auto block = blockStore->load(key).value();
     EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 }
@@ -242,7 +241,7 @@ TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
 TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   Key key = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
 
-  auto block = blockStore->load(key);
+  auto block = blockStore->load(key).value();
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 

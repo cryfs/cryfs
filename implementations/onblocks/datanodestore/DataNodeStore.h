@@ -45,7 +45,7 @@ public:
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
 private:
-  cpputils::unique_ref<DataNode> load(std::unique_ptr<blockstore::Block> block);
+  cpputils::unique_ref<DataNode> load(cpputils::unique_ref<blockstore::Block> block);
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;
   const DataNodeLayout _layout;

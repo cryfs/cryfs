@@ -135,8 +135,7 @@ TEST_F(DataInnerNodeTest, InitializesCorrectly) {
 
 TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
   auto key = InitializeInnerNodeAddLeafReturnKey();
-  //TODO Don't use cpputils::nullcheck
-  auto node = DataInnerNode::InitializeNewNode(cpputils::nullcheck(blockStore->load(key)).value(), *leaf);
+  auto node = DataInnerNode::InitializeNewNode(blockStore->load(key).value(), *leaf);
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
@@ -197,7 +196,7 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
 TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   Key key = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
 
-  auto block = blockStore->load(key);
+  auto block = blockStore->load(key).value();
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 

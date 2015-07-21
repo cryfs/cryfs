@@ -40,8 +40,7 @@ TEST_P(DataNodeViewDepthTest, DepthIsStored) {
     DataNodeView view(std::move(block));
     view.setDepth(GetParam());
   }
-  //TODO Don't use nullcheck
-  DataNodeView view(cpputils::nullcheck(blockStore->load(key)).value());
+  DataNodeView view(blockStore->load(key).value());
   EXPECT_EQ(GetParam(), view.Depth());
 }
 
@@ -56,8 +55,7 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
     DataNodeView view(std::move(block));
     view.setSize(GetParam());
   }
-  //TODO Don't use nullcheck
-  DataNodeView view(cpputils::nullcheck(blockStore->load(key)).value());
+  DataNodeView view(blockStore->load(key).value());
   EXPECT_EQ(GetParam(), view.Size());
 }
 
@@ -69,8 +67,7 @@ TEST_F(DataNodeViewTest, DataIsStored) {
     DataNodeView view(std::move(block));
     view.write(randomData.data(), 0, randomData.size());
   }
-  //TODO Don't use nullcheck
-  DataNodeView view(cpputils::nullcheck(blockStore->load(key)).value());
+  DataNodeView view(blockStore->load(key).value());
   EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), randomData.size()));
 }
 
@@ -79,14 +76,12 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto key = block->key();
   {
-    //TODO Don't use nullcheck
     DataNodeView view(std::move(block));
     view.setDepth(3);
     view.setSize(1000000000u);
     view.write(randomData.data(), 0, DATASIZE_BYTES);
   }
-  //TODO Don't use nullcheck
-  DataNodeView view(cpputils::nullcheck(blockStore->load(key)).value());
+  DataNodeView view(blockStore->load(key).value());
   EXPECT_EQ(3, view.Depth());
   EXPECT_EQ(1000000000u, view.Size());
   EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), DATASIZE_BYTES));

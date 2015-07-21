@@ -28,10 +28,9 @@ DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint32_t blocksi
 DataNodeStore::~DataNodeStore() {
 }
 
-unique_ref<DataNode> DataNodeStore::load(unique_ptr<Block> block) {
+unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
   assert(block->size() == _layout.blocksizeBytes());
-  //TODO Don't use cpputils::nullcheck, but make the parameter a unique_ref
-  DataNodeView node(cpputils::nullcheck(std::move(block)).value());
+  DataNodeView node(std::move(block));
 
   if (node.Depth() == 0) {
     return make_unique_ref<DataLeafNode>(std::move(node));
@@ -57,17 +56,17 @@ unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode() {
 
 optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
   auto block = _blockstore->load(key);
-  if (block == nullptr) {
+  if (block == none) {
     return none;
+  } else {
+    return load(std::move(*block));
   }
-  return load(std::move(block));
 }
 
 unique_ref<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &source) {
   assert(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
   auto newBlock = blockstore::utils::copyToNewBlock(_blockstore.get(), source.node().block());
-  //TODO Don't use to_unique_ptr
-  return load(cpputils::to_unique_ptr(std::move(newBlock)));
+  return load(std::move(newBlock));
 }
 
 unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> target, const DataNode &source) {
@@ -87,8 +86,7 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
 void DataNodeStore::remove(unique_ref<DataNode> node) {
   auto block = node->node().releaseBlock();
   cpputils::to_unique_ptr(std::move(node)).reset(); // Call destructor
-  //TODO Don't use to_unique_ptr
-  _blockstore->remove(cpputils::to_unique_ptr(std::move(block)));
+  _blockstore->remove(std::move(block));
 }
 
 uint64_t DataNodeStore::numNodes() const {
