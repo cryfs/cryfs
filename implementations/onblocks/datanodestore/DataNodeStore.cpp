@@ -12,7 +12,6 @@ using blockstore::Key;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using std::unique_ptr;
 using std::runtime_error;
 using boost::optional;
 using boost::none;

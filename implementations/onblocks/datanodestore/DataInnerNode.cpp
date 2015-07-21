@@ -1,7 +1,6 @@
 #include "DataInnerNode.h"
 #include "DataNodeStore.h"
 
-using std::unique_ptr;
 using blockstore::Block;
 using cpputils::Data;
 using cpputils::unique_ref;

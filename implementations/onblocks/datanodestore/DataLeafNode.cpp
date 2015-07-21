@@ -1,7 +1,6 @@
 #include "DataLeafNode.h"
 #include "DataInnerNode.h"
 
-using std::unique_ptr;
 using blockstore::Block;
 using cpputils::Data;
 using blockstore::Key;

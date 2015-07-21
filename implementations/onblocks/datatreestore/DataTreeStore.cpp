@@ -3,7 +3,6 @@
 #include "../datanodestore/DataLeafNode.h"
 #include "DataTree.h"
 
-using std::unique_ptr;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::optional;
