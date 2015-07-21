@@ -15,7 +15,7 @@ namespace bf = boost::filesystem;
 using blockstore::ondisk::OnDiskBlockStore;
 using blockstore::inmemory::InMemoryBlockStore;
 
-using std::make_unique;
+using cpputils::make_unique_ref;
 
 int main (int argc, char *argv[])
 {
