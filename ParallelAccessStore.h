@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <messmer/cpp-utils/macros.h>
 #include "ParallelAccessBaseStore.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 
 //TODO Refactor
@@ -102,7 +103,7 @@ cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key
 template<class Resource, class ResourceRef, class Key>
 cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, cpputils::unique_ref<Resource> resource) {
   auto insertResult = _openResources.emplace(key, std::move(resource));
-  assert(true == insertResult.second);
+  ASSERT(true == insertResult.second, "Inserting failed");
   return _createResourceRef(insertResult.first->second.getReference(), key);
 }
 
@@ -132,7 +133,7 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpputils::unique_ref<ResourceRef> resource) {
   auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
-  assert(true == insertResult.second);
+  ASSERT(true == insertResult.second, "Inserting failed");
   cpputils::destruct(std::move(resource));
 
   //Wait for last resource user to release it
@@ -146,7 +147,7 @@ template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::release(const Key &key) {
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
-  assert (found != _openResources.end());
+  ASSERT(found != _openResources.end(), "Didn't find key");
   found->second.releaseReference();
   if (found->second.refCountIsZero()) {
 	  auto foundToRemove = _resourcesToRemove.find(key);
