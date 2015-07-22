@@ -11,6 +11,7 @@
 #include <iostream>
 #include <boost/optional.hpp>
 #include "ciphers/Cipher.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 namespace blockstore {
 namespace encrypted {
@@ -123,7 +124,7 @@ const void *EncryptedBlock<Cipher>::data() const {
 
 template<class Cipher>
 void EncryptedBlock<Cipher>::write(const void *source, uint64_t offset, uint64_t count) {
-  assert(offset <= size() && offset + count <= size()); //Also check offset < size() because of possible overflow in the addition
+  ASSERT(offset <= size() && offset + count <= size(), "Write outside of valid area"); //Also check offset < size() because of possible overflow in the addition
   std::memcpy((uint8_t*)_plaintextWithHeader.data()+HEADER_LENGTH+offset, source, count);
   _dataChanged = true;
 }

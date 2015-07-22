@@ -69,7 +69,7 @@ boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::load(c
 template<class Cipher>
 void EncryptedBlockStore<Cipher>::remove(cpputils::unique_ref<Block> block) {
   auto encryptedBlock = cpputils::dynamic_pointer_move<EncryptedBlock<Cipher>>(block);
-  assert(encryptedBlock != boost::none);
+  ASSERT(encryptedBlock != boost::none, "Block is not an EncryptedBlock");
   auto baseBlock = (*encryptedBlock)->releaseBlock();
   return _baseBlockStore->remove(std::move(baseBlock));
 }

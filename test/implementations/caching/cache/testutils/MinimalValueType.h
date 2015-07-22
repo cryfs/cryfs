@@ -4,6 +4,7 @@
 
 #include <messmer/cpp-utils/macros.h>
 #include <cassert>
+#include <messmer/cpp-utils/assert/assert.h>
 
 // This is a not-default-constructible non-copyable but moveable Value type
 class MinimalValueType {
@@ -19,13 +20,13 @@ public:
   }
 
   ~MinimalValueType() {
-    assert(!_isDestructed);
+    ASSERT(!_isDestructed, "Object was already destructed before");
     --instances;
     _isDestructed = true;
   }
 
   int value() const {
-    assert(!_isMoved && !_isDestructed);
+    ASSERT(!_isMoved && !_isDestructed, "Object is invalid");
     return _value;
   }
 

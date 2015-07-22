@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <messmer/cpp-utils/pointer/cast.h>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using cpputils::dynamic_pointer_move;
 using cpputils::Data;
@@ -47,7 +48,7 @@ optional<unique_ref<Block>> CachingBlockStore::load(const Key &key) {
 
 void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
   auto cached_block = dynamic_pointer_move<CachedBlock>(block);
-  assert(cached_block != none);
+  ASSERT(cached_block != none, "Passed block is not a CachedBlock");
   auto baseBlock = (*cached_block)->releaseBlock();
   auto baseNewBlock = dynamic_pointer_move<NewBlock>(baseBlock);
   if (baseNewBlock != none) {

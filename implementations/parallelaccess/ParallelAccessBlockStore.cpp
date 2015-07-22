@@ -3,6 +3,7 @@
 #include "ParallelAccessBlockStoreAdapter.h"
 #include <cassert>
 #include <messmer/cpp-utils/pointer/cast.h>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::string;
 using std::mutex;
@@ -48,7 +49,7 @@ optional<unique_ref<Block>> ParallelAccessBlockStore::load(const Key &key) {
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   auto block_ref = dynamic_pointer_move<BlockRef>(block);
-  assert(block_ref != none);
+  ASSERT(block_ref != none, "Block is not a BlockRef");
   return _parallelAccessStore.remove(key, std::move(*block_ref));
 }
 

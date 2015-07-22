@@ -1,5 +1,6 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::make_shared;
 using std::string;
@@ -42,7 +43,7 @@ void FakeBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   cpputils::destruct(std::move(block));
   int numRemoved = _blocks.erase(key.ToString());
-  assert(numRemoved == 1);
+  ASSERT(numRemoved == 1, "Block not found");
 }
 
 unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
@@ -55,11 +56,11 @@ void FakeBlockStore::updateData(const Key &key, const Data &data) {
   auto found = _blocks.find(key.ToString());
   if (found == _blocks.end()) {
     auto insertResult = _blocks.emplace(key.ToString(), data.copy());
-    assert(true == insertResult.second);
+    ASSERT(true == insertResult.second, "Inserting didn't work");
     found = insertResult.first;
   }
   Data &stored_data = found->second;
-  assert(data.size() == stored_data.size());
+  ASSERT(data.size() == stored_data.size(), "Wrong data size in block");
   std::memcpy(stored_data.data(), data.data(), data.size());
 }
 

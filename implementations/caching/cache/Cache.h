@@ -9,6 +9,7 @@
 #include <mutex>
 #include <boost/optional.hpp>
 #include <future>
+#include <messmer/cpp-utils/assert/assert.h>
 
 namespace blockstore {
 namespace caching {
@@ -66,10 +67,10 @@ boost::optional<Value> Cache<Key, Value>::pop(const Key &key) {
 template<class Key, class Value>
 void Cache<Key, Value>::push(const Key &key, Value value) {
   std::lock_guard<std::mutex> lock(_mutex);
-  assert(_cachedBlocks.size() <= MAX_ENTRIES);
+  ASSERT(_cachedBlocks.size() <= MAX_ENTRIES, "Cache too full");
   if (_cachedBlocks.size() == MAX_ENTRIES) {
     _cachedBlocks.pop();
-    assert(_cachedBlocks.size() == MAX_ENTRIES-1);
+    ASSERT(_cachedBlocks.size() == MAX_ENTRIES-1, "Removing entry from cache didn't work");
   }
   _cachedBlocks.push(key, CacheEntry<Key, Value>(std::move(value)));
 }

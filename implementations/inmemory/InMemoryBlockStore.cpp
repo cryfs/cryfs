@@ -1,6 +1,7 @@
 #include "InMemoryBlock.h"
 #include "InMemoryBlockStore.h"
 #include <memory>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::make_unique;
 using std::string;
@@ -44,7 +45,7 @@ void InMemoryBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   cpputils::destruct(std::move(block));
   int numRemoved = _blocks.erase(key.ToString());
-  assert(1==numRemoved);
+  ASSERT(1==numRemoved, "Didn't find block to remove");
 }
 
 uint64_t InMemoryBlockStore::numBlocks() const {

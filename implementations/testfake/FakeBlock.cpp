@@ -1,6 +1,7 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
 #include <cstring>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::shared_ptr;
 using std::istream;
@@ -27,7 +28,7 @@ const void *FakeBlock::data() const {
 }
 
 void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
-  assert(offset <= _data->size() && offset + size <= _data->size()); //Also check offset < _data->size() because of possible overflow in the addition
+  ASSERT(offset <= _data->size() && offset + size <= _data->size(), "Write outside of valid area"); //Also check offset < _data->size() because of possible overflow in the addition
   std::memcpy((uint8_t*)_data->data()+offset, source, size);
   _dataChanged = true;
 }

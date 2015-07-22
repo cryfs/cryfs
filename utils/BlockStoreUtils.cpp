@@ -2,6 +2,7 @@
 #include "BlockStoreUtils.h"
 #include <messmer/cpp-utils/data/Data.h>
 #include <cassert>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using cpputils::Data;
 using cpputils::unique_ref;
@@ -16,7 +17,7 @@ unique_ref<Block> copyToNewBlock(BlockStore *blockStore, const Block &block) {
 }
 
 void copyTo(Block *target, const Block &source) {
-  assert(target->size() == source.size());
+  ASSERT(target->size() == source.size(), "Can't copy block data when blocks have different sizes");
   target->write(source.data(), 0, source.size());
 }
 

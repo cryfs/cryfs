@@ -1,5 +1,6 @@
 #include "NewBlock.h"
 #include "CachingBlockStore.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 using cpputils::Data;
 using boost::none;
@@ -24,7 +25,7 @@ const void *NewBlock::data() const {
 }
 
 void NewBlock::write(const void *source, uint64_t offset, uint64_t size) {
-  assert(offset <= _data.size() && offset + size <= _data.size());
+  ASSERT(offset <= _data.size() && offset + size <= _data.size(), "Write outside of valid area");
   std::memcpy((uint8_t*)_data.data()+offset, source, size);
   _dataChanged = true;
 }
@@ -34,7 +35,7 @@ void NewBlock::writeToBaseBlockIfChanged() {
     if (_baseBlock == none) {
       //TODO _data.copy() necessary?
       auto newBase = _blockStore->tryCreateInBaseStore(key(), _data.copy());
-      assert(newBase != boost::none); //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
+      ASSERT(newBase != boost::none, "Couldn't create base block"); //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
       _baseBlock = std::move(*newBase);
     } else {
         (*_baseBlock)->write(_data.data(), 0, _data.size());
@@ -52,7 +53,7 @@ void NewBlock::remove() {
 
 void NewBlock::flush() {
   writeToBaseBlockIfChanged();
-  assert(_baseBlock != none);
+  ASSERT(_baseBlock != none, "At this point, the base block should already have been created but wasn't");
   (*_baseBlock)->flush();
 }
 
