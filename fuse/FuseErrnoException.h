@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <errno.h>
+#include <messmer/cpp-utils/assert/assert.h>
 
 namespace fspp {
 namespace fuse{
@@ -26,7 +27,7 @@ inline void CHECK_RETVAL(int retval) {
 
 inline FuseErrnoException::FuseErrnoException(int errno_)
   :runtime_error(strerror(errno_)), _errno(errno_) {
-  assert(_errno != 0);
+  ASSERT(_errno != 0, "Errno shouldn't be zero");
 }
 
 inline FuseErrnoException::~FuseErrnoException() {
