@@ -6,6 +6,7 @@
 #include <cryptopp/cryptopp/osrng.h>
 #include <string>
 #include <cstring>
+#include "../assert/assert.h"
 
 namespace cpputils {
 
@@ -67,7 +68,7 @@ FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateOSRandom() {
 
 template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
-  assert(data.size() == STRING_LENGTH);
+  ASSERT(data.size() == STRING_LENGTH, "Wrong string size for parsing FixedSizeData");
   FixedSizeData<SIZE> result;
   CryptoPP::StringSource(data, true,
     new CryptoPP::HexDecoder(
@@ -85,7 +86,7 @@ std::string FixedSizeData<SIZE>::ToString() const {
       new CryptoPP::StringSink(result)
     )
   );
-  assert(result.size() == STRING_LENGTH);
+  ASSERT(result.size() == STRING_LENGTH, "Created wrongly sized string");
   return result;
 }
 
