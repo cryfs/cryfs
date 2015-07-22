@@ -67,7 +67,7 @@ CryDevice::~CryDevice() {
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
-  assert(path.is_absolute());
+  ASSERT(path.is_absolute(), "Non absolute path given");
 
   if (path.parent_path().empty()) {
     //We are asked to load the root directory '/'.

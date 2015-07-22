@@ -28,7 +28,7 @@ public:
         mode |= S_IFLNK;
         break;
       }
-      assert((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR) || (S_ISLNK(mode) && type == fspp::Dir::EntryType::SYMLINK));
+      ASSERT((S_ISREG(mode) && type == fspp::Dir::EntryType::FILE) || (S_ISDIR(mode) && type == fspp::Dir::EntryType::DIR) || (S_ISLNK(mode) && type == fspp::Dir::EntryType::SYMLINK), "Unknown mode in entry");
     }
 
     fspp::Dir::EntryType type;

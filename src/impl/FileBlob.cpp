@@ -18,7 +18,6 @@ FileBlob::~FileBlob() {
 }
 
 unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
-  assert(blob.get() != nullptr);
   blob->resize(1);
   unsigned char magicNumber = MagicNumbers::FILE;
   blob->write(&magicNumber, 0, 1);

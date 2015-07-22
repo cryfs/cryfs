@@ -24,7 +24,6 @@ SymlinkBlob::~SymlinkBlob() {
 }
 
 unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
-  assert(blob.get() != nullptr);
   string targetStr = target.native();
   blob->resize(1 + targetStr.size());
   unsigned char magicNumber = MagicNumbers::SYMLINK;
@@ -36,7 +35,7 @@ unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, co
 void SymlinkBlob::_checkMagicNumber(const Blob &blob) {
   unsigned char value;
   blob.read(&value, 0, 1);
-  assert(value == MagicNumbers::SYMLINK);
+  ASSERT(value == MagicNumbers::SYMLINK, "Blob is not a symlink blob");
 }
 
 bf::path SymlinkBlob::_readTargetFromBlob(const blobstore::Blob &blob) {

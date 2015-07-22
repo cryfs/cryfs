@@ -28,7 +28,7 @@ namespace cryfs {
 DirBlob::DirBlob(unique_ref<Blob> blob, CryDevice *device) :
     _device(device), _blob(std::move(blob)), _entries(), _changed(false) {
   //TODO generally everywhere: asserts are bad, because they crash the filesystem. Rather return a fuse error!
-  assert(magicNumber() == MagicNumbers::DIR);
+  ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
 
@@ -224,7 +224,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
       result->st_size = SymlinkBlob(std::move(*blob)).target().native().size();
     }
   } else {
-	assert(false);
+	ASSERT(false, "Unknown child type");
   }
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, 512);
@@ -233,7 +233,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
   auto found = _findChild(key);
-  assert ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)));
+  ASSERT ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)), "Unknown mode in entry");
   found->mode = mode;
   _changed = true;
 }

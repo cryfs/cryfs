@@ -27,7 +27,7 @@ CryFile::~CryFile() {
 
 unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
   auto blob = LoadBlob();
-  assert(blob != none);
+  ASSERT(blob != none, "Couldn't load blob");
   return make_unique_ref<CryOpenFile>(make_unique_ref<FileBlob>(std::move(*blob)));
 }
 
