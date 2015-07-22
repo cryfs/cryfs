@@ -8,6 +8,7 @@
 #include "BlobStoreOnBlocks.h"
 #include "BlobOnBlocks.h"
 #include <messmer/cpp-utils/pointer/cast.h>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -47,7 +48,7 @@ optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
 
 void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
   auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
-  assert(_blob != none);
+  ASSERT(_blob != none, "Passed Blob in BlobStoreOnBlocks::remove() is not a BlobOnBlocks.");
   _dataTreeStore->remove((*_blob)->releaseTree());
 }
 

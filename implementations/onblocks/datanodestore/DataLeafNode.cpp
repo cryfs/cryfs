@@ -1,5 +1,6 @@
 #include "DataLeafNode.h"
 #include "DataInnerNode.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 using blockstore::Block;
 using cpputils::Data;
@@ -13,8 +14,8 @@ namespace datanodestore {
 
 DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
-  assert(node().Depth() == 0);
-  assert(numBytes() <= maxStoreableBytes());
+  ASSERT(node().Depth() == 0, "Leaf node must have depth 0. Is it an inner node instead?");
+  ASSERT(numBytes() <= maxStoreableBytes(), "Leaf says it stores more bytes than it has space for");
 }
 
 DataLeafNode::~DataLeafNode() {
@@ -29,12 +30,12 @@ unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ref<Block> block
 }
 
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {
-  assert(offset <= node().Size() && offset + size <= node().Size()); // Also check offset, because the addition could lead to overflows
+  ASSERT(offset <= node().Size() && offset + size <= node().Size(), "Read out of valid area"); // Also check offset, because the addition could lead to overflows
   std::memcpy(target, (uint8_t*)node().data() + offset, size);
 }
 
 void DataLeafNode::write(const void *source, uint64_t offset, uint64_t size) {
-  assert(offset <= node().Size() && offset + size <= node().Size()); // Also check offset, because the addition could lead to overflows
+  ASSERT(offset <= node().Size() && offset + size <= node().Size(), "Write out of valid area"); // Also check offset, because the addition could lead to overflows
   node().write(source, offset, size);
 }
 
@@ -43,7 +44,7 @@ uint32_t DataLeafNode::numBytes() const {
 }
 
 void DataLeafNode::resize(uint32_t new_size) {
-  assert(new_size <= maxStoreableBytes());
+  ASSERT(new_size <= maxStoreableBytes(), "Trying to resize to a size larger than the maximal size");
   uint32_t old_size = node().Size();
   if (new_size < old_size) {
     fillDataWithZeroesFromTo(new_size, old_size);

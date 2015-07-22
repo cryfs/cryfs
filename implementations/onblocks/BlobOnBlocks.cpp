@@ -4,6 +4,7 @@
 #include "datanodestore/DataLeafNode.h"
 #include "utils/Math.h"
 #include <cmath>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::function;
 using cpputils::unique_ref;
@@ -49,9 +50,9 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
-  assert(offset <= _datatree->numStoredBytes() && offset + count <= size());
+  ASSERT(offset <= _datatree->numStoredBytes() && offset + count <= size(), "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
   uint64_t read = tryRead(target, offset, count);
-  assert(read == count);
+  ASSERT(read == count, "BlobOnBlocks::read() couldn't read all requested bytes. Use BlobOnBlocks::tryRead() if this should be allowed.");
 }
 
 uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) const {

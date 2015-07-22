@@ -4,6 +4,7 @@
 
 #include "../../datanodestore/DataInnerNode.h"
 #include "../../datanodestore/DataNodeStore.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 using std::function;
 using cpputils::optional_ownership_ptr;
@@ -24,7 +25,7 @@ namespace algorithms {
 optional<unique_ref<DataInnerNode>> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
   Key key = node.LastChild()->key();
   auto lastChild = nodeStore->load(key);
-  assert(lastChild != none);
+  ASSERT(lastChild != none, "Couldn't load last child");
   return dynamic_pointer_move<DataInnerNode>(*lastChild);
 }
 
@@ -39,7 +40,7 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
     if (condition(*currentNode)) {
       result = std::move(currentNode);
     }
-    assert(lastChild != none || static_cast<int>(i) == rootNode->depth()-1);
+    ASSERT(lastChild != none || static_cast<int>(i) == rootNode->depth()-1, "Couldn't get last child as inner node but we're not deep enough yet for the last child to be a leaf");
     if (lastChild != none) {
       currentNode = cpputils::WithOwnership(std::move(*lastChild));
     }

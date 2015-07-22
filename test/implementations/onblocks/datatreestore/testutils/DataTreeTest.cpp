@@ -41,7 +41,7 @@ unique_ref<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataN
 }
 
 unique_ref<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> children) {
-  assert(children.size() >= 1);
+  ASSERT(children.size() >= 1, "An inner node must have at least one child");
   auto node = nodeStore->createNewInnerNode(**children.begin());
   for(auto child = children.begin()+1; child != children.end(); ++child) {
     node->addChild(**child);

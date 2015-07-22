@@ -1,5 +1,6 @@
 #include "DataInnerNode.h"
 #include "DataNodeStore.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 using blockstore::Block;
 using cpputils::Data;
@@ -13,7 +14,7 @@ namespace datanodestore {
 
 DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
-  assert(depth() > 0);
+  ASSERT(depth() > 0, "Inner node can't have depth 0. Is this a leaf maybe?");
 }
 
 DataInnerNode::~DataInnerNode() {
@@ -61,19 +62,19 @@ DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) {
 }
 
 const DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) const {
-  assert(index < numChildren());
+  ASSERT(index < numChildren(), "Accessing child out of range");
   return ChildrenBegin()+index;
 }
 
 void DataInnerNode::addChild(const DataNode &child) {
-  assert(numChildren() < maxStoreableChildren());
-  assert(child.depth() == depth()-1);
+  ASSERT(numChildren() < maxStoreableChildren(), "Adding more children than we can store");
+  ASSERT(child.depth() == depth()-1, "The child that should be added has wrong depth");
   node().setSize(node().Size()+1);
   LastChild()->setKey(child.key());
 }
 
 void DataInnerNode::removeLastChild() {
-  assert(node().Size() > 1);
+  ASSERT(node().Size() > 1, "There is no child to remove");
   node().setSize(node().Size()-1);
 }
 

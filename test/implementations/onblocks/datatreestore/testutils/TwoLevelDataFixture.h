@@ -5,6 +5,7 @@
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/pointer/cast.h>
 #include "LeafDataFixture.h"
+#include <messmer/cpp-utils/assert/assert.h>
 
 //TODO Rename, since we now allow any number of levels
 // A data fixture containing data for a two-level tree (one inner node with leaf children).
@@ -70,7 +71,8 @@ private:
     case SizePolicy::Unchanged:
       return leaf->numBytes();
     default:
-      assert(false);
+      ASSERT(false, "Unknown size policy");
+      abort(); // The assert above already aborts. This is just to prevent the style checker from complaining about exiting a non-void function
     }
   }
 

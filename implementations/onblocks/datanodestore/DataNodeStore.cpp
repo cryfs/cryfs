@@ -4,7 +4,7 @@
 #include "messmer/blockstore/interface/BlockStore.h"
 #include "messmer/blockstore/interface/Block.h"
 #include "messmer/blockstore/utils/BlockStoreUtils.h"
-
+#include <messmer/cpp-utils/assert/assert.h>
 
 using blockstore::BlockStore;
 using blockstore::Block;
@@ -28,7 +28,7 @@ DataNodeStore::~DataNodeStore() {
 }
 
 unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
-  assert(block->size() == _layout.blocksizeBytes());
+  ASSERT(block->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
   DataNodeView node(std::move(block));
 
   if (node.Depth() == 0) {
@@ -41,7 +41,7 @@ unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
 }
 
 unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
-  assert(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
+  ASSERT(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
   //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
   auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
   return DataInnerNode::InitializeNewNode(std::move(block), first_child);
@@ -63,14 +63,14 @@ optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
 }
 
 unique_ref<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &source) {
-  assert(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes());  // This might be violated if source is from a different DataNodeStore
+  ASSERT(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
   auto newBlock = blockstore::utils::copyToNewBlock(_blockstore.get(), source.node().block());
   return load(std::move(newBlock));
 }
 
 unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> target, const DataNode &source) {
-  assert(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes());
-  assert(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes());
+  ASSERT(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Target node has wrong layout. Is it from the same DataNodeStore?");
+  ASSERT(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
   Key key = target->key();
   {
     auto targetBlock = target->node().releaseBlock();
@@ -78,7 +78,7 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
     blockstore::utils::copyTo(targetBlock.get(), source.node().block());
   }
   auto loaded = load(key);
-  assert(loaded != none);
+  ASSERT(loaded != none, "Couldn't load the target node after overwriting it");
   return std::move(*loaded);
 }
 
@@ -97,7 +97,7 @@ void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
   if (inner != nullptr) {
     for (uint32_t i = 0; i < inner->numChildren(); ++i) {
       auto child = load(inner->getChild(i)->key());
-      assert(child != none);
+      ASSERT(child != none, "Couldn't load child node");
       removeSubtree(std::move(*child));
     }
   }

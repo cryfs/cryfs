@@ -10,6 +10,7 @@
 #include "messmer/cpp-utils/pointer/cast.h"
 #include "messmer/cpp-utils/pointer/optional_ownership_ptr.h"
 #include <cmath>
+#include <messmer/cpp-utils/assert/assert.h>
 
 using blockstore::Key;
 using blobstore::onblocks::datanodestore::DataNodeStore;
@@ -45,7 +46,7 @@ DataTree::~DataTree() {
 
 void DataTree::removeLastDataLeaf() {
   auto deletePosOrNull = algorithms::GetLowestRightBorderNodeWithMoreThanOneChildOrNull(_nodeStore, _rootNode.get());
-  assert(deletePosOrNull.get() != nullptr); //TODO Correct exception (tree has only one leaf, can't shrink it)
+  ASSERT(deletePosOrNull.get() != nullptr, "Tree has only one leaf, can't shrink it.");
 
   deleteLastChildSubtree(deletePosOrNull.get());
 
@@ -54,10 +55,10 @@ void DataTree::removeLastDataLeaf() {
 
 void DataTree::ifRootHasOnlyOneChildReplaceRootWithItsChild() {
   DataInnerNode *rootNode = dynamic_cast<DataInnerNode*>(_rootNode.get());
-  assert(rootNode != nullptr);
+  ASSERT(rootNode != nullptr, "RootNode is not an inner node");
   if (rootNode->numChildren() == 1) {
     auto child = _nodeStore->load(rootNode->getChild(0)->key());
-    assert(child != none);
+    ASSERT(child != none, "Couldn't load first child of root node");
     _rootNode = _nodeStore->overwriteNodeWith(std::move(_rootNode), **child);
     _nodeStore->remove(std::move(*child));
   }
@@ -65,7 +66,7 @@ void DataTree::ifRootHasOnlyOneChildReplaceRootWithItsChild() {
 
 void DataTree::deleteLastChildSubtree(DataInnerNode *node) {
   auto lastChild = _nodeStore->load(node->LastChild()->key());
-  assert(lastChild != none);
+  ASSERT(lastChild != none, "Couldn't load last child");
   _nodeStore->removeSubtree(std::move(*lastChild));
   node->removeLastChild();
 }
@@ -105,7 +106,7 @@ unique_ref<DataNode> DataTree::createChainOfInnerNodes(unsigned int num, unique_
 }
 
 DataInnerNode* DataTree::increaseTreeDepth(unsigned int levels) {
-  assert(levels >= 1);
+  ASSERT(levels >= 1, "Parameter out of bounds: tried to increase tree depth by zero.");
   auto copyOfOldRoot = _nodeStore->createNewNodeAsCopyFrom(*_rootNode);
   auto chain = createChainOfInnerNodes(levels-1, copyOfOldRoot.get());
   auto newRootNode = DataNode::convertToNewInnerNode(std::move(_rootNode), *chain);
@@ -146,7 +147,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
   uint64_t numLeavesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
-  assert(lastChild != none);
+  ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numLeavesInRightChild = _numLeaves(**lastChild);
 
   return numLeavesInLeftChildren + numLeavesInRightChild;
@@ -154,7 +155,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
   unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing
-  assert(beginIndex <= endIndex);
+  ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
   uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), endIndex);
   uint32_t numLeaves = this->numLeaves();
@@ -192,7 +193,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
 void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
   DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
   if (leaf != nullptr) {
-    assert(beginIndex <= 1 && endIndex <= 1);
+    ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
     if (beginIndex == 0 && endIndex == 1) {
       func(leaf, leafOffset);
     }
@@ -219,13 +220,13 @@ vector<unique_ref<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, 
   children.reserve(end-begin);
   for (uint32_t childIndex = begin; childIndex < std::min(node->numChildren(), end); ++childIndex) {
     auto child = _nodeStore->load(node->getChild(childIndex)->key());
-    assert(child != none);
+    ASSERT(child != none, "Couldn't load child node");
     children.emplace_back(std::move(*child));
   }
   for (uint32_t childIndex = node->numChildren(); childIndex < end; ++childIndex) {
     children.emplace_back(addChildTo(node));
   }
-  assert(children.size() == end-begin);
+  ASSERT(children.size() == end-begin, "Number of children in the result is wrong");
   return children;
 }
 
@@ -259,7 +260,7 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
   uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
-  assert(lastChild != none);
+  ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numBytesInRightChild = _numStoredBytes(**lastChild);
 
   return numBytesInLeftChildren + numBytesInRightChild;
@@ -272,7 +273,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     //TODO Faster implementation possible (no addDataLeaf()/removeLastDataLeaf() in a loop, but directly resizing)
     LastLeaf(_rootNode.get())->resize(_nodeStore->layout().maxBytesPerLeaf());
     uint64_t currentNumBytes = _numStoredBytes();
-    assert(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0);
+    ASSERT(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0, "The last leaf is not a max data leaf, although we just resized it to be one.");
     uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
     uint32_t newNumLeaves = std::max(1u, utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
 
@@ -285,7 +286,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
     LastLeaf(_rootNode.get())->resize(newLastLeafSize);
   }
-  assert(newNumBytes == numStoredBytes());
+  ASSERT(newNumBytes == numStoredBytes(), "We resized to the wrong number of bytes");
 }
 
 optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
@@ -296,7 +297,7 @@ optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
 
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
   auto lastChild = _nodeStore->load(inner->LastChild()->key());
-  assert(lastChild != none);
+  ASSERT(lastChild != none, "Couldn't load last child");
   return WithOwnership(LastLeaf(std::move(*lastChild)));
 }
 
@@ -306,9 +307,9 @@ unique_ref<DataLeafNode> DataTree::LastLeaf(unique_ref<DataNode> root) {
     return std::move(*leaf);
   }
   auto inner = dynamic_pointer_move<DataInnerNode>(root);
-  assert(inner != none);
+  ASSERT(inner != none, "Root node is neither a leaf nor an inner node");
   auto child = _nodeStore->load((*inner)->LastChild()->key());
-  assert(child != none);
+  ASSERT(child != none, "Couldn't load last child");
   return LastLeaf(std::move(*child));
 }
 
