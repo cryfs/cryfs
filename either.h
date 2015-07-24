@@ -7,30 +7,30 @@
 namespace cpputils {
 
     template<class Left, class Right>
-    class Either final {
+    class either final {
     public:
         //TODO Try allowing construction with any type that std::is_convertible to Left or Right.
-        Either(const Left &left): _side(Side::left) {
+        either(const Left &left): _side(Side::left) {
             _construct_left(left);
         }
-        Either(Left &&left): _side(Side::left) {
+        either(Left &&left): _side(Side::left) {
             _construct_left(std::move(left));
         }
-        Either(const Right &right): _side(Side::right) {
+        either(const Right &right): _side(Side::right) {
             _construct_right(right);
         }
-        Either(Right &&right): _side(Side::right) {
+        either(Right &&right): _side(Side::right) {
             _construct_right(std::move(right));
         }
         //TODO Try allowing copy-construction when Left/Right types are std::is_convertible
-        Either(const Either<Left, Right> &rhs): _side(rhs._side) {
+        either(const either<Left, Right> &rhs): _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(rhs._left);
             } else {
                 _construct_right(rhs._right);
             }
         }
-        Either(Either<Left, Right> &&rhs): _side(rhs._side) {
+        either(either<Left, Right> &&rhs): _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(std::move(rhs._left));
             } else {
@@ -38,12 +38,12 @@ namespace cpputils {
             }
         }
 
-        ~Either() {
+        ~either() {
             _destruct();
         }
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
-        Either<Left, Right> &operator=(const Either<Left, Right> &rhs) {
+        either<Left, Right> &operator=(const either<Left, Right> &rhs) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -54,7 +54,7 @@ namespace cpputils {
             return *this;
         }
 
-        Either<Left, Right> &operator=(Either<Left, Right> &&rhs) {
+        either<Left, Right> &operator=(either<Left, Right> &&rhs) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -79,7 +79,7 @@ namespace cpputils {
             return _left;
         }
         Left &left() & {
-            return const_cast<Left&>(const_cast<const Either<Left, Right>*>(this)->left());
+            return const_cast<Left&>(const_cast<const either<Left, Right>*>(this)->left());
         }
         Left &&left() && {
             return std::move(left());
@@ -89,7 +89,7 @@ namespace cpputils {
             return _right;
         }
         Right &right() & {
-            return const_cast<Right&>(const_cast<const Either<Left, Right>*>(this)->right());
+            return const_cast<Right&>(const_cast<const either<Left, Right>*>(this)->right());
         }
         Right &&right() && {
             return std::move(right());
@@ -146,7 +146,7 @@ namespace cpputils {
         };
         enum class Side : unsigned char {left, right} _side;
 
-        Either(Side side): _side(side) {}
+        either(Side side): _side(side) {}
 
         template<typename... Args>
         void _construct_left(Args&&... args) {
@@ -165,14 +165,14 @@ namespace cpputils {
         }
 
         template<typename Left_, typename Right_, typename... Args>
-        friend Either<Left_, Right_> make_left(Args&&... args);
+        friend either<Left_, Right_> make_left(Args&&... args);
 
         template<typename Left_, typename Right_, typename... Args>
-        friend Either<Left_, Right_> make_right(Args&&... args);
+        friend either<Left_, Right_> make_right(Args&&... args);
     };
 
     template<class Left, class Right>
-    bool operator==(const Either<Left, Right> &lhs, const Either<Left, Right> &rhs) {
+    bool operator==(const either<Left, Right> &lhs, const either<Left, Right> &rhs) {
         if (lhs.is_left() != rhs.is_left()) {
             return false;
         }
@@ -184,12 +184,12 @@ namespace cpputils {
     }
 
     template<class Left, class Right>
-    bool operator!=(const Either<Left, Right> &lhs, const Either<Left, Right> &rhs) {
+    bool operator!=(const either<Left, Right> &lhs, const either<Left, Right> &rhs) {
         return !operator==(lhs, rhs);
     }
 
     template<class Left, class Right>
-    std::ostream &operator<<(std::ostream &stream, const Either<Left, Right> &value) {
+    std::ostream &operator<<(std::ostream &stream, const either<Left, Right> &value) {
         if (value.is_left()) {
             stream << "Left(" << value.left() << ")";
         } else {
@@ -199,15 +199,15 @@ namespace cpputils {
     }
 
     template<typename Left, typename Right, typename... Args>
-    Either<Left, Right> make_left(Args&&... args) {
-        Either<Left, Right> result(Either<Left, Right>::Side::left);
+    either<Left, Right> make_left(Args&&... args) {
+        either<Left, Right> result(either<Left, Right>::Side::left);
         result._construct_left(std::forward<Args>(args)...);
         return result;
     }
 
     template<typename Left, typename Right, typename... Args>
-    Either<Left, Right> make_right(Args&&... args) {
-        Either<Left, Right> result(Either<Left, Right>::Side::right);
+    either<Left, Right> make_right(Args&&... args) {
+        either<Left, Right> result(either<Left, Right>::Side::right);
         result._construct_right(std::forward<Args>(args)...);
         return result;
     }
