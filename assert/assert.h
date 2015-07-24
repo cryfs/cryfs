@@ -18,11 +18,11 @@ namespace cpputils {
             return std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message;
         }
 
-        inline void assert_fail_release(const char *expr, const char *message, const char *file, int line) {
+        inline void assert_fail_release [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
             throw AssertFailed(format(expr, message, file, line));
         }
 
-        inline void assert_fail_debug(const char *expr, const char *message, const char *file, int line) {
+        inline void assert_fail_debug [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
             std::cerr << format(expr, message, file, line) << std::endl;
             abort();
         }
