@@ -87,7 +87,7 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
 	return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(*parent), entry.key));
   } else {
-    throw FuseErrnoException(EIO);
+    ASSERT(false, "Unknown entry type");
   }
 }
 
