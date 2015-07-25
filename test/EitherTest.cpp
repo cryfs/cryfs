@@ -301,13 +301,13 @@ TEST_F(EitherTest, LeftNotEqualsRight) {
 
 TEST_F(EitherTest, OutputLeft) {
   ostringstream str;
-  str << Either<string, int>("mystring");
+  str << either<string, int>("mystring");
   EXPECT_EQ("Left(mystring)", str.str());
 }
 
 TEST_F(EitherTest, OutputRight) {
   ostringstream str;
-  str << Either<int, string>("mystring");
+  str << either<int, string>("mystring");
   EXPECT_EQ("Right(mystring)", str.str());
 }
 
