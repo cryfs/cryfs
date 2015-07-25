@@ -3,6 +3,7 @@
 #define MESSMER_CPP_UTILS_ASSERT_ASSERTFAILED_H
 
 #include <stdexcept>
+#include <string>
 
 namespace cpputils {
 
