@@ -17,8 +17,6 @@ public:
     IOStreamConsole();
     IOStreamConsole(std::ostream &output, std::istream &input);
     unsigned int ask(const std::string &question, const std::vector<std::string> &options) override;
-
-    //TODO Test print()
     void print(const std::string &output) override;
 private:
     std::ostream &_output;

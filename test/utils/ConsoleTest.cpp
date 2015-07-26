@@ -22,6 +22,9 @@ public:
            return _console.ask(question, options);
         });
     }
+    void print(const string &output) {
+      _console.print(output);
+    }
 private:
     IOStreamConsole _console;
 };
@@ -53,6 +56,10 @@ public:
 
     future<unsigned int> ask(const string &question, const vector<string> &options) {
         return _console.ask(question, options);
+    }
+
+    void print(const string &output) {
+      _console.print(output);
     }
 
 private:
@@ -238,4 +245,9 @@ TEST_F(ConsoleTest, InputNonNumbers) {
   EXPECT_OUTPUT_LINE("Your choice [1-2]", ':', " ");
   sendInputLine("2");
   EXPECT_EQ(1, chosen.get());
+}
+
+TEST_F(ConsoleTest, TestPrint) {
+  print("Bla Blub");
+  EXPECT_OUTPUT_LINE("Bla Blu", 'b'); // 'b' is the delimiter for reading
 }
