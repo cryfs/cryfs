@@ -56,7 +56,7 @@ void CryConfigLoader::_generateEncKey(CryConfig *config) {
   _console->print("Generating secure encryption key...");
   auto new_key = Cipher::EncryptionKey::CreateOSRandom();
   config->SetEncryptionKey(new_key.ToString());
-  _console->print("done");
+  _console->print("done\n");
 }
 
 void CryConfigLoader::_generateWeakEncKey(CryConfig *config) {
