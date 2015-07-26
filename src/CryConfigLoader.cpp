@@ -1,6 +1,5 @@
 #include "CryConfigLoader.h"
 #include <boost/filesystem.hpp>
-#include "utils/Console.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -11,6 +10,10 @@ using std::vector;
 using std::string;
 
 namespace cryfs {
+
+CryConfigLoader::CryConfigLoader(): CryConfigLoader(make_unique_ref<IOStreamConsole>()) {}
+
+CryConfigLoader::CryConfigLoader(unique_ref<Console> console) : _console(std::move(console)) {}
 
 unique_ref<CryConfig> CryConfigLoader::loadOrCreate(const bf::path &filename) {
   auto config = loadExisting(filename);
@@ -41,7 +44,7 @@ void CryConfigLoader::_initializeConfigWithWeakKey(CryConfig *config) {
 
 void CryConfigLoader::_generateCipher(CryConfig *config) {
   vector<string> ciphers = {"aes-256-gcm", "aes-256-cfb"};
-  int cipherIndex = Console().ask("Which block cipher do you want to use?", ciphers);
+  int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
   config->SetCipher(ciphers[cipherIndex]);
 }
 
@@ -50,12 +53,10 @@ void CryConfigLoader::_generateTestCipher(CryConfig *config) {
 }
 
 void CryConfigLoader::_generateEncKey(CryConfig *config) {
-  printf("Generating secure encryption key...");
-  fflush(stdout);
+  _console->print("Generating secure encryption key...");
   auto new_key = Cipher::EncryptionKey::CreateOSRandom();
   config->SetEncryptionKey(new_key.ToString());
-  printf("done\n");
-  fflush(stdout);
+  _console->print("done");
 }
 
 void CryConfigLoader::_generateWeakEncKey(CryConfig *config) {

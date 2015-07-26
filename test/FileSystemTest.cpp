@@ -21,7 +21,7 @@ public:
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
-    auto config = CryConfigLoader::loadOrCreateWithWeakKey(configFile.path());
+    auto config = CryConfigLoader().loadOrCreateWithWeakKey(configFile.path());
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }
 

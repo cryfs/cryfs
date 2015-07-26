@@ -20,7 +20,7 @@ using cpputils::make_unique_ref;
 int main (int argc, char *argv[])
 {
   auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
-  auto config = cryfs::CryConfigLoader::loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
+  auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
   cryfs::CryDevice device(std::move(config), std::move(blockStore));
   fspp::FilesystemImpl fsimpl(&device);
   fspp::fuse::Fuse fuse(&fsimpl);

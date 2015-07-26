@@ -12,10 +12,10 @@ using std::getline;
 using boost::optional;
 using boost::none;
 
-Console::Console(): Console(std::cout, std::cin) {
+IOStreamConsole::IOStreamConsole(): IOStreamConsole(std::cout, std::cin) {
 }
 
-Console::Console(ostream &output, istream &input): _output(output), _input(input) {
+IOStreamConsole::IOStreamConsole(ostream &output, istream &input): _output(output), _input(input) {
 }
 
 optional<int> parseInt(const string &str) {
@@ -34,7 +34,7 @@ optional<int> parseInt(const string &str) {
   }
 }
 
-unsigned int Console::ask(const string &question, const vector<string> &options) {
+unsigned int IOStreamConsole::ask(const string &question, const vector<string> &options) {
     if(options.size() == 0) {
         throw std::invalid_argument("options should have at least one entry");
     }
@@ -50,4 +50,8 @@ unsigned int Console::ask(const string &question, const vector<string> &options)
         choice = parseInt(choiceStr);
     } while(choice == none || *choice < 1 || static_cast<unsigned int>(*choice) > options.size());
     return *choice-1;
+}
+
+void IOStreamConsole::print(const std::string &output) {
+  _output << output << std::flush;
 }

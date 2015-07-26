@@ -23,7 +23,7 @@ public:
         });
     }
 private:
-    Console _console;
+    IOStreamConsole _console;
 };
 
 class ConsoleTest: public ::testing::Test {
