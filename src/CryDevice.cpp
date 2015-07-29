@@ -37,23 +37,7 @@ namespace cryfs {
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ref<BlockStore> blockStore)
-: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(blockStore), GetEncryptionKey(config.get()))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
-}
-
-Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
-  string root_key = config->RootBlob();
-  if (root_key == "") {
-    auto new_key = CreateRootBlobAndReturnKey();
-    config->SetRootBlob(new_key.ToString());
-    config->save();
-    return new_key;
-  }
-
-  return Key::FromString(root_key);
-}
-
-CryDevice::Cipher::EncryptionKey CryDevice::GetEncryptionKey(CryConfig *config) {
-  return Cipher::EncryptionKey::FromString(config->EncryptionKey());
+: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(CreateEncryptedBlockStore(*config, std::move(blockStore))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
@@ -133,6 +117,33 @@ void CryDevice::RemoveBlob(const blockstore::Key &key) {
     _blobStore->remove(std::move(*blob));
   } else {
     //TODO Log error
+  }
+}
+
+Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
+  string root_key = config->RootBlob();
+  if (root_key == "") {
+    auto new_key = CreateRootBlobAndReturnKey();
+    config->SetRootBlob(new_key.ToString());
+    config->save();
+    return new_key;
+  }
+
+  return Key::FromString(root_key);
+}
+
+cpputils::unique_ref<blockstore::BlockStore> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore> baseBlockStore) {
+  //TODO Can we somehow ensure that the if/else chain here doesn't forget a valid value?
+  //TODO Test that CryFS is using the specified cipher
+  std::string cipherName = config.Cipher();
+  if (cipherName == "aes-256-gcm") {
+    using Cipher = blockstore::encrypted::AES256_GCM;
+    return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(config.EncryptionKey()));
+  } else if (cipherName == "aes-256-cfb") {
+    using Cipher = blockstore::encrypted::AES256_CFB;
+    return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(config.EncryptionKey()));
+  } else {
+    ASSERT(false, "Unknown cipher");
   }
 }
 

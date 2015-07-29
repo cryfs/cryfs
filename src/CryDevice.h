@@ -18,8 +18,6 @@ class CryDevice: public fspp::Device {
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
 
-  using Cipher = CryConfigLoader::Cipher;
-
   CryDevice(cpputils::unique_ref<CryConfig> config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
   virtual ~CryDevice();
 
@@ -34,13 +32,14 @@ public:
   boost::optional<cpputils::unique_ref<DirBlob>> LoadDirBlob(const boost::filesystem::path &path);
 
 private:
-  blockstore::Key GetOrCreateRootKey(CryConfig *config);
-  Cipher::EncryptionKey GetEncryptionKey(CryConfig *config);
-  blockstore::Key CreateRootBlobAndReturnKey();
 
   cpputils::unique_ref<blobstore::BlobStore> _blobStore;
 
   blockstore::Key _rootKey;
+
+  blockstore::Key GetOrCreateRootKey(CryConfig *config);
+  blockstore::Key CreateRootBlobAndReturnKey();
+  static cpputils::unique_ref<blockstore::BlockStore> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore> baseBlockStore);
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };
