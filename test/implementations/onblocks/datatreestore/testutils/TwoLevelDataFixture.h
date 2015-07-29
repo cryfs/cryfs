@@ -72,7 +72,6 @@ private:
       return leaf->numBytes();
     default:
       ASSERT(false, "Unknown size policy");
-      abort(); // The assert above already aborts. This is just to prevent the style checker from complaining about exiting a non-void function
     }
   }
 
