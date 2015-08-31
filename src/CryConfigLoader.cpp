@@ -43,24 +43,23 @@ void CryConfigLoader::_initializeConfigWithWeakKey(CryConfig *config) {
 }
 
 void CryConfigLoader::_generateCipher(CryConfig *config) {
-  vector<string> ciphers = {"aes-256-gcm", "aes-256-cfb"};
+  vector<string> ciphers = CryCiphers::supportedCiphers();
   int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
   config->SetCipher(ciphers[cipherIndex]);
+}
+
+void CryConfigLoader::_generateEncKey(CryConfig *config) {
+  _console->print("Generating secure encryption key...");
+  config->SetEncryptionKey(CryCiphers::find(config->Cipher()).createKey());
+  _console->print("done\n");
 }
 
 void CryConfigLoader::_generateTestCipher(CryConfig *config) {
   config->SetCipher("aes-256-gcm");
 }
 
-void CryConfigLoader::_generateEncKey(CryConfig *config) {
-  _console->print("Generating secure encryption key...");
-  auto new_key = Cipher::EncryptionKey::CreateOSRandom();
-  config->SetEncryptionKey(new_key.ToString());
-  _console->print("done\n");
-}
-
 void CryConfigLoader::_generateWeakEncKey(CryConfig *config) {
-  auto new_key = Cipher::EncryptionKey::CreatePseudoRandom();
+  auto new_key = blockstore::encrypted::AES256_GCM::EncryptionKey::CreatePseudoRandom();
   config->SetEncryptionKey(new_key.ToString());
 }
 

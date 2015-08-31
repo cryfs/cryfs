@@ -1,5 +1,5 @@
 #include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
-#include <messmer/blockstore/implementations/encrypted/ciphers/AES256_CFB.h>
+#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 #include "impl/DirBlob.h"
 #include "CryDevice.h"
 
@@ -133,18 +133,8 @@ Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
 }
 
 cpputils::unique_ref<blockstore::BlockStore> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore> baseBlockStore) {
-  //TODO Can we somehow ensure that the if/else chain here doesn't forget a valid value?
   //TODO Test that CryFS is using the specified cipher
-  std::string cipherName = config.Cipher();
-  if (cipherName == "aes-256-gcm") {
-    using Cipher = blockstore::encrypted::AES256_GCM;
-    return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(config.EncryptionKey()));
-  } else if (cipherName == "aes-256-cfb") {
-    using Cipher = blockstore::encrypted::AES256_CFB;
-    return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(config.EncryptionKey()));
-  } else {
-    ASSERT(false, "Unknown cipher");
-  }
+  return CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(baseBlockStore), config.EncryptionKey());
 }
 
 }

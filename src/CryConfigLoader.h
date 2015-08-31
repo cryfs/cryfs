@@ -5,16 +5,14 @@
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <boost/filesystem/path.hpp>
 #include "CryConfig.h"
-#include <messmer/blockstore/implementations/encrypted/ciphers/AES256_GCM.h>
+#include "CryCipher.h"
+#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 #include "utils/Console.h"
 
 namespace cryfs {
 
 class CryConfigLoader {
 public:
-  //TODO Get rid of this and use dynamically configured Cipher instead
-  using Cipher = blockstore::encrypted::AES256_GCM;
-
   CryConfigLoader();
   explicit CryConfigLoader(cpputils::unique_ref<Console> console);
 
