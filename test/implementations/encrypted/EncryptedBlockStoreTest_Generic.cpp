@@ -1,5 +1,4 @@
-#include "../../../implementations/encrypted/ciphers/AES256_GCM.h"
-#include "../../../implementations/encrypted/ciphers/AES256_CFB.h"
+#include "../../../implementations/encrypted/ciphers/ciphers.h"
 #include "../../../implementations/encrypted/ciphers/Cipher.h"
 #include "../../../implementations/encrypted/EncryptedBlockStore.h"
 #include "../../../implementations/testfake/FakeBlockStore.h"

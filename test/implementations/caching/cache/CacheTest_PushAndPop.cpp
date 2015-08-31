@@ -3,6 +3,7 @@
 #include "../../../../implementations/caching/cache/Cache.h"
 #include "testutils/MinimalKeyType.h"
 #include "testutils/MinimalValueType.h"
+#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using ::testing::Test;
 
