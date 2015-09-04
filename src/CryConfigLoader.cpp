@@ -63,7 +63,7 @@ bool CryConfigLoader::_showWarningForCipherAndReturnIfOk(const string &cipherNam
 }
 
 void CryConfigLoader::_generateEncKey(CryConfig *config) {
-  _console->print("Generating secure encryption key...");
+  _console->print("\nGenerating secure encryption key...");
   config->SetEncryptionKey(CryCiphers::find(config->Cipher()).createKey());
   _console->print("done\n");
 }
