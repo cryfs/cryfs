@@ -1,10 +1,4 @@
-#include <google/gtest/gtest.h>
-
-#include "../../src/utils/Console.h"
-
-#include <future>
-#include <thread>
-#include <messmer/cpp-utils/pipestream.h>
+#include "ConsoleTest.h"
 
 using std::stringstream;
 using std::string;
@@ -14,70 +8,16 @@ using std::ostream;
 using std::future;
 using std::initializer_list;
 
-class ConsoleThread {
-public:
-    ConsoleThread(ostream &ostr, istream &istr): _console(ostr, istr) {}
-    future<unsigned int> ask(const string &question, const vector<string> &options) {
-        return std::async(std::launch::async, [this, question, options]() {
-           return _console.ask(question, options);
-        });
-    }
-    void print(const string &output) {
-      _console.print(output);
-    }
-private:
-    IOStreamConsole _console;
-};
+class ConsoleTest_Ask: public ConsoleTest {};
 
-class ConsoleTest: public ::testing::Test {
-public:
-    ConsoleTest(): _inputStr(), _outputStr(), _input(&_inputStr), _output(&_outputStr), _console(_output, _input) {}
-
-    void EXPECT_OUTPUT_LINES(initializer_list<string> lines) {
-        for (const string &line : lines) {
-            EXPECT_OUTPUT_LINE(line);
-        }
-    }
-
-    void EXPECT_OUTPUT_LINE(const string &expected, char delimiter = '\n', const string &expected_after_delimiter = "") {
-        string actual;
-        std::getline(_output, actual, delimiter);
-        EXPECT_EQ(expected, actual);
-        for (char expected_char : expected_after_delimiter) {
-            char actual_char;
-            _output.get(actual_char);
-            EXPECT_EQ(expected_char, actual_char);
-        }
-    }
-
-    void sendInputLine(const string &line) {
-        _input << line << "\n" << std::flush;
-    }
-
-    future<unsigned int> ask(const string &question, const vector<string> &options) {
-        return _console.ask(question, options);
-    }
-
-    void print(const string &output) {
-      _console.print(output);
-    }
-
-private:
-    cpputils::pipestream _inputStr;
-    cpputils::pipestream _outputStr;
-    std::iostream _input;
-    std::iostream _output;
-    ConsoleThread _console;
-};
-
-TEST_F(ConsoleTest, AskCrashesWithoutOptions) {
+TEST_F(ConsoleTest_Ask, CrashesWithoutOptions) {
   EXPECT_THROW(
     (ask("My Question?", {}).get()),
     std::invalid_argument
   );
 }
 
-TEST_F(ConsoleTest, AskOneOption) {
+TEST_F(ConsoleTest_Ask, OneOption) {
   auto chosen = ask("My Question?", {"First Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -88,7 +28,7 @@ TEST_F(ConsoleTest, AskOneOption) {
   EXPECT_EQ(0, chosen.get());
 }
 
-TEST_F(ConsoleTest, AskTwoOptions_ChooseFirst) {
+TEST_F(ConsoleTest_Ask, TwoOptions_ChooseFirst) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -100,7 +40,7 @@ TEST_F(ConsoleTest, AskTwoOptions_ChooseFirst) {
   EXPECT_EQ(0, chosen.get());
 }
 
-TEST_F(ConsoleTest, AskTwoOptions_ChooseSecond) {
+TEST_F(ConsoleTest_Ask, TwoOptions_ChooseSecond) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -112,7 +52,7 @@ TEST_F(ConsoleTest, AskTwoOptions_ChooseSecond) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, AskThreeOptions_ChooseFirst) {
+TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseFirst) {
   auto chosen = ask("My Other Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
     "My Other Question?",
@@ -125,7 +65,7 @@ TEST_F(ConsoleTest, AskThreeOptions_ChooseFirst) {
   EXPECT_EQ(0, chosen.get());
 }
 
-TEST_F(ConsoleTest, AskThreeOptions_ChooseSecond) {
+TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseSecond) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -138,7 +78,7 @@ TEST_F(ConsoleTest, AskThreeOptions_ChooseSecond) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, AskThreeOptions_ChooseThird) {
+TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseThird) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -151,7 +91,7 @@ TEST_F(ConsoleTest, AskThreeOptions_ChooseThird) {
   EXPECT_EQ(2, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputWithLeadingSpaces) {
+TEST_F(ConsoleTest_Ask, InputWithLeadingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -163,7 +103,7 @@ TEST_F(ConsoleTest, InputWithLeadingSpaces) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputWithFollowingSpaces) {
+TEST_F(ConsoleTest_Ask, InputWithFollowingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -175,7 +115,7 @@ TEST_F(ConsoleTest, InputWithFollowingSpaces) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputWithLeadingAndFollowingSpaces) {
+TEST_F(ConsoleTest_Ask, InputWithLeadingAndFollowingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -187,7 +127,7 @@ TEST_F(ConsoleTest, InputWithLeadingAndFollowingSpaces) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputEmptyLine) {
+TEST_F(ConsoleTest_Ask, InputEmptyLine) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -203,7 +143,7 @@ TEST_F(ConsoleTest, InputEmptyLine) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputWrongNumbers) {
+TEST_F(ConsoleTest_Ask, InputWrongNumbers) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -225,7 +165,7 @@ TEST_F(ConsoleTest, InputWrongNumbers) {
   EXPECT_EQ(1, chosen.get());
 }
 
-TEST_F(ConsoleTest, InputNonNumbers) {
+TEST_F(ConsoleTest_Ask, InputNonNumbers) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option"});
   EXPECT_OUTPUT_LINES({
     "My Question?",
@@ -245,9 +185,4 @@ TEST_F(ConsoleTest, InputNonNumbers) {
   EXPECT_OUTPUT_LINE("Your choice [1-2]", ':', " ");
   sendInputLine("2");
   EXPECT_EQ(1, chosen.get());
-}
-
-TEST_F(ConsoleTest, TestPrint) {
-  print("Bla Blub");
-  EXPECT_OUTPUT_LINE("Bla Blu", 'b'); // 'b' is the delimiter for reading
 }

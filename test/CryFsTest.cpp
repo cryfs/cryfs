@@ -26,6 +26,9 @@ class MockConsole: public Console {
   unsigned int ask(const std::string &, const std::vector<std::string> &) override {
     return 0;
   }
+  bool askYesNo(const std::string &) override {
+    return true;
+  }
 };
 
 class CryFsTest: public Test {
