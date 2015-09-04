@@ -35,6 +35,8 @@ private:
   void _generateWeakEncKey(CryConfig *config); // TODO Rename to _generateTestEncKey
   void _generateTestCipher(CryConfig *config);
 
+  bool _showWarningForCipherAndReturnIfOk(const std::string &cipherName);
+
   cpputils::unique_ref<Console> _console;
 };
 

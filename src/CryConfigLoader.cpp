@@ -43,9 +43,23 @@ void CryConfigLoader::_initializeConfigWithWeakKey(CryConfig *config) {
 }
 
 void CryConfigLoader::_generateCipher(CryConfig *config) {
-  vector<string> ciphers = CryCiphers::supportedCiphers();
-  int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
-  config->SetCipher(ciphers[cipherIndex]);
+  vector<string> ciphers = CryCiphers::supportedCipherNames();
+  string cipherName = "";
+  bool askAgain = true;
+  while(askAgain) {
+    int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
+    cipherName = ciphers[cipherIndex];
+    askAgain = !_showWarningForCipherAndReturnIfOk(cipherName);
+  };
+  config->SetCipher(cipherName);
+}
+
+bool CryConfigLoader::_showWarningForCipherAndReturnIfOk(const string &cipherName) {
+  auto warning = CryCiphers::find(cipherName).warning();
+  if (warning == boost::none) {
+    return true;
+  }
+  return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?");
 }
 
 void CryConfigLoader::_generateEncKey(CryConfig *config) {
