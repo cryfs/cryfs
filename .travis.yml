@@ -8,6 +8,7 @@ install:
   && ./update_gcc_version.sh 4.9
   && rm update_gcc_version.sh
 - sudo apt-get install libfuse-dev
+- sudo cp -a /dev/urandom /dev/random
 before_script:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
   && chmod +x setup_biicode_project.sh
