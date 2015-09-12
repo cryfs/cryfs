@@ -1,4 +1,4 @@
-# cryfs
+# cryfs [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
 Cryptographic filesystem for the cloud
 
 See http://www.cryfs.org
