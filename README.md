@@ -9,3 +9,4 @@ This repository contains the filesystem implementation. There are submodules in 
   - [Blobstore](https://github.com/cryfs/blobstore): Store resizeable blobs of data using blocks from a blockstore
   - [ParallelAccessStore](https://github.com/cryfs/parallelaccessstore): Concurrency primitive for Blockstore/Blobstore
   - [Fs++](https://github.com/cryfs/fspp): Implement a file system against a platform independent interface
+
