@@ -4,7 +4,7 @@
 
 #include <messmer/blockstore/interface/BlockStore.h>
 #include <messmer/blobstore/interface/BlobStore.h>
-#include "CryConfigLoader.h"
+#include "../config/CryConfigLoader.h"
 
 #include <boost/filesystem.hpp>
 #include <messmer/fspp/fs_interface/Device.h>

@@ -2,7 +2,7 @@
 #include <messmer/fspp/fstest/FsTest.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 
-#include "../src/CryDevice.h"
+#include "../../src/filesystem/CryDevice.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

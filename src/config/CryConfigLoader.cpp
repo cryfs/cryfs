@@ -4,6 +4,8 @@
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Console;
+using cpputils::IOStreamConsole;
 using boost::optional;
 using boost::none;
 using std::vector;

@@ -7,14 +7,14 @@
 #include "CryConfig.h"
 #include "CryCipher.h"
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
-#include "utils/Console.h"
+#include <messmer/cpp-utils/io/Console.h>
 
 namespace cryfs {
 
 class CryConfigLoader {
 public:
   CryConfigLoader();
-  explicit CryConfigLoader(cpputils::unique_ref<Console> console);
+  explicit CryConfigLoader(cpputils::unique_ref<cpputils::Console> console);
 
   cpputils::unique_ref<CryConfig> loadOrCreate(const boost::filesystem::path &filename);
 
@@ -37,7 +37,7 @@ private:
 
   bool _showWarningForCipherAndReturnIfOk(const std::string &cipherName);
 
-  cpputils::unique_ref<Console> _console;
+  cpputils::unique_ref<cpputils::Console> _console;
 };
 
 }

@@ -7,8 +7,8 @@
 
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
-#include "CryDevice.h"
-#include "CryConfigLoader.h"
+#include "filesystem/CryDevice.h"
+#include "config/CryConfigLoader.h"
 
 namespace bf = boost::filesystem;
 

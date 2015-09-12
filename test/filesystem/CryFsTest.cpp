@@ -3,10 +3,10 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/pointer/cast.h>
 #include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include "../src/CryDevice.h"
-#include "../src/CryDir.h"
-#include "../src/CryFile.h"
-#include "../src/CryOpenFile.h"
+#include "../../src/filesystem/CryDevice.h"
+#include "../../src/filesystem/CryDir.h"
+#include "../../src/filesystem/CryFile.h"
+#include "../../src/filesystem/CryOpenFile.h"
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -16,6 +16,7 @@ using cpputils::TempFile;
 using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
+using cpputils::Console;
 using blockstore::ondisk::OnDiskBlockStore;
 
 namespace bf = boost::filesystem;
