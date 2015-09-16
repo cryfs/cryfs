@@ -10,15 +10,20 @@
 #include "filesystem/CryDevice.h"
 #include "config/CryConfigLoader.h"
 
+#include "Version.h"
+
 namespace bf = boost::filesystem;
 
 using blockstore::ondisk::OnDiskBlockStore;
 using blockstore::inmemory::InMemoryBlockStore;
 
 using cpputils::make_unique_ref;
+using std::cout;
+using std::endl;
 
 int main (int argc, char *argv[])
 {
+  cout << "CryFS Version "<<version::VERSION_STRING << endl;
   auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
   auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
   cryfs::CryDevice device(std::move(config), std::move(blockStore));
