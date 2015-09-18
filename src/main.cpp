@@ -21,20 +21,20 @@ using cpputils::make_unique_ref;
 using std::cout;
 using std::endl;
 
-int main (int argc, char *argv[])
-{
-  cout << "CryFS Version " << gitversion::VERSION.toString() << endl;
-  if (gitversion::VERSION.isDev()) {
-    cout << "WARNING! This is a development version based on git commit " << gitversion::VERSION.gitCommitId().toStdString() << ". Please do not use in production!" << endl;
-  } else if (!gitversion::VERSION.isStable()) {
-    cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-  }
-  cout << endl;
-  auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
-  auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
-  cryfs::CryDevice device(std::move(config), std::move(blockStore));
-  fspp::FilesystemImpl fsimpl(&device);
-  fspp::fuse::Fuse fuse(&fsimpl);
-  fuse.run(argc, argv);
-  return 0;
+int main(int argc, char *argv[]) {
+    cout << "CryFS Version " << gitversion::VERSION.toString() << endl;
+    if (gitversion::VERSION.isDev()) {
+        cout << "WARNING! This is a development version based on git commit " << gitversion::VERSION.gitCommitId() <<
+                ". Please do not use in production!" << endl;
+    } else if (!gitversion::VERSION.isStable()) {
+        cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
+    }
+    cout << endl;
+    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
+    auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
+    cryfs::CryDevice device(std::move(config), std::move(blockStore));
+    fspp::FilesystemImpl fsimpl(&device);
+    fspp::fuse::Fuse fuse(&fsimpl);
+    fuse.run(argc, argv);
+    return 0;
 }
