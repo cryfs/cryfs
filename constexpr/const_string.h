@@ -52,7 +52,7 @@ namespace cpputils {
             return !operator==(rhs);
         }
 
-        std::string toStdString() {
+        std::string toStdString() const {
             return std::string(_str, _size);
         }
 
