@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <string>
+#include <iostream>
 #include "impl/digit_parser.h"
 
 namespace cpputils {
@@ -71,6 +72,11 @@ namespace cpputils {
         const char *_str;
         unsigned int _size;
     };
+
+    std::ostream &operator<<(std::ostream &stream, const const_string &str) {
+        stream << str.toStdString();
+        return stream;
+    }
 }
 
 #endif

@@ -2,6 +2,8 @@
 #include <google/gtest/gtest.h>
 
 using namespace cpputils;
+using std::ostringstream;
+using std::string;
 
 // ----------------------------------------------
 // size()
@@ -118,8 +120,24 @@ static_assert(const_string("") == const_string("").dropUIntPrefix(), "\"\" shoul
 // toStdString()
 // ----------------------------------------------
 TEST(const_string_test, toStdString) {
-  EXPECT_EQ("", const_string("").toStdString());
-  EXPECT_EQ("a", const_string("a").toStdString());
-  EXPECT_EQ("abc", const_string("abc").toStdString());
-  EXPECT_EQ("abc", const_string("prefix_abc_suffix").substr(7,3).toStdString());
+    EXPECT_EQ("", const_string("").toStdString());
+    EXPECT_EQ("a", const_string("a").toStdString());
+    EXPECT_EQ("abc", const_string("abc").toStdString());
+    EXPECT_EQ("abc", const_string("prefix_abc_suffix").substr(7,3).toStdString());
+}
+
+// ----------------------------------------------
+// operator<<
+// ----------------------------------------------
+void EXPECT_OUTPUTS(const string &expected, const const_string &testObj) {
+    ostringstream stream;
+    stream << testObj;
+    EXPECT_EQ(expected, stream.str());
+}
+
+TEST(const_string_test, OutputOperator) {
+    EXPECT_OUTPUTS("", const_string(""));
+    EXPECT_OUTPUTS("a", const_string("a"));
+    EXPECT_OUTPUTS("abc", const_string("abc"));
+    EXPECT_OUTPUTS("abc", const_string("prefix_abc_suffix").substr(7,3));
 }
