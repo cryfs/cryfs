@@ -1,4 +1,5 @@
 INCLUDE(messmer/cmake/tools)
+INCLUDE(messmer/gitversion/cmake)
 
 SETUP_GOOGLETEST()
 
@@ -9,7 +10,7 @@ ACTIVATE_CPP14()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
-ADD_GIT_VERSION(git_version.h)
+GIT_VERSION_INIT()
 
 ENABLE_STYLE_WARNINGS()
 
