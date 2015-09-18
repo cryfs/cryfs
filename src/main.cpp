@@ -24,7 +24,7 @@ using std::endl;
 int main (int argc, char *argv[])
 {
   cout << "CryFS Version "<<version::VERSION.toString() << endl;
-  if (version::COMMITS_SINCE_TAG != 0) {
+  if (version::VERSION.is_dev()) {
     cout << "WARNING! This is a development version based on git commit " << version::GIT_COMMIT_ID << ". Please do not use in production!" << endl;
   } else if (!version::VERSION.is_stable()) {
     cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;

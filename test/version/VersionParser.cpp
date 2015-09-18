@@ -29,10 +29,13 @@ static_assert(VersionTag::BETA == VersionParser::parseTag("beta"), "beta version
 static_assert(VersionTag::RC1 == VersionParser::parseTag("rc1"), "rc1 version tag should be parseable");
 static_assert(VersionTag::FINAL == VersionParser::parseTag(""), "final version tag should be parseable");
 
-static_assert(Version(1, 0, VersionTag::ALPHA) == VersionParser::parse("1.0alpha"), "1.0alpha should parse correctly");
-static_assert(Version(12, 34, VersionTag::BETA) == VersionParser::parse("12.34beta"), "12.34beta should parse correctly");
-static_assert(Version(0, 8, VersionTag::RC1) == VersionParser::parse("0.8rc1"), "0.8rc1 should parse correctly");
-static_assert(Version(1, 2, VersionTag::FINAL) == VersionParser::parse("1.2"), "1.2 should parse correctly");
-static_assert(Version(1, 2, VersionTag::FINAL) == VersionParser::parse("1.02"), "1.02 should parse correctly");
-static_assert(Version(1, 20, VersionTag::FINAL) == VersionParser::parse("1.20"), "1.20 should parse correctly");
-static_assert(Version(1, 20, VersionTag::FINAL) == VersionParser::parse("1.020"), "1.020 should parse correctly");
+static_assert(Version(1, 0, VersionTag::ALPHA, 0, "commitid") == VersionParser::parse("1.0alpha", 0, "commitid"), "1.0alpha should parse correctly");
+static_assert(Version(12, 34, VersionTag::BETA, 0, "commitid") == VersionParser::parse("12.34beta", 0, "commitid"), "12.34beta should parse correctly");
+static_assert(Version(0, 8, VersionTag::RC1, 0, "commitid") == VersionParser::parse("0.8rc1", 0, "commitid"), "0.8rc1 should parse correctly");
+static_assert(Version(1, 2, VersionTag::FINAL, 0, "commitid") == VersionParser::parse("1.2", 0, "commitid"), "1.2 should parse correctly");
+static_assert(Version(1, 2, VersionTag::FINAL, 0, "commitid") == VersionParser::parse("1.02", 0, "commitid"), "1.02 should parse correctly");
+static_assert(Version(1, 20, VersionTag::FINAL, 0, "commitid") == VersionParser::parse("1.20", 0, "commitid"), "1.20 should parse correctly");
+static_assert(Version(1, 20, VersionTag::FINAL, 0, "commitid") == VersionParser::parse("1.020", 0, "commitid"), "1.020 should parse correctly");
+
+static_assert(Version(1, 20, VersionTag::FINAL, 103, "commitid") == VersionParser::parse("1.020", 103, "commitid"), "commitsSinceVersion should parse correctly");
+static_assert(Version(1, 20, VersionTag::FINAL, 103, "other_commitid") == VersionParser::parse("1.020", 103, "other_commitid"), "commitId should parse correctly");

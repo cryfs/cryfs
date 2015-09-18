@@ -19,8 +19,10 @@ namespace version {
 
     class Version {
     public:
-        constexpr Version(unsigned int major, unsigned int minor, VersionTag tag)
-                : _major(major), _minor(minor), _tag(tag) { }
+        constexpr Version(unsigned int major, unsigned int minor, VersionTag tag, unsigned int commitsSinceVersion,
+                          const cpputils::const_string &gitCommitId)
+                : _major(major), _minor(minor), _tag(tag), _commitsSinceVersion(commitsSinceVersion),
+                  _gitCommitId(gitCommitId) { }
 
         constexpr unsigned int major() {
             return _major;
@@ -34,8 +36,12 @@ namespace version {
             return _tag;
         }
 
+        constexpr bool is_dev() {
+            return _commitsSinceVersion != 0;
+        }
+
         constexpr bool is_stable() {
-            return _tag == VersionTag::FINAL;
+            return (!is_dev()) && _tag == VersionTag::FINAL;
         }
 
         constexpr bool operator==(const Version &rhs) {
@@ -47,14 +53,24 @@ namespace version {
         }
 
         std::string toString() const {
-            return std::to_string(_major) + "." + std::to_string(_minor) + VersionTagToString(_tag).toStdString();
+            if (is_dev()) {
+                return _versionTagString() + "-dev" + std::to_string(_commitsSinceVersion) + "-" + _gitCommitId.toStdString();
+            } else {
+                return _versionTagString();
+            }
         }
 
     private:
 
+        std::string _versionTagString() const {
+            return std::to_string(_major) + "." + std::to_string(_minor) + VersionTagToString(_tag).toStdString();
+        }
+
         const unsigned int _major;
         const unsigned int _minor;
         const VersionTag _tag;
+        const unsigned int _commitsSinceVersion;
+        const cpputils::const_string _gitCommitId;
     };
 }
 
