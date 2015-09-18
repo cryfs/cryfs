@@ -2,13 +2,14 @@
 #define MESSMER_CRYFS_VERSION_H
 
 #include <stdexcept>
+#include <messmer/cpp-utils/constexpr/const_string.h>
 
 namespace version {
     enum class VersionTag : unsigned char {
         ALPHA, BETA, RC1, FINAL
     };
 
-    constexpr const char *VersionTagToString(VersionTag tag) {
+    constexpr cpputils::const_string VersionTagToString(VersionTag tag) {
         return (tag == VersionTag::ALPHA) ? "alpha" :
                (tag == VersionTag::BETA) ? "beta" :
                (tag == VersionTag::RC1) ? "rc1" :
@@ -46,7 +47,7 @@ namespace version {
         }
 
         std::string toString() const {
-            return std::to_string(_major) + "." + std::to_string(_minor) + VersionTagToString(_tag);
+            return std::to_string(_major) + "." + std::to_string(_minor) + VersionTagToString(_tag).toStdString();
         }
 
     private:

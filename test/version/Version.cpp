@@ -4,11 +4,12 @@
 #include <google/gtest/gtest.h>
 
 using namespace version;
+using cpputils::const_string;
 
-static_assert(0 == strcmp("alpha", VersionTagToString(VersionTag::ALPHA)), "VersionTag::ALPHA toString");
-static_assert(0 == strcmp("beta", VersionTagToString(VersionTag::BETA)), "VersionTag::BETA toString");
-static_assert(0 == strcmp("rc1", VersionTagToString(VersionTag::RC1)), "VersionTag::RC1 toString");
-static_assert(0 == strlen(VersionTagToString(VersionTag::FINAL)), "VersionTag::FINAL toString");
+static_assert(const_string("alpha") == VersionTagToString(VersionTag::ALPHA), "VersionTag::ALPHA toString");
+static_assert(const_string("beta") == VersionTagToString(VersionTag::BETA), "VersionTag::BETA toString");
+static_assert(const_string("rc1") == VersionTagToString(VersionTag::RC1), "VersionTag::RC1 toString");
+static_assert(const_string("") == VersionTagToString(VersionTag::FINAL), "VersionTag::FINAL toString");
 
 static_assert(Version(1, 0, VersionTag::ALPHA) == Version(1, 0, VersionTag::ALPHA), "Equality for equals");
 static_assert(!(Version(1, 0, VersionTag::ALPHA) != Version(1, 0, VersionTag::ALPHA)), "Inequality for equals");
