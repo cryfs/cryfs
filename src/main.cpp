@@ -10,7 +10,7 @@
 #include "filesystem/CryDevice.h"
 #include "config/CryConfigLoader.h"
 
-#include <messmer/gitversion/gitversion.h>
+#include <gitversion/version.h>
 
 namespace bf = boost::filesystem;
 
@@ -22,11 +22,11 @@ using std::cout;
 using std::endl;
 
 int main(int argc, char *argv[]) {
-    cout << "CryFS Version " << gitversion::VERSION.toString() << endl;
-    if (gitversion::VERSION.isDev()) {
-        cout << "WARNING! This is a development version based on git commit " << gitversion::VERSION.gitCommitId() <<
+    cout << "CryFS Version " << version::VERSION_STRING << endl;
+    if (version::IS_DEV_VERSION) {
+        cout << "WARNING! This is a development version based on git commit " << version::GIT_COMMIT_ID <<
                 ". Please do not use in production!" << endl;
-    } else if (!gitversion::VERSION.isStable()) {
+    } else if (!version::IS_STABLE_VERSION) {
         cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
     }
     cout << endl;
