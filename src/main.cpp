@@ -21,20 +21,28 @@ using cpputils::make_unique_ref;
 using std::cout;
 using std::endl;
 
-int main(int argc, char *argv[]) {
+void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
     if (version::IS_DEV_VERSION) {
         cout << "WARNING! This is a development version based on git commit " << version::GIT_COMMIT_ID <<
-                ". Please do not use in production!" << endl;
+        ". Please do not use in production!" << endl;
     } else if (!version::IS_STABLE_VERSION) {
         cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
     }
     cout << endl;
-    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
+}
+
+void runFilesystem(int argc, char *argv[]) {
     auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
+    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
     cryfs::CryDevice device(std::move(config), std::move(blockStore));
     fspp::FilesystemImpl fsimpl(&device);
     fspp::fuse::Fuse fuse(&fsimpl);
     fuse.run(argc, argv);
+}
+
+int main(int argc, char *argv[]) {
+    showVersion();
+    runFilesystem(argc, argv);
     return 0;
 }
