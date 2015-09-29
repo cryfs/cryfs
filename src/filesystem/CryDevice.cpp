@@ -113,11 +113,8 @@ optional<unique_ref<blobstore::Blob>> CryDevice::LoadBlob(const blockstore::Key 
 
 void CryDevice::RemoveBlob(const blockstore::Key &key) {
   auto blob = _blobStore->load(key);
-  if(blob) {
-    _blobStore->remove(std::move(*blob));
-  } else {
-    //TODO Log error
-  }
+  ASSERT(blob != none, "Blob not found");
+  _blobStore->remove(std::move(*blob));
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
