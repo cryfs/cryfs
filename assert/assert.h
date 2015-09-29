@@ -11,11 +11,21 @@
 #include "AssertFailed.h"
 #include <iostream>
 #include <string>
+#include <execinfo.h>
 
 namespace cpputils {
     namespace _assert {
         inline std::string format(const char *expr, const char *message, const char *file, int line) {
-            return std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message;
+            // get void*'s for all entries on the stack
+            void *array[10];
+            size_t size = backtrace(array, sizeof(array));
+            char **backtrace_str = backtrace_symbols(array, sizeof(backtrace_str));
+            std::string result = std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message+"\n\n";
+            for (unsigned int i = 0; i < size; ++i) {
+                result += std::string(backtrace_str[i]) + "\n";
+            }
+            free(backtrace_str);
+            return result;
         }
 
         inline void assert_fail_release [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
