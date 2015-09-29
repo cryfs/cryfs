@@ -226,8 +226,6 @@ void FilesystemImpl::access(const bf::path &path, int mask) {
 }
 
 int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
-  //TODO Creating the file opens and closes it. We then reopen it afterwards.
-  //     This is slow. Improve!
   PROFILE(_createAndOpenFileNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_createAndOpenFileNanosec_withoutLoading);
