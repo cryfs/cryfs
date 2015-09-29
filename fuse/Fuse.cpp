@@ -352,6 +352,7 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
 }
 
 int Fuse::chmod(const bf::path &path, mode_t mode) {
+  //printf("chmod(%s, %d)\n", path.c_str(), mode);
   try {
 	_fs->chmod(path, mode);
 	return 0;
@@ -364,6 +365,7 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
 }
 
 int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
+  //printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
   try {
 	_fs->chown(path, uid, gid);
 	return 0;
