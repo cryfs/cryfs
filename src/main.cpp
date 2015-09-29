@@ -9,17 +9,21 @@
 #include "messmer/fspp/impl/FilesystemImpl.h"
 #include "filesystem/CryDevice.h"
 #include "config/CryConfigLoader.h"
+#include "program_options/Parser.h"
 
 #include <gitversion/version.h>
 
+using namespace cryfs;
 namespace bf = boost::filesystem;
 
 using blockstore::ondisk::OnDiskBlockStore;
 using blockstore::inmemory::InMemoryBlockStore;
+using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
 using std::cout;
 using std::endl;
+using std::vector;
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -32,17 +36,20 @@ void showVersion() {
     cout << endl;
 }
 
-void runFilesystem(int argc, char *argv[]) {
-    auto config = cryfs::CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
-    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path("/home/heinzi/cryfstest/root"));
-    cryfs::CryDevice device(std::move(config), std::move(blockStore));
+void runFilesystem(const ProgramOptions &options) {
+    auto config = CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
+    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
+    CryDevice device(std::move(config), std::move(blockStore));
     fspp::FilesystemImpl fsimpl(&device);
     fspp::fuse::Fuse fuse(&fsimpl);
-    fuse.run(argc, argv);
+
+    vector<char*> fuseOptions = options.fuseOptions();
+    fuse.run(fuseOptions.size(), fuseOptions.data());
 }
 
 int main(int argc, char *argv[]) {
     showVersion();
-    runFilesystem(argc, argv);
+    ProgramOptions options = program_options::Parser(argc, argv).parse();
+    runFilesystem(options);
     return 0;
 }
