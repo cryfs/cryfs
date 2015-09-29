@@ -6,6 +6,10 @@
 #include "../fuse/Filesystem.h"
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <atomic>
+
+//Remove this line if you don't want profiling
+#define FSPP_PROFILE 1
 
 namespace fspp {
 class Node;
@@ -48,6 +52,43 @@ private:
 	cpputils::unique_ref<Dir> LoadDir(const boost::filesystem::path &path);
 	cpputils::unique_ref<Symlink> LoadSymlink(const boost::filesystem::path &path);
 	int openFile(const File &file, int flags);
+
+#ifdef FSPP_PROFILE
+    std::atomic<uint64_t> _loadFileNanosec;
+    std::atomic<uint64_t> _loadDirNanosec;
+    std::atomic<uint64_t> _loadSymlinkNanosec;
+    std::atomic<uint64_t> _openFileNanosec;
+    std::atomic<uint64_t> _flushNanosec;
+    std::atomic<uint64_t> _closeFileNanosec;
+    std::atomic<uint64_t> _lstatNanosec;
+    std::atomic<uint64_t> _fstatNanosec;
+    std::atomic<uint64_t> _chmodNanosec;
+    std::atomic<uint64_t> _chownNanosec;
+    std::atomic<uint64_t> _truncateNanosec;
+    std::atomic<uint64_t> _ftruncateNanosec;
+    std::atomic<uint64_t> _readNanosec;
+    std::atomic<uint64_t> _writeNanosec;
+    std::atomic<uint64_t> _fsyncNanosec;
+    std::atomic<uint64_t> _fdatasyncNanosec;
+    std::atomic<uint64_t> _accessNanosec;
+    std::atomic<uint64_t> _createAndOpenFileNanosec;
+    std::atomic<uint64_t> _createAndOpenFileNanosec_withoutLoading;
+    std::atomic<uint64_t> _mkdirNanosec;
+    std::atomic<uint64_t> _mkdirNanosec_withoutLoading;
+    std::atomic<uint64_t> _rmdirNanosec;
+    std::atomic<uint64_t> _rmdirNanosec_withoutLoading;
+    std::atomic<uint64_t> _unlinkNanosec;
+    std::atomic<uint64_t> _unlinkNanosec_withoutLoading;
+    std::atomic<uint64_t> _renameNanosec;
+    std::atomic<uint64_t> _readDirNanosec;
+    std::atomic<uint64_t> _readDirNanosec_withoutLoading;
+    std::atomic<uint64_t> _utimensNanosec;
+    std::atomic<uint64_t> _statfsNanosec;
+    std::atomic<uint64_t> _createSymlinkNanosec;
+    std::atomic<uint64_t> _createSymlinkNanosec_withoutLoading;
+    std::atomic<uint64_t> _readSymlinkNanosec;
+    std::atomic<uint64_t> _readSymlinkNanosec_withoutLoading;
+#endif
 
 	Device *_device;
 	FuseOpenFileList _open_files;
