@@ -96,10 +96,8 @@ void Cache<Key, Value>::_popOldEntries() {
   // This function can be called in parallel by multiple threads and will then cause the Value destructors
   // to be called in parallel. The call to _popOldEntry() is synchronized to avoid race conditions,
   // but the Value destructor is called in this function which is not synchronized.
-  int num = 0;
   boost::optional<Value> oldEntry = _popOldEntry();
   while (oldEntry != boost::none) {
-    ++num;
     oldEntry = _popOldEntry();
   }
 }
