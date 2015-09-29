@@ -25,8 +25,9 @@ ProgramOptions Parser::parse() const {
 
     string baseDir = vm["base-dir"].as<string>();
     string mountDir = vm["mount-dir"].as<string>();
+    string configFile = vm["config"].as<string>();
 
-    return ProgramOptions(baseDir, mountDir, options.second);
+    return ProgramOptions(baseDir, mountDir, configFile, options.second);
 }
 
 po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options) {
@@ -58,6 +59,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
     po::options_description options("Allowed options");
     options.add_options()
             ("help,h", "show help message")
+            ("config,c", po::value<string>()->required(), "Config file")
             ;
     desc->add(options);
 }
@@ -74,7 +76,7 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
 }
 
 [[noreturn]] void Parser::_showHelpAndExit() {
-    cerr << "Usage: cryfs [options] rootDir mountPoint [-- [FUSE Mount Options]]\n";
+    cerr << "Usage: cryfs --config configFile [other options] rootDir mountPoint [-- [FUSE Mount Options]]\n";
     po::options_description desc;
     _addAllowedOptions(&desc);
     cerr << desc << "\n";

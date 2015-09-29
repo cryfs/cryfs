@@ -37,7 +37,7 @@ void showVersion() {
 }
 
 void runFilesystem(const ProgramOptions &options) {
-    auto config = CryConfigLoader().loadOrCreate(bf::path("/home/heinzi/cryfstest/config.json"));
+    auto config = CryConfigLoader().loadOrCreate(bf::path(options.configFile()));
     auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
     CryDevice device(std::move(config), std::move(blockStore));
     fspp::FilesystemImpl fsimpl(&device);

@@ -26,6 +26,13 @@ TEST_F(ProgramOptionsParserTest, MissingDir) {
     );
 }
 
+TEST_F(ProgramOptionsParserTest, ConfigFileMissing) {
+    EXPECT_DEATH(
+            parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"}),
+    "Usage:"
+    );
+}
+
 TEST_F(ProgramOptionsParserTest, HelpLongOption) {
     EXPECT_DEATH(
             parse({"./myExecutable", "--help"}),
@@ -41,14 +48,14 @@ TEST_F(ProgramOptionsParserTest, HelpShortOption) {
 }
 
 TEST_F(ProgramOptionsParserTest, NoSpecialOptions) {
-    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    ProgramOptions options = parse({"./myExecutable", "--config", "/home/user/configFile", "/home/user/baseDir", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
     EXPECT_EQ("/home/user/mountDir", options.mountDir());
     EXPECT_VECTOR_EQ({"./myExecutable", "/home/user/mountDir"}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
-    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "--", "-f"});
+    ProgramOptions options = parse({"./myExecutable", "--config", "/home/user/configFile", "/home/user/baseDir", "/home/user/mountDir", "--", "-f"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
     EXPECT_EQ("/home/user/mountDir", options.mountDir());
     EXPECT_VECTOR_EQ({"./myExecutable", "/home/user/mountDir", "-f"}, options.fuseOptions());
