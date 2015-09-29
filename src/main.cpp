@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <messmer/cpp-utils/assert/backtrace.h>
 
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
@@ -24,6 +25,8 @@ using cpputils::make_unique_ref;
 using std::cout;
 using std::endl;
 using std::vector;
+
+//TODO Support files > 4GB
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -48,6 +51,8 @@ void runFilesystem(const ProgramOptions &options) {
 }
 
 int main(int argc, char *argv[]) {
+    cpputils::showBacktraceOnSigSegv();
+
     showVersion();
     ProgramOptions options = program_options::Parser(argc, argv).parse();
     runFilesystem(options);

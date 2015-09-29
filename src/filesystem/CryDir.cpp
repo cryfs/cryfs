@@ -44,7 +44,6 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
   auto child = device()->CreateBlob();
   Key childkey = child->key();
   (*blob)->AddChildFile(name, childkey, mode, uid, gid);
-  //TODO Do we need a return value in createDir for fspp? If not, change fspp Dir interface!
   auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
   return make_unique_ref<CryOpenFile>(std::move(childblob));
 }

@@ -27,7 +27,6 @@ namespace cryfs {
 
 DirBlob::DirBlob(unique_ref<Blob> blob, CryDevice *device) :
     _device(device), _blob(std::move(blob)), _entries(), _changed(false) {
-  //TODO generally everywhere: asserts are bad, because they crash the filesystem. Rather return a fuse error!
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
