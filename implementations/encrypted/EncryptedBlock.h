@@ -151,6 +151,7 @@ void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
 
 template<class Cipher>
 cpputils::unique_ref<Block> EncryptedBlock<Cipher>::releaseBlock() {
+  _encryptToBaseBlock();
   return std::move(_baseBlock);
 }
 

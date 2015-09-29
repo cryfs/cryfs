@@ -100,6 +100,14 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
   EXPECT_EQ(1, blockStore->numBlocks());
 }
 
+TYPED_TEST_P(BlockStoreTest, CanRemoveModifiedBlock) {
+    auto blockStore = this->fixture.createBlockStore();
+    auto block = blockStore->create(cpputils::Data(5));
+    block->write("data", 0, 4);
+    blockStore->remove(std::move(block));
+    EXPECT_EQ(0, blockStore->numBlocks());
+}
+
 #include "BlockStoreTest_Size.h"
 #include "BlockStoreTest_Data.h"
 
@@ -129,7 +137,8 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     NumBlocksIsCorrectAfterRemovingABlock,
     WriteAndReadImmediately,
     WriteAndReadAfterLoading,
-    OverwriteAndRead
+    OverwriteAndRead,
+    CanRemoveModifiedBlock
 );
 
 
