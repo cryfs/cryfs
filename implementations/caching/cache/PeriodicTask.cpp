@@ -17,6 +17,9 @@ PeriodicTask::PeriodicTask(function<void ()> task, double intervalSec) : _thread
       }
     } catch (const boost::thread_interrupted &e) {
       //Do nothing, exit thread.
+    } catch (const std::exception &e) {
+      //TODO Think about logging
+      cerr << "PeriodicTask crashed: " << e.what() << endl;
     } catch (...) {
       //TODO Think about logging
       cerr << "PeriodicTask crashed" << endl;

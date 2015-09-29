@@ -30,7 +30,9 @@ public:
   boost::optional<Value> pop(const Key &key);
 
 private:
+  void _popOldEntriesParallel();
   void _popOldEntries();
+  boost::optional<Value> _popOldEntry();
   static void _destructElementsInParallel(std::vector<CacheEntry<Key, Value>> *list);
 
   mutable std::mutex _mutex;
@@ -46,8 +48,8 @@ template<class Key, class Value> constexpr double Cache<Key, Value>::MAX_LIFETIM
 template<class Key, class Value>
 Cache<Key, Value>::Cache(): _cachedBlocks(), _timeoutFlusher(nullptr) {
   //Don't initialize timeoutFlusher in the initializer list,
-  //because it then might already call Cache::popOldEntries() before Cache is done constructing
-  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_popOldEntries, this), PURGE_INTERVAL);
+  //because it then might already call Cache::popOldEntries() before Cache is done constructing.
+  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_popOldEntriesParallel, this), PURGE_INTERVAL);
 }
 
 template<class Key, class Value>
@@ -76,31 +78,41 @@ void Cache<Key, Value>::push(const Key &key, Value value) {
 }
 
 template<class Key, class Value>
-void Cache<Key, Value>::_popOldEntries() {
-  std::lock_guard<std::mutex> lock(_mutex);
-  std::vector<CacheEntry<Key, Value>> entriesToDelete;
-  while(_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
-	entriesToDelete.push_back(*_cachedBlocks.pop());
+void Cache<Key, Value>::_popOldEntriesParallel() {
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  std::vector<std::future<void>> waitHandles;
+  for (unsigned int i = 0; i < numThreads; ++i) {
+    waitHandles.push_back(std::async(std::launch::async, [this] {
+      _popOldEntries();
+    }));
   }
-  _destructElementsInParallel(&entriesToDelete);
+  for (auto & waitHandle : waitHandles) {
+    waitHandle.wait();
+  }
+};
+
+template<class Key, class Value>
+void Cache<Key, Value>::_popOldEntries() {
+  // This function can be called in parallel by multiple threads and will then cause the Value destructors
+  // to be called in parallel. The call to _popOldEntry() is synchronized to avoid race conditions,
+  // but the Value destructor is called in this function which is not synchronized.
+  int num = 0;
+  boost::optional<Value> oldEntry = _popOldEntry();
+  while (oldEntry != boost::none) {
+    ++num;
+    oldEntry = _popOldEntry();
+  }
 }
 
 template<class Key, class Value>
-void Cache<Key, Value>::_destructElementsInParallel(std::vector<CacheEntry<Key, Value>> *list) {
-  //TODO Check whether this parallel destruction below works (just comment it in but keep the list->clear()) and check performance impacts. Is it better to have a lower parallelity level, i.e. #core threads?
-  /*
-  std::vector<std::future<void>> waitHandles;
-  for (auto & entry : *list) {
-	waitHandles.push_back(std::async(std::launch::async, [&entry] {
-	  entry.releaseValue();
-	}));
+boost::optional<Value> Cache<Key, Value>::_popOldEntry() {
+  std::lock_guard<std::mutex> lock(_mutex);
+  if (_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
+    return _cachedBlocks.pop()->releaseValue();
+  } else {
+    return boost::none;
   }
-  for (auto & waitHandle : waitHandles) {
-	waitHandle.wait();
-  }
-  */
-  list->clear();
-}
+};
 
 }
 }
