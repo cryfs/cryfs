@@ -10,3 +10,36 @@ This repository contains the filesystem implementation. There are submodules in 
   - [ParallelAccessStore](https://github.com/cryfs/parallelaccessstore): Concurrency primitive for Blockstore/Blobstore
   - [Fs++](https://github.com/cryfs/fspp): Implement a file system against a platform independent interface
 
+
+Building from source
+====================
+
+Requirements
+------------
+  - [biicode](https://www.biicode.com)
+
+        $ wget http://apt.biicode.com/install.sh
+        $ ./install.sh
+        $ bii setup:cpp
+
+  - GCC version >= 4.9 or Clang (TODO which minimal version?)
+  - libFUSE (including development headers) (TODO which minimal version?)
+
+Build
+-----
+ 
+ 1. Clone repository
+
+        $ git clone git@github.com:cryfs/cryfs.git cryfs
+        $ cd cryfs
+
+ 2. Build
+
+        $ bii init -L
+        $ bii configure -D CMAKE_BUILD_TYPE=Release
+        $ bii build
+
+You can pass normal make parameters after a double dash.
+This can for example be used to add "-j5" to compile with 5 build threads in parallel:
+
+        $ bii build -- -j5
