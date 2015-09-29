@@ -4,6 +4,8 @@
 #include <iostream>
 #include <unistd.h>
 
+//TODO Use the following? https://github.com/bombela/backward-cpp
+
 namespace cpputils {
 
     void sigsegv_handler(int) {
