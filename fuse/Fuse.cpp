@@ -285,24 +285,28 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
     std::cerr << "AssertFailed in Fuse::mkdir: " << e.what() << std::endl;
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
+    std::cerr << "FuseError in Fuse::mkdir: "<<e.what() << std::endl;
     return -e.getErrno();
   }
 }
 
 int Fuse::unlink(const bf::path &path) {
-  //printf("unlink(%s)\n", path.c_str());
+  printf("unlink(%s)\n", path.c_str());
   try {
     _fs->unlink(path);
+    printf("unlink done\n");
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     std::cerr << "AssertFailed in Fuse::unlink: " << e.what() << std::endl;
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
+    std::cerr << "FuseError in Fuse::unlink: " << e.what() << std::endl;
     return -e.getErrno();
   }
 }
 
 int Fuse::rmdir(const bf::path &path) {
+  //printf("rmdir(%s)\n", path.c_str());
   try {
     _fs->rmdir(path);
     return 0;
