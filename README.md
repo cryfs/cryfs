@@ -25,6 +25,15 @@ Requirements
   - GCC version >= 4.9 or Clang (TODO which minimal version?)
   - libFUSE (including development headers) (TODO which minimal version?)
 
+        # Ubuntu
+        $ sudo apt-get install libfuse-dev
+        
+        # Fedora
+        TODO
+        
+        # Macintosh
+        TODO
+
 Build
 -----
  
