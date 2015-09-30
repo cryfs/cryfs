@@ -9,8 +9,18 @@ public:
   CopyableMovableValueType(const CopyableMovableValueType &rhs): CopyableMovableValueType(rhs._value) {
     ++numCopyConstructorCalled;
   }
+  CopyableMovableValueType &operator=(const CopyableMovableValueType &rhs) {
+    _value = rhs._value;
+    ++numCopyConstructorCalled;
+    return *this;
+  }
   CopyableMovableValueType(CopyableMovableValueType &&rhs): CopyableMovableValueType(rhs._value) {
     //Don't increase numCopyConstructorCalled
+  }
+  CopyableMovableValueType &operator=(CopyableMovableValueType &&rhs) {
+    //Don't increase numCopyConstructorCalled
+    _value = rhs._value;
+    return *this;
   }
   int value() const {
     return _value;

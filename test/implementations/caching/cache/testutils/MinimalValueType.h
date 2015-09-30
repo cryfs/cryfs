@@ -19,6 +19,13 @@ public:
     rhs._isMoved = true;
   }
 
+  MinimalValueType &operator=(MinimalValueType &&rhs) {
+    _value = rhs.value();
+    _isMoved = false;
+    rhs._isMoved = true;
+    return *this;
+  }
+
   ~MinimalValueType() {
     ASSERT(!_isDestructed, "Object was already destructed before");
     --instances;
