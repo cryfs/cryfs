@@ -36,11 +36,12 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
   uint64_t endByte = beginByte + sizeBytes;
   uint32_t firstLeaf = beginByte / _datatree->maxBytesPerLeaf();
   uint32_t endLeaf = utils::ceilDivision(endByte, _datatree->maxBytesPerLeaf());
-  _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte, endLeaf](DataLeafNode *leaf, uint32_t leafIndex) {
+  bool writingOutside = size() < endByte; // TODO Calling size() is slow because it has to traverse the tree
+  _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte, endLeaf, writingOutside](DataLeafNode *leaf, uint32_t leafIndex) {
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
     uint32_t dataEnd = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
-    if (leafIndex == endLeaf-1 && leaf->numBytes() < dataEnd) {
+    if (leafIndex == endLeaf-1 && writingOutside) {
       // If we are traversing an area that didn't exist before, then the last leaf was just created with a wrong size. We have to fix it.
       leaf->resize(dataEnd);
     }
@@ -64,8 +65,8 @@ uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) co
   return realCount;
 }
 
-void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t size) {
-  traverseLeaves(offset, size, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
+  traverseLeaves(offset, count, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
     //TODO Simplify formula, make it easier to understand
     leaf->write((uint8_t*)source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   });

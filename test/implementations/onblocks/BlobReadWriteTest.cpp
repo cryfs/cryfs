@@ -56,6 +56,13 @@ TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
 	EXPECT_DATA_READS_AS(randomData, *loaded, 0, LARGE_SIZE);
 }
 
+// Regression test for a strange bug we had
+TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
+  blob->resize(1);
+  blob->write(randomData.data(), 32776, 4);
+  EXPECT_EQ(32780, blob->size());
+}
+
 struct DataRange {
   size_t blobsize;
   off_t offset;
