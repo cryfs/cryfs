@@ -83,22 +83,27 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 unique_ref<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
   auto blob = LoadBlob(path);
   auto dir = dynamic_pointer_move<DirBlob>(blob);
-  ASSERT(dir != none, "Loaded blob is not a directory");
+  if (dir == none) {
+    throw FuseErrnoException(ENOTDIR); // Loaded blob is not a directory
+  }
   return std::move(*dir);
 }
 
 unique_ref<FsBlob> CryDevice::LoadBlob(const bf::path &path) {
   auto currentBlob = _fsBlobStore->load(_rootKey);
-  //TODO Return correct fuse error
   ASSERT(currentBlob != none, "rootDir not found");
 
   for (const bf::path &component : path.relative_path()) {
     auto currentDir = dynamic_pointer_move<DirBlob>(*currentBlob);
-    ASSERT(currentDir != none, "Path component is not a dir");
+    if (currentDir == none) {
+      throw FuseErrnoException(ENOTDIR); // Path component is not a dir
+    }
 
     Key childKey = (*currentDir)->GetChild(component.c_str()).key;
     currentBlob = _fsBlobStore->load(childKey);
-    ASSERT(currentBlob != none, "Blob for directory entry not found");
+    if (currentBlob == none) {
+      throw FuseErrnoException(ENOENT); // Blob for directory entry not found
+    }
   }
 
   return std::move(*currentBlob);
