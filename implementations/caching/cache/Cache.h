@@ -98,7 +98,7 @@ void Cache<Key, Value>::_popOldEntries() {
   // to be called in parallel. The call to _popOldEntry() is synchronized to avoid race conditions,
   // but the Value destructor is called in this function which is not synchronized.
 
-  // The shared upgrade_lock in here takes care that no push() or pop() operation is running while old entries are deleted.
+  // The shared upgrade_lock in here takes care that no push() or pop() operation is running while an old entry is deleted.
   // This would cause race conditions because pop() could return none before the destructor of the deleted element
   // has finished running. Since the destructor of a cached newly created block creates it in the base block store,
   // there would be a state where the block can neither be found by a pop() in the cache, nor in the base store.
@@ -106,10 +106,13 @@ void Cache<Key, Value>::_popOldEntries() {
   // The shared lock is then upgraded to a unique lock in _popOldEntry, so that only one thread can work on the
   // _cachedBlocks vector at the same time.
   // There is a regression test case for this: CacheTest_RaceCondition:PopBlocksWhileRequestedElementIsThrownOut.
-  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
-  boost::optional<Value> oldEntry = _popOldEntry(&lock);
-  while (oldEntry != boost::none) {
-    oldEntry = _popOldEntry(&lock);
+  while (true) {
+    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
+    boost::optional<Value> oldEntry = _popOldEntry(&lock);
+    if (oldEntry == boost::none) {
+      break;
+    }
+    oldEntry = boost::none; // Call destructor (inside shared lock)
   }
 }
 
