@@ -135,6 +135,7 @@ unique_ref<DataNode> DataTree::releaseRootNode() {
 
 //TODO Test numLeaves(), for example also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
 uint32_t DataTree::numLeaves() const {
+  shared_lock<shared_mutex> lock(_mutex);
   return _numLeaves(*_rootNode);
 }
 
@@ -158,7 +159,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
   uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), endIndex);
-  uint32_t numLeaves = this->numLeaves();
+  uint32_t numLeaves = this->_numLeaves(*_rootNode);
   if (_rootNode->depth() < neededTreeDepth) {
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
     increaseTreeDepth(neededTreeDepth - _rootNode->depth());
@@ -185,7 +186,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
       func(node, index);
     });
   } else {
-    //We are traversing entierly inside the valid region
+    //We are traversing entirely inside the valid region
     _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
   }
 }
@@ -224,6 +225,8 @@ vector<unique_ref<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, 
     children.emplace_back(std::move(*child));
   }
   for (uint32_t childIndex = node->numChildren(); childIndex < end; ++childIndex) {
+    //TODO This creates each child with one chain to one leaf only, and then on the next lower level it
+    //     has to create the children for the child. Would be faster to directly create full trees if necessary.
     children.emplace_back(addChildTo(node));
   }
   ASSERT(children.size() == end-begin, "Number of children in the result is wrong");
