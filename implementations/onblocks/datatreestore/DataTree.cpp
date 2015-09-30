@@ -126,6 +126,9 @@ const Key &DataTree::key() const {
 }
 
 void DataTree::flush() const {
+  // By grabbing a lock, we ensure that all modifying functions don't run currently and are therefore flushed
+  unique_lock<shared_mutex> lock(_mutex);
+  // We also have to flush the root node
   _rootNode->flush();
 }
 
