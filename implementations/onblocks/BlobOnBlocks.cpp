@@ -76,13 +76,6 @@ void BlobOnBlocks::flush() {
   _datatree->flush();
 }
 
-void BlobOnBlocks::resizeIfSmallerThan(uint64_t neededSize) {
-  //TODO This is inefficient, because size() and resizeNumBytes() both traverse the tree. Better: _datatree->ensureMinSize(x)
-  if (neededSize > size()) {
-    _datatree->resizeNumBytes(neededSize);
-  }
-}
-
 Key BlobOnBlocks::key() const {
   return _datatree->key();
 }

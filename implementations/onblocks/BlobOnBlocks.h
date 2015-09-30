@@ -36,7 +36,6 @@ public:
 private:
 
   void traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t, datanodestore::DataLeafNode *, uint32_t, uint32_t)>) const;
-  void resizeIfSmallerThan(uint64_t neededSize);
 
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> _datatree;
 };
