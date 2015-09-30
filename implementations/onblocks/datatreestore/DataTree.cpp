@@ -155,7 +155,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
-  unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing
+  unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing. Otherwise parallel read/write to a blob is not possible!
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
   uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), endIndex);
