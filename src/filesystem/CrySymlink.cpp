@@ -3,7 +3,7 @@
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 #include "CryDevice.h"
 #include "CrySymlink.h"
-#include "impl/SymlinkBlob.h"
+#include "fsblobstore/SymlinkBlob.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -19,6 +19,9 @@ using boost::none;
 using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
+using cryfs::fsblobstore::SymlinkBlob;
+using cryfs::fsblobstore::DirBlob;
 
 namespace cryfs {
 
@@ -29,12 +32,11 @@ CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlob> parent, const Key 
 CrySymlink::~CrySymlink() {
 }
 
-optional<unique_ref<SymlinkBlob>> CrySymlink::LoadBlob() const {
+unique_ref<SymlinkBlob> CrySymlink::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  if (blob == none) {
-    return none;
-  }
-  return make_unique_ref<SymlinkBlob>(std::move(*blob));
+  auto symlink_blob = dynamic_pointer_move<SymlinkBlob>(blob);
+  ASSERT(symlink_blob != none, "Blob does not store a symlink");
+  return std::move(*symlink_blob);
 }
 
 fspp::Dir::EntryType CrySymlink::getType() const {
@@ -43,11 +45,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() const {
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(EIO);
-  }
-  return (*blob)->target();
+  return blob->target();
 }
 
 }

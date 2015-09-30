@@ -9,7 +9,7 @@
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
-#include "impl/SymlinkBlob.h"
+#include "fsblobstore/SymlinkBlob.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -23,8 +23,10 @@ using std::vector;
 using blockstore::Key;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
+using cryfs::fsblobstore::DirBlob;
 
 namespace cryfs {
 
@@ -37,36 +39,22 @@ CryDir::~CryDir() {
 
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(EIO);
-  }
-  auto child = device()->CreateBlob();
-  Key childkey = child->key();
-  (*blob)->AddChildFile(name, childkey, mode, uid, gid);
-  auto childblob = FileBlob::InitializeEmptyFile(std::move(child));
-  return make_unique_ref<CryOpenFile>(std::move(childblob));
+  auto child = device()->CreateFileBlob();
+  blob->AddChildFile(name, child->key(), mode, uid, gid);
+  return make_unique_ref<CryOpenFile>(std::move(child));
 }
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(EIO);
-  }
-  auto child = device()->CreateBlob();
-  Key childkey = child->key();
-  (*blob)->AddChildDir(name, childkey, mode, uid, gid);
-  DirBlob::InitializeEmptyDir(std::move(child), device());
+  auto child = device()->CreateDirBlob();
+  blob->AddChildDir(name, child->key(), mode, uid, gid);
 }
 
-optional<unique_ref<DirBlob>> CryDir::LoadBlob() const {
+unique_ref<DirBlob> CryDir::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  if(blob == none) {
-    return none;
-  }
-  //TODO Without const_cast?
-  return make_unique_ref<DirBlob>(std::move(*blob), const_cast<CryDevice*>(device()));
+  auto dir_blob = dynamic_pointer_move<DirBlob>(blob);
+  ASSERT(dir_blob != none, "Blob does not store a directory");
+  return std::move(*dir_blob);
 }
 
 unique_ref<vector<fspp::Dir::Entry>> CryDir::children() const {
@@ -74,11 +62,7 @@ unique_ref<vector<fspp::Dir::Entry>> CryDir::children() const {
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(EIO);
-  }
-  (*blob)->AppendChildrenTo(children.get());
+  blob->AppendChildrenTo(children.get());
   return children;
 }
 
@@ -88,14 +72,8 @@ fspp::Dir::EntryType CryDir::getType() const {
 
 void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid, gid_t gid) {
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(EIO);
-  }
-  auto child = device()->CreateBlob();
-  Key childkey = child->key();
-  (*blob)->AddChildSymlink(name, childkey, uid, gid);
-  SymlinkBlob::InitializeSymlink(std::move(child), target);
+  auto child = device()->CreateSymlinkBlob(target);
+  blob->AddChildSymlink(name, child->key(), uid, gid);
 }
 
 }

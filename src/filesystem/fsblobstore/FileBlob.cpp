@@ -9,49 +9,45 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
 namespace cryfs {
+namespace fsblobstore {
 
 FileBlob::FileBlob(unique_ref<Blob> blob)
-: _blob(std::move(blob)) {
-}
-
-FileBlob::~FileBlob() {
+: FsBlob(std::move(blob)) {
 }
 
 unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
-  blob->resize(1);
-  unsigned char magicNumber = MagicNumbers::FILE;
-  blob->write(&magicNumber, 0, 1);
+  InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::FILE);
   return make_unique_ref<FileBlob>(std::move(blob));
 }
 
-unsigned char FileBlob::magicNumber() const {
-  unsigned char value;
-  _blob->read(&value, 0, 1);
-  return value;
-}
-
 ssize_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
-  return _blob->tryRead(target, offset + 1, count);
+  return baseBlob().tryRead(target, offset + 1, count);
 }
 
 void FileBlob::write(const void *source, uint64_t offset, uint64_t count) {
-  _blob->write(source, offset + 1, count);
+  baseBlob().write(source, offset + 1, count);
 }
 
 void FileBlob::flush() {
-  _blob->flush();
+  baseBlob().flush();
 }
 
 blockstore::Key FileBlob::key() const {
-  	return _blob->key();
+  	return baseBlob().key();
 }
 
 void FileBlob::resize(off_t size) {
-  _blob->resize(size+1);
+  baseBlob().resize(size+1);
+}
+
+off_t FileBlob::lstat_size() const {
+  return size();
 }
 
 off_t FileBlob::size() const {
-  return _blob->size()-1;
+  return baseBlob().size()-1;
 }
 
 }
+}
+

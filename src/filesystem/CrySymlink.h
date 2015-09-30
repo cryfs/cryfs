@@ -4,14 +4,14 @@
 
 #include <messmer/fspp/fs_interface/Symlink.h>
 #include "CryNode.h"
-#include "impl/SymlinkBlob.h"
-#include "impl/DirBlob.h"
+#include "fsblobstore/SymlinkBlob.h"
+#include "fsblobstore/DirBlob.h"
 
 namespace cryfs {
 
 class CrySymlink: public fspp::Symlink, CryNode {
 public:
-  CrySymlink(CryDevice *device, cpputils::unique_ref<DirBlob> parent, const blockstore::Key &key);
+  CrySymlink(CryDevice *device, cpputils::unique_ref<fsblobstore::DirBlob> parent, const blockstore::Key &key);
   virtual ~CrySymlink();
 
   boost::filesystem::path target() const override;
@@ -19,7 +19,7 @@ public:
   fspp::Dir::EntryType getType() const override;
 
 private:
-  boost::optional<cpputils::unique_ref<SymlinkBlob>> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::SymlinkBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CrySymlink);
 };

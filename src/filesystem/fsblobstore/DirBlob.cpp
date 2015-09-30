@@ -24,9 +24,12 @@ using cpputils::make_unique_ref;
 using boost::none;
 
 namespace cryfs {
+namespace fsblobstore {
 
-DirBlob::DirBlob(unique_ref<Blob> blob, CryDevice *device) :
-    _device(device), _blob(std::move(blob)), _entries(), _changed(false) {
+    //TODO Factor out a DirEntryList class
+
+DirBlob::DirBlob(unique_ref<Blob> blob, FsBlobStore *fsBlobStore) :
+    FsBlob(std::move(blob)), _fsBlobStore(fsBlobStore), _entries(), _changed(false) {
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -37,43 +40,35 @@ DirBlob::~DirBlob() {
 
 void DirBlob::flush() {
   _writeEntriesToBlob();
-  _blob->flush();
+  baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, CryDevice *device) {
-  blob->resize(1);
-  unsigned char magicNumber = MagicNumbers::DIR;
-  blob->write(&magicNumber, 0, 1);
-  return make_unique_ref<DirBlob>(std::move(blob), device);
-}
-
-unsigned char DirBlob::magicNumber() const {
-  unsigned char number;
-  _blob->read(&number, 0, 1);
-  return number;
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, FsBlobStore *fsBlobStore) {
+  InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::DIR);
+  return make_unique_ref<DirBlob>(std::move(blob), fsBlobStore);
 }
 
 void DirBlob::_writeEntriesToBlob() {
   if (_changed) {
     //TODO Resizing is imperformant
-    _blob->resize(1);
+    baseBlob().resize(1);
     unsigned int offset = 1;
     for (const auto &entry : _entries) {
 	  uint8_t entryTypeMagicNumber = static_cast<uint8_t>(entry.type);
-	  _blob->write(&entryTypeMagicNumber, offset, 1);
+	  baseBlob().write(&entryTypeMagicNumber, offset, 1);
 	  offset += 1;
-	  _blob->write(entry.name.c_str(), offset, entry.name.size() + 1);
+      baseBlob().write(entry.name.c_str(), offset, entry.name.size() + 1);
 	  offset += entry.name.size() + 1;
 	  string keystr = entry.key.ToString();
-	  _blob->write(keystr.c_str(), offset, keystr.size() + 1);
+      baseBlob().write(keystr.c_str(), offset, keystr.size() + 1);
 	  offset += keystr.size() + 1;
-	  _blob->write(&entry.uid, offset, sizeof(uid_t));
+      baseBlob().write(&entry.uid, offset, sizeof(uid_t));
 	  //TODO Writing them all in separate write calls is maybe imperformant. We could write the whole entry in one write call instead.
 	  offset += sizeof(uid_t);
-    _blob->write(&entry.gid, offset, sizeof(gid_t));
-    offset += sizeof(gid_t);
-    _blob->write(&entry.mode, offset, sizeof(mode_t));
-    offset += sizeof(mode_t);
+      baseBlob().write(&entry.gid, offset, sizeof(gid_t));
+      offset += sizeof(gid_t);
+      baseBlob().write(&entry.mode, offset, sizeof(mode_t));
+      offset += sizeof(mode_t);
     }
     _changed = false;
   }
@@ -81,8 +76,9 @@ void DirBlob::_writeEntriesToBlob() {
 
 void DirBlob::_readEntriesFromBlob() {
   _entries.clear();
-  Data data(_blob->size() - 1);
-  _blob->read(data.data(), 1, _blob->size() - 1);
+  //TODO Getting size and then reading traverses tree twice. Something like readAll() would be faster.
+  Data data(baseBlob().size() - 1);
+  baseBlob().read(data.data(), 1, baseBlob().size() - 1);
 
   const char *pos = (const char*) data.data();
   while (pos < (const char*) data.data() + data.size()) {
@@ -193,10 +189,15 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
   }
 }
 
+off_t DirBlob::lstat_size() const {
+  //TODO Why do dirs have 4096 bytes in size? Does that make sense?
+  return 4096;
+}
+
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   auto child = GetChild(key);
   //TODO Loading the blob for only getting the size of the file/symlink is not very performant.
-  //     Furthermore, this is the only reason why DirBlob needs a pointer to CryDevice, which is ugly
+  //     Furthermore, this is the only reason why DirBlob needs a pointer to _fsBlobStore, which is ugly
   result->st_mode = child.mode;
   result->st_uid = child.uid;
   result->st_gid = child.gid;
@@ -204,30 +205,12 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_nlink = 1;
   //TODO Handle file access times
   result->st_mtime = result->st_ctime = result->st_atime = 0;
-  if (child.type == fspp::Dir::EntryType::FILE) {
-    auto blob = _device->LoadBlob(key);
-    if (blob == none) {
-      //TODO Log error
-    } else {
-      result->st_size = FileBlob(std::move(*blob)).size();
-    }
-  } else if (child.type == fspp::Dir::EntryType::DIR) {
-	//TODO Why do dirs have 4096 bytes in size? Does that make sense?
-    result->st_size = 4096;
-  } else if (child.type == fspp::Dir::EntryType::SYMLINK) {
-	//TODO Necessary with fuse or does fuse set this on symlinks anyhow?
-    auto blob = _device->LoadBlob(key);
-    if (blob == none) {
-      //TODO Log error
-    } else {
-      result->st_size = SymlinkBlob(std::move(*blob)).target().native().size();
-    }
-  } else {
-	ASSERT(false, "Unknown child type");
-  }
+  auto blob = _fsBlobStore->load(key);
+  ASSERT(blob != none, "Blob for directory entry not found");
+  result->st_size = (*blob)->lstat_size();
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, 512);
-  result->st_blksize = _device->BLOCKSIZE_BYTES;
+  result->st_blksize = CryDevice::BLOCKSIZE_BYTES; //TODO _fsBlobStore->BLOCKSIZE_BYTES would be cleaner
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
@@ -249,4 +232,5 @@ void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
   }
 }
 
+}
 }

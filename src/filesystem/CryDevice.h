@@ -3,16 +3,17 @@
 #define CRYFS_LIB_CRYDEVICE_H_
 
 #include <messmer/blockstore/interface/BlockStore.h>
-#include <messmer/blobstore/interface/BlobStore.h>
 #include "../config/CryConfigLoader.h"
 
 #include <boost/filesystem.hpp>
 #include <messmer/fspp/fs_interface/Device.h>
 
-#include "messmer/cpp-utils/macros.h"
+#include "fsblobstore/FsBlobStore.h"
+#include "fsblobstore/DirBlob.h"
+#include "fsblobstore/FileBlob.h"
+#include "fsblobstore/SymlinkBlob.h"
 
 namespace cryfs {
-class DirBlob;
 
 class CryDevice: public fspp::Device {
 public:
@@ -23,17 +24,20 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  cpputils::unique_ref<blobstore::Blob> CreateBlob();
-  boost::optional<cpputils::unique_ref<blobstore::Blob>> LoadBlob(const blockstore::Key &key);
+  cpputils::unique_ref<fsblobstore::FileBlob> CreateFileBlob();
+  cpputils::unique_ref<fsblobstore::DirBlob> CreateDirBlob();
+  cpputils::unique_ref<fsblobstore::SymlinkBlob> CreateSymlinkBlob(const boost::filesystem::path &target);
+  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob(const blockstore::Key &key); //TODO Do I still need this function?
+  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob(const boost::filesystem::path &path);
+  cpputils::unique_ref<fsblobstore::DirBlob> LoadDirBlob(const boost::filesystem::path &path);
   void RemoveBlob(const blockstore::Key &key);
 
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
 
-  boost::optional<cpputils::unique_ref<DirBlob>> LoadDirBlob(const boost::filesystem::path &path);
 
 private:
 
-  cpputils::unique_ref<blobstore::BlobStore> _blobStore;
+  cpputils::unique_ref<fsblobstore::FsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;
 

@@ -12,15 +12,10 @@ using cpputils::make_unique_ref;
 namespace bf = boost::filesystem;
 
 namespace cryfs {
+namespace fsblobstore {
 
 SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
-: _target(_readTargetFromBlob(*blob)) {
-}
-
-SymlinkBlob::SymlinkBlob(const bf::path &target) :_target(target) {
-}
-
-SymlinkBlob::~SymlinkBlob() {
+: FsBlob(std::move(blob)), _target(_readTargetFromBlob(baseBlob())) {
 }
 
 unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
@@ -29,7 +24,7 @@ unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, co
   unsigned char magicNumber = MagicNumbers::SYMLINK;
   blob->write(&magicNumber, 0, 1);
   blob->write(targetStr.c_str(), 1, targetStr.size());
-  return make_unique_ref<SymlinkBlob>(target);
+  return make_unique_ref<SymlinkBlob>(std::move(blob));
 }
 
 void SymlinkBlob::_checkMagicNumber(const Blob &blob) {
@@ -51,4 +46,9 @@ const bf::path &SymlinkBlob::target() const {
   return _target;
 }
 
+off_t SymlinkBlob::lstat_size() const {
+  return target().native().size();
+}
+
+}
 }

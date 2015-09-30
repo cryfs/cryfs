@@ -4,13 +4,13 @@
 
 #include <messmer/fspp/fs_interface/Dir.h>
 #include "CryNode.h"
-#include "impl/DirBlob.h"
+#include "fsblobstore/DirBlob.h"
 
 namespace cryfs {
 
 class CryDir: public fspp::Dir, CryNode {
 public:
-  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<DirBlob>> parent, const blockstore::Key &key);
+  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<fsblobstore::DirBlob>> parent, const blockstore::Key &key);
   virtual ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -24,7 +24,7 @@ public:
   fspp::Dir::EntryType getType() const override;
 
 private:
-  boost::optional<cpputils::unique_ref<DirBlob>> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::DirBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

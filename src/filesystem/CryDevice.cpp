@@ -1,6 +1,6 @@
 #include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
-#include "impl/DirBlob.h"
+#include "fsblobstore/DirBlob.h"
 #include "CryDevice.h"
 
 #include "CryDir.h"
@@ -11,6 +11,7 @@
 #include "messmer/blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include "messmer/blobstore/implementations/onblocks/BlobOnBlocks.h"
 #include "messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h"
+#include "fsblobstore/FsBlobStore.h"
 
 using std::string;
 
@@ -27,8 +28,14 @@ using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
+using cryfs::fsblobstore::FsBlobStore;
+using cryfs::fsblobstore::FileBlob;
+using cryfs::fsblobstore::DirBlob;
+using cryfs::fsblobstore::SymlinkBlob;
+using cryfs::fsblobstore::FsBlob;
 
 namespace bf = boost::filesystem;
 
@@ -37,14 +44,16 @@ namespace cryfs {
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
 CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ref<BlockStore> blockStore)
-: _blobStore(make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CachingBlockStore>(CreateEncryptedBlockStore(*config, std::move(blockStore))), BLOCKSIZE_BYTES)), _rootKey(GetOrCreateRootKey(config.get())) {
+: _fsBlobStore(make_unique_ref<FsBlobStore>(
+        make_unique_ref<BlobStoreOnBlocks>(
+                make_unique_ref<CachingBlockStore>(
+                        CreateEncryptedBlockStore(*config, std::move(blockStore))
+                ), BLOCKSIZE_BYTES))),
+  _rootKey(GetOrCreateRootKey(config.get())) {
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
-  auto rootBlob = _blobStore->create();
-  Key rootBlobKey = rootBlob->key();
-  DirBlob::InitializeEmptyDir(std::move(rootBlob), this);
-  return rootBlobKey;
+  return _fsBlobStore->createDirBlob()->key();
 }
 
 CryDevice::~CryDevice() {
@@ -58,63 +67,73 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, _rootKey));
   }
   auto parent = LoadDirBlob(path.parent_path());
-  if (parent == none) {
-    //TODO Return correct fuse error
-    return none;
-  }
-  auto entry = (*parent)->GetChild(path.filename().native());
+  auto entry = parent->GetChild(path.filename().native());
 
   if (entry.type == fspp::Dir::EntryType::DIR) {
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(*parent), entry.key));
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key));
   } else if (entry.type == fspp::Dir::EntryType::FILE) {
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(*parent), entry.key));
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), entry.key));
   } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
-	return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(*parent), entry.key));
+	return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), entry.key));
   } else {
     ASSERT(false, "Unknown entry type");
   }
 }
 
-optional<unique_ref<DirBlob>> CryDevice::LoadDirBlob(const bf::path &path) {
-  auto currentBlob = _blobStore->load(_rootKey);
-  if(currentBlob == none) {
-    //TODO Return correct fuse error
-    return none;
-  }
+unique_ref<DirBlob> CryDevice::LoadDirBlob(const bf::path &path) {
+  auto blob = LoadBlob(path);
+  auto dir = dynamic_pointer_move<DirBlob>(blob);
+  ASSERT(dir != none, "Loaded blob is not a directory");
+  return std::move(*dir);
+}
+
+unique_ref<FsBlob> CryDevice::LoadBlob(const bf::path &path) {
+  auto currentBlob = _fsBlobStore->load(_rootKey);
+  //TODO Return correct fuse error
+  ASSERT(currentBlob != none, "rootDir not found");
 
   for (const bf::path &component : path.relative_path()) {
-    //TODO Check whether the next path component is a dir.
-    //     Right now, an assertion in DirBlob constructor will fail if it isn't.
-    //     But fuse should rather return the correct error code.
-    unique_ref<DirBlob> currentDir = make_unique_ref<DirBlob>(std::move(*currentBlob), this);
+    auto currentDir = dynamic_pointer_move<DirBlob>(*currentBlob);
+    ASSERT(currentDir != none, "Path component is not a dir");
 
-    Key childKey = currentDir->GetChild(component.c_str()).key;
-    currentBlob = _blobStore->load(childKey);
-    if(currentBlob == none) {
-      //TODO Return correct fuse error
-      return none;
-    }
+    Key childKey = (*currentDir)->GetChild(component.c_str()).key;
+    currentBlob = _fsBlobStore->load(childKey);
+    ASSERT(currentBlob != none, "Blob for directory entry not found");
   }
 
-  return make_unique_ref<DirBlob>(std::move(*currentBlob), this);
+  return std::move(*currentBlob);
+
+  //TODO Running the python script, waiting for "Create files in sequential order...", then going into dir ~/tmp/cryfs-mount-.../Bonnie.../ and calling "ls"
+  //     crashes cryfs with a sigsegv.
+  //     Possible reason: Many parallel changes to a directory blob are a race condition. Need something like ParallelAccessStore!
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   throw FuseErrnoException(ENOTSUP);
 }
 
-unique_ref<blobstore::Blob> CryDevice::CreateBlob() {
-  return _blobStore->create();
+unique_ref<FileBlob> CryDevice::CreateFileBlob() {
+  return _fsBlobStore->createFileBlob();
 }
 
-optional<unique_ref<blobstore::Blob>> CryDevice::LoadBlob(const blockstore::Key &key) {
-  return _blobStore->load(key);
+unique_ref<DirBlob> CryDevice::CreateDirBlob() {
+  return _fsBlobStore->createDirBlob();
+}
+
+unique_ref<SymlinkBlob> CryDevice::CreateSymlinkBlob(const bf::path &target) {
+  return _fsBlobStore->createSymlinkBlob(target);
+}
+
+unique_ref<FsBlob> CryDevice::LoadBlob(const blockstore::Key &key) {
+  auto blob = _fsBlobStore->load(key);
+  ASSERT(blob != none, "Blob not found");
+  return std::move(*blob);
 }
 
 void CryDevice::RemoveBlob(const blockstore::Key &key) {
-  auto blob = _blobStore->load(key);
+  auto blob = _fsBlobStore->load(key);
   ASSERT(blob != none, "Blob not found");
-  _blobStore->remove(std::move(*blob));
+  _fsBlobStore->remove(std::move(*blob));
 }
 
 Key CryDevice::GetOrCreateRootKey(CryConfig *config) {

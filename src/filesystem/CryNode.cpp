@@ -16,6 +16,8 @@ using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
+using cryfs::fsblobstore::FsBlob;
+using cryfs::fsblobstore::DirBlob;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -53,11 +55,7 @@ void CryNode::rename(const bf::path &to) {
   (*_parent)->RemoveChild(_key);
   (*_parent)->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  if (targetDir == none) {
-    //TODO Return correct fuse error
-    throw FuseErrnoException(ENOSPC);
-  }
-  (*targetDir)->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
+  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
 }
 
 void CryNode::utimens(const timespec times[2]) {
@@ -84,7 +82,7 @@ const CryDevice *CryNode::device() const {
   return _device;
 }
 
-optional<unique_ref<Blob>> CryNode::LoadBlob() const {
+unique_ref<FsBlob> CryNode::LoadBlob() const {
   return _device->LoadBlob(_key);
 }
 

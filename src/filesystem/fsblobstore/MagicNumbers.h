@@ -1,8 +1,9 @@
 #pragma once
-#ifndef CRYFS_LIB_IMPL_MAGICNUMBERS_H_
-#define CRYFS_LIB_IMPL_MAGICNUMBERS_H_
+#ifndef CRYFS_FSBLOBSTORE_MAGICNUMBERS_H_
+#define CRYFS_FSBLOBSTORE_MAGICNUMBERS_H_
 
 namespace cryfs {
+namespace fsblobstore {
 
 //TODO enum class
 enum MagicNumbers {
@@ -11,6 +12,7 @@ enum MagicNumbers {
   SYMLINK = 0x02
 };
 
+}
 }
 
 

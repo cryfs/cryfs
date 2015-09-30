@@ -5,12 +5,11 @@
 
 #include "CryDevice.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
-#include "impl/FileBlob.h"
 
 namespace bf = boost::filesystem;
 
 using cpputils::unique_ref;
-using blobstore::Blob;
+using cryfs::fsblobstore::FileBlob;
 
 //TODO Get rid of this in favor of a exception hierarchy
 using fspp::fuse::CHECK_RETVAL;

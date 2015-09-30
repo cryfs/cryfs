@@ -3,7 +3,6 @@
 #include "CryDevice.h"
 #include "CryOpenFile.h"
 #include "messmer/fspp/fuse/FuseErrnoException.h"
-#include "impl/DirBlob.h"
 
 namespace bf = boost::filesystem;
 
@@ -15,6 +14,9 @@ using blockstore::Key;
 using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
+using cryfs::fsblobstore::DirBlob;
+using cryfs::fsblobstore::FileBlob;
 
 namespace cryfs {
 
@@ -25,19 +27,21 @@ CryFile::CryFile(CryDevice *device, unique_ref<DirBlob> parent, const Key &key)
 CryFile::~CryFile() {
 }
 
+unique_ref<fsblobstore::FileBlob> CryFile::LoadBlob() const {
+  auto blob = CryNode::LoadBlob();
+  auto file_blob = dynamic_pointer_move<FileBlob>(blob);
+  ASSERT(file_blob != none, "Blob does not store a file");
+  return std::move(*file_blob);
+}
+
 unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
   auto blob = LoadBlob();
-  ASSERT(blob != none, "Couldn't load blob");
-  return make_unique_ref<CryOpenFile>(make_unique_ref<FileBlob>(std::move(*blob)));
+  return make_unique_ref<CryOpenFile>(std::move(blob));
 }
 
 void CryFile::truncate(off_t size) const {
   auto blob = LoadBlob();
-  if (blob == none) {
-    //TODO Log error
-    return;
-  }
-  FileBlob(std::move(*blob)).resize(size);
+  blob->resize(size);
 }
 
 fspp::Dir::EntryType CryFile::getType() const {
