@@ -9,9 +9,9 @@ namespace cryfs {
 
         class FileBlob: public FsBlob {
         public:
-            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
+            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob, std::function<void()> onDestruct);
 
-            FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
+            FileBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<void()> onDestruct);
 
             ssize_t read(void *target, uint64_t offset, uint64_t count) const;
 

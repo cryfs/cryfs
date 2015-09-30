@@ -43,9 +43,10 @@ namespace cryfs {
             };
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                    FsBlobStore *fsBlobStore);
+                                                                    FsBlobStore *fsBlobStore,
+                                                                    std::function<void()> onDestruct);
 
-            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, FsBlobStore *fsBlobStore);
+            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct);
 
             virtual ~DirBlob();
 

@@ -11,13 +11,13 @@ using cpputils::make_unique_ref;
 namespace cryfs {
 namespace fsblobstore {
 
-FileBlob::FileBlob(unique_ref<Blob> blob)
-: FsBlob(std::move(blob)) {
+FileBlob::FileBlob(unique_ref<Blob> blob, std::function<void()> onDestruct)
+: FsBlob(std::move(blob), onDestruct) {
 }
 
-unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
+unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, std::function<void()> onDestruct) {
   InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::FILE);
-  return make_unique_ref<FileBlob>(std::move(blob));
+  return make_unique_ref<FileBlob>(std::move(blob), onDestruct);
 }
 
 ssize_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {

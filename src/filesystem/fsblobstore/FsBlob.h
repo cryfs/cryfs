@@ -3,6 +3,7 @@
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/blobstore/interface/Blob.h>
+#include <functional>
 
 namespace cryfs {
     namespace fsblobstore {
@@ -14,7 +15,7 @@ namespace cryfs {
             blockstore::Key key() const;
 
         protected:
-            FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
+            FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob, std::function<void()> onDestruct);
 
             blobstore::Blob &baseBlob();
             const blobstore::Blob &baseBlob() const;
@@ -29,14 +30,17 @@ namespace cryfs {
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
 
             cpputils::unique_ref<blobstore::Blob> _baseBlob;
+            std::function<void()> _onDestruct;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlob);
         };
 
-        inline FsBlob::FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)) {
+        inline FsBlob::FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob, std::function<void()> onDestruct)
+                : _baseBlob(std::move(baseBlob)), _onDestruct(onDestruct) {
         }
 
         inline FsBlob::~FsBlob() {
+            _onDestruct();
         }
 
         inline blockstore::Key FsBlob::key() const {

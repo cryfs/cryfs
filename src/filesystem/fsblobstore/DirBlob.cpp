@@ -28,8 +28,8 @@ namespace fsblobstore {
 
     //TODO Factor out a DirEntryList class
 
-DirBlob::DirBlob(unique_ref<Blob> blob, FsBlobStore *fsBlobStore) :
-    FsBlob(std::move(blob)), _fsBlobStore(fsBlobStore), _entries(), _changed(false) {
+DirBlob::DirBlob(unique_ref<Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct) :
+    FsBlob(std::move(blob), onDestruct), _fsBlobStore(fsBlobStore), _entries(), _changed(false) {
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -43,9 +43,9 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, FsBlobStore *fsBlobStore) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct) {
   InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::DIR);
-  return make_unique_ref<DirBlob>(std::move(blob), fsBlobStore);
+  return make_unique_ref<DirBlob>(std::move(blob), fsBlobStore, onDestruct);
 }
 
 void DirBlob::_writeEntriesToBlob() {

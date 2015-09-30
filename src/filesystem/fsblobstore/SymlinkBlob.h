@@ -11,9 +11,10 @@ namespace cryfs {
         class SymlinkBlob: public FsBlob {
         public:
             static cpputils::unique_ref<SymlinkBlob> InitializeSymlink(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                        const boost::filesystem::path &target);
+                                                                       const boost::filesystem::path &target,
+                                                                       std::function<void()> onDestruct);
 
-            SymlinkBlob(cpputils::unique_ref<blobstore::Blob> blob);
+            SymlinkBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<void()> onDestruct);
 
             const boost::filesystem::path &target() const;
 

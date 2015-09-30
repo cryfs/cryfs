@@ -27,6 +27,7 @@ using std::endl;
 using std::vector;
 
 //TODO Support files > 4GB
+//TODO cryfs process doesn't seem to react to "kill". Needs "kill -9". Why? Furthermore, calling "fusermount -u" unmounts the fs, but the cryfs process keeps running. Why?
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
