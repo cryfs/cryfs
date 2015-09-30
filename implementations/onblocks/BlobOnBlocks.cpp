@@ -36,12 +36,11 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
   uint64_t endByte = beginByte + sizeBytes;
   uint32_t firstLeaf = beginByte / _datatree->maxBytesPerLeaf();
   uint32_t endLeaf = utils::ceilDivision(endByte, _datatree->maxBytesPerLeaf());
-  bool traversingOutOfRange = _datatree->numStoredBytes() < endByte; //TODO numBytes() inefficient
-  _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte, endLeaf, traversingOutOfRange](DataLeafNode *leaf, uint32_t leafIndex) {
+  _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte, endLeaf](DataLeafNode *leaf, uint32_t leafIndex) {
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
     uint32_t dataEnd = std::min((uint64_t)leaf->maxStoreableBytes(), endByte - indexOfFirstLeafByte);
-    if (leafIndex == endLeaf-1 && traversingOutOfRange) {
+    if (leafIndex == endLeaf-1 && leaf->numBytes() < dataEnd) {
       // If we are traversing an area that didn't exist before, then the last leaf was just created with a wrong size. We have to fix it.
       leaf->resize(dataEnd);
     }
