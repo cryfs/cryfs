@@ -15,6 +15,9 @@ using namespace fspp::fuse;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 
+// Remove the following line, if you don't want to output each fuse operation on the console
+//#define FSPP_LOG 1
+
 namespace {
 int fusepp_getattr(const char *path, struct stat *stbuf) {
   int rs = FUSE_OBJ->getattr(bf::path(path), stbuf);
@@ -219,7 +222,9 @@ bool Fuse::running() const {
 }
 
 int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
-  //printf("getattr(%s, _, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("getattr(%s, _, _)\n", path.c_str());
+#endif
   try {
     _fs->lstat(path, stbuf);
     return 0;
@@ -232,7 +237,9 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
 }
 
 int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
-  //printf("fgetattr(%s, _, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("fgetattr(%s, _, _)\n", path.c_str());
+#endif
 
   // On FreeBSD, trying to do anything with the mountpoint ends up
   // opening it, and then using the FD for an fgetattr.  So in the
@@ -255,7 +262,9 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
 }
 
 int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
-  //printf("readlink(%s, _, %zu)\n", path.c_str(), size);
+#ifdef FSPP_LOG
+  printf("readlink(%s, _, %zu)\n", path.c_str(), size);
+#endif
   try {
     _fs->readSymlink(path, buf, size);
     return 0;
@@ -276,7 +285,9 @@ int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
 }
 
 int Fuse::mkdir(const bf::path &path, mode_t mode) {
-  //printf("mkdir(%s, %d)\n", path.c_str(), mode);
+#ifdef FSPP_LOG
+  printf("mkdir(%s, %d)\n", path.c_str(), mode);
+#endif
   try {
     auto context = fuse_get_context();
     _fs->mkdir(path, mode, context->uid, context->gid);
@@ -290,7 +301,9 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
 }
 
 int Fuse::unlink(const bf::path &path) {
-  //printf("unlink(%s)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("unlink(%s)\n", path.c_str());
+#endif
   try {
     _fs->unlink(path);
     return 0;
@@ -303,7 +316,9 @@ int Fuse::unlink(const bf::path &path) {
 }
 
 int Fuse::rmdir(const bf::path &path) {
-  //printf("rmdir(%s)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("rmdir(%s)\n", path.c_str());
+#endif
   try {
     _fs->rmdir(path);
     return 0;
@@ -316,7 +331,9 @@ int Fuse::rmdir(const bf::path &path) {
 }
 
 int Fuse::symlink(const bf::path &from, const bf::path &to) {
-  //printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
+#ifdef FSPP_LOG
+  printf("symlink(%s, %s)\n", from.c_str(), to.c_str());
+#endif
   try {
 	auto context = fuse_get_context();
     _fs->createSymlink(from, to, context->uid, context->gid);
@@ -330,7 +347,9 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
 }
 
 int Fuse::rename(const bf::path &from, const bf::path &to) {
-  //printf("rename(%s, %s)\n", from.c_str(), to.c_str());
+#ifdef FSPP_LOG
+  printf("rename(%s, %s)\n", from.c_str(), to.c_str());
+#endif
   try {
     _fs->rename(from, to);
     return 0;
@@ -353,7 +372,9 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
 }
 
 int Fuse::chmod(const bf::path &path, mode_t mode) {
-  //printf("chmod(%s, %d)\n", path.c_str(), mode);
+#ifdef FSPP_LOG
+  printf("chmod(%s, %d)\n", path.c_str(), mode);
+#endif
   try {
 	_fs->chmod(path, mode);
 	return 0;
@@ -366,7 +387,9 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
 }
 
 int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
-  //printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
+#ifdef FSPP_LOG
+  printf("chown(%s, %d, %d)\n", path.c_str(), uid, gid);
+#endif
   try {
 	_fs->chown(path, uid, gid);
 	return 0;
@@ -379,7 +402,9 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
 }
 
 int Fuse::truncate(const bf::path &path, off_t size) {
-  //printf("truncate(%s, %zu)\n", path.c_str(), size);
+#ifdef FSPP_LOG
+  printf("truncate(%s, %zu)\n", path.c_str(), size);
+#endif
   try {
     _fs->truncate(path, size);
     return 0;
@@ -392,7 +417,9 @@ int Fuse::truncate(const bf::path &path, off_t size) {
 }
 
 int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) {
-  //printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
+#ifdef FSPP_LOG
+  printf("ftruncate(%s, %zu, _)\n", path.c_str(), size);
+#endif
   UNUSED(path);
   try {
     _fs->ftruncate(fileinfo->fh, size);
@@ -407,7 +434,9 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
 
 //TODO
 int Fuse::utimens(const bf::path &path, const timespec times[2]) {
-  //printf("utimens(%s, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("utimens(%s, _)\n", path.c_str());
+#endif
   try {
     _fs->utimens(path, times);
     return 0;
@@ -420,7 +449,9 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
 }
 
 int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
-  //printf("open(%s, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("open(%s, _)\n", path.c_str());
+#endif
   try {
     fileinfo->fh = _fs->openFile(path, fileinfo->flags);
     return 0;
@@ -433,7 +464,9 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
-  //printf("release(%s, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("release(%s, _)\n", path.c_str());
+#endif
   UNUSED(path);
   try {
     _fs->closeFile(fileinfo->fh);
@@ -447,7 +480,9 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
-  //printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+#ifdef FSPP_LOG
+  printf("read(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+#endif
   UNUSED(path);
   try {
     return _fs->read(fileinfo->fh, buf, size, offset);
@@ -460,7 +495,9 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
 }
 
 int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
-  //printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+#ifdef FSPP_LOG
+  printf("write(%s, _, %zu, %zu, _)\n", path.c_str(), size, offset);
+#endif
   UNUSED(path);
   try {
     _fs->write(fileinfo->fh, buf, size, offset);
@@ -475,7 +512,9 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
 
 //TODO
 int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
-  //printf("statfs(%s, _)\n", path.c_str());
+#ifdef FSPP_LOG
+  printf("statfs(%s, _)\n", path.c_str());
+#endif
   try {
     _fs->statfs(path, fsstat);
     return 0;
@@ -489,8 +528,10 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
 
 //TODO
 int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
+#ifdef FSPP_LOG
+  printf("Called non-implemented flush(%s, _)\n", path.c_str());
+#endif
   UNUSED(path);
-  //printf("Called non-implemented flush(%s, _)\n", path.c_str());
   try {
     _fs->flush(fileinfo->fh);
     return 0;
@@ -503,7 +544,9 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
-  //printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
+#ifdef FSPP_LOG
+  printf("fsync(%s, %d, _)\n", path.c_str(), datasync);
+#endif
   UNUSED(path);
   try {
     if (datasync) {
@@ -529,8 +572,10 @@ int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
+#ifdef FSPP_LOG
+  printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
+#endif
   UNUSED(fileinfo);
-  //printf("readdir(%s, _, _, %zu, _)\n", path.c_str(), offset);
   UNUSED(offset);
   try {
     auto entries = _fs->readDir(path);
@@ -591,7 +636,9 @@ void Fuse::destroy() {
 }
 
 int Fuse::access(const bf::path &path, int mask) {
-  //printf("access(%s, %d)\n", path.c_str(), mask);
+#ifdef FSPP_LOG
+  printf("access(%s, %d)\n", path.c_str(), mask);
+#endif
   try {
     _fs->access(path, mask);
     return 0;
@@ -604,7 +651,9 @@ int Fuse::access(const bf::path &path, int mask) {
 }
 
 int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
-  //printf("create(%s, %d, _)\n", path.c_str(), mode);
+#ifdef FSPP_LOG
+  printf("create(%s, %d, _)\n", path.c_str(), mode);
+#endif
   try {
     auto context = fuse_get_context();
     fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
