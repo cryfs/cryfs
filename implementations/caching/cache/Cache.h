@@ -9,7 +9,7 @@
 #include <boost/optional.hpp>
 #include <future>
 #include <messmer/cpp-utils/assert/assert.h>
-#include <messmer/cpp-utils/lock/LockPool.h>
+#include <messmer/cpp-utils/lock/MutexPoolLock.h>
 
 namespace blockstore {
 namespace caching {
@@ -61,14 +61,12 @@ Cache<Key, Value>::~Cache() {
 template<class Key, class Value>
 boost::optional<Value> Cache<Key, Value>::pop(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _currentlyFlushingEntries.lock(key, &lock);
+  cpputils::MutexPoolLock<Key> lockEntryFromBeingPopped(&_currentlyFlushingEntries, key, &lock);
 
   auto found = _cachedBlocks.pop(key);
   if (!found) {
     return boost::none;
   }
-
-  _currentlyFlushingEntries.release(key);
   return found->releaseValue();
 }
 
@@ -96,14 +94,13 @@ template<class Key, class Value>
 void Cache<Key, Value>::_deleteEntry(std::unique_lock<std::mutex> *lock) {
   auto key = _cachedBlocks.peekKey();
   ASSERT(key != boost::none, "There was no entry to delete");
-  _currentlyFlushingEntries.lock(*key);
+  cpputils::MutexPoolLock<Key> lockEntryFromBeingPopped(&_currentlyFlushingEntries, *key);
   auto value = _cachedBlocks.pop();
   // Call destructor outside of the unique_lock,
   // i.e. pop() and push() can be called here, except for pop() on the element in _currentlyFlushingEntries
   lock->unlock();
   value = boost::none; // Call destructor
   lock->lock();
-  _currentlyFlushingEntries.release(*key);
 };
 
 template<class Key, class Value>
