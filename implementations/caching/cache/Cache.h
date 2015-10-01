@@ -6,11 +6,10 @@
 #include "QueueMap.h"
 #include "PeriodicTask.h"
 #include <memory>
-//TODO Replace with C++14 once std::shared_mutex is supported
-#include <boost/thread/shared_mutex.hpp>
 #include <boost/optional.hpp>
 #include <future>
 #include <messmer/cpp-utils/assert/assert.h>
+#include <messmer/cpp-utils/lock/LockPool.h>
 
 namespace blockstore {
 namespace caching {
@@ -31,12 +30,14 @@ public:
   boost::optional<Value> pop(const Key &key);
 
 private:
-  void _popOldEntriesParallel();
-  void _popOldEntries();
-  boost::optional<Value> _popOldEntry(boost::upgrade_lock<boost::shared_mutex> *lock);
-  static void _destructElementsInParallel(std::vector<CacheEntry<Key, Value>> *list);
+  void _makeSpaceForEntry(std::unique_lock<std::mutex> *lock);
+  void _deleteEntry(std::unique_lock<std::mutex> *lock);
+  void _deleteOldEntriesParallel();
+  void _deleteOldEntries();
+  bool _deleteOldEntry();
 
-  mutable boost::shared_mutex _mutex;
+  mutable std::mutex _mutex;
+  cpputils::LockPool<Key> _currentlyFlushingEntries;
   QueueMap<Key, CacheEntry<Key, Value>> _cachedBlocks;
   std::unique_ptr<PeriodicTask> _timeoutFlusher;
 };
@@ -50,7 +51,7 @@ template<class Key, class Value>
 Cache<Key, Value>::Cache(): _cachedBlocks(), _timeoutFlusher(nullptr) {
   //Don't initialize timeoutFlusher in the initializer list,
   //because it then might already call Cache::popOldEntries() before Cache is done constructing.
-  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_popOldEntriesParallel, this), PURGE_INTERVAL);
+  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_deleteOldEntriesParallel, this), PURGE_INTERVAL);
 }
 
 template<class Key, class Value>
@@ -59,32 +60,59 @@ Cache<Key, Value>::~Cache() {
 
 template<class Key, class Value>
 boost::optional<Value> Cache<Key, Value>::pop(const Key &key) {
-  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  std::unique_lock<std::mutex> lock(_mutex);
+  _currentlyFlushingEntries.lock(key, &lock);
+
   auto found = _cachedBlocks.pop(key);
   if (!found) {
     return boost::none;
   }
+
+  _currentlyFlushingEntries.release(key);
   return found->releaseValue();
 }
 
 template<class Key, class Value>
 void Cache<Key, Value>::push(const Key &key, Value value) {
-  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  std::unique_lock<std::mutex> lock(_mutex);
   ASSERT(_cachedBlocks.size() <= MAX_ENTRIES, "Cache too full");
-  if (_cachedBlocks.size() == MAX_ENTRIES) {
-    _cachedBlocks.pop();
-    ASSERT(_cachedBlocks.size() == MAX_ENTRIES-1, "Removing entry from cache didn't work");
-  }
+  _makeSpaceForEntry(&lock);
   _cachedBlocks.push(key, CacheEntry<Key, Value>(std::move(value)));
 }
 
 template<class Key, class Value>
-void Cache<Key, Value>::_popOldEntriesParallel() {
+void Cache<Key, Value>::_makeSpaceForEntry(std::unique_lock<std::mutex> *lock) {
+  // _deleteEntry releases the lock while the Value destructor is running.
+  // So we can destruct multiple entries in parallel and also call pop() or push() while doing so.
+  // However, if another thread calls push() before we get the lock back, the cache is full again.
+  // That's why we need the while() loop here.
+  while (_cachedBlocks.size() == MAX_ENTRIES) {
+    _deleteEntry(lock);
+  }
+  ASSERT(_cachedBlocks.size() < MAX_ENTRIES, "Removing entry from cache didn't work");
+};
+
+template<class Key, class Value>
+void Cache<Key, Value>::_deleteEntry(std::unique_lock<std::mutex> *lock) {
+  auto key = _cachedBlocks.peekKey();
+  ASSERT(key != boost::none, "There was no entry to delete");
+  _currentlyFlushingEntries.lock(*key);
+  auto value = _cachedBlocks.pop();
+  // Call destructor outside of the unique_lock,
+  // i.e. pop() and push() can be called here, except for pop() on the element in _currentlyFlushingEntries
+  lock->unlock();
+  value = boost::none; // Call destructor
+  lock->lock();
+  _currentlyFlushingEntries.release(*key);
+};
+
+template<class Key, class Value>
+void Cache<Key, Value>::_deleteOldEntriesParallel() {
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::vector<std::future<void>> waitHandles;
   for (unsigned int i = 0; i < numThreads; ++i) {
     waitHandles.push_back(std::async(std::launch::async, [this] {
-      _popOldEntries();
+      _deleteOldEntries();
     }));
   }
   for (auto & waitHandle : waitHandles) {
@@ -93,40 +121,20 @@ void Cache<Key, Value>::_popOldEntriesParallel() {
 };
 
 template<class Key, class Value>
-void Cache<Key, Value>::_popOldEntries() {
-  // This function can be called in parallel by multiple threads and will then cause the Value destructors
-  // to be called in parallel. The call to _popOldEntry() is synchronized to avoid race conditions,
-  // but the Value destructor is called in this function which is not synchronized.
-
-  // The shared upgrade_lock in here takes care that no push() or pop() operation is running while an old entry is deleted.
-  // This would cause race conditions because pop() could return none before the destructor of the deleted element
-  // has finished running. Since the destructor of a cached newly created block creates it in the base block store,
-  // there would be a state where the block can neither be found by a pop() in the cache, nor in the base store.
-  // so CachingBlockStore would return that the block doesn't exist.
-  // The shared lock is then upgraded to a unique lock in _popOldEntry, so that only one thread can work on the
-  // _cachedBlocks vector at the same time.
-  // There is a regression test case for this: CacheTest_RaceCondition:PopBlocksWhileRequestedElementIsThrownOut.
-  while (true) {
-    //TODO Since there are 4 threads running this, there will always be one having one of the shared locks.
-    //     That is, while purging is running, no thread has a chance of calling pop() or push() and purging has priority.
-    //     Fix this, use something like priority locks for pop() and push()?
-    //     http://stackoverflow.com/questions/11666610/how-to-give-priority-to-privileged-thread-in-mutex-locking
-    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
-    boost::optional<Value> oldEntry = _popOldEntry(&lock);
-    if (oldEntry == boost::none) {
-      break;
-    }
-    oldEntry = boost::none; // Call destructor (inside shared lock)
-  }
+void Cache<Key, Value>::_deleteOldEntries() {
+  while (_deleteOldEntry()) {}
 }
 
 template<class Key, class Value>
-boost::optional<Value> Cache<Key, Value>::_popOldEntry(boost::upgrade_lock<boost::shared_mutex> *lock) {
-  boost::upgrade_to_unique_lock<boost::shared_mutex> exclusiveLock(*lock);
+bool Cache<Key, Value>::_deleteOldEntry() {
+  // This function can be called in parallel by multiple threads and will then cause the Value destructors
+  // to be called in parallel. The call to _deleteEntry() releases the lock while the Value destructor is running.
+  std::unique_lock<std::mutex> lock(_mutex);
   if (_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
-    return _cachedBlocks.pop()->releaseValue();
+    _deleteEntry(&lock);
+    return true;
   } else {
-    return boost::none;
+    return false;
   }
 };
 

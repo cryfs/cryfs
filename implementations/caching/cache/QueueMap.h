@@ -52,6 +52,13 @@ public:
     return pop(*_sentinel.next->key);
   }
 
+  boost::optional<const Key &> peekKey() {
+    if(_sentinel.next == &_sentinel) {
+      return boost::none;
+    }
+    return *_sentinel.next->key;
+  }
+
   boost::optional<const Value &> peek() {
     if(_sentinel.next == &_sentinel) {
       return boost::none;
