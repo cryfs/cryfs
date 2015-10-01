@@ -107,6 +107,10 @@ void Cache<Key, Value>::_popOldEntries() {
   // _cachedBlocks vector at the same time.
   // There is a regression test case for this: CacheTest_RaceCondition:PopBlocksWhileRequestedElementIsThrownOut.
   while (true) {
+    //TODO Since there are 4 threads running this, there will always be one having one of the shared locks.
+    //     That is, while purging is running, no thread has a chance of calling pop() or push() and purging has priority.
+    //     Fix this, use something like priority locks for pop() and push()?
+    //     http://stackoverflow.com/questions/11666610/how-to-give-priority-to-privileged-thread-in-mutex-locking
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
     boost::optional<Value> oldEntry = _popOldEntry(&lock);
     if (oldEntry == boost::none) {
