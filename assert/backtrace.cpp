@@ -9,8 +9,9 @@
 namespace cpputils {
 
     void sigsegv_handler(int) {
-        void *array[100];
-        size_t size = backtrace(array, sizeof(array));
+        constexpr unsigned int MAX_SIZE = 100;
+        void *array[MAX_SIZE];
+        size_t size = backtrace(array, MAX_SIZE);
 
         std::cerr << "Error: SIGSEGV" << std::endl;
         backtrace_symbols_fd(array, size, STDERR_FILENO);
