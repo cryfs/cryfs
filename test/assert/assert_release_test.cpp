@@ -24,7 +24,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
     EXPECT_THAT(e.what(), MatchesRegex(
-        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:23: my message"
+        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:23: my message.*"
     ));
   }
 }
