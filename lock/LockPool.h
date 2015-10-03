@@ -33,23 +33,18 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::lock(const LockName &lock, std::unique_lock<std::mutex> *lockToFreeWhileWaiting) {
-        std::cerr << "Aquiring lock " << lock.ToString() << std::endl;
         std::unique_lock<std::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
-        std::cerr << (void*)this << " Bquiring lock " << lock.ToString() << std::endl;
         if (_isLocked(lock)) {
-            std::cerr << " is locked " << lock.ToString() << std::endl;
             if(lockToFreeWhileWaiting != nullptr) {
                 lockToFreeWhileWaiting->unlock();
             }
             _cv.wait(mutexLock, [this, &lock]{
                 return !_isLocked(lock);
             });
-            std::cerr << " reaquiring " << lock.ToString() << std::endl;
             if(lockToFreeWhileWaiting != nullptr) {
                 lockToFreeWhileWaiting->lock();
             }
         }
-        std::cerr << "Lock acquired  " << lock.ToString() << std::endl;
         _lockedLocks.push_back(lock);
     }
 
@@ -60,13 +55,11 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::release(const LockName &lock) {
-        std::cerr << "Releasing lock "<<lock.ToString()<<std::endl;
         std::unique_lock<std::mutex> mutexLock(_mutex);
         auto found = std::find(_lockedLocks.begin(), _lockedLocks.end(), lock);
         ASSERT(found != _lockedLocks.end(), "Lock given to release() was not locked");
         _lockedLocks.erase(found);
         _cv.notify_all();
-        std::cerr << "Lock released  "<<lock.ToString()<<std::endl;
     }
 }
 
