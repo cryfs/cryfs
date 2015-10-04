@@ -26,7 +26,7 @@ public:
   class ResourceRefBase {
   public:
     //TODO Better way to initialize
-    ResourceRefBase(): _cachingStore(nullptr), _key(Key::CreatePseudoRandom()) {}
+    ResourceRefBase(): _cachingStore(nullptr), _key(Key::Null()) {}
     void init(ParallelAccessStore *cachingStore, const Key &key) {
       _cachingStore = cachingStore;
       _key = key;
@@ -41,7 +41,10 @@ public:
   };
 
   cpputils::unique_ref<ResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource);
+  template<class ActualResourceRef>
+  cpputils::unique_ref<ActualResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
   boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key);
+  boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef);
   void remove(const Key &key, cpputils::unique_ref<ResourceRef> block);
 
 private:
@@ -76,8 +79,8 @@ private:
   std::unordered_map<Key, OpenResource> _openResources;
   std::map<Key, std::promise<cpputils::unique_ref<Resource>>> _resourcesToRemove;
 
-  cpputils::unique_ref<ResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource);
-  cpputils::unique_ref<ResourceRef> _createResourceRef(Resource *resource, const Key &key);
+  template<class ActualResourceRef>
+  cpputils::unique_ref<ActualResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -96,26 +99,39 @@ ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(cpputils::u
 
 template<class Resource, class ResourceRef, class Key>
 cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, cpputils::unique_ref<Resource> resource) {
-  std::lock_guard<std::mutex> lock(_mutex);
-  return _add(key, std::move(resource));
+  return add<ResourceRef>(key, std::move(resource), [] (Resource *resource) {
+      return cpputils::make_unique_ref<ResourceRef>(resource);
+  });
 }
 
 template<class Resource, class ResourceRef, class Key>
-cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, cpputils::unique_ref<Resource> resource) {
+template<class ActualResourceRef>
+cpputils::unique_ref<ActualResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef) {
+  static_assert(std::is_base_of<ResourceRef, ActualResourceRef>::value, "Wrong ResourceRef type");
+  std::lock_guard<std::mutex> lock(_mutex);
+  return _add<ActualResourceRef>(key, std::move(resource), createResourceRef);
+}
+
+template<class Resource, class ResourceRef, class Key>
+template<class ActualResourceRef>
+cpputils::unique_ref<ActualResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef) {
+  static_assert(std::is_base_of<ResourceRef, ActualResourceRef>::value, "Wrong ResourceRef type");
   auto insertResult = _openResources.emplace(key, std::move(resource));
   ASSERT(true == insertResult.second, "Inserting failed");
-  return _createResourceRef(insertResult.first->second.getReference(), key);
-}
-
-template<class Resource, class ResourceRef, class Key>
-cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_createResourceRef(Resource *resource, const Key &key) {
-  auto resourceRef = cpputils::make_unique_ref<ResourceRef>(resource);
+  auto resourceRef = createResourceRef(insertResult.first->second.getReference());
   resourceRef->init(this, key);
-  return std::move(resourceRef);
+  return resourceRef;
 }
 
 template<class Resource, class ResourceRef, class Key>
 boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key) {
+  return load(key, [] (Resource *res) {
+      return cpputils::make_unique_ref<ResourceRef>(res);
+  });
+};
+
+template<class Resource, class ResourceRef, class Key>
+boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
   //TODO This lock doesn't allow loading different blocks in parallel. Can we do something with futures maybe?
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
@@ -124,9 +140,11 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
     if (resource == boost::none) {
       return boost::none;
     }
-  	return _add(key, std::move(*resource));
+  	return _add(key, std::move(*resource), createResourceRef);
   } else {
-    return _createResourceRef(found->second.getReference(), key);
+    auto resourceRef = createResourceRef(found->second.getReference());
+    resourceRef->init(this, key);
+    return std::move(resourceRef);
   }
 }
 
