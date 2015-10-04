@@ -7,17 +7,18 @@
 using blobstore::Blob;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using blockstore::Key;
 
 namespace cryfs {
 namespace fsblobstore {
 
-FileBlob::FileBlob(unique_ref<Blob> blob, std::function<void()> onDestruct)
-: FsBlob(std::move(blob), onDestruct) {
+FileBlob::FileBlob(unique_ref<Blob> blob)
+: FsBlob(std::move(blob)) {
 }
 
-unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, std::function<void()> onDestruct) {
+unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
   InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::FILE);
-  return make_unique_ref<FileBlob>(std::move(blob), onDestruct);
+  return make_unique_ref<FileBlob>(std::move(blob));
 }
 
 ssize_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
@@ -30,10 +31,6 @@ void FileBlob::write(const void *source, uint64_t offset, uint64_t count) {
 
 void FileBlob::flush() {
   baseBlob().flush();
-}
-
-blockstore::Key FileBlob::key() const {
-  	return baseBlob().key();
 }
 
 void FileBlob::resize(off_t size) {

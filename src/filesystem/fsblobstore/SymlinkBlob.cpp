@@ -14,17 +14,17 @@ namespace bf = boost::filesystem;
 namespace cryfs {
 namespace fsblobstore {
 
-SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob, std::function<void()> onDestruct)
-: FsBlob(std::move(blob), onDestruct), _target(_readTargetFromBlob(baseBlob())) {
+SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
+: FsBlob(std::move(blob)), _target(_readTargetFromBlob(baseBlob())) {
 }
 
-unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, std::function<void()> onDestruct) {
+unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target) {
   string targetStr = target.native();
   blob->resize(1 + targetStr.size());
   unsigned char magicNumber = MagicNumbers::SYMLINK;
   blob->write(&magicNumber, 0, 1);
   blob->write(targetStr.c_str(), 1, targetStr.size());
-  return make_unique_ref<SymlinkBlob>(std::move(blob), onDestruct);
+  return make_unique_ref<SymlinkBlob>(std::move(blob));
 }
 
 void SymlinkBlob::_checkMagicNumber(const Blob &blob) {

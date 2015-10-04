@@ -15,21 +15,21 @@ using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using cryfs::fsblobstore::DirBlob;
-using cryfs::fsblobstore::FileBlob;
+using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlob> parent, const Key &key)
+CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, const Key &key)
 : CryNode(device, std::move(parent), key) {
 }
 
 CryFile::~CryFile() {
 }
 
-unique_ref<fsblobstore::FileBlob> CryFile::LoadBlob() const {
+unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  auto file_blob = dynamic_pointer_move<FileBlob>(blob);
+  auto file_blob = dynamic_pointer_move<FileBlobRef>(blob);
   ASSERT(file_blob != none, "Blob does not store a file");
   return std::move(*file_blob);
 }

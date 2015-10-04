@@ -9,7 +9,6 @@
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
-#include "fsblobstore/SymlinkBlob.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -26,11 +25,11 @@ using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
-using cryfs::fsblobstore::DirBlob;
+using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, boost::optional<unique_ref<DirBlob>> parent, const Key &key)
+CryDir::CryDir(CryDevice *device, boost::optional<unique_ref<DirBlobRef>> parent, const Key &key)
 : CryNode(device, std::move(parent), key) {
 }
 
@@ -38,9 +37,8 @@ CryDir::~CryDir() {
 }
 
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
-  auto blob = LoadBlob();
   auto child = device()->CreateFileBlob();
-  blob->AddChildFile(name, child->key(), mode, uid, gid);
+  LoadBlob()->AddChildFile(name, child->key(), mode, uid, gid);
   return make_unique_ref<CryOpenFile>(std::move(child));
 }
 
@@ -50,9 +48,9 @@ void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   blob->AddChildDir(name, child->key(), mode, uid, gid);
 }
 
-unique_ref<DirBlob> CryDir::LoadBlob() const {
+unique_ref<DirBlobRef> CryDir::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  auto dir_blob = dynamic_pointer_move<DirBlob>(blob);
+  auto dir_blob = dynamic_pointer_move<DirBlobRef>(blob);
   ASSERT(dir_blob != none, "Blob does not store a directory");
   return std::move(*dir_blob);
 }

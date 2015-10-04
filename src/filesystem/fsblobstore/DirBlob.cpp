@@ -26,10 +26,10 @@ using boost::none;
 namespace cryfs {
 namespace fsblobstore {
 
-    //TODO Factor out a DirEntryList class
+//TODO Factor out a DirEntryList class
 
-DirBlob::DirBlob(unique_ref<Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct) :
-    FsBlob(std::move(blob), onDestruct), _fsBlobStore(fsBlobStore), _entries(), _changed(false) {
+DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
+    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _changed(false) {
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -43,9 +43,9 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::function<off_t(const blockstore::Key&)> getLstatSize) {
   InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::DIR);
-  return make_unique_ref<DirBlob>(std::move(blob), fsBlobStore, onDestruct);
+  return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
 }
 
 void DirBlob::_writeEntriesToBlob() {
@@ -205,12 +205,10 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_nlink = 1;
   //TODO Handle file access times
   result->st_mtime = result->st_ctime = result->st_atime = 0;
-  auto blob = _fsBlobStore->load(key);
-  ASSERT(blob != none, "Blob for directory entry not found");
-  result->st_size = (*blob)->lstat_size();
+  result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, 512);
-  result->st_blksize = CryDevice::BLOCKSIZE_BYTES; //TODO _fsBlobStore->BLOCKSIZE_BYTES would be cleaner
+  result->st_blksize = CryDevice::BLOCKSIZE_BYTES; //TODO FsBlobStore::BLOCKSIZE_BYTES would be cleaner
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
@@ -230,6 +228,10 @@ void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
     found->gid = gid;
     _changed = true;
   }
+}
+
+void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {
+    _getLstatSize = getLstatSize;
 }
 
 }

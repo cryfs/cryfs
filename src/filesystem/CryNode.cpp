@@ -16,8 +16,8 @@ using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
-using cryfs::fsblobstore::FsBlob;
-using cryfs::fsblobstore::DirBlob;
+using cryfs::parallelaccessfsblobstore::FsBlobRef;
+using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -25,7 +25,7 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlob>> parent, const Key &key)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, const Key &key)
 : _device(device),
   _parent(std::move(parent)),
   _key(key) {
@@ -82,7 +82,7 @@ const CryDevice *CryNode::device() const {
   return _device;
 }
 
-unique_ref<FsBlob> CryNode::LoadBlob() const {
+unique_ref<FsBlobRef> CryNode::LoadBlob() const {
   return _device->LoadBlob(_key);
 }
 

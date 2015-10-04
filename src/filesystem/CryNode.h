@@ -5,14 +5,14 @@
 #include <messmer/fspp/fs_interface/Node.h>
 #include "messmer/cpp-utils/macros.h"
 #include <messmer/fspp/fs_interface/Dir.h>
-#include "fsblobstore/DirBlob.h"
+#include "parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
 
 namespace cryfs {
 
 class CryNode: public virtual fspp::Node {
 public:
-  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<fsblobstore::DirBlob>> parent, const blockstore::Key &key);
+  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, const blockstore::Key &key);
   void access(int mask) const override;
   void stat(struct ::stat *result) const override;
   void chmod(mode_t mode) override;
@@ -27,13 +27,13 @@ protected:
 
   CryDevice *device();
   const CryDevice *device() const;
-  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob() const;
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
 
   virtual fspp::Dir::EntryType getType() const = 0;
 
 private:
   CryDevice *_device;
-  boost::optional<cpputils::unique_ref<fsblobstore::DirBlob>> _parent;
+  boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> _parent;
   blockstore::Key _key;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);

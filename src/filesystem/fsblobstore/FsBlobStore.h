@@ -23,10 +23,9 @@ namespace cryfs {
             void remove(cpputils::unique_ref<FsBlob> blob);
 
         private:
-            std::function<void()> freeLockFunction(const blockstore::Key &key);
 
-            //Instead of locking open blobs, it would be faster to allow parallel access similar to parallelaccessstore.
-            cpputils::LockPool<blockstore::Key> _openBlobs;
+            std::function<off_t(const blockstore::Key &)> _getLstatSize();
+
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
         };
     }

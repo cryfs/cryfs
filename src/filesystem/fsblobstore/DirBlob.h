@@ -6,7 +6,6 @@
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/fspp/fs_interface/Dir.h>
 #include "FsBlob.h"
-
 #include <vector>
 
 namespace cryfs {
@@ -43,10 +42,9 @@ namespace cryfs {
             };
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                    FsBlobStore *fsBlobStore,
-                                                                    std::function<void()> onDestruct);
+                                                                    std::function<off_t (const blockstore::Key&)> getLstatSize);
 
-            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, FsBlobStore *fsBlobStore, std::function<void()> onDestruct);
+            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize);
 
             virtual ~DirBlob();
 
@@ -80,6 +78,8 @@ namespace cryfs {
 
             void chownChild(const blockstore::Key &key, uid_t uid, gid_t gid);
 
+            void setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize);
+
         private:
 
             const char *readAndAddNextChild(const char *pos, std::vector<Entry> *result) const;
@@ -92,7 +92,7 @@ namespace cryfs {
 
             std::vector<DirBlob::Entry>::iterator _findChild(const blockstore::Key &key);
 
-            FsBlobStore *_fsBlobStore;
+            std::function<off_t (const blockstore::Key&)> _getLstatSize;
             std::vector<Entry> _entries;
             bool _changed;
 

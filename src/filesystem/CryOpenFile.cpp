@@ -9,7 +9,7 @@
 namespace bf = boost::filesystem;
 
 using cpputils::unique_ref;
-using cryfs::fsblobstore::FileBlob;
+using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 //TODO Get rid of this in favor of a exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -17,7 +17,7 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(unique_ref<FileBlob> fileBlob)
+CryOpenFile::CryOpenFile(unique_ref<FileBlobRef> fileBlob)
 : _fileBlob(std::move(fileBlob)) {
 }
 

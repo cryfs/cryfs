@@ -8,10 +8,10 @@
 #include <boost/filesystem.hpp>
 #include <messmer/fspp/fs_interface/Device.h>
 
-#include "fsblobstore/FsBlobStore.h"
-#include "fsblobstore/DirBlob.h"
-#include "fsblobstore/FileBlob.h"
-#include "fsblobstore/SymlinkBlob.h"
+#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "parallelaccessfsblobstore/FileBlobRef.h"
+#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
 
 namespace cryfs {
 
@@ -24,12 +24,12 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  cpputils::unique_ref<fsblobstore::FileBlob> CreateFileBlob();
-  cpputils::unique_ref<fsblobstore::DirBlob> CreateDirBlob();
-  cpputils::unique_ref<fsblobstore::SymlinkBlob> CreateSymlinkBlob(const boost::filesystem::path &target);
-  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob(const blockstore::Key &key); //TODO Do I still need this function?
-  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob(const boost::filesystem::path &path);
-  cpputils::unique_ref<fsblobstore::DirBlob> LoadDirBlob(const boost::filesystem::path &path);
+  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob();
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob();
+  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target);
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key); //TODO Do I still need this function?
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const boost::filesystem::path &path);
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob(const boost::filesystem::path &path);
   void RemoveBlob(const blockstore::Key &key);
 
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
@@ -37,7 +37,7 @@ public:
 
 private:
 
-  cpputils::unique_ref<fsblobstore::FsBlobStore> _fsBlobStore;
+  cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;
 
