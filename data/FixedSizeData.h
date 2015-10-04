@@ -21,6 +21,8 @@ public:
 
   static FixedSizeData<SIZE> CreatePseudoRandom();
   static FixedSizeData<SIZE> CreateOSRandom();
+  //TODO Test Null()
+  static FixedSizeData<SIZE> Null();
 
   static FixedSizeData<SIZE> FromString(const std::string &data);
   std::string ToString() const;
@@ -63,6 +65,13 @@ template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateOSRandom() {
   FixedSizeData<SIZE> result;
   CryptoPP::OS_GenerateRandomBlock(true, result._data, BINARY_LENGTH);
+  return result;
+}
+
+template<unsigned int SIZE>
+FixedSizeData<SIZE> FixedSizeData<SIZE>::Null() {
+  FixedSizeData<SIZE> result;
+  std::memset(result._data, 0, BINARY_LENGTH);
   return result;
 }
 
