@@ -20,7 +20,7 @@ public:
   BlobOnBlocks(cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> datatree);
   virtual ~BlobOnBlocks();
 
-  blockstore::Key key() const override;
+  const blockstore::Key &key() const override;
 
   uint64_t size() const override;
   void resize(uint64_t numBytes) override;

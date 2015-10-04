@@ -13,7 +13,7 @@ public:
   virtual ~Blob() {}
 
   //TODO Use own Key class for blobstore
-  virtual blockstore::Key key() const = 0;
+  virtual const blockstore::Key &key() const = 0;
 
   virtual uint64_t size() const = 0;
   virtual void resize(uint64_t numBytes) = 0;

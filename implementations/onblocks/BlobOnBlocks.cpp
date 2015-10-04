@@ -76,7 +76,7 @@ void BlobOnBlocks::flush() {
   _datatree->flush();
 }
 
-Key BlobOnBlocks::key() const {
+const Key &BlobOnBlocks::key() const {
   return _datatree->key();
 }
 
