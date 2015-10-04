@@ -7,6 +7,7 @@
 #include <messmer/fspp/fs_interface/Dir.h>
 #include "FsBlob.h"
 #include <vector>
+#include <mutex>
 
 namespace cryfs {
     namespace fsblobstore {
@@ -84,7 +85,7 @@ namespace cryfs {
 
             const char *readAndAddNextChild(const char *pos, std::vector<Entry> *result) const;
 
-            bool hasChild(const std::string &name) const;
+            bool _hasChild(const std::string &name) const;
 
             void _readEntriesFromBlob();
 
@@ -94,6 +95,7 @@ namespace cryfs {
 
             std::function<off_t (const blockstore::Key&)> _getLstatSize;
             std::vector<Entry> _entries;
+            mutable std::mutex _mutex;
             bool _changed;
 
             DISALLOW_COPY_AND_ASSIGN(DirBlob);

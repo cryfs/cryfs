@@ -49,6 +49,7 @@ unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::func
 }
 
 void DirBlob::_writeEntriesToBlob() {
+  std::unique_lock<std::mutex> lock(_mutex);
   if (_changed) {
     //TODO Resizing is imperformant
     baseBlob().resize(1);
@@ -75,6 +76,7 @@ void DirBlob::_writeEntriesToBlob() {
 }
 
 void DirBlob::_readEntriesFromBlob() {
+  //No lock needed, because this is only called from the constructor.
   _entries.clear();
   //TODO Getting size and then reading traverses tree twice. Something like readAll() would be faster.
   Data data(baseBlob().size() - 1);
@@ -116,7 +118,7 @@ const char *DirBlob::readAndAddNextChild(const char *pos,
   return pos;
 }
 
-bool DirBlob::hasChild(const string &name) const {
+bool DirBlob::_hasChild(const string &name) const {
   auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const Entry &entry) {
     return entry.name == name;
   });
@@ -137,7 +139,8 @@ void DirBlob::AddChildSymlink(const std::string &name, const blockstore::Key &bl
 
 void DirBlob::AddChild(const std::string &name, const Key &blobKey,
     fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid) {
-  if (hasChild(name)) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  if (_hasChild(name)) {
     throw fspp::fuse::FuseErrnoException(EEXIST);
   }
 
@@ -146,6 +149,7 @@ void DirBlob::AddChild(const std::string &name, const Key &blobKey,
 }
 
 const DirBlob::Entry &DirBlob::GetChild(const string &name) const {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const Entry &entry) {
     return entry.name == name;
   });
@@ -156,6 +160,7 @@ const DirBlob::Entry &DirBlob::GetChild(const string &name) const {
 }
 
 const DirBlob::Entry &DirBlob::GetChild(const Key &key) const {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = std::find_if(_entries.begin(), _entries.end(), [key] (const Entry &entry) {
 	return entry.key == key;
   });
@@ -166,6 +171,7 @@ const DirBlob::Entry &DirBlob::GetChild(const Key &key) const {
 }
 
 void DirBlob::RemoveChild(const Key &key) {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = _findChild(key);
   _entries.erase(found);
   _changed = true;
@@ -183,6 +189,7 @@ std::vector<DirBlob::Entry>::iterator DirBlob::_findChild(const Key &key) {
 }
 
 void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
+  std::unique_lock<std::mutex> lock(_mutex);
   result->reserve(result->size() + _entries.size());
   for (const auto &entry : _entries) {
     result->emplace_back(entry.type, entry.name);
@@ -212,6 +219,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = _findChild(key);
   ASSERT ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)), "Unknown mode in entry");
   found->mode = mode;
@@ -219,6 +227,7 @@ void DirBlob::chmodChild(const Key &key, mode_t mode) {
 }
 
 void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = _findChild(key);
   if (uid != (uid_t)-1) {
     found->uid = uid;
@@ -231,6 +240,7 @@ void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
 }
 
 void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {
+    std::unique_lock<std::mutex> lock(_mutex);
     _getLstatSize = getLstatSize;
 }
 
