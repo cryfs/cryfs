@@ -262,6 +262,7 @@ void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> ge
 cpputils::unique_ref<blobstore::Blob> DirBlob::releaseBaseBlob() {
   std::unique_lock<std::mutex> lock(_mutex);
   _writeEntriesToBlob();
+  return FsBlob::releaseBaseBlob();
 }
 
 }

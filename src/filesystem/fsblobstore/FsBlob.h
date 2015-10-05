@@ -24,9 +24,10 @@ namespace cryfs {
 
             static void InitializeBlobWithMagicNumber(blobstore::Blob *blob, unsigned char magicNumber);
 
-        private:
             friend class FsBlobStore;
             virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
+
+        private:
 
             cpputils::unique_ref<blobstore::Blob> _baseBlob;
 
