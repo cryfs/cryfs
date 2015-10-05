@@ -4,7 +4,6 @@
 //TODO Remove and replace with exception hierarchy
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 
-#include <messmer/cpp-utils/data/Data.h>
 #include <messmer/blobstore/implementations/onblocks/utils/Math.h>
 #include "MagicNumbers.h"
 #include "../CryDevice.h"
@@ -48,6 +47,36 @@ unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::func
   return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
 }
 
+Data DirBlob::_writeEntry(const DirBlob::Entry & entry) {
+  string keystr = entry.key.ToString();
+
+  unsigned int size = 1 + (entry.name.size() + 1) + (keystr.size() + 1) + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
+  Data result(size);
+  unsigned int offset = 0;
+
+  *static_cast<uint8_t*>(result.dataOffset(offset)) = static_cast<uint8_t>(entry.type);
+  offset += 1;
+
+  std::memcpy(result.dataOffset(offset), entry.name.c_str(), entry.name.size()+1);
+  offset += entry.name.size() + 1;
+
+  std::memcpy(result.dataOffset(offset), keystr.c_str(), keystr.size() + 1);
+  offset += keystr.size() + 1;
+
+  *reinterpret_cast<uid_t*>(result.dataOffset(offset)) = entry.uid;
+  offset += sizeof(uid_t);
+
+  *reinterpret_cast<gid_t*>(result.dataOffset(offset)) = entry.gid;
+  offset += sizeof(gid_t);
+
+  *reinterpret_cast<mode_t*>(result.dataOffset(offset)) = entry.mode;
+  offset += sizeof(mode_t);
+
+  ASSERT(offset == size, "Didn't write correct number of elements");
+
+  return result;
+}
+
 void DirBlob::_writeEntriesToBlob() {
   std::unique_lock<std::mutex> lock(_mutex);
   if (_changed) {
@@ -55,21 +84,9 @@ void DirBlob::_writeEntriesToBlob() {
     baseBlob().resize(1);
     unsigned int offset = 1;
     for (const auto &entry : _entries) {
-	  uint8_t entryTypeMagicNumber = static_cast<uint8_t>(entry.type);
-	  baseBlob().write(&entryTypeMagicNumber, offset, 1);
-	  offset += 1;
-      baseBlob().write(entry.name.c_str(), offset, entry.name.size() + 1);
-	  offset += entry.name.size() + 1;
-	  string keystr = entry.key.ToString();
-      baseBlob().write(keystr.c_str(), offset, keystr.size() + 1);
-	  offset += keystr.size() + 1;
-      baseBlob().write(&entry.uid, offset, sizeof(uid_t));
-	  //TODO Writing them all in separate write calls is maybe imperformant. We could write the whole entry in one write call instead.
-	  offset += sizeof(uid_t);
-      baseBlob().write(&entry.gid, offset, sizeof(gid_t));
-      offset += sizeof(gid_t);
-      baseBlob().write(&entry.mode, offset, sizeof(mode_t));
-      offset += sizeof(mode_t);
+      Data serializedEntry = _writeEntry(entry);
+      baseBlob().write(serializedEntry.data(), offset, serializedEntry.size());
+      offset += serializedEntry.size();
     }
     _changed = false;
   }

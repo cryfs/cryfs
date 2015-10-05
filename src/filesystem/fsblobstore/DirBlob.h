@@ -4,6 +4,7 @@
 
 #include <messmer/blockstore/utils/Key.h>
 #include <messmer/cpp-utils/macros.h>
+#include <messmer/cpp-utils/data/Data.h>
 #include <messmer/fspp/fs_interface/Dir.h>
 #include "FsBlob.h"
 #include <vector>
@@ -90,6 +91,7 @@ namespace cryfs {
             void _readEntriesFromBlob();
 
             void _writeEntriesToBlob();
+            static cpputils::Data _writeEntry(const DirBlob::Entry & entry);
 
             std::vector<DirBlob::Entry>::iterator _findChild(const blockstore::Key &key);
 
