@@ -5,6 +5,7 @@
 #include "messmer/fspp/fuse/FuseErrnoException.h"
 
 #include <messmer/blobstore/implementations/onblocks/utils/Math.h>
+#include <messmer/cpp-utils/data/Data.h>
 #include "MagicNumbers.h"
 #include "../CryDevice.h"
 #include "FileBlob.h"
