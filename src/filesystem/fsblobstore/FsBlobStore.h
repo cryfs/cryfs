@@ -27,6 +27,8 @@ namespace cryfs {
             std::function<off_t(const blockstore::Key &)> _getLstatSize();
 
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
+
+            DISALLOW_COPY_AND_ASSIGN(FsBlobStore);
         };
     }
 }

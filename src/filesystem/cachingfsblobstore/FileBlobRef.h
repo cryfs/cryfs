@@ -1,15 +1,19 @@
-#ifndef CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_FILEBLOBREF_H
-#define CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_FILEBLOBREF_H
+#ifndef CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_FILEBLOBREF_H
+#define CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_FILEBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../cachingfsblobstore/FileBlobRef.h"
+#include "../fsblobstore/FileBlob.h"
 
 namespace cryfs {
-namespace parallelaccessfsblobstore {
+namespace cachingfsblobstore {
 
 class FileBlobRef: public FsBlobRef {
 public:
-    FileBlobRef(cachingfsblobstore::FileBlobRef *base) : _base(base) {}
+    FileBlobRef(cpputils::unique_ref<fsblobstore::FileBlob> base, CachingFsBlobStore *fsBlobStore)
+            :FsBlobRef(std::move(base), fsBlobStore),
+            _base(dynamic_cast<fsblobstore::FileBlob*>(baseBlob())) {
+        ASSERT(_base != nullptr, "We just initialized this with a pointer to FileBlob. Can't be something else now.");
+    }
 
     void resize(off_t size) {
         return _base->resize(size);
@@ -40,7 +44,7 @@ public:
     }
 
 private:
-    cachingfsblobstore::FileBlobRef *_base;
+    fsblobstore::FileBlob *_base;
 };
 
 }

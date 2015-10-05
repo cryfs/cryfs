@@ -2,14 +2,14 @@
 #define CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_SYMLINKBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../fsblobstore/SymlinkBlob.h"
+#include "../cachingfsblobstore/SymlinkBlobRef.h"
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
 class SymlinkBlobRef: public FsBlobRef {
 public:
-    SymlinkBlobRef(fsblobstore::SymlinkBlob *base) : _base(base) {}
+    SymlinkBlobRef(cachingfsblobstore::SymlinkBlobRef *base) : _base(base) {}
 
     const boost::filesystem::path &target() const {
         return _base->target();
@@ -24,7 +24,7 @@ public:
     }
 
 private:
-    fsblobstore::SymlinkBlob *_base;
+    cachingfsblobstore::SymlinkBlobRef *_base;
 };
 
 }

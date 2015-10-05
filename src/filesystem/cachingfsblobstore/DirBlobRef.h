@@ -1,15 +1,19 @@
-#ifndef CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_DIRBLOBREF_H
-#define CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_DIRBLOBREF_H
+#ifndef CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_DIRBLOBREF_H
+#define CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_DIRBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../cachingfsblobstore/DirBlobRef.h"
+#include "../fsblobstore/DirBlob.h"
 
 namespace cryfs {
-namespace parallelaccessfsblobstore {
+namespace cachingfsblobstore {
 
 class DirBlobRef: public FsBlobRef {
 public:
-    DirBlobRef(cachingfsblobstore::DirBlobRef *base): _base(base) {}
+    DirBlobRef(cpputils::unique_ref<fsblobstore::DirBlob> base, CachingFsBlobStore *fsBlobStore):
+            FsBlobRef(std::move(base), fsBlobStore),
+            _base(dynamic_cast<fsblobstore::DirBlob*>(baseBlob())) {
+        ASSERT(_base != nullptr, "We just initialized this with a pointer to DirBlob. Can't be something else now.");
+    }
 
     using Entry = fsblobstore::DirBlob::Entry;
 
@@ -70,8 +74,12 @@ public:
         return _base->lstat_size();
     }
 
+    void setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {
+        return _base->setLstatSizeGetter(getLstatSize);
+    }
+
 private:
-    cachingfsblobstore::DirBlobRef *_base;
+    fsblobstore::DirBlob *_base;
 };
 
 }

@@ -2,13 +2,14 @@
 #define CRYFS_PARALLELACCESSFSBLOBSTORE_FSBLOBREF_H
 
 #include <messmer/parallelaccessstore/ParallelAccessStore.h>
-#include "../fsblobstore/FsBlob.h"
+#include "../cachingfsblobstore/FsBlobRef.h"
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class FsBlobRef: public parallelaccessstore::ParallelAccessStore<fsblobstore::FsBlob, FsBlobRef, blockstore::Key>::ResourceRefBase {
+class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::Key>::ResourceRefBase {
 public:
+    virtual ~FsBlobRef() {}
     virtual const blockstore::Key &key() const = 0;
     virtual off_t lstat_size() const = 0;
 

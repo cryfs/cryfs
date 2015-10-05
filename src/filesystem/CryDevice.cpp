@@ -12,6 +12,7 @@
 #include "messmer/blobstore/implementations/onblocks/BlobOnBlocks.h"
 #include "messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h"
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "cachingfsblobstore/CachingFsBlobStore.h"
 
 using std::string;
 
@@ -32,6 +33,7 @@ using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
 using cryfs::fsblobstore::FsBlobStore;
+using cryfs::cachingfsblobstore::CachingFsBlobStore;
 using cryfs::parallelaccessfsblobstore::ParallelAccessFsBlobStore;
 using cryfs::parallelaccessfsblobstore::FileBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
@@ -47,11 +49,13 @@ constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ref<BlockStore> blockStore)
 : _fsBlobStore(
       make_unique_ref<ParallelAccessFsBlobStore>(
-        make_unique_ref<FsBlobStore>(
-          make_unique_ref<BlobStoreOnBlocks>(
-            make_unique_ref<CachingBlockStore>(
-              CreateEncryptedBlockStore(*config, std::move(blockStore))
-            ), BLOCKSIZE_BYTES)))
+        make_unique_ref<CachingFsBlobStore>(
+          make_unique_ref<FsBlobStore>(
+            make_unique_ref<BlobStoreOnBlocks>(
+              make_unique_ref<CachingBlockStore>(
+                CreateEncryptedBlockStore(*config, std::move(blockStore))
+              ), BLOCKSIZE_BYTES)))
+        )
       ),
   _rootKey(GetOrCreateRootKey(config.get())) {
 }

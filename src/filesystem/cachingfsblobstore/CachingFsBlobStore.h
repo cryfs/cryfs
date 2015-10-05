@@ -1,0 +1,43 @@
+#ifndef CRYFS_CACHINGFSBLOBSTORE_CACHINGFSBLOBSTORE_H
+#define CRYFS_CACHINGFSBLOBSTORE_CACHINGFSBLOBSTORE_H
+
+#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include "../fsblobstore/FsBlobStore.h"
+#include <messmer/blockstore/implementations/caching/cache/Cache.h>
+#include "FileBlobRef.h"
+#include "DirBlobRef.h"
+#include "SymlinkBlobRef.h"
+
+namespace cryfs {
+    namespace cachingfsblobstore {
+        //TODO Test classes in cachingfsblobstore
+
+        //TODO Inherit from same interface as FsBlobStore?
+        class CachingFsBlobStore {
+        public:
+            CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore);
+            virtual ~CachingFsBlobStore();
+
+            cpputils::unique_ref<FileBlobRef> createFileBlob();
+            cpputils::unique_ref<DirBlobRef> createDirBlob();
+            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target);
+            boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
+            void remove(cpputils::unique_ref<FsBlobRef> blob);
+
+            void releaseForCache(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob);
+
+        private:
+            cpputils::unique_ref<FsBlobRef> _makeRef(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob);
+
+            cpputils::unique_ref<fsblobstore::FsBlobStore> _baseBlobStore;
+
+            //TODO Move Cache to some common location, not in blockstore
+            //TODO Use other cache config (i.e. smaller max number of entries) here than in blockstore
+            blockstore::caching::Cache<blockstore::Key, cpputils::unique_ref<fsblobstore::FsBlob>> _cache;
+
+            DISALLOW_COPY_AND_ASSIGN(CachingFsBlobStore);
+        };
+    }
+}
+
+#endif
