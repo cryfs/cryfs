@@ -35,10 +35,12 @@ DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::K
 }
 
 DirBlob::~DirBlob() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _writeEntriesToBlob();
 }
 
 void DirBlob::flush() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _writeEntriesToBlob();
   baseBlob().flush();
 }
@@ -76,7 +78,6 @@ void DirBlob::_serializeEntry(const DirBlob::Entry & entry, uint8_t *dest) {
 }
 
 void DirBlob::_writeEntriesToBlob() {
-  std::unique_lock<std::mutex> lock(_mutex);
   if (_changed) {
     size_t serializedSize = 0;
     for (const auto &entry : _entries) {
@@ -256,6 +257,11 @@ void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
 void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {
     std::unique_lock<std::mutex> lock(_mutex);
     _getLstatSize = getLstatSize;
+}
+
+cpputils::unique_ref<blobstore::Blob> DirBlob::releaseBaseBlob() {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _writeEntriesToBlob();
 }
 
 }

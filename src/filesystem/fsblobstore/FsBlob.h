@@ -26,14 +26,14 @@ namespace cryfs {
 
         private:
             friend class FsBlobStore;
-            cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
+            virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
 
             cpputils::unique_ref<blobstore::Blob> _baseBlob;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlob);
         };
 
-        
+
         // ---------------------------
         // Inline function definitions
         // ---------------------------

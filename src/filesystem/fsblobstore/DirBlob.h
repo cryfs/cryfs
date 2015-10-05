@@ -93,6 +93,8 @@ namespace cryfs {
             static size_t _serializedSizeOfEntry(const DirBlob::Entry &entry);
             static void _serializeEntry(const DirBlob::Entry &entry, uint8_t *dest);
 
+            cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
+
             std::vector<DirBlob::Entry>::iterator _findChild(const blockstore::Key &key);
 
             std::function<off_t (const blockstore::Key&)> _getLstatSize;
