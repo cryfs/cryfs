@@ -59,7 +59,7 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
 }
 
 Data BlobOnBlocks::readAll() const {
-  //TODO Querying size is inefficient. Is this possible without numStoredBytes()?
+  //TODO Querying size is inefficient. Is this possible without a call to size()?
   uint64_t count = size();
   Data result(count);
   _read(result.data(), 0, count);
