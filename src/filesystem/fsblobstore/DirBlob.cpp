@@ -99,11 +99,9 @@ void DirBlob::_writeEntriesToBlob() {
 void DirBlob::_readEntriesFromBlob() {
   //No lock needed, because this is only called from the constructor.
   _entries.clear();
-  //TODO Getting size and then reading traverses tree twice. Something like readAll() would be faster.
-  Data data(baseBlob().size() - 1);
-  baseBlob().read(data.data(), 1, baseBlob().size() - 1);
+  Data data = baseBlob().readAll();
 
-  const char *pos = (const char*) data.data();
+  const char *pos = (const char*)data.data() + 1; // +1 for magic number of blob
   while (pos < (const char*) data.data() + data.size()) {
     pos = readAndAddNextChild(pos, &_entries);
   }
