@@ -33,6 +33,11 @@ namespace cryfs {
             DISALLOW_COPY_AND_ASSIGN(FsBlob);
         };
 
+        
+        // ---------------------------
+        // Inline function definitions
+        // ---------------------------
+
         inline FsBlob::FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob)
                 : _baseBlob(std::move(baseBlob)) {
         }
