@@ -8,6 +8,7 @@
 
 using std::function;
 using cpputils::unique_ref;
+using cpputils::Data;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::Key;
@@ -18,18 +19,22 @@ namespace onblocks {
 using parallelaccessdatatreestore::DataTreeRef;
 
 BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
-: _datatree(std::move(datatree)) {
+: _datatree(std::move(datatree)), _sizeCache(boost::none) {
 }
 
 BlobOnBlocks::~BlobOnBlocks() {
 }
 
 uint64_t BlobOnBlocks::size() const {
-  return _datatree->numStoredBytes();
+  if (_sizeCache == boost::none) {
+    _sizeCache = _datatree->numStoredBytes();
+  }
+  return *_sizeCache;
 }
 
 void BlobOnBlocks::resize(uint64_t numBytes) {
   _datatree->resizeNumBytes(numBytes);
+  _sizeCache = numBytes;
 }
 
 void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, DataLeafNode *leaf, uint32_t, uint32_t)> func) const {
@@ -47,10 +52,22 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
     }
     func(indexOfFirstLeafByte, leaf, dataBegin, dataEnd-dataBegin);
   });
+  if (writingOutside) {
+    //ASSERT(_datatree->numStoredBytes() == endByte, "Writing didn't grow by the correct number of bytes");
+    _sizeCache = endByte;
+  }
+}
+
+Data BlobOnBlocks::readAll() const {
+  //TODO Querying size is inefficient. Is this possible without numStoredBytes()?
+  uint64_t count = size();
+  Data result(count);
+  _read(result.data(), 0, count);
+  return result;
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
-  ASSERT(offset <= _datatree->numStoredBytes() && offset + count <= size(), "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
+  ASSERT(offset <= size() && offset + count <= size(), "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
   uint64_t read = tryRead(target, offset, count);
   ASSERT(read == count, "BlobOnBlocks::read() couldn't read all requested bytes. Use BlobOnBlocks::tryRead() if this should be allowed.");
 }
@@ -58,11 +75,15 @@ void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
 uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) const {
   //TODO Quite inefficient to call size() here, because that has to traverse the tree
   uint64_t realCount = std::max(UINT64_C(0), std::min(count, size()-offset));
-  traverseLeaves(offset, realCount, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
-    //TODO Simplify formula, make it easier to understand
-    leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
-  });
+  _read(target, offset, realCount);
   return realCount;
+}
+
+void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
+  traverseLeaves(offset, count, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+      //TODO Simplify formula, make it easier to understand
+      leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
+  });
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {

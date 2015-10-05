@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdint>
 #include <messmer/blockstore/utils/Key.h>
+#include <messmer/cpp-utils/data/Data.h>
 
 namespace blobstore {
 
@@ -18,6 +19,7 @@ public:
   virtual uint64_t size() const = 0;
   virtual void resize(uint64_t numBytes) = 0;
 
+  virtual cpputils::Data readAll() const = 0;
   virtual void read(void *target, uint64_t offset, uint64_t size) const = 0;
   virtual uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const = 0;
   virtual void write(const void *source, uint64_t offset, uint64_t size) = 0;
