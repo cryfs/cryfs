@@ -22,20 +22,24 @@ template<class Resource, class ResourceRef, class Key>
 class ParallelAccessStore {
 public:
   explicit ParallelAccessStore(cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> baseStore);
+    ~ParallelAccessStore() {
+        ASSERT(_openResources.size() == 0, "Still resources open when trying to destruct");
+        ASSERT(_resourcesToRemove.size() == 0, "Still resources to remove when trying to destruct");
+    };
 
   class ResourceRefBase {
   public:
     //TODO Better way to initialize
-    ResourceRefBase(): _cachingStore(nullptr), _key(Key::Null()) {}
-    void init(ParallelAccessStore *cachingStore, const Key &key) {
-      _cachingStore = cachingStore;
+    ResourceRefBase(): _parallelAccessStore(nullptr), _key(Key::Null()) {}
+    void init(ParallelAccessStore *parallelAccessStore, const Key &key) {
+      _parallelAccessStore = parallelAccessStore;
       _key = key;
     }
     virtual ~ResourceRefBase() {
-      _cachingStore->release(_key);
+      _parallelAccessStore->release(_key);
     }
   private:
-    ParallelAccessStore *_cachingStore;
+    ParallelAccessStore *_parallelAccessStore;
     //TODO We're storing Key twice (here and in the base resource). Rather use getKey() on the base resource if possible somehow.
     Key _key;
   };
