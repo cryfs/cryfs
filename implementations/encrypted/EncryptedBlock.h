@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 #include "ciphers/Cipher.h"
 #include <messmer/cpp-utils/assert/assert.h>
+#include <mutex>
 
 namespace blockstore {
 namespace encrypted {
@@ -49,6 +50,8 @@ private:
   void _encryptToBaseBlock();
   static cpputils::Data _prependKeyHeaderToData(const Key &key, cpputils::Data data);
   static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data);
+
+  std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlock);
 };
@@ -114,6 +117,7 @@ EncryptedBlock<Cipher>::EncryptedBlock(cpputils::unique_ref<Block> baseBlock, co
 
 template<class Cipher>
 EncryptedBlock<Cipher>::~EncryptedBlock() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _encryptToBaseBlock();
 }
 
@@ -131,6 +135,7 @@ void EncryptedBlock<Cipher>::write(const void *source, uint64_t offset, uint64_t
 
 template<class Cipher>
 void EncryptedBlock<Cipher>::flush() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _encryptToBaseBlock();
   return _baseBlock->flush();
 }
@@ -151,6 +156,7 @@ void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
 
 template<class Cipher>
 cpputils::unique_ref<Block> EncryptedBlock<Cipher>::releaseBlock() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _encryptToBaseBlock();
   return std::move(_baseBlock);
 }

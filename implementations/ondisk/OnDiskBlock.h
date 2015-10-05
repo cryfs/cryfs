@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <mutex>
 
 namespace blockstore {
 namespace ondisk {
@@ -36,6 +37,8 @@ private:
 
   void _fillDataWithZeroes();
   void _storeToDisk() const;
+
+  std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(OnDiskBlock);
 };

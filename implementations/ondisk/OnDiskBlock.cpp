@@ -91,6 +91,7 @@ void OnDiskBlock::_storeToDisk() const {
 }
 
 void OnDiskBlock::flush() {
+  std::unique_lock<std::mutex> lock(_mutex);
   if (_dataChanged) {
     _storeToDisk();
     _dataChanged = false;
