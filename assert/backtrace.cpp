@@ -5,14 +5,16 @@
 #include <unistd.h>
 #include <cxxabi.h>
 #include <string>
+#include <sstream>
 
 using std::string;
+using std::ostringstream;
 
 //TODO Use the following? https://github.com/bombela/backward-cpp
 
 namespace cpputils {
 
-    //TODO Refactor (for example: RAII or at least try{}finally{} instead of not-exceptionsafe free())
+    //TODO Refactor (for example: RAII or at least try{}finally{} instead of  free())
 
     std::string demangle(const string &mangledName) {
         string result;
@@ -36,21 +38,25 @@ namespace cpputils {
         return demangle(backtraceLine.substr(startMangledName+1, endMangledName-startMangledName-1)) + ": (" + backtraceLine.substr(0, startMangledName) + backtraceLine.substr(endMangledName);
     }
 
-    void print_backtrace(void *array[], size_t size) {
+    string backtrace_to_string(void *array[], size_t size) {
+        ostringstream result;
         char **ptr = backtrace_symbols(array, size);
         for (size_t i = 0; i < size; ++i) {
-            std::cerr << pretty(ptr[i]) << "\n";
+            result << pretty(ptr[i]) << "\n";
         }
         free(ptr);
+        return result.str();
+    }
+
+    string backtrace() {
+        constexpr unsigned int MAX_SIZE = 100;
+        void *array[MAX_SIZE];
+        size_t size = ::backtrace(array, MAX_SIZE);
+        return backtrace_to_string(array, size);
     }
 
     void sigsegv_handler(int) {
-        constexpr unsigned int MAX_SIZE = 100;
-        void *array[MAX_SIZE];
-        size_t size = backtrace(array, MAX_SIZE);
-
-        std::cerr << "Error: SIGSEGV" << std::endl;
-        print_backtrace(array, size);
+        std::cerr << "Error: SIGSEGV\n" << backtrace() << std::endl;
         exit(1);
     }
 

@@ -10,22 +10,12 @@
 
 #include "AssertFailed.h"
 #include <iostream>
-#include <string>
-#include <execinfo.h>
+#include "backtrace.h"
 
 namespace cpputils {
     namespace _assert {
         inline std::string format(const char *expr, const char *message, const char *file, int line) {
-            // get void*'s for all entries on the stack
-            constexpr unsigned int MAX_SIZE = 100;
-            void *array[MAX_SIZE];
-            size_t size = backtrace(array, MAX_SIZE);
-            char **backtrace_str = backtrace_symbols(array, size);
-            std::string result = std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message+"\n\n";
-            for (unsigned int i = 0; i < size; ++i) {
-                result += std::string(backtrace_str[i]) + "\n";
-            }
-            free(backtrace_str);
+            std::string result = std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message+"\n\n" + backtrace();
             return result;
         }
 
