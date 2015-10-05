@@ -26,6 +26,8 @@ public:
   Cache();
   virtual ~Cache();
 
+  uint32_t size() const;
+
   void push(const Key &key, Value value);
   boost::optional<Value> pop(const Key &key);
 
@@ -133,6 +135,12 @@ bool Cache<Key, Value>::_deleteOldEntry() {
   } else {
     return false;
   }
+};
+
+template<class Key, class Value>
+uint32_t Cache<Key, Value>::size() const {
+  std::unique_lock<std::mutex> lock(_mutex);
+  return _cachedBlocks.size();
 };
 
 }

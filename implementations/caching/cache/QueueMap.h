@@ -66,7 +66,7 @@ public:
     return _sentinel.next->value();
   }
 
-  uint32_t size() {
+  uint32_t size() const {
     return _entries.size();
   }
 
