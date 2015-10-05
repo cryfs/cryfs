@@ -47,47 +47,51 @@ unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::func
   return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
 }
 
-Data DirBlob::_writeEntry(const DirBlob::Entry & entry) {
+size_t DirBlob::_serializedSizeOfEntry(const DirBlob::Entry &entry) {
+  return 1 + (entry.name.size() + 1) + (entry.key.STRING_LENGTH + 1) + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
+}
+
+void DirBlob::_serializeEntry(const DirBlob::Entry & entry, uint8_t *dest) {
+  //TODO Write key as binary?
   string keystr = entry.key.ToString();
 
-  unsigned int size = 1 + (entry.name.size() + 1) + (keystr.size() + 1) + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
-  Data result(size);
   unsigned int offset = 0;
-
-  *static_cast<uint8_t*>(result.dataOffset(offset)) = static_cast<uint8_t>(entry.type);
+  *(dest+offset) = static_cast<uint8_t>(entry.type);
   offset += 1;
 
-  std::memcpy(result.dataOffset(offset), entry.name.c_str(), entry.name.size()+1);
+  std::memcpy(dest+offset, entry.name.c_str(), entry.name.size()+1);
   offset += entry.name.size() + 1;
 
-  std::memcpy(result.dataOffset(offset), keystr.c_str(), keystr.size() + 1);
+  std::memcpy(dest+offset, keystr.c_str(), keystr.size() + 1);
   offset += keystr.size() + 1;
 
-  *reinterpret_cast<uid_t*>(result.dataOffset(offset)) = entry.uid;
+  *reinterpret_cast<uid_t*>(dest+offset) = entry.uid;
   offset += sizeof(uid_t);
 
-  *reinterpret_cast<gid_t*>(result.dataOffset(offset)) = entry.gid;
+  *reinterpret_cast<gid_t*>(dest+offset) = entry.gid;
   offset += sizeof(gid_t);
 
-  *reinterpret_cast<mode_t*>(result.dataOffset(offset)) = entry.mode;
+  *reinterpret_cast<mode_t*>(dest+offset) = entry.mode;
   offset += sizeof(mode_t);
 
-  ASSERT(offset == size, "Didn't write correct number of elements");
-
-  return result;
+  ASSERT(offset == _serializedSizeOfEntry(entry), "Didn't write correct number of elements");
 }
 
 void DirBlob::_writeEntriesToBlob() {
   std::unique_lock<std::mutex> lock(_mutex);
   if (_changed) {
-    //TODO Resizing is imperformant
-    baseBlob().resize(1);
-    unsigned int offset = 1;
+    size_t serializedSize = 0;
     for (const auto &entry : _entries) {
-      Data serializedEntry = _writeEntry(entry);
-      baseBlob().write(serializedEntry.data(), offset, serializedEntry.size());
-      offset += serializedEntry.size();
+      serializedSize += _serializedSizeOfEntry(entry);
     }
+    Data serialized(serializedSize);
+    unsigned int offset = 0;
+    for (const auto &entry : _entries) {
+      _serializeEntry(entry, static_cast<uint8_t*>(serialized.dataOffset(offset)));
+      offset += _serializedSizeOfEntry(entry);
+    }
+    baseBlob().resize(1 + serializedSize);
+    baseBlob().write(serialized.data(), 1, serializedSize);
     _changed = false;
   }
 }
