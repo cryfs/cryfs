@@ -49,13 +49,10 @@ unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::func
 }
 
 size_t DirBlob::_serializedSizeOfEntry(const DirBlob::Entry &entry) {
-  return 1 + (entry.name.size() + 1) + (entry.key.STRING_LENGTH + 1) + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
+  return 1 + (entry.name.size() + 1) + entry.key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
 }
 
 void DirBlob::_serializeEntry(const DirBlob::Entry & entry, uint8_t *dest) {
-  //TODO Write key as binary?
-  string keystr = entry.key.ToString();
-
   unsigned int offset = 0;
   *(dest+offset) = static_cast<uint8_t>(entry.type);
   offset += 1;
@@ -63,8 +60,8 @@ void DirBlob::_serializeEntry(const DirBlob::Entry & entry, uint8_t *dest) {
   std::memcpy(dest+offset, entry.name.c_str(), entry.name.size()+1);
   offset += entry.name.size() + 1;
 
-  std::memcpy(dest+offset, keystr.c_str(), keystr.size() + 1);
-  offset += keystr.size() + 1;
+  entry.key.ToBinary(dest+offset);
+  offset += entry.key.BINARY_LENGTH;
 
   *reinterpret_cast<uid_t*>(dest+offset) = entry.uid;
   offset += sizeof(uid_t);
@@ -119,11 +116,8 @@ const char *DirBlob::readAndAddNextChild(const char *pos,
   std::string name(pos, namelength);
   pos += namelength + 1;
 
-  size_t keylength = strlen(pos);
-  std::string keystr(pos, keylength);
-  pos += keylength + 1;
-
-  //It might make sense to read all of them at once with a memcpy
+  Key key = Key::FromBinary(pos);
+  pos += Key::BINARY_LENGTH;
 
   uid_t uid = *(uid_t*)pos;
   pos += sizeof(uid_t);
@@ -134,7 +128,7 @@ const char *DirBlob::readAndAddNextChild(const char *pos,
   mode_t mode = *(mode_t*)pos;
   pos += sizeof(mode_t);
 
-  result->emplace_back(type, name, Key::FromString(keystr), mode, uid, gid);
+  result->emplace_back(type, name, key, mode, uid, gid);
   return pos;
 }
 
