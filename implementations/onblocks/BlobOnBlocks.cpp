@@ -53,7 +53,7 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
     func(indexOfFirstLeafByte, leaf, dataBegin, dataEnd-dataBegin);
   });
   if (writingOutside) {
-    //ASSERT(_datatree->numStoredBytes() == endByte, "Writing didn't grow by the correct number of bytes");
+    ASSERT(_datatree->numStoredBytes() == endByte, "Writing didn't grow by the correct number of bytes");
     _sizeCache = endByte;
   }
 }
