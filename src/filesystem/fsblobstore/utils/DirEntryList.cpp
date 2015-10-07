@@ -1,4 +1,5 @@
 #include "DirEntryList.h"
+#include <limits>
 
 //TODO Get rid of that in favor of better error handling
 #include <messmer/fspp/fuse/FuseErrnoException.h>
@@ -52,9 +53,7 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
-    auto insert_pos = std::upper_bound(_entries.begin(), _entries.end(), blobKey, [] (const Key &key, const DirEntry &item) {
-        return std::less<Key>()(key, item.key);
-    });
+    auto insert_pos = _findUpperBound(blobKey);
     _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid);
 }
 
@@ -78,13 +77,40 @@ void DirEntryList::remove(const Key &key) {
 }
 
 vector<DirEntry>::iterator DirEntryList::_find(const Key &key) {
-    auto found = std::lower_bound(_entries.begin(), _entries.end(), key, [] (const DirEntry &entry, const Key &key) {
-        return std::less<Key>()(entry.key, key);
-    });
+    auto found = _findLowerBound(key);
     if (found == _entries.end() || found->key != key) {
         throw fspp::fuse::FuseErrnoException(ENOENT);
     }
     return found;
+}
+
+vector<DirEntry>::iterator DirEntryList::_findLowerBound(const Key &key) {
+    return _findFirst(key, [&key] (const DirEntry &entry) {
+        return !std::less<Key>()(entry.key, key);
+    });
+}
+
+vector<DirEntry>::iterator DirEntryList::_findUpperBound(const Key &key) {
+    return _findFirst(key, [&key] (const DirEntry &entry) {
+        return std::less<Key>()(key, entry.key);
+    });
+}
+
+vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::function<bool (const DirEntry&)> pred) {
+    //TODO Factor out a datastructure that keeps a sorted std::vector and allows these _findLowerBound()/_findUpperBound operations using this hinted linear search
+    if (_entries.size() == 0) {
+        return _entries.end();
+    }
+    double startpos_percent = static_cast<double>(*static_cast<const unsigned char*>(hint.data())) / std::numeric_limits<unsigned char>::max();
+    auto iter = _entries.begin() + static_cast<int>(startpos_percent * (_entries.size()-1));
+    ASSERT(iter >= _entries.begin() && iter < _entries.end(), "Startpos out of range");
+    while(iter != _entries.begin() && pred(*iter)) {
+        --iter;
+    }
+    while(iter != _entries.end() && !pred(*iter)) {
+        ++iter;
+    }
+    return iter;
 }
 
 vector<DirEntry>::const_iterator DirEntryList::_find(const Key &key) const {

@@ -37,6 +37,9 @@ namespace cryfs {
             bool _hasChild(const std::string &name) const;
             std::vector<DirEntry>::iterator _find(const blockstore::Key &key);
             std::vector<DirEntry>::const_iterator _find(const blockstore::Key &key) const;
+            std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
+            std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
+            std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
 
             std::vector<DirEntry> _entries;
 
