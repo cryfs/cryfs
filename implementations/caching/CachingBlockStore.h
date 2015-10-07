@@ -26,7 +26,7 @@ public:
 
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
-  Cache<Key, cpputils::unique_ref<Block>> _cache;
+  Cache<Key, cpputils::unique_ref<Block>, 1000> _cache;
   uint32_t _numNewBlocks;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);
