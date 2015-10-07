@@ -11,7 +11,7 @@ class DirBlobRef: public FsBlobRef {
 public:
     DirBlobRef(cachingfsblobstore::DirBlobRef *base): _base(base) {}
 
-    using Entry = fsblobstore::DirBlob::Entry;
+    using Entry = fsblobstore::DirEntry;
 
     const Entry &GetChild(const std::string &name) const {
         return _base->GetChild(name);

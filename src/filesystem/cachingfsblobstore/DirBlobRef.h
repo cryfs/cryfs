@@ -15,7 +15,7 @@ public:
         ASSERT(_base != nullptr, "We just initialized this with a pointer to DirBlob. Can't be something else now.");
     }
 
-    using Entry = fsblobstore::DirBlob::Entry;
+    using Entry = fsblobstore::DirEntry;
 
     const Entry &GetChild(const std::string &name) const {
         return _base->GetChild(name);
