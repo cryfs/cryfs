@@ -11,6 +11,9 @@ using blockstore::Key;
 namespace cryfs {
 namespace fsblobstore {
 
+DirEntryList::DirEntryList() : _entries() {
+}
+
 Data DirEntryList::serialize() const {
     Data serialized(_serializedSize());
     unsigned int offset = 0;
@@ -38,7 +41,7 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
 }
 
 bool DirEntryList::_hasChild(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const DirEntry &entry) {
+    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
         return entry.name == name;
     });
     return found != _entries.end();
@@ -49,12 +52,14 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
-
-    _entries.emplace_back(entryType, name, blobKey, mode, uid, gid);
+    auto insert_pos = std::upper_bound(_entries.begin(), _entries.end(), blobKey, [] (const Key &key, const DirEntry &item) {
+        return std::less<Key>()(key, item.key);
+    });
+    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid);
 }
 
 const DirEntry &DirEntryList::get(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [name] (const DirEntry &entry) {
+    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
         return entry.name == name;
     });
     if (found == _entries.end()) {
@@ -73,10 +78,10 @@ void DirEntryList::remove(const Key &key) {
 }
 
 vector<DirEntry>::iterator DirEntryList::_find(const Key &key) {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [key] (const DirEntry &entry) {
-        return entry.key == key;
+    auto found = std::lower_bound(_entries.begin(), _entries.end(), key, [] (const DirEntry &entry, const Key &key) {
+        return std::less<Key>()(entry.key, key);
     });
-    if (found == _entries.end()) {
+    if (found == _entries.end() || found->key != key) {
         throw fspp::fuse::FuseErrnoException(ENOENT);
     }
     return found;

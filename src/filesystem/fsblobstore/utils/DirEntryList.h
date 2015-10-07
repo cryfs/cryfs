@@ -14,6 +14,8 @@ namespace cryfs {
         public:
             using const_iterator = std::vector<DirEntry>::const_iterator;
 
+            DirEntryList();
+
             cpputils::Data serialize() const;
             void deserializeFrom(const void *data, uint64_t size);
 
@@ -37,6 +39,8 @@ namespace cryfs {
             std::vector<DirEntry>::const_iterator _find(const blockstore::Key &key) const;
 
             std::vector<DirEntry> _entries;
+
+            DISALLOW_COPY_AND_ASSIGN(DirEntryList);
         };
 
     }
