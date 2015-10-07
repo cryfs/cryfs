@@ -33,7 +33,7 @@ namespace cryfs {
 
             //TODO Move Cache to some common location, not in blockstore
             //TODO Use other cache config (i.e. smaller max number of entries) here than in blockstore
-            blockstore::caching::Cache<blockstore::Key, cpputils::unique_ref<fsblobstore::FsBlob>> _cache;
+            blockstore::caching::Cache<blockstore::Key, cpputils::unique_ref<fsblobstore::FsBlob>, 50> _cache;
 
             DISALLOW_COPY_AND_ASSIGN(CachingFsBlobStore);
         };
