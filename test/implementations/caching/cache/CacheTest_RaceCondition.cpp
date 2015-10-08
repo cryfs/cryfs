@@ -36,7 +36,9 @@ class CacheTest_RaceCondition: public ::testing::Test {
 public:
     CacheTest_RaceCondition(): cache(), destructorStarted(), destructorFinished(false) {}
 
-    Cache<int, unique_ptr<ObjectWithLongDestructor>> cache;
+    static constexpr unsigned int MAX_ENTRIES = 100;
+
+    Cache<int, unique_ptr<ObjectWithLongDestructor>, MAX_ENTRIES> cache;
     ConditionBarrier destructorStarted;
     bool destructorFinished;
 
@@ -53,8 +55,8 @@ public:
     future<void> causeCacheOverflowInOtherThread() {
         //Add maximum+1 element in another thread (this causes the cache to flush the first element in another thread)
         return std::async(std::launch::async, [this] {
-            for(unsigned int i = 0; i < cache.MAX_ENTRIES+1; ++i) {
-                cache.push(cache.MAX_ENTRIES+i, nullptr);
+            for(unsigned int i = 0; i < MAX_ENTRIES+1; ++i) {
+                cache.push(MAX_ENTRIES+i, nullptr);
             }
         });
     }

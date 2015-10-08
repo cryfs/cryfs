@@ -16,7 +16,9 @@ public:
   void push(int key, int value);
   boost::optional<int> pop(int key);
 
-  using Cache = blockstore::caching::Cache<MinimalKeyType, MinimalValueType>;
+  static constexpr unsigned int MAX_ENTRIES = 100;
+
+  using Cache = blockstore::caching::Cache<MinimalKeyType, MinimalValueType, MAX_ENTRIES>;
 
 private:
   Cache _cache;
