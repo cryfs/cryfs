@@ -29,6 +29,7 @@ using std::vector;
 //TODO Support files > 4GB
 //TODO cryfs process doesn't seem to react to "kill". Needs "kill -9". Why? Furthermore, calling "fusermount -u" unmounts the fs, but the cryfs process keeps running. Why?
 //TODO CryFS is only using 100% CPU (not parallel) when running bonnie. Furthermore, when calling "ls" in the mount/Bonnie.../ dir while bonnie runs, ls blocks and doesn't return. Probable reason: fsblobstore locks blobs instead of allowing parallel access. Use something like parallelaccessstore. Also generally improve parallelity.
+//TODO Crashes when running multiple dd processes in parallel (writing from /dev/zero to different files folder$i/file inside cryfs)
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
