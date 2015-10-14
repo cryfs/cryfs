@@ -7,6 +7,7 @@
 #include <string>
 #include <cstring>
 #include "../assert/assert.h"
+#include "ThreadsafePseudoRandomPool.h"
 
 namespace cpputils {
 
@@ -34,7 +35,7 @@ public:
 
 private:
   FixedSizeData() {}
-  static CryptoPP::AutoSeededRandomPool &PseudoRandomPool();
+  static ThreadsafePseudoRandomPool &PseudoRandomPool();
 
   unsigned char _data[BINARY_LENGTH];
 };
@@ -48,9 +49,8 @@ template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_L
 template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
 
 template<unsigned int SIZE>
-CryptoPP::AutoSeededRandomPool &FixedSizeData<SIZE>::PseudoRandomPool() {
-  //TODO Make seeding use blocking=true (aka /dev/random instead of /dev/urandom) or offer a configuration option?
-  static CryptoPP::AutoSeededRandomPool singleton;
+ThreadsafePseudoRandomPool &FixedSizeData<SIZE>::PseudoRandomPool() {
+  static ThreadsafePseudoRandomPool singleton;
   return singleton;
 }
 
