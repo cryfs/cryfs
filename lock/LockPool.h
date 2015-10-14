@@ -13,9 +13,10 @@
 //TODO Rename to MutexPool
 namespace cpputils {
     template<class LockName>
-    class LockPool {
+    class LockPool final {
     public:
         LockPool();
+        ~LockPool();
         void lock(const LockName &lock, std::unique_lock<std::mutex> *lockToFreeWhileWaiting = nullptr);
         void release(const LockName &lock);
 
@@ -30,6 +31,11 @@ namespace cpputils {
     };
     template<class LockName>
     inline LockPool<LockName>::LockPool(): _lockedLocks(), _mutex(), _cv() {}
+
+    template<class LockName>
+    inline LockPool<LockName>::~LockPool() {
+        ASSERT(_lockedLocks.size() == 0, "Still locks open");
+    }
 
     template<class LockName>
     inline void LockPool<LockName>::lock(const LockName &lock, std::unique_lock<std::mutex> *lockToFreeWhileWaiting) {
