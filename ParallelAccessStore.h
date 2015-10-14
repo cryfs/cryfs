@@ -44,6 +44,7 @@ public:
     Key _key;
   };
 
+  bool isOpened(const Key &key) const;
   cpputils::unique_ref<ResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource);
   template<class ActualResourceRef>
   cpputils::unique_ref<ActualResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
@@ -77,7 +78,7 @@ private:
 	uint32_t _refCount;
   };
 
-  std::mutex _mutex;
+  mutable std::mutex _mutex;
   cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> _baseStore;
 
   std::unordered_map<Key, OpenResource> _openResources;
@@ -102,6 +103,12 @@ ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(cpputils::u
 }
 
 template<class Resource, class ResourceRef, class Key>
+bool ParallelAccessStore<Resource, ResourceRef, Key>::isOpened(const Key &key) const {
+  std::lock_guard<std::mutex> lock(_mutex);
+  return _openResources.find(key) != _openResources.end();
+};
+
+template<class Resource, class ResourceRef, class Key>
 cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, cpputils::unique_ref<Resource> resource) {
   return add<ResourceRef>(key, std::move(resource), [] (Resource *resource) {
       return cpputils::make_unique_ref<ResourceRef>(resource);
@@ -121,7 +128,7 @@ template<class ActualResourceRef>
 cpputils::unique_ref<ActualResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::_add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef) {
   static_assert(std::is_base_of<ResourceRef, ActualResourceRef>::value, "Wrong ResourceRef type");
   auto insertResult = _openResources.emplace(key, std::move(resource));
-  ASSERT(true == insertResult.second, "Inserting failed");
+  ASSERT(true == insertResult.second, "Inserting failed. Already exists.");
   auto resourceRef = createResourceRef(insertResult.first->second.getReference());
   resourceRef->init(this, key);
   return resourceRef;
@@ -136,7 +143,7 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
 
 template<class Resource, class ResourceRef, class Key>
 boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
-  //TODO This lock doesn't allow loading different blocks in parallel. Can we do something with futures maybe?
+  //TODO This lock doesn't allow loading different blocks in parallel. Can we only lock the requested key?
   std::lock_guard<std::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
@@ -154,12 +161,18 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpputils::unique_ref<ResourceRef> resource) {
-  auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
-  ASSERT(true == insertResult.second, "Inserting failed");
+  std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture;
+  {
+    std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
+    auto insertResult = _resourcesToRemove.emplace(key, std::promise < cpputils::unique_ref < Resource >> ());
+    ASSERT(true == insertResult.second, "Inserting failed");
+    resourceToRemoveFuture = insertResult.first->second.get_future();
+  }
   cpputils::destruct(std::move(resource));
-
   //Wait for last resource user to release it
-  auto resourceToRemove = insertResult.first->second.get_future().get();
+  auto resourceToRemove = resourceToRemoveFuture.get();
+
+  std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
   _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
 
   _baseStore->removeFromBaseStore(std::move(resourceToRemove));
