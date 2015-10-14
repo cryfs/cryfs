@@ -6,6 +6,7 @@
 
 namespace cpputils {
 
+    //TODO Create more complete random library around CryptoPP (also offering OS_Random for example) and use it in FixedSizeDate::CreateRandom()/CreateOSRandom()
     //TODO Store a static CryptoPP::AutoSeededRandomPool (or multiple ones) and make constructor of
     //     ThreadsafeRandomPool() be lightweight (i.e. not do seeding), so it can be called on each callsite.
     //     Alternatively, use a singleton factory.
