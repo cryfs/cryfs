@@ -9,7 +9,7 @@
 #include <atomic>
 
 //Remove this line if you don't want profiling
-#define FSPP_PROFILE 1
+//#define FSPP_PROFILE 1
 
 namespace fspp {
 class Node;
