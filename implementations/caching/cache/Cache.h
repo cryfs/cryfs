@@ -30,12 +30,16 @@ public:
   void push(const Key &key, Value value);
   boost::optional<Value> pop(const Key &key);
 
+  void flush();
+
 private:
   void _makeSpaceForEntry(std::unique_lock<std::mutex> *lock);
   void _deleteEntry(std::unique_lock<std::mutex> *lock);
   void _deleteOldEntriesParallel();
-  void _deleteOldEntries();
-  bool _deleteOldEntry();
+  void _deleteAllEntriesParallel();
+  void _deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches);
+  void _deleteMatchingEntriesAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
+  bool _deleteMatchingEntryAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
 
   mutable std::mutex _mutex;
   cpputils::LockPool<Key> _currentlyFlushingEntries;
@@ -56,6 +60,8 @@ Cache<Key, Value, MAX_ENTRIES>::Cache(): _cachedBlocks(), _timeoutFlusher(nullpt
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 Cache<Key, Value, MAX_ENTRIES>::~Cache() {
+  _deleteAllEntriesParallel();
+  ASSERT(_cachedBlocks.size() == 0, "Error in _deleteAllEntriesParallel()");
 }
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
@@ -105,12 +111,26 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteEntry(std::unique_lock<std::mutex> *
 };
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
+void Cache<Key, Value, MAX_ENTRIES>::_deleteAllEntriesParallel() {
+  return _deleteMatchingEntriesAtBeginningParallel([] (const CacheEntry<Key, Value> &) {
+      return true;
+  });
+}
+
+template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntriesParallel() {
+  return _deleteMatchingEntriesAtBeginningParallel([] (const CacheEntry<Key, Value> &entry) {
+      return entry.ageSeconds() > PURGE_LIFETIME_SEC;
+  });
+}
+
+template<class Key, class Value, uint32_t MAX_ENTRIES>
+void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::vector<std::future<void>> waitHandles;
   for (unsigned int i = 0; i < numThreads; ++i) {
-    waitHandles.push_back(std::async(std::launch::async, [this] {
-      _deleteOldEntries();
+    waitHandles.push_back(std::async(std::launch::async, [this, matches] {
+      _deleteMatchingEntriesAtBeginning(matches);
     }));
   }
   for (auto & waitHandle : waitHandles) {
@@ -119,16 +139,16 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntriesParallel() {
 };
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-void Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntries() {
-  while (_deleteOldEntry()) {}
+void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
+  while (_deleteMatchingEntryAtBeginning(matches)) {}
 }
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-bool Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntry() {
+bool Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntryAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
   // This function can be called in parallel by multiple threads and will then cause the Value destructors
   // to be called in parallel. The call to _deleteEntry() releases the lock while the Value destructor is running.
   std::unique_lock<std::mutex> lock(_mutex);
-  if (_cachedBlocks.size() > 0 && _cachedBlocks.peek()->ageSeconds() > PURGE_LIFETIME_SEC) {
+  if (_cachedBlocks.size() > 0 && matches(*_cachedBlocks.peek())) {
     _deleteEntry(&lock);
     return true;
   } else {
@@ -140,6 +160,12 @@ template<class Key, class Value, uint32_t MAX_ENTRIES>
 uint32_t Cache<Key, Value, MAX_ENTRIES>::size() const {
   std::unique_lock<std::mutex> lock(_mutex);
   return _cachedBlocks.size();
+};
+
+template<class Key, class Value, uint32_t MAX_ENTRIES>
+void Cache<Key, Value, MAX_ENTRIES>::flush() {
+  //TODO Test flush()
+  return _deleteAllEntriesParallel();
 };
 
 }

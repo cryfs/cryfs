@@ -26,7 +26,9 @@ Key CachingBlockStore::createKey() {
 }
 
 optional<unique_ref<Block>> CachingBlockStore::tryCreate(const Key &key, Data data) {
+  ASSERT(_cache.pop(key) == none, "Key already exists in cache");
   //TODO Shouldn't we return boost::none if the key already exists?
+  //TODO Key can also already exist but not be in the cache right now.
   ++_numNewBlocks;
   return unique_ref<Block>(make_unique_ref<CachedBlock>(make_unique_ref<NewBlock>(key, std::move(data), this), this));
 }
@@ -80,6 +82,10 @@ optional<unique_ref<Block>> CachingBlockStore::tryCreateInBaseStore(const Key &k
 
 void CachingBlockStore::removeFromBaseStore(cpputils::unique_ref<Block> block) {
   _baseBlockStore->remove(std::move(block));
+}
+
+void CachingBlockStore::flush() {
+  _cache.flush();
 }
 
 }

@@ -24,6 +24,8 @@ public:
   boost::optional<cpputils::unique_ref<Block>> tryCreateInBaseStore(const Key &key, cpputils::Data data);
   void removeFromBaseStore(cpputils::unique_ref<Block> block);
 
+  void flush();
+
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   Cache<Key, cpputils::unique_ref<Block>, 1000> _cache;
