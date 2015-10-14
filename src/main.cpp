@@ -39,6 +39,9 @@ void showVersion() {
     } else if (!version::IS_STABLE_VERSION) {
         cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
     }
+#ifndef NDEBUG
+    cout << "WARNING! This is a debug build. Performance might be slow." << endl;
+#endif
     cout << endl;
 }
 
