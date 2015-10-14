@@ -24,7 +24,6 @@ namespace cachingfsblobstore {
     }
 
     CachingFsBlobStore::~CachingFsBlobStore() {
-        std::cerr << "Destruct CachingFsBlobStore with "<<_cache.size() << " entries" << std::endl;
     }
 
     unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob() {
