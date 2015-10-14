@@ -3,6 +3,8 @@
 #define MESSMER_CPPUTILS_DATA_THREADSAFEPSEUDORANDOMPOOL_H
 
 #include "../macros.h"
+#include <mutex>
+#include <cryptopp/cryptopp/osrng.h>
 
 namespace cpputils {
 
