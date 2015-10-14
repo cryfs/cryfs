@@ -6,8 +6,6 @@
 #include <messmer/cpp-utils/assert/assert.h>
 
 using std::string;
-using std::mutex;
-using std::lock_guard;
 using std::promise;
 using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
@@ -29,6 +27,7 @@ Key ParallelAccessBlockStore::createKey() {
 }
 
 optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
+  ASSERT(!_parallelAccessStore.isOpened(key), ("Key "+key.ToString()+"already exists").c_str());
   auto block = _baseBlockStore->tryCreate(key, std::move(data));
   if (block == none) {
 	//TODO Test this code branch
