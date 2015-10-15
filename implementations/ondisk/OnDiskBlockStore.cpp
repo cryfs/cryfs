@@ -15,6 +15,8 @@ namespace ondisk {
 OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
  : _rootdir(rootdir) {}
 
+//TODO Do I have to lock tryCreate/remove and/or load? Or does ParallelAccessBlockStore take care of that?
+
 optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
   //TODO Easier implementation? This is only so complicated because of the cast OnDiskBlock -> Block
   auto result = std::move(OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data)));

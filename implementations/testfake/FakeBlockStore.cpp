@@ -19,6 +19,7 @@ FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks() {}
 
 optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data) {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto insert_result = _blocks.emplace(key.ToString(), std::move(data));
 
   if (!insert_result.second) {
@@ -26,10 +27,15 @@ optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data)
   }
 
   //Return a copy of the stored data
-  return load(key);
+  return _load(key);
 }
 
 optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  return _load(key);
+}
+
+optional<unique_ref<Block>> FakeBlockStore::_load(const Key &key) {
   //Return a copy of the stored data
   string key_string = key.ToString();
   try {
@@ -42,6 +48,7 @@ optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
 void FakeBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   cpputils::destruct(std::move(block));
+  std::unique_lock<std::mutex> lock(_mutex);
   int numRemoved = _blocks.erase(key.ToString());
   ASSERT(numRemoved == 1, "Block not found");
 }
@@ -53,6 +60,7 @@ unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Da
 }
 
 void FakeBlockStore::updateData(const Key &key, const Data &data) {
+  std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(key.ToString());
   if (found == _blocks.end()) {
     auto insertResult = _blocks.emplace(key.ToString(), data.copy());
@@ -65,6 +73,7 @@ void FakeBlockStore::updateData(const Key &key, const Data &data) {
 }
 
 uint64_t FakeBlockStore::numBlocks() const {
+  std::unique_lock<std::mutex> lock(_mutex);
   return _blocks.size();
 }
 

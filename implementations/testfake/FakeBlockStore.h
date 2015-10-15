@@ -48,7 +48,10 @@ private:
   //We want to avoid this for the reasons mentioned above (overflow data).
   std::vector<std::shared_ptr<cpputils::Data>> _used_dataregions_for_blocks;
 
+  mutable std::mutex _mutex;
+
   cpputils::unique_ref<Block> makeFakeBlockFromData(const Key &key, const cpputils::Data &data, bool dirty);
+  boost::optional<cpputils::unique_ref<Block>> _load(const Key &key);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };
