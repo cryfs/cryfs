@@ -7,6 +7,7 @@
 #include <iostream>
 #include <messmer/cpp-utils/assert/assert.h>
 
+using std::vector;
 using std::string;
 
 namespace bf = boost::filesystem;
@@ -214,7 +215,22 @@ Fuse::Fuse(Filesystem *fs)
 }
 
 void Fuse::run(int argc, char **argv) {
-  fuse_main(argc, argv, operations(), (void*)this);
+  vector<char*> _argv(argv, argv + argc);
+  //If we allow fuse to fork the process, it wouldn't fork our threads with it (fork() only forks the main thread).
+  //So we always run it in foreground, and can do our own daemonization before calling this.
+  _addRunInForegroundOption(&_argv);
+  fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
+}
+
+void Fuse::_addRunInForegroundOption(vector<char*> *argv) {
+  //TODO Fix char* warning (-Wwrite-strings)
+  static char *foregroundOption = "-f";
+  bool hasRunInForegroundOption = std::find_if(argv->begin(), argv->end(),
+                                            [] (char *elem) {return string(elem) == string(foregroundOption);}
+                                  ) != argv->end();
+  if (!hasRunInForegroundOption) {
+    argv->push_back(foregroundOption);
+  }
 }
 
 bool Fuse::running() const {

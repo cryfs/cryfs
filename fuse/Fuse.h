@@ -5,6 +5,7 @@
 #include "params.h"
 #include <cstdio>
 #include <string>
+#include <vector>
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
 #include "messmer/cpp-utils/macros.h"
@@ -56,6 +57,7 @@ public:
 
 private:
   Filesystem *_fs;
+  void _addRunInForegroundOption(std::vector<char*> *argv);
   bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
