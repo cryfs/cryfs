@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <messmer/cpp-utils/assert/backtrace.h>
+#include <messmer/cpp-utils/daemon/daemonize.h>
 
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
@@ -27,7 +28,6 @@ using std::endl;
 using std::vector;
 
 //TODO Support files > 4GB
-//TODO cryfs process doesn't seem to react to "kill". Needs "kill -9". Why? Furthermore, calling "fusermount -u" unmounts the fs, but the cryfs process keeps running. Why?
 //TODO Improve parallelity.
 //TODO Seems to deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 
@@ -58,9 +58,13 @@ void runFilesystem(const ProgramOptions &options) {
 
 int main(int argc, char *argv[]) {
     cpputils::showBacktraceOnSigSegv();
-
     showVersion();
+    
     ProgramOptions options = program_options::Parser(argc, argv).parse();
+    if (!options.foreground()) {
+        cpputils::daemonize();
+    }
+
     runFilesystem(options);
     return 0;
 }

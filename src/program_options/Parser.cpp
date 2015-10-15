@@ -26,8 +26,9 @@ ProgramOptions Parser::parse() const {
     string baseDir = vm["base-dir"].as<string>();
     string mountDir = vm["mount-dir"].as<string>();
     string configFile = vm["config"].as<string>();
+    bool foreground = vm.count("foreground");
 
-    return ProgramOptions(baseDir, mountDir, configFile, options.second);
+    return ProgramOptions(baseDir, mountDir, configFile, foreground, options.second);
 }
 
 po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options) {
@@ -60,6 +61,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
     options.add_options()
             ("help,h", "show help message")
             ("config,c", po::value<string>()->required(), "Config file")
+            ("foreground,f", "Run CryFS in foreground.")
             ;
     desc->add(options);
 }
