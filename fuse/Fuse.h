@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_FUSE_FUSE_H_
-#define FSPP_FUSE_FUSE_H_
+#ifndef MESSMER_FSPP_FUSE_FUSE_H_
+#define MESSMER_FSPP_FUSE_FUSE_H_
 
 #include "params.h"
 #include <cstdio>

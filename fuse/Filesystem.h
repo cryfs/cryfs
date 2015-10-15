@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_IMPL_FILESYSTEM_H_
-#define FSPP_IMPL_FILESYSTEM_H_
+#ifndef MESSMER_FSPP_FUSE_FILESYSTEM_H_
+#define MESSMER_FSPP_FUSE_FILESYSTEM_H_
 
 #include <boost/filesystem.hpp>
 #include <messmer/cpp-utils/pointer/unique_ref.h>

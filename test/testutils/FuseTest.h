@@ -1,6 +1,6 @@
 #pragma once
-#ifndef TEST_TESTUTILS_FUSETEST_H_
-#define TEST_TESTUTILS_FUSETEST_H_
+#ifndef MESSMER_FSPP_TEST_TESTUTILS_FUSETEST_H_
+#define MESSMER_FSPP_TEST_TESTUTILS_FUSETEST_H_
 
 #include "google/gtest/gtest.h"
 #include "google/gmock/gmock.h"

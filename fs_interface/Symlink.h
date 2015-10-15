@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_SYMLINK_H_
-#define FSPP_SYMLINK_H_
+#ifndef MESSMER_FSPP_FSINTERFACE_SYMLINK_H_
+#define MESSMER_FSPP_FSINTERFACE_SYMLINK_H_
 
 #include "Node.h"
 #include <messmer/cpp-utils/pointer/unique_ref.h>

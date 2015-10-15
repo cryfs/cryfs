@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_IMPL_FUSEOPENFILELIST_H_
-#define FSPP_IMPL_FUSEOPENFILELIST_H_
+#ifndef MESSMER_FSPP_IMPL_FUSEOPENFILELIST_H_
+#define MESSMER_FSPP_IMPL_FUSEOPENFILELIST_H_
 
 #include "../fs_interface/File.h"
 #include "../fs_interface/OpenFile.h"

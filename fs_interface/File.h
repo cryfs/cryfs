@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_FILE_H_
-#define FSPP_FILE_H_
+#ifndef MESSMER_FSPP_FSINTERFACE_FILE_H_
+#define MESSMER_FSPP_FSINTERFACE_FILE_H_
 
 #include "Node.h"
 #include <messmer/cpp-utils/pointer/unique_ref.h>

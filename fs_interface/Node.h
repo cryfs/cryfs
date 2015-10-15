@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_NODE_H_
-#define FSPP_NODE_H_
+#ifndef MESSMER_FSPP_FSINTERFACE_NODE_H_
+#define MESSMER_FSPP_FSINTERFACE_NODE_H_
 
 #include <boost/filesystem.hpp>
 

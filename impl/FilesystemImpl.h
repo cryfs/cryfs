@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_IMPL_FILESYSTEMIMPL_H_
-#define FSPP_IMPL_FILESYSTEMIMPL_H_
+#ifndef MESSMER_FSPP_IMPL_FILESYSTEMIMPL_H_
+#define MESSMER_FSPP_IMPL_FILESYSTEMIMPL_H_
 
 #include "FuseOpenFileList.h"
 #include "../fuse/Filesystem.h"

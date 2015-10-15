@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_OPENFILE_H_
-#define FSPP_OPENFILE_H_
+#ifndef MESSMER_FSPP_FSINTERFACE_OPENFILE_H_
+#define MESSMER_FSPP_FSINTERFACE_OPENFILE_H_
 
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>

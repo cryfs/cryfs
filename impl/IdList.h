@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_FUSE_IDLIST_H_
-#define FSPP_FUSE_IDLIST_H_
+#ifndef MESSMER_FSPP_IMPL_IDLIST_H_
+#define MESSMER_FSPP_IMPL_IDLIST_H_
 
 #include <map>
 #include <mutex>

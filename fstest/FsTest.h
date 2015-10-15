@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MESSMER_FSPP_FSTEST_FSTEST_H_
 #define MESSMER_FSPP_FSTEST_FSTEST_H_
 

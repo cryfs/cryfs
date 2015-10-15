@@ -1,5 +1,6 @@
-#ifndef FSPP_IMPL_PROFILER_H
-#define FSPP_IMPL_PROFILER_H
+#pragma once
+#ifndef MESSMER_FSPP_IMPL_PROFILER_H
+#define MESSMER_FSPP_IMPL_PROFILER_H
 
 #include <atomic>
 #include <chrono>
