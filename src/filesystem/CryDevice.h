@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYDEVICE_H_
-#define CRYFS_LIB_CRYDEVICE_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYDEVICE_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYDEVICE_H_
 
 #include <messmer/blockstore/interface/BlockStore.h>
 #include "../config/CryConfigLoader.h"

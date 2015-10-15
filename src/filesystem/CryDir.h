@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYDIR_H_
-#define CRYFS_LIB_CRYDIR_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYDIR_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYDIR_H_
 
 #include <messmer/fspp/fs_interface/Dir.h>
 #include "CryNode.h"

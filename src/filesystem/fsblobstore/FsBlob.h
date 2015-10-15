@@ -1,5 +1,6 @@
-#ifndef CRYFS_FSBLOBSTORE_FSBLOB_H
-#define CRYFS_FSBLOBSTORE_FSBLOB_H
+#pragma once
+#ifndef MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_FSBLOB_H
+#define MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_FSBLOB_H
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/blobstore/interface/Blob.h>

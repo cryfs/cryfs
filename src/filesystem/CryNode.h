@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYNODE_H_
-#define CRYFS_LIB_CRYNODE_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYNODE_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYNODE_H_
 
 #include <messmer/fspp/fs_interface/Node.h>
 #include "messmer/cpp-utils/macros.h"

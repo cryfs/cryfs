@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYCONFIG_H_
-#define CRYFS_LIB_CRYCONFIG_H_
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYCONFIG_H_
+#define MESSMER_CRYFS_SRC_CONFIG_CRYCONFIG_H_
 
 #include <boost/filesystem/path.hpp>
 

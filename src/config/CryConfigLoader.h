@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CRYCONFIGLOADER_H_
-#define MESSMER_CRYFS_SRC_CRYCONFIGLOADER_H_
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYCONFIGLOADER_H_
+#define MESSMER_CRYFS_SRC_CONFIG_CRYCONFIGLOADER_H_
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <boost/filesystem/path.hpp>

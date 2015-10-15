@@ -1,5 +1,6 @@
-#ifndef CRYFS_PROGRAMOPTIONS_UTILS_H
-#define CRYFS_PROGRAMOPTIONS_UTILS_H
+#pragma once
+#ifndef MESSMER_CRYFS_PROGRAMOPTIONS_UTILS_H
+#define MESSMER_CRYFS_PROGRAMOPTIONS_UTILS_H
 
 #include <utility>
 #include <vector>

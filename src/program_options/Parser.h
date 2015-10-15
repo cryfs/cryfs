@@ -1,5 +1,6 @@
-#ifndef CRYFS_PROGRAMOPTIONS_PARSER_H
-#define CRYFS_PROGRAMOPTIONS_PARSER_H
+#pragma once
+#ifndef MESSMER_CRYFS_PROGRAMOPTIONS_PARSER_H
+#define MESSMER_CRYFS_PROGRAMOPTIONS_PARSER_H
 
 #include "ProgramOptions.h"
 #include <boost/program_options.hpp>

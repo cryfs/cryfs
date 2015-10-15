@@ -1,5 +1,6 @@
-#ifndef CRYFS_FSBLOBSTORE_FSBLOBSTORE_H
-#define CRYFS_FSBLOBSTORE_FSBLOBSTORE_H
+#pragma once
+#ifndef MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_FSBLOBSTORE_H
+#define MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_FSBLOBSTORE_H
 
 #include <messmer/cpp-utils/lock/LockPool.h>
 #include <messmer/cpp-utils/pointer/unique_ref.h>

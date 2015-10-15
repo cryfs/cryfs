@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_FSBLOBSTORE_DIRBLOB_H_
-#define CRYFS_FSBLOBSTORE_DIRBLOB_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_DIRBLOB_H_
+#define MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_DIRBLOB_H_
 
 #include <messmer/blockstore/utils/Key.h>
 #include <messmer/cpp-utils/macros.h>

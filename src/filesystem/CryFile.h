@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYFILE_H_
-#define CRYFS_LIB_CRYFILE_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
 
 #include "parallelaccessfsblobstore/FileBlobRef.h"
 #include "parallelaccessfsblobstore/DirBlobRef.h"

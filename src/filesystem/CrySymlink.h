@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYSYMLINK_H_
-#define CRYFS_LIB_CRYSYMLINK_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYSYMLINK_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYSYMLINK_H_
 
 #include <messmer/fspp/fs_interface/Symlink.h>
 #include "CryNode.h"

@@ -1,5 +1,6 @@
-#ifndef CRYFS_CRYCIPHER_H
-#define CRYFS_CRYCIPHER_H
+#pragma once
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYCIPHER_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYCIPHER_H
 
 #include <vector>
 #include <string>

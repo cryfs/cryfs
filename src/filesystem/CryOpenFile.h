@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_LIB_CRYOPENFILE_H_
-#define CRYFS_LIB_CRYOPENFILE_H_
+#ifndef MESSMER_CRYFS_FILESYSTEM_CRYOPENFILE_H_
+#define MESSMER_CRYFS_FILESYSTEM_CRYOPENFILE_H_
 
 #include "messmer/fspp/fs_interface/OpenFile.h"
 #include "parallelaccessfsblobstore/FileBlobRef.h"
