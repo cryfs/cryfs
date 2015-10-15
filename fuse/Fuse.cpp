@@ -223,8 +223,8 @@ void Fuse::run(int argc, char **argv) {
 }
 
 void Fuse::_addRunInForegroundOption(vector<char*> *argv) {
-  //TODO Fix char* warning (-Wwrite-strings)
-  static char *foregroundOption = "-f";
+  //TODO Is this without the const_cast hack possible? Can I pass (const char*) to fuse_main?
+  static char *foregroundOption = const_cast<char*>("-f");
   bool hasRunInForegroundOption = std::find_if(argv->begin(), argv->end(),
                                             [] (char *elem) {return string(elem) == string(foregroundOption);}
                                   ) != argv->end();
