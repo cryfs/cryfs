@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPP_UTILS_EITHER_H
-#define MESSMER_CPP_UTILS_EITHER_H
+#ifndef MESSMER_CPPUTILS_EITHER_H
+#define MESSMER_CPPUTILS_EITHER_H
 
 #include <boost/optional.hpp>
 

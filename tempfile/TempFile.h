@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_TEMPFILE_TEMPFILE_H_
-#define MESSMER_TEMPFILE_TEMPFILE_H_
+#ifndef MESSMER_CPPUTILS_TEMPFILE_TEMPFILE_H_
+#define MESSMER_CPPUTILS_TEMPFILE_TEMPFILE_H_
 
 #include <boost/filesystem.hpp>
 #include "../macros.h"

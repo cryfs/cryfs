@@ -22,7 +22,7 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 //  OTHER DEALINGS IN THE SOFTWARE.
 // ----------------------------------------------------------------------------
-
+#pragma once
 #ifndef MESSMER_CPPUTILS_PIPESTREAM_H
 #define MESSMER_CPPUTILS_PIPESTREAM_H
 

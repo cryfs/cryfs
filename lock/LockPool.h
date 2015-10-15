@@ -1,5 +1,6 @@
-#ifndef MESSMER_CPPUTILS_LOCKPOOL_H
-#define MESSMER_CPPUTILS_LOCKPOOL_H
+#pragma once
+#ifndef MESSMER_CPPUTILS_LOCK_LOCKPOOL_H
+#define MESSMER_CPPUTILS_LOCK_LOCKPOOL_H
 
 #include <mutex>
 #include <condition_variable>

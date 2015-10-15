@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPP_UTILS_ASSERT_ASSERT_H
-#define MESSMER_CPP_UTILS_ASSERT_ASSERT_H
+#ifndef MESSMER_CPPUTILS_ASSERT_ASSERT_H
+#define MESSMER_CPPUTILS_ASSERT_ASSERT_H
 
 /**
  * This implements an ASSERT(expr, msg) macro.

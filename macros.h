@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPP_UTILS_MACROS_H_
-#define MESSMER_CPP_UTILS_MACROS_H_
+#ifndef MESSMER_CPPUTILS_MACROS_H_
+#define MESSMER_CPPUTILS_MACROS_H_
 
 /**
  * Disallow the copy and assignment constructors of a class

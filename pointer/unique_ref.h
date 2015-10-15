@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPP_UTILS_POINTER_UNIQUE_REF_H
-#define MESSMER_CPP_UTILS_POINTER_UNIQUE_REF_H
+#ifndef MESSMER_CPPUTILS_POINTER_UNIQUE_REF_H
+#define MESSMER_CPPUTILS_POINTER_UNIQUE_REF_H
 
 #include <memory>
 #include <boost/optional.hpp>
