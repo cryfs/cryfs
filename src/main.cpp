@@ -1,4 +1,4 @@
-ß#include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <messmer/blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
 #include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
 #include <cmath>
