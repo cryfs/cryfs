@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FSPP_BLOBSTORE_BLOBSTORE_H_
-#define FSPP_BLOBSTORE_BLOBSTORE_H_
+#ifndef MESSMER_BLOBSTORE_INTERFACE_BLOBSTORE_H_
+#define MESSMER_BLOBSTORE_INTERFACE_BLOBSTORE_H_
 
 #include "Blob.h"
 #include <string>

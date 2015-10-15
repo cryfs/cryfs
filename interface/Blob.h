@@ -1,6 +1,6 @@
 #pragma once
-#ifndef BLOBSTORE_INTERFACE_BLOB_H_
-#define BLOBSTORE_INTERFACE_BLOB_H_
+#ifndef MESSMER_BLOBSTORE_INTERFACE_BLOB_H_
+#define MESSMER_BLOBSTORE_INTERFACE_BLOB_H_
 
 #include <cstring>
 #include <cstdint>

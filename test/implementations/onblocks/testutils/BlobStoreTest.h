@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_TESTUTILS_BLOBSTORETEST_H_
+#define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_TESTUTILS_BLOBSTORETEST_H_
+
 #include <google/gtest/gtest.h>
 
 #include "../../../../interface/BlobStore.h"
@@ -21,3 +25,5 @@ public:
     //ref is moved into here and then destructed
   }
 };
+
+#endif
