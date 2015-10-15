@@ -1,6 +1,6 @@
 #pragma once
-#ifndef BLOCKSTORE_INTERFACE_BLOCK_H_
-#define BLOCKSTORE_INTERFACE_BLOCK_H_
+#ifndef MESSMER_BLOCKSTORE_INTERFACE_BLOCK_H_
+#define MESSMER_BLOCKSTORE_INTERFACE_BLOCK_H_
 
 #include "../utils/Key.h"
 #include <cstring>

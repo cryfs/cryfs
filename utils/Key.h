@@ -1,6 +1,6 @@
 #pragma once
-#ifndef BLOCKSTORE_UTILS_KEY_H_
-#define BLOCKSTORE_UTILS_KEY_H_
+#ifndef MESSMER_BLOCKSTORE_UTILS_KEY_H_
+#define MESSMER_BLOCKSTORE_UTILS_KEY_H_
 
 #include <string>
 #include <messmer/cpp-utils/data/FixedSizeData.h>

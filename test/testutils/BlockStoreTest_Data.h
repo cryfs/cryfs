@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTORETEST_DATA_H_
+#define MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTORETEST_DATA_H_
+
 // This file is meant to be included by BlockStoreTest.h only
 
 struct DataRange {
@@ -96,3 +100,5 @@ constexpr std::initializer_list<DataRange> DATA_RANGES = {
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadImmediately);
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadAfterLoading);
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteAndRead);
+
+#endif

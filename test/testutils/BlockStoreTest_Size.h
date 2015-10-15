@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTORETEST_SIZE_H_
+#define MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTORETEST_SIZE_H_
+
 // This file is meant to be included by BlockStoreTest.h only
 
 #include <messmer/cpp-utils/data/Data.h>
@@ -156,3 +160,5 @@ TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushingDoesntChangeBlock);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterCreate_FlushesWhenDestructed);
 TYPED_TEST_P_FOR_ALL_SIZES(AfterLoad_FlushesWhenDestructed);
 TYPED_TEST_P_FOR_ALL_SIZES(LoadNonExistingBlock);
+
+#endif
