@@ -7,6 +7,11 @@ ACTIVATE_CPP14()
 
 ADD_BOOST(filesystem system thread)
 
+# This is needed by boost thread
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  TARGET_LINK_LIBRARIES(${BII_BLOCK_TARGET} INTERFACE rt)
+ENDIF(CMAKE_SYSTEM_NAME)
+
 ENABLE_STYLE_WARNINGS()
 
 # You can safely delete lines from here...
