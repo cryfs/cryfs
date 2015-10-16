@@ -7,7 +7,7 @@
 #include <string>
 #include <cstring>
 #include "../assert/assert.h"
-#include "ThreadsafePseudoRandomPool.h"
+#include "../random/RandomPool.h"
 
 namespace cpputils {
 
@@ -35,7 +35,6 @@ public:
 
 private:
   FixedSizeData() {}
-  static ThreadsafePseudoRandomPool &PseudoRandomPool();
 
   unsigned char _data[BINARY_LENGTH];
 };
@@ -49,15 +48,9 @@ template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_L
 template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
 
 template<unsigned int SIZE>
-ThreadsafePseudoRandomPool &FixedSizeData<SIZE>::PseudoRandomPool() {
-  static ThreadsafePseudoRandomPool singleton;
-  return singleton;
-}
-
-template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::CreatePseudoRandom() {
   FixedSizeData<SIZE> result;
-  PseudoRandomPool().GenerateBlock(result._data, BINARY_LENGTH);
+  RandomPool::get(result._data, BINARY_LENGTH);
   return result;
 }
 
