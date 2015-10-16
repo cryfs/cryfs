@@ -7,7 +7,7 @@
 
 namespace cryfs {
     namespace program_options {
-        class ProgramOptions {
+        class ProgramOptions final {
         public:
             ProgramOptions(const std::string &baseDir, const std::string &mountDir, const std::string &configFile, bool foreground, const std::vector<char *> &fuseOptions);
             ~ProgramOptions();

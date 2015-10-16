@@ -12,35 +12,38 @@ public:
     }
 };
 
-TEST_F(ProgramOptionsParserTest, MissingAllOptions) {
+class ProgramOptionsParserDeathTest: public ProgramOptionsParserTest {};
+
+TEST_F(ProgramOptionsParserDeathTest, MissingAllOptions) {
     EXPECT_DEATH(
-            parse({"./myExecutable"}),
-    "Usage:"
+        parse({"./myExecutable"}),
+        "Usage:"
     );
+    std::cout << "exited" << std::endl;
 }
 
-TEST_F(ProgramOptionsParserTest, MissingDir) {
+TEST_F(ProgramOptionsParserDeathTest, MissingDir) {
     EXPECT_DEATH(
         parse({"./myExecutable", "/home/user/baseDir"}),
         "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserTest, ConfigFileMissing) {
+TEST_F(ProgramOptionsParserDeathTest, ConfigFileMissing) {
     EXPECT_DEATH(
             parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"}),
     "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserTest, HelpLongOption) {
+TEST_F(ProgramOptionsParserDeathTest, HelpLongOption) {
     EXPECT_DEATH(
             parse({"./myExecutable", "--help"}),
     "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserTest, HelpShortOption) {
+TEST_F(ProgramOptionsParserDeathTest, HelpShortOption) {
     EXPECT_DEATH(
             parse({"./myExecutable", "-h"}),
     "Usage:"

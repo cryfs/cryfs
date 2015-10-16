@@ -7,6 +7,7 @@ using namespace cryfs::program_options;
 using std::pair;
 using std::vector;
 using std::cerr;
+using std::endl;
 using std::string;
 
 Parser::Parser(int argc, char *argv[]) :_options(_argsToVector(argc, argv)) {}
@@ -81,6 +82,6 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
     cerr << "Usage: cryfs --config configFile [other options] rootDir mountPoint [-- [FUSE Mount Options]]\n";
     po::options_description desc;
     _addAllowedOptions(&desc);
-    cerr << desc << "\n";
+    cerr << desc << endl;
     exit(1);
 }
