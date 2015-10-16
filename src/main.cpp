@@ -54,6 +54,7 @@ void runFilesystem(const ProgramOptions &options) {
     //TODO This daemonize causes error messages when initializing CryDevice to get lost.
     //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
     //     because it doesn't fork threads. What to do?
+    //TODO Setup stdout/stderr as log files so we see the program output when detached
     if (!options.foreground()) {
         cpputils::daemonize();
     }
