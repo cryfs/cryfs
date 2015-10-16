@@ -5,7 +5,7 @@ ADD_BII_TARGETS()
 
 ACTIVATE_CPP14()
 
-ADD_BOOST(filesystem system)
+ADD_BOOST(filesystem system thread)
 
 ENABLE_STYLE_WARNINGS()
 
