@@ -16,10 +16,8 @@ namespace cpputils {
     }
 
     Data RandomGeneratorThread::_generateRandomData(size_t size) {
-        std::cout << "Generate " << static_cast<double>(size)/1024 << " KB" << std::endl;
         Data newRandom(size);
         _randomGenerator.GenerateBlock(static_cast<byte*>(newRandom.data()), size);
-        std::cout << "Generate " << static_cast<double>(size)/1024 << " KB done" << std::endl;
         return newRandom;
     }
 
