@@ -380,6 +380,8 @@ public:
 
 private:
   const DestructorCallback *_destructorCallback;
+
+  ClassWithDestructorCallback &operator=(const ClassWithDestructorCallback &rhs) = delete;
 };
 class OnlyMoveableClassWithDestructorCallback {
 public:

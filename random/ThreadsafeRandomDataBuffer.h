@@ -35,7 +35,7 @@ namespace cpputils {
         DISALLOW_COPY_AND_ASSIGN(ThreadsafeRandomDataBuffer);
     };
 
-    inline ThreadsafeRandomDataBuffer::ThreadsafeRandomDataBuffer() {
+    inline ThreadsafeRandomDataBuffer::ThreadsafeRandomDataBuffer(): _buffer(), _mutex(), _dataAddedCv(), _dataGottenCv() {
     }
 
     inline size_t ThreadsafeRandomDataBuffer::size() const {

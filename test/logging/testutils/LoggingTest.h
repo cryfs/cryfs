@@ -33,6 +33,8 @@ private:
 
 class LoggingTest: public ::testing::Test {
 public:
+    LoggingTest(): mockLogger() {}
+
     std::string captureStderr(std::function<void()> func) {
         testing::internal::CaptureStderr();
         func();

@@ -11,6 +11,7 @@ namespace cpputils {
 
 class Console {
 public:
+    virtual ~Console() {}
     virtual unsigned int ask(const std::string &question, const std::vector<std::string> &options) = 0;
     virtual bool askYesNo(const std::string &question) = 0;
     virtual void print(const std::string &output) = 0;

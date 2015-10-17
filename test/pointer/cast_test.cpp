@@ -36,6 +36,7 @@ public:
 
 private:
   const DestructorCallback *_destructorCallback;
+  DISALLOW_COPY_AND_ASSIGN(Child);
 };
 
 class Child2 : public Parent {};
@@ -129,6 +130,8 @@ TEST(UniquePtr_DynamicPointerMoveTest, ChildToParentCast) {
 
 class UniqueRef_DynamicPointerMoveDestructorTest: public ::testing::Test {
 public:
+  UniqueRef_DynamicPointerMoveDestructorTest(): childDestructorCallback() {}
+
   DestructorCallback childDestructorCallback;
   unique_ref<Child> createChild() {
     return make_unique_ref<Child>(&childDestructorCallback);
@@ -140,6 +143,8 @@ public:
 
 class UniquePtr_DynamicPointerMoveDestructorTest: public ::testing::Test {
 public:
+  UniquePtr_DynamicPointerMoveDestructorTest(): childDestructorCallback() {}
+
   DestructorCallback childDestructorCallback;
   unique_ptr<Child> createChild() {
     return make_unique<Child>(&childDestructorCallback);

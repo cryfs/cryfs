@@ -14,6 +14,7 @@ public:
   virtual ~TestObject() {
     _destructorListener();
   }
+
 private:
   function<void()> _destructorListener;
 };
@@ -42,10 +43,13 @@ public:
 private:
   bool _isDestructed;
   TestObject *_testObject;
+  DISALLOW_COPY_AND_ASSIGN(TestObjectHolder);
 };
 
 class OptionalOwnershipPointerTest: public Test {
 public:
+  OptionalOwnershipPointerTest(): obj(), obj2() {}
+
   TestObjectHolder obj;
   TestObjectHolder obj2;
 };

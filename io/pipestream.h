@@ -47,6 +47,7 @@
 #include <streambuf>
 #include <string>
 #include <thread>
+#include "../macros.h"
 
 //TODO Add test cases
 
@@ -67,7 +68,9 @@ namespace cpputils {
 
     public:
         pipestream(string_size_t out_size = 16, string_size_t in_size = 64)
-        : d_out(std::max(string_size_t(1), out_size), ' ')
+        : d_mutex()
+        ,  d_condition()
+        ,  d_out(std::max(string_size_t(1), out_size), ' ')
         , d_in(std::max(string_size_t(1), in_size), ' ')
         , d_tmp(std::max(string_size_t(1), in_size), ' ')
         , d_current(&this->d_tmp[0])
@@ -144,6 +147,8 @@ namespace cpputils {
             }
             return traits_type::eof();
         }
+
+        DISALLOW_COPY_AND_ASSIGN(pipestream);
     };
 
 }
