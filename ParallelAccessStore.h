@@ -43,6 +43,8 @@ public:
     ParallelAccessStore *_parallelAccessStore;
     //TODO We're storing Key twice (here and in the base resource). Rather use getKey() on the base resource if possible somehow.
     Key _key;
+
+    DISALLOW_COPY_AND_ASSIGN(ResourceRefBase);
   };
 
   bool isOpened(const Key &key) const;
