@@ -9,10 +9,19 @@ namespace cpputils {
 namespace logging {
     class Logger {
     public:
-        Logger() : _logger(spdlog::stdout_logger_mt("Log")) { }
-
         void setLogger(std::shared_ptr<spdlog::logger> logger) {
             _logger = logger;
+            _logger->set_level(_level);
+        }
+
+        void reset() {
+            _level = spdlog::level::info;
+            setLogger(_defaultLogger());
+        }
+
+        void setLevel(spdlog::level::level_enum level) {
+            _level = level;
+            _logger->set_level(_level);
         }
 
         spdlog::logger *operator->() {
@@ -20,7 +29,19 @@ namespace logging {
         }
 
     private:
+
+        static std::shared_ptr<spdlog::logger> _defaultLogger() {
+            static std::shared_ptr<spdlog::logger> singleton = spdlog::stdout_logger_mt("Log");
+            return singleton;
+        }
+
+        Logger() : _logger(), _level() {
+            reset();
+        }
+        friend Logger &logger();
+
         std::shared_ptr<spdlog::logger> _logger;
+        spdlog::level::level_enum _level;
 
         DISALLOW_COPY_AND_ASSIGN(Logger);
     };

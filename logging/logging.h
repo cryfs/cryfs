@@ -17,6 +17,20 @@ namespace cpputils {
             logger().setLogger(newLogger);
         }
 
+        inline void reset() {
+            logger().reset();
+        }
+
+        inline void setLevel(Level level) {
+            switch(level) {
+                case ERROR: logger().setLevel(spdlog::level::err); return;
+                case WARN: logger().setLevel(spdlog::level::warn); return;
+                case INFO: logger().setLevel(spdlog::level::info); return;
+                case DEBUG: logger().setLevel(spdlog::level::debug); return;
+            }
+            throw std::logic_error("Unknown logger level");
+        }
+
         inline spdlog::details::line_logger LOG(Level level) {
             switch(level) {
                 case ERROR: return logger()->error();
