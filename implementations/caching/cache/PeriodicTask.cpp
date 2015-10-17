@@ -1,8 +1,9 @@
 #include "PeriodicTask.h"
+#include <messmer/cpp-utils/logging/logging.h>
 
 using std::function;
-using std::cerr;
 using std::endl;
+using namespace cpputils::logging;
 
 namespace blockstore {
 namespace caching {
@@ -18,11 +19,9 @@ PeriodicTask::PeriodicTask(function<void ()> task, double intervalSec) : _thread
     } catch (const boost::thread_interrupted &e) {
       //Do nothing, exit thread.
     } catch (const std::exception &e) {
-      //TODO Think about logging
-      cerr << "PeriodicTask crashed: " << e.what() << endl;
+      LOG(ERROR) << "PeriodicTask crashed: " << e.what();
     } catch (...) {
-      //TODO Think about logging
-      cerr << "PeriodicTask crashed" << endl;
+      LOG(ERROR) << "PeriodicTask crashed";
     }
   });
 }
