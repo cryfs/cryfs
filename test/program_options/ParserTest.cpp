@@ -19,7 +19,6 @@ TEST_F(ProgramOptionsParserDeathTest, MissingAllOptions) {
         parse({"./myExecutable"}),
         "Usage:"
     );
-    std::cout << "exited" << std::endl;
 }
 
 TEST_F(ProgramOptionsParserDeathTest, MissingDir) {
