@@ -111,7 +111,8 @@ EncryptedBlock<Cipher>::EncryptedBlock(cpputils::unique_ref<Block> baseBlock, co
    _baseBlock(std::move(baseBlock)),
    _plaintextWithHeader(std::move(plaintextWithHeader)),
    _encKey(encKey),
-   _dataChanged(false) {
+   _dataChanged(false),
+   _mutex() {
 }
 
 template<class Cipher>

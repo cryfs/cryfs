@@ -16,7 +16,7 @@ namespace blockstore {
 namespace testfake {
 
 FakeBlockStore::FakeBlockStore()
- : _blocks(), _used_dataregions_for_blocks() {}
+ : _blocks(), _used_dataregions_for_blocks(), _mutex() {}
 
 optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data) {
   std::unique_lock<std::mutex> lock(_mutex);

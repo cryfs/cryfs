@@ -52,7 +52,7 @@ template<class Key, class Value, uint32_t MAX_ENTRIES> constexpr double Cache<Ke
 template<class Key, class Value, uint32_t MAX_ENTRIES> constexpr double Cache<Key, Value, MAX_ENTRIES>::MAX_LIFETIME_SEC;
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-Cache<Key, Value, MAX_ENTRIES>::Cache(): _cachedBlocks(), _timeoutFlusher(nullptr) {
+Cache<Key, Value, MAX_ENTRIES>::Cache(): _mutex(), _currentlyFlushingEntries(), _cachedBlocks(), _timeoutFlusher(nullptr) {
   //Don't initialize timeoutFlusher in the initializer list,
   //because it then might already call Cache::popOldEntries() before Cache is done constructing.
   _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_deleteOldEntriesParallel, this), PURGE_INTERVAL);

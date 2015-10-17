@@ -23,7 +23,7 @@ namespace blockstore {
 namespace ondisk {
 
 OnDiskBlock::OnDiskBlock(const Key &key, const bf::path &filepath, Data data)
- : Block(key), _filepath(filepath), _data(std::move(data)), _dataChanged(false) {
+ : Block(key), _filepath(filepath), _data(std::move(data)), _dataChanged(false), _mutex() {
 }
 
 OnDiskBlock::~OnDiskBlock() {

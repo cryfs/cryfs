@@ -49,6 +49,9 @@ public:
     auto source = baseBlockStore->load(key).value();
     return blockstore::utils::copyToNewBlock(baseBlockStore, *source)->key();
   }
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(EncryptedBlockStoreTest);
 };
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteOnCreate) {

@@ -17,6 +17,8 @@ using cpputils::make_unique_ref;
 
 class OnDiskBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
+  OnDiskBlockStoreTestFixture(): tempdir() {}
+
   unique_ref<BlockStore> createBlockStore() override {
     return make_unique_ref<OnDiskBlockStore>(tempdir.path());
   }
@@ -28,6 +30,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixtur
 
 class OnDiskBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
+  OnDiskBlockStoreWithRandomKeysTestFixture(): tempdir() {}
+  
   unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
     return make_unique_ref<OnDiskBlockStore>(tempdir.path());
   }

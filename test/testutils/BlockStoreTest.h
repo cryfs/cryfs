@@ -8,12 +8,15 @@
 
 class BlockStoreTestFixture {
 public:
+  virtual ~BlockStoreTestFixture() {}
   virtual cpputils::unique_ref<blockstore::BlockStore> createBlockStore() = 0;
 };
 
 template<class ConcreteBlockStoreTestFixture>
 class BlockStoreTest: public ::testing::Test {
 public:
+  BlockStoreTest() :fixture() {}
+
   BOOST_STATIC_ASSERT_MSG(
     (std::is_base_of<BlockStoreTestFixture, ConcreteBlockStoreTestFixture>::value),
     "Given test fixture for instantiating the (type parameterized) BlockStoreTest must inherit from BlockStoreTestFixture"

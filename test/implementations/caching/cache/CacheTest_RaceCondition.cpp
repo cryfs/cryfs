@@ -30,6 +30,8 @@ public:
 private:
     ConditionBarrier *_onDestructorStarted;
     bool *_destructorFinished;
+
+    DISALLOW_COPY_AND_ASSIGN(ObjectWithLongDestructor);
 };
 
 class CacheTest_RaceCondition: public ::testing::Test {

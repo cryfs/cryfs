@@ -44,9 +44,12 @@ public:
 
 class BlockStoreWithRandomKeysTest: public Test {
 public:
+  BlockStoreWithRandomKeysTest() :blockStoreMock(), blockStore(blockStoreMock),
+                                  key(Key::FromString("1491BB4932A389EE14BC7090AC772972")) {}
+
   BlockStoreWithRandomKeysMock blockStoreMock;
-  BlockStore &blockStore = blockStoreMock;
-  const blockstore::Key key = Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  BlockStore &blockStore;
+  const blockstore::Key key;
 
   Data createDataWithSize(size_t size) {
 	Data fixture(DataFixture::generate(size));
