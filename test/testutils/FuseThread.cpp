@@ -12,7 +12,7 @@ using std::string;
 using fspp::fuse::Fuse;
 
 FuseThread::FuseThread(Fuse *fuse)
-  :_fuse(fuse) {
+  :_fuse(fuse), _child() {
 }
 
 void FuseThread::start(int argc, char *argv[]) {

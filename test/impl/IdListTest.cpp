@@ -14,11 +14,14 @@ public:
 };
 
 struct IdListTest: public ::testing::Test {
-  const int OBJ1 = 3;
-  const int OBJ2 = 10;
-  const int OBJ3 = 8;
+  static constexpr int OBJ1 = 3;
+  static constexpr int OBJ2 = 10;
+  static constexpr int OBJ3 = 8;
+
+  IdListTest(): list() {}
 
   IdList<MyObj> list;
+
   int add(int num) {
     return list.add(make_unique_ref<MyObj>(num));
   }

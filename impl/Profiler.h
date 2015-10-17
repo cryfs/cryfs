@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <messmer/cpp-utils/macros.h>
 
 namespace fspp {
     class Profiler {
@@ -14,6 +15,8 @@ namespace fspp {
     private:
         std::atomic_uint_fast64_t *_targetForAddingNanosec;
         std::chrono::high_resolution_clock::time_point _beginTime;
+
+        DISALLOW_COPY_AND_ASSIGN(Profiler);
     };
 
     inline Profiler::Profiler(std::atomic_uint_fast64_t *targetForAddingNanosec)

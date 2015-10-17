@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_TEST_TESTUTILS_FUSETHREAD_H_
 
 #include <thread>
+#include <messmer/cpp-utils/macros.h>
 
 namespace fspp {
 namespace fuse {
@@ -19,6 +20,8 @@ public:
 private:
   fspp::fuse::Fuse *_fuse;
   std::thread _child;
+
+  DISALLOW_COPY_AND_ASSIGN(FuseThread);
 };
 
 #endif

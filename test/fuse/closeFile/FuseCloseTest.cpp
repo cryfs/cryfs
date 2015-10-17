@@ -31,6 +31,8 @@ using std::chrono::seconds;
 
 class Barrier {
 public:
+  Barrier(): m(), cv(), finished(false) {}
+
   template<class A, class B>
   void WaitAtMost(const duration<A, B> &atMost) {
     unique_lock<mutex> lock(m);
@@ -47,7 +49,7 @@ public:
 private:
   mutex m;
   condition_variable cv;
-  bool finished = false;
+  bool finished;
 };
 
 class FuseCloseTest: public FuseTest, public WithParamInterface<int> {

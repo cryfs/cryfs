@@ -27,14 +27,17 @@ public:
 };
 
 struct FuseOpenFileListTest: public ::testing::Test {
-  const int FILEID1 = 4;
-  const int FLAGS1 = 5;
-  const int FILEID2 = 6;
-  const int FLAGS2 = 7;
-  const int FILEID3 = 8;
-  const int FLAGS3 = 9;
+  static constexpr int FILEID1 = 4;
+  static constexpr int FLAGS1 = 5;
+  static constexpr int FILEID2 = 6;
+  static constexpr int FLAGS2 = 7;
+  static constexpr int FILEID3 = 8;
+  static constexpr int FLAGS3 = 9;
+
+  FuseOpenFileListTest(): list() {}
 
   FuseOpenFileList list;
+
   int open(int fileid, int flags) {
     return list.open(make_unique_ref<MockOpenFile>(fileid, flags));
   }

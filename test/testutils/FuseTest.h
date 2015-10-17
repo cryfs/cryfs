@@ -84,7 +84,7 @@ public:
 
 class FuseTest: public ::testing::Test {
 public:
-  const char* FILENAME = "/myfile";
+  static constexpr const char* FILENAME = "/myfile";
 
   FuseTest();
 
