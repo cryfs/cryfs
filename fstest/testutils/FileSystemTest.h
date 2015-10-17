@@ -15,6 +15,7 @@
 
 class FileSystemTestFixture {
 public:
+  virtual ~FileSystemTestFixture() {}
   virtual cpputils::unique_ref<fspp::Device> createDevice() = 0;
 };
 

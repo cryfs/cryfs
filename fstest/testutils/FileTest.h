@@ -9,7 +9,7 @@
 template<class ConcreteFileSystemTestFixture>
 class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
-  FileTest() {
+  FileTest(): file_root(), file_nested() {
 	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
 	file_root = cpputils::to_unique_ptr(this->LoadFile("/myfile"));
 
