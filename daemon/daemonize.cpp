@@ -18,7 +18,7 @@ namespace cpputils {
 
     //TODO Test daemonize()
 
-    void daemonize() {
+    void daemonize(const std::string &daemonName) {
             pid_t pid = fork();
             if (pid < 0) {
                 exit(EXIT_FAILURE);
@@ -43,6 +43,9 @@ namespace cpputils {
                 LOG(ERROR) << "Failed to change working directory for daemon process";
                 exit(EXIT_FAILURE);
             }
+
+            // Setup logging to syslog.
+            cpputils::logging::setLogger(spdlog::syslog_logger(daemonName, daemonName, LOG_PID));
 
             // Close out the standard file descriptors. The daemon can't use them anyhow.
             close(STDIN_FILENO);
