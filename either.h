@@ -3,6 +3,7 @@
 #define MESSMER_CPPUTILS_EITHER_H
 
 #include <boost/optional.hpp>
+#include <iostream>
 
 namespace cpputils {
 
