@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <boost/optional.hpp>
+#include <messmer/cpp-utils/macros.h>
 
 namespace cryfs {
     namespace program_options {
@@ -13,6 +14,7 @@ namespace cryfs {
             ProgramOptions(const std::string &baseDir, const std::string &mountDir, const std::string &configFile,
                            bool foreground, const boost::optional<std::string> &logFile,
                            const std::vector<char *> &fuseOptions);
+            ProgramOptions(ProgramOptions &&rhs);
             ~ProgramOptions();
 
             const std::string &baseDir() const;
@@ -29,6 +31,8 @@ namespace cryfs {
             bool _foreground;
             boost::optional<std::string> _logFile;
             std::vector<char *> _fuseOptions;
+
+            DISALLOW_COPY_AND_ASSIGN(ProgramOptions);
         };
     }
 }

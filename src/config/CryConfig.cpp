@@ -12,7 +12,7 @@ using std::string;
 namespace cryfs {
 
 CryConfig::CryConfig(const bf::path &configfile)
-:_configfile(configfile), _rootBlob(""), _encKey("") {
+:_configfile(configfile), _rootBlob(""), _encKey(""), _cipher("") {
   if (bf::exists(_configfile)) {
     load();
   }

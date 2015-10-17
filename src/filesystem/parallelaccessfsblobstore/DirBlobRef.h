@@ -73,6 +73,8 @@ public:
 
 private:
     cachingfsblobstore::DirBlobRef *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(DirBlobRef);
 };
 
 }

@@ -26,6 +26,8 @@ public:
 
 private:
     cachingfsblobstore::SymlinkBlobRef *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(SymlinkBlobRef);
 };
 
 }

@@ -45,7 +45,10 @@ public:
     }
 
 private:
+
     fsblobstore::FileBlob *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(FileBlobRef);
 };
 
 }

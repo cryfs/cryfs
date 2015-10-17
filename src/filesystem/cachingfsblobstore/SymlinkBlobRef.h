@@ -29,7 +29,10 @@ public:
     }
 
 private:
+
     fsblobstore::SymlinkBlob *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(SymlinkBlobRef);
 };
 
 }

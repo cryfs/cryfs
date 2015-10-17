@@ -80,7 +80,10 @@ public:
     }
 
 private:
+
     fsblobstore::DirBlob *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(DirBlobRef);
 };
 
 }

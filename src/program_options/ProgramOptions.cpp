@@ -17,8 +17,17 @@ ProgramOptions::ProgramOptions(const string &baseDir, const string &mountDir, co
     _fuseOptions.insert(_fuseOptions.begin()+1, _mountDir);
 }
 
+ProgramOptions::ProgramOptions(ProgramOptions &&rhs)
+    :_baseDir(std::move(rhs._baseDir)), _mountDir(std::move(rhs._mountDir)), _configFile(std::move(rhs._configFile)),
+     _foreground(std::move(rhs._foreground)), _logFile(std::move(rhs._logFile)),
+     _fuseOptions(std::move(rhs._fuseOptions)) {
+    rhs._mountDir = nullptr;
+}
+
 ProgramOptions::~ProgramOptions() {
-    delete[] _mountDir;
+    if (_mountDir != nullptr) {
+        delete[] _mountDir;
+    }
 }
 
 const string &ProgramOptions::baseDir() const {

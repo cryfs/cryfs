@@ -20,7 +20,7 @@ namespace cryfs {
 namespace cachingfsblobstore {
 
     CachingFsBlobStore::CachingFsBlobStore(unique_ref<FsBlobStore> baseBlobStore)
-        : _baseBlobStore(std::move(baseBlobStore)) {
+        : _baseBlobStore(std::move(baseBlobStore)), _cache() {
     }
 
     CachingFsBlobStore::~CachingFsBlobStore() {

@@ -27,7 +27,7 @@ namespace cryfs {
 namespace fsblobstore {
 
 DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
-    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _changed(false) {
+    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }

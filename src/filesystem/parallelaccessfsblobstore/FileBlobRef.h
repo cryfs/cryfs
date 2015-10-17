@@ -42,6 +42,8 @@ public:
 
 private:
     cachingfsblobstore::FileBlobRef *_base;
+
+    DISALLOW_COPY_AND_ASSIGN(FileBlobRef);
 };
 
 }
