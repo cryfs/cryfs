@@ -65,4 +65,4 @@ private:
 }
 }
 
-#endif /* FSPP_FUSE_FUSE_H_ */
+#endif

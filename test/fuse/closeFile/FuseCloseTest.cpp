@@ -86,7 +86,6 @@ TEST_P(FuseCloseTest, DISABLED_CloseFile) {
     EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1);
     EXPECT_CALL(fsimpl, closeFile(Eq(GetParam()))).Times(1).WillOnce(Invoke([&barrier] (int) {
       // Release the waiting lock at the end of this test case, because the fuse release() came in now.
-      printf("RELEASING\n");fflush(stdout);
       barrier.Release();
     }));
   }

@@ -8,8 +8,9 @@
 #include "../fuse/FuseErrnoException.h"
 #include "../fs_interface/File.h"
 
-
+#include <messmer/cpp-utils/logging/logging.h>
 #include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <sstream>
 
 using namespace fspp;
 using cpputils::dynamic_pointer_move;
@@ -20,6 +21,7 @@ using std::string;
 using boost::none;
 
 namespace bf = boost::filesystem;
+using namespace cpputils::logging;
 
 #ifdef FSPP_PROFILE
 #include "Profiler.h"
@@ -48,10 +50,8 @@ FilesystemImpl::FilesystemImpl(Device *device)
 
 FilesystemImpl::~FilesystemImpl() {
 #ifdef FSPP_PROFILE
-  std::cout
-    << "---------------------------------------------------------------------------\n"
-    << "Profiler Information\n"
-    << "---------------------------------------------------------------------------\n"
+  std::ostringstream profilerInformation;
+  profilerInformation << "Profiler Information\n"
     << std::fixed << std::setprecision(6)
     << std::setw(40) << "LoadFile: " << static_cast<double>(_loadFileNanosec)/1000000000 << "\n"
     << std::setw(40) << "LoadDir: " << static_cast<double>(_loadDirNanosec)/1000000000 << "\n"
@@ -86,8 +86,8 @@ FilesystemImpl::~FilesystemImpl() {
     << std::setw(40) << "CreateSymlink: " << static_cast<double>(_createSymlinkNanosec)/1000000000 << "\n"
     << std::setw(40) << "CreateSymlink (without loading): " << static_cast<double>(_createSymlinkNanosec_withoutLoading)/1000000000 << "\n"
     << std::setw(40) << "ReadSymlink: " << static_cast<double>(_readSymlinkNanosec)/1000000000 << "\n"
-    << std::setw(40) << "ReadSymlink (without loading): " << static_cast<double>(_readSymlinkNanosec_withoutLoading)/1000000000 << "\n"
-    << "---------------------------------------------------------------------------\n" << std::flush;
+    << std::setw(40) << "ReadSymlink (without loading): " << static_cast<double>(_readSymlinkNanosec_withoutLoading)/1000000000 << "\n";
+  LOG(INFO) << profilerInformation.str();
 #endif
 }
 
