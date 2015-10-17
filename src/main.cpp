@@ -26,6 +26,7 @@ using cpputils::make_unique_ref;
 using std::cout;
 using std::endl;
 using std::vector;
+using boost::none;
 
 //TODO Support files > 4GB
 //TODO Improve parallelity.
@@ -54,9 +55,12 @@ void runFilesystem(const ProgramOptions &options) {
     //TODO This daemonize causes error messages when initializing CryDevice to get lost.
     //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
     //     because it doesn't fork threads. What to do?
-    //TODO Setup stdout/stderr as log files so we see the program output when detached
     if (!options.foreground()) {
-        cpputils::daemonize("cryfs");
+        cpputils::daemonize();
+        if (options.logFile() == none) {
+            // Setup logging to syslog.
+            cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
+        }
     }
     auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
     CryDevice device(std::move(config), std::move(blockStore));
@@ -72,6 +76,10 @@ int main(int argc, char *argv[]) {
     showVersion();
     
     ProgramOptions options = program_options::Parser(argc, argv).parse();
+    //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
+    if (options.logFile() != none) {
+        cpputils::logging::setLogger(spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", *options.logFile()));
+    }
     runFilesystem(options);
     return 0;
 }
