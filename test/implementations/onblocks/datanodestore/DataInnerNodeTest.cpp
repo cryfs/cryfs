@@ -106,6 +106,10 @@ public:
   Data ZEROES;
   unique_ref<DataLeafNode> leaf;
   unique_ref<DataInnerNode> node;
+
+private:
+
+  DISALLOW_COPY_AND_ASSIGN(DataInnerNodeTest);
 };
 
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;

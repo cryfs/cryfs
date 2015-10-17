@@ -40,8 +40,12 @@ public:
   void flush() {
     return _baseTree->flush();
   }
+
 private:
+
   datatreestore::DataTree *_baseTree;
+
+  DISALLOW_COPY_AND_ASSIGN(DataTreeRef);
 };
 
 }

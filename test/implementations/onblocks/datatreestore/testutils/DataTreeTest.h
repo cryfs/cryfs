@@ -55,6 +55,9 @@ public:
   void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::Key &key);
 
   void CHECK_DEPTH(int depth, const blockstore::Key &key);
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(DataTreeTest);
 };
 
 

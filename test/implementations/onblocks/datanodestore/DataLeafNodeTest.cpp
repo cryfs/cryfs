@@ -112,6 +112,9 @@ public:
   Data ZEROES;
   Data randomData;
   unique_ref<DataLeafNode> leaf;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(DataLeafNodeTest);
 };
 
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;

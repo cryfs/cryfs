@@ -22,6 +22,8 @@ MATCHER_P(KeyEq, expected, "node key equals") {
 
 class DataTreeTest_TraverseLeaves: public DataTreeTest {
 public:
+  DataTreeTest_TraverseLeaves() :traversor() {}
+
   unique_ref<DataInnerNode> CreateThreeLevel() {
     return CreateInner({
       CreateFullTwoLevel(),
