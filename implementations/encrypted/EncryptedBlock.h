@@ -13,6 +13,7 @@
 #include "ciphers/Cipher.h"
 #include <messmer/cpp-utils/assert/assert.h>
 #include <mutex>
+#include <messmer/cpp-utils/logging/logging.h>
 
 namespace blockstore {
 namespace encrypted {
@@ -79,14 +80,12 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
   boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data(), baseBlock->size(), encKey);
   if(plaintextWithHeader == boost::none) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
-    //TODO Think about logging
-    std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?" << std::endl;
+    cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?";
     return boost::none;
   }
   if(!_keyHeaderIsCorrect(baseBlock->key(), *plaintextWithHeader)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
-    //TODO Think about logging
-    std::cerr << "Decrypting block " << baseBlock->key().ToString() << " failed due to invalid block key. Was the block modified by an attacker?" << std::endl;
+    cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed due to invalid block key. Was the block modified by an attacker?";
     return boost::none;
   }
   return cpputils::make_unique_ref<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));

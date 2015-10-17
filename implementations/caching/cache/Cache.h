@@ -79,7 +79,6 @@ boost::optional<Value> Cache<Key, Value, MAX_ENTRIES>::pop(const Key &key) {
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::push(const Key &key, Value value) {
   std::unique_lock<std::mutex> lock(_mutex);
-  //std::cout << "Pushing " << key.ToString() << "\n";
   ASSERT(_cachedBlocks.size() <= MAX_ENTRIES, "Cache too full");
   _makeSpaceForEntry(&lock);
   _cachedBlocks.push(key, CacheEntry<Key, Value>(std::move(value)));
