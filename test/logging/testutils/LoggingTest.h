@@ -33,10 +33,10 @@ private:
 
 class LoggingTest: public ::testing::Test {
 public:
-    std::string captureStdout(std::function<void()> func) {
-        testing::internal::CaptureStdout();
+    std::string captureStderr(std::function<void()> func) {
+        testing::internal::CaptureStderr();
         func();
-        return testing::internal::GetCapturedStdout();
+        return testing::internal::GetCapturedStderr();
     }
 
     ~LoggingTest() {

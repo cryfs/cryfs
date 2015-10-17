@@ -31,7 +31,7 @@ namespace logging {
     private:
 
         static std::shared_ptr<spdlog::logger> _defaultLogger() {
-            static std::shared_ptr<spdlog::logger> singleton = spdlog::stdout_logger_mt("Log");
+            static auto singleton = spdlog::stderr_logger_mt("Log");
             return singleton;
         }
 

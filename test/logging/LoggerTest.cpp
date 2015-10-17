@@ -15,6 +15,6 @@ TEST_F(LoggerTest, IsSingleton) {
 }
 
 TEST_F(LoggerTest, SetLogger) {
-    logger().setLogger(spdlog::stdout_logger_mt("MyTestLog1"));
+    logger().setLogger(spdlog::stderr_logger_mt("MyTestLog1"));
     EXPECT_EQ("MyTestLog1", logger()->name());
 }

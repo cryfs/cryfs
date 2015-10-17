@@ -9,30 +9,30 @@ using namespace cpputils::logging;
 using std::string;
 using testing::MatchesRegex;
 
-TEST_F(LoggingTest, DefaultLoggerIsStdout) {
-    string output = captureStdout([]{
+TEST_F(LoggingTest, DefaultLoggerIsStderr) {
+    string output = captureStderr([]{
         LOG(INFO) << "My log message";
     });
     EXPECT_THAT(output, MatchesRegex(".*\\[Log\\].*\\[info\\].*My log message.*"));
 }
 
 TEST_F(LoggingTest, SetLogger_NewLoggerIsUsed) {
-    setLogger(spdlog::stdout_logger_mt("MyTestLog2"));
-    string output = captureStdout([]{
+    setLogger(spdlog::stderr_logger_mt("MyTestLog2"));
+    string output = captureStderr([]{
         LOG(INFO) << "My log message";
     });
     EXPECT_THAT(output, MatchesRegex(".*\\[MyTestLog2\\].*\\[info\\].*My log message.*"));
 }
 
-TEST_F(LoggingTest, SetNonStdoutLogger_LogsToNewLogger) {
+TEST_F(LoggingTest, SetNonStderrLogger_LogsToNewLogger) {
     setLogger(mockLogger.get());
     logger()->info() << "My log message";
     EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[info\\].*My log message.*"));
 }
 
-TEST_F(LoggingTest, SetNonStdoutLogger_DoesNotLogToStdout) {
+TEST_F(LoggingTest, SetNonStderrLogger_DoesNotLogToStderr) {
     setLogger(mockLogger.get());
-    string output = captureStdout([] {
+    string output = captureStderr([] {
         logger()->info() << "My log message";
     });
     EXPECT_EQ("", output);
@@ -71,8 +71,7 @@ void logAndExit(const string &message) {
 // fork() only forks the main thread. This test ensures that logging doesn't depend on threads that suddenly aren't
 // there anymore after a fork().
 TEST_F(LoggingTest, LoggingAlsoWorksAfterFork) {
-    auto sink = std::make_shared<spdlog::sinks::ostream_sink<std::mutex>>(std::cerr, true);
-    setLogger(spdlog::create("StderrLogger", {sink}));
+    setLogger(spdlog::stderr_logger_mt("StderrLogger"));
     //TODO Use EXPECT_EXIT instead once the gtest version is new enough to support it
     EXPECT_DEATH(
         logAndExit("My log message"),
