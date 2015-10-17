@@ -11,7 +11,7 @@ public:
     MockLogger():
             _capturedLogData(),
             _sink(std::make_shared<spdlog::sinks::ostream_sink<std::mutex>>(_capturedLogData, true)),
-            _logger(std::make_shared<spdlog::logger>("MockLogger", _sink)) {
+            _logger(spdlog::create("MockLogger", {_sink})) {
     }
 
     ~MockLogger() {

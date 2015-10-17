@@ -62,3 +62,20 @@ TEST_F(LoggingTest, ErrorLog) {
     LOG(ERROR) << "My log message";
     EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
 }
+
+void logAndExit(const string &message) {
+    LOG(INFO) << message;
+    abort();
+}
+
+// fork() only forks the main thread. This test ensures that logging doesn't depend on threads that suddenly aren't
+// there anymore after a fork().
+TEST_F(LoggingTest, LoggingAlsoWorksAfterFork) {
+    auto sink = std::make_shared<spdlog::sinks::ostream_sink<std::mutex>>(std::cerr, true);
+    setLogger(spdlog::create("StderrLogger", {sink}));
+    //TODO Use EXPECT_EXIT instead once the gtest version is new enough to support it
+    EXPECT_DEATH(
+        logAndExit("My log message"),
+        "My log message"
+    );
+}
