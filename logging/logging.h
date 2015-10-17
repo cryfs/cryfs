@@ -7,8 +7,7 @@
 
 namespace cpputils {
     namespace logging {
-        //TODO Test whole logging folder
-
+        
         enum Level {
             ERROR, WARN, INFO, DEBUG
         };
