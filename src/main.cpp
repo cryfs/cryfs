@@ -56,7 +56,7 @@ void runFilesystem(const ProgramOptions &options) {
     //     because it doesn't fork threads. What to do?
     //TODO Setup stdout/stderr as log files so we see the program output when detached
     if (!options.foreground()) {
-        cpputils::daemonize();
+        cpputils::daemonize("cryfs");
     }
     auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
     CryDevice device(std::move(config), std::move(blockStore));
