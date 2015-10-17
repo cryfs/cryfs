@@ -1,4 +1,7 @@
 #include "LoopThread.h"
+#include "../logging/logging.h"
+
+using namespace cpputils::logging;
 
 namespace cpputils {
 
@@ -26,10 +29,10 @@ namespace cpputils {
             //Do nothing, exit thread.
         } catch (const std::exception &e) {
             //TODO Think about logging
-            std::cerr << "LoopThread crashed: " << e.what() << std::endl;
+            LOG(ERROR) << "LoopThread crashed: " << e.what();
         } catch (...) {
             //TODO Think about logging
-            std::cerr << "LoopThread crashed" << std::endl;
+            LOG(ERROR) << "LoopThread crashed";
         }
     }
 }

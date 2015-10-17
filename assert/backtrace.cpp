@@ -6,9 +6,11 @@
 #include <cxxabi.h>
 #include <string>
 #include <sstream>
+#include "../logging/logging.h"
 
 using std::string;
 using std::ostringstream;
+using namespace cpputils::logging;
 
 //TODO Use the following? https://github.com/bombela/backward-cpp
 
@@ -56,7 +58,7 @@ namespace cpputils {
     }
 
     void sigsegv_handler(int) {
-        std::cerr << "Error: SIGSEGV\n" << backtrace() << std::endl;
+        LOG(ERROR) << "SIGSEGV\n" << backtrace();
         exit(1);
     }
 

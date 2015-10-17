@@ -11,6 +11,7 @@
 #include "AssertFailed.h"
 #include <iostream>
 #include "backtrace.h"
+#include "../logging/logging.h"
 
 namespace cpputils {
     namespace _assert {
@@ -20,11 +21,15 @@ namespace cpputils {
         }
 
         inline void assert_fail_release [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
-            throw AssertFailed(format(expr, message, file, line));
+            auto msg = format(expr, message, file, line);
+            using namespace logging;
+            LOG(ERROR) << msg;
+            throw AssertFailed(msg);
         }
 
         inline void assert_fail_debug [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
-            std::cerr << format(expr, message, file, line) << std::endl;
+            using namespace logging;
+            LOG(ERROR) << format(expr, message, file, line);
             abort();
         }
     }

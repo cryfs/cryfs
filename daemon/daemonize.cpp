@@ -10,6 +10,9 @@
 #include <syslog.h>
 #include <string.h>
 #include <iostream>
+#include "../logging/logging.h"
+
+using namespace cpputils::logging;
 
 namespace cpputils {
 
@@ -31,13 +34,13 @@ namespace cpputils {
             // Create a new SID for the child process
             pid_t sid = setsid();
             if (sid < 0) {
-                std::cerr << "Failed to get SID for daemon process" << std::endl;
+                LOG(ERROR) << "Failed to get SID for daemon process";
                 exit(EXIT_FAILURE);
             }
 
             // Change the current working directory to a directory that's always existin
             if ((chdir("/")) < 0) {
-                std::cerr << "Failed to change working directory for daemon process" << std::endl;
+                LOG(ERROR) << "Failed to change working directory for daemon process";
                 exit(EXIT_FAILURE);
             }
 
