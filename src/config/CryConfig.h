@@ -5,13 +5,14 @@
 #include <boost/filesystem/path.hpp>
 
 #include "messmer/cpp-utils/macros.h"
+#include <iostream>
 
 namespace cryfs {
 
-class CryConfig {
+class CryConfig final {
 public:
-  explicit CryConfig(const boost::filesystem::path &configfile);
-  virtual ~CryConfig();
+  CryConfig();
+  CryConfig(CryConfig &&rhs);
 
   const std::string &RootBlob() const;
   void SetRootBlob(const std::string &value);
@@ -22,13 +23,10 @@ public:
   const std::string &Cipher() const;
   void SetCipher(const std::string &value);
 
-  void save() const;
+  void load(std::istream &loadSource);
+  void save(std::ostream &destination) const;
 
 private:
-  boost::filesystem::path _configfile;
-
-  void load();
-
   std::string _rootBlob;
   std::string _encKey;
   std::string _cipher;

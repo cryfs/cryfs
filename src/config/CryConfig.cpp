@@ -8,33 +8,36 @@ namespace bf = boost::filesystem;
 
 using boost::property_tree::ptree;
 using std::string;
+using std::istream;
+using std::ostream;
 
 namespace cryfs {
 
-CryConfig::CryConfig(const bf::path &configfile)
-:_configfile(configfile), _rootBlob(""), _encKey(""), _cipher("") {
-  if (bf::exists(_configfile)) {
-    load();
-  }
+CryConfig::CryConfig()
+: _rootBlob(""), _encKey(""), _cipher("") {
 }
 
-void CryConfig::load() {
+CryConfig::CryConfig(CryConfig &&rhs)
+: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)) {
+}
+
+void CryConfig::load(istream &loadSource) {
   ptree pt;
-  read_json(_configfile.native(), pt);
+  read_json(loadSource, pt);
 
   _rootBlob = pt.get("cryfs.rootblob", "");
   _encKey = pt.get("cryfs.key", "");
   _cipher = pt.get("cryfs.cipher", "");
 }
 
-void CryConfig::save() const {
+void CryConfig::save(ostream &writeDestination) const {
   ptree pt;
 
   pt.put("cryfs.rootblob", _rootBlob);
   pt.put("cryfs.key", _encKey);
   pt.put("cryfs.cipher", _cipher);
 
-  write_json(_configfile.native(), pt);
+  write_json(writeDestination, pt);
 }
 
 const std::string &CryConfig::RootBlob() const {
@@ -59,10 +62,6 @@ const std::string &CryConfig::Cipher() const {
 
 void CryConfig::SetCipher(const std::string &value) {
   _cipher = value;
-}
-
-CryConfig::~CryConfig() {
-  save();
 }
 
 }

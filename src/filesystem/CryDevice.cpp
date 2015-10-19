@@ -46,25 +46,22 @@ namespace cryfs {
 
 constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
 
-CryDevice::CryDevice(unique_ref<CryConfig> config, unique_ref<BlockStore> blockStore)
+CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore)
 : _fsBlobStore(
       make_unique_ref<ParallelAccessFsBlobStore>(
         make_unique_ref<CachingFsBlobStore>(
           make_unique_ref<FsBlobStore>(
             make_unique_ref<BlobStoreOnBlocks>(
               make_unique_ref<CachingBlockStore>(
-                CreateEncryptedBlockStore(*config, std::move(blockStore))
+                CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore))
               ), BLOCKSIZE_BYTES)))
         )
       ),
-  _rootKey(GetOrCreateRootKey(config.get())) {
+  _rootKey(GetOrCreateRootKey(&configFile)) {
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
   return _fsBlobStore->createDirBlob()->key();
-}
-
-CryDevice::~CryDevice() {
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
@@ -149,12 +146,12 @@ void CryDevice::RemoveBlob(const blockstore::Key &key) {
   _fsBlobStore->remove(std::move(*blob));
 }
 
-Key CryDevice::GetOrCreateRootKey(CryConfig *config) {
-  string root_key = config->RootBlob();
+Key CryDevice::GetOrCreateRootKey(CryConfigFile *configFile) {
+  string root_key = configFile->config()->RootBlob();
   if (root_key == "") {
     auto new_key = CreateRootBlobAndReturnKey();
-    config->SetRootBlob(new_key.ToString());
-    config->save();
+    configFile->config()->SetRootBlob(new_key.ToString());
+    configFile->save();
     return new_key;
   }
 

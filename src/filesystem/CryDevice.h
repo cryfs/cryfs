@@ -15,12 +15,11 @@
 
 namespace cryfs {
 
-class CryDevice: public fspp::Device {
+class CryDevice final: public fspp::Device {
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
 
-  CryDevice(cpputils::unique_ref<CryConfig> config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
-  virtual ~CryDevice();
+  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
@@ -41,7 +40,7 @@ private:
 
   blockstore::Key _rootKey;
 
-  blockstore::Key GetOrCreateRootKey(CryConfig *config);
+  blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
   blockstore::Key CreateRootBlobAndReturnKey();
   static cpputils::unique_ref<blockstore::BlockStore> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore> baseBlockStore);
 
