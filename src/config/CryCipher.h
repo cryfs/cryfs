@@ -26,6 +26,8 @@ public:
     static const CryCipher& find(const std::string &cipherName);
 
 private:
+    static const std::string INTEGRITY_WARNING;
+
     static const std::vector<std::shared_ptr<CryCipher>> SUPPORTED_CIPHERS;
 };
 

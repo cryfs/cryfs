@@ -11,6 +11,9 @@ namespace bf = boost::filesystem;
 namespace cryfs {
 
 CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config) {
+    if (bf::exists(path)) {
+        throw std::runtime_error("Config file exists already.");
+    }
     return CryConfigFile(path, std::move(config));
 }
 

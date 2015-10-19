@@ -45,7 +45,7 @@ private:
     optional<string> _warning;
 };
 
-const string INTEGRITY_WARNING = "This cipher does not ensure integrity.";
+const string CryCiphers::INTEGRITY_WARNING = "This cipher does not ensure integrity.";
 
 //We have to use shared_ptr instead of unique_ref, because c++ initializer_list needs copyable values
 const vector<shared_ptr<CryCipher>> CryCiphers::SUPPORTED_CIPHERS = {
