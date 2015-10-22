@@ -6,6 +6,7 @@
 #include <string>
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/blockstore/interface/BlockStore.h>
+#include <messmer/cpp-utils/random/RandomGenerator.h>
 
 namespace cryfs {
 
@@ -16,7 +17,7 @@ public:
     virtual const std::string &cipherName() const = 0;
     virtual const boost::optional<std::string> &warning() const = 0;
     virtual cpputils::unique_ref<blockstore::BlockStore> createEncryptedBlockstore(cpputils::unique_ref<blockstore::BlockStore> baseBlockStore, const std::string &encKey) const = 0;
-    virtual std::string createKey() const = 0;
+    virtual std::string createKey(cpputils::RandomGenerator &randomGenerator) const = 0;
 };
 
 class CryCiphers {

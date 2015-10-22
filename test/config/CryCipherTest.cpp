@@ -6,6 +6,7 @@
 #include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
 #include <messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h>
 #include <messmer/cpp-utils/data/DataFixture.h>
+#include <messmer/cpp-utils/random/Random.h>
 
 using namespace cryfs;
 using namespace blockstore::encrypted;
@@ -22,6 +23,7 @@ using cpputils::DataFixture;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Random;
 
 class CryCipherTest : public ::testing::Test {
 public:
@@ -39,13 +41,13 @@ public:
     void EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE(const string &cipherName) {
         const auto &actualCipher = CryCiphers::find(cipherName);
         Data dataFixture = DataFixture::generate(1024);
-        string encKey = ExpectedCipher::EncryptionKey::CreatePseudoRandom().ToString();
+        string encKey = ExpectedCipher::CreateKey(Random::PseudoRandom()).ToString();
         _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
     }
 
     template<class ExpectedCipher>
     void _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
-        blockstore::Key key = blockstore::Key::CreatePseudoRandom();
+        blockstore::Key key = cpputils::Random::PseudoRandom().getFixedSize<blockstore::Key::BINARY_LENGTH>();
         Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, key, dataFixture.copy());
         Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, key, std::move(encrypted));
         EXPECT_EQ(dataFixture, decrypted);
@@ -124,13 +126,13 @@ TEST_F(CryCipherTest, ThereIsACipherWithIntegrityWarning) {
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_448) {
-    EXPECT_EQ(Mars448_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("mars-448-gcm").createKey().size());
+    EXPECT_EQ(Mars448_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("mars-448-gcm").createKey(Random::PseudoRandom()).size());
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_256) {
-    EXPECT_EQ(AES256_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("aes-256-gcm").createKey().size());
+    EXPECT_EQ(AES256_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("aes-256-gcm").createKey(Random::PseudoRandom()).size());
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_128) {
-    EXPECT_EQ(AES128_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("aes-128-gcm").createKey().size());
+    EXPECT_EQ(AES128_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("aes-128-gcm").createKey(Random::PseudoRandom()).size());
 }

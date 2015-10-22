@@ -4,27 +4,19 @@
 
 using cpputils::Console;
 using cpputils::unique_ref;
+using cpputils::RandomGenerator;
 using std::string;
 using std::vector;
-
 namespace cryfs {
 
-    CryConfigCreator::CryConfigCreator(unique_ref<Console> console)
-        :_console(std::move(console)) {
+    CryConfigCreator::CryConfigCreator(unique_ref<Console> console, RandomGenerator &encryptionKeyGenerator)
+        :_console(std::move(console)), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
     CryConfig CryConfigCreator::create() {
         CryConfig config;
         config.SetCipher(_generateCipher());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
-        config.SetRootBlob(_generateRootBlobKey());
-        return config;
-    }
-
-    CryConfig CryConfigCreator::createForTest() {
-        CryConfig config;
-        config.SetCipher(_generateCipherForTest());
-        config.SetEncryptionKey(_generateEncKeyForTest(config.Cipher()));
         config.SetRootBlob(_generateRootBlobKey());
         return config;
     }
@@ -51,17 +43,9 @@ namespace cryfs {
 
     string CryConfigCreator::_generateEncKey(const std::string &cipher) {
         _console->print("\nGenerating secure encryption key...");
-        auto key = CryCiphers::find(cipher).createKey();
+        auto key = CryCiphers::find(cipher).createKey(_encryptionKeyGenerator);
         _console->print("done\n");
         return key;
-    }
-
-    string CryConfigCreator::_generateCipherForTest() {
-        return "aes-256-gcm";
-    }
-
-    string CryConfigCreator::_generateEncKeyForTest(const std::string &) {
-        return blockstore::encrypted::AES256_GCM::EncryptionKey::CreatePseudoRandom().ToString();
     }
 
     string CryConfigCreator::_generateRootBlobKey() {

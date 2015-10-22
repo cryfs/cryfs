@@ -36,8 +36,8 @@ public:
         return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(encKey));
     }
 
-    string createKey() const override {
-        return Cipher::EncryptionKey::CreateOSRandom().ToString();
+    string createKey(cpputils::RandomGenerator &randomGenerator) const override {
+        return Cipher::CreateKey(randomGenerator).ToString();
     }
 
 private:
