@@ -1,3 +1,3 @@
-#include "../../random/RandomPool.h"
+#include "../../random/Random.h"
 
 // Test the header can be included without needing additional dependencies

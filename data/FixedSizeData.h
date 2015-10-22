@@ -3,16 +3,14 @@
 #define MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 
 #include <cryptopp/cryptopp/hex.h>
-#include <cryptopp/cryptopp/osrng.h>
 #include <string>
 #include <cstring>
 #include "../assert/assert.h"
-#include "../random/RandomPool.h"
 
 namespace cpputils {
 
 template<unsigned int SIZE>
-class FixedSizeData {
+class FixedSizeData final {
 public:
   //Non-virtual destructor because we want objects to be small
   ~FixedSizeData() {}
@@ -20,8 +18,6 @@ public:
   static constexpr unsigned int BINARY_LENGTH = SIZE;
   static constexpr unsigned int STRING_LENGTH = 2 * BINARY_LENGTH; // Hex encoding
 
-  static FixedSizeData<SIZE> CreatePseudoRandom();
-  static FixedSizeData<SIZE> CreateOSRandom();
   //TODO Test Null()
   static FixedSizeData<SIZE> Null();
 
@@ -32,6 +28,7 @@ public:
   void ToBinary(void *target) const;
 
   const unsigned char *data() const;
+  unsigned char *data();
 
 private:
   FixedSizeData() {}
@@ -46,20 +43,6 @@ template<unsigned int SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, cons
 
 template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_LENGTH;
 template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
-
-template<unsigned int SIZE>
-FixedSizeData<SIZE> FixedSizeData<SIZE>::CreatePseudoRandom() {
-  FixedSizeData<SIZE> result;
-  RandomPool::get(result._data, BINARY_LENGTH);
-  return result;
-}
-
-template<unsigned int SIZE>
-FixedSizeData<SIZE> FixedSizeData<SIZE>::CreateOSRandom() {
-  FixedSizeData<SIZE> result;
-  CryptoPP::OS_GenerateRandomBlock(true, result._data, BINARY_LENGTH);
-  return result;
-}
 
 template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::Null() {
@@ -95,6 +78,11 @@ std::string FixedSizeData<SIZE>::ToString() const {
 template<unsigned int SIZE>
 const unsigned char *FixedSizeData<SIZE>::data() const {
   return _data;
+}
+
+template<unsigned int SIZE>
+unsigned char *FixedSizeData<SIZE>::data() {
+  return const_cast<unsigned char*>(const_cast<const FixedSizeData<SIZE>*>(this)->data());
 }
 
 template<unsigned int SIZE>

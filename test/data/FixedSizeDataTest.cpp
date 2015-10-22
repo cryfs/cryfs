@@ -33,15 +33,6 @@ public:
 
 constexpr unsigned int FixedSizeDataTest::SIZE;
 
-TEST_F(FixedSizeDataTest, CanGenerateRandomDataWithoutCrashing) {
-  FixedSizeData<SIZE> result = FixedSizeData<SIZE>::CreatePseudoRandom();
-}
-
-TEST_F(FixedSizeDataTest, CreatedRandomDatasHaveCorrectLength) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::CreatePseudoRandom();
-  EXPECT_EQ(FixedSizeData<SIZE>::STRING_LENGTH, data.ToString().size());
-}
-
 TEST_F(FixedSizeDataTest, EqualsTrue) {
   FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
   FixedSizeData<SIZE> DATA1_2 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
