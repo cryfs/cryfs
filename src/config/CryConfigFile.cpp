@@ -14,7 +14,13 @@ CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config) {
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    return CryConfigFile(path, std::move(config));
+    auto result = CryConfigFile(path, std::move(config));
+    result.save();
+    return result;
+}
+
+CryConfigFile::~CryConfigFile() {
+    //We do not call save() here, because we do not want the config file to be re-encrypted on each filesystem run
 }
 
 optional<CryConfigFile> CryConfigFile::load(const bf::path &path) {

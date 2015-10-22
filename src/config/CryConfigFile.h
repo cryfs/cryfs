@@ -9,6 +9,7 @@ namespace cryfs {
     class CryConfigFile final {
     public:
         CryConfigFile(CryConfigFile &&rhs);
+        ~CryConfigFile();
 
         static CryConfigFile create(const boost::filesystem::path &path, CryConfig config);
         static boost::optional<CryConfigFile> load(const boost::filesystem::path &path);
