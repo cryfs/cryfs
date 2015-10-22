@@ -4,6 +4,7 @@
 
 #include "../../../../implementations/encrypted/ciphers/Cipher.h"
 #include <messmer/cpp-utils/data/FixedSizeData.h>
+#include <messmer/cpp-utils/random/Random.h>
 
 struct FakeKey {
   static FakeKey FromBinary(const void *data) {
@@ -21,12 +22,9 @@ public:
 
   using EncryptionKey = FakeKey;
 
-  static EncryptionKey CreateKey() {
-    return FakeKey{(uint8_t)rand()};
-  }
-
-  static EncryptionKey CreatePseudoRandomKey() {
-    return FakeKey{(uint8_t)rand()};
+  static EncryptionKey CreateKey(cpputils::RandomGenerator &randomGenerator) {
+    auto data = randomGenerator.getFixedSize<1>();
+    return FakeKey{*((uint8_t*)data.data())};
   }
 
   static EncryptionKey Key1() {

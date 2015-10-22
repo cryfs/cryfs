@@ -19,13 +19,8 @@ public:
 
   using EncryptionKey = cpputils::FixedSizeData<KeySize>;
 
-  static EncryptionKey CreateKey() {
-    return cpputils::Random::OSRandom().getFixedSize<EncryptionKey::BINARY_LENGTH>();
-  }
-
-  // Used in test cases for fast key creation
-  static EncryptionKey CreatePseudoRandomKey() {
-    return cpputils::Random::PseudoRandom().getFixedSize<EncryptionKey::BINARY_LENGTH>();
+  static EncryptionKey CreateKey(cpputils::RandomGenerator &randomGenerator) {
+    return randomGenerator.getFixedSize<EncryptionKey::BINARY_LENGTH>();
   }
 
   static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
