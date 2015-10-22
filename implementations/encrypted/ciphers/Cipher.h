@@ -15,9 +15,10 @@ public:
   BOOST_CONCEPT_USAGE(CipherConcept) {
     same_type(UINT32_C(0), X::ciphertextSize(UINT32_C(5)));
     same_type(UINT32_C(0), X::plaintextSize(UINT32_C(5)));
-    typename X::EncryptionKey key = X::EncryptionKey::CreateOSRandom();
-    same_type(cpputils::Data(0), X::encrypt((uint8_t*)nullptr, UINT32_C(0), key));
-    same_type(boost::optional<cpputils::Data>(cpputils::Data(0)), X::decrypt((uint8_t*)nullptr, UINT32_C(0), key));
+    typename X::EncryptionKey key1 = X::CreateKey();
+    typename X::EncryptionKey key2 = X::CreatePseudoRandomKey();
+    same_type(cpputils::Data(0), X::encrypt((uint8_t*)nullptr, UINT32_C(0), key1));
+    same_type(boost::optional<cpputils::Data>(cpputils::Data(0)), X::decrypt((uint8_t*)nullptr, UINT32_C(0), key2));
   }
 
 private:

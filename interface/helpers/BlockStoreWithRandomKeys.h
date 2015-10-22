@@ -4,6 +4,7 @@
 
 #include "../BlockStore.h"
 #include "../Block.h"
+#include <messmer/cpp-utils/random/Random.h>
 
 namespace blockstore {
 
@@ -13,7 +14,7 @@ namespace blockstore {
 class BlockStoreWithRandomKeys: public BlockStore {
 public:
   Key createKey() final {
-    return Key::CreatePseudoRandom();
+    return cpputils::Random::PseudoRandom().getFixedSize<Key::BINARY_LENGTH>();
   }
 };
 

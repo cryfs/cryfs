@@ -7,9 +7,9 @@
 
 namespace blockstore {
 
-// A key here is NOT a key for encryption, but a key as used in key->value mappings ("access handle for a block").
-using Key = cpputils::FixedSizeData<16>;
-
+  // A key here is NOT a key for encryption, but a key as used in key->value mappings ("access handle for a block").
+  //TODO Rename to BlockId/BlobId and make it a class containing a FixedSizeData<> member
+  using Key = cpputils::FixedSizeData<16>;
 }
 
 namespace std {

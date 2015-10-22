@@ -17,6 +17,7 @@ namespace caching {
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 class Cache {
 public:
+  //TODO Current MAX_LIFETIME_SEC only considers time since the element was last pushed to the Cache. Also insert a real MAX_LIFETIME_SEC that forces resync of entries that have been pushed/popped often (e.g. the root blob)
   //TODO Experiment with good values
   static constexpr double PURGE_LIFETIME_SEC = 0.5; //When an entry has this age, it will be purged from the cache
   static constexpr double PURGE_INTERVAL = 0.5; // With this interval, we check for entries to purge

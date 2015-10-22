@@ -4,6 +4,7 @@
 
 #include <messmer/cpp-utils/data/FixedSizeData.h>
 #include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/random/Random.h>
 #include <cryptopp/cryptopp/gcm.h>
 #include "Cipher.h"
 
@@ -16,6 +17,15 @@ public:
     BOOST_CONCEPT_ASSERT((CipherConcept<GCM_Cipher<BlockCipher, KeySize>>));
 
     using EncryptionKey = cpputils::FixedSizeData<KeySize>;
+
+    static EncryptionKey CreateKey() {
+        return cpputils::Random::OSRandom().getFixedSize<EncryptionKey::BINARY_LENGTH>();
+    }
+
+    // Used in test cases for fast key creation
+    static EncryptionKey CreatePseudoRandomKey() {
+        return cpputils::Random::PseudoRandom().getFixedSize<EncryptionKey::BINARY_LENGTH>();
+    }
 
     static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
         return plaintextBlockSize + IV_SIZE + TAG_SIZE;
@@ -35,7 +45,7 @@ private:
 
 template<typename BlockCipher, unsigned int KeySize>
 cpputils::Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
-    auto iv = cpputils::FixedSizeData<IV_SIZE>::CreatePseudoRandom();
+    cpputils::FixedSizeData<IV_SIZE> iv = cpputils::Random::PseudoRandom().getFixedSize<IV_SIZE>();
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Encryption encryption;
     encryption.SetKeyWithIV(encKey.data(), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
     cpputils::Data ciphertext(ciphertextSize(plaintextSize));

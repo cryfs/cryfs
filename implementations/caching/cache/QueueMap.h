@@ -12,6 +12,11 @@
 namespace blockstore {
 namespace caching {
 
+//TODO FreeList for performance
+//TODO Single linked list with pointer to last element (for insertion) should be enough for a queue. No double linked list needed.
+//     But then, popping arbitrary elements needs to be rewritten so that _removeFromQueue() is _removeSuccessorFromQueue()
+//     and the map doesn't store the element itself, but its predecessor. That is, popping might be a bit slower. Test with experiments!
+
 // A class that is a queue and a map at the same time. We could also see it as an addressable queue.
 template<class Key, class Value>
 class QueueMap {

@@ -6,9 +6,6 @@
 #include <messmer/cpp-utils/data/FixedSizeData.h>
 
 struct FakeKey {
-  static FakeKey CreateOSRandom() {
-    return FakeKey{(uint8_t)rand()};
-  }
   static FakeKey FromBinary(const void *data) {
     return FakeKey{*(uint8_t*)data};
   }
@@ -23,6 +20,14 @@ public:
   BOOST_CONCEPT_ASSERT((blockstore::encrypted::CipherConcept<FakeAuthenticatedCipher>));
 
   using EncryptionKey = FakeKey;
+
+  static EncryptionKey CreateKey() {
+    return FakeKey{(uint8_t)rand()};
+  }
+
+  static EncryptionKey CreatePseudoRandomKey() {
+    return FakeKey{(uint8_t)rand()};
+  }
 
   static EncryptionKey Key1() {
     return FakeKey{5};
