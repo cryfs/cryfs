@@ -11,12 +11,12 @@ namespace cpputils {
         OSRandomGenerator();
 
     protected:
-        void get(void *target, size_t bytes) override;
+        void _get(void *target, size_t bytes) override;
     };
 
     inline OSRandomGenerator::OSRandomGenerator() {}
 
-    inline void OSRandomGenerator::get(void *target, size_t bytes) {
+    inline void OSRandomGenerator::_get(void *target, size_t bytes) {
         CryptoPP::OS_GenerateRandomBlock(true, (byte*)target, bytes);
     }
 }

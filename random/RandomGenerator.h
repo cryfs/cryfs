@@ -11,20 +11,20 @@ namespace cpputils {
         Data get(size_t size);
 
     protected:
-        virtual void get(void *target, size_t bytes) = 0;
+        virtual void _get(void *target, size_t bytes) = 0;
     private:
         static std::mutex _mutex;
     };
 
     template<size_t SIZE> inline FixedSizeData<SIZE> RandomGenerator::getFixedSize() {
         FixedSizeData<SIZE> result = FixedSizeData<SIZE>::Null();
-        get(result.data(), SIZE);
+        _get(result.data(), SIZE);
         return result;
     }
 
     inline Data RandomGenerator::get(size_t size) {
         Data result(size);
-        get(result.data(), size);
+        _get(result.data(), size);
         return result;
     }
 }

@@ -15,7 +15,7 @@ namespace cpputils {
         PseudoRandomPool();
 
     protected:
-        void get(void *target, size_t bytes) override;
+        void _get(void *target, size_t bytes) override;
 
     private:
         static constexpr size_t MIN_BUFFER_SIZE = 1*1024*1024; // 1MB
@@ -27,7 +27,7 @@ namespace cpputils {
     };
 
 
-    inline void PseudoRandomPool::get(void *target, size_t bytes) {
+    inline void PseudoRandomPool::_get(void *target, size_t bytes) {
         _buffer.get(target, bytes);
     }
 
