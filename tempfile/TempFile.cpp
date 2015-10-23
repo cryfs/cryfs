@@ -19,9 +19,13 @@ TempFile::TempFile(bool create)
 }
 
 TempFile::~TempFile() {
-  if (bf::exists(_path)) {
+  if (exists()) {
     bf::remove(_path);
   }
+}
+
+bool TempFile::exists() const {
+  return bf::exists(_path);
 }
 
 const bf::path &TempFile::path() const {
