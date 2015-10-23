@@ -13,6 +13,7 @@ public:
   explicit TempFile(bool create = true);
   virtual ~TempFile();
   const boost::filesystem::path &path() const;
+  //TODO Test exists()
   bool exists() const;
 
 private:
