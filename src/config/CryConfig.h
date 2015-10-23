@@ -8,7 +8,6 @@
 #include <iostream>
 
 namespace cryfs {
-    //TODO Add test case for the whole config folder
 
 class CryConfig final {
 public:

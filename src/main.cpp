@@ -23,6 +23,8 @@ using blockstore::inmemory::InMemoryBlockStore;
 using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
+using cpputils::Random;
+using cpputils::IOStreamConsole;
 using std::cout;
 using std::endl;
 using std::vector;
@@ -50,8 +52,14 @@ void showVersion() {
     cout << endl;
 }
 
+CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
+    auto console = make_unique_ref<IOStreamConsole>();
+    auto &keyGenerator = Random::OSRandom();
+    return CryConfigLoader(std::move(console), keyGenerator).loadOrCreate(bf::path(options.configFile()));
+}
+
 void runFilesystem(const ProgramOptions &options) {
-    auto config = CryConfigLoader().loadOrCreate(bf::path(options.configFile()));
+    auto config = loadOrCreateConfig(options);
     //TODO This daemonize causes error messages when initializing CryDevice to get lost.
     //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
     //     because it doesn't fork threads. What to do?

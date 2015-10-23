@@ -36,14 +36,6 @@ public:
 
 #define EXPECT_ASK_FOR_CIPHER() EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames())))
 
-ACTION(ChooseAnyCipher) {
-    return 0;
-}
-
-ACTION_P(ChooseCipher, cipherName) {
-    return std::find(arg1.begin(), arg1.end(), cipherName) - arg1.begin();
-}
-
 TEST_F(CryConfigCreatorTest, DoesNotCrash) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
     CryConfig config = creator.create();

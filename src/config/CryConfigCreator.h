@@ -1,5 +1,6 @@
-#ifndef CRYFS_SRC_CONFIG_CRYCONFIGCREATOR_H
-#define CRYFS_SRC_CONFIG_CRYCONFIGCREATOR_H
+#pragma once
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYCONFIGCREATOR_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYCONFIGCREATOR_H
 
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/cpp-utils/random/RandomGenerator.h>

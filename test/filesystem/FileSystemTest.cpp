@@ -16,7 +16,7 @@ using blockstore::testfake::FakeBlockStore;
 
 using namespace cryfs;
 
-class CryFsTestFixture: public FileSystemTestFixture {
+class CryFsTestFixture: public FileSystemTestFixture, public TestWithMockConsole {
 public:
   CryFsTestFixture()
   // Don't create config tempfile yet
@@ -27,13 +27,6 @@ public:
     auto config = CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom())
             .loadOrCreate(configFile.path());
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
-  }
-
-  unique_ref<MockConsole> mockConsole() {
-    auto console = make_unique_ref<MockConsole>();
-    EXPECT_CALL(*console, ask(_, _)).WillRepeatedly(Return(0));
-    EXPECT_CALL(*console, askYesNo(_)).WillRepeatedly(Return(true));
-    return console;
   }
 
   cpputils::TempFile configFile;

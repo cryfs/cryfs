@@ -12,11 +12,9 @@ namespace cryfs {
 
 class CryConfigLoader {
 public:
-  CryConfigLoader();
-  explicit CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator);
+  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator);
 
   CryConfigFile loadOrCreate(const boost::filesystem::path &filename);
-  CryConfigFile createNew(const boost::filesystem::path &filename);
 
 private:
   CryConfigCreator _creator;
