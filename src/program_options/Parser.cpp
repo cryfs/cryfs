@@ -90,7 +90,7 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
 }
 
 [[noreturn]] void Parser::_showHelpAndExit() {
-    cerr << "Usage: cryfs --config configFile [other options] rootDir mountPoint [-- [FUSE Mount Options]]\n";
+    cerr << "Usage: cryfs [options] rootDir mountPoint [-- [FUSE Mount Options]]\n";
     po::options_description desc;
     _addAllowedOptions(&desc);
     cerr << desc << endl;

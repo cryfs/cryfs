@@ -53,12 +53,12 @@ TEST_F(ProgramOptionsParserTest, NoSpecialOptions) {
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
-    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--logfile", "/home/user/logfile", "/home/user/mountDir"});
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--logfile", "/home/user/mylogfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/mylogfile", options.logFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, ConfigfileGiven) {
-    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--configfile", "/home/user/configfile", "/home/user/mountDir"});
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--config", "/home/user/myconfigfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/myconfigfile", options.configFile().value());
 }
 
