@@ -3,6 +3,7 @@
 #define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KEYCONFIG_H
 
 #include <messmer/cpp-utils/data/Data.h>
+#include <iostream>
 
 namespace cryfs {
 
@@ -29,6 +30,10 @@ namespace cryfs {
         size_t p() const {
             return _p;
         }
+
+        void save(std::ostream &stream) const;
+
+        static DerivedKeyConfig load(std::istream &stream);
 
     private:
         cpputils::Data _salt;
