@@ -3,17 +3,15 @@
 #include "../../src/config/CryConfig.h"
 
 using namespace cryfs;
+using cpputils::Data;
 
 class CryConfigTest: public ::testing::Test {
 public:
     CryConfig cfg;
 
     CryConfig SaveAndLoad(CryConfig cfg) {
-        std::stringstream stream;
-        cfg.save(stream);
-        CryConfig loaded;
-        loaded.load(stream);
-        return loaded;
+        Data configData = cfg.save();
+        return CryConfig::load(configData);
     }
 };
 

@@ -8,6 +8,8 @@
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
+using boost::optional;
+using boost::none;
 using std::string;
 using ::testing::Return;
 using ::testing::_;
@@ -16,37 +18,40 @@ using namespace cryfs;
 
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
 public:
-    CryConfigLoaderTest(): loader(mockConsole(), cpputils::Random::PseudoRandom()), file(false) {}
+    CryConfigLoaderTest(): file(false) {}
 
-    CryConfigFile Create() {
+    CryConfigLoader loader(const string &password) {
+        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), [password] {return password;});
+    }
+
+    CryConfigFile Create(const string &password = "mypassword") {
         EXPECT_FALSE(file.exists());
-        return loader.loadOrCreate(file.path());
+        return loader(password).loadOrCreate(file.path());
     }
 
-    CryConfigFile Load() {
+    CryConfigFile Load(const string &password = "mypassword") {
         EXPECT_TRUE(file.exists());
-        return loader.loadOrCreate(file.path());
+        return loader(password).loadOrCreate(file.path());
     }
 
-    void CreateWithRootBlob(const string &rootBlob) {
-        auto cfg = loader.loadOrCreate(file.path());
+    void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
+        auto cfg = loader(password).loadOrCreate(file.path());
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
-    void CreateWithCipher(const string &cipher) {
-        auto cfg = loader.loadOrCreate(file.path());
+    void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
+        auto cfg = loader(password).loadOrCreate(file.path());
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
-    void CreateWithEncryptionKey(const string &encKey) {
-        auto cfg = loader.loadOrCreate(file.path());
+    void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
+        auto cfg = loader(password).loadOrCreate(file.path());
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
 
-    CryConfigLoader loader;
     TempFile file;
 };
 
@@ -59,6 +64,14 @@ TEST_F(CryConfigLoaderTest, CreatesNewIfNotExisting) {
 TEST_F(CryConfigLoaderTest, DoesntCrashIfExisting) {
     Create();
     Load();
+}
+
+TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
+    Create("mypassword");
+    EXPECT_DEATH(
+        Load("mypassword2"),
+        "Wrong password"
+    );
 }
 
 TEST_F(CryConfigLoaderTest, RootBlob_Load) {

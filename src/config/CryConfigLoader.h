@@ -12,12 +12,19 @@ namespace cryfs {
 
 class CryConfigLoader {
 public:
-  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator);
+  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, std::function<std::string()> askPassword);
+  CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   CryConfigFile loadOrCreate(const boost::filesystem::path &filename);
 
 private:
-  CryConfigCreator _creator;
+    CryConfigFile _loadConfig(const boost::filesystem::path &filename);
+    CryConfigFile _createConfig(const boost::filesystem::path &filename);
+
+    CryConfigCreator _creator;
+    std::function<std::string()> _askPassword;
+
+    DISALLOW_COPY_AND_ASSIGN(CryConfigLoader);
 };
 
 }

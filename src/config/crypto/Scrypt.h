@@ -14,7 +14,7 @@ namespace cryfs {
 
     class SCrypt {
     public:
-        //TODO Make user-configurable. For sensitive storage, N=1048576, r=8 is recommended.
+        //TODO Make user-configurable. For sensitive storage, N=1048576, r=8 is recommended. For tests, we should use faster settings.
         constexpr static size_t SALT_LEN = 32; // Size of the salt
         constexpr static uint64_t N = 524288; // CPU/Memory cost
         constexpr static uint32_t r = 1; // Blocksize

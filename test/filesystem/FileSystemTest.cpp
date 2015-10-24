@@ -3,10 +3,12 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 
 #include "../../src/filesystem/CryDevice.h"
+#include "../../src/config/CryConfigLoader.h"
 #include "../testutils/MockConsole.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Random;
 
 using fspp::Device;
 using ::testing::Return;
@@ -24,7 +26,7 @@ public:
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
-    auto config = CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom())
+    auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";})
             .loadOrCreate(configFile.path());
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }

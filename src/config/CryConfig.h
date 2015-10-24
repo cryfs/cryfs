@@ -4,13 +4,14 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "messmer/cpp-utils/macros.h"
+#include <messmer/cpp-utils/data/Data.h>
 #include <iostream>
 
 namespace cryfs {
 
 class CryConfig final {
 public:
+  //TODO No default constructor, pass in config values instead!
   CryConfig();
   CryConfig(CryConfig &&rhs);
 
@@ -23,8 +24,8 @@ public:
   const std::string &Cipher() const;
   void SetCipher(const std::string &value);
 
-  void load(std::istream &loadSource);
-  void save(std::ostream &destination) const;
+  static CryConfig load(const cpputils::Data &data);
+  cpputils::Data save() const;
 
 private:
   std::string _rootBlob;

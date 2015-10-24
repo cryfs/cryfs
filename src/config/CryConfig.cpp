@@ -3,13 +3,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <sstream>
 
 namespace bf = boost::filesystem;
 
 using boost::property_tree::ptree;
 using std::string;
-using std::istream;
-using std::ostream;
+using std::stringstream;
+using cpputils::Data;
 
 namespace cryfs {
 
@@ -21,23 +22,29 @@ CryConfig::CryConfig(CryConfig &&rhs)
 : _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)) {
 }
 
-void CryConfig::load(istream &loadSource) {
+CryConfig CryConfig::load(const Data &data) {
+  stringstream stream;
+  data.StoreToStream(stream);
   ptree pt;
-  read_json(loadSource, pt);
+  read_json(stream, pt);
 
-  _rootBlob = pt.get("cryfs.rootblob", "");
-  _encKey = pt.get("cryfs.key", "");
-  _cipher = pt.get("cryfs.cipher", "");
+  CryConfig cfg;
+  cfg._rootBlob = pt.get("cryfs.rootblob", "");
+  cfg._encKey = pt.get("cryfs.key", "");
+  cfg._cipher = pt.get("cryfs.cipher", "");
+  return cfg;
 }
 
-void CryConfig::save(ostream &writeDestination) const {
+Data CryConfig::save() const {
   ptree pt;
 
   pt.put("cryfs.rootblob", _rootBlob);
   pt.put("cryfs.key", _encKey);
   pt.put("cryfs.cipher", _cipher);
 
-  write_json(writeDestination, pt);
+  stringstream stream;
+  write_json(stream, pt);
+  return Data::LoadFromStream(stream);
 }
 
 const std::string &CryConfig::RootBlob() const {

@@ -8,6 +8,7 @@
 #include "../../src/filesystem/CryFile.h"
 #include "../../src/filesystem/CryOpenFile.h"
 #include "../testutils/MockConsole.h"
+#include "../../src/config/CryConfigLoader.h"
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -20,6 +21,7 @@ using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using cpputils::Console;
+using cpputils::Random;
 using blockstore::ondisk::OnDiskBlockStore;
 
 namespace bf = boost::filesystem;
@@ -31,7 +33,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom()).loadOrCreate(config.path());
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}).loadOrCreate(config.path());
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

@@ -11,6 +11,7 @@ namespace cryfs {
     class CryConfigCreator final {
     public:
         CryConfigCreator(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator);
+        CryConfigCreator(CryConfigCreator &&rhs) = default;
 
         CryConfig create();
     private:

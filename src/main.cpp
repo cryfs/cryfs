@@ -15,6 +15,14 @@
 
 #include <gitversion/version.h>
 
+#include <pwd.h>
+
+//<limits.h> needed for libc to define PASS_MAX
+#include <limits.h>
+#ifdef PASS_MAX
+#error The used libc implementation has a maximal password size for getpass(). We cannot use it to ask for passwords.
+#endif
+
 using namespace cryfs;
 namespace bf = boost::filesystem;
 
@@ -26,6 +34,7 @@ using cpputils::make_unique_ref;
 using cpputils::Random;
 using cpputils::IOStreamConsole;
 using std::cout;
+using std::string;
 using std::endl;
 using std::vector;
 using boost::none;
@@ -34,6 +43,7 @@ using boost::none;
 //TODO Improve parallelity.
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Improve error message when root blob wasn't found.
+//TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -52,15 +62,36 @@ void showVersion() {
     cout << endl;
 }
 
-CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
-    auto console = make_unique_ref<IOStreamConsole>();
-    auto &keyGenerator = Random::OSRandom();
-    return CryConfigLoader(std::move(console), keyGenerator).loadOrCreate(bf::path(options.configFile()));
+bool checkPassword(const string &password) {
+    if (password == "") {
+        std::cerr << "Empty password not allowed. Please try again." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+string askPassword() {
+    string password = getpass("Password: ");
+    while(!checkPassword(password)) {
+        password = getpass("Password: ");
+    }
+    return password;
+};
+
+CryConfigFile loadOrCreateConfig(const bf::path &filename) {
+    try {
+        auto console = make_unique_ref<IOStreamConsole>();
+        auto &keyGenerator = Random::OSRandom();
+        return CryConfigLoader(std::move(console), keyGenerator, &askPassword).loadOrCreate(filename);
+    } catch (const std::exception &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        exit(1);
+    }
 }
 
 void runFilesystem(const ProgramOptions &options) {
-    auto config = loadOrCreateConfig(options);
-    //TODO This daemonize causes error messages when initializing CryDevice to get lost.
+    auto config = loadOrCreateConfig(options.configFile());
+    //TODO This daemonize causes error messages from CryDevice initialization to get lost.
     //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
     //     because it doesn't fork threads. What to do?
     if (!options.foreground()) {
@@ -76,6 +107,7 @@ void runFilesystem(const ProgramOptions &options) {
     fspp::fuse::Fuse fuse(&fsimpl);
 
     vector<char*> fuseOptions = options.fuseOptions();
+    std::cout << "\nFilesystem is running." << std::endl;
     fuse.run(fuseOptions.size(), fuseOptions.data());
 }
 

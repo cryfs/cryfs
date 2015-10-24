@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_CRYDEVICE_H_
 
 #include <messmer/blockstore/interface/BlockStore.h>
-#include "../config/CryConfigLoader.h"
+#include "../config/CryConfigFile.h"
 
 #include <boost/filesystem.hpp>
 #include <messmer/fspp/fs_interface/Device.h>

@@ -13,6 +13,7 @@
 #include "messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h"
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"
+#include "../config/CryCipher.h"
 
 using std::string;
 
