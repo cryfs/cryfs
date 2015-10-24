@@ -1,0 +1,5 @@
+Version 0.8.1
+---------------
+* Configuration files are AES-256-GCM encrypted with a password and the scrypt KDF. If the configuration file is not specified as command line parameter, it will be put into the base directory.
+* Added a --logfile option to specify where logs should be written to. If the option is not specified, CryFs logs to syslog.
+* Fixed daemonization. When CryFs is run without "-f" flag, it will run in background.
