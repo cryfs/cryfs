@@ -15,14 +15,10 @@ boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   if (!file.good()) {
     return boost::none;
   }
-  size_t size = _getStreamSize(file);
-
-  Data result(size);
-  result._readFromStream(file);
-  return std::move(result);
+  return LoadFromStream(file);
 }
 
-size_t Data::_getStreamSize(istream &stream) {
+std::streampos Data::_getStreamSize(istream &stream) {
   auto current_pos = stream.tellg();
 
   //Retrieve length
@@ -35,9 +31,12 @@ size_t Data::_getStreamSize(istream &stream) {
   return endpos - current_pos;
 }
 
+Data Data::LoadFromStream(istream &stream) {
+  size_t size = _getStreamSize(stream);
 
-void Data::_readFromStream(istream &stream) {
-  stream.read((char*)_data, _size);
+  Data result(size);
+  stream.read(static_cast<char*>(result.data()), result.size());
+  return std::move(result);
 }
 
 }

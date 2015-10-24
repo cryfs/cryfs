@@ -35,11 +35,15 @@ public:
   void StoreToFile(const boost::filesystem::path &filepath) const;
   static boost::optional<Data> LoadFromFile(const boost::filesystem::path &filepath);
 
+  //TODO Test LoadFromStream/StoreToStream
+  static Data LoadFromStream(std::istream &stream);
+  void StoreToStream(std::ostream &stream) const;
+
 private:
   size_t _size;
   void *_data;
 
-  static size_t _getStreamSize(std::istream &stream);
+  static std::streampos _getStreamSize(std::istream &stream);
   void _readFromStream(std::istream &stream);
 
   DISALLOW_COPY_AND_ASSIGN(Data);
@@ -115,7 +119,12 @@ inline Data &Data::FillWithZeroes() {
 
 inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
   std::ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
-  file.write((const char*)_data, _size);
+  StoreToStream(file);
+}
+
+
+inline void Data::StoreToStream(std::ostream &stream) const {
+  stream.write(static_cast<const char*>(_data), _size);
 }
 
 inline bool operator==(const Data &lhs, const Data &rhs) {
