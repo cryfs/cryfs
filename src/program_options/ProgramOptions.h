@@ -11,7 +11,7 @@ namespace cryfs {
     namespace program_options {
         class ProgramOptions final {
         public:
-            ProgramOptions(const std::string &baseDir, const std::string &mountDir, const std::string &configFile,
+            ProgramOptions(const std::string &baseDir, const std::string &mountDir, const boost::optional<std::string> &configFile,
                            bool foreground, const boost::optional<std::string> &logFile,
                            const std::vector<char *> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs);
@@ -19,15 +19,15 @@ namespace cryfs {
 
             const std::string &baseDir() const;
             std::string mountDir() const;
-            const std::string &configFile() const;
+            const boost::optional<std::string> &configFile() const;
             bool foreground() const;
-            const boost::optional<std::string> logFile() const;
+            const boost::optional<std::string> &logFile() const;
             const std::vector<char *> &fuseOptions() const;
 
         private:
             std::string _baseDir;
             char *_mountDir;
-            std::string _configFile;
+            boost::optional<std::string> _configFile;
             bool _foreground;
             boost::optional<std::string> _logFile;
             std::vector<char *> _fuseOptions;

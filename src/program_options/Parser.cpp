@@ -29,14 +29,17 @@ ProgramOptions Parser::parse() const {
 
     string baseDir = vm["base-dir"].as<string>();
     string mountDir = vm["mount-dir"].as<string>();
-    string configFile = vm["config"].as<string>();
+    optional<string> configfile = none;
+    if (vm.count("config")) {
+        configfile = vm["config"].as<string>();
+    }
     bool foreground = vm.count("foreground");
     optional<string> logfile = none;
     if (vm.count("logfile")) {
         logfile = vm["logfile"].as<string>();
     }
 
-    return ProgramOptions(baseDir, mountDir, configFile, foreground, logfile, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, logfile, options.second);
 }
 
 po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options) {
@@ -68,7 +71,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
     po::options_description options("Allowed options");
     options.add_options()
             ("help,h", "show help message")
-            ("config,c", po::value<string>()->required(), "Configuration file")
+            ("config,c", po::value<string>(), "Configuration file")
             ("foreground,f", "Run CryFS in foreground.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
             ;

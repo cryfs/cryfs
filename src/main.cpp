@@ -78,11 +78,20 @@ string askPassword() {
     return password;
 };
 
-CryConfigFile loadOrCreateConfig(const bf::path &filename) {
+bf::path determineConfigFile(const ProgramOptions &options) {
+    auto configFile = options.configFile();
+    if (configFile == none) {
+        return options.baseDir() + "cryfs.config";
+    }
+    return *configFile;
+}
+
+CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
     try {
+        auto configFile = determineConfigFile(options);
         auto console = make_unique_ref<IOStreamConsole>();
         auto &keyGenerator = Random::OSRandom();
-        return CryConfigLoader(std::move(console), keyGenerator, &askPassword).loadOrCreate(filename);
+        return CryConfigLoader(std::move(console), keyGenerator, &askPassword).loadOrCreate(configFile);
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         exit(1);
@@ -90,7 +99,7 @@ CryConfigFile loadOrCreateConfig(const bf::path &filename) {
 }
 
 void runFilesystem(const ProgramOptions &options) {
-    auto config = loadOrCreateConfig(options.configFile());
+    auto config = loadOrCreateConfig(options);
     //TODO This daemonize causes error messages from CryDevice initialization to get lost.
     //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
     //     because it doesn't fork threads. What to do?
