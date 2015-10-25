@@ -16,7 +16,7 @@
 namespace cryfs {
     //TODO Test
     //TODO Don't only encrypt with the main cipher, but also use user specified cipher.
-    //TODO Refactor. Functions too large.
+    //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
     template<class Cipher>
     class CryConfigEncryptor {
     public:
@@ -27,10 +27,11 @@ namespace cryfs {
         static boost::optional<std::pair<ConfigEncryptionKey, cpputils::Data>> decrypt(const cpputils::Data &ciphertext, const std::string &password);
         static cpputils::Data encrypt(const cpputils::Data &plaintext, const ConfigEncryptionKey &key);
     private:
-        static boost::optional<std::pair<ConfigEncryptionKey, cpputils::Data>> _decrypt(const std::string &header, const cpputils::Data &serializedKeyConfig, const cpputils::Data &ciphertext, const std::string &password);
-        static bool _checkHeader(const std::string &header);
-        static boost::optional<ConfigEncryptionKey> _loadKey(const cpputils::Data &serializedKeyConfig, const std::string &password);
-        static boost::optional<cpputils::Data> _loadAndDecryptConfigData(const cpputils::Data &ciphertext, const typename Cipher::EncryptionKey &key);
+        static std::pair<ConfigEncryptionKey, cpputils::Data> _decrypt(cpputils::Deserializer *deserializer, const std::string &password);
+        static void _checkHeader(cpputils::Deserializer *deserializer);
+        static ConfigEncryptionKey _loadKey(cpputils::Deserializer *deserializer, const std::string &password);
+        static cpputils::Data _loadAndDecryptConfigData(cpputils::Deserializer *deserializer, const typename Cipher::EncryptionKey &key);
+        static cpputils::Data _serialize(const cpputils::Data &ciphertext, const ConfigEncryptionKey &key);
         //TODO Test that encrypted config data always has the same size, no matter how big the plaintext config data
         static cpputils::Data _addPadding(const cpputils::Data &data);
         static boost::optional<cpputils::Data> _removePadding(const cpputils::Data &data);
@@ -52,90 +53,74 @@ namespace cryfs {
     template<class Cipher>
     boost::optional<std::pair<typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey, cpputils::Data>>
     CryConfigEncryptor<Cipher>::decrypt(const cpputils::Data &data, const std::string &password) {
+        cpputils::Deserializer deserializer(&data);
         try {
-            cpputils::Deserializer deserializer(&data);
-            std::string header = deserializer.readString();
-            cpputils::Data serializedKeyConfig = deserializer.readData();
-            cpputils::Data ciphertext = deserializer.readData();
+            auto result = _decrypt(&deserializer, password);
             deserializer.finished();
-
-            return _decrypt(header, serializedKeyConfig, ciphertext, password);
-
+            return result;
         } catch (const std::exception &e) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Error deserializing CryConfigEncryptor: " << e.what();
-            return boost::none; // This can be caused by bad loaded data and is not necessarily a programming logic error. Don't throw exception.
+            cpputils::logging::LOG(cpputils::logging::ERROR) << "Error loading configuration: " << e.what();
+            return boost::none; // This can be caused by invalid loaded data and is not necessarily a programming logic error. Don't throw exception.
         }
     };
 
     template<class Cipher>
-    boost::optional<std::pair<typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey, cpputils::Data>>
-    CryConfigEncryptor<Cipher>::_decrypt(const std::string &header, const cpputils::Data &serializedKeyConfig, const cpputils::Data &ciphertext, const std::string &password) {
-        if (!_checkHeader(header)) {
-            return boost::none;
-        }
+    std::pair<typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey, cpputils::Data>
+    CryConfigEncryptor<Cipher>::_decrypt(cpputils::Deserializer *deserializer, const std::string &password) {
+        _checkHeader(deserializer);
+        auto key = _loadKey(deserializer, password);
+        auto configData = _loadAndDecryptConfigData(deserializer, key.key());
 
-        auto key = _loadKey(serializedKeyConfig, password);
-        if (key == boost::none) {
-            return boost::none;
-        }
-
-        auto configData = _loadAndDecryptConfigData(ciphertext, key->key());
-        if (configData == boost::none) {
-            return boost::none;
-        }
-
-        return std::make_pair(std::move(*key), std::move(*configData));
+        return std::make_pair(std::move(key), std::move(configData));
     };
 
     template<class Cipher>
-    bool CryConfigEncryptor<Cipher>::_checkHeader(const std::string &header) {
+    void CryConfigEncryptor<Cipher>::_checkHeader(cpputils::Deserializer *deserializer) {
+        std::string header = deserializer->readString();
         if (header != HEADER) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Error deserializing CryConfigEncryptor: Invalid header.";
-            return false;
+            throw std::runtime_error("Invalid header");
         }
-        return true;
     }
 
     template<class Cipher>
-    boost::optional<typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey> CryConfigEncryptor<Cipher>::_loadKey(const cpputils::Data &serializedKeyConfig, const std::string &password) {
-        auto keyConfig = DerivedKeyConfig::load(serializedKeyConfig);
-        if (keyConfig == boost::none) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Error deserializing CryConfigEncryptor: Invalid key configuration.";
-            return boost::none;
-        }
+    typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey CryConfigEncryptor<Cipher>::_loadKey(cpputils::Deserializer *deserializer, const std::string &password) {
+        auto keyConfig = DerivedKeyConfig::load(deserializer);
         //TODO This is only kept here to recognize when this is run in tests. After tests are faster, replace this with something in main(), saying something like "Loading configuration file..."
         std::cout << "Deriving secure key for config file..." << std::flush;
-        auto key = SCrypt().generateKeyFromConfig<Cipher::EncryptionKey::BINARY_LENGTH>(password, *keyConfig);
+        auto key = SCrypt().generateKeyFromConfig<Cipher::EncryptionKey::BINARY_LENGTH>(password, keyConfig);
         std::cout << "done" << std::endl;
-        return ConfigEncryptionKey(std::move(*keyConfig), std::move(key));
+        return ConfigEncryptionKey(std::move(keyConfig), std::move(key));
     }
 
     template<class Cipher>
-    boost::optional<cpputils::Data> CryConfigEncryptor<Cipher>::_loadAndDecryptConfigData(const cpputils::Data &ciphertext, const typename Cipher::EncryptionKey &key) {
+    cpputils::Data CryConfigEncryptor<Cipher>::_loadAndDecryptConfigData(cpputils::Deserializer *deserializer, const typename Cipher::EncryptionKey &key) {
+        auto ciphertext = deserializer->readData();
         auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(ciphertext.data()), ciphertext.size(), key);
         if (decrypted == boost::none) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) <<  "Couldn't decrypt config file. Wrong password?";
-            return boost::none;
+            throw std::runtime_error("Couldn't decrypt config file. Wrong password?");
         }
         auto configData = _removePadding(*decrypted);
         if (configData == boost::none) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) <<  "Couldn't decrypt config file because of wrong padding.";
-            return boost::none;
+            throw std::runtime_error("Couldn't decrypt config file because of wrong padding");
         }
-        return configData;
+        return std::move(*configData);
     }
 
     template<class Cipher>
     cpputils::Data CryConfigEncryptor<Cipher>::encrypt(const cpputils::Data &plaintext, const ConfigEncryptionKey &key) {
-        cpputils::Data serializedKeyConfig = key.config().save();
         auto paddedPlaintext = _addPadding(plaintext);
         auto ciphertext = Cipher::encrypt(static_cast<const uint8_t*>(paddedPlaintext.data()), paddedPlaintext.size(), key.key());
+        return _serialize(ciphertext, key);
+    }
+
+    template <class Cipher>
+    cpputils::Data CryConfigEncryptor<Cipher>::_serialize(const cpputils::Data &ciphertext, const ConfigEncryptionKey &key) {
         try {
             cpputils::Serializer serializer(cpputils::Serializer::StringSize(HEADER)
-                                            + cpputils::Serializer::DataSize(serializedKeyConfig)
+                                            + key.config().serializedSize()
                                             + cpputils::Serializer::DataSize(ciphertext));
             serializer.writeString(HEADER);
-            serializer.writeData(serializedKeyConfig);
+            key.config().serialize(&serializer);
             serializer.writeData(ciphertext);
             return serializer.finished();
         } catch (const std::exception &e) {

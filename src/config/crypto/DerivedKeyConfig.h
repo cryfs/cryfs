@@ -3,6 +3,8 @@
 #define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KEYCONFIG_H
 
 #include <messmer/cpp-utils/data/Data.h>
+#include <messmer/cpp-utils/data/Serializer.h>
+#include <messmer/cpp-utils/data/Deserializer.h>
 #include <iostream>
 
 namespace cryfs {
@@ -31,9 +33,11 @@ namespace cryfs {
             return _p;
         }
 
-        cpputils::Data save() const;
+        void serialize(cpputils::Serializer *destination) const;
 
-        static boost::optional<DerivedKeyConfig> load(const cpputils::Data &data);
+        size_t serializedSize() const;
+
+        static DerivedKeyConfig load(cpputils::Deserializer *source);
 
     private:
         cpputils::Data _salt;

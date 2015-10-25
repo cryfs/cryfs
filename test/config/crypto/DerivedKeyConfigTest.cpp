@@ -6,12 +6,17 @@
 using namespace cryfs;
 using cpputils::DataFixture;
 using cpputils::Data;
+using cpputils::Serializer;
+using cpputils::Deserializer;
 
 class DerivedKeyConfigTest : public ::testing::Test {
 public:
     DerivedKeyConfig SaveAndLoad(const DerivedKeyConfig &source) {
-        Data serialized = source.save();
-        return DerivedKeyConfig::load(serialized).value();
+        Serializer serializer(source.serializedSize());
+        source.serialize(&serializer);
+        Data serialized = serializer.finished();
+        Deserializer deserializer(&serialized);
+        return DerivedKeyConfig::load(&deserializer);
     }
 };
 
