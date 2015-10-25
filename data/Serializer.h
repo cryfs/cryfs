@@ -4,6 +4,7 @@
 
 #include "Data.h"
 #include "../macros.h"
+#include <string>
 
 namespace cpputils {
     //TODO Test Serializer/Deserializer
@@ -20,9 +21,11 @@ namespace cpputils {
         void writeInt32(int32_t value);
         void writeUint64(uint64_t value);
         void writeInt64(int64_t value);
-        void writeData(const Data &data);
+        void writeData(const Data &value);
+        void writeString(const std::string &value);
 
-        static size_t DataSize(const Data &data);
+        static size_t DataSize(const Data &value);
+        static size_t StringSize(const std::string &value);
 
         Data finished();
 
@@ -93,7 +96,20 @@ namespace cpputils {
         return sizeof(uint64_t) + data.size();
     }
 
-    Data Serializer::finished() {
+    inline void Serializer::writeString(const std::string &value) {
+        writeUint64(value.size());
+        if (_pos + value.size() > _result.size()) {
+            throw std::runtime_error("Serialization failed - size overflow");
+        }
+        std::memcpy(static_cast<char*>(_result.dataOffset(_pos)), value.c_str(), value.size());
+        _pos += value.size();
+    }
+
+    inline size_t Serializer::StringSize(const std::string &value) {
+        return sizeof(uint64_t) + value.size();
+    }
+
+    inline Data Serializer::finished() {
         if (_pos != _result.size()) {
             throw std::runtime_error("Serialization failed - size not fully used.");
         }

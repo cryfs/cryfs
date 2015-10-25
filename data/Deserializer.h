@@ -21,6 +21,7 @@ namespace cpputils {
         uint64_t readUint64();
         int64_t readInt64();
         Data readData();
+        std::string readString();
 
         void finished();
 
@@ -93,6 +94,17 @@ namespace cpputils {
         }
         Data result(size);
         std::memcpy(static_cast<char*>(result.data()), static_cast<const char*>(_source->dataOffset(_pos)), size);
+        _pos += size;
+        return result;
+    }
+
+    inline std::string Deserializer::readString() {
+        uint64_t size = readUint64();
+        if (_pos + size > _source->size()) {
+            _finishedCalled = true; // We don't want the destructor assertion to fail when destructor is called because of the exception
+            throw std::runtime_error("Deserialization failed - size overflow");
+        }
+        std::string result(reinterpret_cast<const char*>(_source->dataOffset(_pos)), size);
         _pos += size;
         return result;
     }
