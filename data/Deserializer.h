@@ -10,7 +10,6 @@ namespace cpputils {
     class Deserializer final {
     public:
         Deserializer(const Data *source);
-        ~Deserializer();
 
         uint8_t readUint8();
         int8_t readInt8();
@@ -30,16 +29,11 @@ namespace cpputils {
 
         size_t _pos;
         const Data *_source;
-        bool _finishedCalled;
 
         DISALLOW_COPY_AND_ASSIGN(Deserializer);
     };
 
-    inline Deserializer::Deserializer(const Data *source): _pos(0), _source(source), _finishedCalled(false) {
-    }
-
-    inline Deserializer::~Deserializer() {
-        ASSERT(_finishedCalled, "Forgot to call Deserializer::finished()");
+    inline Deserializer::Deserializer(const Data *source): _pos(0), _source(source) {
     }
 
     inline uint8_t Deserializer::readUint8() {
@@ -78,7 +72,6 @@ namespace cpputils {
     inline DataType Deserializer::_read() {
         static_assert(std::is_pod<DataType>::value, "Can only deserialize PODs");
         if (_pos + sizeof(DataType) > _source->size()) {
-            _finishedCalled = true; // We don't want the destructor assertion to fail when destructor is called because of the exception
             throw std::runtime_error("Deserialization failed - size overflow");
         }
         DataType result = *reinterpret_cast<const DataType*>(_source->dataOffset(_pos));
@@ -89,7 +82,6 @@ namespace cpputils {
     inline Data Deserializer::readData() {
         uint64_t size = readUint64();
         if (_pos + size > _source->size()) {
-            _finishedCalled = true; // We don't want the destructor assertion to fail when destructor is called because of the exception
             throw std::runtime_error("Deserialization failed - size overflow");
         }
         Data result(size);
@@ -101,7 +93,6 @@ namespace cpputils {
     inline std::string Deserializer::readString() {
         uint64_t size = readUint64();
         if (_pos + size > _source->size()) {
-            _finishedCalled = true; // We don't want the destructor assertion to fail when destructor is called because of the exception
             throw std::runtime_error("Deserialization failed - size overflow");
         }
         std::string result(reinterpret_cast<const char*>(_source->dataOffset(_pos)), size);
@@ -110,7 +101,6 @@ namespace cpputils {
     }
 
     inline void Deserializer::finished() {
-        _finishedCalled = true;
         if (_pos != _source->size()) {
             throw std::runtime_error("Deserialization failed - size not fully used.");
         }
