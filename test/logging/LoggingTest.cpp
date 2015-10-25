@@ -65,16 +65,16 @@ TEST_F(LoggingTest, ErrorLog) {
 
 void logAndExit(const string &message) {
     LOG(INFO) << message;
-    abort();
+    exit(1);
 }
 
 // fork() only forks the main thread. This test ensures that logging doesn't depend on threads that suddenly aren't
 // there anymore after a fork().
 TEST_F(LoggingTest, LoggingAlsoWorksAfterFork) {
     setLogger(spdlog::stderr_logger_mt("StderrLogger"));
-    //TODO Use EXPECT_EXIT instead once the gtest version is new enough to support it
-    EXPECT_DEATH(
+    EXPECT_EXIT(
         logAndExit("My log message"),
+        ::testing::ExitedWithCode(1),
         "My log message"
     );
 }
