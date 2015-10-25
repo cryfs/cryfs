@@ -35,7 +35,7 @@ CryConfigFile CryConfigLoader::_loadConfig(const bf::path &filename) {
   auto config = CryConfigFile::load(filename, password);
   if (config == none) {
     std::cerr << "Could not load config file. Wrong password?" << std::endl;
-    abort(); // TODO Use exit() once gtest can handle that
+    exit(1);
   }
   return std::move(*config);
 }

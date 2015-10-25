@@ -68,8 +68,9 @@ TEST_F(CryConfigLoaderTest, DoesntCrashIfExisting) {
 
 TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
     Create("mypassword");
-    EXPECT_DEATH(
+    EXPECT_EXIT(
         Load("mypassword2"),
+        ::testing::ExitedWithCode(1),
         "Wrong password"
     );
 }
