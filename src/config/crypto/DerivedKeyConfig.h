@@ -31,9 +31,9 @@ namespace cryfs {
             return _p;
         }
 
-        void save(std::ostream &stream) const;
+        cpputils::Data save() const;
 
-        static DerivedKeyConfig load(std::istream &stream);
+        static boost::optional<DerivedKeyConfig> load(const cpputils::Data &data);
 
     private:
         cpputils::Data _salt;

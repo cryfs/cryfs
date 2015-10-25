@@ -6,14 +6,12 @@
 using namespace cryfs;
 using cpputils::DataFixture;
 using cpputils::Data;
-using std::stringstream;
 
 class DerivedKeyConfigTest : public ::testing::Test {
 public:
     DerivedKeyConfig SaveAndLoad(const DerivedKeyConfig &source) {
-        stringstream str;
-        source.save(str);
-        return DerivedKeyConfig::load(str);
+        Data serialized = source.save();
+        return DerivedKeyConfig::load(serialized).value();
     }
 };
 
