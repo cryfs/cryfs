@@ -37,6 +37,7 @@ public:
 
   //TODO Test LoadFromStream/StoreToStream
   static Data LoadFromStream(std::istream &stream);
+  static Data LoadFromStream(std::istream &stream, size_t size);
   void StoreToStream(std::ostream &stream) const;
 
 private:
@@ -122,9 +123,12 @@ inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
   StoreToStream(file);
 }
 
-
 inline void Data::StoreToStream(std::ostream &stream) const {
   stream.write(static_cast<const char*>(_data), _size);
+}
+
+inline Data Data::LoadFromStream(std::istream &stream) {
+  return LoadFromStream(stream, _getStreamSize(stream));
 }
 
 inline bool operator==(const Data &lhs, const Data &rhs) {
