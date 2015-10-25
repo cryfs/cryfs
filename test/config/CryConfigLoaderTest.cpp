@@ -66,7 +66,13 @@ TEST_F(CryConfigLoaderTest, DoesntCrashIfExisting) {
     Load();
 }
 
-TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
+//Giving the test case a "DeathTest" suffix causes gtest to run it before other tests.
+//This is necessary, because otherwise the call to exit() will fail and deadlock because the DeathTest is run
+//in a forked process. Some of the other tests here access global singletons that create a thread and want to join
+//it on process exit. But threads aren't forked by the fork syscall, so it waits forever.
+using CryConfigLoaderTest_DeathTest = CryConfigLoaderTest;
+
+TEST_F(CryConfigLoaderTest_DeathTest, DoesntLoadIfWrongPassword) {
     Create("mypassword");
     EXPECT_EXIT(
         Load("mypassword2"),
