@@ -96,6 +96,7 @@ CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
             std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
             exit(1);
         }
+        return std::move(*config);
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         exit(1);

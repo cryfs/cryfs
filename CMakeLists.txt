@@ -16,6 +16,8 @@ GIT_VERSION_INIT()
 
 ENABLE_STYLE_WARNINGS()
 
+INSTALL(TARGETS ${BII_src_main_target} DESTINATION bin RENAME cryfs)
+
 # You can safely delete lines from here...
 
 ###############################################################################

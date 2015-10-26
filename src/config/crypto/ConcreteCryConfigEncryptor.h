@@ -8,6 +8,7 @@
 #include "CryConfigEncryptor.h"
 
 namespace cryfs {
+    //TODO Test
     template<class Cipher>
     class ConcreteCryConfigEncryptor: public CryConfigEncryptor {
     public:

@@ -7,6 +7,7 @@
 #include "kdf/Scrypt.h"
 
 namespace cryfs {
+    //TODO Test
     class CryConfigEncryptorFactory {
     public:
         template<class Cipher>
