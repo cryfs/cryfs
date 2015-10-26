@@ -16,10 +16,9 @@ Building from source
 
 Requirements
 ------------
-  - [biicode](https://www.biicode.com)
+  - [biicode](https://www.biicode.com/downloads)
 
-        $ wget http://apt.biicode.com/install.sh
-        $ ./install.sh
+        # After installing, call
         $ bii setup:cpp
 
   - GCC version >= 4.9 or Clang (TODO which minimal version?)
