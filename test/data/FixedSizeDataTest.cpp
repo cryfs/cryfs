@@ -116,6 +116,52 @@ TEST_P(FixedSizeDataTestWithParam, CopyConstructor) {
   EXPECT_EQ(GetParam(), copy);
 }
 
+TEST_P(FixedSizeDataTestWithParam, Take_Half) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<SIZE/2> taken = source.take<SIZE/2>();
+  EXPECT_EQ(0, std::memcmp(source.data(), taken.data(), SIZE/2));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Drop_Half) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<SIZE/2> taken = source.drop<SIZE/2>();
+  EXPECT_EQ(0, std::memcmp(source.data() + SIZE/2, taken.data(), SIZE/2));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Take_One) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<1> taken = source.take<1>();
+  EXPECT_EQ(0, std::memcmp(source.data(), taken.data(), 1));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Drop_One) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<SIZE-1> taken = source.drop<1>();
+  EXPECT_EQ(0, std::memcmp(source.data() + 1, taken.data(), SIZE-1));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Take_Nothing) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<0> taken = source.take<0>();
+}
+
+TEST_P(FixedSizeDataTestWithParam, Drop_Nothing) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<SIZE> taken = source.drop<0>();
+  EXPECT_EQ(0, std::memcmp(source.data(), taken.data(), SIZE));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Take_All) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<SIZE> taken = source.take<SIZE>();
+  EXPECT_EQ(0, std::memcmp(source.data(), taken.data(), SIZE));
+}
+
+TEST_P(FixedSizeDataTestWithParam, Drop_All) {
+  FixedSizeData<SIZE> source(GetParam());
+  FixedSizeData<0> taken = source.drop<SIZE>();
+}
+
 TEST_F(FixedSizeDataTest, CopyConstructorDoesntChangeSource) {
   FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
   FixedSizeData<SIZE> data2(data1);

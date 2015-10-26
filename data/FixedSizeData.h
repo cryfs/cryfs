@@ -30,8 +30,12 @@ public:
   const unsigned char *data() const;
   unsigned char *data();
 
+  template<size_t size> FixedSizeData<size> take() const;
+  template<size_t size> FixedSizeData<SIZE-size> drop() const;
+
 private:
   FixedSizeData() {}
+  template<unsigned int _SIZE> friend class FixedSizeData;
 
   unsigned char _data[BINARY_LENGTH];
 };
@@ -94,6 +98,22 @@ template<unsigned int SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromBinary(const void *source) {
   FixedSizeData<SIZE> result;
   std::memcpy(result._data, source, BINARY_LENGTH);
+  return result;
+}
+
+template<unsigned int SIZE> template<size_t size>
+FixedSizeData<size> FixedSizeData<SIZE>::take() const {
+  static_assert(size <= SIZE, "Out of bounds");
+  FixedSizeData<size> result;
+  std::memcpy(result._data, _data, size);
+  return result;
+}
+
+template<unsigned int SIZE> template<size_t size>
+FixedSizeData<SIZE-size> FixedSizeData<SIZE>::drop() const {
+  static_assert(size <= SIZE, "Out of bounds");
+  FixedSizeData<SIZE-size> result;
+  std::memcpy(result._data, _data+size, SIZE-size);
   return result;
 }
 
