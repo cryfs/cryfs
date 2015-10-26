@@ -15,10 +15,10 @@ public:
   CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, std::function<std::string()> askPassword);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
-  CryConfigFile loadOrCreate(const boost::filesystem::path &filename);
+  boost::optional<CryConfigFile> loadOrCreate(const boost::filesystem::path &filename);
 
 private:
-    CryConfigFile _loadConfig(const boost::filesystem::path &filename);
+    boost::optional<CryConfigFile> _loadConfig(const boost::filesystem::path &filename);
     CryConfigFile _createConfig(const boost::filesystem::path &filename);
 
     CryConfigCreator _creator;

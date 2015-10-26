@@ -11,9 +11,6 @@
 namespace cryfs {
     class CryConfigFile final {
     public:
-        using ConfigCipher = blockstore::encrypted::AES256_GCM;
-        using ConfigEncryptionKey = DerivedKey<ConfigCipher::EncryptionKey::BINARY_LENGTH>;
-
         CryConfigFile(CryConfigFile &&rhs) = default;
         ~CryConfigFile();
 
@@ -24,16 +21,11 @@ namespace cryfs {
         CryConfig *config();
 
     private:
-        CryConfigFile(const boost::filesystem::path &path, CryConfig config, ConfigEncryptionKey configEncKey);
-
-        static ConfigEncryptionKey _deriveKey(const std::string &password);
-        static std::string _decrypt(cpputils::Data content, const ConfigEncryptionKey &configEncKey);
-        static cpputils::Data _encrypt(const std::string &content, const ConfigEncryptionKey &configEncKey);
+        CryConfigFile(const boost::filesystem::path &path, CryConfig config, cpputils::unique_ref<CryConfigEncryptor> encryptor);
 
         boost::filesystem::path _path;
         CryConfig _config;
-        ConfigEncryptionKey _configEncKey;
-        using Encryptor = CryConfigEncryptor<ConfigCipher>;
+        cpputils::unique_ref<CryConfigEncryptor> _encryptor;
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigFile);
     };

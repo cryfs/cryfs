@@ -27,7 +27,7 @@ public:
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
     auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";})
-            .loadOrCreate(configFile.path());
+            .loadOrCreate(configFile.path()).value();
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }
 

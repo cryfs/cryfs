@@ -33,7 +33,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}).loadOrCreate(config.path());
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}).loadOrCreate(config.path()).value();
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

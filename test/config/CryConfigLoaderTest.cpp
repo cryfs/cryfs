@@ -26,28 +26,28 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword") {
         EXPECT_FALSE(file.exists());
-        return loader(password).loadOrCreate(file.path());
+        return loader(password).loadOrCreate(file.path()).value();
     }
 
-    CryConfigFile Load(const string &password = "mypassword") {
+    optional<CryConfigFile> Load(const string &password = "mypassword") {
         EXPECT_TRUE(file.exists());
         return loader(password).loadOrCreate(file.path());
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path());
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path());
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path());
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -66,24 +66,15 @@ TEST_F(CryConfigLoaderTest, DoesntCrashIfExisting) {
     Load();
 }
 
-//Giving the test case a "DeathTest" suffix causes gtest to run it before other tests.
-//This is necessary, because otherwise the call to exit() will fail and deadlock because the DeathTest is run
-//in a forked process. Some of the other tests here access global singletons that create a thread and want to join
-//it on process exit. But threads aren't forked by the fork syscall, so it waits forever.
-using CryConfigLoaderTest_DeathTest = CryConfigLoaderTest;
-
-TEST_F(CryConfigLoaderTest_DeathTest, DoesntLoadIfWrongPassword) {
+TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
     Create("mypassword");
-    EXPECT_EXIT(
-        Load("mypassword2"),
-        ::testing::ExitedWithCode(1),
-        "Wrong password"
-    );
+    auto loaded = Load("mypassword2");
+    EXPECT_EQ(none, loaded);
 }
 
 TEST_F(CryConfigLoaderTest, RootBlob_Load) {
     CreateWithRootBlob("rootblobid");
-    auto loaded = Load();
+    auto loaded = Load().value();
     EXPECT_EQ("rootblobid", loaded.config()->RootBlob());
 }
 
@@ -94,7 +85,7 @@ TEST_F(CryConfigLoaderTest, RootBlob_Create) {
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
     CreateWithEncryptionKey("encryptionkey");
-    auto loaded = Load();
+    auto loaded = Load().value();
     EXPECT_EQ("encryptionkey", loaded.config()->EncryptionKey());
 }
 
@@ -106,7 +97,7 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
 
 TEST_F(CryConfigLoaderTest, Cipher_Load) {
     CreateWithCipher("ciphername");
-    auto loaded = Load();
+    auto loaded = Load().value();
     EXPECT_EQ("ciphername", loaded.config()->Cipher());
 }
 
