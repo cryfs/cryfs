@@ -47,6 +47,11 @@ Build
         $ bii configure -D CMAKE_BUILD_TYPE=Release
         $ bii build
 
+ 3. Install
+
+        $ cd bii/build/messmer_cryfs
+        $ sudo make install
+
 You can pass normal make parameters after a double dash.
 This can for example be used to add "-j5" to compile with 5 build threads in parallel:
 

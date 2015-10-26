@@ -16,7 +16,12 @@ GIT_VERSION_INIT()
 
 ENABLE_STYLE_WARNINGS()
 
-INSTALL(TARGETS ${BII_src_main_target} DESTINATION bin RENAME cryfs)
+SET_TARGET_PROPERTIES(${BII_src_main_TARGET} PROPERTIES OUTPUT_NAME cryfs)
+
+INSTALL(TARGETS ${BII_src_main_TARGET}
+        DESTINATION bin
+        PERMISSIONS WORLD_EXECUTE
+        CONFIGURATIONS Release)
 
 # You can safely delete lines from here...
 
