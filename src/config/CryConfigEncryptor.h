@@ -39,7 +39,7 @@ namespace cryfs {
         static const std::string HEADER;
     };
 
-    template<class Cipher> const std::string CryConfigEncryptor<Cipher>::HEADER = "scrypt";
+    template<class Cipher> const std::string CryConfigEncryptor<Cipher>::HEADER = "cryfs.config;0.8.1;scrypt";
 
     template<class Cipher>
     typename CryConfigEncryptor<Cipher>::ConfigEncryptionKey CryConfigEncryptor<Cipher>::deriveKey(const std::string &password) {
@@ -146,7 +146,7 @@ namespace cryfs {
     boost::optional<cpputils::Data> CryConfigEncryptor<Cipher>::_removePadding(const cpputils::Data &data) {
         uint32_t size;
         std::memcpy(&size, reinterpret_cast<const char*>(data.data()), sizeof(size));
-        if(sizeof(size) + size >= CONFIG_SIZE) {
+        if(sizeof(size) + size >= data.size()) {
             cpputils::logging::LOG(cpputils::logging::ERROR) << "Config file is invalid: Invalid padding.";
             return boost::none;
         };
