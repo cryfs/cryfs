@@ -20,8 +20,39 @@ SET_TARGET_PROPERTIES(${BII_src_main_TARGET} PROPERTIES OUTPUT_NAME cryfs)
 
 INSTALL(TARGETS ${BII_src_main_TARGET}
         DESTINATION bin
-        PERMISSIONS WORLD_EXECUTE
         CONFIGURATIONS Release)
+
+SET(CPACK_GENERATOR TGZ STGZ 7Z ZIP DEB RPM)
+SET(CPACK_PACKAGE_NAME "cryfs")
+SET(CPACK_PACKAGE_VERSION "${GITVERSION_VERSION_STRING}")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.")
+SET(CPACK_PACKAGE_CONTACT "messmer@cryfs.org")
+SET(CPACK_PACKAGE_VENDOR "Sebastian Messmer")
+SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+SET(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
+IF(WIN32 AND NOT UNIX)
+        # There is a bug in NSI that does not handle full unix paths properly. Make
+        # sure there is at least one set of four (4) backlasshes.
+        #SET(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\InstallIcon.bmp")
+        #SET(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\cryfs.exe")
+        #SET(CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_INSTALL_DIRECTORY} CryFS")
+        #SET(CPACK_NSIS_HELP_LINK "http:\\\\\\\\www.cryfs.org")
+        #SET(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\www.cryfs.org")
+        #SET(CPACK_NSIS_CONTACT "messmer@cryfs.org")
+        #SET(CPACK_NSIS_MODIFY_PATH ON)
+ELSE(WIN32 AND NOT UNIX)
+        SET(CPACK_STRIP_FILES "bin/cryfs")
+        SET(CPACK_SOURCE_STRIP_FILES "")
+ENDIF(WIN32 AND NOT UNIX)
+SET(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
+SET(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+#SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libfuse2 (>= 2.9.4-1)") # TODO Use correct minimal fuse version
+#SET(CPACK_RPM_PACKAGE_REQUIRES "libfuse (>= 2.7.4-1)") # TODO Use correct minimal fuse version
+SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # TODO Other architectures?
+SET(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64") # TODO Other architectures?
+SET(CPACK_RPM_PACKAGE_LICENSE "LGPLv3")
+INCLUDE(CPack)
 
 # You can safely delete lines from here...
 
