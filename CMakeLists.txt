@@ -47,7 +47,7 @@ ELSE(WIN32 AND NOT UNIX)
 ENDIF(WIN32 AND NOT UNIX)
 SET(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
 SET(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-#SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libfuse2 (>= 2.9.4-1)") # TODO Use correct minimal fuse version
+#SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libfuse2 (>= 2.7.4-1)") # TODO Use correct minimal fuse version
 #SET(CPACK_RPM_PACKAGE_REQUIRES "libfuse (>= 2.7.4-1)") # TODO Use correct minimal fuse version
 SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # TODO Other architectures?
 SET(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64") # TODO Other architectures?
