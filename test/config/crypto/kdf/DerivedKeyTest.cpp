@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include "../../../src/config/crypto/DerivedKey.h"
+#include "../../../../src/config/crypto/kdf/DerivedKey.h"
 #include <messmer/cpp-utils/data/DataFixture.h>
 
 using namespace cryfs;

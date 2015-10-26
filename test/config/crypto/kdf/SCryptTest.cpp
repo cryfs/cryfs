@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include "../../../src/config/crypto/Scrypt.h"
+#include "../../../../src/config/crypto/kdf/Scrypt.h"
 
 using namespace cryfs;
 

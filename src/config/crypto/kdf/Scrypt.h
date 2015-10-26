@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_SCRYPT_H
-#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_SCRYPT_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_SCRYPT_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_SCRYPT_H
 
 #include <messmer/cpp-utils/macros.h>
 #include <messmer/cpp-utils/random/Random.h>

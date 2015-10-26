@@ -2,8 +2,8 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <sstream>
-#include "crypto/Scrypt.h"
 #include <messmer/cpp-utils/logging/logging.h>
+#include "crypto/CryConfigEncryptorFactory.h"
 
 using boost::optional;
 using boost::none;
@@ -30,7 +30,7 @@ CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, cons
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptor::deriveKey<ConfigCipher>(password));
+    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher>(password));
     result.save();
     return result;
 }
@@ -41,7 +41,7 @@ optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &
         LOG(ERROR) << "Config file not found";
         return none;
     }
-    auto encryptor = CryConfigEncryptor::loadKey(*encryptedConfigData, password);
+    auto encryptor = CryConfigEncryptorFactory::loadKey(*encryptedConfigData, password);
     if (encryptor == none) {
         return none;
     }

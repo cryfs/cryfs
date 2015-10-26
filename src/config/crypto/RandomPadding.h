@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CONFIG_PADDING_H
-#define MESSMER_CRYFS_SRC_CONFIG_PADDING_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_PADDING_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_PADDING_H
 
 #include <messmer/cpp-utils/data/Data.h>
 #include <boost/optional.hpp>

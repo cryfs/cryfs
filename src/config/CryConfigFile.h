@@ -5,7 +5,7 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
 #include "CryConfig.h"
-#include "CryConfigEncryptor.h"
+#include "crypto/CryConfigEncryptor.h"
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 
 namespace cryfs {

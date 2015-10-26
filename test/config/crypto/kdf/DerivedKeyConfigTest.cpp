@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include "../../../src/config/crypto/DerivedKeyConfig.h"
+#include "../../../../src/config/crypto/kdf/DerivedKeyConfig.h"
 #include <messmer/cpp-utils/data/DataFixture.h>
 #include <sstream>
 

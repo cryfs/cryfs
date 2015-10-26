@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KEYCONFIG_H
-#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KEYCONFIG_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_KEYCONFIG_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_KEYCONFIG_H
 
 #include <messmer/cpp-utils/data/Data.h>
 #include <messmer/cpp-utils/data/Serializer.h>

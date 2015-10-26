@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_DERIVEDKEY_H
-#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_DERIVEDKEY_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_DERIVEDKEY_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_KDF_DERIVEDKEY_H
 
 #include <messmer/cpp-utils/data/FixedSizeData.h>
 #include "DerivedKeyConfig.h"
