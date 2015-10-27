@@ -2,7 +2,7 @@
 #include <google/gmock/gmock.h>
 #include "../../src/config/CryConfigCreator.h"
 #include "../../src/config/CryCipher.h"
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
 
 using namespace cryfs;
@@ -50,19 +50,19 @@ TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("mars-448-gcm"));
     CryConfig config = creator.create();
-    blockstore::encrypted::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-256-gcm"));
     CryConfig config = creator.create();
-    blockstore::encrypted::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+cpputils::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-128-gcm"));
     CryConfig config = creator.create();
-    blockstore::encrypted::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 class CryConfigCreatorTest_ChooseCipher: public CryConfigCreatorTest, public ::testing::WithParamInterface<string> {

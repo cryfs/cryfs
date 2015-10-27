@@ -3,8 +3,8 @@
 #include "../testutils/MockConsole.h"
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/Random.h>
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
-#include <messmer/cpp-utils/test/crypto/testutils/SCryptTestSettings.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
+#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -93,7 +93,7 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
     auto created = Create();
     //aes-256-gcm is the default cipher chosen by mockConsole()
-    blockstore::encrypted::AES256_GCM::EncryptionKey::FromString(created.config()->EncryptionKey()); // This crashes if key is invalid
+    cpputils::AES256_GCM::EncryptionKey::FromString(created.config()->EncryptionKey()); // This crashes if key is invalid
 }
 
 TEST_F(CryConfigLoaderTest, Cipher_Load) {

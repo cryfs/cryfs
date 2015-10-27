@@ -1,5 +1,5 @@
 #include "CryConfigEncryptorFactory.h"
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 
 using namespace cpputils::logging;
 using boost::optional;
@@ -16,7 +16,7 @@ namespace cryfs {
 
     optional<unique_ref<CryConfigEncryptor>> CryConfigEncryptorFactory::loadKey(const Data &ciphertext,
                                                                                 const string &password) {
-        using Cipher = blockstore::encrypted::AES256_GCM; //TODO Allow other ciphers
+        using Cipher = cpputils::AES256_GCM; //TODO Allow other ciphers
         Deserializer deserializer(&ciphertext);
         try {
             CryConfigEncryptor::checkHeader(&deserializer);

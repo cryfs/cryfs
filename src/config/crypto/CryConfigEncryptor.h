@@ -7,7 +7,7 @@
 #include <messmer/cpp-utils/data/Serializer.h>
 #include "InnerEncryptor.h"
 #include <messmer/cpp-utils/crypto/kdf/DerivedKeyConfig.h>
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 
 namespace cryfs {
     //TODO Test
@@ -17,7 +17,7 @@ namespace cryfs {
     //TODO To get rid of many size fields, introduce Serializer::writeNullTerminatedString() and Serializer::writeUnterminatedData() (the latter one just writes until the end)
     class CryConfigEncryptor {
     public:
-        using OuterCipher = blockstore::encrypted::AES256_GCM;
+        using OuterCipher = cpputils::AES256_GCM;
         static constexpr size_t CONFIG_SIZE = 1024;  // Config data is grown to this size before encryption to hide its actual size
 
         CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, cpputils::DerivedKeyConfig keyConfig);

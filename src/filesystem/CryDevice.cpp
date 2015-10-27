@@ -1,5 +1,5 @@
 #include <messmer/blockstore/implementations/caching/CachingBlockStore.h>
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include "parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
 
@@ -24,7 +24,6 @@ using fspp::fuse::FuseErrnoException;
 using blockstore::BlockStore;
 using blockstore::Key;
 using blockstore::encrypted::EncryptedBlockStore;
-using blockstore::encrypted::AES256_CFB;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;

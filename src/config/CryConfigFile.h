@@ -5,7 +5,7 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include "CryConfig.h"
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include "crypto/CryConfigEncryptorFactory.h"
 
 namespace cryfs {
@@ -33,7 +33,7 @@ namespace cryfs {
 
     template<class SCryptSettings>
     CryConfigFile CryConfigFile::create(const boost::filesystem::path &path, CryConfig config, const std::string &password) {
-        using ConfigCipher = blockstore::encrypted::AES256_GCM; // TODO Take cipher from config instead
+        using ConfigCipher = cpputils::AES256_GCM; // TODO Take cipher from config instead
         if (boost::filesystem::exists(path)) {
             throw std::runtime_error("Config file exists already.");
         }

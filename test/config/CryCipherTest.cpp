@@ -1,7 +1,7 @@
 #include <google/gtest/gtest.h>
 #include <google/gmock/gmock.h>
 #include "../../src/config/CryCipher.h"
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
 #include <messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h>
@@ -19,11 +19,7 @@ using std::vector;
 using std::find;
 using boost::none;
 using testing::MatchesRegex;
-using cpputils::DataFixture;
-using cpputils::Data;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
-using cpputils::Random;
+using namespace cpputils;
 
 class CryCipherTest : public ::testing::Test {
 public:

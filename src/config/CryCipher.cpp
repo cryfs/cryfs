@@ -1,6 +1,6 @@
 #include "CryCipher.h"
 
-#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include <messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h>
 
 using std::vector;
@@ -12,9 +12,10 @@ using std::shared_ptr;
 using std::make_shared;
 using boost::optional;
 using boost::none;
+using blockstore::encrypted::EncryptedBlockStore;
 
 using namespace cryfs;
-using namespace blockstore::encrypted;
+using namespace cpputils;
 
 template<typename Cipher>
 class CryCipherInstance: public CryCipher {
