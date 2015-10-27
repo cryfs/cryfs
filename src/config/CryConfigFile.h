@@ -5,7 +5,6 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include "CryConfig.h"
-#include "crypto/kdf/Scrypt.h"
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 #include "crypto/CryConfigEncryptorFactory.h"
 

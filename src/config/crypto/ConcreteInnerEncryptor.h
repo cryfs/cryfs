@@ -4,9 +4,9 @@
 
 #include <messmer/cpp-utils/data/Serializer.h>
 #include <messmer/cpp-utils/data/Deserializer.h>
-#include "RandomPadding.h"
 #include "InnerEncryptor.h"
-#include "kdf/DerivedKey.h"
+#include <messmer/cpp-utils/crypto/RandomPadding.h>
+#include <messmer/cpp-utils/crypto/kdf/DerivedKey.h>
 
 namespace cryfs {
     //TODO Test
@@ -43,7 +43,7 @@ namespace cryfs {
         if (decrypted == boost::none) {
             return boost::none;
         }
-        auto configData = RandomPadding::remove(*decrypted);
+        auto configData = cpputils::RandomPadding::remove(*decrypted);
         if (configData == boost::none) {
             return boost::none;
         }
@@ -71,7 +71,7 @@ namespace cryfs {
 
     template<class Cipher>
     cpputils::Data ConcreteInnerEncryptor<Cipher>::encrypt(const cpputils::Data &plaintext) const {
-        auto paddedPlaintext = RandomPadding::add(plaintext, CONFIG_SIZE);
+        auto paddedPlaintext = cpputils::RandomPadding::add(plaintext, CONFIG_SIZE);
         auto encrypted = Cipher::encrypt(static_cast<const uint8_t*>(paddedPlaintext.data()), paddedPlaintext.size(), _key);
         return _serialize(encrypted);
     }

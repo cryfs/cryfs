@@ -4,7 +4,7 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
-#include "testutils/SCryptTestSettings.h"
+#include <messmer/cpp-utils/test/crypto/testutils/SCryptTestSettings.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

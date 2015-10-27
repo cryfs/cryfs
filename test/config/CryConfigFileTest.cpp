@@ -3,7 +3,7 @@
 #include "../../src/config/CryConfigFile.h"
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <boost/optional/optional_io.hpp>
-#include "testutils/SCryptTestSettings.h"
+#include <messmer/cpp-utils/test/crypto/testutils/SCryptTestSettings.h>
 
 using namespace cryfs;
 using cpputils::TempFile;

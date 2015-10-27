@@ -7,7 +7,7 @@
 #include "CryConfigFile.h"
 #include "CryCipher.h"
 #include "CryConfigCreator.h"
-#include "crypto/kdf/Scrypt.h"
+#include <messmer/cpp-utils/crypto/kdf/Scrypt.h>
 
 namespace cryfs {
 
@@ -16,7 +16,7 @@ public:
   CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, std::function<std::string()> askPassword);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
-  template<class SCryptSettings = SCryptDefaultSettings>
+  template<class SCryptSettings = cpputils::SCryptDefaultSettings>
   boost::optional<CryConfigFile> loadOrCreate(const boost::filesystem::path &filename);
 
 private:

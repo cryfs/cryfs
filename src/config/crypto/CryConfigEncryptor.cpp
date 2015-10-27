@@ -1,11 +1,13 @@
 #include "CryConfigEncryptor.h"
-#include "RandomPadding.h"
+#include <messmer/cpp-utils/crypto/RandomPadding.h>
 
 using std::string;
 using cpputils::Deserializer;
 using cpputils::Serializer;
 using cpputils::unique_ref;
 using cpputils::Data;
+using cpputils::RandomPadding;
+using cpputils::DerivedKeyConfig;
 using boost::optional;
 using boost::none;
 using namespace cpputils::logging;

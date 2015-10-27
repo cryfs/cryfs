@@ -6,7 +6,7 @@
 #include <messmer/cpp-utils/data/Deserializer.h>
 #include <messmer/cpp-utils/data/Serializer.h>
 #include "InnerEncryptor.h"
-#include "kdf/DerivedKeyConfig.h"
+#include <messmer/cpp-utils/crypto/kdf/DerivedKeyConfig.h>
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 
 namespace cryfs {
@@ -20,7 +20,7 @@ namespace cryfs {
         using OuterCipher = blockstore::encrypted::AES256_GCM;
         static constexpr size_t CONFIG_SIZE = 1024;  // Config data is grown to this size before encryption to hide its actual size
 
-        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, DerivedKeyConfig keyConfig);
+        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, cpputils::DerivedKeyConfig keyConfig);
 
         cpputils::Data encrypt(const cpputils::Data &plaintext);
         boost::optional <cpputils::Data> decrypt(const cpputils::Data &plaintext);
@@ -35,7 +35,7 @@ namespace cryfs {
 
         cpputils::unique_ref<InnerEncryptor> _innerEncryptor;
         OuterCipher::EncryptionKey _outerKey;
-        DerivedKeyConfig _keyConfig;
+        cpputils::DerivedKeyConfig _keyConfig;
 
         static const std::string HEADER;
     };
