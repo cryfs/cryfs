@@ -62,7 +62,7 @@ namespace cryfs {
             }
             auto result = deserializer.readTailData();
             deserializer.finished();
-            return result;
+            return std::move(result); // TODO This std::move() is not necessary on newer gcc versions. Remove it and look for other occurrences of the same.
         } catch (const std::exception &e) {
             cpputils::logging::LOG(cpputils::logging::ERROR) << "Error serializing inner configuration: " << e.what();
             return boost::none; // This can be caused by invalid input data and does not have to be a programming error. Don't throw exception.
