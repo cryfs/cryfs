@@ -7,6 +7,7 @@
 #include <messmer/cpp-utils/data/Serializer.h>
 #include "InnerEncryptor.h"
 #include "kdf/DerivedKeyConfig.h"
+#include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
 
 namespace cryfs {
     //TODO Test
@@ -15,7 +16,9 @@ namespace cryfs {
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
     class CryConfigEncryptor {
     public:
-        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, DerivedKeyConfig keyConfig);
+        using OuterCipher = blockstore::encrypted::AES256_GCM;
+
+        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, DerivedKeyConfig keyConfig);
 
         cpputils::Data encrypt(const cpputils::Data &plaintext);
         boost::optional <cpputils::Data> decrypt(const cpputils::Data &plaintext);
@@ -29,6 +32,7 @@ namespace cryfs {
         cpputils::Data _serialize(const cpputils::Data &ciphertext);
 
         cpputils::unique_ref<InnerEncryptor> _innerEncryptor;
+        OuterCipher::EncryptionKey _outerKey;
         DerivedKeyConfig _keyConfig;
 
         static const std::string HEADER;

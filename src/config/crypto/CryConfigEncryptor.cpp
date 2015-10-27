@@ -11,8 +11,8 @@ using boost::none;
 namespace cryfs {
     const string CryConfigEncryptor::HEADER = "cryfs.config;0.8.1;scrypt";
 
-    CryConfigEncryptor::CryConfigEncryptor(unique_ref<InnerEncryptor> innerEncryptor, DerivedKeyConfig keyConfig)
-            : _innerEncryptor(std::move(innerEncryptor)), _keyConfig(std::move(keyConfig)) {
+    CryConfigEncryptor::CryConfigEncryptor(unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, DerivedKeyConfig keyConfig)
+            : _innerEncryptor(std::move(innerEncryptor)), _outerKey(std::move(outerKey)), _keyConfig(std::move(keyConfig)) {
     }
 
     void CryConfigEncryptor::checkHeader(Deserializer *deserializer) {
@@ -27,7 +27,8 @@ namespace cryfs {
     }
 
     Data CryConfigEncryptor::encrypt(const Data &plaintext) {
-        auto ciphertext = _innerEncryptor->encrypt(plaintext);
+        auto inner = _innerEncryptor->encrypt(plaintext);
+        auto ciphertext = OuterCipher::encrypt(static_cast<const uint8_t*>(inner.data()), inner.size(), _outerKey);
         return _serialize(ciphertext);
     }
 
@@ -66,6 +67,10 @@ namespace cryfs {
 
     optional<Data> CryConfigEncryptor::_loadAndDecryptConfigData(Deserializer *deserializer) {
         auto ciphertext = deserializer->readData();
-        return _innerEncryptor->decrypt(ciphertext);
+        auto inner = OuterCipher::decrypt(static_cast<const uint8_t*>(ciphertext.data()), ciphertext.size(), _outerKey);
+        if(inner == none) {
+            return none;
+        }
+        return _innerEncryptor->decrypt(*inner);
     }
 }

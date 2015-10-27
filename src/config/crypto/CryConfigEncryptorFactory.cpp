@@ -12,26 +12,21 @@ using std::string;
 
 namespace cryfs {
 
-    template<class Cipher>
-    DerivedKey<Cipher::EncryptionKey::BINARY_LENGTH> CryConfigEncryptorFactory::_loadKey(cpputils::Deserializer *deserializer,
-                                                                                         const std::string &password) {
-        auto keyConfig = DerivedKeyConfig::load(deserializer);
-        //TODO This is only kept here to recognize when this is run in tests. After tests are faster, replace this with something in main(), saying something like "Loading configuration file..."
-        std::cout << "Deriving secure key for config file..." << std::flush;
-        auto key = SCrypt().generateKeyFromConfig<Cipher::EncryptionKey::BINARY_LENGTH>(password, keyConfig);
-        std::cout << "done" << std::endl;
-        return DerivedKey<Cipher::EncryptionKey::BINARY_LENGTH>(std::move(keyConfig), std::move(key));
-    }
+    constexpr size_t CryConfigEncryptorFactory::OuterKeySize;
 
     optional<unique_ref<CryConfigEncryptor>> CryConfigEncryptorFactory::loadKey(const Data &ciphertext,
                                                                                 const string &password) {
+        using Cipher = blockstore::encrypted::AES256_GCM; //TODO Allow other ciphers
         Deserializer deserializer(&ciphertext);
         try {
             CryConfigEncryptor::checkHeader(&deserializer);
-            auto key = _loadKey<blockstore::encrypted::AES256_GCM>(&deserializer, password); //TODO Allow other ciphers
+            auto derivedKey = _loadKey<Cipher>(&deserializer, password);
+            auto outerKey = derivedKey.key().take<OuterKeySize>();
+            auto innerKey = derivedKey.key().drop<OuterKeySize>();
             return make_unique_ref<CryConfigEncryptor>(
-                       make_unique_ref<ConcreteInnerEncryptor<blockstore::encrypted::AES256_GCM>>(key.moveOutKey()),  //TODO Allow other ciphers
-                       key.moveOutConfig()
+                       make_unique_ref<ConcreteInnerEncryptor<Cipher>>(innerKey),
+                       outerKey,
+                       derivedKey.moveOutConfig()
                    );
         } catch (const std::exception &e) {
             LOG(ERROR) << "Error loading configuration: " << e.what();
