@@ -3,10 +3,11 @@
 #define MESSMER_CRYFS_SRC_CONFIG_CRYCONFIGFILE_H
 
 #include <boost/optional.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 #include "CryConfig.h"
-#include "crypto/CryConfigEncryptor.h"
+#include "crypto/kdf/Scrypt.h"
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include "crypto/CryConfigEncryptorFactory.h"
 
 namespace cryfs {
     class CryConfigFile final {
@@ -14,6 +15,7 @@ namespace cryfs {
         CryConfigFile(CryConfigFile &&rhs) = default;
         ~CryConfigFile();
 
+        template<class SCryptConfig>
         static CryConfigFile create(const boost::filesystem::path &path, CryConfig config, const std::string &password);
         static boost::optional<CryConfigFile> load(const boost::filesystem::path &path, const std::string &password);
         void save() const;
@@ -29,6 +31,17 @@ namespace cryfs {
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigFile);
     };
+
+    template<class SCryptSettings>
+    CryConfigFile CryConfigFile::create(const boost::filesystem::path &path, CryConfig config, const std::string &password) {
+        using ConfigCipher = blockstore::encrypted::AES256_GCM; // TODO Take cipher from config instead
+        if (boost::filesystem::exists(path)) {
+            throw std::runtime_error("Config file exists already.");
+        }
+        auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher, SCryptSettings>(password));
+        result.save();
+        return result;
+    }
 }
 
 #endif

@@ -3,6 +3,7 @@
 #include "../../src/config/CryConfigFile.h"
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <boost/optional/optional_io.hpp>
+#include "testutils/SCryptTestSettings.h"
 
 using namespace cryfs;
 using cpputils::TempFile;
@@ -32,7 +33,7 @@ public:
     }
 
     void Create(CryConfig cfg, const string &password = "mypassword") {
-        CryConfigFile::create(file.path(), std::move(cfg), password);
+        CryConfigFile::create<SCryptTestSettings>(file.path(), std::move(cfg), password);
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword") {
@@ -42,7 +43,7 @@ public:
     void CreateWithCipher(const string &cipher, const TempFile &tempFile) {
         CryConfig cfg;
         cfg.SetCipher(cipher);
-        CryConfigFile::create(tempFile.path(), std::move(cfg), "mypassword");
+        CryConfigFile::create<SCryptTestSettings>(tempFile.path(), std::move(cfg), "mypassword");
     }
 };
 

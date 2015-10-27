@@ -91,7 +91,9 @@ CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
         auto configFile = determineConfigFile(options);
         auto console = make_unique_ref<IOStreamConsole>();
         auto &keyGenerator = Random::OSRandom();
+        std::cout << "Loading config file..." << std::flush;
         auto config = CryConfigLoader(std::move(console), keyGenerator, &askPassword).loadOrCreate(configFile);
+        std::cout << "done" << std::endl;
         if (config == none) {
             std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
             exit(1);

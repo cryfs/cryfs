@@ -10,7 +10,7 @@ namespace cryfs {
     //TODO Test
     class CryConfigEncryptorFactory {
     public:
-        template<class Cipher>
+        template<class Cipher, class SCryptConfig>
         static cpputils::unique_ref <CryConfigEncryptor> deriveKey(const std::string &password);
 
         static boost::optional <cpputils::unique_ref<CryConfigEncryptor>> loadKey(const cpputils::Data &ciphertext,
@@ -22,12 +22,9 @@ namespace cryfs {
                                                                          const std::string &password);
     };
 
-    template<class Cipher>
+    template<class Cipher, class SCryptConfig>
     cpputils::unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const std::string &password) {
-        //TODO This is only kept here to recognize when this is run in tests. After tests are faster, replace this with something in main(), saying something like "Loading configuration file..."
-        std::cout << "Deriving secure key for config file..." << std::flush;
-        auto key = SCrypt().generateKey<Cipher::EncryptionKey::BINARY_LENGTH>(password);
-        std::cout << "done" << std::endl;
+        auto key = SCrypt().generateKey<Cipher::EncryptionKey::BINARY_LENGTH, SCryptConfig>(password);
         return cpputils::make_unique_ref<ConcreteCryConfigEncryptor<Cipher>>(std::move(key));
     }
 }

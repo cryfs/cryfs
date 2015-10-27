@@ -3,7 +3,6 @@
 #include <boost/filesystem.hpp>
 #include <sstream>
 #include <messmer/cpp-utils/logging/logging.h>
-#include "crypto/CryConfigEncryptorFactory.h"
 
 using boost::optional;
 using boost::none;
@@ -23,16 +22,6 @@ namespace cryfs {
 
 CryConfigFile::~CryConfigFile() {
     //We do not call save() here, because we do not want the config file to be re-encrypted on each filesystem run
-}
-
-CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password) {
-    using ConfigCipher = blockstore::encrypted::AES256_GCM; // TODO Take cipher from config instead
-    if (bf::exists(path)) {
-        throw std::runtime_error("Config file exists already.");
-    }
-    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher>(password));
-    result.save();
-    return result;
 }
 
 optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &password) {

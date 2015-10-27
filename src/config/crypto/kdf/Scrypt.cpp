@@ -1,8 +1,13 @@
 #include "Scrypt.h"
 
 namespace cryfs {
-    constexpr size_t SCrypt::SALT_LEN;
-    constexpr uint64_t SCrypt::N;
-    constexpr uint32_t SCrypt::r;
-    constexpr uint32_t SCrypt::p;
+    constexpr size_t SCryptDefaultSettings::SALT_LEN;
+    constexpr uint64_t SCryptDefaultSettings::N;
+    constexpr uint32_t SCryptDefaultSettings::r;
+    constexpr uint32_t SCryptDefaultSettings::p;
+
+    constexpr size_t SCryptParanoidSettings::SALT_LEN;
+    constexpr uint64_t SCryptParanoidSettings::N;
+    constexpr uint32_t SCryptParanoidSettings::r;
+    constexpr uint32_t SCryptParanoidSettings::p;
 }

@@ -24,14 +24,6 @@ CryConfigLoader::CryConfigLoader(unique_ref<Console> console, RandomGenerator &k
     : _creator(std::move(console), keyGenerator), _askPassword(askPassword) {
 }
 
-optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) {
-  if (bf::exists(filename)) {
-    return _loadConfig(filename);
-  } else {
-    return _createConfig(filename);
-  }
-}
-
 optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   string password = _askPassword();
   auto config = CryConfigFile::load(filename, password);
@@ -40,13 +32,6 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   return std::move(*config);
-}
-
-CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
-  auto config = _creator.create();
-  //TODO Ask confirmation if using insecure password (<8 characters)
-  string password = _askPassword();
-  return CryConfigFile::create(filename, std::move(config), password);
 }
 
 }

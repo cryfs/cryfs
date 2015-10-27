@@ -4,6 +4,7 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/blockstore/implementations/encrypted/ciphers/ciphers.h>
+#include "testutils/SCryptTestSettings.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -26,28 +27,28 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword") {
         EXPECT_FALSE(file.exists());
-        return loader(password).loadOrCreate(file.path()).value();
+        return loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword") {
         EXPECT_TRUE(file.exists());
-        return loader(password).loadOrCreate(file.path());
+        return loader(password).loadOrCreate<SCryptTestSettings>(file.path());
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
