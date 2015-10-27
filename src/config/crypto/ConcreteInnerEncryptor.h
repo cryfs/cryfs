@@ -54,12 +54,13 @@ namespace cryfs {
     boost::optional<cpputils::Data> ConcreteInnerEncryptor<Cipher>::_deserialize(const cpputils::Data &ciphertext) const {
         cpputils::Deserializer deserializer(&ciphertext);
         try {
+            _checkHeader(&deserializer);
             std::string readCipherName = deserializer.readString();
             if (readCipherName != _cipherName) {
                 cpputils::logging::LOG(cpputils::logging::ERROR) << "Wrong inner cipher used";
                 return boost::none;
             }
-            auto result = deserializer.readData();
+            auto result = deserializer.readTailData();
             deserializer.finished();
             return result;
         } catch (const std::exception &e) {
@@ -78,10 +79,12 @@ namespace cryfs {
     template<class Cipher>
     cpputils::Data ConcreteInnerEncryptor<Cipher>::_serialize(const cpputils::Data &ciphertext) const {
         try {
-            cpputils::Serializer serializer(cpputils::Serializer::StringSize(_cipherName)
-                                            + cpputils::Serializer::DataSize(ciphertext));
+            cpputils::Serializer serializer(cpputils::Serializer::StringSize(HEADER)
+                                            + cpputils::Serializer::StringSize(_cipherName)
+                                            + ciphertext.size());
+            serializer.writeString(HEADER);
             serializer.writeString(_cipherName);
-            serializer.writeData(ciphertext);
+            serializer.writeTailData(ciphertext);
             return serializer.finished();
         } catch (const std::exception &e) {
             cpputils::logging::LOG(cpputils::logging::ERROR) << "Error serializing inner configuration: " << e.what();

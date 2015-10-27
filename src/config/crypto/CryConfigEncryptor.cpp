@@ -11,7 +11,7 @@ using boost::none;
 using namespace cpputils::logging;
 
 namespace cryfs {
-    const string CryConfigEncryptor::HEADER = "cryfs.config;0.8.1;scrypt";
+    const string CryConfigEncryptor::HEADER = "cryfs.config;0;scrypt";
 
     CryConfigEncryptor::CryConfigEncryptor(unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, DerivedKeyConfig keyConfig)
             : _innerEncryptor(std::move(innerEncryptor)), _outerKey(std::move(outerKey)), _keyConfig(std::move(keyConfig)) {
@@ -39,10 +39,10 @@ namespace cryfs {
         try {
             Serializer serializer(Serializer::StringSize(HEADER)
                                   + _keyConfig.serializedSize()
-                                  + Serializer::DataSize(ciphertext));
+                                  + ciphertext.size());
             writeHeader(&serializer);
             _keyConfig.serialize(&serializer);
-            serializer.writeData(ciphertext);
+            serializer.writeTailData(ciphertext);
             return serializer.finished();
         } catch (const std::exception &e) {
             cpputils::logging::LOG(cpputils::logging::ERROR) << "Error serializing CryConfigEncryptor: " << e.what();
@@ -69,7 +69,7 @@ namespace cryfs {
     }
 
     optional<Data> CryConfigEncryptor::_loadAndDecryptConfigData(Deserializer *deserializer) {
-        auto ciphertext = deserializer->readData();
+        auto ciphertext = deserializer->readTailData();
         auto inner = OuterCipher::decrypt(static_cast<const uint8_t*>(ciphertext.data()), ciphertext.size(), _outerKey);
         if(inner == none) {
             return none;
