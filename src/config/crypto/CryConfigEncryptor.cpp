@@ -7,6 +7,7 @@ using cpputils::unique_ref;
 using cpputils::Data;
 using boost::optional;
 using boost::none;
+using namespace cpputils::logging;
 
 namespace cryfs {
     const string CryConfigEncryptor::HEADER = "cryfs.config;0.8.1;scrypt";
@@ -56,7 +57,7 @@ namespace cryfs {
             deserializer.finished();
             return configData;
         } catch (const std::exception &e) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Error loading configuration: " << e.what();
+            LOG(ERROR) << "Error loading configuration: " << e.what();
             return boost::none; // This can be caused by invalid loaded data and is not necessarily a programming logic error. Don't throw exception.
         }
     }

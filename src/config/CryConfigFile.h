@@ -38,7 +38,7 @@ namespace cryfs {
         if (boost::filesystem::exists(path)) {
             throw std::runtime_error("Config file exists already.");
         }
-        auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher, SCryptSettings>(password));
+        auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher, SCryptSettings>(password, "aes-256-gcm")); // TODO Take cipher from config instead
         result.save();
         return result;
     }

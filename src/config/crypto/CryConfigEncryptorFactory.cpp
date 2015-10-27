@@ -24,7 +24,7 @@ namespace cryfs {
             auto outerKey = derivedKey.key().take<OuterKeySize>();
             auto innerKey = derivedKey.key().drop<OuterKeySize>();
             return make_unique_ref<CryConfigEncryptor>(
-                       make_unique_ref<ConcreteInnerEncryptor<Cipher>>(innerKey),
+                       make_unique_ref<ConcreteInnerEncryptor<Cipher>>(innerKey, "aes-256-gcm"), // TODO Allow other ciphers
                        outerKey,
                        derivedKey.moveOutConfig()
                    );
