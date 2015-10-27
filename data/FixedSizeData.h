@@ -9,14 +9,14 @@
 
 namespace cpputils {
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 class FixedSizeData final {
 public:
   //Non-virtual destructor because we want objects to be small
   ~FixedSizeData() {}
 
-  static constexpr unsigned int BINARY_LENGTH = SIZE;
-  static constexpr unsigned int STRING_LENGTH = 2 * BINARY_LENGTH; // Hex encoding
+  static constexpr size_t BINARY_LENGTH = SIZE;
+  static constexpr size_t STRING_LENGTH = 2 * BINARY_LENGTH; // Hex encoding
 
   //TODO Test Null()
   static FixedSizeData<SIZE> Null();
@@ -35,27 +35,27 @@ public:
 
 private:
   FixedSizeData() {}
-  template<unsigned int _SIZE> friend class FixedSizeData;
+  template<size_t _SIZE> friend class FixedSizeData;
 
   unsigned char _data[BINARY_LENGTH];
 };
 
-template<unsigned int SIZE> bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
-template<unsigned int SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
+template<size_t SIZE> bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
+template<size_t SIZE> bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs);
 
 // ----- Implementation -----
 
-template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::BINARY_LENGTH;
-template<unsigned int SIZE> constexpr unsigned int FixedSizeData<SIZE>::STRING_LENGTH;
+template<size_t SIZE> constexpr size_t FixedSizeData<SIZE>::BINARY_LENGTH;
+template<size_t SIZE> constexpr size_t FixedSizeData<SIZE>::STRING_LENGTH;
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::Null() {
   FixedSizeData<SIZE> result;
   std::memset(result._data, 0, BINARY_LENGTH);
   return result;
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
   ASSERT(data.size() == STRING_LENGTH, "Wrong string size for parsing FixedSizeData");
   FixedSizeData<SIZE> result;
@@ -67,7 +67,7 @@ FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
   return result;
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 std::string FixedSizeData<SIZE>::ToString() const {
   std::string result;
   CryptoPP::ArraySource(_data, BINARY_LENGTH, true,
@@ -79,29 +79,29 @@ std::string FixedSizeData<SIZE>::ToString() const {
   return result;
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 const unsigned char *FixedSizeData<SIZE>::data() const {
   return _data;
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 unsigned char *FixedSizeData<SIZE>::data() {
   return const_cast<unsigned char*>(const_cast<const FixedSizeData<SIZE>*>(this)->data());
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 void FixedSizeData<SIZE>::ToBinary(void *target) const {
   std::memcpy(target, _data, BINARY_LENGTH);
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromBinary(const void *source) {
   FixedSizeData<SIZE> result;
   std::memcpy(result._data, source, BINARY_LENGTH);
   return result;
 }
 
-template<unsigned int SIZE> template<size_t size>
+template<size_t SIZE> template<size_t size>
 FixedSizeData<size> FixedSizeData<SIZE>::take() const {
   static_assert(size <= SIZE, "Out of bounds");
   FixedSizeData<size> result;
@@ -109,7 +109,7 @@ FixedSizeData<size> FixedSizeData<SIZE>::take() const {
   return result;
 }
 
-template<unsigned int SIZE> template<size_t size>
+template<size_t SIZE> template<size_t size>
 FixedSizeData<SIZE-size> FixedSizeData<SIZE>::drop() const {
   static_assert(size <= SIZE, "Out of bounds");
   FixedSizeData<SIZE-size> result;
@@ -117,12 +117,12 @@ FixedSizeData<SIZE-size> FixedSizeData<SIZE>::drop() const {
   return result;
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 bool operator==(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
   return 0 == std::memcmp(lhs.data(), rhs.data(), FixedSizeData<SIZE>::BINARY_LENGTH);
 }
 
-template<unsigned int SIZE>
+template<size_t SIZE>
 bool operator!=(const FixedSizeData<SIZE> &lhs, const FixedSizeData<SIZE> &rhs) {
   return !operator==(lhs, rhs);
 }
