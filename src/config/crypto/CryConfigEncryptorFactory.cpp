@@ -23,19 +23,19 @@ namespace cryfs {
         return DerivedKey<Cipher::EncryptionKey::BINARY_LENGTH>(std::move(keyConfig), std::move(key));
     }
 
-    optional <unique_ref<CryConfigEncryptor>> CryConfigEncryptorFactory::loadKey(const Data &ciphertext,
-                                                                          const string &password) {
+    optional<unique_ref<CryConfigEncryptor>> CryConfigEncryptorFactory::loadKey(const Data &ciphertext,
+                                                                                const string &password) {
         Deserializer deserializer(&ciphertext);
         try {
             CryConfigEncryptor::checkHeader(&deserializer);
             auto key = _loadKey<blockstore::encrypted::AES256_GCM>(&deserializer, password); //TODO Allow other ciphers
-            return optional < unique_ref < CryConfigEncryptor >> (make_unique_ref < ConcreteCryConfigEncryptor <
-                                                                  blockstore::encrypted::AES256_GCM >>
-                                                                  (std::move(key))); //TODO Allow other ciphers
+            return make_unique_ref<CryConfigEncryptor>(
+                       make_unique_ref<ConcreteInnerEncryptor<blockstore::encrypted::AES256_GCM>>(key.moveOutKey()),  //TODO Allow other ciphers
+                       key.moveOutConfig()
+                   );
         } catch (const std::exception &e) {
             LOG(ERROR) << "Error loading configuration: " << e.what();
             return none; // This can be caused by invalid loaded data and is not necessarily a programming logic error. Don't throw exception.
         }
     }
-
 }

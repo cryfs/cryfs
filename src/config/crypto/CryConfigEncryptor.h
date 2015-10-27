@@ -2,13 +2,11 @@
 #ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_CRYCONFIGENCRYPTOR_H
 #define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_CRYCONFIGENCRYPTOR_H
 
-#include <messmer/cpp-utils/data/Data.h>
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/cpp-utils/data/Deserializer.h>
 #include <messmer/cpp-utils/data/Serializer.h>
-#include "kdf/DerivedKey.h"
-#include <string>
-#include <stdexcept>
+#include "InnerEncryptor.h"
+#include "kdf/DerivedKeyConfig.h"
 
 namespace cryfs {
     //TODO Test
@@ -17,17 +15,21 @@ namespace cryfs {
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
     class CryConfigEncryptor {
     public:
-        virtual cpputils::Data encrypt(const cpputils::Data &plaintext) = 0;
+        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, DerivedKeyConfig keyConfig);
 
-        virtual boost::optional <cpputils::Data> decrypt(const cpputils::Data &plaintext) = 0;
+        cpputils::Data encrypt(const cpputils::Data &plaintext);
+        boost::optional <cpputils::Data> decrypt(const cpputils::Data &plaintext);
 
         static void checkHeader(cpputils::Deserializer *deserializer);
         static void writeHeader(cpputils::Serializer *serializer);
 
     private:
-        template<class Cipher>
-        static DerivedKey<Cipher::EncryptionKey::BINARY_LENGTH> _loadKey(cpputils::Deserializer *deserializer,
-                                                                         const std::string &password);
+        void _ignoreKey(cpputils::Deserializer *deserializer);
+        boost::optional<cpputils::Data> _loadAndDecryptConfigData(cpputils::Deserializer *deserializer);
+        cpputils::Data _serialize(const cpputils::Data &ciphertext);
+
+        cpputils::unique_ref<InnerEncryptor> _innerEncryptor;
+        DerivedKeyConfig _keyConfig;
 
         static const std::string HEADER;
     };

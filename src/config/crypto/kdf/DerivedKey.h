@@ -17,8 +17,16 @@ namespace cryfs {
             return _config;
         }
 
+        DerivedKeyConfig moveOutConfig() {
+            return std::move(_config);
+        }
+
         const cpputils::FixedSizeData<KEY_LENGTH> &key() const {
             return _key;
+        }
+
+        cpputils::FixedSizeData<KEY_LENGTH> moveOutKey() {
+            return std::move(_key);
         }
     private:
         DerivedKeyConfig _config;

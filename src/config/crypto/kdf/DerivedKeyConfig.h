@@ -44,8 +44,6 @@ namespace cryfs {
         uint64_t _N;
         uint32_t _r;
         uint32_t _p;
-
-        DISALLOW_COPY_AND_ASSIGN(DerivedKeyConfig);
     };
 
 }
