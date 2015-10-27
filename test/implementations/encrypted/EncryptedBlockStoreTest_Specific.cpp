@@ -1,5 +1,5 @@
 #include <google/gtest/gtest.h>
-#include "testutils/FakeAuthenticatedCipher.h"
+#include <messmer/cpp-utils/test/crypto/symmetric/testutils/FakeAuthenticatedCipher.h>
 #include "../../../implementations/encrypted/EncryptedBlockStore.h"
 #include "../../../implementations/testfake/FakeBlockStore.h"
 #include "../../../utils/BlockStoreUtils.h"
@@ -11,6 +11,7 @@ using cpputils::DataFixture;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::FakeAuthenticatedCipher;
 
 using blockstore::testfake::FakeBlockStore;
 

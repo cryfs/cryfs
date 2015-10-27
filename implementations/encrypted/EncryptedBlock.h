@@ -10,7 +10,7 @@
 #include <memory>
 #include <iostream>
 #include <boost/optional.hpp>
-#include "ciphers/Cipher.h"
+#include <messmer/cpp-utils/crypto/symmetric/Cipher.h>
 #include <messmer/cpp-utils/assert/assert.h>
 #include <mutex>
 #include <messmer/cpp-utils/logging/logging.h>
@@ -24,7 +24,7 @@ template<class Cipher> class EncryptedBlockStore;
 template<class Cipher>
 class EncryptedBlock: public Block {
 public:
-  BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
+  BOOST_CONCEPT_ASSERT((cpputils::CipherConcept<Cipher>));
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 

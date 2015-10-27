@@ -1,9 +1,9 @@
-#include "../../../implementations/encrypted/ciphers/ciphers.h"
-#include "../../../implementations/encrypted/ciphers/Cipher.h"
+#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
+#include <messmer/cpp-utils/crypto/symmetric/Cipher.h>
 #include "../../../implementations/encrypted/EncryptedBlockStore.h"
 #include "../../../implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "testutils/FakeAuthenticatedCipher.h"
+#include <messmer/cpp-utils/test/crypto/symmetric/testutils/FakeAuthenticatedCipher.h>
 #include "google/gtest/gtest.h"
 
 using ::testing::Test;
@@ -11,8 +11,9 @@ using ::testing::Test;
 using blockstore::BlockStore;
 using blockstore::encrypted::EncryptedBlockStore;
 using blockstore::testfake::FakeBlockStore;
-using blockstore::encrypted::AES256_GCM;
-using blockstore::encrypted::AES256_CFB;
+using cpputils::AES256_GCM;
+using cpputils::AES256_CFB;
+using cpputils::FakeAuthenticatedCipher;
 
 using cpputils::Data;
 using cpputils::DataFixture;
