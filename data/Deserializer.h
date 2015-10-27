@@ -19,13 +19,15 @@ namespace cpputils {
         int32_t readInt32();
         uint64_t readUint64();
         int64_t readInt64();
-        Data readData();
         std::string readString();
+        Data readData();
+        Data readTailData();
 
         void finished();
 
     private:
         template<typename DataType> DataType _read();
+        Data _readData(size_t size);
 
         size_t _pos;
         const Data *_source;
@@ -84,6 +86,15 @@ namespace cpputils {
         if (_pos + size > _source->size()) {
             throw std::runtime_error("Deserialization failed - size overflow");
         }
+        return _readData(size);
+    }
+
+    inline Data Deserializer::readTailData() {
+        uint64_t size = _source->size() - _pos;
+        return _readData(size);
+    }
+
+    inline Data Deserializer::_readData(uint64_t size) {
         Data result(size);
         std::memcpy(static_cast<char*>(result.data()), static_cast<const char*>(_source->dataOffset(_pos)), size);
         _pos += size;

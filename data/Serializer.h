@@ -4,6 +4,7 @@
 
 #include "Data.h"
 #include "../macros.h"
+#include "../assert/assert.h"
 #include <string>
 
 namespace cpputils {
@@ -21,8 +22,12 @@ namespace cpputils {
         void writeInt32(int32_t value);
         void writeUint64(uint64_t value);
         void writeInt64(int64_t value);
-        void writeData(const Data &value);
         void writeString(const std::string &value);
+        void writeData(const Data &value);
+
+        // Write the data as last element when serializing.
+        // It does not store a data size but limits the size by the size of the serialization result
+        void writeTailData(const Data &value);
 
         static size_t DataSize(const Data &value);
         static size_t StringSize(const std::string &value);
@@ -31,6 +36,7 @@ namespace cpputils {
 
     private:
         template<typename DataType> void _write(DataType obj);
+        void _writeData(const Data &value);
 
         size_t _pos;
         Data _result;
@@ -85,15 +91,24 @@ namespace cpputils {
 
     inline void Serializer::writeData(const Data &data) {
         writeUint64(data.size());
+        _writeData(data);
+    }
+
+    inline size_t Serializer::DataSize(const Data &data) {
+        return sizeof(uint64_t) + data.size();
+    }
+
+    inline void Serializer::writeTailData(const Data &data) {
+        ASSERT(_pos + data.size() == _result.size(), "Not enough data given to write until the end of the stream");
+        _writeData(data);
+    }
+
+    inline void Serializer::_writeData(const Data &data) {
         if (_pos + data.size() > _result.size()) {
             throw std::runtime_error("Serialization failed - size overflow");
         }
         std::memcpy(static_cast<char*>(_result.dataOffset(_pos)), static_cast<const char*>(data.data()), data.size());
         _pos += data.size();
-    }
-
-    inline size_t Serializer::DataSize(const Data &data) {
-        return sizeof(uint64_t) + data.size();
     }
 
     inline void Serializer::writeString(const std::string &value) {
