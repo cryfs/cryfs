@@ -1,4 +1,5 @@
 #include "CryConfigEncryptor.h"
+#include "RandomPadding.h"
 
 using std::string;
 using cpputils::Deserializer;
@@ -29,7 +30,8 @@ namespace cryfs {
 
     Data CryConfigEncryptor::encrypt(const Data &plaintext) {
         auto inner = _innerEncryptor->encrypt(plaintext);
-        auto ciphertext = OuterCipher::encrypt(static_cast<const uint8_t*>(inner.data()), inner.size(), _outerKey);
+        auto padded = RandomPadding::add(inner, CONFIG_SIZE);
+        auto ciphertext = OuterCipher::encrypt(static_cast<const uint8_t*>(padded.data()), padded.size(), _outerKey);
         return _serialize(ciphertext);
     }
 
@@ -53,9 +55,9 @@ namespace cryfs {
         try {
             checkHeader(&deserializer);
             _ignoreKey(&deserializer);
-            auto configData = _loadAndDecryptConfigData(&deserializer);
+            auto result = _loadAndDecryptConfigData(&deserializer);
             deserializer.finished();
-            return configData;
+            return result;
         } catch (const std::exception &e) {
             LOG(ERROR) << "Error loading configuration: " << e.what();
             return boost::none; // This can be caused by invalid loaded data and is not necessarily a programming logic error. Don't throw exception.
@@ -72,6 +74,10 @@ namespace cryfs {
         if(inner == none) {
             return none;
         }
-        return _innerEncryptor->decrypt(*inner);
+        auto depadded = RandomPadding::remove(*inner);
+        if(depadded == none) {
+            return none;
+        }
+        return _innerEncryptor->decrypt(*depadded);
     }
 }
