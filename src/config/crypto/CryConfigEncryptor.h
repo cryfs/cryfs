@@ -14,6 +14,7 @@ namespace cryfs {
     //TODO Test that encrypted config data always has the same size, no matter how big the plaintext config data
     //TODO Don't only encrypt with the main cipher, but also use user specified cipher.
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
+    //TODO To get rid of many size fields, introduce Serializer::writeNullTerminatedString() and Serializer::writeUnterminatedData() (the latter one just writes until the end)
     class CryConfigEncryptor {
     public:
         using OuterCipher = blockstore::encrypted::AES256_GCM;
