@@ -44,6 +44,7 @@ using boost::none;
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Improve error message when root blob wasn't found.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
+//TODO When creating a new filesystem, we need 2x kill to kill the process (probably because we access random values before daemonizing)
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;

@@ -12,7 +12,7 @@ namespace cryfs {
     class InnerEncryptor {
     public:
         virtual cpputils::Data encrypt(const cpputils::Data &plaintext) const = 0;
-        virtual boost::optional <cpputils::Data> decrypt(const cpputils::Data &plaintext) const = 0;
+        virtual boost::optional<cpputils::Data> decrypt(const cpputils::Data &plaintext) const = 0;
 
     protected:
         static void _checkHeader(cpputils::Deserializer *deserializer);
