@@ -68,9 +68,11 @@ void logAndExit(const string &message) {
     exit(1);
 }
 
+using LoggingTest_DeathTest = LoggingTest;
+
 // fork() only forks the main thread. This test ensures that logging doesn't depend on threads that suddenly aren't
 // there anymore after a fork().
-TEST_F(LoggingTest, LoggingAlsoWorksAfterFork) {
+TEST_F(LoggingTest_DeathTest, LoggingAlsoWorksAfterFork) {
     setLogger(spdlog::stderr_logger_mt("StderrLogger"));
     EXPECT_EXIT(
         logAndExit("My log message"),

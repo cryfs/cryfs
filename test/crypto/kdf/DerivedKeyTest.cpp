@@ -2,9 +2,7 @@
 #include "../../../crypto/kdf/DerivedKey.h"
 #include "../../../data/DataFixture.h"
 
-using namespace cryfs;
-using cpputils::DataFixture;
-using cpputils::Data;
+using namespace cpputils;
 
 TEST(DerivedKeyTest, Config) {
     DerivedKey<32> key(DerivedKeyConfig(DataFixture::generate(32, 1), 1024, 8, 16), DataFixture::generateFixedSize<32>(2));

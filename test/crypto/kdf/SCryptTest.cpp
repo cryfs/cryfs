@@ -2,7 +2,7 @@
 #include "../../../crypto/kdf/Scrypt.h"
 #include "testutils/SCryptTestSettings.h"
 
-using namespace cryfs;
+using namespace cpputils;
 
 TEST(SCryptTest, GeneratedKeyIsReproductible_448) {
     auto created = SCrypt().generateKey<56, SCryptTestSettings>("mypassword");

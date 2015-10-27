@@ -14,7 +14,7 @@ using namespace cpputils;
 
 class FixedSizeDataTest: public Test {
 public:
-  static constexpr unsigned int SIZE = 16;
+  static constexpr size_t SIZE = 16;
 
   const string DATA1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";
   const string DATA2_AS_STRING = "272EE5517627CFA147A971A8E6E747E0";
@@ -24,14 +24,14 @@ public:
 
   FixedSizeDataTest() : DATA3_AS_BINARY(DataFixture::generate(SIZE, 1)), DATA4_AS_BINARY(DataFixture::generate(SIZE, 2)) {}
 
-  template<unsigned int SIZE>
+  template<size_t SIZE>
   void EXPECT_DATA_EQ(const Data &expected, const FixedSizeData<SIZE> &actual) {
     EXPECT_EQ(expected.size(), SIZE);
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), SIZE));
   }
 };
 
-constexpr unsigned int FixedSizeDataTest::SIZE;
+constexpr size_t FixedSizeDataTest::SIZE;
 
 TEST_F(FixedSizeDataTest, EqualsTrue) {
   FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
