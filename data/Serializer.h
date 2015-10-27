@@ -97,16 +97,16 @@ namespace cpputils {
     }
 
     inline void Serializer::writeString(const std::string &value) {
-        writeUint64(value.size());
-        if (_pos + value.size() > _result.size()) {
+        size_t size = value.size() + 1; // +1 for the nullbyte
+        if (_pos + size > _result.size()) {
             throw std::runtime_error("Serialization failed - size overflow");
         }
-        std::memcpy(static_cast<char*>(_result.dataOffset(_pos)), value.c_str(), value.size());
-        _pos += value.size();
+        std::memcpy(static_cast<char*>(_result.dataOffset(_pos)), value.c_str(), size);
+        _pos += size;
     }
 
     inline size_t Serializer::StringSize(const std::string &value) {
-        return sizeof(uint64_t) + value.size();
+        return value.size() + 1; // +1 for nullbyte
     }
 
     inline Data Serializer::finished() {

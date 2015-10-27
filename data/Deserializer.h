@@ -91,12 +91,14 @@ namespace cpputils {
     }
 
     inline std::string Deserializer::readString() {
-        uint64_t size = readUint64();
-        if (_pos + size > _source->size()) {
-            throw std::runtime_error("Deserialization failed - size overflow");
+        //TODO Test whether that works when string ends (a) at beginning (b) in middle (c) at end of data region
+        const void *nullbytepos = std::memchr(_source->dataOffset(_pos), '\0', _source->size()-_pos);
+        if (nullbytepos == nullptr) {
+            throw std::runtime_error("Deserialization failed - missing nullbyte for string termination");
         }
+        uint64_t size = static_cast<const uint8_t*>(nullbytepos) - static_cast<const uint8_t*>(_source->dataOffset(_pos));
         std::string result(reinterpret_cast<const char*>(_source->dataOffset(_pos)), size);
-        _pos += size;
+        _pos += size + 1;
         return result;
     }
 
