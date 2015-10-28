@@ -8,6 +8,7 @@
 #include <boost/optional/optional_io.hpp>
 
 using namespace cpputils;
+using std::string;
 
 template<class Cipher>
 class CipherTest: public ::testing::Test {
@@ -252,3 +253,32 @@ INSTANTIATE_TYPED_TEST_CASE_P(Mars256_GCM, AuthenticatedCipherTest, Mars256_GCM)
 INSTANTIATE_TYPED_TEST_CASE_P(Mars128_CFB, CipherTest, Mars128_CFB); //CFB mode is not authenticated
 INSTANTIATE_TYPED_TEST_CASE_P(Mars128_GCM, CipherTest, Mars128_GCM);
 INSTANTIATE_TYPED_TEST_CASE_P(Mars128_GCM, AuthenticatedCipherTest, Mars128_GCM);
+
+
+// Test cipher names
+TEST(CipherNameTest, TestCipherNames) {
+  EXPECT_EQ("aes-256-gcm", string(AES256_GCM::NAME));
+  EXPECT_EQ("aes-256-cfb", string(AES256_CFB::NAME));
+  EXPECT_EQ("aes-128-gcm", string(AES128_GCM::NAME));
+  EXPECT_EQ("aes-128-cfb", string(AES128_CFB::NAME));
+
+  EXPECT_EQ("twofish-256-gcm", string(Twofish256_GCM::NAME));
+  EXPECT_EQ("twofish-256-cfb", string(Twofish256_CFB::NAME));
+  EXPECT_EQ("twofish-128-gcm", string(Twofish128_GCM::NAME));
+  EXPECT_EQ("twofish-128-cfb", string(Twofish128_CFB::NAME));
+
+  EXPECT_EQ("serpent-256-gcm", string(Serpent256_GCM::NAME));
+  EXPECT_EQ("serpent-256-cfb", string(Serpent256_CFB::NAME));
+  EXPECT_EQ("serpent-128-gcm", string(Serpent128_GCM::NAME));
+  EXPECT_EQ("serpent-128-cfb", string(Serpent128_CFB::NAME));
+
+  EXPECT_EQ("cast-256-gcm", string(Cast256_GCM::NAME));
+  EXPECT_EQ("cast-256-cfb", string(Cast256_CFB::NAME));
+
+  EXPECT_EQ("mars-448-gcm", string(Mars448_GCM::NAME));
+  EXPECT_EQ("mars-448-cfb", string(Mars448_CFB::NAME));
+  EXPECT_EQ("mars-256-gcm", string(Mars256_GCM::NAME));
+  EXPECT_EQ("mars-256-cfb", string(Mars256_CFB::NAME));
+  EXPECT_EQ("mars-128-gcm", string(Mars128_GCM::NAME));
+  EXPECT_EQ("mars-128-cfb", string(Mars128_CFB::NAME));
+}

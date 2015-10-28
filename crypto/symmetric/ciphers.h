@@ -10,37 +10,44 @@
 #include "GCM_Cipher.h"
 #include "CFB_Cipher.h"
 
+#define DEFINE_CIPHER(InstanceName, StringName, Mode, Base, Keysize) \
+    class InstanceName final: public Mode<Base, Keysize> {           \
+    public:                                                          \
+        static constexpr const char *NAME = StringName;              \
+    }                                                                \
+
+
 namespace cpputils {
 
 static_assert(32 == CryptoPP::AES::MAX_KEYLENGTH, "If AES offered larger keys, we should offer a variant with it");
-using AES256_GCM = GCM_Cipher<CryptoPP::AES, 32>;
-using AES256_CFB = CFB_Cipher<CryptoPP::AES, 32>;
-using AES128_GCM = GCM_Cipher<CryptoPP::AES, 16>;
-using AES128_CFB = CFB_Cipher<CryptoPP::AES, 16>;
+DEFINE_CIPHER(AES256_GCM, "aes-256-gcm", GCM_Cipher, CryptoPP::AES, 32);
+DEFINE_CIPHER(AES256_CFB, "aes-256-cfb", CFB_Cipher, CryptoPP::AES, 32);
+DEFINE_CIPHER(AES128_GCM, "aes-128-gcm", GCM_Cipher, CryptoPP::AES, 16);
+DEFINE_CIPHER(AES128_CFB, "aes-128-cfb", CFB_Cipher, CryptoPP::AES, 16);
 
 static_assert(32 == CryptoPP::Twofish::MAX_KEYLENGTH, "If Twofish offered larger keys, we should offer a variant with it");
-using Twofish256_GCM = GCM_Cipher<CryptoPP::Twofish, 32>;
-using Twofish256_CFB = CFB_Cipher<CryptoPP::Twofish, 32>;
-using Twofish128_GCM = GCM_Cipher<CryptoPP::Twofish, 16>;
-using Twofish128_CFB = CFB_Cipher<CryptoPP::Twofish, 16>;
+DEFINE_CIPHER(Twofish256_GCM, "twofish-256-gcm", GCM_Cipher, CryptoPP::Twofish, 32);
+DEFINE_CIPHER(Twofish256_CFB, "twofish-256-cfb", CFB_Cipher, CryptoPP::Twofish, 32);
+DEFINE_CIPHER(Twofish128_GCM, "twofish-128-gcm", GCM_Cipher, CryptoPP::Twofish, 16);
+DEFINE_CIPHER(Twofish128_CFB, "twofish-128-cfb", CFB_Cipher, CryptoPP::Twofish, 16);
 
 static_assert(32 == CryptoPP::Serpent::MAX_KEYLENGTH, "If Serpent offered larger keys, we should offer a variant with it");
-using Serpent256_GCM = GCM_Cipher<CryptoPP::Serpent, 32>;
-using Serpent256_CFB = CFB_Cipher<CryptoPP::Serpent, 32>;
-using Serpent128_GCM = GCM_Cipher<CryptoPP::Serpent, 16>;
-using Serpent128_CFB = CFB_Cipher<CryptoPP::Serpent, 16>;
+DEFINE_CIPHER(Serpent256_GCM, "serpent-256-gcm", GCM_Cipher, CryptoPP::Serpent, 32);
+DEFINE_CIPHER(Serpent256_CFB, "serpent-256-cfb", CFB_Cipher, CryptoPP::Serpent, 32);
+DEFINE_CIPHER(Serpent128_GCM, "serpent-128-gcm", GCM_Cipher, CryptoPP::Serpent, 16);
+DEFINE_CIPHER(Serpent128_CFB, "serpent-128-cfb", CFB_Cipher, CryptoPP::Serpent, 16);
 
 static_assert(32 == CryptoPP::CAST256::MAX_KEYLENGTH, "If Cast offered larger keys, we should offer a variant with it");
-using Cast256_GCM = GCM_Cipher<CryptoPP::CAST256, 32>;
-using Cast256_CFB = CFB_Cipher<CryptoPP::CAST256, 32>;
+DEFINE_CIPHER(Cast256_GCM, "cast-256-gcm", GCM_Cipher, CryptoPP::CAST256, 32);
+DEFINE_CIPHER(Cast256_CFB, "cast-256-cfb", CFB_Cipher, CryptoPP::CAST256, 32);
 
 static_assert(56 == CryptoPP::MARS::MAX_KEYLENGTH, "If Mars offered larger keys, we should offer a variant with it");
-using Mars448_GCM = GCM_Cipher<CryptoPP::MARS, 56>;
-using Mars448_CFB = CFB_Cipher<CryptoPP::MARS, 56>;
-using Mars256_GCM = GCM_Cipher<CryptoPP::MARS, 32>;
-using Mars256_CFB = CFB_Cipher<CryptoPP::MARS, 32>;
-using Mars128_GCM = GCM_Cipher<CryptoPP::MARS, 16>;
-using Mars128_CFB = CFB_Cipher<CryptoPP::MARS, 16>;
+DEFINE_CIPHER(Mars448_GCM, "mars-448-gcm", GCM_Cipher, CryptoPP::MARS, 56);
+DEFINE_CIPHER(Mars448_CFB, "mars-448-cfb", CFB_Cipher, CryptoPP::MARS, 56);
+DEFINE_CIPHER(Mars256_GCM, "mars-256-gcm", GCM_Cipher, CryptoPP::MARS, 32);
+DEFINE_CIPHER(Mars256_CFB, "mars-256-cfb", CFB_Cipher, CryptoPP::MARS, 32);
+DEFINE_CIPHER(Mars128_GCM, "mars-128-gcm", GCM_Cipher, CryptoPP::MARS, 16);
+DEFINE_CIPHER(Mars128_CFB, "mars-128-cfb", CFB_Cipher, CryptoPP::MARS, 16);
 
 }
 
