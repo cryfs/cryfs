@@ -15,7 +15,7 @@ namespace cryfs {
     public:
         static constexpr size_t CONFIG_SIZE = 512;  // Inner config data is grown to this size before encryption to hide its actual size
 
-        ConcreteInnerEncryptor(typename Cipher::EncryptionKey key, const std::string &cipherName);
+        ConcreteInnerEncryptor(typename Cipher::EncryptionKey key);
 
         cpputils::Data encrypt(const cpputils::Data &plaintext) const override;
         boost::optional<cpputils::Data> decrypt(const cpputils::Data &ciphertext) const override;
@@ -24,13 +24,12 @@ namespace cryfs {
         cpputils::Data _serialize(const cpputils::Data &data) const;
         boost::optional<cpputils::Data> _deserialize(const cpputils::Data &data) const;
 
-        std::string _cipherName;
         typename Cipher::EncryptionKey _key;
     };
 
     template<class Cipher>
-    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(typename Cipher::EncryptionKey key, const std::string &cipherName)
-            :  _cipherName(cipherName), _key(std::move(key)) {
+    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(typename Cipher::EncryptionKey key)
+            : _key(std::move(key)) {
     }
 
     template<class Cipher>
@@ -56,7 +55,7 @@ namespace cryfs {
         try {
             _checkHeader(&deserializer);
             std::string readCipherName = deserializer.readString();
-            if (readCipherName != _cipherName) {
+            if (readCipherName != Cipher::NAME) {
                 cpputils::logging::LOG(cpputils::logging::ERROR) << "Wrong inner cipher used";
                 return boost::none;
             }
@@ -80,10 +79,10 @@ namespace cryfs {
     cpputils::Data ConcreteInnerEncryptor<Cipher>::_serialize(const cpputils::Data &ciphertext) const {
         try {
             cpputils::Serializer serializer(cpputils::Serializer::StringSize(HEADER)
-                                            + cpputils::Serializer::StringSize(_cipherName)
+                                            + cpputils::Serializer::StringSize(Cipher::NAME)
                                             + ciphertext.size());
             serializer.writeString(HEADER);
-            serializer.writeString(_cipherName);
+            serializer.writeString(Cipher::NAME);
             serializer.writeTailData(ciphertext);
             return serializer.finished();
         } catch (const std::exception &e) {

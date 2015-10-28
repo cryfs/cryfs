@@ -12,7 +12,7 @@ namespace cryfs {
     class CryConfigEncryptorFactory {
     public:
         template<class Cipher, class SCryptConfig>
-        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password, const std::string &cipherName);
+        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password);
 
         static boost::optional <cpputils::unique_ref<CryConfigEncryptor>> loadKey(const cpputils::Data &ciphertext,
                                                                                   const std::string &password);
@@ -31,12 +31,12 @@ namespace cryfs {
     }
 
     template<class Cipher, class SCryptConfig>
-    cpputils::unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const std::string &password, const std::string &cipherName) {
+    cpputils::unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const std::string &password) {
         auto derivedKey = cpputils::SCrypt().generateKey<TotalKeySize<Cipher>(), SCryptConfig>(password);
         auto outerKey = derivedKey.key().template take<OuterKeySize>();
         auto innerKey = derivedKey.key().template drop<OuterKeySize>();
         return cpputils::make_unique_ref<CryConfigEncryptor>(
-                   cpputils::make_unique_ref<ConcreteInnerEncryptor<Cipher>>(innerKey, cipherName),
+                   cpputils::make_unique_ref<ConcreteInnerEncryptor<Cipher>>(innerKey),
                    outerKey,
                    derivedKey.moveOutConfig()
                );
