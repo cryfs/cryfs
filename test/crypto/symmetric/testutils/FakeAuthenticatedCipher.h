@@ -85,6 +85,8 @@ namespace cpputils {
           return std::move(result);
         }
 
+        static constexpr const char *NAME = "FakeAuthenticatedCipher";
+
     private:
         static int32_t _parity(const byte *data, unsigned int size) {
           int32_t parity = 34343435; // some init value

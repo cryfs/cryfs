@@ -13,8 +13,6 @@ namespace cpputils {
 template<typename BlockCipher, unsigned int KeySize>
 class GCM_Cipher {
 public:
-    BOOST_CONCEPT_ASSERT((CipherConcept<GCM_Cipher<BlockCipher, KeySize>>));
-
     using EncryptionKey = FixedSizeData<KeySize>;
 
     static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {

@@ -7,6 +7,8 @@
 #include "../../data/Data.h"
 #include "../../random/Random.h"
 
+using std::string;
+
 namespace cpputils {
 
 template<class X>
@@ -18,6 +20,7 @@ public:
     typename X::EncryptionKey key = X::CreateKey(Random::OSRandom());
     same_type(Data(0), X::encrypt((uint8_t*)nullptr, UINT32_C(0), key));
     same_type(boost::optional<Data>(Data(0)), X::decrypt((uint8_t*)nullptr, UINT32_C(0), key));
+    string name = X::NAME;
   }
 
 private:

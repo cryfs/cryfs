@@ -13,6 +13,7 @@
 #define DEFINE_CIPHER(InstanceName, StringName, Mode, Base, Keysize) \
     class InstanceName final: public Mode<Base, Keysize> {           \
     public:                                                          \
+        BOOST_CONCEPT_ASSERT((CipherConcept<InstanceName>));         \
         static constexpr const char *NAME = StringName;              \
     }                                                                \
 

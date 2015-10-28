@@ -14,8 +14,6 @@ namespace cpputils {
 template<typename BlockCipher, unsigned int KeySize>
 class CFB_Cipher {
 public:
-  BOOST_CONCEPT_ASSERT((CipherConcept<CFB_Cipher<BlockCipher, KeySize>>));
-
   using EncryptionKey = FixedSizeData<KeySize>;
 
   static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {
