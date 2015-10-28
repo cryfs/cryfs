@@ -7,18 +7,22 @@
 namespace cpputils {
     //TODO Test
     //TODO Move out of "random" folder into own library folder
-    class LoopThread {
+    // Has to be final, because otherwise there could be a race condition where LoopThreadForkHandler calls a LoopThread
+    // where the child class destructor already ran.
+    class LoopThread final {
     public:
-        LoopThread();
-        virtual ~LoopThread();
+        LoopThread(std::function<void()> loopIteration);
+        ~LoopThread();
         void start();
         void stop();
 
-        virtual void loopIteration() = 0;
+        void asyncStop();
+        void waitUntilStopped();
 
     private:
         void main();
         boost::thread _thread;
+        std::function<void()> _loopIteration;
     };
 }
 

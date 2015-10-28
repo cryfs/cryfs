@@ -8,18 +8,24 @@
 
 namespace cpputils {
     //TODO Test
-    class RandomGeneratorThread: public LoopThread {
+    class RandomGeneratorThread {
     public:
         RandomGeneratorThread(ThreadsafeRandomDataBuffer *buffer, size_t minSize, size_t maxSize);
-        void loopIteration() override;
+
+        void start();
 
     private:
+        void _loopIteration();
         Data _generateRandomData(size_t size);
 
         CryptoPP::AutoSeededRandomPool _randomGenerator;
         ThreadsafeRandomDataBuffer *_buffer;
         size_t _minSize;
         size_t _maxSize;
+
+        //This has to be the last member, because it has to be destructed first - otherwise the thread could still be
+        //running while the RandomGeneratorThread object is invalid.
+        LoopThread _thread;
 
         DISALLOW_COPY_AND_ASSIGN(RandomGeneratorThread);
     };

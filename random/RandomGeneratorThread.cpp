@@ -3,11 +3,19 @@
 namespace cpputils {
 
     RandomGeneratorThread::RandomGeneratorThread(ThreadsafeRandomDataBuffer *buffer, size_t minSize, size_t maxSize)
-            : _randomGenerator(), _buffer(buffer), _minSize(minSize), _maxSize(maxSize) {
+            : _randomGenerator(),
+              _buffer(buffer),
+              _minSize(minSize),
+              _maxSize(maxSize),
+              _thread(std::bind(&RandomGeneratorThread::_loopIteration, this)) {
         ASSERT(_maxSize >= _minSize, "Invalid parameters");
     }
 
-    void RandomGeneratorThread::loopIteration() {
+    void RandomGeneratorThread::start() {
+        return _thread.start();
+    }
+
+    void RandomGeneratorThread::_loopIteration() {
         _buffer->waitUntilSizeIsLessThan(_minSize);
         size_t neededRandomDataSize = _maxSize - _buffer->size();
         ASSERT(_maxSize > _buffer->size(), "This could theoretically fail if another thread refilled the buffer. But we should be the only refilling thread.");
