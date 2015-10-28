@@ -45,6 +45,7 @@ using boost::none;
 //TODO Improve error message when root blob wasn't found.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO When creating a new filesystem, we need 2x kill to kill the process (probably because we access random values before daemonizing)
+//TODO Fuse error messages like "fuse: bad mount point `...': Transport endpoint is not connected" go missing when running in background
 
 void showVersion() {
     cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -82,7 +83,7 @@ string askPassword() {
 bf::path determineConfigFile(const ProgramOptions &options) {
     auto configFile = options.configFile();
     if (configFile == none) {
-        return options.baseDir() + "cryfs.config";
+        return bf::path(options.baseDir()) / "cryfs.config";
     }
     return *configFile;
 }
