@@ -25,7 +25,7 @@ script:
 # Build cryfs executable
 - bii cpp:build -- -j2
 # Make distribution packages
-- cd bii/build/messmer_cryfs && make package
+- cd bii/build/messmer_cryfs && make package && cd ../../..
 # Build and run test cases
 - bii cpp:build --target messmer_cryfs_test_main -- -j2
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
