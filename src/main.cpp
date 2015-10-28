@@ -44,7 +44,6 @@ using boost::none;
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Improve error message when root blob wasn't found.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
-//TODO When creating a new filesystem, we need 2x kill to kill the process (probably because we access random values before daemonizing)
 //TODO Fuse error messages like "fuse: bad mount point `...': Transport endpoint is not connected" go missing when running in background
 
 void showVersion() {
@@ -109,9 +108,11 @@ CryConfigFile loadOrCreateConfig(const ProgramOptions &options) {
 
 void runFilesystem(const ProgramOptions &options) {
     auto config = loadOrCreateConfig(options);
-    //TODO This daemonize causes error messages from CryDevice initialization to get lost.
-    //     However, initializing CryDevice might (?) already spawn threads and we have to do daemonization before that
-    //     because it doesn't fork threads. What to do?
+    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
+    CryDevice device(std::move(config), std::move(blockStore));
+    fspp::FilesystemImpl fsimpl(&device);
+    fspp::fuse::Fuse fuse(&fsimpl);
+
     if (!options.foreground()) {
         cpputils::daemonize();
         if (options.logFile() == none) {
@@ -119,10 +120,6 @@ void runFilesystem(const ProgramOptions &options) {
             cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
         }
     }
-    auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
-    CryDevice device(std::move(config), std::move(blockStore));
-    fspp::FilesystemImpl fsimpl(&device);
-    fspp::fuse::Fuse fuse(&fsimpl);
 
     vector<char*> fuseOptions = options.fuseOptions();
     std::cout << "\nFilesystem is running." << std::endl;

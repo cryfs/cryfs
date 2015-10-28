@@ -13,30 +13,28 @@ public:
     }
 };
 
-class ProgramOptionsParserDeathTest: public ProgramOptionsParserTest {};
-
-TEST_F(ProgramOptionsParserDeathTest, MissingAllOptions) {
+TEST_F(ProgramOptionsParserTest, MissingAllOptions) {
     EXPECT_DEATH(
         parse({"./myExecutable"}),
         "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserDeathTest, MissingDir) {
+TEST_F(ProgramOptionsParserTest, MissingDir) {
     EXPECT_DEATH(
         parse({"./myExecutable", "/home/user/baseDir"}),
         "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserDeathTest, HelpLongOption) {
+TEST_F(ProgramOptionsParserTest, HelpLongOption) {
     EXPECT_DEATH(
             parse({"./myExecutable", "--help"}),
     "Usage:"
     );
 }
 
-TEST_F(ProgramOptionsParserDeathTest, HelpShortOption) {
+TEST_F(ProgramOptionsParserTest, HelpShortOption) {
     EXPECT_DEATH(
             parse({"./myExecutable", "-h"}),
     "Usage:"
