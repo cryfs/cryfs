@@ -8,6 +8,8 @@ install:
   && ./update_gcc_version.sh 4.9
   && rm update_gcc_version.sh
 - sudo apt-get install libfuse-dev
+# This is needed for packaging distribution packages
+- sudo apt-get install 7z
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
 before_script:
