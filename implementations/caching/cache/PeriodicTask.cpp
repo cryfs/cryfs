@@ -16,16 +16,10 @@ PeriodicTask::PeriodicTask(function<void ()> task, double intervalSec) :
 }
 
 void PeriodicTask::_loopIteration() {
-  try {
-    boost::this_thread::sleep_for(_interval);
-    _task();
-  } catch (const std::exception &e) {
-    LOG(ERROR) << "PeriodicTask crashed: " << e.what();
-    throw;
-  } catch (...) {
-    LOG(ERROR) << "PeriodicTask crashed";
-    throw;
-  }
+  //Has to be boost::this_thread::sleep_for and not std::this_thread::sleep_for, because it has to be interruptible.
+  //LoopThread will interrupt this method if it has to be restarted.
+  boost::this_thread::sleep_for(_interval);
+  _task();
 }
 
 }
