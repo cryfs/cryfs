@@ -8,8 +8,10 @@ install:
   && ./update_gcc_version.sh 4.9
   && rm update_gcc_version.sh
 - sudo apt-get install libfuse-dev
-# This is needed for packaging distribution packages
-- sudo apt-get install p7zip-full
+# This is needed for packaging 7z distribution packages
+- sudo apt-get install software-properties-common && sudo add-apt-repository ppa:george-edison55/precise-backports -y && sudo apt-get update
+- sudo apt-get install cmake cmake-data rpm
+- cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
 before_script:
