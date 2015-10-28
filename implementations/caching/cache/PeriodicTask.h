@@ -3,20 +3,25 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_PERIODICTASK_H_
 
 #include <functional>
-#include <boost/thread.hpp>
+#include <messmer/cpp-utils/random/LoopThread.h>
+#include <boost/chrono.hpp>
 
 namespace blockstore {
 namespace caching {
 
-class PeriodicTask {
+class PeriodicTask final {
 public:
 	PeriodicTask(std::function<void ()> task, double intervalSec);
-	virtual ~PeriodicTask();
 
 private:
-  boost::thread _thread;
-  std::function<void ()> _task;
-  double _intervalSec;
+  void _loopIteration();
+
+  std::function<void()> _task;
+  boost::chrono::nanoseconds _interval;
+
+  //This member has to be last, so the thread is destructed first. Otherwise the thread might access elements from a
+  //partly destructed PeriodicTask.
+  cpputils::LoopThread _thread;
 };
 
 }
