@@ -13,8 +13,9 @@ namespace cpputils {
     }
 
     LoopThreadForkHandler::LoopThreadForkHandler() {
-        //pthread_atfork(&LoopThreadForkHandler::_onBeforeFork, &LoopThreadForkHandler::_onAfterFork, &LoopThreadForkHandler::_onAfterFork);
-        pthread_atfork(nullptr, nullptr, &LoopThreadForkHandler::_onAfterFork);
+        //Stopping the thread before fork() (and then also restarting it in the parent thread after fork()) is important,
+        //because as a running thread it might hold locks or condition variables that won't play well when forked.
+        pthread_atfork(&LoopThreadForkHandler::_onBeforeFork, &LoopThreadForkHandler::_onAfterFork, &LoopThreadForkHandler::_onAfterFork);
     }
 
     void LoopThreadForkHandler::add(LoopThread *thread) {
