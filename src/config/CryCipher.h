@@ -14,7 +14,7 @@ class CryCipher {
 public:
     virtual ~CryCipher() {}
 
-    virtual const std::string &cipherName() const = 0;
+    virtual std::string cipherName() const = 0;
     virtual const boost::optional<std::string> &warning() const = 0;
     virtual cpputils::unique_ref<blockstore::BlockStore> createEncryptedBlockstore(cpputils::unique_ref<blockstore::BlockStore> baseBlockStore, const std::string &encKey) const = 0;
     virtual std::string createKey(cpputils::RandomGenerator &randomGenerator) const = 0;

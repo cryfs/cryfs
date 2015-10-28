@@ -22,11 +22,11 @@ class CryCipherInstance: public CryCipher {
 public:
     BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
 
-    CryCipherInstance(const std::string &cipherName, const optional<string> warning = none): _cipherName(cipherName), _warning(warning) {
+    CryCipherInstance(const optional<string> warning = none): _warning(warning) {
     }
 
-    const string &cipherName() const override {
-        return _cipherName;
+    string cipherName() const override {
+        return Cipher::NAME;
     }
 
     const optional<string> &warning() const override {
@@ -42,7 +42,6 @@ public:
     }
 
 private:
-    string _cipherName;
     optional<string> _warning;
 };
 
@@ -50,26 +49,26 @@ const string CryCiphers::INTEGRITY_WARNING = "This cipher does not ensure integr
 
 //We have to use shared_ptr instead of unique_ref, because c++ initializer_list needs copyable values
 const vector<shared_ptr<CryCipher>> CryCiphers::SUPPORTED_CIPHERS = {
-        make_shared<CryCipherInstance<AES256_GCM>>("aes-256-gcm"),
-        make_shared<CryCipherInstance<AES256_CFB>>("aes-256-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<AES128_GCM>>("aes-128-gcm"),
-        make_shared<CryCipherInstance<AES128_CFB>>("aes-128-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Twofish256_GCM>>("twofish-256-gcm"),
-        make_shared<CryCipherInstance<Twofish256_CFB>>("twofish-256-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Twofish128_GCM>>("twofish-128-gcm"),
-        make_shared<CryCipherInstance<Twofish128_CFB>>("twofish-128-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Serpent256_GCM>>("serpent-256-gcm"),
-        make_shared<CryCipherInstance<Serpent256_CFB>>("serpent-256-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Serpent128_GCM>>("serpent-128-gcm"),
-        make_shared<CryCipherInstance<Serpent128_CFB>>("serpent-128-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Cast256_GCM>>("cast-256-gcm"),
-        make_shared<CryCipherInstance<Cast256_CFB>>("cast-256-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Mars448_GCM>>("mars-448-gcm"),
-        make_shared<CryCipherInstance<Mars448_CFB>>("mars-448-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Mars256_GCM>>("mars-256-gcm"),
-        make_shared<CryCipherInstance<Mars256_CFB>>("mars-256-cfb", INTEGRITY_WARNING),
-        make_shared<CryCipherInstance<Mars128_GCM>>("mars-128-gcm"),
-        make_shared<CryCipherInstance<Mars128_CFB>>("mars-128-cfb", INTEGRITY_WARNING)
+        make_shared<CryCipherInstance<AES256_GCM>>(),
+        make_shared<CryCipherInstance<AES256_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<AES128_GCM>>(),
+        make_shared<CryCipherInstance<AES128_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Twofish256_GCM>>(),
+        make_shared<CryCipherInstance<Twofish256_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Twofish128_GCM>>(),
+        make_shared<CryCipherInstance<Twofish128_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Serpent256_GCM>>(),
+        make_shared<CryCipherInstance<Serpent256_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Serpent128_GCM>>(),
+        make_shared<CryCipherInstance<Serpent128_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Cast256_GCM>>(),
+        make_shared<CryCipherInstance<Cast256_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Mars448_GCM>>(),
+        make_shared<CryCipherInstance<Mars448_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Mars256_GCM>>(),
+        make_shared<CryCipherInstance<Mars256_CFB>>(INTEGRITY_WARNING),
+        make_shared<CryCipherInstance<Mars128_GCM>>(),
+        make_shared<CryCipherInstance<Mars128_CFB>>(INTEGRITY_WARNING)
 };
 
 const CryCipher& CryCiphers::find(const string &cipherName) {
