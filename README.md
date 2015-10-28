@@ -46,8 +46,10 @@ Build
         $ bii init -L
         $ bii configure -D CMAKE_BUILD_TYPE=Release
         $ bii build
+        
+ 3. (if build failed) Biicode can have a bug sometimes where the first call to configure fails. If that happens, just call it again.
 
- 3. Install
+ 4. Install
 
         $ cd bii/build/messmer_cryfs
         $ sudo make install
