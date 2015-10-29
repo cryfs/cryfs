@@ -20,6 +20,7 @@ namespace cryfs {
         static bool _checkPassword(const std::string &password);
         static void _showVersion();
         static void _initLogfile(const program_options::ProgramOptions &options);
+        static void _sanityChecks(const program_options::ProgramOptions &options);
     };
 }
 

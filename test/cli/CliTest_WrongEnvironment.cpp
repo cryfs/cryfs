@@ -5,7 +5,6 @@
 // - mountdir exists but belongs to other user
 // - mountdir exists but is missing permissions
 // - TODO when else is libfuse failing? What requirements are there for the mountdir?)
-//TODO Test what happens if basedir == mountdir
 
 
 namespace bf = boost::filesystem;
@@ -39,7 +38,7 @@ public:
     }
 
     vector<const char*> args() {
-        vector<const char*> result = {basedir.path().c_str(), mountdir.path().c_str()};
+        vector<const char*> result = {basedir->path().c_str(), mountdir->path().c_str()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
             result.push_back(configfile.path().c_str());
@@ -69,8 +68,13 @@ TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
     Test_Run_Success();
 }
 
+TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
+    mountdir = basedir;
+    Test_Run_Error("Error: Can't mount into base directory");
+}
+
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
-    basedir.remove();
+    basedir->remove();
     Test_Run_Error("Error: Base directory not found");
 }
 

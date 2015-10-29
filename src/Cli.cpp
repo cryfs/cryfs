@@ -143,6 +143,12 @@ namespace cryfs {
         }
     }
 
+    void Cli::_sanityChecks(const ProgramOptions &options) {
+        if (bf::path(options.baseDir()) == bf::path(options.mountDir())) {
+            throw std::runtime_error("Can't mount into base directory");
+        }
+    }
+
     int Cli::main(int argc, char *argv[]) {
         cpputils::showBacktraceOnSigSegv();
         _showVersion();
@@ -150,6 +156,7 @@ namespace cryfs {
         ProgramOptions options = program_options::Parser(argc, argv).parse();
 
         try {
+            _sanityChecks(options);
             _runFilesystem(options);
         } catch (const std::runtime_error &e) {
             std::cerr << "Error: " << e.what() << std::endl;
