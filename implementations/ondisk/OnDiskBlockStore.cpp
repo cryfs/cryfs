@@ -13,7 +13,12 @@ namespace blockstore {
 namespace ondisk {
 
 OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
- : _rootdir(rootdir) {}
+ : _rootdir(rootdir) {
+  if (!bf::exists(rootdir)) {
+    throw std::runtime_error("Base directory not found");
+  }
+  //TODO Test for read access, write access, enter (x) access, and throw runtime_error in case
+}
 
 //TODO Do I have to lock tryCreate/remove and/or load? Or does ParallelAccessBlockStore take care of that?
 
