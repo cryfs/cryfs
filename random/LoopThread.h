@@ -7,6 +7,8 @@
 namespace cpputils {
     //TODO Test
     //TODO Move out of "random" folder into own library folder
+    //TODO Test that fork() doesn't destroy anything (e.g. no deadlock on stop() because thread is not running anymore)
+
     // Has to be final, because otherwise there could be a race condition where LoopThreadForkHandler calls a LoopThread
     // where the child class destructor already ran.
     class LoopThread final {
