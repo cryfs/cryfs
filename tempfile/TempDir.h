@@ -7,14 +7,16 @@
 
 namespace cpputils {
 
-class TempDir {
+class TempDir final {
 public:
   TempDir();
-  virtual ~TempDir();
+  ~TempDir();
   const boost::filesystem::path &path() const;
+  void remove();
 
 private:
   const boost::filesystem::path _path;
+  bool _existing;
 
   DISALLOW_COPY_AND_ASSIGN(TempDir);
 };

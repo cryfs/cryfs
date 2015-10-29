@@ -7,11 +7,11 @@
 
 namespace cpputils {
 
-class TempFile {
+class TempFile final {
 public:
   explicit TempFile(const boost::filesystem::path &path, bool create = true);
   explicit TempFile(bool create = true);
-  virtual ~TempFile();
+  ~TempFile();
   const boost::filesystem::path &path() const;
   //TODO Test exists()
   bool exists() const;
