@@ -16,7 +16,7 @@ public:
     cpputils::TempFile logfile;
     cpputils::TempFile configfile;
 
-    void run(std::initializer_list<const char*> args) {
+    void run(std::vector<const char*> args) {
         std::vector<char*> _args;
         _args.reserve(args.size()+1);
         _args.push_back(const_cast<char*>("cryfs"));
@@ -26,11 +26,11 @@ public:
         cryfs::Cli().main(_args.size(), _args.data());
     }
 
-    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::initializer_list<const char*> args) {
+    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args) {
         EXPECT_RUN_ERROR(args, "Usage");
     }
 
-    void EXPECT_RUN_ERROR(std::initializer_list<const char*> args, const char *message) {
+    void EXPECT_RUN_ERROR(std::vector<const char*> args, const char *message) {
         EXPECT_EXIT(
             run(args),
             ::testing::ExitedWithCode(1),
@@ -38,7 +38,7 @@ public:
         );
     }
 
-    void EXPECT_RUN_SUCCESS(std::initializer_list<const char*> args) {
+    void EXPECT_RUN_SUCCESS(std::vector<const char*> args) {
         //TODO
         /*EXPECT_EXIT(
             run(args),

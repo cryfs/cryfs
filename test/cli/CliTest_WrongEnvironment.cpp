@@ -10,9 +10,17 @@
 
 
 namespace bf = boost::filesystem;
+using ::testing::Values;
+using ::testing::WithParamInterface;
+using std::vector;
+
+struct TestConfig {
+    bool externalConfigfile;
+    bool logIsNotStderr;
+};
 
 //Tests what happens if cryfs is run in the wrong environment, i.e. with a base directory that doesn't exist or similar
-class CliTest_WrongEnvironment: public CliTest {
+class CliTest_WrongEnvironment: public CliTest, public WithParamInterface<TestConfig> {
 public:
     void RemoveReadPermission(const bf::path &dir) {
         //TODO Take read permission from basedir in a better way
@@ -20,148 +28,65 @@ public:
     }
 
     void Test_Run_Success() {
-        EXPECT_RUN_SUCCESS(
-            {basedir.path().c_str(), mountdir.path().c_str()}
-        );
+        EXPECT_RUN_SUCCESS(args());
     }
 
     void Test_Run_Error(const char *expectedError) {
         EXPECT_RUN_ERROR(
-            {basedir.path().c_str(), mountdir.path().c_str()},
+            args(),
             expectedError
         );
     }
 
-    void Test_Run_LogIsNotStderr_Error(const char *expectedError) {
-        //Error message should be shown on stderr, even if a logfile is specified.
-        EXPECT_RUN_ERROR(
-            {basedir.path().c_str(), mountdir.path().c_str(), "--logfile", logfile.path().c_str()},
-            expectedError
-        );
+    vector<const char*> args() {
+        vector<const char*> result = {basedir.path().c_str(), mountdir.path().c_str()};
+        if (GetParam().externalConfigfile) {
+            result.push_back("--config");
+            result.push_back(configfile.path().c_str());
+        }
+        if (GetParam().logIsNotStderr) {
+            result.push_back("--logfile");
+            result.push_back(logfile.path().c_str());
+        }
+        return result;
     }
-
-    void Test_Run_ExternalConfigfile_Error(const char *expectedError) {
-        //Config file writing is one of the first things happening. This test case ensures that even if
-        //the config file is not written to the base directory, a wrong base directory is recognized correctly.
-        EXPECT_RUN_ERROR(
-            {basedir.path().c_str(), mountdir.path().c_str(), "--config", configfile.path().c_str()},
-            expectedError
-        );
-    }
-
-    void Test_Run_ExternalConfigfile_LogIsNotStderr_Error(const char *expectedError) {
-        EXPECT_RUN_ERROR(
-            {basedir.path().c_str(), mountdir.path().c_str(), "--logfile", logfile.path().c_str(), "--config", configfile.path().c_str()},
-            expectedError
-        );
-    }    
 };
 
-TEST_F(CliTest_WrongEnvironment, NoErrorCondition) {
-    //Counter-Test. Test that it doesn't fail if we call it without an error condition.
+INSTANTIATE_TEST_CASE_P(DefaultParams, CliTest_WrongEnvironment, Values(TestConfig({false, false})));
+INSTANTIATE_TEST_CASE_P(ExternalConfigfile, CliTest_WrongEnvironment, Values(TestConfig({true, false})));
+INSTANTIATE_TEST_CASE_P(LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({false, true})));
+INSTANTIATE_TEST_CASE_P(ExternalConfigfile_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({true, true})));
+
+//Counter-Test. Test that it doesn't fail if we call it without an error condition.
+TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
     Test_Run_Success();
 }
 
-TEST_F(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
+TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     basedir.remove();
     Test_Run_Error("Error: Base directory not found");
 }
 
-TEST_F(CliTest_WrongEnvironment, BaseDir_DoesntExist_LogIsNotStderr) {
-    basedir.remove();
-    Test_Run_LogIsNotStderr_Error("Error: Base directory not found");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_DoesntExist_ExternalConfigfile) {
-    basedir.remove();
-    Test_Run_ExternalConfigfile_Error("Error: Base directory not found");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_DoesntExist_ExternalConfigfile_LogIsNotStderr) {
-    basedir.remove();
-    Test_Run_ExternalConfigfile_LogIsNotStderr_Error("Error: Base directory not found");
-}
-
 //TODO finish the following test cases
 /*
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
     RemoveReadPermission(basedir);
     Test_Run_Error("Error: Base directory not readable");
 }
 
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoReadPermission_LogIsNotStderr) {
-    RemoveReadPermission(basedir);
-    Test_Run_LogIsNotStderr_Error("Error: Base directory not readable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoReadPermission_ExternalConfigfile) {
-    RemoveReadPermission(basedir);
-    Test_Run_ExternalConfigfile_Error("Error: Base directory not readable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoReadPermission_ExternalConfigfile_LogIsNotStderr) {
-    RemoveReadPermission(basedir);
-    Test_Run_ExternalConfigfile_LogIsNotStderrError("Error: Base directory not readable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
     RemoveReadPermission(basedir);
     Test_Run_Error("Error: Base directory not writeable");
 }
 
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoWritePermission_LogIsNotStderr) {
-    RemoveReadPermission(basedir);
-    Test_Run_LogIsNotStderr_Error("Error: Base directory not writeable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoWritePermission_ExternalConfigfile) {
-    RemoveReadPermission(basedir);
-    Test_Run_ExternalConfigfile_Error("Error: Base directory not writeable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoWritePermission_ExternalConfigfile_LogIsNotStderr) {
-    RemoveReadPermission(basedir);
-    Test_Run_ExternalConfigfile_LogIsNotStderrError("Error: Base directory not writeable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoAccessPermission) {
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoAccessPermission) {
     RemoveAccessPermission(basedir);
     Test_Run_Error("Error: Base directory not accessable");
 }
 
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoAccessPermission_LogIsNotStderr) {
-    RemoveAccessPermission(basedir);
-    Test_Run_LogIsNotStderr_Error("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoAccessPermission_ExternalConfigfile) {
-    RemoveAccessPermission(basedir);
-    Test_Run_ExternalConfigfile_Error("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoAccessPermission_ExternalConfigfile_LogIsNotStderr) {
-    RemoveAccessPermission(basedir);
-    Test_Run_ExternalConfigfile_LogIsNotStderrError("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoPermission) {
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
     RemoveAllPermissions(basedir);
     Test_Run_Error("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoPermission_LogIsNotStderr) {
-    RemoveAllPermissions(basedir);
-    Test_Run_LogIsNotStderr_Error("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoPermission_ExternalConfigfile) {
-    RemoveAllPermissions(basedir);
-    Test_Run_ExternalConfigfile_Error("Error: Base directory not accessable");
-}
-
-TEST_F(CliTest_WrongEnvironment, BaseDir_NoPermission_ExternalConfigfile_LogIsNotStderr) {
-    RemoveAllPermissions(basedir);
-    Test_Run_ExternalConfigfile_LogIsNotStderrError("Error: Base directory not accessable");
 }
 
 */
