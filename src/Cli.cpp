@@ -111,12 +111,13 @@ namespace cryfs {
     }
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
-        auto config = _loadOrCreateConfig(options);
         auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
+        auto config = _loadOrCreateConfig(options);
         CryDevice device(std::move(config), std::move(blockStore));
         fspp::FilesystemImpl fsimpl(&device);
         fspp::fuse::Fuse fuse(&fsimpl);
 
+        _initLogfile(options);
         _goToBackgroundIfSpecified(options);
 
         vector<char *> fuseOptions = options.fuseOptions();
@@ -134,17 +135,26 @@ namespace cryfs {
         }
     }
 
+    void Cli::_initLogfile(const ProgramOptions &options) {
+        //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
+        if (options.logFile() != none) {
+            cpputils::logging::setLogger(
+                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", *options.logFile()));
+        }
+    }
+
     int Cli::main(int argc, char *argv[]) {
         cpputils::showBacktraceOnSigSegv();
         _showVersion();
 
         ProgramOptions options = program_options::Parser(argc, argv).parse();
-        //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
-        if (options.logFile() != none) {
-            cpputils::logging::setLogger(
-                    spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", *options.logFile()));
+
+        try {
+            _runFilesystem(options);
+        } catch (const std::runtime_error &e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+            exit(1);
         }
-        _runFilesystem(options);
         return 0;
     }
 
