@@ -120,6 +120,9 @@ inline Data &Data::FillWithZeroes() {
 
 inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
   std::ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
+  if (!file.good()) {
+    throw std::runtime_error("Could not open file for writing");
+  }
   StoreToStream(file);
 }
 
