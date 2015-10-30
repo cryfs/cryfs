@@ -85,21 +85,18 @@ bf::path make_relative(const bf::path &path) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {
     mountdir = make_relative(basedir);
-    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
     Test_Run_Error("Error: Base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BaseDirRelative) {
     mountdir = basedir;
     basedir = make_relative(basedir);
-    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
     Test_Run_Error("Error: Base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
     basedir = make_relative(basedir);
     mountdir = basedir;
-    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
     Test_Run_Error("Error: Base directory can't be inside the mount directory");
 }
 
