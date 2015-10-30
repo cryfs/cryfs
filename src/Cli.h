@@ -5,6 +5,7 @@
 #include "program_options/ProgramOptions.h"
 #include "config/CryConfigFile.h"
 #include <boost/filesystem/path.hpp>
+#include <messmer/cpp-utils/tempfile/TempFile.h>
 
 namespace cryfs {
     class Cli final {
@@ -24,6 +25,8 @@ namespace cryfs {
         static void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
         static bool _pathContains(const boost::filesystem::path &parent, const boost::filesystem::path &child);
         static void _checkBasedirAccessible(const program_options::ProgramOptions &options);
+        static std::shared_ptr<cpputils::TempFile> _checkBasedirWriteable(const program_options::ProgramOptions &options);
+        static void _checkBasedirReadable(const program_options::ProgramOptions &options, std::shared_ptr<cpputils::TempFile> tempfile);
     };
 }
 

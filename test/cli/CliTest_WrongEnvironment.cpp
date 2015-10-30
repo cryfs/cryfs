@@ -11,6 +11,7 @@ namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
 using std::vector;
+using cpputils::TempFile;
 
 struct TestConfig {
     bool externalConfigfile;
@@ -21,9 +22,24 @@ struct TestConfig {
 //Tests what happens if cryfs is run in the wrong environment, i.e. with a base directory that doesn't exist or similar
 class CliTest_WrongEnvironment: public CliTest, public WithParamInterface<TestConfig> {
 public:
-    void RemoveReadPermission(const bf::path &dir) {
-        //TODO Take read permission from basedir in a better way
-        system((std::string("chmod -rwx ")+dir.c_str()).c_str());
+    void SetAllPermissions(const bf::path &dir) {
+        bf::permissions(dir, bf::owner_write|bf::owner_read|bf::owner_exe);
+    }
+
+    void SetNoReadPermission(const bf::path &dir) {
+        bf::permissions(dir, bf::owner_write|bf::owner_exe);
+    }
+
+    void SetNoWritePermission(const bf::path &dir) {
+        bf::permissions(dir, bf::owner_read|bf::owner_exe);
+    }
+
+    void SetNoExePermission(const bf::path &dir) {
+        bf::permissions(dir, bf::owner_read|bf::owner_write);
+    }
+
+    void SetNoPermission(const bf::path &dir) {
+        bf::permissions(dir, bf::no_perms);
     }
 
     void Test_Run_Success() {
@@ -105,26 +121,34 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     Test_Run_Error("Error: Base directory not found");
 }
 
-//TODO finish the following test cases
-/*
+TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
+    TempFile basedirfile;
+    basedir = basedirfile.path();
+    Test_Run_Error("Error: Base directory is not a directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
+    //Counter-Test. Test it doesn't fail if permissions are there.
+    SetAllPermissions(basedir);
+    Test_Run_Success();
+}
+
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
-    RemoveReadPermission(basedir);
-    Test_Run_Error("Error: Base directory not readable");
+    SetNoReadPermission(basedir);
+    Test_Run_Error("Error: Could not read from base directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
-    RemoveWritePermission(basedir);
-    Test_Run_Error("Error: Base directory not writeable");
+    SetNoWritePermission(basedir);
+    Test_Run_Error("Error: Could not write to base directory");
 }
 
-TEST_P(CliTest_WrongEnvironment, BaseDir_NoAccessPermission) {
-    RemoveAccessPermission(basedir);
-    Test_Run_Error("Error: Base directory not accessable");
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
+    SetNoExePermission(basedir);
+    Test_Run_Error("Error: Could not write to base directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
-    RemoveAllPermissions(basedir);
-    Test_Run_Error("Error: Base directory not accessable");
+    SetNoPermission(basedir);
+    Test_Run_Error("Error: Could not write to base directory");
 }
-
-*/

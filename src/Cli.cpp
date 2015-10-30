@@ -37,10 +37,13 @@ using program_options::ProgramOptions;
 using cpputils::make_unique_ref;
 using cpputils::Random;
 using cpputils::IOStreamConsole;
+using cpputils::TempFile;
 using std::cout;
 using std::string;
 using std::endl;
 using std::vector;
+using std::shared_ptr;
+using std::make_shared;
 using boost::none;
 
 //TODO Support files > 4GB
@@ -155,7 +158,39 @@ namespace cryfs {
         if (!bf::exists(options.baseDir())) {
             throw std::runtime_error("Base directory not found.");
         }
-        //TODO Check permissions
+        if (!bf::is_directory(options.baseDir())) {
+            throw std::runtime_error("Base directory is not a directory.");
+        }
+        auto file = _checkBasedirWriteable(options);
+        _checkBasedirReadable(options, file);
+    }
+
+    shared_ptr<TempFile> Cli::_checkBasedirWriteable(const ProgramOptions &options) {
+        auto path = bf::path(options.baseDir()) / "tempfile";
+        try {
+            return make_shared<TempFile>(path);
+        } catch (const std::runtime_error &e) {
+            throw std::runtime_error("Could not write to base directory.");
+        }
+    }
+
+    void Cli::_checkBasedirReadable(const ProgramOptions &options, shared_ptr<TempFile> tempfile) {
+        ASSERT(bf::path(options.baseDir()) == tempfile->path().parent_path(), "This function should be called with a file inside the base directory");
+        try {
+            bool found = false;
+            bf::directory_iterator end;
+            for (auto iter = bf::directory_iterator(options.baseDir()); iter != end; ++iter) {
+                if (bf::equivalent(*iter, tempfile->path())) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                //This should not happen. Can only happen if the written temp file got deleted inbetween or maybe was not written at all.
+                throw std::runtime_error("Error accessing base directory.");
+            }
+        } catch (const boost::filesystem::filesystem_error &e) {
+            throw std::runtime_error("Could not read from base directory.");
+        }
     }
 
     void Cli::_checkMountdirDoesntContainBasedir(const ProgramOptions &options) {
@@ -194,5 +229,4 @@ namespace cryfs {
         }
         return 0;
     }
-
 }
