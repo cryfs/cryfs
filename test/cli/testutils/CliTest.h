@@ -9,10 +9,12 @@
 
 class CliTest : public ::testing::Test {
 public:
-    CliTest(): basedir(std::make_shared<cpputils::TempDir>()), mountdir(std::make_shared<cpputils::TempDir>()), logfile(), configfile(false) {}
+    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false) {}
 
-    std::shared_ptr<cpputils::TempDir> basedir;
-    std::shared_ptr<cpputils::TempDir> mountdir;
+    cpputils::TempDir _basedir;
+    cpputils::TempDir _mountdir;
+    boost::filesystem::path basedir;
+    boost::filesystem::path mountdir;
     cpputils::TempFile logfile;
     cpputils::TempFile configfile;
 

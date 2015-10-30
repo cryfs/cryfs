@@ -21,6 +21,9 @@ namespace cryfs {
         static void _showVersion();
         static void _initLogfile(const program_options::ProgramOptions &options);
         static void _sanityChecks(const program_options::ProgramOptions &options);
+        static void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
+        static bool _pathContains(const boost::filesystem::path &parent, const boost::filesystem::path &child);
+        static void _checkBasedirAccessible(const program_options::ProgramOptions &options);
     };
 }
 

@@ -25,6 +25,8 @@
 #error The used libc implementation has a maximal password size for getpass(). We cannot use it to ask for passwords.
 #endif
 
+//TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
+
 using namespace cryfs;
 namespace bf = boost::filesystem;
 
@@ -144,9 +146,40 @@ namespace cryfs {
     }
 
     void Cli::_sanityChecks(const ProgramOptions &options) {
-        if (bf::path(options.baseDir()) == bf::path(options.mountDir())) {
-            throw std::runtime_error("Can't mount into base directory");
+        _checkBasedirAccessible(options);
+        //TODO Check MountdirAccessible (incl. Permissions)
+        _checkMountdirDoesntContainBasedir(options);
+    }
+
+    void Cli::_checkBasedirAccessible(const ProgramOptions &options) {
+        if (!bf::exists(options.baseDir())) {
+            throw std::runtime_error("Base directory not found.");
         }
+        //TODO Check permissions
+    }
+
+    void Cli::_checkMountdirDoesntContainBasedir(const ProgramOptions &options) {
+        if (_pathContains(options.mountDir(), options.baseDir())) {
+            throw std::runtime_error("Base directory can't be inside the mount directory.");
+        }
+    }
+
+    bool Cli::_pathContains(const bf::path &parent, const bf::path &child) {
+        bf::path absParent = bf::canonical(parent);
+        bf::path current = bf::canonical(child);
+        if (absParent.empty() && current.empty()) {
+            return true;
+        }
+        while(!current.empty()) {
+            std::cout << absParent.c_str() << " cmp " << current.c_str() << std::endl;
+            if (bf::equivalent(current, absParent)) {
+                std::cout << "equals" << std::endl;
+                return true;
+            }
+            std::cout << "not equals" << std::endl;
+            current = current.parent_path();
+        }
+        return false;
     }
 
     int Cli::main(int argc, char *argv[]) {

@@ -38,7 +38,7 @@ public:
     }
 
     vector<const char*> args() {
-        vector<const char*> result = {basedir->path().c_str(), mountdir->path().c_str()};
+        vector<const char*> result = {basedir.c_str(), mountdir.c_str()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
             result.push_back(configfile.path().c_str());
@@ -70,11 +70,41 @@ TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
     mountdir = basedir;
-    Test_Run_Error("Error: Can't mount into base directory");
+    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+}
+
+bf::path make_relative(const bf::path &path) {
+    bf::path result;
+    bf::path cwd = bf::current_path();
+    for(auto iter = ++cwd.begin(); iter!=cwd.end(); ++iter) {
+        result /= "..";
+    }
+    result /= path;
+    return result;
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {
+    mountdir = make_relative(basedir);
+    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
+    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BaseDirRelative) {
+    mountdir = basedir;
+    basedir = make_relative(basedir);
+    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
+    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
+    basedir = make_relative(basedir);
+    mountdir = basedir;
+    std::cout << basedir.c_str() << " --- " << mountdir.c_str();
+    Test_Run_Error("Error: Base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
-    basedir->remove();
+    _basedir.remove();
     Test_Run_Error("Error: Base directory not found");
 }
 

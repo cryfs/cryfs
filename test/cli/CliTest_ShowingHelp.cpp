@@ -7,7 +7,7 @@ TEST_F(CliTest_ShowingHelp, HelpLongOption) {
 }
 
 TEST_F(CliTest_ShowingHelp, HelpLongOptionTogetherWithOtherOptions) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir->path().c_str(), mountdir->path().c_str(), "--help"});
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str(), mountdir.c_str(), "--help"});
 }
 
 TEST_F(CliTest_ShowingHelp, HelpShortOption) {
@@ -15,7 +15,7 @@ TEST_F(CliTest_ShowingHelp, HelpShortOption) {
 }
 
 TEST_F(CliTest_ShowingHelp, HelpShortOptionTogetherWithOtherOptions) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir->path().c_str(), mountdir->path().c_str(), "-h"});
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str(), mountdir.c_str(), "-h"});
 }
 
 TEST_F(CliTest_ShowingHelp, MissingAllOptions) {
@@ -23,5 +23,5 @@ TEST_F(CliTest_ShowingHelp, MissingAllOptions) {
 }
 
 TEST_F(CliTest_ShowingHelp, MissingDir) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir->path().c_str()});
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str()});
 }
