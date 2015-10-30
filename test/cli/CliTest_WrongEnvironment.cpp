@@ -1,12 +1,5 @@
 #include "testutils/CliTest.h"
 
-//TODO Test CLI ends with error message (before daemonization), if
-// - mountdir does not exist
-// - mountdir exists but belongs to other user
-// - mountdir exists but is missing permissions
-// - TODO when else is libfuse failing? What requirements are there for the mountdir?)
-
-
 namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
@@ -86,7 +79,7 @@ TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
     mountdir = basedir;
-    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory");
 }
 
 bf::path make_relative(const bf::path &path) {
@@ -101,30 +94,30 @@ bf::path make_relative(const bf::path &path) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {
     mountdir = make_relative(basedir);
-    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BaseDirRelative) {
     mountdir = basedir;
     basedir = make_relative(basedir);
-    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
     basedir = make_relative(basedir);
     mountdir = basedir;
-    Test_Run_Error("Error: Base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     _basedir.remove();
-    Test_Run_Error("Error: Base directory not found");
+    Test_Run_Error("Error: base directory not found");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
     TempFile basedirfile;
     basedir = basedirfile.path();
-    Test_Run_Error("Error: Base directory is not a directory");
+    Test_Run_Error("Error: base directory is not a directory");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
@@ -151,4 +144,41 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
     SetNoPermission(basedir);
     Test_Run_Error("Error: Could not write to base directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
+    _mountdir.remove();
+    Test_Run_Error("Error: mount directory not found");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
+    TempFile mountdirfile;
+    mountdir = mountdirfile.path();
+    Test_Run_Error("Error: mount directory is not a directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
+    //Counter-Test. Test it doesn't fail if permissions are there.
+    SetAllPermissions(mountdir);
+    Test_Run_Success();
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoReadPermission) {
+    SetNoReadPermission(mountdir);
+    Test_Run_Error("Error: Could not read from mount directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
+    SetNoWritePermission(mountdir);
+    Test_Run_Error("Error: Could not write to mount directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
+    SetNoExePermission(mountdir);
+    Test_Run_Error("Error: Could not write to mount directory");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoPermission) {
+    SetNoPermission(mountdir);
+    Test_Run_Error("Error: Could not write to mount directory");
 }

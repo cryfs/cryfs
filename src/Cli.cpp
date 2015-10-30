@@ -149,53 +149,53 @@ namespace cryfs {
     }
 
     void Cli::_sanityChecks(const ProgramOptions &options) {
-        _checkBasedirAccessible(options);
-        //TODO Check MountdirAccessible (incl. Permissions)
+        _checkDirAccessible(options.baseDir(), "base directory");
+        _checkDirAccessible(options.mountDir(), "mount directory");
         _checkMountdirDoesntContainBasedir(options);
     }
 
-    void Cli::_checkBasedirAccessible(const ProgramOptions &options) {
-        if (!bf::exists(options.baseDir())) {
-            throw std::runtime_error("Base directory not found.");
+    void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
+        if (!bf::exists(dir)) {
+            throw std::runtime_error(name+" not found.");
         }
-        if (!bf::is_directory(options.baseDir())) {
-            throw std::runtime_error("Base directory is not a directory.");
+        if (!bf::is_directory(dir)) {
+            throw std::runtime_error(name+" is not a directory.");
         }
-        auto file = _checkBasedirWriteable(options);
-        _checkBasedirReadable(options, file);
+        auto file = _checkDirWriteable(dir, name);
+        _checkDirReadable(dir, file, name);
     }
 
-    shared_ptr<TempFile> Cli::_checkBasedirWriteable(const ProgramOptions &options) {
-        auto path = bf::path(options.baseDir()) / "tempfile";
+    shared_ptr<TempFile> Cli::_checkDirWriteable(const bf::path &dir, const std::string &name) {
+        auto path = dir / "tempfile";
         try {
             return make_shared<TempFile>(path);
         } catch (const std::runtime_error &e) {
-            throw std::runtime_error("Could not write to base directory.");
+            throw std::runtime_error("Could not write to "+name+".");
         }
     }
 
-    void Cli::_checkBasedirReadable(const ProgramOptions &options, shared_ptr<TempFile> tempfile) {
-        ASSERT(bf::equivalent(bf::path(options.baseDir()), tempfile->path().parent_path()), "This function should be called with a file inside the base directory");
+    void Cli::_checkDirReadable(const bf::path &dir, shared_ptr<TempFile> tempfile, const std::string &name) {
+        ASSERT(bf::equivalent(dir, tempfile->path().parent_path()), "This function should be called with a file inside the directory");
         try {
             bool found = false;
             bf::directory_iterator end;
-            for (auto iter = bf::directory_iterator(options.baseDir()); iter != end; ++iter) {
+            for (auto iter = bf::directory_iterator(dir); iter != end; ++iter) {
                 if (bf::equivalent(*iter, tempfile->path())) {
                     found = true;
                 }
             }
             if (!found) {
                 //This should not happen. Can only happen if the written temp file got deleted inbetween or maybe was not written at all.
-                throw std::runtime_error("Error accessing base directory.");
+                throw std::runtime_error("Error accessing "+name+".");
             }
         } catch (const boost::filesystem::filesystem_error &e) {
-            throw std::runtime_error("Could not read from base directory.");
+            throw std::runtime_error("Could not read from "+name+".");
         }
     }
 
     void Cli::_checkMountdirDoesntContainBasedir(const ProgramOptions &options) {
         if (_pathContains(options.mountDir(), options.baseDir())) {
-            throw std::runtime_error("Base directory can't be inside the mount directory.");
+            throw std::runtime_error("base directory can't be inside the mount directory.");
         }
     }
 

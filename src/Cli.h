@@ -23,9 +23,9 @@ namespace cryfs {
         static void _sanityChecks(const program_options::ProgramOptions &options);
         static void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
         static bool _pathContains(const boost::filesystem::path &parent, const boost::filesystem::path &child);
-        static void _checkBasedirAccessible(const program_options::ProgramOptions &options);
-        static std::shared_ptr<cpputils::TempFile> _checkBasedirWriteable(const program_options::ProgramOptions &options);
-        static void _checkBasedirReadable(const program_options::ProgramOptions &options, std::shared_ptr<cpputils::TempFile> tempfile);
+        static void _checkDirAccessible(const boost::filesystem::path &dir, const std::string &name);
+        static std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name);
+        static void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name);
     };
 }
 
