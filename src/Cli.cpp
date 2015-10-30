@@ -171,12 +171,9 @@ namespace cryfs {
             return true;
         }
         while(!current.empty()) {
-            std::cout << absParent.c_str() << " cmp " << current.c_str() << std::endl;
             if (bf::equivalent(current, absParent)) {
-                std::cout << "equals" << std::endl;
                 return true;
             }
-            std::cout << "not equals" << std::endl;
             current = current.parent_path();
         }
         return false;
