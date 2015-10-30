@@ -29,6 +29,7 @@
 
 using namespace cryfs;
 namespace bf = boost::filesystem;
+using namespace cpputils::logging;
 
 using blockstore::ondisk::OnDiskBlockStore;
 using blockstore::inmemory::InMemoryBlockStore;
@@ -116,18 +117,26 @@ namespace cryfs {
     }
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
-        auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
-        auto config = _loadOrCreateConfig(options);
-        CryDevice device(std::move(config), std::move(blockStore));
-        fspp::FilesystemImpl fsimpl(&device);
-        fspp::fuse::Fuse fuse(&fsimpl);
+        try {
+            auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
+            auto config = _loadOrCreateConfig(options);
+            CryDevice device(std::move(config), std::move(blockStore));
+            fspp::FilesystemImpl fsimpl(&device);
+            fspp::fuse::Fuse fuse(&fsimpl);
 
-        _initLogfile(options);
-        _goToBackgroundIfSpecified(options);
+            _initLogfile(options);
 
-        vector<char *> fuseOptions = options.fuseOptions();
-        std::cout << "\nFilesystem is running." << std::endl;
-        fuse.run(fuseOptions.size(), fuseOptions.data());
+            std::cout << "\nFilesystem is running. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
+
+            _goToBackgroundIfSpecified(options);
+
+            vector<char *> fuseOptions = options.fuseOptions();
+            fuse.run(fuseOptions.size(), fuseOptions.data());
+        } catch (const std::exception &e) {
+            LOG(ERROR) << "Crashed: " << e.what();
+        } catch (...) {
+            LOG(ERROR) << "Crashed";
+        }
     }
 
     void Cli::_goToBackgroundIfSpecified(const ProgramOptions &options) {
