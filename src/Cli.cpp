@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <messmer/cpp-utils/assert/backtrace.h>
-#include <messmer/cpp-utils/daemon/daemonize.h>
 
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
@@ -126,9 +125,7 @@ namespace cryfs {
 
             _initLogfile(options);
 
-            std::cout << "\nFilesystem is running. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
-
-            _goToBackgroundIfSpecified(options);
+            std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
 
             vector<char *> fuseOptions = options.fuseOptions();
             fuse.run(fuseOptions.size(), fuseOptions.data());
@@ -139,21 +136,15 @@ namespace cryfs {
         }
     }
 
-    void Cli::_goToBackgroundIfSpecified(const ProgramOptions &options) {
-        if (!options.foreground()) {
-            cpputils::daemonize();
-            if (options.logFile() == none) {
-                // Setup logging to syslog.
-                cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
-            }
-        }
-    }
-
     void Cli::_initLogfile(const ProgramOptions &options) {
         //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
         if (options.logFile() != none) {
             cpputils::logging::setLogger(
                 spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", *options.logFile()));
+        } else if (options.foreground()) {
+            cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
+        } else {
+            cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
         }
     }
 
@@ -184,7 +175,7 @@ namespace cryfs {
     }
 
     void Cli::_checkBasedirReadable(const ProgramOptions &options, shared_ptr<TempFile> tempfile) {
-        ASSERT(bf::path(options.baseDir()) == tempfile->path().parent_path(), "This function should be called with a file inside the base directory");
+        ASSERT(bf::equivalent(bf::path(options.baseDir()), tempfile->path().parent_path()), "This function should be called with a file inside the base directory");
         try {
             bool found = false;
             bf::directory_iterator end;

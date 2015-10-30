@@ -36,6 +36,9 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         configfile = vm["config"].as<string>();
     }
     bool foreground = vm.count("foreground");
+    if (foreground) {
+        options.second.push_back(const_cast<char*>("-f"));
+    }
     optional<string> logfile = none;
     if (vm.count("logfile")) {
         logfile = vm["logfile"].as<string>();

@@ -45,7 +45,7 @@ public:
     public:
         _UnmountFilesystemInDestructor(const boost::filesystem::path &baseDir) :_baseDir(baseDir) {}
         ~_UnmountFilesystemInDestructor() {
-            if (0 != system((std::string("fusermount -u ")+_baseDir.c_str()).c_str()), "Could not unmount cryfs") {
+            if (0 != system((std::string("fusermount -u ")+_baseDir.c_str()).c_str())) {
                 cpputils::logging::LOG(cpputils::logging::ERROR) << "Could not unmount cryfs";
             }
         }

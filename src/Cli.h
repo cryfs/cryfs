@@ -16,7 +16,6 @@ namespace cryfs {
         static void _runFilesystem(const program_options::ProgramOptions &options);
         static CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
         static boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
-        static void _goToBackgroundIfSpecified(const program_options::ProgramOptions &options);
         static std::string _askPassword();
         static bool _checkPassword(const std::string &password);
         static void _showVersion();
