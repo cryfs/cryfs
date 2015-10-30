@@ -43,7 +43,7 @@ public:
     }
 
     void Test_Run_Success() {
-        EXPECT_RUN_SUCCESS(args());
+        EXPECT_RUN_SUCCESS(args(), basedir);
     }
 
     void Test_Run_Error(const char *expectedError) {

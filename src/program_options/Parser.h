@@ -11,7 +11,7 @@ namespace cryfs {
         public:
             Parser(int argc, char *argv[]);
 
-            ProgramOptions parse() const;
+            ProgramOptions parse(const std::vector<std::string> &supportedCiphers) const;
 
         private:
             static std::vector<char *> _argsToVector(int argc, char *argv[]);
@@ -19,8 +19,10 @@ namespace cryfs {
             static void _addPositionalOptionForBaseDir(boost::program_options::options_description *desc,
                                                        boost::program_options::positional_options_description *positional);
             [[noreturn]] static void _showHelpAndExit();
-            static boost::program_options::variables_map _parseOptionsOrShowHelp(const std::vector<char*> options);
-            static boost::program_options::variables_map _parseOptions(const std::vector<char*> options);
+            [[noreturn]] static void _showCiphersAndExit(const std::vector<std::string> &supportedCiphers);
+            static boost::program_options::variables_map _parseOptionsOrShowHelp(const std::vector<char*> options, const std::vector<std::string> &supportedCiphers);
+            static boost::program_options::variables_map _parseOptions(const std::vector<char*> options, const std::vector<std::string> &supportedCiphers);
+            static void _checkValidCipher(const std::string &cipher, const std::vector<std::string> &supportedCiphers);
 
             std::vector<char*> _options;
         };

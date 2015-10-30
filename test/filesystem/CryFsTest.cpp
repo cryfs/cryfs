@@ -23,6 +23,7 @@ using cpputils::unique_ref;
 using cpputils::Console;
 using cpputils::Random;
 using blockstore::ondisk::OnDiskBlockStore;
+using boost::none;
 
 namespace bf = boost::filesystem;
 using namespace cryfs;
@@ -33,7 +34,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}).loadOrCreate(config.path()).value();
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none).loadOrCreate(config.path()).value();
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

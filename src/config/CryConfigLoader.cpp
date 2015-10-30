@@ -20,8 +20,8 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(unique_ref<Console> console, RandomGenerator &keyGenerator, function<string()> askPassword)
-    : _creator(std::move(console), keyGenerator), _askPassword(askPassword) {
+CryConfigLoader::CryConfigLoader(unique_ref<Console> console, RandomGenerator &keyGenerator, function<string()> askPassword, const optional<string> &cipher)
+    : _creator(std::move(console), keyGenerator), _askPassword(askPassword), _cipher(cipher) {
 }
 
 optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
@@ -30,6 +30,9 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   if (config == none) {
     LOG(ERROR) << "Could not load config file. Wrong password?";
     return none;
+  }
+  if (_cipher != none && config->config()->Cipher() != *_cipher) {
+    throw std::runtime_error("Filesystem uses "+config->config()->Cipher()+" cipher and not "+*_cipher+" as specified.");
   }
   return std::move(*config);
 }

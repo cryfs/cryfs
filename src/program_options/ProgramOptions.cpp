@@ -8,9 +8,10 @@ using std::vector;
 using boost::optional;
 
 ProgramOptions::ProgramOptions(const string &baseDir, const string &mountDir, const optional<string> &configFile,
-                               bool foreground, const optional<string> &logFile, const vector<char*> &fuseOptions)
+                               bool foreground, const optional<string> &logFile, const optional<string> &cipher,
+                               const vector<char*> &fuseOptions)
     :_baseDir(baseDir), _mountDir(new char[mountDir.size()+1]), _configFile(configFile), _foreground(foreground),
-     _logFile(logFile), _fuseOptions(fuseOptions) {
+     _logFile(logFile), _cipher(cipher), _fuseOptions(fuseOptions) {
     std::memcpy(_mountDir, mountDir.c_str(), mountDir.size()+1);
     // Fuse needs the mountDir passed as first option (first option = position 1, since 0 is the executable name)
     ASSERT(_fuseOptions.size() >= 1, "There has to be one parameter at least for the executable name");
@@ -48,6 +49,10 @@ bool ProgramOptions::foreground() const {
 
 const optional<string> &ProgramOptions::logFile() const {
     return _logFile;
+}
+
+const optional<string> &ProgramOptions::cipher() const {
+    return _cipher;
 }
 
 const vector<char *> &ProgramOptions::fuseOptions() const {

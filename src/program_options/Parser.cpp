@@ -13,7 +13,9 @@ using std::string;
 using boost::optional;
 using boost::none;
 
-Parser::Parser(int argc, char *argv[]) :_options(_argsToVector(argc, argv)) {}
+Parser::Parser(int argc, char *argv[])
+        :_options(_argsToVector(argc, argv)) {
+}
 
 vector<char*> Parser::_argsToVector(int argc, char *argv[]) {
     vector<char*> result;
@@ -23,9 +25,9 @@ vector<char*> Parser::_argsToVector(int argc, char *argv[]) {
     return result;
 }
 
-ProgramOptions Parser::parse() const {
+ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     pair<vector<char*>, vector<char*>> options = splitAtDoubleDash(_options);
-    po::variables_map vm = _parseOptionsOrShowHelp(options.first);
+    po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
 
     string baseDir = vm["base-dir"].as<string>();
     string mountDir = vm["mount-dir"].as<string>();
@@ -38,19 +40,31 @@ ProgramOptions Parser::parse() const {
     if (vm.count("logfile")) {
         logfile = vm["logfile"].as<string>();
     }
+    optional<string> cipher = none;
+    if (vm.count("cipher")) {
+        cipher = vm["cipher"].as<string>();
+        _checkValidCipher(*cipher, supportedCiphers);
+    }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, logfile, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, logfile, cipher, options.second);
 }
 
-po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options) {
+void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
+    if (std::find(supportedCiphers.begin(), supportedCiphers.end(), cipher) == supportedCiphers.end()) {
+        std::cerr << "Invalid cipher: " << cipher << std::endl;
+        exit(1);
+    }
+}
+
+po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options, const vector<string> &supportedCiphers) {
     try {
-        return _parseOptions(options);
+        return _parseOptions(options, supportedCiphers);
     } catch(const std::exception &e) {
         _showHelpAndExit();
     }
 }
 
-po::variables_map Parser::_parseOptions(const vector<char*> options) {
+po::variables_map Parser::_parseOptions(const vector<char*> options, const vector<string> &supportedCiphers) {
     po::options_description desc;
     po::positional_options_description positional_desc;
     _addAllowedOptions(&desc);
@@ -61,6 +75,9 @@ po::variables_map Parser::_parseOptions(const vector<char*> options) {
                       .options(desc).positional(positional_desc).run(), vm);
     if (vm.count("help")) {
         _showHelpAndExit();
+    }
+    if (vm.count("show-ciphers")) {
+        _showCiphersAndExit(supportedCiphers);
     }
     po::notify(vm);
 
@@ -73,6 +90,8 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("help,h", "show help message")
             ("config,c", po::value<string>(), "Configuration file")
             ("foreground,f", "Run CryFS in foreground.")
+            ("cipher", po::value<string>(), "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers")
+            ("show-ciphers", "Show list of supported ciphers.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
             ;
     desc->add(options);
@@ -87,6 +106,13 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
             ("mount-dir", po::value<string>()->required(), "Mount directory")
             ;
     desc->add(hidden);
+}
+
+[[noreturn]] void Parser::_showCiphersAndExit(const vector<string> &supportedCiphers) {
+    for (const auto &cipher : supportedCiphers) {
+        std::cerr << cipher << "\n";
+    }
+    exit(0);
 }
 
 [[noreturn]] void Parser::_showHelpAndExit() {

@@ -36,33 +36,38 @@ public:
 
 #define EXPECT_ASK_FOR_CIPHER() EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames())))
 
-TEST_F(CryConfigCreatorTest, DoesNotCrash) {
-    EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
-    CryConfig config = creator.create();
+TEST_F(CryConfigCreatorTest, DoesAskForCipherIfNotSpecified) {
+    EXPECT_ASK_FOR_CIPHER().Times(1).WillOnce(ChooseAnyCipher());
+    CryConfig config = creator.create(none);
+}
+
+TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfSpecified) {
+    EXPECT_ASK_FOR_CIPHER().Times(0);
+    CryConfig config = creator.create(string("aes-256-gcm"));
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
-    CryConfig config = creator.create();
+    CryConfig config = creator.create(none);
     EXPECT_EQ("", config.RootBlob()); // This tells CryFS to create a new root blob
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("mars-448-gcm"));
-    CryConfig config = creator.create();
+    CryConfig config = creator.create(none);
     cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-256-gcm"));
-    CryConfig config = creator.create();
-cpputils::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    CryConfig config = creator.create(none);
+    cpputils::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-128-gcm"));
-    CryConfig config = creator.create();
-cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    CryConfig config = creator.create(none);
+    cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 class CryConfigCreatorTest_ChooseCipher: public CryConfigCreatorTest, public ::testing::WithParamInterface<string> {
@@ -88,7 +93,7 @@ TEST_P(CryConfigCreatorTest_ChooseCipher, ChoosesCipherCorrectly) {
 
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher(cipherName));
 
-    CryConfig config = creator.create();
+    CryConfig config = creator.create(none);
     EXPECT_EQ(cipherName, config.Cipher());
 }
 

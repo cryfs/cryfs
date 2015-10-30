@@ -13,7 +13,7 @@ namespace cryfs {
 
 class CryConfigLoader {
 public:
-  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, std::function<std::string()> askPassword);
+  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, std::function<std::string()> askPassword, const boost::optional<std::string> &cipher);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   template<class SCryptSettings = cpputils::SCryptDefaultSettings>
@@ -26,6 +26,7 @@ private:
 
     CryConfigCreator _creator;
     std::function<std::string()> _askPassword;
+    boost::optional<std::string> _cipher;
 
     DISALLOW_COPY_AND_ASSIGN(CryConfigLoader);
 };
@@ -41,7 +42,7 @@ boost::optional<CryConfigFile> CryConfigLoader::loadOrCreate(const boost::filesy
 
 template<class SCryptSettings>
 CryConfigFile CryConfigLoader::_createConfig(const boost::filesystem::path &filename) {
-    auto config = _creator.create();
+    auto config = _creator.create(_cipher);
     //TODO Ask confirmation if using insecure password (<8 characters)
     std::string password = _askPassword();
     return CryConfigFile::create<SCryptSettings>(filename, std::move(config), password);

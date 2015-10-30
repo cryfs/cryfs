@@ -17,22 +17,24 @@ using ::testing::_;
 
 using namespace cryfs;
 
+//TODO Test loading with same/different --cipher argument
+
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
 public:
     CryConfigLoaderTest(): file(false) {}
 
-    CryConfigLoader loader(const string &password) {
-        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), [password] {return password;});
+    CryConfigLoader loader(const string &password, const optional<string> &cipher = none) {
+        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), [password] {return password;}, cipher);
     }
 
-    CryConfigFile Create(const string &password = "mypassword") {
+    CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none) {
         EXPECT_FALSE(file.exists());
-        return loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
+        return loader(password, cipher).loadOrCreate<SCryptTestSettings>(file.path()).value();
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword") {
+    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none) {
         EXPECT_TRUE(file.exists());
-        return loader(password).loadOrCreate<SCryptTestSettings>(file.path());
+        return loader(password, cipher).loadOrCreate<SCryptTestSettings>(file.path());
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
@@ -71,6 +73,21 @@ TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
     Create("mypassword");
     auto loaded = Load("mypassword2");
     EXPECT_EQ(none, loaded);
+}
+
+TEST_F(CryConfigLoaderTest, DoesntLoadIfDifferentCipher) {
+    Create("mypassword", string("aes-256-gcm"));
+    try {
+        Load("mypassword", string("aes-256-cfb"));
+        EXPECT_TRUE(false); // Should throw exception
+    } catch (const std::runtime_error &e) {
+        EXPECT_EQ(string("Filesystem uses aes-256-gcm cipher and not aes-256-cfb as specified."), e.what());
+    }
+}
+
+TEST_F(CryConfigLoaderTest, DoesLoadIfSameCipher) {
+    Create("mypassword", string("aes-256-gcm"));
+    Load("mypassword", string("aes-256-gcm"));
 }
 
 TEST_F(CryConfigLoaderTest, RootBlob_Load) {

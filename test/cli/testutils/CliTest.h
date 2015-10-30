@@ -6,6 +6,7 @@
 #include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include "../../../src/Cli.h"
+#include <messmer/cpp-utils/logging/logging.h>
 
 class CliTest : public ::testing::Test {
 public:
@@ -40,14 +41,25 @@ public:
         );
     }
 
-    void EXPECT_RUN_SUCCESS(std::vector<const char*> args) {
-        //TODO
-        /*EXPECT_EXIT(
+    class _UnmountFilesystemInDestructor final {
+    public:
+        _UnmountFilesystemInDestructor(const boost::filesystem::path &baseDir) :_baseDir(baseDir) {}
+        ~_UnmountFilesystemInDestructor() {
+            if (0 != system((std::string("fusermount -u ")+_baseDir.c_str()).c_str()), "Could not unmount cryfs") {
+                cpputils::logging::LOG(cpputils::logging::ERROR) << "Could not unmount cryfs";
+            }
+        }
+    private:
+        boost::filesystem::path _baseDir;
+    };
+
+    void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &baseDir) {
+        /*_UnmountFilesystemInDestructor raii(baseDir);
+        EXPECT_EXIT(
             run(args),
             ::testing::ExitedWithCode(0),
             "Filesystem is running"
         );*/
-        //TODO Then stop running cryfs process again
     }
 };
 

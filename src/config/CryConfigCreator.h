@@ -13,9 +13,10 @@ namespace cryfs {
         CryConfigCreator(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator);
         CryConfigCreator(CryConfigCreator &&rhs) = default;
 
-        CryConfig create();
+        CryConfig create(const boost::optional<std::string> &cipher);
     private:
-        std::string _generateCipher();
+        std::string _generateCipher(const boost::optional<std::string> &cipher);
+        std::string _askCipher();
         std::string _generateEncKey(const std::string &cipher);
         std::string _generateRootBlobKey();
         bool _showWarningForCipherAndReturnIfOk(const std::string &cipherName);

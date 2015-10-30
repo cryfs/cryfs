@@ -13,6 +13,7 @@ using cpputils::Random;
 using fspp::Device;
 using ::testing::Return;
 using ::testing::_;
+using boost::none;
 
 using blockstore::testfake::FakeBlockStore;
 
@@ -26,7 +27,7 @@ public:
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
-    auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";})
+    auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none)
             .loadOrCreate(configFile.path()).value();
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }

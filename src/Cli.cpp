@@ -102,7 +102,7 @@ namespace cryfs {
             auto console = make_unique_ref<IOStreamConsole>();
             auto &keyGenerator = Random::OSRandom();
             std::cout << "Loading config file..." << std::endl;
-            auto config = CryConfigLoader(std::move(console), keyGenerator, &Cli::_askPassword).loadOrCreate(configFile);
+            auto config = CryConfigLoader(std::move(console), keyGenerator, &Cli::_askPassword, options.cipher()).loadOrCreate(configFile);
             std::cout << "Loading config file...done" << std::endl;
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
@@ -218,7 +218,7 @@ namespace cryfs {
         cpputils::showBacktraceOnSigSegv();
         _showVersion();
 
-        ProgramOptions options = program_options::Parser(argc, argv).parse();
+        ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
 
         try {
             _sanityChecks(options);
