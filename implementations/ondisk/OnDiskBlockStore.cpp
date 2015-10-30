@@ -17,6 +17,9 @@ OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
   if (!bf::exists(rootdir)) {
     throw std::runtime_error("Base directory not found");
   }
+  if (!bf::is_directory(rootdir)) {
+      throw std::runtime_error("Base directory is not a directory");
+  }
   //TODO Test for read access, write access, enter (x) access, and throw runtime_error in case
 }
 
