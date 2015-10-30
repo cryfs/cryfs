@@ -6,6 +6,7 @@
 #include "Filesystem.h"
 #include <iostream>
 #include <messmer/cpp-utils/assert/assert.h>
+#include <messmer/cpp-utils/logging/logging.h>
 
 using std::vector;
 using std::string;
@@ -649,12 +650,12 @@ void Fuse::init(fuse_conn_info *conn) {
   cpputils::logging::setLevel(DEBUG);
 #endif
 
-  //LOG(DEBUG) << "init()";
+  LOG(INFO) << "Filesystem started.";
 }
 
 void Fuse::destroy() {
   _running = false;
-  //LOG(DEBUG) << "destroy()";
+  LOG(INFO) << "Filesystem stopped.";
 }
 
 int Fuse::access(const bf::path &path, int mask) {
