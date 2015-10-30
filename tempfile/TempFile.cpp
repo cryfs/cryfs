@@ -1,9 +1,10 @@
 #include "TempFile.h"
-
+#include "../logging/logging.h"
 #include <fstream>
 
 namespace bf = boost::filesystem;
 using std::ofstream;
+using namespace cpputils::logging;
 
 namespace cpputils {
 
@@ -22,8 +23,12 @@ TempFile::TempFile(bool create)
 }
 
 TempFile::~TempFile() {
-  if (exists()) {
-    bf::remove(_path);
+  try {
+    if (exists()) {
+      bf::remove(_path);
+    }
+  } catch (const boost::filesystem::filesystem_error &e) {
+    LOG(ERROR) << "Could not delete tempfile.";
   }
 }
 

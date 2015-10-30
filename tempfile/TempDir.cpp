@@ -1,11 +1,13 @@
 #include "TempDir.h"
+#include "../logging/logging.h"
 
 namespace bf = boost::filesystem;
+using namespace cpputils::logging;
 
 namespace cpputils {
 
 TempDir::TempDir()
-  : _path(bf::unique_path(bf::temp_directory_path() / "%%%%-%%%%-%%%%-%%%%")), _existing(true) {
+  : _path(bf::unique_path(bf::temp_directory_path() / "%%%%-%%%%-%%%%-%%%%")) {
   bf::create_directory(_path);
 }
 
@@ -14,9 +16,12 @@ TempDir::~TempDir() {
 }
 
 void TempDir::remove() {
-  if (_existing) {
-    bf::remove_all(_path);
-    _existing = false;
+  try {
+    if (bf::exists(_path)) {
+      bf::remove_all(_path);
+    }
+  } catch (const boost::filesystem::filesystem_error &e) {
+    LOG(ERROR) << "Could not delete tempfile.";
   }
 }
 

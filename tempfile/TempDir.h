@@ -16,7 +16,6 @@ public:
 
 private:
   const boost::filesystem::path _path;
-  bool _existing;
 
   DISALLOW_COPY_AND_ASSIGN(TempDir);
 };
