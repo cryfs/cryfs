@@ -57,7 +57,6 @@ public:
 
 private:
   Filesystem *_fs;
-  void _addRunInForegroundOption(std::vector<char*> *argv);
   bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);

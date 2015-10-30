@@ -217,21 +217,7 @@ Fuse::Fuse(Filesystem *fs)
 
 void Fuse::run(int argc, char **argv) {
   vector<char*> _argv(argv, argv + argc);
-  //If we allow fuse to fork the process, it wouldn't fork our threads with it (fork() only forks the main thread).
-  //So we always run it in foreground, and can do our own daemonization before calling this.
-  _addRunInForegroundOption(&_argv);
   fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
-}
-
-void Fuse::_addRunInForegroundOption(vector<char*> *argv) {
-  //TODO Is this without the const_cast hack possible? Can I pass (const char*) to fuse_main?
-  static char *foregroundOption = const_cast<char*>("-f");
-  bool hasRunInForegroundOption = std::find_if(argv->begin(), argv->end(),
-                                            [] (char *elem) {return string(elem) == string(foregroundOption);}
-                                  ) != argv->end();
-  if (!hasRunInForegroundOption) {
-    argv->push_back(foregroundOption);
-  }
 }
 
 bool Fuse::running() const {
