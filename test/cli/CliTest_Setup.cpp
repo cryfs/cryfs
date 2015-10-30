@@ -6,24 +6,24 @@ using cpputils::TempFile;
 using CliTest_Setup = CliTest;
 
 TEST_F(CliTest_Setup, NoSpecialOptions) {
-    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--cipher", "aes-256-gcm"}, basedir);
+    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--cipher", "aes-256-gcm"}, mountdir);
 }
 
 TEST_F(CliTest_Setup, NotexistingLogfileGiven) {
     TempFile notexisting_logfile(false);
-    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--logfile", notexisting_logfile.path().c_str()}, basedir);
+    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--logfile", notexisting_logfile.path().c_str()}, mountdir);
     //TODO Expect logfile is used (check logfile content)
 }
 
 TEST_F(CliTest_Setup, ExistingLogfileGiven) {
-    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--logfile", logfile.path().c_str()}, basedir);
+    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--logfile", logfile.path().c_str()}, mountdir);
     //TODO Expect logfile is used (check logfile content)
 }
 
 TEST_F(CliTest_Setup, ConfigfileGiven) {
-    EXPECT_RUN_SUCCESS({basedir.c_str(), "--config", configfile.path().c_str(), mountdir.c_str()}, basedir);
+    EXPECT_RUN_SUCCESS({basedir.c_str(), "--config", configfile.path().c_str(), mountdir.c_str()}, mountdir);
 }
 
 TEST_F(CliTest_Setup, FuseOptionGiven) {
-    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--", "-f"}, basedir);
+    EXPECT_RUN_SUCCESS({basedir.c_str(), mountdir.c_str(), "--", "-f"}, mountdir);
 }

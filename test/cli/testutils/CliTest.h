@@ -41,26 +41,19 @@ public:
         );
     }
 
-    class _UnmountFilesystemInDestructor final {
-    public:
-        _UnmountFilesystemInDestructor(const boost::filesystem::path &baseDir) :_baseDir(baseDir) {}
-        ~_UnmountFilesystemInDestructor() {
-            if (0 != system((std::string("fusermount -u ")+_baseDir.c_str()).c_str())) {
-                cpputils::logging::LOG(cpputils::logging::ERROR) << "Could not unmount cryfs";
-            }
-        }
-    private:
-        boost::filesystem::path _baseDir;
-    };
-
-    void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &baseDir) {
+    void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
         //TODO
-        /*_UnmountFilesystemInDestructor raii(baseDir);
-        EXPECT_EXIT(
+        /*EXPECT_EXIT(
             run(args),
             ::testing::ExitedWithCode(0),
-            "Filesystem is running"
-        );*/
+            "Mounting filesystem"
+        );
+
+        //Cleanup: Unmount filesystem
+        auto returncode = system((std::string("fusermount -u ")+mountDir.c_str()).c_str());
+        if (0 != returncode) {
+            cpputils::logging::LOG(cpputils::logging::ERROR) << "Could not unmount cryfs";
+        }*/
     }
 };
 
