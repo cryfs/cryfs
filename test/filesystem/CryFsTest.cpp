@@ -9,6 +9,7 @@
 #include "../../src/filesystem/CryOpenFile.h"
 #include "../testutils/MockConsole.h"
 #include "../../src/config/CryConfigLoader.h"
+#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -34,7 +35,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none).loadOrCreate(config.path()).value();
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none).loadOrCreate<SCryptTestSettings>(config.path()).value();
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {
