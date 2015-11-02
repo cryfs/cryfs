@@ -3,6 +3,7 @@
 #define MESSMER_CRYFS_TEST_CLI_TESTUTILS_CLITEST_H
 
 #include <google/gtest/gtest.h>
+#include <google/gmock/gmock.h>
 #include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include "../../../src/Cli.h"
@@ -42,18 +43,19 @@ public:
     }
 
     void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
-        //TODO
-        /*EXPECT_EXIT(
-            run(args),
-            ::testing::ExitedWithCode(0),
-            "Mounting filesystem"
-        );
-
-        //Cleanup: Unmount filesystem
-        auto returncode = system((std::string("fusermount -u ")+mountDir.c_str()).c_str());
-        if (0 != returncode) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Could not unmount cryfs";
-        }*/
+        std::thread unmountThread([&mountDir] {
+            int returncode = -1;
+            while (returncode != 0) {
+                returncode = system((std::string("fusermount -u ") + mountDir.c_str()).c_str());
+                std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
+            }
+        });
+        //testing::internal::CaptureStdout();
+        //TODO Don't force foreground, but find a way to run it also in background.
+        args.push_back("-f");
+        run(args);
+        unmountThread.join();
+        //EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
     }
 };
 

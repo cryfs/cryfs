@@ -59,6 +59,9 @@ public:
         if (GetParam().runningInForeground) {
             result.push_back("-f");
         }
+        // Test case should be non-interactive, so don't ask for cipher.
+        result.push_back("--cipher");
+        result.push_back("aes-256-gcm");
         return result;
     }
 };
@@ -74,7 +77,6 @@ INSTANTIATE_TEST_CASE_P(RunningInForeground_ExternalConfigfile_LogIsNotStderr, C
 
 //Counter-Test. Test that it doesn't fail if we call it without an error condition.
 TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
-    if (GetParam().runningInForeground) {return;} // Don't run this test in foreground, because it would block
     Test_Run_Success();
 }
 
@@ -124,7 +126,6 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
 TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
     //Counter-Test. Test it doesn't fail if permissions are there.
     SetAllPermissions(basedir);
-    if (GetParam().runningInForeground) {return;} // Don't run this test in foreground, because it would block
     Test_Run_Success();
 }
 
@@ -161,7 +162,6 @@ TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
     //Counter-Test. Test it doesn't fail if permissions are there.
-    if (GetParam().runningInForeground) {return;} // Don't run this test in foreground, because it would block
     SetAllPermissions(mountdir);
     Test_Run_Success();
 }
