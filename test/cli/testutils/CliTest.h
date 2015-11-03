@@ -8,6 +8,7 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include "../../../src/Cli.h"
 #include <messmer/cpp-utils/logging/logging.h>
+#include <messmer/cpp-utils/process/subprocess.h>
 
 class CliTest : public ::testing::Test {
 public:
@@ -49,7 +50,7 @@ public:
         std::thread unmountThread([&mountDir] {
             int returncode = -1;
             while (returncode != 0) {
-                returncode = system((std::string("fusermount -u ") + mountDir.c_str()).c_str());  //TODO Don't show the error messages from fusermount
+                returncode = cpputils::Subprocess::callAndGetReturnCode(std::string("fusermount -u ") + mountDir.c_str() + " 2>/dev/null");
                 std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
             }
         });
