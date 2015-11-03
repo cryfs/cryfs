@@ -44,7 +44,7 @@ namespace cpputils {
                 exit(EXIT_FAILURE);
             }
 
-            // Close out the standard file descriptors. The daemon can't use them anyhow.
+            // Close out the standard file descriptors. The process can't use them anyhow.
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
             close(STDERR_FILENO);
