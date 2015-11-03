@@ -9,6 +9,9 @@ namespace cpputils {
     class Subprocess {
     public:
         static std::string call(const std::string &command);
+        static int callAndGetReturnCode(const std::string &command);
+    private:
+        static FILE* _call(const std::string &command);
     };
 }
 

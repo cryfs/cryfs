@@ -5,13 +5,10 @@
 using std::string;
 
 namespace cpputils {
+    //TODO Exception safety
+
     string Subprocess::call(const string &command) {
-        //TODO Exception safety
-        FILE *subprocessOutput = popen(command.c_str(), "r");
-        if (!subprocessOutput)
-        {
-            throw std::runtime_error("Error starting subprocess "+command);
-        }
+        FILE *subprocessOutput = _call(command);
 
         string result;
         char buffer[1024];
@@ -25,5 +22,21 @@ namespace cpputils {
         }
 
         return result;
+    }
+
+    int Subprocess::callAndGetReturnCode(const string &command) {
+        FILE *subprocess = _call(command);
+
+        auto returncode = pclose(subprocess);
+        return WEXITSTATUS(returncode);
+    }
+
+    FILE *Subprocess::_call(const string &command) {
+        FILE *subprocess = popen(command.c_str(), "r");
+        if (!subprocess)
+        {
+            throw std::runtime_error("Error starting subprocess "+command);
+        }
+        return subprocess;
     }
 }
