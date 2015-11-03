@@ -67,6 +67,7 @@ po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options, c
     try {
         return _parseOptions(options, supportedCiphers);
     } catch(const std::exception &e) {
+        std::cerr << e.what() << std::endl;
         _showHelpAndExit();
     }
 }
