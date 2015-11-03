@@ -27,7 +27,8 @@ public:
         for (const char *arg : args) {
             _args.push_back(const_cast<char*>(arg));
         }
-        cryfs::Cli().main(_args.size(), _args.data());
+        auto &keyGenerator = cpputils::Random::PseudoRandom();
+        cryfs::Cli(keyGenerator).main(_args.size(), _args.data());
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args) {
@@ -46,7 +47,7 @@ public:
         std::thread unmountThread([&mountDir] {
             int returncode = -1;
             while (returncode != 0) {
-                returncode = system((std::string("fusermount -u ") + mountDir.c_str()).c_str());
+                returncode = system((std::string("fusermount -u ") + mountDir.c_str()).c_str());  //TODO Don't show the error messages from fusermount
                 std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
             }
         });

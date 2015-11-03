@@ -13,7 +13,7 @@ namespace cryfs {
         public:
             ProgramOptions(const std::string &baseDir, const std::string &mountDir, const boost::optional<std::string> &configFile,
                            bool foreground, const boost::optional<std::string> &logFile, const boost::optional<std::string> &cipher,
-                           const std::vector<char *> &fuseOptions);
+                           const boost::optional<std::string> &extPass, const std::vector<char *> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs);
             ~ProgramOptions();
 
@@ -23,6 +23,7 @@ namespace cryfs {
             bool foreground() const;
             const boost::optional<std::string> &logFile() const;
             const boost::optional<std::string> &cipher() const;
+            const boost::optional<std::string> &extPass() const;
             const std::vector<char *> &fuseOptions() const;
 
         private:
@@ -32,6 +33,7 @@ namespace cryfs {
             bool _foreground;
             boost::optional<std::string> _logFile;
             boost::optional<std::string> _cipher;
+            boost::optional<std::string> _extPass;
             std::vector<char *> _fuseOptions;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);

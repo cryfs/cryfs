@@ -10,6 +10,7 @@
 
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
+#include <messmer/cpp-utils/process/subprocess.h>
 #include "filesystem/CryDevice.h"
 #include "config/CryConfigLoader.h"
 #include "program_options/Parser.h"
@@ -55,6 +56,8 @@ using boost::none;
 
 namespace cryfs {
 
+    Cli::Cli(cpputils::RandomGenerator &keyGenerator): _keyGenerator(keyGenerator) {}
+
     void Cli::_showVersion() {
         cout << "CryFS Version " << version::VERSION_STRING << endl;
         if (version::IS_DEV_VERSION) {
@@ -80,6 +83,24 @@ namespace cryfs {
         return true;
     }
 
+    string Cli::_getPassword(const ProgramOptions &options) {
+        string password;
+        if (options.extPass() == none) {
+            password = _askPassword();
+        } else {
+            password = cpputils::Subprocess::call(*options.extPass());
+        }
+        //Remove trailing newline
+        if (password[password.size()-1] == '\n') {
+            password.resize(password.size()-1);
+        }
+        //Check that password is valid
+        if (!_checkPassword(password)) {
+            throw std::runtime_error("Password invalid.");
+        }
+        return password;
+    }
+
     string Cli::_askPassword() {
         string password = getpass("Password: ");
         while (!_checkPassword(password)) {
@@ -100,9 +121,8 @@ namespace cryfs {
         try {
             auto configFile = _determineConfigFile(options);
             auto console = make_unique_ref<IOStreamConsole>();
-            auto &keyGenerator = Random::OSRandom();
             std::cout << "Loading config file..." << std::endl;
-            auto config = CryConfigLoader(std::move(console), keyGenerator, &Cli::_askPassword, options.cipher()).loadOrCreate(configFile);
+            auto config = CryConfigLoader(std::move(console), _keyGenerator, std::bind(&Cli::_getPassword, this, std::cref(options)), options.cipher()).loadOrCreate(configFile);
             std::cout << "Loading config file...done" << std::endl;
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;

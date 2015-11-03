@@ -9,9 +9,9 @@ using boost::optional;
 
 ProgramOptions::ProgramOptions(const string &baseDir, const string &mountDir, const optional<string> &configFile,
                                bool foreground, const optional<string> &logFile, const optional<string> &cipher,
-                               const vector<char*> &fuseOptions)
+                               const optional<string> &extPass, const vector<char*> &fuseOptions)
     :_baseDir(baseDir), _mountDir(new char[mountDir.size()+1]), _configFile(configFile), _foreground(foreground),
-     _logFile(logFile), _cipher(cipher), _fuseOptions(fuseOptions) {
+     _logFile(logFile), _cipher(cipher), _extPass(extPass), _fuseOptions(fuseOptions) {
     std::memcpy(_mountDir, mountDir.c_str(), mountDir.size()+1);
     // Fuse needs the mountDir passed as first option (first option = position 1, since 0 is the executable name)
     ASSERT(_fuseOptions.size() >= 1, "There has to be one parameter at least for the executable name");
@@ -20,8 +20,8 @@ ProgramOptions::ProgramOptions(const string &baseDir, const string &mountDir, co
 
 ProgramOptions::ProgramOptions(ProgramOptions &&rhs)
     :_baseDir(std::move(rhs._baseDir)), _mountDir(std::move(rhs._mountDir)), _configFile(std::move(rhs._configFile)),
-     _foreground(std::move(rhs._foreground)), _logFile(std::move(rhs._logFile)),
-     _fuseOptions(std::move(rhs._fuseOptions)) {
+     _foreground(std::move(rhs._foreground)), _logFile(std::move(rhs._logFile)), _cipher(std::move(rhs._cipher)),
+     _extPass(std::move(rhs._extPass)), _fuseOptions(std::move(rhs._fuseOptions)) {
     rhs._mountDir = nullptr;
 }
 
@@ -53,6 +53,10 @@ const optional<string> &ProgramOptions::logFile() const {
 
 const optional<string> &ProgramOptions::cipher() const {
     return _cipher;
+}
+
+const optional<string> &ProgramOptions::extPass() const {
+    return _extPass;
 }
 
 const vector<char *> &ProgramOptions::fuseOptions() const {

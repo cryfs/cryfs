@@ -83,6 +83,11 @@ TEST_F(ProgramOptionsParserTest, InvalidCipher) {
     );
 }
 
+TEST_F(ProgramOptionsParserTest, ExtPassGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--extpass", "echo mypassword", "/home/user/mountDir"});
+    EXPECT_EQ("echo mypassword", options.extPass().value());
+}
+
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "--", "-f"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
