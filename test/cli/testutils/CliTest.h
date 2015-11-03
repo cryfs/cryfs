@@ -44,6 +44,8 @@ public:
     }
 
     void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
+        //TODO Make this work when run in background
+        ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
         std::thread unmountThread([&mountDir] {
             int returncode = -1;
             while (returncode != 0) {
@@ -52,8 +54,6 @@ public:
             }
         });
         //testing::internal::CaptureStdout();
-        //TODO Don't force foreground, but find a way to run it also in background.
-        args.push_back("-f");
         run(args);
         unmountThread.join();
         //EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
