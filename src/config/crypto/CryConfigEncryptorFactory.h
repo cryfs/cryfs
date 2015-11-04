@@ -11,8 +11,8 @@ namespace cryfs {
     //TODO Test
     class CryConfigEncryptorFactory {
     public:
-        template<class Cipher, class SCryptConfig>
-        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password);
+        template<class Cipher>
+        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password, const cpputils::SCryptSettings &scryptSettings);
 
         static boost::optional <cpputils::unique_ref<CryConfigEncryptor>> loadKey(const cpputils::Data &ciphertext,
                                                                                   const std::string &password);
@@ -30,9 +30,9 @@ namespace cryfs {
         return OuterKeySize + Cipher::EncryptionKey::BINARY_LENGTH;
     }
 
-    template<class Cipher, class SCryptConfig>
-    cpputils::unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const std::string &password) {
-        auto derivedKey = cpputils::SCrypt().generateKey<TotalKeySize<Cipher>(), SCryptConfig>(password);
+    template<class Cipher>
+    cpputils::unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const std::string &password, const cpputils::SCryptSettings &scryptSettings) {
+        auto derivedKey = cpputils::SCrypt().generateKey<TotalKeySize<Cipher>()>(password, scryptSettings);
         auto outerKey = derivedKey.key().template take<OuterKeySize>();
         auto innerKey = derivedKey.key().template drop<OuterKeySize>();
         return cpputils::make_unique_ref<CryConfigEncryptor>(

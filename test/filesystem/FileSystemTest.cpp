@@ -5,12 +5,11 @@
 #include "../../src/filesystem/CryDevice.h"
 #include "../../src/config/CryConfigLoader.h"
 #include "../testutils/MockConsole.h"
-#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::Random;
-
+using cpputils::SCrypt;
 using fspp::Device;
 using ::testing::Return;
 using ::testing::_;
@@ -28,8 +27,8 @@ public:
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
-    auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none)
-            .loadOrCreate<SCryptTestSettings>(configFile.path()).value();
+    auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, [] {return "mypassword";}, none)
+            .loadOrCreate(configFile.path()).value();
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }
 

@@ -4,11 +4,11 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
-#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
+using cpputils::SCrypt;
 using boost::optional;
 using boost::none;
 using std::string;
@@ -24,33 +24,33 @@ public:
     CryConfigLoaderTest(): file(false) {}
 
     CryConfigLoader loader(const string &password, const optional<string> &cipher = none) {
-        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), [password] {return password;}, cipher);
+        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, [password] {return password;}, cipher);
     }
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none) {
         EXPECT_FALSE(file.exists());
-        return loader(password, cipher).loadOrCreate<SCryptTestSettings>(file.path()).value();
+        return loader(password, cipher).loadOrCreate(file.path()).value();
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none) {
         EXPECT_TRUE(file.exists());
-        return loader(password, cipher).loadOrCreate<SCryptTestSettings>(file.path());
+        return loader(password, cipher).loadOrCreate(file.path());
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate<SCryptTestSettings>(file.path()).value();
+        auto cfg = loader(password).loadOrCreate(file.path()).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }

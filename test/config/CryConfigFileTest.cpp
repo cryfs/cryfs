@@ -3,13 +3,13 @@
 #include "../../src/config/CryConfigFile.h"
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <boost/optional/optional_io.hpp>
-#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 using namespace cryfs;
 using cpputils::TempFile;
 using std::string;
 using boost::optional;
 using boost::none;
+using cpputils::SCrypt;
 namespace bf = boost::filesystem;
 
 //gtest/boost::optional workaround for working with optional<CryConfigFile>
@@ -33,7 +33,7 @@ public:
     }
 
     void Create(CryConfig cfg, const string &password = "mypassword") {
-        CryConfigFile::create<SCryptTestSettings>(file.path(), std::move(cfg), password);
+        CryConfigFile::create(file.path(), std::move(cfg), password, SCrypt::TestSettings);
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword") {
@@ -43,7 +43,7 @@ public:
     void CreateWithCipher(const string &cipher, const TempFile &tempFile) {
         CryConfig cfg;
         cfg.SetCipher(cipher);
-        CryConfigFile::create<SCryptTestSettings>(tempFile.path(), std::move(cfg), "mypassword");
+        CryConfigFile::create(tempFile.path(), std::move(cfg), "mypassword", SCrypt::TestSettings);
     }
 };
 

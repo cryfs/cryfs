@@ -29,7 +29,7 @@ public:
             _args.push_back(const_cast<char*>(arg));
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
-        cryfs::Cli(keyGenerator).main(_args.size(), _args.data());
+        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings).main(_args.size(), _args.data());
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args) {
@@ -54,10 +54,10 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
             }
         });
-        //testing::internal::CaptureStdout();
+        testing::internal::CaptureStdout();
         run(args);
         unmountThread.join();
-        //EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
+        EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
     }
 };
 

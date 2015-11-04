@@ -39,6 +39,9 @@ using cpputils::make_unique_ref;
 using cpputils::Random;
 using cpputils::IOStreamConsole;
 using cpputils::TempFile;
+using cpputils::RandomGenerator;
+using cpputils::unique_ref;
+using cpputils::SCryptSettings;
 using std::cout;
 using std::string;
 using std::endl;
@@ -52,11 +55,12 @@ using boost::none;
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Improve error message when root blob wasn't found.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
-//TODO Fuse error messages like "fuse: bad mount point `...': Transport endpoint is not connected" go missing when running in background
+//TODO Test cases fail indeterministically. Fix!
 
 namespace cryfs {
 
-    Cli::Cli(cpputils::RandomGenerator &keyGenerator): _keyGenerator(keyGenerator) {}
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings) {}
 
     void Cli::_showVersion() {
         cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -122,7 +126,7 @@ namespace cryfs {
             auto configFile = _determineConfigFile(options);
             auto console = make_unique_ref<IOStreamConsole>();
             std::cout << "Loading config file..." << std::endl;
-            auto config = CryConfigLoader(std::move(console), _keyGenerator, std::bind(&Cli::_getPassword, this, std::cref(options)), options.cipher()).loadOrCreate(configFile);
+            auto config = CryConfigLoader(std::move(console), _keyGenerator, _scryptSettings, std::bind(&Cli::_getPassword, this, std::cref(options)), options.cipher()).loadOrCreate(configFile);
             std::cout << "Loading config file...done" << std::endl;
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;

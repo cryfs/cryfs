@@ -9,7 +9,6 @@
 #include "../../src/filesystem/CryOpenFile.h"
 #include "../testutils/MockConsole.h"
 #include "../../src/config/CryConfigLoader.h"
-#include <messmer/cpp-utils/test/crypto/kdf/testutils/SCryptTestSettings.h>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -23,6 +22,7 @@ using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using cpputils::Console;
 using cpputils::Random;
+using cpputils::SCrypt;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
 
@@ -35,7 +35,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), [] {return "mypassword";}, none).loadOrCreate<SCryptTestSettings>(config.path()).value();
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, [] {return "mypassword";}, none).loadOrCreate(config.path()).value();
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

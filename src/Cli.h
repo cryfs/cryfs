@@ -11,7 +11,7 @@
 namespace cryfs {
     class Cli final {
     public:
-        Cli(cpputils::RandomGenerator &keyGenerator);
+        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings);
         int main(int argc, char *argv[]);
 
     private:
@@ -31,6 +31,7 @@ namespace cryfs {
         void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name);
 
         cpputils::RandomGenerator &_keyGenerator;
+        cpputils::SCryptSettings _scryptSettings;
     };
 }
 

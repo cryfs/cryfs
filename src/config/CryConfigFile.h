@@ -14,8 +14,7 @@ namespace cryfs {
         CryConfigFile(CryConfigFile &&rhs) = default;
         ~CryConfigFile();
 
-        template<class SCryptConfig>
-        static CryConfigFile create(const boost::filesystem::path &path, CryConfig config, const std::string &password);
+        static CryConfigFile create(const boost::filesystem::path &path, CryConfig config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
         static boost::optional<CryConfigFile> load(const boost::filesystem::path &path, const std::string &password);
         void save() const;
 
@@ -30,17 +29,6 @@ namespace cryfs {
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigFile);
     };
-
-    template<class SCryptSettings>
-    CryConfigFile CryConfigFile::create(const boost::filesystem::path &path, CryConfig config, const std::string &password) {
-        using ConfigCipher = cpputils::AES256_GCM; // TODO Take cipher from config instead
-        if (boost::filesystem::exists(path)) {
-            throw std::runtime_error("Config file exists already.");
-        }
-        auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher, SCryptSettings>(password));
-        result.save();
-        return result;
-    }
 }
 
 #endif

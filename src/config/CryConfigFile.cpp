@@ -15,6 +15,7 @@ using std::stringstream;
 using std::istream;
 using cpputils::Data;
 using cpputils::unique_ref;
+using cpputils::SCryptSettings;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 
@@ -40,6 +41,16 @@ optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &
     }
     CryConfig config = CryConfig::load(*decrypted);
     return CryConfigFile(path, std::move(config), std::move(*encryptor));
+}
+
+CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
+    using ConfigCipher = cpputils::AES256_GCM; // TODO Take cipher from config instead
+    if (bf::exists(path)) {
+        throw std::runtime_error("Config file exists already.");
+    }
+    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher>(password, scryptSettings));
+    result.save();
+    return result;
 }
 
 CryConfigFile::CryConfigFile(const bf::path &path, CryConfig config, unique_ref<CryConfigEncryptor> encryptor)
