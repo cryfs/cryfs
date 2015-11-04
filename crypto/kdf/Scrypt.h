@@ -12,32 +12,31 @@ extern "C" {
 
 namespace cpputils {
 
-    struct SCryptParanoidSettings {
-        constexpr static size_t SALT_LEN = 32; // Size of the salt
-        constexpr static uint64_t N = 1048576; // CPU/Memory cost
-        constexpr static uint32_t r = 8; // Blocksize
-        constexpr static uint32_t p = 16; // Parallelization
+    struct SCryptSettings {
+        size_t SALT_LEN;
+        uint64_t N;
+        uint32_t r;
+        uint32_t p;
     };
 
-    struct SCryptDefaultSettings {
-        constexpr static size_t SALT_LEN = 32; // Size of the salt
-        constexpr static uint64_t N = 524288; // CPU/Memory cost
-        constexpr static uint32_t r = 1; // Blocksize
-        constexpr static uint32_t p = 1; // Parallelization
-    };
-
-    class SCrypt {
+    class SCrypt final {
     public:
+        static constexpr SCryptSettings ParanoidSettings = SCryptSettings {32, 1048576, 8, 16};
+        static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 524288, 1, 1};
+        static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 1};
+
         SCrypt() {}
 
-        template<size_t KEYSIZE, class Settings = SCryptDefaultSettings> DerivedKey<KEYSIZE> generateKey(const std::string &password) {
-            auto salt = Random::PseudoRandom().get(Settings::SALT_LEN);
-            auto config = DerivedKeyConfig(std::move(salt), Settings::N, Settings::r, Settings::p);
+        template<size_t KEYSIZE>
+        DerivedKey<KEYSIZE> generateKey(const std::string &password, const SCryptSettings &settings) {
+            auto salt = Random::PseudoRandom().get(settings.SALT_LEN);
+            auto config = DerivedKeyConfig(std::move(salt), settings.N, settings.r, settings.p);
             auto key = generateKeyFromConfig<KEYSIZE>(password, config);
             return DerivedKey<KEYSIZE>(std::move(config), key);
         }
 
-        template<size_t KEYSIZE> FixedSizeData<KEYSIZE> generateKeyFromConfig(const std::string &password, const DerivedKeyConfig &config) {
+        template<size_t KEYSIZE>
+        FixedSizeData<KEYSIZE> generateKeyFromConfig(const std::string &password, const DerivedKeyConfig &config) {
             auto key = FixedSizeData<KEYSIZE>::Null();
             int errorcode = crypto_scrypt(reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
                           reinterpret_cast<const uint8_t*>(config.salt().data()), config.salt().size(),
