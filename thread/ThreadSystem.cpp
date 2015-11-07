@@ -11,21 +11,23 @@ namespace cpputils {
         return system;
     }
 
-    ThreadSystem::ThreadSystem(): _runningThreads() {
+    ThreadSystem::ThreadSystem(): _runningThreads(), _mutex() {
         //Stopping the thread before fork() (and then also restarting it in the parent thread after fork()) is important,
         //because as a running thread it might hold locks or condition variables that won't play well when forked.
         pthread_atfork(&ThreadSystem::_onBeforeFork, &ThreadSystem::_onAfterFork, &ThreadSystem::_onAfterFork);
     }
 
     ThreadSystem::Handle ThreadSystem::start(function<void()> loopIteration) {
+        boost::unique_lock<boost::mutex> lock(_mutex);
         auto thread = _startThread(loopIteration);
         _runningThreads.push_back(RunningThread{loopIteration, std::move(thread)});
         return std::prev(_runningThreads.end());
     }
 
     void ThreadSystem::stop(Handle handle) {
+        boost::unique_lock<boost::mutex> lock(_mutex);
         handle->thread.interrupt();
-        handle->thread.join();
+        handle->thread.join(); //TODO Can I release the lock before calling join()? Maybe I have to move the erase() line to earlier (inside the lock).
         _runningThreads.erase(handle);
     }
 
@@ -38,6 +40,7 @@ namespace cpputils {
     }
 
     void ThreadSystem::_stopAllThreadsForRestart() {
+        _mutex.lock(); // Is unlocked in the after-fork handler. This way, the whole fork() is protected.
         for (RunningThread &thread : _runningThreads) {
             thread.thread.interrupt();
         }
@@ -50,6 +53,7 @@ namespace cpputils {
         for (RunningThread &thread : _runningThreads) {
             thread.thread = _startThread(thread.loopIteration);
         }
+        _mutex.unlock(); // Was locked in the before-fork handler
     }
 
     boost::thread ThreadSystem::_startThread(function<void()> loopIteration) {

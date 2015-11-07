@@ -12,7 +12,7 @@ namespace cpputils {
 
         string result;
         char buffer[1024];
-        while(fgets(buffer, sizeof(buffer), subprocessOutput) != NULL) {
+        while(fgets(buffer, sizeof(buffer), subprocessOutput) != nullptr) {
             result += buffer;
         }
 

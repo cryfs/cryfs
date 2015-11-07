@@ -31,11 +31,13 @@ namespace cpputils {
 
         static void _onBeforeFork();
         static void _onAfterFork();
+        //TODO Rename to _doOnBeforeFork and _doAfterFork or similar, because they also handle locking _mutex for fork().
         void _stopAllThreadsForRestart();
         void _restartAllThreads();
         boost::thread _startThread(std::function<void()> loopIteration);
 
         std::list<RunningThread> _runningThreads;  // std::list, because we give out iterators as handles
+        boost::mutex _mutex;
 
         DISALLOW_COPY_AND_ASSIGN(ThreadSystem);
     };
