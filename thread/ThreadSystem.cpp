@@ -26,9 +26,13 @@ namespace cpputils {
 
     void ThreadSystem::stop(Handle handle) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        handle->thread.interrupt();
-        handle->thread.join(); //TODO Can I release the lock before calling join()? Maybe I have to move the erase() line to earlier (inside the lock).
+        boost::thread thread = std::move(handle->thread);
+        thread.interrupt();
         _runningThreads.erase(handle);
+
+        //It's fine if another thread gets the mutex while we still wait for the join. Joining doesn't change any internal state.
+        lock.unlock();
+        thread.join();
     }
 
     void ThreadSystem::_onBeforeFork() {
