@@ -6,6 +6,7 @@
 #include <condition_variable>
 
 //TODO Test
+//TODO Merge lock folder with thread folder
 
 namespace cpputils {
     // Like a condition variable, but without spurious wakeups.

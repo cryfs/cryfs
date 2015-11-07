@@ -1,12 +1,12 @@
 #pragma once
-#ifndef MESSMER_CPPUTILS_RANDOM_LOOPTHREAD_H
-#define MESSMER_CPPUTILS_RANDOM_LOOPTHREAD_H
+#ifndef MESSMER_CPPUTILS_THREAD_LOOPTHREAD_H
+#define MESSMER_CPPUTILS_THREAD_LOOPTHREAD_H
 
-#include <boost/thread.hpp>
+#include "ThreadSystem.h"
+#include <boost/optional.hpp>
 
 namespace cpputils {
     //TODO Test
-    //TODO Move out of "random" folder into own library folder
     //TODO Test that fork() doesn't destroy anything (e.g. no deadlock on stop() because thread is not running anymore)
 
     // Has to be final, because otherwise there could be a race condition where LoopThreadForkHandler calls a LoopThread
@@ -18,13 +18,9 @@ namespace cpputils {
         void start();
         void stop();
 
-        void asyncStop();
-        void waitUntilStopped();
-
     private:
-        void main();
-        boost::thread _thread;
         std::function<void()> _loopIteration;
+        boost::optional<ThreadSystem::Handle> _runningHandle;
     };
 }
 

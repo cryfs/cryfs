@@ -1,0 +1,44 @@
+#pragma once
+#ifndef MESSMER_CPPUTILS_THREAD_THREADSYSTEM_H
+#define MESSMER_CPPUTILS_THREAD_THREADSYSTEM_H
+
+#include "../macros.h"
+#include <boost/thread.hpp>
+#include <list>
+#include <functional>
+
+namespace cpputils {
+    //TODO Test
+
+    class ThreadSystem final {
+    private:
+        struct RunningThread {
+            std::function<void()> loopIteration;
+            boost::thread thread;  // boost::thread because we need it to be interruptible.
+        };
+    public:
+        using Handle = std::list<RunningThread>::iterator;
+
+        static ThreadSystem &singleton();
+
+        Handle start(std::function<void()> loopIteration);
+        void stop(Handle handle);
+
+    private:
+        ThreadSystem();
+
+        static void _runThread(std::function<void()> loopIteration);
+
+        static void _onBeforeFork();
+        static void _onAfterFork();
+        void _stopAllThreadsForRestart();
+        void _restartAllThreads();
+        boost::thread _startThread(std::function<void()> loopIteration);
+
+        std::list<RunningThread> _runningThreads;  // std::list, because we give out iterators as handles
+
+        DISALLOW_COPY_AND_ASSIGN(ThreadSystem);
+    };
+}
+
+#endif

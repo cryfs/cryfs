@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_RANDOM_RANDOMGENERATORTHREAD_H
 #define MESSMER_CPPUTILS_RANDOM_RANDOMGENERATORTHREAD_H
 
-#include "LoopThread.h"
+#include "../thread/LoopThread.h"
 #include "ThreadsafeRandomDataBuffer.h"
 #include <cryptopp/cryptopp/osrng.h>
 
