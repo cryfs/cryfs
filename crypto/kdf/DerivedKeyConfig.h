@@ -15,7 +15,21 @@ namespace cpputils {
                 : _salt(std::move(salt)),
                   _N(N), _r(r), _p(p) { }
 
+        DerivedKeyConfig(const DerivedKeyConfig &rhs)
+                :_salt(rhs._salt.copy()),
+                 _N(rhs._N), _r(rhs._r), _p(rhs._p) { }
+
         DerivedKeyConfig(DerivedKeyConfig &&rhs) = default;
+
+        DerivedKeyConfig &operator=(const DerivedKeyConfig &rhs) {
+            _salt = rhs._salt.copy();
+            _N = rhs._N;
+            _r = rhs._r;
+            _p = rhs._p;
+            return *this;
+        }
+
+        DerivedKeyConfig &operator=(DerivedKeyConfig &&rhs) = default;
 
         const Data &salt() const {
             return _salt;
@@ -37,7 +51,7 @@ namespace cpputils {
 
         size_t serializedSize() const;
 
-        static DerivedKeyConfig load(Deserializer *source);
+        static DerivedKeyConfig deserialize(Deserializer *source);
 
     private:
         Data _salt;
