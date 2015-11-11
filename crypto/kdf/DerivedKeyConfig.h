@@ -60,6 +60,14 @@ namespace cpputils {
         uint32_t _p;
     };
 
+    inline bool operator==(const DerivedKeyConfig &lhs, const DerivedKeyConfig &rhs) {
+        return lhs.salt() == rhs.salt() && lhs.N() == rhs.N() && lhs.r() == rhs.r() && lhs.p() == rhs.p();
+    }
+
+    inline bool operator!=(const DerivedKeyConfig &lhs, const DerivedKeyConfig &rhs) {
+        return !operator==(lhs, rhs);
+    }
+
 }
 
 #endif
