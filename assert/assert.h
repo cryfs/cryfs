@@ -15,19 +15,19 @@
 
 namespace cpputils {
     namespace _assert {
-        inline std::string format(const char *expr, const char *message, const char *file, int line) {
+        inline std::string format(const char *expr, const std::string &message, const char *file, int line) {
             std::string result = std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message+"\n\n" + backtrace();
             return result;
         }
 
-        inline void assert_fail_release [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
+        inline void assert_fail_release [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             auto msg = format(expr, message, file, line);
             using namespace logging;
             LOG(ERROR) << msg;
             throw AssertFailed(msg);
         }
 
-        inline void assert_fail_debug [[noreturn]] (const char *expr, const char *message, const char *file, int line) {
+        inline void assert_fail_debug [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             using namespace logging;
             LOG(ERROR) << format(expr, message, file, line);
             abort();
