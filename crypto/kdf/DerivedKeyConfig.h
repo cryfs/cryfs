@@ -9,6 +9,9 @@
 
 namespace cpputils {
 
+    //TODO Test Copy/move constructor and assignment
+    //TODO Test operator==/!=
+
     class DerivedKeyConfig {
     public:
         DerivedKeyConfig(Data salt, uint64_t N, uint32_t r, uint32_t p)
