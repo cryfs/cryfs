@@ -4,7 +4,7 @@ Version 0.8.1
   - Inner level: Encrypts the config data using the user specified cipher.
   - Outer level: Encrypts the name of the inner cipher and the inner level ciphertext using aes-256-gcm.
   The config file is padded to hide the size of the configuration data (including the name of the cipher used).
-* Password Encryption: If the configuration file is not specified as command line parameter, it will be put into the base directory. This way, the filesystem can be mounted with the password only, without specifying a config file on command line.
+* No external config file needed: If the configuration file is not specified as command line parameter, it will be put into the base directory. This way, the filesystem can be mounted with the password only, without specifying a config file on command line.
 * Logfiles: Added a --logfile option to specify where logs should be written to. If the option is not specified, CryFs logs to syslog.
 * Running in Background: Fixed daemonization. When CryFs is run without "-f" flag, it will run in background.
 * Better error messages when base directory is not existing, not readable or not writeable.
