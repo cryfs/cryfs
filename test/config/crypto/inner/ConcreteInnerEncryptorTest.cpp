@@ -17,7 +17,7 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    ostream &operator<<(ostream &stream, const Data &) {
+    inline ostream &operator<<(ostream &stream, const Data &) {
         return stream << "cpputils::Data()";
     }
 }
@@ -78,8 +78,10 @@ TEST_F(ConcreteInnerEncryptorTest, DoesntEncryptWhenTooLarge) {
 
 TEST_F(ConcreteInnerEncryptorTest, EncryptionIsFixedSize) {
     auto encryptor = makeInnerEncryptor<AES256_GCM>();
-    InnerConfig encrypted1 = encryptor->encrypt(DataFixture::generate(200));
-    InnerConfig encrypted2 = encryptor->encrypt(Data(0));
+    InnerConfig encrypted1 = encryptor->encrypt(DataFixture::generate(100));
+    InnerConfig encrypted2 = encryptor->encrypt(DataFixture::generate(200));
+    InnerConfig encrypted3 = encryptor->encrypt(Data(0));
 
     EXPECT_EQ(encrypted1.encryptedConfig.size(), encrypted2.encryptedConfig.size());
+    EXPECT_EQ(encrypted1.encryptedConfig.size(), encrypted3.encryptedConfig.size());
 }

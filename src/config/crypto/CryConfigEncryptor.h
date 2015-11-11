@@ -13,7 +13,7 @@
 #include "../CryCipher.h"
 
 namespace cryfs {
-    //TODO Test (whole crypto folder)
+    //TODO Test
     //TODO Test that encrypted config data always has the same size, no matter how big the plaintext config data
     //TODO Test that specified inner cipher is used (e.g. can't be decrypted with other cipher)
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
