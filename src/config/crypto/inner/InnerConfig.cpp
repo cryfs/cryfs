@@ -13,7 +13,7 @@ using namespace cpputils::logging;
 namespace cryfs {
     const string InnerConfig::HEADER = "cryfs.config.inner;0";
 
-    Data InnerConfig::serialize() {
+    Data InnerConfig::serialize() const {
         try {
             Serializer serializer(Serializer::StringSize(HEADER)
                                   + Serializer::StringSize(cipherName)

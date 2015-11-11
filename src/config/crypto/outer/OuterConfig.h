@@ -12,7 +12,7 @@ namespace cryfs {
         cpputils::DerivedKeyConfig keyConfig;
         cpputils::Data encryptedInnerConfig;
 
-        cpputils::Data serialize();
+        cpputils::Data serialize() const;
         static boost::optional<OuterConfig> deserialize(const cpputils::Data &data);
 
     private:

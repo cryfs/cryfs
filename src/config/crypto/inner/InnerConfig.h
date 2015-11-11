@@ -11,7 +11,7 @@ namespace cryfs {
         std::string cipherName;
         cpputils::Data encryptedConfig;
 
-        cpputils::Data serialize();
+        cpputils::Data serialize() const;
         static boost::optional<InnerConfig> deserialize(const cpputils::Data &data);
 
     private:

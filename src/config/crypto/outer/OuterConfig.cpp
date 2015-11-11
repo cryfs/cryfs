@@ -24,7 +24,7 @@ namespace cryfs {
         serializer->writeString(HEADER);
     }
 
-    Data OuterConfig::serialize() {
+    Data OuterConfig::serialize() const {
         try {
             Serializer serializer(Serializer::StringSize(HEADER)
                                   + keyConfig.serializedSize()
