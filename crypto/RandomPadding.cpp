@@ -8,7 +8,9 @@ using namespace cpputils::logging;
 namespace cpputils {
     Data RandomPadding::add(const Data &data, size_t targetSize) {
         uint32_t size = data.size();
-        ASSERT(size < targetSize - sizeof(size), "Config data too large. We should increase padding target size.");
+        if (size >= targetSize - sizeof(size)) {
+            throw std::runtime_error("Data too large. We should increase padding target size.");
+        }
         Data randomData = Random::PseudoRandom().get(targetSize-sizeof(size)-size);
         ASSERT(sizeof(size) + size + randomData.size() == targetSize, "Calculated size of randomData incorrectly");
         Data result(targetSize);

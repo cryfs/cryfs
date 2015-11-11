@@ -11,6 +11,7 @@ namespace cpputils {
 
     //TODO Test Copy/move constructor and assignment
     //TODO Test operator==/!=
+    //TODO Use SCryptSettings as a member here instead of storing _N, _r, _p.
 
     class DerivedKeyConfig {
     public:
