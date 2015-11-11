@@ -9,7 +9,6 @@
 #include "InnerConfig.h"
 
 namespace cryfs {
-    //TODO Test
     template<class Cipher>
     class ConcreteInnerEncryptor: public InnerEncryptor {
     public:
@@ -38,6 +37,7 @@ namespace cryfs {
         }
         auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(innerConfig.encryptedConfig.data()), innerConfig.encryptedConfig.size(), _key);
         if (decrypted == boost::none) {
+            cpputils::logging::LOG(cpputils::logging::ERROR) << "Failed decrypting configuration file";
             return boost::none;
         }
         auto configData = cpputils::RandomPadding::remove(*decrypted);
