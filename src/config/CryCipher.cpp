@@ -17,10 +17,14 @@ using blockstore::encrypted::EncryptedBlockStore;
 using namespace cryfs;
 using namespace cpputils;
 
+constexpr size_t CryCiphers::MAX_KEY_SIZE;
+
 template<typename Cipher>
 class CryCipherInstance: public CryCipher {
 public:
     BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
+
+    static_assert(Cipher::EncryptionKey::BINARY_LENGTH <= CryCiphers::MAX_KEY_SIZE, "The key size for this cipher is too large. Please modify CryCiphers::MAX_KEY_SIZE");
 
     CryCipherInstance(const optional<string> warning = none): _warning(warning) {
     }

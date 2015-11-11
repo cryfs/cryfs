@@ -24,6 +24,10 @@ class CryCiphers {
 public:
     static std::vector<std::string> supportedCipherNames();
 
+    //A static_assert in CryCipherInstance ensures that there is no cipher with a key size larger than specified here.
+    //TODO Calculate this from SUPPORTED_CIPHERS instead of setting it manually
+    static constexpr size_t MAX_KEY_SIZE = 56; // in bytes
+
     static const CryCipher& find(const std::string &cipherName);
 
 private:

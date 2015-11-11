@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_INNERENCRYPTOR_H
-#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_INNERENCRYPTOR_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_INNER_INNERENCRYPTOR_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_INNER_INNERENCRYPTOR_H
 
 #include <messmer/cpp-utils/data/Data.h>
 #include <messmer/cpp-utils/pointer/unique_ref.h>
@@ -13,13 +13,6 @@ namespace cryfs {
     public:
         virtual cpputils::Data encrypt(const cpputils::Data &plaintext) const = 0;
         virtual boost::optional<cpputils::Data> decrypt(const cpputils::Data &plaintext) const = 0;
-
-    protected:
-        static void _checkHeader(cpputils::Deserializer *deserializer);
-        static void _writeHeader(cpputils::Serializer *serializer);
-
-    private:
-        static const std::string HEADER;
     };
 }
 
