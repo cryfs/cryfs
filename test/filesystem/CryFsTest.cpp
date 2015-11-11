@@ -23,6 +23,7 @@ using cpputils::unique_ref;
 using cpputils::Console;
 using cpputils::Random;
 using cpputils::SCrypt;
+using cpputils::Data;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
 
@@ -53,4 +54,16 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   CryDevice dev(loadOrCreateConfig(), blockStore());
   auto root = dev.Load(bf::path("/"));
   dynamic_pointer_move<CryDir>(root.get()).get()->children();
+}
+
+TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
+  {
+    CryDevice dev(loadOrCreateConfig(), blockStore());
+  }
+  Data configAfterCreating = Data::LoadFromFile(config.path()).value();
+  {
+    CryDevice dev(loadOrCreateConfig(), blockStore());
+  }
+  Data configAfterLoading = Data::LoadFromFile(config.path()).value();
+  EXPECT_EQ(configAfterCreating, configAfterLoading);
 }
