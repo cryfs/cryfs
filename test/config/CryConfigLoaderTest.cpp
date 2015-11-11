@@ -114,7 +114,7 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, Cipher_Load) {
-    CreateWithCipher("ciphername");
+    CreateWithCipher("twofish-128-cfb");
     auto loaded = Load().value();
     EXPECT_EQ("ciphername", loaded.config()->Cipher());
 }

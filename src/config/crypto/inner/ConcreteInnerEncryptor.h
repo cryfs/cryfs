@@ -17,8 +17,9 @@ namespace cryfs {
 
         ConcreteInnerEncryptor(typename Cipher::EncryptionKey key);
 
-        cpputils::Data encrypt(const cpputils::Data &plaintext) const override;
-        boost::optional<cpputils::Data> decrypt(const cpputils::Data &ciphertext) const override;
+        InnerConfig encrypt(const cpputils::Data &config) const override;
+        boost::optional<cpputils::Data> decrypt(const InnerConfig &innerConfig) const override;
+
     private:
 
         typename Cipher::EncryptionKey _key;
@@ -30,16 +31,12 @@ namespace cryfs {
     }
 
     template<class Cipher>
-    boost::optional<cpputils::Data> ConcreteInnerEncryptor<Cipher>::decrypt(const cpputils::Data &ciphertext) const {
-        auto innerConfig = InnerConfig::deserialize(ciphertext);
-        if (innerConfig == boost::none) {
+    boost::optional<cpputils::Data> ConcreteInnerEncryptor<Cipher>::decrypt(const InnerConfig &innerConfig) const {
+        if (innerConfig.cipherName != Cipher::NAME) {
+            cpputils::logging::LOG(cpputils::logging::ERROR) << "Initialized ConcreteInnerEncryptor with wrong cipher";
             return boost::none;
         }
-        if (innerConfig->cipherName != Cipher::NAME) {
-            cpputils::logging::LOG(cpputils::logging::ERROR) << "Wrong inner cipher used";
-            return boost::none;
-        }
-        auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(innerConfig->encryptedConfig.data()), innerConfig->encryptedConfig.size(), _key);
+        auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(innerConfig.encryptedConfig.data()), innerConfig.encryptedConfig.size(), _key);
         if (decrypted == boost::none) {
             return boost::none;
         }
@@ -51,10 +48,10 @@ namespace cryfs {
     }
 
     template<class Cipher>
-    cpputils::Data ConcreteInnerEncryptor<Cipher>::encrypt(const cpputils::Data &plaintext) const {
-        auto paddedPlaintext = cpputils::RandomPadding::add(plaintext, CONFIG_SIZE);
-        auto encrypted = Cipher::encrypt(static_cast<const uint8_t*>(paddedPlaintext.data()), paddedPlaintext.size(), _key);
-        return InnerConfig{Cipher::NAME, std::move(encrypted)}.serialize();
+    InnerConfig ConcreteInnerEncryptor<Cipher>::encrypt(const cpputils::Data &config) const {
+        auto padded = cpputils::RandomPadding::add(config, CONFIG_SIZE);
+        auto encrypted = Cipher::encrypt(static_cast<const uint8_t*>(padded.data()), padded.size(), _key);
+        return InnerConfig{Cipher::NAME, std::move(encrypted)};
     }
 }
 

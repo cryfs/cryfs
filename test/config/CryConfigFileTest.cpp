@@ -4,6 +4,8 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <boost/optional/optional_io.hpp>
 
+//TODO Test that config file is still loadable after changing the cipher and then storing it (i.e. it uses a different inner cipher but is still the same CryConfigFile instance)
+
 using namespace cryfs;
 using cpputils::TempFile;
 using std::string;
@@ -27,8 +29,14 @@ public:
 
     TempFile file;
 
+    CryConfig Config() {
+        CryConfig result;
+        result.SetCipher("aes-256-gcm");
+        return result;
+    }
+
     CryConfigFile CreateAndLoadEmpty(const string &password = "mypassword") {
-        Create(CryConfig(), password);
+        Create(Config(), password);
         return Load().value();
     }
 
@@ -40,6 +48,10 @@ public:
         return CryConfigFile::load(file.path(), password);
     }
 
+    void CreateWithCipher(const string &cipher) {
+        return CreateWithCipher(cipher, file);
+    }
+
     void CreateWithCipher(const string &cipher, const TempFile &tempFile) {
         CryConfig cfg;
         cfg.SetCipher(cipher);
@@ -48,7 +60,7 @@ public:
 };
 
 TEST_F(CryConfigFileTest, DoesntLoadIfWrongPassword) {
-    Create(CryConfig(), "mypassword");
+    Create(Config(), "mypassword");
     auto loaded = Load("mypassword2");
     EXPECT_EQ(none, loaded);
 }
@@ -59,7 +71,7 @@ TEST_F(CryConfigFileTest, RootBlob_Init) {
 }
 
 TEST_F(CryConfigFileTest, RootBlob_CreateAndLoad) {
-    CryConfig cfg;
+    CryConfig cfg = Config();
     cfg.SetRootBlob("rootblobid");
     Create(std::move(cfg));
     CryConfigFile loaded = Load().value();
@@ -80,7 +92,7 @@ TEST_F(CryConfigFileTest, EncryptionKey_Init) {
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_CreateAndLoad) {
-    CryConfig cfg;
+    CryConfig cfg = Config();
     cfg.SetEncryptionKey("encryptionkey");
     Create(std::move(cfg));
     CryConfigFile loaded = Load().value();
@@ -97,30 +109,42 @@ TEST_F(CryConfigFileTest, EncryptionKey_SaveAndLoad) {
 
 TEST_F(CryConfigFileTest, Cipher_Init) {
     CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created.config()->Cipher());
+    EXPECT_EQ("aes-256-gcm", created.config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, Cipher_CreateAndLoad) {
-    CryConfig cfg;
-    cfg.SetCipher("cipher");
+    CryConfig cfg = Config();
+    cfg.SetCipher("twofish-128-cfb");
     Create(std::move(cfg));
     CryConfigFile loaded = Load().value();
-    EXPECT_EQ("cipher", loaded.config()->Cipher());
+    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, Cipher_SaveAndLoad) {
     CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetCipher("cipher");
+    created.config()->SetCipher("twofish-128-cfb");
     created.save();
     CryConfigFile loaded = Load().value();
-    EXPECT_EQ("cipher", loaded.config()->Cipher());
+    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
 }
 
 //Test that the encrypted config file has the same size, no matter how big the plaintext config data.
 TEST_F(CryConfigFileTest, ConfigFileHasFixedSize) {
     TempFile file1(false);
     TempFile file2(false);
-    CreateWithCipher("short", file1);
-    CreateWithCipher("long_cipher_name_that_causes_the_plaintext_config_data_to_be_larger", file2);
+    //It is important to have different cipher name lengths here, because they're on the outer encryption level.
+    //So this ensures that there also is a padding happening on the outer encryption level.
+    CreateWithCipher("aes-128-gcm", file1); // Short cipher name and short key
+    CreateWithCipher("twofish-256-cfb", file2); // Long cipher name and long key
     EXPECT_EQ(bf::file_size(file1.path()), bf::file_size(file2.path()));
+}
+
+TEST_F(CryConfigFileTest, CanSaveAndLoadModififedCipher) {
+    CreateWithCipher("aes-256-gcm");
+    CryConfigFile created = Load().value();
+    EXPECT_EQ("aes-256-gcm", created.config()->Cipher());
+    created.config()->SetCipher("twofish-128-cfb");
+    created.save();
+    CryConfigFile loaded = Load().value();
+    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
 }

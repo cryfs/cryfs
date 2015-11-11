@@ -34,6 +34,7 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   if (_cipher != none && config->config()->Cipher() != *_cipher) {
+    //TODO Test this fails
     throw std::runtime_error("Filesystem uses "+config->config()->Cipher()+" cipher and not "+*_cipher+" as specified.");
   }
   return std::move(*config);

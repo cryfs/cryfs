@@ -5,30 +5,39 @@
 #include <messmer/cpp-utils/pointer/unique_ref.h>
 #include <messmer/cpp-utils/data/Deserializer.h>
 #include <messmer/cpp-utils/data/Serializer.h>
-#include "inner/InnerEncryptor.h"
 #include <messmer/cpp-utils/crypto/kdf/DerivedKeyConfig.h>
+#include <messmer/cpp-utils/crypto/kdf/DerivedKey.h>
 #include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
+#include "inner/InnerEncryptor.h"
+#include "outer/OuterEncryptor.h"
+#include "../CryCipher.h"
 
 namespace cryfs {
-    //TODO Test
+    //TODO Test (whole crypto folder)
     //TODO Test that encrypted config data always has the same size, no matter how big the plaintext config data
+    //TODO Test that specified inner cipher is used (e.g. can't be decrypted with other cipher)
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
     class CryConfigEncryptor {
     public:
-        using OuterCipher = cpputils::AES256_GCM;
-        static constexpr size_t CONFIG_SIZE = 1024;  // Config data is grown to this size before encryption to hide its actual size
+        static constexpr size_t OuterKeySize = OuterEncryptor::Cipher::EncryptionKey::BINARY_LENGTH;
+        static constexpr size_t MaxTotalKeySize = OuterKeySize + CryCiphers::MAX_KEY_SIZE;
 
-        CryConfigEncryptor(cpputils::unique_ref<InnerEncryptor> innerEncryptor, OuterCipher::EncryptionKey outerKey, cpputils::DerivedKeyConfig keyConfig);
+        struct Decrypted {
+            cpputils::Data data;
+            std::string cipherName;
+        };
 
-        cpputils::Data encrypt(const cpputils::Data &plaintext);
-        boost::optional <cpputils::Data> decrypt(const cpputils::Data &data);
+        CryConfigEncryptor(cpputils::DerivedKey<MaxTotalKeySize> derivedKey);
+
+        cpputils::Data encrypt(const cpputils::Data &plaintext, const std::string &cipherName) const;
+        boost::optional<Decrypted> decrypt(const cpputils::Data &data) const;
 
     private:
-        boost::optional<cpputils::Data> _decryptInnerConfig(const cpputils::Data &encryptedInnerConfig);
+        boost::optional<InnerConfig> _loadInnerConfig(const cpputils::Data &data) const;
+        cpputils::unique_ref<OuterEncryptor> _outerEncryptor() const;
+        cpputils::unique_ref<InnerEncryptor> _innerEncryptor(const std::string &cipherName) const;
 
-        cpputils::unique_ref<InnerEncryptor> _innerEncryptor;
-        OuterCipher::EncryptionKey _outerKey;
-        cpputils::DerivedKeyConfig _keyConfig;
+        cpputils::DerivedKey<MaxTotalKeySize> _derivedKey;
     };
 }
 

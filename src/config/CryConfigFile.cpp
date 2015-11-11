@@ -39,16 +39,20 @@ optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &
     if (decrypted == none) {
         return none;
     }
-    CryConfig config = CryConfig::load(*decrypted);
+    CryConfig config = CryConfig::load(decrypted->data);
+    if (config.Cipher() != decrypted->cipherName) {
+        //TODO Test that this fails
+        LOG(ERROR) << "Inner cipher algorithm used to encrypt config file doesn't match config value";
+        return none;
+    }
     return CryConfigFile(path, std::move(config), std::move(*encryptor));
 }
 
 CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
-    using ConfigCipher = cpputils::AES256_GCM; // TODO Take cipher from config instead
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey<ConfigCipher>(password, scryptSettings));
+    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(config.Cipher(), password, scryptSettings));
     result.save();
     return result;
 }
@@ -59,7 +63,7 @@ CryConfigFile::CryConfigFile(const bf::path &path, CryConfig config, unique_ref<
 
 void CryConfigFile::save() const {
     Data configData = _config.save();
-    auto encrypted = _encryptor->encrypt(configData);
+    auto encrypted = _encryptor->encrypt(configData, _config.Cipher());
     encrypted.StoreToFile(_path);
 }
 

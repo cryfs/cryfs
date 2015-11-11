@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CRYFS_OUTERCONFIG_H
-#define CRYFS_OUTERCONFIG_H
+#ifndef MESSMER_CRYFS_SRC_CONFIG_CRYPTO_OUTER_OUTERCONFIG_H
+#define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_OUTER_OUTERCONFIG_H
 
 #include <messmer/cpp-utils/crypto/kdf/DerivedKeyConfig.h>
 #include <messmer/cpp-utils/data/Data.h>

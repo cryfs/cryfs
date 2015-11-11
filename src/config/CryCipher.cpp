@@ -2,11 +2,13 @@
 
 #include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
 #include <messmer/blockstore/implementations/encrypted/EncryptedBlockStore.h>
+#include "crypto/inner/ConcreteInnerEncryptor.h"
 
 using std::vector;
 using std::string;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::FixedSizeData;
 using blockstore::BlockStore;
 using std::shared_ptr;
 using std::make_shared;
@@ -45,6 +47,10 @@ public:
         return Cipher::CreateKey(randomGenerator).ToString();
     }
 
+    unique_ref<InnerEncryptor> createInnerConfigEncryptor(const FixedSizeData<CryCiphers::MAX_KEY_SIZE> &key) const override {
+        return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key.take<Cipher::EncryptionKey::BINARY_LENGTH>());
+    }
+
 private:
     optional<string> _warning;
 };
@@ -80,7 +86,7 @@ const CryCipher& CryCiphers::find(const string &cipherName) {
                               [cipherName] (const auto& element) {
                                   return element->cipherName() == cipherName;
                               });
-    ASSERT(found != CryCiphers::SUPPORTED_CIPHERS.end(), "Unknown Cipher");
+    ASSERT(found != CryCiphers::SUPPORTED_CIPHERS.end(), "Unknown Cipher: "+cipherName);
     return **found;
 }
 
