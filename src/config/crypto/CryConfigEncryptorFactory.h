@@ -12,7 +12,7 @@ namespace cryfs {
     //TODO Test
     class CryConfigEncryptorFactory {
     public:
-        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &cipherName, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
+        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password, const cpputils::SCryptSettings &scryptSettings);
 
         static boost::optional<cpputils::unique_ref<CryConfigEncryptor>> loadKey(const cpputils::Data &ciphertext,
                                                                                  const std::string &password);

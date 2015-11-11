@@ -52,7 +52,7 @@ CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, cons
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(config.Cipher(), password, scryptSettings));
+    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(password, scryptSettings));
     result.save();
     return result;
 }

@@ -35,7 +35,7 @@ namespace cryfs {
         return DerivedKey<CryConfigEncryptor::MaxTotalKeySize>(keyConfig, std::move(key));
     }
 
-    unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const string &cipherName, const string &password, const SCryptSettings &scryptSettings) {
+    unique_ref<CryConfigEncryptor> CryConfigEncryptorFactory::deriveKey(const string &password, const SCryptSettings &scryptSettings) {
         auto derivedKey = cpputils::SCrypt().generateKey<CryConfigEncryptor::MaxTotalKeySize>(password, scryptSettings);
         return make_unique_ref<CryConfigEncryptor>(std::move(derivedKey));
     }
