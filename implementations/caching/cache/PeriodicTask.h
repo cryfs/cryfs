@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_PERIODICTASK_H_
 
 #include <functional>
-#include <messmer/cpp-utils/random/LoopThread.h>
+#include <messmer/cpp-utils/thread/LoopThread.h>
 #include <boost/chrono.hpp>
 
 namespace blockstore {
@@ -14,7 +14,7 @@ public:
 	PeriodicTask(std::function<void ()> task, double intervalSec);
 
 private:
-  void _loopIteration();
+  bool _loopIteration();
 
   std::function<void()> _task;
   boost::chrono::nanoseconds _interval;
