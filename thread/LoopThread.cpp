@@ -6,7 +6,7 @@ using boost::none;
 
 namespace cpputils {
 
-    LoopThread::LoopThread(function<void()> loopIteration): _loopIteration(loopIteration), _runningHandle(none) {
+    LoopThread::LoopThread(function<bool()> loopIteration): _loopIteration(loopIteration), _runningHandle(none) {
     }
 
     LoopThread::~LoopThread() {

@@ -15,12 +15,13 @@ namespace cpputils {
         return _thread.start();
     }
 
-    void RandomGeneratorThread::_loopIteration() {
+    bool RandomGeneratorThread::_loopIteration() {
         _buffer->waitUntilSizeIsLessThan(_minSize);
         size_t neededRandomDataSize = _maxSize - _buffer->size();
         ASSERT(_maxSize > _buffer->size(), "This could theoretically fail if another thread refilled the buffer. But we should be the only refilling thread.");
         Data randomData = _generateRandomData(neededRandomDataSize);
         _buffer->add(std::move(randomData));
+        return true; // Run another iteration (don't terminate thread)
     }
 
     Data RandomGeneratorThread::_generateRandomData(size_t size) {

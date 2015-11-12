@@ -17,7 +17,7 @@ namespace cpputils {
         pthread_atfork(&ThreadSystem::_onBeforeFork, &ThreadSystem::_onAfterFork, &ThreadSystem::_onAfterFork);
     }
 
-    ThreadSystem::Handle ThreadSystem::start(function<void()> loopIteration) {
+    ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration) {
         boost::unique_lock<boost::mutex> lock(_mutex);
         auto thread = _startThread(loopIteration);
         _runningThreads.push_back(RunningThread{loopIteration, std::move(thread)});
@@ -60,16 +60,18 @@ namespace cpputils {
         _mutex.unlock(); // Was locked in the before-fork handler
     }
 
-    boost::thread ThreadSystem::_startThread(function<void()> loopIteration) {
+    boost::thread ThreadSystem::_startThread(function<bool()> loopIteration) {
         return boost::thread(std::bind(&ThreadSystem::_runThread, loopIteration));
     }
 
-    void ThreadSystem::_runThread(function<void()> loopIteration) {
+    void ThreadSystem::_runThread(function<bool()> loopIteration) {
         try {
-            while(true) {
+            bool cont = true;
+            while(cont) {
                 boost::this_thread::interruption_point();
-                loopIteration(); // This might also be interrupted.
+                cont = loopIteration(); // This might also be interrupted.
             }
+            //The thread is terminated gracefully.
         } catch (const boost::thread_interrupted &e) {
             //Do nothing, exit thread.
         } catch (const std::exception &e) {
@@ -77,5 +79,6 @@ namespace cpputils {
         } catch (...) {
             LOG(ERROR) << "LoopThread crashed";
         }
+        //TODO We should remove the thread from _runningThreads here, not in stop().
     }
 }

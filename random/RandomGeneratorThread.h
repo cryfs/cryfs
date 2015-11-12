@@ -15,7 +15,7 @@ namespace cpputils {
         void start();
 
     private:
-        void _loopIteration();
+        bool _loopIteration();
         Data _generateRandomData(size_t size);
 
         CryptoPP::AutoSeededRandomPool _randomGenerator;

@@ -13,13 +13,14 @@ namespace cpputils {
     // where the child class destructor already ran.
     class LoopThread final {
     public:
-        LoopThread(std::function<void()> loopIteration);
+        // The loopIteration callback returns true, if more iterations should be run, and false, if the thread should be terminated.
+        LoopThread(std::function<bool()> loopIteration);
         ~LoopThread();
         void start();
         void stop();
 
     private:
-        std::function<void()> _loopIteration;
+        std::function<bool()> _loopIteration;
         boost::optional<ThreadSystem::Handle> _runningHandle;
     };
 }

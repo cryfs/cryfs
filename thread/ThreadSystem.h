@@ -13,7 +13,7 @@ namespace cpputils {
     class ThreadSystem final {
     private:
         struct RunningThread {
-            std::function<void()> loopIteration;
+            std::function<bool()> loopIteration;  // The loopIteration callback returns true, if more iterations should be run, and false, if the thread should be terminated.
             boost::thread thread;  // boost::thread because we need it to be interruptible.
         };
     public:
@@ -21,20 +21,20 @@ namespace cpputils {
 
         static ThreadSystem &singleton();
 
-        Handle start(std::function<void()> loopIteration);
+        Handle start(std::function<bool()> loopIteration);
         void stop(Handle handle);
 
     private:
         ThreadSystem();
 
-        static void _runThread(std::function<void()> loopIteration);
+        static void _runThread(std::function<bool()> loopIteration);
 
         static void _onBeforeFork();
         static void _onAfterFork();
         //TODO Rename to _doOnBeforeFork and _doAfterFork or similar, because they also handle locking _mutex for fork().
         void _stopAllThreadsForRestart();
         void _restartAllThreads();
-        boost::thread _startThread(std::function<void()> loopIteration);
+        boost::thread _startThread(std::function<bool()> loopIteration);
 
         std::list<RunningThread> _runningThreads;  // std::list, because we give out iterators as handles
         boost::mutex _mutex;
