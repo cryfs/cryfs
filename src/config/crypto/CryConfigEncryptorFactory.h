@@ -9,7 +9,6 @@
 #include "../CryCipher.h"
 
 namespace cryfs {
-    //TODO Test
     class CryConfigEncryptorFactory {
     public:
         static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password, const cpputils::SCryptSettings &scryptSettings);
