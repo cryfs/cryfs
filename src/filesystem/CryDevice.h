@@ -31,14 +31,18 @@ public:
   cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob(const boost::filesystem::path &path);
   void RemoveBlob(const blockstore::Key &key);
 
+  void onFsAction(std::function<void()> callback);
+
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
 
+  void callFsActionCallbacks() const;
 
 private:
 
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;
+  std::vector<std::function<void()>> _onFsAction;
 
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
   blockstore::Key CreateRootBlobAndReturnKey();

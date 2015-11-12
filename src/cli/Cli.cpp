@@ -48,7 +48,15 @@ using std::endl;
 using std::vector;
 using std::shared_ptr;
 using std::make_shared;
+using std::unique_ptr;
+using std::make_unique;
+using std::function;
+using boost::optional;
 using boost::none;
+using boost::chrono::duration;
+using boost::chrono::duration_cast;
+using boost::chrono::minutes;
+using boost::chrono::milliseconds;
 
 //TODO Support files > 4GB
 //TODO Improve parallelity.
@@ -148,6 +156,13 @@ namespace cryfs {
 
             _initLogfile(options);
 
+            //TODO Test auto unmounting after idle timeout
+            //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
+            auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
+            if (idleUnmounter != none) {
+                device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
+            }
+
             std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
 
             vector<char *> fuseOptions = options.fuseOptions();
@@ -157,6 +172,14 @@ namespace cryfs {
         } catch (...) {
             LOG(ERROR) << "Crashed";
         }
+    }
+
+    optional<unique_ref<CallAfterTimeout>> Cli::_createIdleCallback(optional<double> minutes, function<void()> callback) {
+        if (minutes == none) {
+            return none;
+        }
+        uint64_t millis = std::round(60000 * (*minutes));
+        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback);
     }
 
     void Cli::_initLogfile(const ProgramOptions &options) {

@@ -12,7 +12,7 @@ namespace cryfs {
         class ProgramOptions final {
         public:
             ProgramOptions(const std::string &baseDir, const std::string &mountDir, const boost::optional<std::string> &configFile,
-                           bool foreground, const boost::optional<unsigned int> &unmountAfterIdleMinutes,
+                           bool foreground, const boost::optional<double> &unmountAfterIdleMinutes,
                            const boost::optional<std::string> &logFile, const boost::optional<std::string> &cipher,
                            const boost::optional<std::string> &extPass, const std::vector<char *> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs);
@@ -23,7 +23,7 @@ namespace cryfs {
             const boost::optional<std::string> &configFile() const;
             bool foreground() const;
             const boost::optional<std::string> &cipher() const;
-            const boost::optional<unsigned int> &unmountAfterIdleMinutes() const;
+            const boost::optional<double> &unmountAfterIdleMinutes() const;
             const boost::optional<std::string> &logFile() const;
             const boost::optional<std::string> &extPass() const;
             const std::vector<char *> &fuseOptions() const;
@@ -34,7 +34,7 @@ namespace cryfs {
             boost::optional<std::string> _configFile;
             bool _foreground;
             boost::optional<std::string> _cipher;
-            boost::optional<unsigned int> _unmountAfterIdleMinutes;
+            boost::optional<double> _unmountAfterIdleMinutes;
             boost::optional<std::string> _logFile;
             boost::optional<std::string> _extPass;
             std::vector<char *> _fuseOptions;

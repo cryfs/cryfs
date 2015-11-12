@@ -11,3 +11,4 @@ Version 0.8.1
 * Allow --cipher=xxx to specify cipher on command line. If cryfs is creating a new filesystem, it will use this cipher. If it is opening an existing filesystem, it will check whether this is the cipher used by it.
 * --show-ciphers shows a list of all supported ciphers
 * --extpass allows using an external program for password input
+* --unmount-idle x automatically unmounts the filesystem after x minutes without a filesystem operation.

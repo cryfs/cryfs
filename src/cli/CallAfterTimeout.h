@@ -21,6 +21,8 @@ namespace cryfs {
         boost::chrono::time_point<boost::chrono::steady_clock> _start;
         cpputils::LoopThread _checkTimeoutThread;
         std::mutex _mutex;
+
+        DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
     };
 
     inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback)

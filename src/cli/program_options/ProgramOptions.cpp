@@ -8,7 +8,7 @@ using std::vector;
 using boost::optional;
 
 ProgramOptions::ProgramOptions(const string &baseDir, const string &mountDir, const optional<string> &configFile,
-                               bool foreground, const optional<unsigned int> &unmountAfterIdleMinutes,
+                               bool foreground, const optional<double> &unmountAfterIdleMinutes,
                                const optional<string> &logFile, const optional<string> &cipher,
                                const optional<string> &extPass, const vector<char*> &fuseOptions)
     :_baseDir(baseDir), _mountDir(new char[mountDir.size()+1]), _configFile(configFile), _foreground(foreground),
@@ -50,7 +50,7 @@ bool ProgramOptions::foreground() const {
     return _foreground;
 }
 
-const optional<unsigned int> &ProgramOptions::unmountAfterIdleMinutes() const {
+const optional<double> &ProgramOptions::unmountAfterIdleMinutes() const {
     return _unmountAfterIdleMinutes;
 }
 

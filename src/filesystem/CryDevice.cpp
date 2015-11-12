@@ -57,7 +57,8 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
               ), BLOCKSIZE_BYTES)))
         )
       ),
-  _rootKey(GetOrCreateRootKey(&configFile)) {
+  _rootKey(GetOrCreateRootKey(&configFile)),
+  _onFsAction() {
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
@@ -68,6 +69,8 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   ASSERT(path.is_absolute(), "Non absolute path given");
+
+  callFsActionCallbacks();
 
   if (path.parent_path().empty()) {
     //We are asked to load the root directory '/'.
@@ -121,6 +124,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+  callFsActionCallbacks();
   throw FuseErrnoException(ENOTSUP);
 }
 
@@ -163,6 +167,16 @@ Key CryDevice::GetOrCreateRootKey(CryConfigFile *configFile) {
 cpputils::unique_ref<blockstore::BlockStore> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore> baseBlockStore) {
   //TODO Test that CryFS is using the specified cipher
   return CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(baseBlockStore), config.EncryptionKey());
+}
+
+void CryDevice::onFsAction(std::function<void()> callback) {
+  _onFsAction.push_back(callback);
+}
+
+void CryDevice::callFsActionCallbacks() const {
+  for (const auto &callback : _onFsAction) {
+    callback();
+  }
 }
 
 }

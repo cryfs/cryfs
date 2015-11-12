@@ -10,7 +10,7 @@ class CryDevice;
 
 class CryOpenFile: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
+  explicit CryOpenFile(const CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
   virtual ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
@@ -22,6 +22,7 @@ public:
   void fdatasync() override;
 
 private:
+  const CryDevice *_device;
   cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);

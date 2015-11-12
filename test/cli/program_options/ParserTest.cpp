@@ -81,6 +81,11 @@ TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven) {
     EXPECT_EQ(10, options.unmountAfterIdleMinutes().value());
 }
 
+TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven_Float) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--unmount-idle", "0.5", "/home/user/mountDir"});
+    EXPECT_EQ(0.5, options.unmountAfterIdleMinutes().value());
+}
+
 TEST_F(ProgramOptionsParserTest, InvalidCipher) {
     EXPECT_DEATH(
         parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"}),

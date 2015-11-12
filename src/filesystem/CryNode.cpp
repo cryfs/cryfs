@@ -35,12 +35,14 @@ CryNode::~CryNode() {
 }
 
 void CryNode::access(int mask) const {
+  device()->callFsActionCallbacks();
   //TODO
   return;
   throw FuseErrnoException(ENOTSUP);
 }
 
 void CryNode::rename(const bf::path &to) {
+  device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
     //TODO What should we do?
@@ -59,11 +61,13 @@ void CryNode::rename(const bf::path &to) {
 }
 
 void CryNode::utimens(const timespec times[2]) {
+  device()->callFsActionCallbacks();
   //TODO
   throw FuseErrnoException(ENOTSUP);
 }
 
 void CryNode::remove() {
+  device()->callFsActionCallbacks();
   //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
   if (_parent == none) {
     //We are the root direcory.
@@ -87,6 +91,7 @@ unique_ref<FsBlobRef> CryNode::LoadBlob() const {
 }
 
 void CryNode::stat(struct ::stat *result) const {
+  device()->callFsActionCallbacks();
   if(_parent == none) {
     //We are the root directory.
 	//TODO What should we do?
@@ -97,6 +102,7 @@ void CryNode::stat(struct ::stat *result) const {
 }
 
 void CryNode::chmod(mode_t mode) {
+  device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
 	//TODO What should we do?
@@ -106,6 +112,7 @@ void CryNode::chmod(mode_t mode) {
 }
 
 void CryNode::chown(uid_t uid, gid_t gid) {
+  device()->callFsActionCallbacks();
   if (_parent == none) {
 	//We are the root direcory.
 	//TODO What should we do?

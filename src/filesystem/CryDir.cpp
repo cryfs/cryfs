@@ -37,12 +37,14 @@ CryDir::~CryDir() {
 }
 
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
+  device()->callFsActionCallbacks();
   auto child = device()->CreateFileBlob();
   LoadBlob()->AddChildFile(name, child->key(), mode, uid, gid);
-  return make_unique_ref<CryOpenFile>(std::move(child));
+  return make_unique_ref<CryOpenFile>(device(), std::move(child));
 }
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
+  device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   auto child = device()->CreateDirBlob();
   blob->AddChildDir(name, child->key(), mode, uid, gid);
@@ -56,6 +58,7 @@ unique_ref<DirBlobRef> CryDir::LoadBlob() const {
 }
 
 unique_ref<vector<fspp::Dir::Entry>> CryDir::children() const {
+  device()->callFsActionCallbacks();
   auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
@@ -65,10 +68,12 @@ unique_ref<vector<fspp::Dir::Entry>> CryDir::children() const {
 }
 
 fspp::Dir::EntryType CryDir::getType() const {
+  device()->callFsActionCallbacks();
   return fspp::Dir::EntryType::DIR;
 }
 
 void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid, gid_t gid) {
+  device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   auto child = device()->CreateSymlinkBlob(target);
   blob->AddChildSymlink(name, child->key(), uid, gid);

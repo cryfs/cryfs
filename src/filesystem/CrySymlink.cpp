@@ -40,10 +40,12 @@ unique_ref<SymlinkBlobRef> CrySymlink::LoadBlob() const {
 }
 
 fspp::Dir::EntryType CrySymlink::getType() const {
+  device()->callFsActionCallbacks();
   return fspp::Dir::EntryType::SYMLINK;
 }
 
 bf::path CrySymlink::target() const {
+  device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   return blob->target();
 }

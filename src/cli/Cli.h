@@ -7,6 +7,7 @@
 #include <boost/filesystem/path.hpp>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/RandomGenerator.h>
+#include "CallAfterTimeout.h"
 
 namespace cryfs {
     class Cli final {
@@ -29,6 +30,7 @@ namespace cryfs {
         void _checkDirAccessible(const boost::filesystem::path &dir, const std::string &name);
         std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name);
         void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name);
+        boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
 
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
