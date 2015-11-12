@@ -23,6 +23,7 @@ public:
 
 	void run(int argc, char **argv);
 	bool running() const;
+	void stop();
 
   int getattr(const boost::filesystem::path &path, struct stat *stbuf);
   int fgetattr(const boost::filesystem::path &path, struct stat *stbuf, fuse_file_info *fileinfo);
@@ -57,6 +58,7 @@ public:
 
 private:
   Filesystem *_fs;
+  boost::filesystem::path _mountdir;
   bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);

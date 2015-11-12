@@ -7,6 +7,7 @@
 #include <iostream>
 #include <messmer/cpp-utils/assert/assert.h>
 #include <messmer/cpp-utils/logging/logging.h>
+#include <csignal>
 
 using std::vector;
 using std::string;
@@ -212,16 +213,25 @@ Fuse::~Fuse() {
 }
 
 Fuse::Fuse(Filesystem *fs)
-  :_fs(fs), _running(false) {
+  :_fs(fs), _mountdir(), _running(false) {
 }
 
 void Fuse::run(int argc, char **argv) {
   vector<char*> _argv(argv, argv + argc);
+  _mountdir = argv[1];
   fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
 }
 
 bool Fuse::running() const {
   return _running;
+}
+
+void Fuse::stop() {
+  //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
+  int ret = system(("fusermount -z -u " + _mountdir.native()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
+  if (ret != 0) {
+    LOG(ERROR) << "Could not unmount filesystem";
+  }
 }
 
 int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
