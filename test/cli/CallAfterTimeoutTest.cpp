@@ -20,48 +20,48 @@ public:
 };
 
 TEST_F(CallAfterTimeoutTest, NoReset_1) {
-    auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(40));
+    auto obj = callAfterTimeout(milliseconds(100));
+    sleep_for(milliseconds(50));
     EXPECT_FALSE(called);
-    sleep_for(milliseconds(20));
+    sleep_for(milliseconds(100));
     EXPECT_TRUE(called);
 }
 
 TEST_F(CallAfterTimeoutTest, NoReset_2) {
-    auto obj = callAfterTimeout(milliseconds(100));
-    sleep_for(milliseconds(90));
+    auto obj = callAfterTimeout(milliseconds(200));
+    sleep_for(milliseconds(150));
     EXPECT_FALSE(called);
-    sleep_for(milliseconds(20));
+    sleep_for(milliseconds(100));
     EXPECT_TRUE(called);
 }
 
 TEST_F(CallAfterTimeoutTest, DoesntCallTwice) {
     auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(60));
+    sleep_for(milliseconds(100));
     EXPECT_TRUE(called);
     called = false;
-    sleep_for(milliseconds(60));
+    sleep_for(milliseconds(100));
     EXPECT_FALSE(called);
 }
 
 TEST_F(CallAfterTimeoutTest, OneReset) {
-    auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(40));
+    auto obj = callAfterTimeout(milliseconds(100));
+    sleep_for(milliseconds(75));
     obj->resetTimer();
-    sleep_for(milliseconds(40));
+    sleep_for(milliseconds(75));
     EXPECT_FALSE(called);
-    sleep_for(milliseconds(20));
+    sleep_for(milliseconds(75));
     EXPECT_TRUE(called);
 }
 
 TEST_F(CallAfterTimeoutTest, TwoResets) {
-    auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(20));
+    auto obj = callAfterTimeout(milliseconds(100));
+    sleep_for(milliseconds(50));
     obj->resetTimer();
-    sleep_for(milliseconds(40));
+    sleep_for(milliseconds(75));
     obj->resetTimer();
-    sleep_for(milliseconds(40));
+    sleep_for(milliseconds(75));
     EXPECT_FALSE(called);
-    sleep_for(milliseconds(20));
+    sleep_for(milliseconds(75));
     EXPECT_TRUE(called);
 }
