@@ -6,7 +6,7 @@
 #include <google/gmock/gmock.h>
 #include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
-#include "../../../src/Cli.h"
+#include "../../../src/cli/Cli.h"
 #include <messmer/cpp-utils/logging/logging.h>
 #include <messmer/cpp-utils/process/subprocess.h>
 

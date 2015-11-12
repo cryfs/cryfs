@@ -1,6 +1,6 @@
 #include "testutils/ProgramOptionsTestBase.h"
-#include "../../src/program_options/Parser.h"
-#include "../../src/config/CryCipher.h"
+#include "../../../src/cli/program_options/Parser.h"
+#include "../../../src/config/CryCipher.h"
 
 using namespace cryfs;
 using namespace cryfs::program_options;
@@ -74,6 +74,11 @@ TEST_F(ProgramOptionsParserTest, ConfigfileGiven) {
 TEST_F(ProgramOptionsParserTest, CipherGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--cipher", "aes-256-gcm", "/home/user/mountDir"});
     EXPECT_EQ("aes-256-gcm", options.cipher().value());
+}
+
+TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--unmount-idle", "10", "/home/user/mountDir"});
+    EXPECT_EQ(10, options.unmountAfterIdleMinutes().value());
 }
 
 TEST_F(ProgramOptionsParserTest, InvalidCipher) {

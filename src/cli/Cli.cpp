@@ -11,8 +11,8 @@
 #include "messmer/fspp/fuse/Fuse.h"
 #include "messmer/fspp/impl/FilesystemImpl.h"
 #include <messmer/cpp-utils/process/subprocess.h>
-#include "filesystem/CryDevice.h"
-#include "config/CryConfigLoader.h"
+#include "../filesystem/CryDevice.h"
+#include "../config/CryConfigLoader.h"
 #include "program_options/Parser.h"
 
 #include <gitversion/version.h>

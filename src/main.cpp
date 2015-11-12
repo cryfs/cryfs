@@ -1,4 +1,4 @@
-#include "Cli.h"
+#include "cli/Cli.h"
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/cpp-utils/crypto/kdf/Scrypt.h>
 

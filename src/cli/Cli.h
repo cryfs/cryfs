@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_CLI_H
 
 #include "program_options/ProgramOptions.h"
-#include "config/CryConfigFile.h"
+#include "../config/CryConfigFile.h"
 #include <boost/filesystem/path.hpp>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/RandomGenerator.h>
