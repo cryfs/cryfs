@@ -12,7 +12,7 @@ public:
         source.serialize(&serializer);
         Data serialized = serializer.finished();
         Deserializer deserializer(&serialized);
-        return DerivedKeyConfig::load(&deserializer);
+        return DerivedKeyConfig::deserialize(&deserializer);
     }
 };
 
