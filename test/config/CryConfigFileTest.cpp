@@ -10,6 +10,7 @@ using std::string;
 using boost::optional;
 using boost::none;
 using cpputils::SCrypt;
+using cpputils::Data;
 namespace bf = boost::filesystem;
 
 //gtest/boost::optional workaround for working with optional<CryConfigFile>
@@ -145,4 +146,14 @@ TEST_F(CryConfigFileTest, CanSaveAndLoadModififedCipher) {
     created.save();
     CryConfigFile loaded = Load().value();
     EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
+}
+
+TEST_F(CryConfigFileTest, FailsIfConfigFileIsEncryptedWithACipherDifferentToTheOneSpecifiedByTheUser) {
+    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+    auto config = Config();
+    config.SetCipher("aes-256-gcm");
+    Data encrypted = encryptor->encrypt(config.save(), "aes-256-cfb");
+    encrypted.StoreToFile(file.path());
+    auto loaded = Load("mypassword");
+    EXPECT_EQ(none, loaded);
 }
