@@ -5,6 +5,7 @@
 #include <boost/optional/optional_io.hpp>
 
 //TODO Test that config file is still loadable after changing the cipher and then storing it (i.e. it uses a different inner cipher but is still the same CryConfigFile instance)
+//TODO Test it can load a precreated config file
 
 using namespace cryfs;
 using cpputils::TempFile;
