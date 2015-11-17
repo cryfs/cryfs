@@ -1,3 +1,7 @@
+Version 0.8.2
+---------------
+* Mount directory and base directory can be specified as relative paths.
+
 Version 0.8.1
 ---------------
 * Config File Encryption: Configuration files are encrypted with two ciphers. The user specifies a password, which is then used with the scrypt KDF to generate the two encryption keys.

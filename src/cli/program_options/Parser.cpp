@@ -4,6 +4,7 @@
 #include <boost/optional.hpp>
 
 namespace po = boost::program_options;
+namespace bf = boost::filesystem;
 using namespace cryfs::program_options;
 using std::pair;
 using std::vector;
@@ -29,11 +30,11 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     pair<vector<char*>, vector<char*>> options = splitAtDoubleDash(_options);
     po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
 
-    string baseDir = vm["base-dir"].as<string>();
-    string mountDir = vm["mount-dir"].as<string>();
-    optional<string> configfile = none;
+    bf::path baseDir = bf::canonical(vm["base-dir"].as<string>());
+    bf::path mountDir = bf::canonical(vm["mount-dir"].as<string>());
+    optional<bf::path> configfile = none;
     if (vm.count("config")) {
-        configfile = vm["config"].as<string>();
+        configfile = bf::canonical(vm["config"].as<string>());
     }
     bool foreground = vm.count("foreground");
     if (foreground) {
@@ -43,9 +44,9 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();
     }
-    optional<string> logfile = none;
+    optional<bf::path> logfile = none;
     if (vm.count("logfile")) {
-        logfile = vm["logfile"].as<string>();
+        logfile = bf::canonical(vm["logfile"].as<string>());
     }
     optional<string> cipher = none;
     if (vm.count("cipher")) {

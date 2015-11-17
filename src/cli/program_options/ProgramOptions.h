@@ -6,36 +6,39 @@
 #include <string>
 #include <boost/optional.hpp>
 #include <messmer/cpp-utils/macros.h>
+#include <boost/filesystem.hpp>
 
 namespace cryfs {
     namespace program_options {
         class ProgramOptions final {
         public:
-            ProgramOptions(const std::string &baseDir, const std::string &mountDir, const boost::optional<std::string> &configFile,
+            ProgramOptions(const boost::filesystem::path &baseDir, const boost::filesystem::path &mountDir,
+                           const boost::optional<boost::filesystem::path> &configFile,
                            bool foreground, const boost::optional<double> &unmountAfterIdleMinutes,
-                           const boost::optional<std::string> &logFile, const boost::optional<std::string> &cipher,
-                           const boost::optional<std::string> &extPass, const std::vector<char *> &fuseOptions);
+                           const boost::optional<boost::filesystem::path> &logFile,
+                           const boost::optional<std::string> &cipher, const boost::optional<std::string> &extPass,
+                           const std::vector<char *> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs);
             ~ProgramOptions();
 
-            const std::string &baseDir() const;
-            std::string mountDir() const;
-            const boost::optional<std::string> &configFile() const;
+            const boost::filesystem::path &baseDir() const;
+            boost::filesystem::path mountDir() const;
+            const boost::optional<boost::filesystem::path> &configFile() const;
             bool foreground() const;
             const boost::optional<std::string> &cipher() const;
             const boost::optional<double> &unmountAfterIdleMinutes() const;
-            const boost::optional<std::string> &logFile() const;
+            const boost::optional<boost::filesystem::path> &logFile() const;
             const boost::optional<std::string> &extPass() const;
             const std::vector<char *> &fuseOptions() const;
 
         private:
-            std::string _baseDir;
+            boost::filesystem::path _baseDir;
             char *_mountDir;
-            boost::optional<std::string> _configFile;
+            boost::optional<boost::filesystem::path> _configFile;
             bool _foreground;
             boost::optional<std::string> _cipher;
             boost::optional<double> _unmountAfterIdleMinutes;
-            boost::optional<std::string> _logFile;
+            boost::optional<boost::filesystem::path> _logFile;
             boost::optional<std::string> _extPass;
             std::vector<char *> _fuseOptions;
 

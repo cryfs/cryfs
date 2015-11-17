@@ -14,6 +14,7 @@
 #include "../filesystem/CryDevice.h"
 #include "../config/CryConfigLoader.h"
 #include "program_options/Parser.h"
+#include <boost/filesystem.hpp>
 
 #include <gitversion/version.h>
 
@@ -62,6 +63,7 @@ using boost::chrono::milliseconds;
 //TODO Improve parallelity.
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
+//TODO Biicode warning: Depend on cryptopp dev version? Should use release version!
 
 namespace cryfs {
 
@@ -147,7 +149,7 @@ namespace cryfs {
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
         try {
-            auto blockStore = make_unique_ref<OnDiskBlockStore>(bf::path(options.baseDir()));
+            auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
             auto config = _loadOrCreateConfig(options);
             CryDevice device(std::move(config), std::move(blockStore));
             fspp::FilesystemImpl fsimpl(&device);
@@ -186,7 +188,7 @@ namespace cryfs {
         //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
         if (options.logFile() != none) {
             cpputils::logging::setLogger(
-                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", *options.logFile()));
+                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", options.logFile()->native()));
         } else if (options.foreground()) {
             cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
         } else {
