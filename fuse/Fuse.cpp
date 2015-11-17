@@ -216,6 +216,14 @@ Fuse::Fuse(Filesystem *fs)
   :_fs(fs), _mountdir(), _running(false) {
 }
 
+void Fuse::_logException(const std::exception &e) {
+  LOG(ERROR) << "Exception thrown: " << e.what();
+}
+
+void Fuse::_logUnknownException() {
+  LOG(ERROR) << "Unknown exception thrown";
+}
+
 void Fuse::run(int argc, char **argv) {
   vector<char*> _argv(argv, argv + argc);
   _mountdir = argv[1];
@@ -246,6 +254,12 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -271,6 +285,12 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -286,6 +306,12 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -310,6 +336,12 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -325,6 +357,12 @@ int Fuse::unlink(const bf::path &path) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -340,6 +378,12 @@ int Fuse::rmdir(const bf::path &path) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -356,6 +400,12 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -371,6 +421,12 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -396,6 +452,12 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -411,6 +473,12 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -426,6 +494,12 @@ int Fuse::truncate(const bf::path &path, off_t size) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -442,6 +516,12 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -458,6 +538,12 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -473,6 +559,12 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -489,6 +581,12 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -504,6 +602,12 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -520,6 +624,12 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -536,6 +646,12 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -554,6 +670,12 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -574,6 +696,12 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -618,6 +746,12 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -666,6 +800,12 @@ int Fuse::access(const bf::path &path, int mask) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }
 
@@ -682,5 +822,11 @@ int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
   }
 }

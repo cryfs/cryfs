@@ -57,6 +57,9 @@ public:
   int create(const boost::filesystem::path &path, mode_t mode, fuse_file_info *fileinfo);
 
 private:
+  static void _logException(const std::exception &e);
+  static void _logUnknownException();
+
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
   bool _running;
