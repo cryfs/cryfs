@@ -61,7 +61,6 @@ using boost::chrono::milliseconds;
 //TODO Support files > 4GB
 //TODO Improve parallelity.
 //TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
-//TODO Improve error message when root blob wasn't found.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 
 namespace cryfs {

@@ -39,6 +39,7 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using cryfs::parallelaccessfsblobstore::SymlinkBlobRef;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
+using namespace cpputils::logging;
 
 namespace bf = boost::filesystem;
 
@@ -101,7 +102,10 @@ unique_ref<DirBlobRef> CryDevice::LoadDirBlob(const bf::path &path) {
 
 unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
   auto currentBlob = _fsBlobStore->load(_rootKey);
-  ASSERT(currentBlob != none, "rootDir not found");
+  if (currentBlob == none) {
+    LOG(ERROR) << "Could not load root blob. Is the base directory accessible?";
+    throw FuseErrnoException(EIO);
+  }
 
   for (const bf::path &component : path.relative_path()) {
     auto currentDir = dynamic_pointer_move<DirBlobRef>(*currentBlob);
@@ -142,13 +146,19 @@ unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target) 
 
 unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::Key &key) {
   auto blob = _fsBlobStore->load(key);
-  ASSERT(blob != none, "Blob not found");
+  if (blob == none) {
+    LOG(ERROR) << "Could not load blob " << key.ToString() << ". Is the root directory accessible?";
+    throw FuseErrnoException(EIO);
+  }
   return std::move(*blob);
 }
 
 void CryDevice::RemoveBlob(const blockstore::Key &key) {
   auto blob = _fsBlobStore->load(key);
-  ASSERT(blob != none, "Blob not found");
+  if (blob == none) {
+    LOG(ERROR) << "Could not load blob " << key.ToString() << ". Is the root directory accessible?";
+    throw FuseErrnoException(EIO);
+  }
   _fsBlobStore->remove(std::move(*blob));
 }
 
