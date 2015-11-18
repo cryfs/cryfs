@@ -1,6 +1,6 @@
 Version 0.8.2
 ---------------
-* Mount directory and base directory can be specified as relative paths.
+* Mount directory, base directory, logfile and config file can be specified as relative paths.
 * Improved error messages.
 
 Version 0.8.1
