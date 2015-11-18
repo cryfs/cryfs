@@ -19,9 +19,9 @@ TEST_F(CliTest_ShowingHelp, HelpShortOptionTogetherWithOtherOptions) {
 }
 
 TEST_F(CliTest_ShowingHelp, MissingAllOptions) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({});
+    EXPECT_EXIT_WITH_HELP_MESSAGE({}, "Please specify a base directory");
 }
 
 TEST_F(CliTest_ShowingHelp, MissingDir) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str()});
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str()}, "Please specify a mount directory");
 }

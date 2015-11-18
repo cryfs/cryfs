@@ -30,11 +30,19 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     pair<vector<char*>, vector<char*>> options = splitAtDoubleDash(_options);
     po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
 
-    bf::path baseDir = bf::canonical(vm["base-dir"].as<string>());
-    bf::path mountDir = bf::canonical(vm["mount-dir"].as<string>());
+    if (!vm.count("base-dir")) {
+        std::cerr << "Please specify a base directory.\n";
+        _showHelpAndExit();
+    }
+    if (!vm.count("mount-dir")) {
+        std::cerr << "Please specify a mount directory.\n";
+        _showHelpAndExit();
+    }
+    bf::path baseDir = bf::absolute(vm["base-dir"].as<string>());
+    bf::path mountDir = bf::absolute(vm["mount-dir"].as<string>());
     optional<bf::path> configfile = none;
     if (vm.count("config")) {
-        configfile = bf::canonical(vm["config"].as<string>());
+        configfile = bf::absolute(vm["config"].as<string>());
     }
     bool foreground = vm.count("foreground");
     if (foreground) {
@@ -46,7 +54,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     }
     optional<bf::path> logfile = none;
     if (vm.count("logfile")) {
-        logfile = bf::canonical(vm["logfile"].as<string>());
+        logfile = bf::absolute(vm["logfile"].as<string>());
     }
     optional<string> cipher = none;
     if (vm.count("cipher")) {
@@ -117,8 +125,8 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
     positional->add("mount-dir", 1);
     po::options_description hidden("Hidden options");
     hidden.add_options()
-            ("base-dir", po::value<string>()->required(), "Base directory")
-            ("mount-dir", po::value<string>()->required(), "Mount directory")
+            ("base-dir", po::value<string>(), "Base directory")
+            ("mount-dir", po::value<string>(), "Mount directory")
             ;
     desc->add(hidden);
 }

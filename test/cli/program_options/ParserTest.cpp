@@ -6,6 +6,7 @@ using namespace cryfs;
 using namespace cryfs::program_options;
 using std::vector;
 using boost::none;
+namespace bf = boost::filesystem;
 
 class ProgramOptionsParserTest: public ProgramOptionsTestBase {
 public:
@@ -61,14 +62,34 @@ TEST_F(ProgramOptionsParserTest, NoSpecialOptions) {
     EXPECT_VECTOR_EQ({"./myExecutable", "/home/user/mountDir"}, options.fuseOptions());
 }
 
+TEST_F(ProgramOptionsParserTest, RelativeBaseDir) {
+    ProgramOptions options = parse({"./myExecutable", "baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(bf::current_path() / "baseDir", options.baseDir());
+}
+
+TEST_F(ProgramOptionsParserTest, RelativeMountDir) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "mountDir"});
+    EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
+}
+
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--logfile", "/home/user/mylogfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/mylogfile", options.logFile().value());
 }
 
+TEST_F(ProgramOptionsParserTest, LogfileGiven_RelativePath) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--logfile", "mylogfile", "/home/user/mountDir"});
+    EXPECT_EQ(bf::current_path() / "mylogfile", options.logFile().value());
+}
+
 TEST_F(ProgramOptionsParserTest, ConfigfileGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--config", "/home/user/myconfigfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/myconfigfile", options.configFile().value());
+}
+
+TEST_F(ProgramOptionsParserTest, ConfigfileGiven_RelativePath) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--config", "myconfigfile", "/home/user/mountDir"});
+    EXPECT_EQ(bf::current_path() / "myconfigfile", options.configFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, CipherGiven) {

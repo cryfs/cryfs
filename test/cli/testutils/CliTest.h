@@ -32,8 +32,8 @@ public:
         cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings).main(_args.size(), _args.data());
     }
 
-    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args) {
-        EXPECT_RUN_ERROR(args, "Usage");
+    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message = "") {
+        EXPECT_RUN_ERROR(args, (message+".*Usage").c_str());
     }
 
     void EXPECT_RUN_ERROR(std::vector<const char*> args, const char *message) {

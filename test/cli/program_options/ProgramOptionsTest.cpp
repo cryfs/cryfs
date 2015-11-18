@@ -5,7 +5,20 @@
 using namespace cryfs::program_options;
 using std::vector;
 using boost::none;
+using boost::optional;
+using std::ostream;
 using std::string;
+namespace bf = boost::filesystem;
+
+// This is needed for google test to work with boost::optional<boost::filesystem::path>
+namespace boost {
+    template<> ostream& operator<< <char, std::char_traits<char>, bf::path>(ostream &stream, const optional<bf::path> &path) {
+        if (path == none) {
+            return stream << "none";
+        }
+        return stream << *path;
+    }
+}
 
 class ProgramOptionsTest: public ProgramOptionsTestBase {};
 
@@ -25,7 +38,7 @@ TEST_F(ProgramOptionsTest, ConfigfileNone) {
 }
 
 TEST_F(ProgramOptionsTest, ConfigfileSome) {
-    ProgramOptions testobj("", "", string("/home/user/configfile"), true, none, none, none, none, options({"./myExecutable"}));
+    ProgramOptions testobj("", "", bf::path("/home/user/configfile"), true, none, none, none, none, options({"./myExecutable"}));
     EXPECT_EQ("/home/user/configfile", testobj.configFile().get());
 }
 
@@ -45,7 +58,7 @@ TEST_F(ProgramOptionsTest, LogfileNone) {
 }
 
 TEST_F(ProgramOptionsTest, LogfileSome) {
-    ProgramOptions testobj("", "", none, true, none, string("logfile"), none, none, options({"./myExecutable"}));
+    ProgramOptions testobj("", "", none, true, none, bf::path("logfile"), none, none, options({"./myExecutable"}));
     EXPECT_EQ("logfile", testobj.logFile().get());
 }
 
