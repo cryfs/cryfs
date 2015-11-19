@@ -19,9 +19,11 @@ namespace cryfs {
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
-        std::string _getPassword(const program_options::ProgramOptions &options);
-        std::string _askPassword();
-        bool _checkPassword(const std::string &password);
+        std::string _getPassword(const program_options::ProgramOptions &options, std::function<std::string()> askPassword);
+        static std::string _askPasswordForExistingFilesystem();
+        static std::string _askPasswordForNewFilesystem();
+        static bool _confirmPassword(const std::string &password);
+        static bool _checkPassword(const std::string &password);
         void _showVersion();
         void _initLogfile(const program_options::ProgramOptions &options);
         void _sanityChecks(const program_options::ProgramOptions &options);

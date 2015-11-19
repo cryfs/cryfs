@@ -24,7 +24,8 @@ public:
     CryConfigLoaderTest(): file(false) {}
 
     CryConfigLoader loader(const string &password, const optional<string> &cipher = none) {
-        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, [password] {return password;}, cipher);
+        auto askPassword = [password] {return password;};
+        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher);
     }
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none) {

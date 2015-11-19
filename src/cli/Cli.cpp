@@ -27,6 +27,7 @@
 #endif
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
+//TODO Factor out class handling askPassword
 
 using namespace cryfs;
 namespace bf = boost::filesystem;
@@ -95,10 +96,10 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_getPassword(const ProgramOptions &options) {
+    string Cli::_getPassword(const ProgramOptions &options, function<string()> askPassword) {
         string password;
         if (options.extPass() == none) {
-            password = _askPassword();
+            password = askPassword();
         } else {
             password = cpputils::Subprocess::call(*options.extPass());
         }
@@ -113,13 +114,40 @@ namespace cryfs {
         return password;
     }
 
-    string Cli::_askPassword() {
+    string Cli::_askPasswordForExistingFilesystem() {
         string password = getpass("Password: ");
         while (!_checkPassword(password)) {
             password = getpass("Password: ");
         }
         return password;
     };
+
+    string Cli::_askPasswordForNewFilesystem() {
+        string password;
+        bool again = false;
+        do {
+            password = getpass("Password: ");
+            if (!_checkPassword(password)) {
+                again = true;
+                continue;
+            }
+            if (!_confirmPassword(password)) {
+                again = true;
+                continue;
+            }
+            again = false;
+        } while(again);
+        return password;
+    }
+
+    bool Cli::_confirmPassword(const string &password) {
+        string confirmPassword = getpass("Confirm Password: ");
+        if (password != confirmPassword) {
+            std::cout << "Passwords don't match" << std::endl;
+            return false;
+        }
+        return true;
+    }
 
     bf::path Cli::_determineConfigFile(const ProgramOptions &options) {
         auto configFile = options.configFile();
@@ -133,9 +161,10 @@ namespace cryfs {
         try {
             auto configFile = _determineConfigFile(options);
             auto console = make_unique_ref<IOStreamConsole>();
-            std::cout << "Loading config file..." << std::endl;
-            auto config = CryConfigLoader(std::move(console), _keyGenerator, _scryptSettings, std::bind(&Cli::_getPassword, this, std::cref(options)), options.cipher()).loadOrCreate(configFile);
-            std::cout << "Loading config file...done" << std::endl;
+            auto config = CryConfigLoader(std::move(console), _keyGenerator, _scryptSettings,
+                                          std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForExistingFilesystem),
+                                          std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForNewFilesystem),
+                                          options.cipher()).loadOrCreate(configFile);
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);

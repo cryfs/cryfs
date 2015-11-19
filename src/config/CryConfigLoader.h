@@ -13,7 +13,7 @@ namespace cryfs {
 
 class CryConfigLoader {
 public:
-  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPassword, const boost::optional<std::string> &cipher);
+  CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipher);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   boost::optional<CryConfigFile> loadOrCreate(const boost::filesystem::path &filename);
@@ -24,7 +24,8 @@ private:
 
     CryConfigCreator _creator;
     cpputils::SCryptSettings _scryptSettings;
-    std::function<std::string()> _askPassword;
+    std::function<std::string()> _askPasswordForExistingFilesystem;
+    std::function<std::string()> _askPasswordForNewFilesystem;
     boost::optional<std::string> _cipher;
 
     DISALLOW_COPY_AND_ASSIGN(CryConfigLoader);
