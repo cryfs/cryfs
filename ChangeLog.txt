@@ -1,3 +1,7 @@
+Version 0.8.3
+---------------
+* Ask for password confirmation when creating new filesystem.
+
 Version 0.8.2
 ---------------
 * Mount directory, base directory, logfile and config file can be specified as relative paths.
