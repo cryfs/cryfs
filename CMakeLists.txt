@@ -22,7 +22,7 @@ INSTALL(TARGETS ${BII_src_main_TARGET}
         DESTINATION bin
         CONFIGURATIONS Release)
 
-SET(CPACK_GENERATOR TGZ STGZ 7Z ZIP DEB RPM)
+SET(CPACK_GENERATOR TGZ DEB RPM)
 SET(CPACK_PACKAGE_NAME "cryfs")
 SET(CPACK_PACKAGE_VERSION "${GITVERSION_VERSION_STRING}")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.")
