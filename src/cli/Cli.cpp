@@ -18,6 +18,8 @@
 
 #include <gitversion/version.h>
 
+#include "VersionChecker.h"
+
 #include <pwd.h>
 
 //<limits.h> needed for libc to define PASS_MAX
@@ -79,12 +81,23 @@ namespace cryfs {
         } else if (!version::IS_STABLE_VERSION) {
             cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
         } else {
-            //TODO This is shown for stable version numbers like 0.8 - remove once we reach 1.0
+            //TODO This is even shown for stable version numbers like 0.8 - remove once we reach 1.0
             cout << "WARNING! This version is not considered stable. Please backup your data frequently!" << endl;
         }
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
+        VersionChecker versionChecker;
+        optional<string> newestVersion = versionChecker.newestVersion();
+        if (newestVersion == none) {
+            cout << "Could not connect to cryfs.org to check for updates." << endl;
+        } else if (*newestVersion != version::VERSION_STRING) {
+            cout << "CryFS " << *newestVersion << " is released. Please update." << endl;
+        }
+        optional<string> securityWarning = versionChecker.securityWarningFor(version::VERSION_STRING);
+        if (securityWarning != none) {
+            cout << *securityWarning << endl;
+        }
         cout << endl;
     }
 
