@@ -49,9 +49,11 @@ SET(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
 SET(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 #SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libfuse2 (>= 2.7.4-1)") # TODO Use correct minimal fuse version
 #SET(CPACK_RPM_PACKAGE_REQUIRES "libfuse (>= 2.7.4-1)") # TODO Use correct minimal fuse version
-SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64") # TODO Other architectures?
-SET(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64") # TODO Other architectures?
+#SET(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) # TODO Use this instead of manual dependency definition
+SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://cryfs.org")
 SET(CPACK_RPM_PACKAGE_LICENSE "LGPLv3")
+
+
 INCLUDE(CPack)
 
 # You can safely delete lines from here...
