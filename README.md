@@ -21,7 +21,7 @@ Requirements
         # After installing, call
         $ bii setup:cpp
 
-  - GCC version >= 4.9 or Clang (TODO which minimal version?)
+  - GCC version >= 4.8 or Clang (TODO which minimal version?)
   - libFUSE (including development headers) (TODO which minimal version?)
 
         # Ubuntu
