@@ -21,7 +21,11 @@ class FuseFstatErrorTest: public FuseFstatTest, public WithParamInterface<int> {
 public:
   int CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
     auto real_path = fs->mountDir() / filename;
+#if __GNUC__ == 4 && __GNUC_MINOR__ == 8
+    return ::open(real_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#else
     return ::open(real_path.c_str(), O_RDWR | O_CREAT);
+#endif
   }
 };
 INSTANTIATE_TEST_CASE_P(FuseFstatErrorTest, FuseFstatErrorTest, Values(EACCES, EBADF, EFAULT, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EOVERFLOW));
