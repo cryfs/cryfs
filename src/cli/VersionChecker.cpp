@@ -54,7 +54,8 @@ namespace cryfs {
     }
 
     optional<ptree> VersionChecker::_getVersionInfo(shared_ptr<HttpClient> httpClient) {
-        optional<string> response = httpClient->get("http://www.cryfs.org/version_info.json");
+        long timeoutMsec = 2000;
+        optional<string> response = httpClient->get("http://www.cryfs.org/version_info.json", timeoutMsec);
         if (response == none) {
             return none;
         }
