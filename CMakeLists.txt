@@ -47,8 +47,7 @@ ELSE(WIN32 AND NOT UNIX)
 ENDIF(WIN32 AND NOT UNIX)
 SET(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
 SET(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libcurl3") # TODO Use correct minimal libcurl version
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libfuse2 (>= 2.7.4-1)") # TODO Use correct minimal fuse version
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libcurl3 (>= 7.22.0-3), libfuse2 (>= 2.7.4-1)") # TODO Use correct minimal versions
 #SET(CPACK_RPM_PACKAGE_REQUIRES "libfuse (>= 2.7.4-1)") # TODO Use correct minimal fuse version
 #SET(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) # TODO Use this instead of manual dependency definition
 
