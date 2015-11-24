@@ -4,6 +4,7 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
+#include <boost/optional/optional_io.hpp>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -12,10 +13,18 @@ using cpputils::SCrypt;
 using boost::optional;
 using boost::none;
 using std::string;
+using std::ostream;
 using ::testing::Return;
 using ::testing::_;
 
 using namespace cryfs;
+
+// This is needed for google test
+namespace boost {
+    inline ostream &operator<<(ostream &stream, const CryConfigFile &) {
+        return stream << "CryConfigFile()";
+    }
+}
 
 //TODO Test loading with same/different --cipher argument
 

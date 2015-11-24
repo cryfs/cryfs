@@ -83,7 +83,7 @@ const vector<shared_ptr<CryCipher>> CryCiphers::SUPPORTED_CIPHERS = {
 
 const CryCipher& CryCiphers::find(const string &cipherName) {
     auto found = std::find_if(CryCiphers::SUPPORTED_CIPHERS.begin(), CryCiphers::SUPPORTED_CIPHERS.end(),
-                              [cipherName] (const auto& element) {
+                              [cipherName] (const std::shared_ptr<CryCipher>& element) {
                                   return element->cipherName() == cipherName;
                               });
     ASSERT(found != CryCiphers::SUPPORTED_CIPHERS.end(), "Unknown Cipher: "+cipherName);
