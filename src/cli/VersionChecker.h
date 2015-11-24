@@ -8,8 +8,6 @@
 #include <messmer/cpp-utils/network/HttpClient.h>
 
 namespace cryfs {
-    //TODO Test
-
     class VersionChecker final {
     public:
         VersionChecker();
