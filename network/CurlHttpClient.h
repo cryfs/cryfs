@@ -13,7 +13,7 @@ namespace cpputils {
 
         ~CurlHttpClient();
 
-        boost::optional <std::string> get(const std::string &url) override;
+        boost::optional <std::string> get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
     private:
         void *curl;

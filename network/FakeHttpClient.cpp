@@ -12,7 +12,8 @@ namespace cpputils {
         _sites[url] = content;
     }
 
-    optional<string> FakeHttpClient::get(const string &url) {
+    optional<string> FakeHttpClient::get(const string &url, optional<long> timeoutMsec) {
+        UNUSED(timeoutMsec);
         auto found = _sites.find(url);
         if (found == _sites.end()) {
             return none;

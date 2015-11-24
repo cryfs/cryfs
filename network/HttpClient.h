@@ -9,7 +9,7 @@ namespace cpputils {
     public:
         virtual ~HttpClient() {}
 
-        virtual boost::optional<std::string> get(const std::string& url) = 0;
+        virtual boost::optional<std::string> get(const std::string& url, boost::optional<long> timeoutMsec = boost::none) = 0;
     };
 };
 

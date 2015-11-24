@@ -26,7 +26,7 @@ namespace cpputils {
         curl_easy_cleanup(curl);
     }
 
-    optional <string> CurlHttpClient::get(const string &url) {
+    optional <string> CurlHttpClient::get(const string &url, optional<long> timeoutMsec) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         // example.com is redirected, so we tell libcurl to follow redirection
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -35,6 +35,9 @@ namespace cpputils {
         ostringstream out;
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlHttpClient::write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out);
+        if (timeoutMsec != none) {
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, *timeoutMsec);
+        }
         // Perform the request, res will get the return code
         CURLcode res = curl_easy_perform(curl);
         // Check for errors
