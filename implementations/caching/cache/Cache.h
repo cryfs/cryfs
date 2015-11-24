@@ -10,6 +10,7 @@
 #include <future>
 #include <messmer/cpp-utils/assert/assert.h>
 #include <messmer/cpp-utils/lock/MutexPoolLock.h>
+#include <messmer/cpp-utils/pointer/gcc_4_8_compatibility.h>
 
 namespace blockstore {
 namespace caching {

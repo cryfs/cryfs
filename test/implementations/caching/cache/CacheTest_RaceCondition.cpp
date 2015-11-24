@@ -5,8 +5,8 @@
 #include <future>
 #include <messmer/cpp-utils/lock/ConditionBarrier.h>
 
-using namespace std::chrono_literals;
 using namespace blockstore::caching;
+using std::chrono::seconds;
 using std::string;
 using cpputils::ConditionBarrier;
 using std::unique_ptr;
@@ -24,7 +24,7 @@ public:
             : _onDestructorStarted(onDestructorStarted), _destructorFinished(destructorFinished) {}
     ~ObjectWithLongDestructor() {
         _onDestructorStarted->release();
-        std::this_thread::sleep_for(1s);
+        std::this_thread::sleep_for(seconds(1));
         *_destructorFinished = true;
     }
 private:

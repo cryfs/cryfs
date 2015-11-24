@@ -79,19 +79,22 @@ private:
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, block, start, count);
   }
 };
-constexpr std::initializer_list<DataRange> DATA_RANGES = {
-  DataRange{1024,     0,   1024},     // full size leaf, access beginning to end
-  DataRange{1024,     100, 1024-200}, // full size leaf, access middle to middle
-  DataRange{1024,     0,   1024-100}, // full size leaf, access beginning to middle
-  DataRange{1024,     100, 1024-100}, // full size leaf, access middle to end
-  DataRange{1024-100, 0,   1024-100}, // non-full size leaf, access beginning to end
-  DataRange{1024-100, 100, 1024-300}, // non-full size leaf, access middle to middle
-  DataRange{1024-100, 0,   1024-200}, // non-full size leaf, access beginning to middle
-  DataRange{1024-100, 100, 1024-200}  // non-full size leaf, access middle to end
+
+inline std::vector<DataRange> DATA_RANGES() {
+  return {
+          DataRange{1024, 0, 1024},     // full size leaf, access beginning to end
+          DataRange{1024, 100, 1024 - 200}, // full size leaf, access middle to middle
+          DataRange{1024, 0, 1024 - 100}, // full size leaf, access beginning to middle
+          DataRange{1024, 100, 1024 - 100}, // full size leaf, access middle to end
+          DataRange{1024 - 100, 0, 1024 - 100}, // non-full size leaf, access beginning to end
+          DataRange{1024 - 100, 100, 1024 - 300}, // non-full size leaf, access middle to middle
+          DataRange{1024 - 100, 0, 1024 - 200}, // non-full size leaf, access beginning to middle
+          DataRange{1024 - 100, 100, 1024 - 200}  // non-full size leaf, access middle to end
+  };
 };
 #define TYPED_TEST_P_FOR_ALL_DATA_RANGES(TestName)                                   \
   TYPED_TEST_P(BlockStoreTest, TestName) {                                           \
-    for (auto dataRange: DATA_RANGES) {                                              \
+    for (auto dataRange: DATA_RANGES()) {                                            \
       BlockStoreDataParametrizedTest(this->fixture.createBlockStore(), dataRange)    \
         .Test##TestName();                                                           \
     }                                                                                \
