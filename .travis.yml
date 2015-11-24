@@ -5,7 +5,7 @@ compiler:
 before_install:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
   && chmod +x update_gcc_version.sh
-  && ./update_gcc_version.sh 4.9
+  && ./update_gcc_version.sh 4.8
   && rm update_gcc_version.sh
 before_script:
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
