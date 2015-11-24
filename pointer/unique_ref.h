@@ -5,6 +5,7 @@
 #include <memory>
 #include <boost/optional.hpp>
 #include "../macros.h"
+#include "gcc_4_8_compatibility.h"
 #include "cast.h"
 
 namespace cpputils {
