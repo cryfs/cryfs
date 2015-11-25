@@ -37,10 +37,10 @@ TEST_F(CallAfterTimeoutTest, NoReset_2) {
 
 TEST_F(CallAfterTimeoutTest, DoesntCallTwice) {
     auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(100));
+    sleep_for(milliseconds(150));
     EXPECT_TRUE(called);
     called = false;
-    sleep_for(milliseconds(100));
+    sleep_for(milliseconds(150));
     EXPECT_FALSE(called);
 }
 
