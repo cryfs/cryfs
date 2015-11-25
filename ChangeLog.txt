@@ -1,3 +1,7 @@
+Version 0.8.4
+---------------
+* Compatibility with 32bit systems
+
 Version 0.8.3
 ---------------
 * Ask for password confirmation when creating new filesystem.

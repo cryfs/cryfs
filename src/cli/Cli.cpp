@@ -64,9 +64,8 @@ using boost::chrono::milliseconds;
 
 //TODO Support files > 4GB
 //TODO Improve parallelity.
-//TODO Did deadlock in bonnie++ second run (in the create files sequentially) - maybe also in a later run or different step?
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
-//TODO When calling cryfs without basedir parameter (i.e. just calling "cryfs"): the option '--base-dir' is required but missing. Should be a better error message, since --base-dir is not actually a command line option.
+//TODO Performance difference when setting compiler parameter -maes for scrypt?
 
 namespace cryfs {
 
