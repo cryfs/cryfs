@@ -23,7 +23,7 @@ public:
 
   ::testing::Action<int(int, void*, size_t, off_t)> ReturnSuccessfulReadRegardingSize(size_t filesize) {
     return ::testing::Invoke([filesize](int, void *, size_t count, off_t offset) {
-      size_t ableToReadCount = std::min(count, filesize - offset);
+      size_t ableToReadCount = std::min(count, (size_t)(filesize - offset));
       return ableToReadCount;
     });
   }

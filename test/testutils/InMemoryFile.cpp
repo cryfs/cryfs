@@ -9,7 +9,7 @@ InMemoryFile::~InMemoryFile() {
 }
 
 int InMemoryFile::read(void *buf, size_t count, off_t offset) const {
-  size_t realCount = std::min(count, _data.size() - offset);
+  size_t realCount = std::min(count, (size_t)(_data.size() - offset));
   std::memcpy(buf, (uint8_t*)_data.data() + offset, realCount);
   return realCount;
 }
