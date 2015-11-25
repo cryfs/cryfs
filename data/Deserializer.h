@@ -94,7 +94,7 @@ namespace cpputils {
         return _readData(size);
     }
 
-    inline Data Deserializer::_readData(uint64_t size) {
+    inline Data Deserializer::_readData(size_t size) {
         Data result(size);
         std::memcpy(static_cast<char*>(result.data()), static_cast<const char*>(_source->dataOffset(_pos)), size);
         _pos += size;

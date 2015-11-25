@@ -191,12 +191,16 @@ TEST_F(DataTest, Inequality_DifferentLastByte) {
   EXPECT_TRUE(data1 != data2);
 }
 
+#ifdef __x86_64__
 //Needs 64bit for representation. This value isn't in the size param list, because the list is also used for read/write checks.
 TEST_F(DataTest, LargesizeSize) {
-  size_t size = 10L*1024*1024*1024;
+  uint64_t size = 10L*1024*1024*1024;
   Data data(size);
   EXPECT_EQ(size, data.size());
 }
+#else
+#warning This is not a 64bit architecture. Large size data tests are disabled.
+#endif
 
 TEST_F(DataTest, LoadingNonexistingFile) {
   TempFile file(false); // Pass false to constructor, so the tempfile is not created
