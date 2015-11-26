@@ -19,7 +19,7 @@ namespace caching {
 
 // A class that is a queue and a map at the same time. We could also see it as an addressable queue.
 template<class Key, class Value>
-class QueueMap {
+class QueueMap final {
 public:
   QueueMap(): _entries(), _sentinel(&_sentinel, &_sentinel) {
   }
@@ -77,27 +77,30 @@ public:
   }
 
 private:
-  class Entry {
+  class Entry final {
   public:
-    Entry(Entry *prev_, Entry *next_): prev(prev_), next(next_), key(nullptr), _value() {
+    Entry(Entry *prev_, Entry *next_): prev(prev_), next(next_), key(nullptr), __value() {
     }
     void init(const Key *key_, Value value_) {
       key = key_;
-      new(_value) Value(std::move(value_));
+      new(__value) Value(std::move(value_));
     }
     Value release() {
-      Value value = std::move(*reinterpret_cast<Value*>(_value));
-      reinterpret_cast<Value*>(_value)->~Value();
+      Value value = std::move(*_value());
+      _value()->~Value();
       return value;
     }
     const Value &value() {
-      return *reinterpret_cast<Value*>(_value);
+      return *_value();
     }
     Entry *prev;
     Entry *next;
     const Key *key;
   private:
-    alignas(Value) char _value[sizeof(Value)];
+    Value *_value() {
+      return reinterpret_cast<Value*>(__value);
+    }
+    alignas(Value) char __value[sizeof(Value)];
     DISALLOW_COPY_AND_ASSIGN(Entry);
   };
 
