@@ -37,8 +37,12 @@ TEST_F(CallAfterTimeoutTest, NoReset_2) {
 
 TEST_F(CallAfterTimeoutTest, DoesntCallTwice) {
     auto obj = callAfterTimeout(milliseconds(50));
-    sleep_for(milliseconds(150));
+    // Wait until it was called
+    while(!called) {
+        sleep_for(milliseconds(10));
+    }
     EXPECT_TRUE(called);
+    // Test that it isn't called again
     called = false;
     sleep_for(milliseconds(150));
     EXPECT_FALSE(called);
