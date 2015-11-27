@@ -11,7 +11,7 @@ namespace blockstore {
 namespace parallelaccess {
 
 //TODO Check that this blockstore allows parallel destructing of blocks (otherwise we won't encrypt blocks in parallel)
-class ParallelAccessBlockStore: public BlockStore {
+class ParallelAccessBlockStore final: public BlockStore {
 public:
   explicit ParallelAccessBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
 

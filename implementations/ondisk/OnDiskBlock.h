@@ -14,10 +14,10 @@ namespace blockstore {
 namespace ondisk {
 class OnDiskBlockStore;
 
-class OnDiskBlock: public Block {
+class OnDiskBlock final: public Block {
 public:
   OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
-  virtual ~OnDiskBlock();
+  ~OnDiskBlock();
 
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);

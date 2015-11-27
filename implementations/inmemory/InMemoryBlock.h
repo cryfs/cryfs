@@ -9,11 +9,11 @@ namespace blockstore {
 namespace inmemory {
 class InMemoryBlockStore;
 
-class InMemoryBlock: public Block {
+class InMemoryBlock final: public Block {
 public:
   InMemoryBlock(const Key &key, cpputils::Data size);
   InMemoryBlock(const InMemoryBlock &rhs);
-  virtual ~InMemoryBlock();
+  ~InMemoryBlock();
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

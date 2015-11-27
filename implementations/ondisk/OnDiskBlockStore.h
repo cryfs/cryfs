@@ -10,7 +10,7 @@
 namespace blockstore {
 namespace ondisk {
 
-class OnDiskBlockStore: public BlockStoreWithRandomKeys {
+class OnDiskBlockStore final: public BlockStoreWithRandomKeys {
 public:
   explicit OnDiskBlockStore(const boost::filesystem::path &rootdir);
 

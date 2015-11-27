@@ -12,7 +12,7 @@ namespace blockstore {
 namespace encrypted {
 
 template<class Cipher>
-class EncryptedBlockStore: public BlockStore {
+class EncryptedBlockStore final: public BlockStore {
 public:
   EncryptedBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 

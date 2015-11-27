@@ -12,7 +12,7 @@ namespace blockstore {
 namespace inmemory {
 class InMemoryBlock;
 
-class InMemoryBlockStore: public BlockStoreWithRandomKeys {
+class InMemoryBlockStore final: public BlockStoreWithRandomKeys {
 public:
   InMemoryBlockStore();
 

@@ -16,7 +16,7 @@ namespace blockstore {
 namespace caching {
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-class Cache {
+class Cache final {
 public:
   //TODO Current MAX_LIFETIME_SEC only considers time since the element was last pushed to the Cache. Also insert a real MAX_LIFETIME_SEC that forces resync of entries that have been pushed/popped often (e.g. the root blob)
   //TODO Experiment with good values
@@ -25,7 +25,7 @@ public:
   static constexpr double MAX_LIFETIME_SEC = PURGE_LIFETIME_SEC + PURGE_INTERVAL; // This is the oldest age an entry can reach (given purging works in an ideal world, i.e. with the ideal interval and in zero time)
 
   Cache();
-  virtual ~Cache();
+  ~Cache();
 
   uint32_t size() const;
 
@@ -47,6 +47,8 @@ private:
   cpputils::LockPool<Key> _currentlyFlushingEntries;
   QueueMap<Key, CacheEntry<Key, Value>> _cachedBlocks;
   std::unique_ptr<PeriodicTask> _timeoutFlusher;
+
+  DISALLOW_COPY_AND_ASSIGN(Cache);
 };
 
 template<class Key, class Value, uint32_t MAX_ENTRIES> constexpr double Cache<Key, Value, MAX_ENTRIES>::PURGE_LIFETIME_SEC;

@@ -10,11 +10,11 @@ namespace blockstore {
 namespace caching {
 class CachingBlockStore;
 
-class CachedBlock: public Block {
+class CachedBlock final: public Block {
 public:
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
   CachedBlock(cpputils::unique_ref<Block> baseBlock, CachingBlockStore *blockStore);
-  virtual ~CachedBlock();
+  ~CachedBlock();
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

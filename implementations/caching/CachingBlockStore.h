@@ -9,7 +9,7 @@ namespace blockstore {
 namespace caching {
 
 //TODO Check that this blockstore allows parallel destructing of blocks (otherwise we won't encrypt blocks in parallel)
-class CachingBlockStore: public BlockStore {
+class CachingBlockStore final: public BlockStore {
 public:
   explicit CachingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
 

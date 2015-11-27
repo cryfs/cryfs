@@ -18,10 +18,10 @@ class CachingBlockStore;
 
 // This is a block that was created in CachingBlockStore, but doesn't exist in the base block store yet.
 // It only exists in the cache and it is created in the base block store when destructed.
-class NewBlock: public Block {
+class NewBlock final: public Block {
 public:
   NewBlock(const Key &key, cpputils::Data data, CachingBlockStore *blockStore);
-  virtual ~NewBlock();
+  ~NewBlock();
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

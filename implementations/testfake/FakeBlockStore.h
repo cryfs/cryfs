@@ -27,7 +27,7 @@ class FakeBlock;
  * the data (instead of a direct pointer as InMemoryBlockStore does) and flushing will copy the data back to the
  * background. This way, tests are more likely to fail if they use the blockstore wrongly.
  */
-class FakeBlockStore: public BlockStoreWithRandomKeys {
+class FakeBlockStore final: public BlockStoreWithRandomKeys {
 public:
   FakeBlockStore();
 

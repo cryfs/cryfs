@@ -23,7 +23,7 @@ class QueueMap final {
 public:
   QueueMap(): _entries(), _sentinel(&_sentinel, &_sentinel) {
   }
-  virtual ~QueueMap() {
+  ~QueueMap() {
     for (auto &entry : _entries) {
       entry.second.release();
     }

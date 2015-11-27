@@ -11,7 +11,7 @@ namespace blockstore {
 namespace caching {
 
 template<class Key, class Value>
-class CacheEntry {
+class CacheEntry final {
 public:
   explicit CacheEntry(Value value): _lastAccess(currentTime()), _value(std::move(value)) {
   }

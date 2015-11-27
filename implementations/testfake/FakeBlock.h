@@ -11,10 +11,10 @@ namespace blockstore {
 namespace testfake {
 class FakeBlockStore;
 
-class FakeBlock: public Block {
+class FakeBlock final: public Block {
 public:
   FakeBlock(FakeBlockStore *store, const Key &key, std::shared_ptr<cpputils::Data> data, bool dirty);
-  virtual ~FakeBlock();
+  ~FakeBlock();
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

@@ -22,7 +22,7 @@ template<class Cipher> class EncryptedBlockStore;
 //TODO Test EncryptedBlock
 
 template<class Cipher>
-class EncryptedBlock: public Block {
+class EncryptedBlock final: public Block {
 public:
   BOOST_CONCEPT_ASSERT((cpputils::CipherConcept<Cipher>));
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
@@ -30,7 +30,7 @@ public:
 
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
   EncryptedBlock(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key, cpputils::Data plaintextWithHeader);
-  virtual ~EncryptedBlock();
+  ~EncryptedBlock();
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t count) override;

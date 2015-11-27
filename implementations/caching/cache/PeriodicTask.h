@@ -22,6 +22,8 @@ private:
   //This member has to be last, so the thread is destructed first. Otherwise the thread might access elements from a
   //partly destructed PeriodicTask.
   cpputils::LoopThread _thread;
+
+  DISALLOW_COPY_AND_ASSIGN(PeriodicTask);
 };
 
 }
