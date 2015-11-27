@@ -17,7 +17,7 @@ namespace onblocks {
 namespace datanodestore {
 
 //TODO Move DataNodeLayout into own file
-class DataNodeLayout {
+class DataNodeLayout final {
 public:
   constexpr DataNodeLayout(uint32_t blocksizeBytes)
     :_blocksizeBytes(
@@ -57,11 +57,11 @@ private:
   uint32_t _blocksizeBytes;
 };
 
-class DataNodeView {
+class DataNodeView final {
 public:
   DataNodeView(cpputils::unique_ref<blockstore::Block> block): _block(std::move(block)) {
   }
-  virtual ~DataNodeView() {}
+  ~DataNodeView() {}
 
   DataNodeView(DataNodeView &&rhs) = default;
 

@@ -9,12 +9,12 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-class DataInnerNode: public DataNode {
+class DataInnerNode final: public DataNode {
 public:
   static cpputils::unique_ref<DataInnerNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block, const DataNode &first_child_key);
 
   DataInnerNode(DataNodeView block);
-  virtual ~DataInnerNode();
+  ~DataInnerNode();
 
   using ChildEntry = DataInnerNode_ChildEntry;
 
@@ -38,6 +38,8 @@ private:
   ChildEntry *ChildrenEnd();
   const ChildEntry *ChildrenBegin() const;
   const ChildEntry *ChildrenEnd() const;
+
+  DISALLOW_COPY_AND_ASSIGN(DataInnerNode);
 };
 
 }

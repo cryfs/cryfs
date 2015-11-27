@@ -16,10 +16,10 @@ class DataNodeStore;
 namespace datatreestore {
 class DataTree;
 
-class DataTreeStore {
+class DataTreeStore final {
 public:
   DataTreeStore(cpputils::unique_ref<datanodestore::DataNodeStore> nodeStore);
-  virtual ~DataTreeStore();
+  ~DataTreeStore();
 
   boost::optional<cpputils::unique_ref<DataTree>> load(const blockstore::Key &key);
 

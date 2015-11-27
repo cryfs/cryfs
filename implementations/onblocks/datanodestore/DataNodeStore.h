@@ -19,10 +19,10 @@ class DataNode;
 class DataLeafNode;
 class DataInnerNode;
 
-class DataNodeStore {
+class DataNodeStore final {
 public:
   DataNodeStore(cpputils::unique_ref<blockstore::BlockStore> blockstore, uint32_t blocksizeBytes);
-  virtual ~DataNodeStore();
+  ~DataNodeStore();
 
   static constexpr uint8_t MAX_DEPTH = 10;
 

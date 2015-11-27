@@ -16,10 +16,10 @@ namespace parallelaccessdatatreestore {
 class DataTreeRef;
 }
 
-class BlobOnBlocks: public Blob {
+class BlobOnBlocks final: public Blob {
 public:
   BlobOnBlocks(cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> datatree);
-  virtual ~BlobOnBlocks();
+  ~BlobOnBlocks();
 
   const blockstore::Key &key() const override;
 
@@ -42,6 +42,8 @@ private:
 
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> _datatree;
   mutable boost::optional<uint64_t> _sizeCache;
+
+  DISALLOW_COPY_AND_ASSIGN(BlobOnBlocks);
 };
 
 }

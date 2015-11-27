@@ -18,10 +18,10 @@ class DataTreeRef;
 
 //TODO Test CachingDataTreeStore
 
-class ParallelAccessDataTreeStore {
+class ParallelAccessDataTreeStore final {
 public:
   ParallelAccessDataTreeStore(cpputils::unique_ref<datatreestore::DataTreeStore> dataTreeStore);
-  virtual ~ParallelAccessDataTreeStore();
+  ~ParallelAccessDataTreeStore();
 
   boost::optional<cpputils::unique_ref<DataTreeRef>> load(const blockstore::Key &key);
 

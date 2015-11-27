@@ -8,7 +8,7 @@ namespace blobstore{
 namespace onblocks{
 namespace datanodestore{
 
-struct DataInnerNode_ChildEntry {
+struct DataInnerNode_ChildEntry final {
 public:
   blockstore::Key key() const {
     return blockstore::Key::FromBinary(_keydata);
@@ -19,6 +19,7 @@ private:
   }
   friend class DataInnerNode;
   uint8_t _keydata[blockstore::Key::BINARY_LENGTH];
+
   DISALLOW_COPY_AND_ASSIGN(DataInnerNode_ChildEntry);
 };
 

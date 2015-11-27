@@ -9,7 +9,7 @@ namespace blobstore {
 namespace onblocks {
 namespace parallelaccessdatatreestore {
 
-class DataTreeRef: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key>::ResourceRefBase {
+class DataTreeRef final: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key>::ResourceRefBase {
 public:
   DataTreeRef(datatreestore::DataTree *baseTree): _baseTree(baseTree) {}
 

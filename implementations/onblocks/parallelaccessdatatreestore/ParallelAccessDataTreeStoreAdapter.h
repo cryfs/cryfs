@@ -11,7 +11,7 @@ namespace blobstore {
 namespace onblocks {
 namespace parallelaccessdatatreestore {
 
-class ParallelAccessDataTreeStoreAdapter: public parallelaccessstore::ParallelAccessBaseStore<datatreestore::DataTree, blockstore::Key> {
+class ParallelAccessDataTreeStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<datatreestore::DataTree, blockstore::Key> {
 public:
   ParallelAccessDataTreeStoreAdapter(datatreestore::DataTreeStore *baseDataTreeStore)
     :_baseDataTreeStore(std::move(baseDataTreeStore)) {

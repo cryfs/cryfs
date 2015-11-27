@@ -9,12 +9,12 @@ namespace onblocks {
 namespace datanodestore {
 class DataInnerNode;
 
-class DataLeafNode: public DataNode {
+class DataLeafNode final: public DataNode {
 public:
   static cpputils::unique_ref<DataLeafNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block);
 
   DataLeafNode(DataNodeView block);
-  virtual ~DataLeafNode();
+  ~DataLeafNode();
 
   uint32_t maxStoreableBytes() const;
 
@@ -27,6 +27,8 @@ public:
 
 private:
   void fillDataWithZeroesFromTo(off_t begin, off_t end);
+
+  DISALLOW_COPY_AND_ASSIGN(DataLeafNode);
 };
 
 }

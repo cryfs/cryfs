@@ -21,10 +21,10 @@ class DataNode;
 namespace datatreestore {
 
 //TODO It is strange that DataLeafNode is still part in the public interface of DataTree. This should be separated somehow.
-class DataTree {
+class DataTree final {
 public:
   DataTree(datanodestore::DataNodeStore *nodeStore, cpputils::unique_ref<datanodestore::DataNode> rootNode);
-  virtual ~DataTree();
+  ~DataTree();
 
   const blockstore::Key &key() const;
   uint32_t maxBytesPerLeaf() const;
