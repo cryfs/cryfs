@@ -8,7 +8,7 @@
 namespace cpputils {
 
     template<size_t KEY_LENGTH>
-    class DerivedKey {
+    class DerivedKey final {
     public:
         DerivedKey(DerivedKeyConfig config, const FixedSizeData<KEY_LENGTH> &key): _config(std::move(config)), _key(key) {}
         DerivedKey(DerivedKey &&rhs) = default;

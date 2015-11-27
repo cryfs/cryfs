@@ -4,10 +4,11 @@
 
 #include <stdexcept>
 #include <string>
+#include "../macros.h"
 
 namespace cpputils {
 
-    class AssertFailed : public std::exception {
+    class AssertFailed final: public std::exception {
     public:
         AssertFailed(const std::string &message) : _message(message) { }
 

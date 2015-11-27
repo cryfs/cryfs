@@ -13,7 +13,7 @@ namespace cpputils {
     //TODO Test operator==/!=
     //TODO Use SCryptSettings as a member here instead of storing _N, _r, _p.
 
-    class DerivedKeyConfig {
+    class DerivedKeyConfig final {
     public:
         DerivedKeyConfig(Data salt, uint64_t N, uint32_t r, uint32_t p)
                 : _salt(std::move(salt)),

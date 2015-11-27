@@ -9,7 +9,7 @@
 #include <mutex>
 
 namespace cpputils {
-    class Random {
+    class Random final {
     public:
         static PseudoRandomPool &PseudoRandom() {
             std::unique_lock <std::mutex> lock(_mutex);
@@ -25,6 +25,8 @@ namespace cpputils {
 
     private:
         static std::mutex _mutex;
+
+        DISALLOW_COPY_AND_ASSIGN(Random);
     };
 }
 

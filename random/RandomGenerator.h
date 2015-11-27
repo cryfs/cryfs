@@ -7,6 +7,8 @@
 namespace cpputils {
     class RandomGenerator {
     public:
+        RandomGenerator();
+
         template<size_t SIZE> FixedSizeData<SIZE> getFixedSize();
         Data get(size_t size);
 
@@ -14,7 +16,12 @@ namespace cpputils {
         virtual void _get(void *target, size_t bytes) = 0;
     private:
         static std::mutex _mutex;
+
+        DISALLOW_COPY_AND_ASSIGN(RandomGenerator);
     };
+
+    inline RandomGenerator::RandomGenerator() {
+    }
 
     template<size_t SIZE> inline FixedSizeData<SIZE> RandomGenerator::getFixedSize() {
         FixedSizeData<SIZE> result = FixedSizeData<SIZE>::Null();

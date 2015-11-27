@@ -7,7 +7,7 @@
 
 namespace cpputils {
     //TODO Test
-    class RandomPadding {
+    class RandomPadding final {
     public:
         static Data add(const Data &data, size_t targetSize);
         static boost::optional<Data> remove(const Data &data);
