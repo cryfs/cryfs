@@ -104,11 +104,12 @@ public:
 
   MockFilesystem fsimpl;
 
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(size_t size);
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile;
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(size_t size);
   static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat;
+  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstatWithSize(size_t size);
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir;
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist;
 
@@ -118,6 +119,7 @@ public:
   void ReturnDoesntExistOnLstat(const boost::filesystem::path &path);
   void OnOpenReturnFileDescriptor(const char *filename, int descriptor);
   void ReturnIsFileOnFstat(int descriptor);
+  void ReturnIsFileOnFstatWithSize(int descriptor, const size_t size);
 };
 
 #endif

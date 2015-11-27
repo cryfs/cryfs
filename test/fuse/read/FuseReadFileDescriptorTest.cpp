@@ -19,11 +19,11 @@ INSTANTIATE_TEST_CASE_P(FuseReadFileDescriptorTest, FuseReadFileDescriptorTest, 
 
 
 TEST_P(FuseReadFileDescriptorTest, FileDescriptorIsCorrect) {
-  ReturnIsFileOnLstat(FILENAME);
+  ReturnIsFileOnLstatWithSize(FILENAME, 1);
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
   EXPECT_CALL(fsimpl, read(Eq(GetParam()), _, _, _))
     .Times(1).WillOnce(ReturnSuccessfulRead);
 
   char buf[1];
-  ReadFile(FILENAME, buf, 0, 0);
+  ReadFile(FILENAME, buf, 1, 0);
 }

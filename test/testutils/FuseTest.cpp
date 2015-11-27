@@ -81,6 +81,15 @@ Action<void(int, struct ::stat*)> FuseTest::ReturnIsFileFstat =
     result->st_nlink = 1;
   });
 
+Action<void(int, struct ::stat*)> FuseTest::ReturnIsFileFstatWithSize(size_t size) {
+  return Invoke([size](int, struct ::stat *result) {
+      result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+      result->st_nlink = 1;
+      result->st_size = size;
+      std::cout << "Return size: " << size <<std::endl;
+  });
+}
+
 Action<void(const char*, struct ::stat*)> FuseTest::ReturnIsDir =
   Invoke([](const char*, struct ::stat* result) {
     result->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
@@ -111,4 +120,8 @@ void FuseTest::ReturnDoesntExistOnLstat(const bf::path &path) {
 
 void FuseTest::ReturnIsFileOnFstat(int descriptor) {
   EXPECT_CALL(fsimpl, fstat(descriptor, _)).WillRepeatedly(ReturnIsFileFstat);
+}
+
+void FuseTest::ReturnIsFileOnFstatWithSize(int descriptor, size_t size) {
+  EXPECT_CALL(fsimpl, fstat(descriptor, _)).WillRepeatedly(ReturnIsFileFstatWithSize(size));
 }

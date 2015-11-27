@@ -23,17 +23,19 @@ private:
     return fd;
   }
   void ReadFile(int fd) {
-    int retval = ::read(fd, nullptr, 0);
-    EXPECT_EQ(0, retval) << "Reading file failed";
+    uint8_t buf;
+    int retval = ::read(fd, &buf, 1);
+    EXPECT_EQ(1, retval) << "Reading file failed";
   }
 };
 INSTANTIATE_TEST_CASE_P(FuseOpenFileDescriptorTest, FuseOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseOpenFileDescriptorTest, TestReturnedFileDescriptor) {
-  ReturnIsFileOnLstat(FILENAME);
+  ReturnIsFileOnLstatWithSize(FILENAME, 1);
   EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _))
     .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(0));
+  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(1));
 
   OpenAndReadFile(FILENAME);
 }
+
