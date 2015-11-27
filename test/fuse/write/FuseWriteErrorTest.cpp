@@ -16,8 +16,8 @@ using namespace fspp::fuse;
 
 class FuseWriteErrorTest: public FuseWriteTest, public WithParamInterface<int> {
 public:
-  size_t FILESIZE = 1024*1024*1024;
-  size_t WRITECOUNT = 512*1024*1024;
+  size_t FILESIZE = 64*1024*1024;
+  size_t WRITECOUNT = 32*1024*1024;
 
   void SetUp() override {
     //Make the file size big enough that fuse should issue at least two writes
