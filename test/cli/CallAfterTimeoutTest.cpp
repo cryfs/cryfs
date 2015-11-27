@@ -49,12 +49,12 @@ TEST_F(CallAfterTimeoutTest, DoesntCallTwice) {
 }
 
 TEST_F(CallAfterTimeoutTest, OneReset) {
-    auto obj = callAfterTimeout(milliseconds(100));
-    sleep_for(milliseconds(75));
+    auto obj = callAfterTimeout(milliseconds(200));
+    sleep_for(milliseconds(125));
     obj->resetTimer();
-    sleep_for(milliseconds(75));
+    sleep_for(milliseconds(125));
     EXPECT_FALSE(called);
-    sleep_for(milliseconds(75));
+    sleep_for(milliseconds(125));
     EXPECT_TRUE(called);
 }
 
