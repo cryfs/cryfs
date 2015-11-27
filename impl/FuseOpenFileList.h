@@ -9,10 +9,10 @@
 
 namespace fspp {
 
-class FuseOpenFileList {
+class FuseOpenFileList final {
 public:
   FuseOpenFileList();
-  virtual ~FuseOpenFileList();
+  ~FuseOpenFileList();
 
   int open(cpputils::unique_ref<OpenFile> file);
   OpenFile *get(int descriptor);
@@ -46,4 +46,4 @@ inline void FuseOpenFileList::close(int descriptor) {
 
 }
 
-#endif /* FSPP_IMPL_FUSEOPENFILELIST_H_ */
+#endif

@@ -4,10 +4,10 @@
 
 #include <messmer/cpp-utils/data/Data.h>
 
-class InMemoryFile {
+class InMemoryFile final {
 public:
   InMemoryFile(cpputils::Data data);
-  virtual ~InMemoryFile();
+  ~InMemoryFile();
 
   int read(void *buf, size_t count, off_t offset) const;
 

@@ -9,10 +9,9 @@
 namespace fspp {
 namespace fuse{
 
-class FuseErrnoException: public std::runtime_error {
+class FuseErrnoException final: public std::runtime_error {
 public:
   explicit FuseErrnoException(int errno_);
-  virtual ~FuseErrnoException();
 
   int getErrno() const;
 private:
@@ -30,9 +29,6 @@ inline FuseErrnoException::FuseErrnoException(int errno_)
   ASSERT(_errno != 0, "Errno shouldn't be zero");
 }
 
-inline FuseErrnoException::~FuseErrnoException() {
-}
-
 inline int FuseErrnoException::getErrno() const {
   return _errno;
 }
@@ -40,4 +36,4 @@ inline int FuseErrnoException::getErrno() const {
 }
 }
 
-#endif /* FSPP_FUSE_FUSEERRNOEXCEPTION_H_ */
+#endif

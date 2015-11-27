@@ -7,7 +7,7 @@
 #include <messmer/cpp-utils/macros.h>
 
 namespace fspp {
-    class Profiler {
+    class Profiler final {
     public:
         Profiler(std::atomic_uint_fast64_t *targetForAddingNanosec);
         ~Profiler();

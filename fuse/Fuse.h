@@ -16,14 +16,14 @@ class Device;
 namespace fuse {
 class Filesystem;
 
-class Fuse {
+class Fuse final {
 public:
   explicit Fuse(Filesystem *fs);
-	virtual ~Fuse();
+  ~Fuse();
 
-	void run(int argc, char **argv);
-	bool running() const;
-	void stop();
+  void run(int argc, char **argv);
+  bool running() const;
+  void stop();
 
   int getattr(const boost::filesystem::path &path, struct stat *stbuf);
   int fgetattr(const boost::filesystem::path &path, struct stat *stbuf, fuse_file_info *fileinfo);

@@ -17,7 +17,7 @@ class File;
 class Symlink;
 class OpenFile;
 
-class FilesystemImpl: public fuse::Filesystem {
+class FilesystemImpl final: public fuse::Filesystem {
 public:
   explicit FilesystemImpl(Device *device);
 	virtual ~FilesystemImpl();
@@ -98,4 +98,4 @@ private:
 
 }
 
-#endif /* FSPP_IMPL_FILESYSTEMIMPL_H_ */
+#endif

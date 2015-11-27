@@ -10,7 +10,7 @@
 namespace fspp {
 
 template<class Entry>
-class IdList {
+class IdList final {
 public:
   IdList();
   virtual ~IdList();
@@ -24,7 +24,7 @@ private:
   int _id_counter;
   mutable std::mutex _mutex;
 
-  DISALLOW_COPY_AND_ASSIGN(IdList<Entry>)
+  DISALLOW_COPY_AND_ASSIGN(IdList<Entry>);
 };
 
 template<class Entry>
@@ -67,6 +67,6 @@ void IdList<Entry>::remove(int id) {
   _entries.erase(found_iter);
 }
 
-} /* namespace fspp */
+}
 
-#endif /* FSPP_FUSE_IDLIST_H_ */
+#endif
