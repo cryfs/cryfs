@@ -20,7 +20,7 @@
 namespace parallelaccessstore {
 
 template<class Resource, class ResourceRef, class Key>
-class ParallelAccessStore {
+class ParallelAccessStore final {
 public:
   explicit ParallelAccessStore(cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> baseStore);
     ~ParallelAccessStore() {
@@ -56,9 +56,10 @@ public:
   void remove(const Key &key, cpputils::unique_ref<ResourceRef> block);
 
 private:
-  class OpenResource {
+  class OpenResource final {
   public:
 	OpenResource(cpputils::unique_ref<Resource> resource): _resource(std::move(resource)), _refCount(0) {}
+    OpenResource(OpenResource &&rhs) = default;
 
 	Resource *getReference() {
 	  ++_refCount;
@@ -79,6 +80,8 @@ private:
   private:
 	cpputils::unique_ref<Resource> _resource;
 	uint32_t _refCount;
+
+    DISALLOW_COPY_AND_ASSIGN(OpenResource);
   };
 
   mutable std::mutex _mutex;
