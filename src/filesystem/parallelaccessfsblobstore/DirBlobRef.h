@@ -8,7 +8,7 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class DirBlobRef: public FsBlobRef {
+class DirBlobRef final: public FsBlobRef {
 public:
     DirBlobRef(cachingfsblobstore::DirBlobRef *base): _base(base) {}
 

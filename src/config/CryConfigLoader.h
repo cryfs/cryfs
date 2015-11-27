@@ -11,7 +11,7 @@
 
 namespace cryfs {
 
-class CryConfigLoader {
+class CryConfigLoader final {
 public:
   CryConfigLoader(cpputils::unique_ref<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipher);
   CryConfigLoader(CryConfigLoader &&rhs) = default;

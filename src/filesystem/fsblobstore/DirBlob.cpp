@@ -112,7 +112,7 @@ off_t DirBlob::lstat_size() const {
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
-  auto child = GetChild(key);
+  const auto &child = GetChild(key);
   //TODO Loading the blob for only getting the size of the file/symlink is not very performant.
   //     Furthermore, this is the only reason why DirBlob needs a pointer to _fsBlobStore, which is ugly
   result->st_mode = child.mode;

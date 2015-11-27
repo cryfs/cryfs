@@ -8,7 +8,7 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class SymlinkBlobRef: public FsBlobRef {
+class SymlinkBlobRef final: public FsBlobRef {
 public:
     SymlinkBlobRef(cachingfsblobstore::SymlinkBlobRef *base) : _base(base) {}
 

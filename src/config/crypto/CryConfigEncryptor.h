@@ -14,7 +14,7 @@
 
 namespace cryfs {
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them
-    class CryConfigEncryptor {
+    class CryConfigEncryptor final {
     public:
         static constexpr size_t OuterKeySize = OuterEncryptor::Cipher::EncryptionKey::BINARY_LENGTH;
         static constexpr size_t MaxTotalKeySize = OuterKeySize + CryCiphers::MAX_KEY_SIZE;
@@ -35,6 +35,8 @@ namespace cryfs {
         cpputils::unique_ref<InnerEncryptor> _innerEncryptor(const std::string &cipherName) const;
 
         cpputils::DerivedKey<MaxTotalKeySize> _derivedKey;
+
+        DISALLOW_COPY_AND_ASSIGN(CryConfigEncryptor);
     };
 }
 

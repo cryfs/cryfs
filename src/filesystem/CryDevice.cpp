@@ -78,7 +78,7 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, _rootKey));
   }
   auto parent = LoadDirBlob(path.parent_path());
-  auto entry = parent->GetChild(path.filename().native());
+  const auto &entry = parent->GetChild(path.filename().native());
 
   if (entry.type == fspp::Dir::EntryType::DIR) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key));

@@ -16,7 +16,7 @@ namespace cryfs {
         //                     it didn't get written into cache yet, when Thread 2 requests it.
         //                     Same race condition in Caching/ParallelAccessBlockStore?
 
-        class ParallelAccessFsBlobStore {
+        class ParallelAccessFsBlobStore final {
         public:
             ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore);
 

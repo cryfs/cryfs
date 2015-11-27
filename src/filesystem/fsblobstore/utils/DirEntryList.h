@@ -10,7 +10,7 @@
 namespace cryfs {
     namespace fsblobstore {
 
-        class DirEntryList {
+        class DirEntryList final {
         public:
             using const_iterator = std::vector<DirEntry>::const_iterator;
 

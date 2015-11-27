@@ -13,7 +13,7 @@ namespace cryfs {
     namespace fsblobstore {
         //TODO Test classes in fsblobstore
 
-        class FsBlobStore {
+        class FsBlobStore final {
         public:
             FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore);
 

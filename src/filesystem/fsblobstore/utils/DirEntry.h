@@ -8,7 +8,7 @@
 namespace cryfs {
     namespace fsblobstore {
 
-        struct DirEntry {
+        struct DirEntry final {
             DirEntry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_, mode_t mode_,
                   uid_t uid_, gid_t gid_) : type(type_), name(name_), key(key_), mode(mode_), uid(uid_), gid(gid_) {
                 switch (type) {

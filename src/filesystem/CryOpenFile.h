@@ -8,10 +8,10 @@
 namespace cryfs {
 class CryDevice;
 
-class CryOpenFile: public fspp::OpenFile {
+class CryOpenFile final: public fspp::OpenFile {
 public:
   explicit CryOpenFile(const CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
-  virtual ~CryOpenFile();
+  ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
   void truncate(off_t size) const override;

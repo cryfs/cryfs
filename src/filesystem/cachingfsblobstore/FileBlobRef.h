@@ -8,7 +8,7 @@
 namespace cryfs {
 namespace cachingfsblobstore {
 
-class FileBlobRef: public FsBlobRef {
+class FileBlobRef final: public FsBlobRef {
 public:
     FileBlobRef(cpputils::unique_ref<fsblobstore::FileBlob> base, CachingFsBlobStore *fsBlobStore)
             :FsBlobRef(std::move(base), fsBlobStore),

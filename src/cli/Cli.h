@@ -36,6 +36,8 @@ namespace cryfs {
 
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
+
+        DISALLOW_COPY_AND_ASSIGN(Cli);
     };
 }
 

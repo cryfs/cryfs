@@ -7,7 +7,7 @@
 namespace cryfs {
     namespace fsblobstore {
 
-        class FileBlob: public FsBlob {
+        class FileBlob final: public FsBlob {
         public:
             static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
 
@@ -24,7 +24,8 @@ namespace cryfs {
             off_t lstat_size() const override;
 
             off_t size() const;
-
+        private:
+            DISALLOW_COPY_AND_ASSIGN(FileBlob);
         };
     }
 }

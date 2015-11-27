@@ -7,7 +7,7 @@
 #include <messmer/cpp-utils/data/Deserializer.h>
 
 namespace cryfs {
-    struct InnerConfig {
+    struct InnerConfig final {
         std::string cipherName;
         cpputils::Data encryptedConfig;
 

@@ -9,7 +9,7 @@
 #include "OuterConfig.h"
 
 namespace cryfs {
-    class OuterEncryptor {
+    class OuterEncryptor final {
     public:
         using Cipher = cpputils::AES256_GCM;
         static constexpr size_t CONFIG_SIZE = 1024;  // Config data is grown to this size before encryption to hide its actual size
@@ -23,6 +23,8 @@ namespace cryfs {
 
         Cipher::EncryptionKey _key;
         cpputils::DerivedKeyConfig _keyConfig;
+
+        DISALLOW_COPY_AND_ASSIGN(OuterEncryptor);
     };
 }
 

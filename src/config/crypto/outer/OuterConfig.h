@@ -8,7 +8,7 @@
 #include <messmer/cpp-utils/data/Deserializer.h>
 
 namespace cryfs {
-    struct OuterConfig {
+    struct OuterConfig final {
         cpputils::DerivedKeyConfig keyConfig;
         cpputils::Data encryptedInnerConfig;
 

@@ -8,7 +8,7 @@
 namespace cryfs {
     namespace fsblobstore {
 
-        class SymlinkBlob: public FsBlob {
+        class SymlinkBlob final: public FsBlob {
         public:
             static cpputils::unique_ref<SymlinkBlob> InitializeSymlink(cpputils::unique_ref<blobstore::Blob> blob,
                                                                        const boost::filesystem::path &target);
@@ -25,6 +25,8 @@ namespace cryfs {
             static void _checkMagicNumber(const blobstore::Blob &blob);
 
             static boost::filesystem::path _readTargetFromBlob(const blobstore::Blob &blob);
+
+            DISALLOW_COPY_AND_ASSIGN(SymlinkBlob);
         };
     }
 }

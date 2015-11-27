@@ -14,10 +14,10 @@ namespace cryfs {
         //TODO Test classes in cachingfsblobstore
 
         //TODO Inherit from same interface as FsBlobStore?
-        class CachingFsBlobStore {
+        class CachingFsBlobStore final {
         public:
             CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore);
-            virtual ~CachingFsBlobStore();
+            ~CachingFsBlobStore();
 
             cpputils::unique_ref<FileBlobRef> createFileBlob();
             cpputils::unique_ref<DirBlobRef> createDirBlob();

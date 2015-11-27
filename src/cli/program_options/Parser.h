@@ -7,7 +7,7 @@
 
 namespace cryfs {
     namespace program_options {
-        class Parser {
+        class Parser final {
         public:
             Parser(int argc, char *argv[]);
 
@@ -25,6 +25,8 @@ namespace cryfs {
             static void _checkValidCipher(const std::string &cipher, const std::vector<std::string> &supportedCiphers);
 
             std::vector<char*> _options;
+
+            DISALLOW_COPY_AND_ASSIGN(Parser);
         };
     }
 }

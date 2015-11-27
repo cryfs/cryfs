@@ -9,7 +9,7 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class ParallelAccessFsBlobStoreAdapter: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::Key> {
+class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::Key> {
 public:
   explicit ParallelAccessFsBlobStoreAdapter(cachingfsblobstore::CachingFsBlobStore *baseBlockStore)
     :_baseBlockStore(std::move(baseBlockStore)) {

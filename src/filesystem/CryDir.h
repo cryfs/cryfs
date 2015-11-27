@@ -8,10 +8,10 @@
 
 namespace cryfs {
 
-class CryDir: public fspp::Dir, CryNode {
+class CryDir final: public fspp::Dir, CryNode {
 public:
   CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, const blockstore::Key &key);
-  virtual ~CryDir();
+  ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
   cpputils::unique_ref<fspp::OpenFile> createAndOpenFile(const std::string &name, mode_t mode, uid_t uid, gid_t gid) override;

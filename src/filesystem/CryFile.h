@@ -9,10 +9,10 @@
 
 namespace cryfs {
 
-class CryFile: public fspp::File, CryNode {
+class CryFile final: public fspp::File, CryNode {
 public:
   CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, const blockstore::Key &key);
-  virtual ~CryFile();
+  ~CryFile();
 
   cpputils::unique_ref<fspp::OpenFile> open(int flags) const override;
   void truncate(off_t size) const override;

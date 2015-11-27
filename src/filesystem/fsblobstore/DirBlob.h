@@ -13,7 +13,7 @@ namespace cryfs {
     namespace fsblobstore {
         class FsBlobStore;
 
-        class DirBlob : public FsBlob {
+        class DirBlob final : public FsBlob {
         public:
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
@@ -21,7 +21,7 @@ namespace cryfs {
 
             DirBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize);
 
-            virtual ~DirBlob();
+            ~DirBlob();
 
             off_t lstat_size() const override;
 

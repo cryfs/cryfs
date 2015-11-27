@@ -8,7 +8,7 @@
 namespace cryfs {
 namespace cachingfsblobstore {
 
-class SymlinkBlobRef: public FsBlobRef {
+class SymlinkBlobRef final: public FsBlobRef {
 public:
     SymlinkBlobRef(cpputils::unique_ref<fsblobstore::SymlinkBlob> base, CachingFsBlobStore *fsBlobStore)
         :FsBlobRef(std::move(base), fsBlobStore),
