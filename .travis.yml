@@ -24,14 +24,16 @@ script:
 - bii cpp:configure || bii cpp:configure
 # Build cryfs executable
 - bii cpp:build -- -j2
-# Make distribution packages
-- cd bii/build/messmer_cryfs && make package && cd ../../..
 # Build and run test cases
 - bii cpp:build --target messmer_cryfs_test_main -- -j2
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
   && chmod +x run_with_fuse.sh
   && ./run_with_fuse.sh "./bin/messmer_cryfs_test_main"
   && rm run_with_fuse.sh
+# Make distribution packages
+- bii clean
+- bii cpp:configure -D CMAKE_BUILD_TYPE=Release
+- cd bii/build/messmer_cryfs && make package && cd ../../..
 after_success:
 - bii user ${BII_USERNAME} -p ${BII_PASSWORD}
 - bii publish
