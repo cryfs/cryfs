@@ -4,6 +4,7 @@
 
 #include <mutex>
 #include <condition_variable>
+#include "../macros.h"
 
 //TODO Test
 //TODO Merge lock folder with thread folder
