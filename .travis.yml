@@ -33,6 +33,7 @@ script:
 # Make distribution packages
 - bii clean
 - bii cpp:configure -D CMAKE_BUILD_TYPE=Release
+- bii build -- -j2
 - cd bii/build/messmer_cryfs && make package && cd ../../..
 after_success:
 - bii user ${BII_USERNAME} -p ${BII_PASSWORD}
