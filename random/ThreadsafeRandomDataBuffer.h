@@ -9,7 +9,7 @@
 
 namespace cpputils {
     //TODO Test
-    class ThreadsafeRandomDataBuffer {
+    class ThreadsafeRandomDataBuffer final {
     public:
         ThreadsafeRandomDataBuffer();
 

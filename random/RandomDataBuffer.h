@@ -7,7 +7,7 @@
 
 namespace cpputils {
     //TODO Test
-    class RandomDataBuffer {
+    class RandomDataBuffer final {
     public:
         RandomDataBuffer();
 

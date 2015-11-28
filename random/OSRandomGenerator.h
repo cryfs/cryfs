@@ -12,6 +12,9 @@ namespace cpputils {
 
     protected:
         void _get(void *target, size_t bytes) override;
+
+    private:
+        DISALLOW_COPY_AND_ASSIGN(OSRandomGenerator);
     };
 
     inline OSRandomGenerator::OSRandomGenerator() {}
