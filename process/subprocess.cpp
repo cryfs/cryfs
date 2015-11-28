@@ -1,6 +1,7 @@
 #include "subprocess.h"
 #include <cstdio>
 #include <stdexcept>
+#include <sys/wait.h>
 
 using std::string;
 

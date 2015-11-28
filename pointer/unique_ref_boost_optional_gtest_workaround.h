@@ -10,14 +10,14 @@
 //TODO Test that this solves the problem (add test unit file that doesn't compile without)
 
 #include "unique_ref.h"
-#include <boost/optional/optional_io.hpp>
 //gtest/boost::optional workaround for working with optional<unique_ref<T>>
-namespace boost {
+namespace cpputils {
     template<typename T>
     inline std::ostream& operator<<(std::ostream& out, const cpputils::unique_ref<T> &ref) {
       out << ref.get();
       return out;
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 #endif
