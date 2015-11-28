@@ -64,7 +64,7 @@ public:
     return rename(from.c_str(), to.c_str());
   }
   MOCK_METHOD2(rename, void(const char*, const char*));
-  cpputils::unique_ref<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) {
+  cpputils::unique_ref<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) override {
     return cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).value();
   }
   MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
