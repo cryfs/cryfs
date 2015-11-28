@@ -69,7 +69,7 @@ public:
 
   void TestAfterCreate_FlushesWhenDestructed() {
     cpputils::Data randomData = cpputils::DataFixture::generate(size);
-    blockstore::Key key = key;
+    blockstore::Key key = blockstore::Key::Null();
     {
       auto block = blockStore->create(cpputils::Data(size));
       key = block->key();
@@ -81,7 +81,7 @@ public:
 
   void TestAfterLoad_FlushesWhenDestructed() {
     cpputils::Data randomData = cpputils::DataFixture::generate(size);
-    blockstore::Key key = key;
+    blockstore::Key key = blockstore::Key::Null();
     {
       key = CreateBlock()->key();
       auto block = blockStore->load(key).value();
