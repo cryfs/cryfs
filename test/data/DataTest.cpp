@@ -192,9 +192,9 @@ TEST_F(DataTest, Inequality_DifferentLastByte) {
 }
 
 #ifdef __x86_64__
-//Needs 64bit for representation. This value isn't in the size param list, because the list is also used for read/write checks.
 TEST_F(DataTest, LargesizeSize) {
-  uint64_t size = 10L*1024*1024*1024;
+  //Needs 64bit for representation. This value isn't in the size param list, because the list is also used for read/write checks.
+  uint64_t size = 4.5L*1024*1024*1024;
   Data data(size);
   EXPECT_EQ(size, data.size());
 }
