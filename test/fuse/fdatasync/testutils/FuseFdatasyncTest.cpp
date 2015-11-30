@@ -1,4 +1,5 @@
 #include "FuseFdatasyncTest.h"
+#include <fcntl.h>
 
 void FuseFdatasyncTest::FdatasyncFile(const char *filename) {
   int error = FdatasyncFileReturnError(filename);
@@ -9,8 +10,13 @@ int FuseFdatasyncTest::FdatasyncFileReturnError(const char *filename) {
   auto fs = TestFS();
 
   int fd = OpenFile(fs.get(), filename);
+#ifdef F_FULLFSYNC
+  // This is MacOSX, which doesn't know fdatasync
+  int retval = fcntl(fd, F_FULLFSYNC);
+#else
   int retval = ::fdatasync(fd);
-  if (retval == 0) {
+#endif
+  if (retval != -1) {
     return 0;
   } else {
     return errno;
