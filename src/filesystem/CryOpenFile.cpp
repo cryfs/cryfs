@@ -42,7 +42,7 @@ void CryOpenFile::truncate(off_t size) const {
   _fileBlob->resize(size);
 }
 
-ssize_t CryOpenFile::read(void *buf, size_t count, off_t offset) const {
+size_t CryOpenFile::read(void *buf, size_t count, off_t offset) const {
   _device->callFsActionCallbacks();
   return _fileBlob->read(buf, offset, count);
 }
