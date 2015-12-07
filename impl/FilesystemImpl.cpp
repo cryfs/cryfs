@@ -195,7 +195,7 @@ void FilesystemImpl::ftruncate(int descriptor, off_t size) {
   _open_files.get(descriptor)->truncate(size);
 }
 
-int FilesystemImpl::read(int descriptor, void *buf, size_t count, off_t offset) {
+size_t FilesystemImpl::read(int descriptor, void *buf, size_t count, off_t offset) {
   PROFILE(_readNanosec);
   return _open_files.get(descriptor)->read(buf, count, offset);
 }

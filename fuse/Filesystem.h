@@ -27,7 +27,7 @@ public:
   virtual void chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) = 0;
   virtual void truncate(const boost::filesystem::path &path, off_t size) = 0;
   virtual void ftruncate(int descriptor, off_t size) = 0;
-  virtual int read(int descriptor, void *buf, size_t count, off_t offset) = 0;
+  virtual size_t read(int descriptor, void *buf, size_t count, off_t offset) = 0;
   virtual void write(int descriptor, const void *buf, size_t count, off_t offset) = 0;
   virtual void fsync(int descriptor) = 0;
   virtual void fdatasync(int descriptor) = 0;

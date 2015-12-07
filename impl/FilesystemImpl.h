@@ -31,7 +31,7 @@ public:
 	void chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) override;
 	void truncate(const boost::filesystem::path &path, off_t size) override;
 	void ftruncate(int descriptor, off_t size) override;
-	int read(int descriptor, void *buf, size_t count, off_t offset) override;
+	size_t read(int descriptor, void *buf, size_t count, off_t offset) override;
 	void write(int descriptor, const void *buf, size_t count, off_t offset) override;
 	void fsync(int descriptor) override;
 	void fdatasync(int descriptor) override;
