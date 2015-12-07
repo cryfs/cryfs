@@ -12,7 +12,7 @@
 namespace blockstore {
 namespace caching {
 
-//TODO FreeList for performance
+//TODO FreeList for performance (malloc is expensive)
 //TODO Single linked list with pointer to last element (for insertion) should be enough for a queue. No double linked list needed.
 //     But then, popping arbitrary elements needs to be rewritten so that _removeFromQueue() is _removeSuccessorFromQueue()
 //     and the map doesn't store the element itself, but its predecessor. That is, popping might be a bit slower. Test with experiments!
