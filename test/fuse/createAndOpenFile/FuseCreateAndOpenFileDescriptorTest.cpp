@@ -18,11 +18,7 @@ public:
 private:
   int CreateAndOpenFile(const TempTestFS *fs, const char *filename) {
     auto realpath = fs->mountDir() / filename;
-#if __GNUC__ == 4 && __GNUC_MINOR__ == 8
     int fd = ::open(realpath.c_str(), O_RDONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
-#else
-    int fd = ::open(realpath.c_str(), O_RDONLY | O_CREAT);
-#endif
     EXPECT_GE(fd, 0) << "Creating file failed";
     return fd;
   }

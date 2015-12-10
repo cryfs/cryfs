@@ -61,7 +61,7 @@ public:
   }
 
   // This read() mock implementation reads from the stored virtual file (testFile).
-  Action<int(int, void*, size_t, off_t)> ReadFromFile = Invoke([this](int, void *buf, size_t count, off_t offset) {
+  Action<size_t(int, void*, size_t, off_t)> ReadFromFile = Invoke([this](int, void *buf, size_t count, off_t offset) {
     return testFile->read(buf, count, offset);
   });
 };
