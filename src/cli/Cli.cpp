@@ -62,7 +62,7 @@ using boost::chrono::duration_cast;
 using boost::chrono::minutes;
 using boost::chrono::milliseconds;
 
-//TODO Support files > 4GB
+//TODO Delete a large file in parallel possible? Takes a long time right now...
 //TODO Improve parallelity.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO Performance difference when setting compiler parameter -maes for scrypt?

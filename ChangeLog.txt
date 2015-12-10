@@ -1,6 +1,7 @@
 Version 0.8.4
 ---------------
 * Compatibility with 32bit systems
+* Support files larger than 4GB
 
 Version 0.8.3
 ---------------

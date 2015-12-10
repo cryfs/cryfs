@@ -124,7 +124,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_mtime = result->st_ctime = result->st_atime = 0;
   result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
-  result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, 512);
+  result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
   result->st_blksize = CryDevice::BLOCKSIZE_BYTES; //TODO FsBlobStore::BLOCKSIZE_BYTES would be cleaner
 }
 
