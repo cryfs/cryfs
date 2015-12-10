@@ -27,7 +27,8 @@ public:
   ~DataTree();
 
   const blockstore::Key &key() const;
-  uint32_t maxBytesPerLeaf() const;
+  //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
+  uint64_t maxBytesPerLeaf() const;
 
   void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
   void resizeNumBytes(uint64_t newNumBytes);

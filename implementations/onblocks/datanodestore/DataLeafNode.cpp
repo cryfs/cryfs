@@ -58,7 +58,7 @@ void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
   node().write(ZEROES.data(), begin, end-begin);
 }
 
-uint32_t DataLeafNode::maxStoreableBytes() const {
+uint64_t DataLeafNode::maxStoreableBytes() const {
   return node().layout().maxBytesPerLeaf();
 }
 

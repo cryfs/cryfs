@@ -245,7 +245,7 @@ unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
-  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), root.depth()-1);
+  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), (uint32_t)root.depth()-1);
 }
 
 uint64_t DataTree::numStoredBytes() const {
@@ -281,7 +281,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     uint64_t currentNumBytes = _numStoredBytes();
     ASSERT(currentNumBytes % _nodeStore->layout().maxBytesPerLeaf() == 0, "The last leaf is not a max data leaf, although we just resized it to be one.");
     uint32_t currentNumLeaves = currentNumBytes / _nodeStore->layout().maxBytesPerLeaf();
-    uint32_t newNumLeaves = std::max(1u, utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
+    uint32_t newNumLeaves = std::max(UINT64_C(1), utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
 
     for(uint32_t i = currentNumLeaves; i < newNumLeaves; ++i) {
       addDataLeaf()->resize(_nodeStore->layout().maxBytesPerLeaf());
@@ -292,7 +292,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
     LastLeaf(_rootNode.get())->resize(newLastLeafSize);
   }
-  ASSERT(newNumBytes == numStoredBytes(), "We resized to the wrong number of bytes");
+  ASSERT(newNumBytes == numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }
 
 optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
@@ -319,7 +319,7 @@ unique_ref<DataLeafNode> DataTree::LastLeaf(unique_ref<DataNode> root) {
   return LastLeaf(std::move(*child));
 }
 
-uint32_t DataTree::maxBytesPerLeaf() const {
+uint64_t DataTree::maxBytesPerLeaf() const {
   return _nodeStore->layout().maxBytesPerLeaf();
 }
 

@@ -16,7 +16,8 @@ public:
   DataLeafNode(DataNodeView block);
   ~DataLeafNode();
 
-  uint32_t maxStoreableBytes() const;
+  //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
+  uint64_t maxStoreableBytes() const;
 
   void read(void *target, uint64_t offset, uint64_t size) const;
   void write(const void *source, uint64_t offset, uint64_t size);

@@ -50,7 +50,8 @@ public:
   }
 
   //Maximum number of bytes a leaf can store
-  constexpr uint32_t maxBytesPerLeaf() const {
+  //We are returning uint64_t here, because calculations involving maxBytesPerLeaf most probably should use 64bit integers to support blobs >4GB.
+  constexpr uint64_t maxBytesPerLeaf() const {
     return datasizeBytes();
   }
 private:

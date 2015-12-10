@@ -17,7 +17,7 @@ public:
     return _baseTree->key();
   }
 
-  uint32_t maxBytesPerLeaf() const {
+  uint64_t maxBytesPerLeaf() const {
     return _baseTree->maxBytesPerLeaf();
   }
 

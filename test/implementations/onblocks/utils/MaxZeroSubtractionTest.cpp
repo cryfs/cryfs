@@ -38,7 +38,7 @@ TEST_F(MaxZeroSubtractionTest, SubtractPositive2) {
 }
 
 TEST_F(MaxZeroSubtractionTest, SubtractPositive3) {
-  EXPECT_EQ(numeric_limits<uint32_t>::max()-1, maxZeroSubtraction(numeric_limits<uint32_t>::max(), 1));
+  EXPECT_EQ(numeric_limits<uint32_t>::max()-1, maxZeroSubtraction(numeric_limits<uint32_t>::max(), UINT32_C(1)));
 }
 
 TEST_F(MaxZeroSubtractionTest, SubtractPositive4) {
@@ -62,7 +62,7 @@ TEST_F(MaxZeroSubtractionTest, SubtractNegative4) {
 }
 
 TEST_F(MaxZeroSubtractionTest, SubtractNegative5) {
-  EXPECT_EQ(0, maxZeroSubtraction(5, numeric_limits<uint32_t>::max()));
+  EXPECT_EQ(0, maxZeroSubtraction(UINT32_C(5), numeric_limits<uint32_t>::max()));
 }
 
 TEST_F(MaxZeroSubtractionTest, SubtractFromZero1) {
@@ -74,5 +74,17 @@ TEST_F(MaxZeroSubtractionTest, SubtractFromZero2) {
 }
 
 TEST_F(MaxZeroSubtractionTest, SubtractFromZero3) {
-  EXPECT_EQ(0, maxZeroSubtraction(0, numeric_limits<uint32_t>::max()));
+  EXPECT_EQ(0, maxZeroSubtraction(UINT32_C(0), numeric_limits<uint32_t>::max()));
+}
+
+TEST_F(MaxZeroSubtractionTest, 64bit_valid) {
+  uint64_t value = UINT64_C(1024)*1024*1024*1024;
+  EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(value*1024-value, maxZeroSubtraction(value*1024, value));
+}
+
+TEST_F(MaxZeroSubtractionTest, 64bit_zero) {
+  uint64_t value = UINT64_C(1024)*1024*1024*1024;
+  EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(0, maxZeroSubtraction(value, value*1024));
 }

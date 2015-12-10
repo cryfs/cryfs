@@ -191,7 +191,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(1u, ceilDivision(tree->numStoredBytes(), nodeStore->layout().maxBytesPerLeaf()));
+  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), (uint64_t)nodeStore->layout().maxBytesPerLeaf()));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   Key key = tree->key();
   cpputils::destruct(std::move(tree));
