@@ -78,7 +78,7 @@ INSTANTIATE_TEST_CASE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024*
 
 //TODO Figure out what's wrong and enable this test
 //Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.
-TEST_P(FuseCloseTest, DISABLED_CloseFile) {
+/*TEST_P(FuseCloseTest, CloseFile) {
   Barrier barrier;
 
   ReturnIsFileOnLstat(FILENAME);
@@ -96,4 +96,4 @@ TEST_P(FuseCloseTest, DISABLED_CloseFile) {
 
   // Wait, until fuse release() was called, so we can check for the function call expectation.
   barrier.WaitAtMost(seconds(10));
-}
+}*/

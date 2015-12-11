@@ -89,7 +89,7 @@ TEST_F(FuseOpenFileListTest, Open3AndGet) {
 }
 
 //TODO Test case fails. Disabled it. Figure out why and reenable.
-TEST_F(FuseOpenFileListTest, DISABLED_DestructOnClose) {
+/*TEST_F(FuseOpenFileListTest, DestructOnClose) {
   int id = open();
 
   MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(list.get(id));
@@ -97,7 +97,7 @@ TEST_F(FuseOpenFileListTest, DISABLED_DestructOnClose) {
   EXPECT_FALSE(openFile->destructed);
   list.close(id);
   EXPECT_TRUE(openFile->destructed);
-}
+}*/
 
 TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
   int id = open();
