@@ -9,10 +9,6 @@ using std::numeric_limits;
 
 class CeilLogTest: public Test {};
 
-TEST_F(CeilLogTest, Log3_0) {
- EXPECT_EQ(0, ceilLog(3, 0));
-}
-
 TEST_F(CeilLogTest, Log3_1) {
  EXPECT_EQ(0, ceilLog(3, 1));
 }
