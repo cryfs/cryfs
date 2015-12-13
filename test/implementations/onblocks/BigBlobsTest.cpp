@@ -30,8 +30,8 @@ public:
 };
 
 constexpr size_t BigBlobsTest::BLOCKSIZE;
-constexpr size_t BigBlobsTest::SMALL_BLOB_SIZE;
-constexpr size_t BigBlobsTest::LARGE_BLOB_SIZE;
+constexpr uint64_t BigBlobsTest::SMALL_BLOB_SIZE;
+constexpr uint64_t BigBlobsTest::LARGE_BLOB_SIZE;
 
 // DISABLED, because it uses a lot of memory
 TEST_F(BigBlobsTest, DISABLED_Resize) {
