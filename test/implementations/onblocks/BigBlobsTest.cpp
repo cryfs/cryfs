@@ -37,8 +37,7 @@ constexpr size_t BigBlobsTest::BLOCKSIZE;
 constexpr uint64_t BigBlobsTest::SMALL_BLOB_SIZE;
 constexpr uint64_t BigBlobsTest::LARGE_BLOB_SIZE;
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_Resize) {
+TEST_F(BigBlobsTest, Resize) {
     //These operations are in one test case and not in many small ones, because it takes quite long to create a >4GB blob.
 
     //Resize to >4GB
@@ -75,8 +74,7 @@ TEST_F(BigBlobsTest, DISABLED_Resize) {
     blobStore->remove(std::move(blob));
 }
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Crossing4GBBorder) {
+TEST_F(BigBlobsTest, GrowByWriting_Crossing4GBBorder) {
     Data fixture = DataFixture::generate(2*(LARGE_BLOB_SIZE-SMALL_BLOB_SIZE));
     blob->write(fixture.data(), SMALL_BLOB_SIZE, fixture.size());
 
@@ -87,8 +85,7 @@ TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Crossing4GBBorder) {
     EXPECT_EQ(0, std::memcmp(loaded.data(), fixture.data(), loaded.size()));
 }
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Outside4GBBorder_StartingSizeZero) {
+TEST_F(BigBlobsTest, GrowByWriting_Outside4GBBorder_StartingSizeZero) {
     Data fixture = DataFixture::generate(1024);
     blob->write(fixture.data(), LARGE_BLOB_SIZE, fixture.size());
 
@@ -99,8 +96,7 @@ TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Outside4GBBorder_StartingSizeZero) {
     EXPECT_EQ(0, std::memcmp(loaded.data(), fixture.data(), loaded.size()));
 }
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Outside4GBBorder_StartingSizeOutside4GBBorder) {
+TEST_F(BigBlobsTest, GrowByWriting_Outside4GBBorder_StartingSizeOutside4GBBorder) {
     blob->resize(LARGE_BLOB_SIZE);
     Data fixture = DataFixture::generate(1024);
     blob->write(fixture.data(), LARGE_BLOB_SIZE+1024, fixture.size());
@@ -112,8 +108,7 @@ TEST_F(BigBlobsTest, DISABLED_GrowByWriting_Outside4GBBorder_StartingSizeOutside
     EXPECT_EQ(0, std::memcmp(loaded.data(), fixture.data(), loaded.size()));
 }
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_ReadWriteAfterGrown_Crossing4GBBorder) {
+TEST_F(BigBlobsTest, ReadWriteAfterGrown_Crossing4GBBorder) {
     blob->resize(LARGE_BLOB_SIZE+(LARGE_BLOB_SIZE-SMALL_BLOB_SIZE)+1024);
     Data fixture = DataFixture::generate(2*(LARGE_BLOB_SIZE-SMALL_BLOB_SIZE));
     blob->write(fixture.data(), SMALL_BLOB_SIZE, fixture.size());
@@ -125,8 +120,7 @@ TEST_F(BigBlobsTest, DISABLED_ReadWriteAfterGrown_Crossing4GBBorder) {
     EXPECT_EQ(0, std::memcmp(loaded.data(), fixture.data(), loaded.size()));
 }
 
-// DISABLED, because it uses a lot of memory
-TEST_F(BigBlobsTest, DISABLED_ReadWriteAfterGrown_Outside4GBBorder) {
+TEST_F(BigBlobsTest, ReadWriteAfterGrown_Outside4GBBorder) {
     blob->resize(LARGE_BLOB_SIZE+2048);
     Data fixture = DataFixture::generate(1024);
     blob->write(fixture.data(), LARGE_BLOB_SIZE, fixture.size());
