@@ -158,6 +158,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  //TODO Can we traverse in parallel?
   unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing. Otherwise parallel read/write to a blob is not possible!
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
   if (0 == endIndex) {
@@ -277,6 +278,7 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
 }
 
 void DataTree::resizeNumBytes(uint64_t newNumBytes) {
+  //TODO Can we resize in parallel? Especially creating new blocks (i.e. encrypting them) is expensive and should be done in parallel.
   boost::upgrade_lock<shared_mutex> lock(_mutex);
   {
     boost::upgrade_to_unique_lock<shared_mutex> exclusiveLock(lock);

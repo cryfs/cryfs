@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <messmer/blockstore/implementations/compressing/CompressingBlockStore.h>
+#include <messmer/blockstore/implementations/compressing/compressors/RunLengthEncoding.h>
 #include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
 #include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
 #include <messmer/cpp-utils/data/DataFixture.h>
@@ -13,6 +15,8 @@ using cpputils::make_unique_ref;
 using cpputils::DataFixture;
 using cpputils::Data;
 using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::compressing::CompressingBlockStore;
+using blockstore::compressing::RunLengthEncoding;
 
 // Test cases, ensuring that big blobs (>4G) work (i.e. testing that we don't use any 32bit variables for blob size, etc.)
 class BigBlobsTest : public ::testing::Test {
@@ -25,7 +29,7 @@ public:
     static_assert(SMALL_BLOB_SIZE < max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
     static_assert(LARGE_BLOB_SIZE > max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
 
-    unique_ref<BlobStore> blobStore = make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<InMemoryBlockStore>(), BLOCKSIZE);
+    unique_ref<BlobStore> blobStore = make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CompressingBlockStore<RunLengthEncoding>>(make_unique_ref<InMemoryBlockStore>()), BLOCKSIZE);
     unique_ref<Blob> blob = blobStore->create();
 };
 
