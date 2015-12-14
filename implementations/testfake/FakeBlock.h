@@ -23,6 +23,8 @@ public:
 
   size_t size() const override;
 
+  void resize(size_t newSize) override;
+
 private:
   FakeBlockStore *_store;
   std::shared_ptr<cpputils::Data> _data;

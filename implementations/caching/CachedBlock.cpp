@@ -34,6 +34,10 @@ size_t CachedBlock::size() const {
   return _baseBlock->size();
 }
 
+void CachedBlock::resize(size_t newSize) {
+    return _baseBlock->resize(newSize);
+}
+
 unique_ref<Block> CachedBlock::releaseBlock() {
   return std::move(_baseBlock);
 }

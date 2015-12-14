@@ -1,6 +1,7 @@
 #include "InMemoryBlock.h"
 #include "InMemoryBlockStore.h"
 #include <cstring>
+#include <messmer/cpp-utils/data/DataUtils.h>
 #include <messmer/cpp-utils/assert/assert.h>
 
 using std::make_shared;
@@ -36,6 +37,10 @@ void InMemoryBlock::write(const void *source, uint64_t offset, uint64_t size) {
 
 size_t InMemoryBlock::size() const {
   return _data->size();
+}
+
+void InMemoryBlock::resize(size_t newSize) {
+    *_data = cpputils::DataUtils::resize(std::move(*_data), newSize);
 }
 
 void InMemoryBlock::flush() {

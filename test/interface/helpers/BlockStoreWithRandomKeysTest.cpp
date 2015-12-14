@@ -39,6 +39,7 @@ public:
   MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
   MOCK_METHOD0(flush, void());
   MOCK_CONST_METHOD0(size, size_t());
+  MOCK_METHOD1(resize, void(size_t));
   MOCK_CONST_METHOD0(key, const Key&());
 };
 

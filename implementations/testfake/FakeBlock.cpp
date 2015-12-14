@@ -2,6 +2,7 @@
 #include "FakeBlockStore.h"
 #include <cstring>
 #include <messmer/cpp-utils/assert/assert.h>
+#include <messmer/cpp-utils/data/DataUtils.h>
 
 using std::shared_ptr;
 using std::istream;
@@ -35,6 +36,11 @@ void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
 
 size_t FakeBlock::size() const {
   return _data->size();
+}
+
+void FakeBlock::resize(size_t newSize) {
+  *_data = cpputils::DataUtils::resize(std::move(*_data), newSize);
+  _dataChanged = true;
 }
 
 void FakeBlock::flush() {

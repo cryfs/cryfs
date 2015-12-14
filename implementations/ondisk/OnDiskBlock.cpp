@@ -4,6 +4,7 @@
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 #include "../../utils/FileDoesntExistException.h"
+#include <messmer/cpp-utils/data/DataUtils.h>
 #include <messmer/cpp-utils/assert/assert.h>
 
 using std::istream;
@@ -42,6 +43,11 @@ void OnDiskBlock::write(const void *source, uint64_t offset, uint64_t size) {
 
 size_t OnDiskBlock::size() const {
   return _data.size();
+}
+
+void OnDiskBlock::resize(size_t newSize) {
+  _data = cpputils::DataUtils::resize(std::move(_data), newSize);
+  _dataChanged = true;
 }
 
 optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const Key &key) {

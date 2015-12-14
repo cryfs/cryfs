@@ -29,6 +29,8 @@ public:
 
   size_t size() const override;
 
+  void resize(size_t newSize) override;
+
   void remove();
 
   bool alreadyExistsInBaseStore() const;

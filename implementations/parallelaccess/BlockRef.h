@@ -32,6 +32,10 @@ public:
 	return _baseBlock->size();
   }
 
+  void resize(size_t newSize) override {
+    return _baseBlock->resize(newSize);
+  }
+
 private:
   Block *_baseBlock;
 

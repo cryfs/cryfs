@@ -21,6 +21,9 @@ public:
 
   virtual size_t size() const = 0;
 
+  //TODO Test resize()
+  virtual void resize(size_t newSize) = 0;
+
   const Key &key() const {
     return _key;
   }

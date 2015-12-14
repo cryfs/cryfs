@@ -68,8 +68,7 @@ void FakeBlockStore::updateData(const Key &key, const Data &data) {
     found = insertResult.first;
   }
   Data &stored_data = found->second;
-  ASSERT(data.size() == stored_data.size(), "Wrong data size in block");
-  std::memcpy(stored_data.data(), data.data(), data.size());
+  stored_data = data.copy();
 }
 
 uint64_t FakeBlockStore::numBlocks() const {

@@ -22,6 +22,8 @@ public:
 
   size_t size() const override;
 
+  void resize(size_t newSize) override;
+
   cpputils::unique_ref<Block> releaseBlock();
 
 private:

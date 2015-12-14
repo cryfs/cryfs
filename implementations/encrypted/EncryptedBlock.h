@@ -12,6 +12,7 @@
 #include <boost/optional.hpp>
 #include <messmer/cpp-utils/crypto/symmetric/Cipher.h>
 #include <messmer/cpp-utils/assert/assert.h>
+#include <messmer/cpp-utils/data/DataUtils.h>
 #include <mutex>
 #include <messmer/cpp-utils/logging/logging.h>
 
@@ -20,6 +21,8 @@ namespace encrypted {
 template<class Cipher> class EncryptedBlockStore;
 
 //TODO Test EncryptedBlock
+
+//TODO Fix mutexes & locks (basically true for all blockstores)
 
 template<class Cipher>
 class EncryptedBlock final: public Block {
@@ -37,11 +40,12 @@ public:
   void flush() override;
 
   size_t size() const override;
+  void resize(size_t newSize) override;
 
   cpputils::unique_ref<Block> releaseBlock();
 
 private:
-  cpputils::unique_ref<Block> _baseBlock;
+  cpputils::unique_ref<Block> _baseBlock; // TODO Do I need the ciphertext block in memory or is the key enough?
   cpputils::Data _plaintextWithHeader;
   typename Cipher::EncryptionKey _encKey;
   bool _dataChanged;
@@ -143,6 +147,12 @@ void EncryptedBlock<Cipher>::flush() {
 template<class Cipher>
 size_t EncryptedBlock<Cipher>::size() const {
   return _plaintextWithHeader.size() - HEADER_LENGTH;
+}
+
+template<class Cipher>
+void EncryptedBlock<Cipher>::resize(size_t newSize) {
+  _plaintextWithHeader = cpputils::DataUtils::resize(std::move(_plaintextWithHeader), newSize + HEADER_LENGTH);
+  _dataChanged = true;
 }
 
 template<class Cipher>

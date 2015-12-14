@@ -1,6 +1,7 @@
 #include "NewBlock.h"
 #include "CachingBlockStore.h"
 #include <messmer/cpp-utils/assert/assert.h>
+#include <messmer/cpp-utils/data/DataUtils.h>
 
 using cpputils::Data;
 using boost::none;
@@ -59,6 +60,11 @@ void NewBlock::flush() {
 
 size_t NewBlock::size() const {
   return _data.size();
+}
+
+void NewBlock::resize(size_t newSize) {
+    _data = cpputils::DataUtils::resize(std::move(_data), newSize);
+    _dataChanged = true;
 }
 
 bool NewBlock::alreadyExistsInBaseStore() const {
