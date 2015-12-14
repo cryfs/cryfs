@@ -17,7 +17,7 @@ const timespec TIMEVAL6[2] = {FuseUtimensTest::makeTimespec(0,0), FuseUtimensTes
 const timespec TIMEVAL7[2] = {FuseUtimensTest::makeTimespec(0,0), FuseUtimensTest::makeTimespec(0,1000)};
 const timespec TIMEVAL8[2] = {FuseUtimensTest::makeTimespec(0,0), FuseUtimensTest::makeTimespec(1000,1000)};
 const timespec TIMEVAL9[2] = {FuseUtimensTest::makeTimespec(1417196126,123000), FuseUtimensTest::makeTimespec(1417109713,321000)}; // current timestamp and the day before as of writing this test case
-const timespec TIMEVAL10[2] = {FuseUtimensTest::makeTimespec(1024L*1024*1024*1024,999000), FuseUtimensTest::makeTimespec(2L*1024*1024*1024*1024,321000)}; // needs 64bit for timestamp representation
+const timespec TIMEVAL10[2] = {FuseUtimensTest::makeTimespec(UINT64_C(1024)*1024*1024*1024,999000), FuseUtimensTest::makeTimespec(UINT64_C(2*1024)*1024*1024*1024,321000)}; // needs 64bit for timestamp representation
 INSTANTIATE_TEST_CASE_P(FuseUtimensTimeParameterTest, FuseUtimensTimeParameterTest,
     Values(TIMEVAL1, TIMEVAL2, TIMEVAL3, TIMEVAL4, TIMEVAL5, TIMEVAL6, TIMEVAL7, TIMEVAL8, TIMEVAL9, TIMEVAL10));
 
