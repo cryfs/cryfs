@@ -91,7 +91,8 @@ namespace blockstore {
         }
 
         Data RunLengthEncoding::Decompress(const void *data, size_t size) {
-            istringstream stream = _parseData((uint8_t*)data, size);
+            istringstream stream;
+            _parseData((uint8_t*)data, size, &stream);
             ostringstream decompressed;
             while(_hasData(&stream)) {
                 _decodeArbitraryWords(&stream, &decompressed);
@@ -108,11 +109,8 @@ namespace blockstore {
             return !str->eof();
         }
 
-        istringstream RunLengthEncoding::_parseData(const uint8_t *data, size_t size) {
-            string str((const char*)data, size);
-            istringstream result;
-            result.str(str);
-            return result;
+        void RunLengthEncoding::_parseData(const uint8_t *data, size_t size, istringstream *result) {
+            result->str(string((const char*)data, size));
         }
 
         void RunLengthEncoding::_decodeArbitraryWords(istringstream *stream, ostringstream *decompressed) {
