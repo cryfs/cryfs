@@ -7,7 +7,7 @@
 
 namespace cpputils {
 
-class DataFixture {
+class DataFixture final {
 public:
   static Data generate(size_t size, long long int seed = 1);
 

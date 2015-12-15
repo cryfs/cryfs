@@ -7,7 +7,7 @@
 
 namespace cpputils {
 namespace logging {
-    class Logger {
+    class Logger final {
     public:
         void setLogger(std::shared_ptr<spdlog::logger> logger) {
             _logger = logger;

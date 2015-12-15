@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <boost/optional.hpp>
+#include "../macros.h"
 
 namespace cpputils {
 
@@ -17,7 +18,7 @@ public:
     virtual void print(const std::string &output) = 0;
 };
 
-class IOStreamConsole: public Console {
+class IOStreamConsole final: public Console {
 public:
     IOStreamConsole();
     IOStreamConsole(std::ostream &output, std::istream &input);
@@ -30,6 +31,8 @@ private:
 
     std::ostream &_output;
     std::istream &_input;
+
+    DISALLOW_COPY_AND_ASSIGN(IOStreamConsole);
 };
 
 }

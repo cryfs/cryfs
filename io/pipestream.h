@@ -53,7 +53,7 @@
 
 namespace cpputils {
 
-    class pipestream : public std::streambuf {
+    class pipestream final : public std::streambuf {
     private:
         typedef std::streambuf::traits_type traits_type;
         typedef std::string::size_type string_size_t;

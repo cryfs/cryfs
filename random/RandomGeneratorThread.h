@@ -8,7 +8,7 @@
 
 namespace cpputils {
     //TODO Test
-    class RandomGeneratorThread {
+    class RandomGeneratorThread final {
     public:
         RandomGeneratorThread(ThreadsafeRandomDataBuffer *buffer, size_t minSize, size_t maxSize);
 

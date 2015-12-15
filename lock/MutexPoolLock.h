@@ -6,7 +6,7 @@
 
 namespace cpputils {
     template<class LockName>
-    class MutexPoolLock {
+    class MutexPoolLock final {
     public:
         MutexPoolLock(LockPool<LockName> *pool, const LockName &lockName): _pool(pool), _lockName(lockName) {
             _pool->lock(_lockName);
