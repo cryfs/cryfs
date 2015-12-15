@@ -3,7 +3,7 @@ INCLUDE(messmer/cmake/tools)
 # Actually create targets: EXEcutables and libraries.
 ADD_BII_TARGETS()
 
-ADD_BOOST(filesystem system)
+ADD_BOOST(filesystem system thread chrono)
 
 ACTIVATE_CPP14()
 REQUIRE_GCC_VERSION(4.8)

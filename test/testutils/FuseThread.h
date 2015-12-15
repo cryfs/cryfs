@@ -2,7 +2,8 @@
 #ifndef MESSMER_FSPP_TEST_TESTUTILS_FUSETHREAD_H_
 #define MESSMER_FSPP_TEST_TESTUTILS_FUSETHREAD_H_
 
-#include <thread>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 #include <messmer/cpp-utils/macros.h>
 
 namespace fspp {
@@ -19,7 +20,7 @@ public:
 
 private:
   fspp::fuse::Fuse *_fuse;
-  std::thread _child;
+  boost::thread _child;
 
   DISALLOW_COPY_AND_ASSIGN(FuseThread);
 };
