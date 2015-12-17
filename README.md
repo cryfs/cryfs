@@ -10,7 +10,7 @@ This repository contains the filesystem implementation. There are submodules in 
   - [ParallelAccessStore](https://github.com/cryfs/parallelaccessstore): Concurrency primitive for Blockstore/Blobstore
   - [Fs++](https://github.com/cryfs/fspp): Implement a file system against a platform independent interface
 
-Install stable release
+Install latest release
 ======================
 
 Easy install (Ubuntu and Debian)
