@@ -25,7 +25,7 @@ Manual install (Ubuntu)
     wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
 
     # Add apt repository
-    sudo apt-add-repository http://apt.cryfs.org/ubuntu
+    sudo sh -c "echo \"deb http://apt.cryfs.org/ubuntu `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
     
     # Install cryfs 
     sudo apt-get update
@@ -37,7 +37,7 @@ Manual install (Debian)
     wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
 
     # Add apt repository
-    sudo apt-add-repository http://apt.cryfs.org/debian
+    sudo sh -c "echo \"deb http://apt.cryfs.org/debian `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
     
     # Install cryfs 
     sudo apt-get update
