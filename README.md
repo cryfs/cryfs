@@ -16,7 +16,7 @@ Install stable release
 Easy install (Ubuntu and Debian)
 --------------------------------
 
-    wget -O - http://www.cryfs.org/install.sh | sudo sh
+    wget -O - http://www.cryfs.org/install.sh | sudo bash
 
 Manual install (Ubuntu)
 -----------------------
