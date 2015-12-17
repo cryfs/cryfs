@@ -1,5 +1,6 @@
 Version 0.8.4
 ---------------
+* Offering .deb packages for Debian and Ubuntu
 * Compatibility with 32bit systems
 * Support files larger than 4GB
 
