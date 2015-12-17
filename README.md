@@ -10,6 +10,39 @@ This repository contains the filesystem implementation. There are submodules in 
   - [ParallelAccessStore](https://github.com/cryfs/parallelaccessstore): Concurrency primitive for Blockstore/Blobstore
   - [Fs++](https://github.com/cryfs/fspp): Implement a file system against a platform independent interface
 
+Install stable release
+======================
+
+Easy install (Ubuntu and Debian)
+--------------------------------
+
+    wget -O - http://www.cryfs.org/install.sh | sudo sh
+
+Manual install (Ubuntu)
+-----------------------
+
+    # Add apt key
+    wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
+
+    # Add apt repository
+    sudo apt-add-repository http://apt.cryfs.org/ubuntu
+    
+    # Install cryfs 
+    sudo apt-get update
+    sudo apt-get install cryfs
+
+Manual install (Debian)
+-----------------------
+    # Add apt key
+    wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
+
+    # Add apt repository
+    sudo apt-add-repository http://apt.cryfs.org/debian
+    
+    # Install cryfs 
+    sudo apt-get update
+    sudo apt-get install cryfs
+    
 
 Building from source
 ====================
@@ -22,7 +55,7 @@ Requirements
         $ bii setup:cpp
 
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
-  - libFUSE (including development headers) (TODO which minimal version?)
+  - libFUSE >= 2.8.6 (including development headers)
 
         # Ubuntu
         $ sudo apt-get install libfuse-dev
