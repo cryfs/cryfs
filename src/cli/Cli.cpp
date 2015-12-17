@@ -28,6 +28,7 @@
 #error The used libc implementation has a maximal password size for getpass(). We cannot use it to ask for passwords.
 #endif
 
+//TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
 
