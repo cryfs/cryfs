@@ -1,5 +1,5 @@
 # cryfs [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
-Cryptographic filesystem for the cloud
+CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.
 
 See http://www.cryfs.org
 
