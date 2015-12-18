@@ -15,13 +15,13 @@ Install latest release
 Easy install (Ubuntu and Debian)
 --------------------------------
 
-    wget -O - http://www.cryfs.org/install.sh | sudo bash
+    wget -O - https://www.cryfs.org/install.sh | sudo bash
 
 Manual install (Ubuntu)
 -----------------------
 
     # Add apt key
-    wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
+    wget -O - https://www.cryfs.org/apt.key | sudo apt-key add -
 
     # Add apt repository
     sudo sh -c "echo \"deb http://apt.cryfs.org/ubuntu `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
@@ -33,7 +33,7 @@ Manual install (Ubuntu)
 Manual install (Debian)
 -----------------------
     # Add apt key
-    wget -O - http://www.cryfs.org/apt.key | sudo apt-key add -
+    wget -O - https://www.cryfs.org/apt.key | sudo apt-key add -
 
     # Add apt repository
     sudo sh -c "echo \"deb http://apt.cryfs.org/debian `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
