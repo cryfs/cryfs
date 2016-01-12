@@ -1,3 +1,7 @@
+Version 0.8.5
+---------------
+* Fix package manager warning when installing the .deb package
+
 Version 0.8.4
 ---------------
 * Offering .deb packages for Debian and Ubuntu
