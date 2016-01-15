@@ -12,7 +12,7 @@ install:
 - sudo apt-get install software-properties-common && sudo add-apt-repository ppa:george-edison55/precise-backports -y && sudo apt-get update
 - sudo apt-get install cmake cmake-data rpm
 # CryFS needs cmake >= 3.3, install it.
-- wget --no-check-certificates https://cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz
+- wget --no-check-certificate https://cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz
   && tar -xf cmake-3.3.2-Linux-x86_64.tar.gz
   && cp -R cmake-3.3.2-Linux-x86_64/* /usr
 - cmake --version
