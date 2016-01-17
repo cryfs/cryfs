@@ -21,8 +21,8 @@ ACTION_P(ChooseCipher, cipherName) {
 class TestWithMockConsole {
 public:
     // Return a console that chooses a valid cryfs setting
-    static cpputils::unique_ref<MockConsole> mockConsole() {
-        auto console = cpputils::make_unique_ref<MockConsole>();
+    static std::shared_ptr<MockConsole> mockConsole() {
+        auto console = std::make_shared<MockConsole>();
         EXPECT_CALL(*console, ask(::testing::_, ::testing::_)).WillRepeatedly(ChooseCipher("aes-256-gcm"));
         EXPECT_CALL(*console, askYesNo(::testing::_)).WillRepeatedly(::testing::Return(true));
         return console;

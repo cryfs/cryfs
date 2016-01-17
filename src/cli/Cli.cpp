@@ -56,6 +56,7 @@ using std::make_shared;
 using std::unique_ptr;
 using std::make_unique;
 using std::function;
+using std::make_shared;
 using boost::optional;
 using boost::none;
 using boost::chrono::duration;
@@ -173,8 +174,8 @@ namespace cryfs {
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto console = make_unique_ref<IOStreamConsole>();
-            auto config = CryConfigLoader(std::move(console), _keyGenerator, _scryptSettings,
+            auto console = make_shared<IOStreamConsole>();
+            auto config = CryConfigLoader(console, _keyGenerator, _scryptSettings,
                                           std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForExistingFilesystem),
                                           std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForNewFilesystem),
                                           options.cipher()).loadOrCreate(configFile);

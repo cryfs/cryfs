@@ -14,6 +14,8 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::string;
 using std::vector;
+using std::shared_ptr;
+using std::make_shared;
 using ::testing::_;
 using ::testing::Return;
 using ::testing::Invoke;
@@ -25,12 +27,10 @@ using ::testing::WithParamInterface;
 class CryConfigCreatorTest: public ::testing::Test {
 public:
     CryConfigCreatorTest()
-            : _console(make_unique_ref<MockConsole>()),
-              console(_console.get()),
-              creator(std::move(_console), cpputils::Random::PseudoRandom()) {
+            : console(make_shared<MockConsole>()),
+              creator(console, cpputils::Random::PseudoRandom()) {
     }
-    unique_ref<MockConsole> _console;
-    MockConsole *console;
+    shared_ptr<MockConsole> console;
     CryConfigCreator creator;
 };
 

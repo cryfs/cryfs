@@ -14,6 +14,7 @@ using cpputils::RandomGenerator;
 using cpputils::SCryptSettings;
 using boost::optional;
 using boost::none;
+using std::shared_ptr;
 using std::vector;
 using std::string;
 using std::function;
@@ -22,10 +23,10 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(unique_ref<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipher)
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine)
     : _creator(std::move(console), keyGenerator), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
-      _cipher(cipher) {
+      _cipherFromCommandLine(cipherFromCommandLine) {
 }
 
 optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
@@ -37,8 +38,8 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   std::cout << "done" << std::endl;
-  if (_cipher != none && config->config()->Cipher() != *_cipher) {
-    throw std::runtime_error("Filesystem uses "+config->config()->Cipher()+" cipher and not "+*_cipher+" as specified.");
+  if (_cipherFromCommandLine != none && config->config()->Cipher() != *_cipherFromCommandLine) {
+    throw std::runtime_error("Filesystem uses "+config->config()->Cipher()+" cipher and not "+*_cipherFromCommandLine+" as specified.");
   }
   return std::move(*config);
 }
@@ -52,7 +53,7 @@ optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) 
 }
 
 CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
-  auto config = _creator.create(_cipher);
+  auto config = _creator.create(_cipherFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
   std::cout << "Creating config file..." << std::flush;
