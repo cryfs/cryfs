@@ -69,32 +69,3 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
     CryConfig config = creator.create(none);
     cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
-
-class CryConfigCreatorTest_ChooseCipher: public CryConfigCreatorTest, public ::testing::WithParamInterface<string> {
-public:
-    string cipherName = GetParam();
-    optional<string> cipherWarning = CryCiphers::find(cipherName).warning();
-
-    void EXPECT_DONT_SHOW_WARNING() {
-        EXPECT_CALL(*console, askYesNo(_)).Times(0);
-    }
-
-    void EXPECT_SHOW_WARNING(const string &warning) {
-        EXPECT_CALL(*console, askYesNo(HasSubstr(warning))).WillOnce(Return(true));
-    }
-};
-
-TEST_P(CryConfigCreatorTest_ChooseCipher, ChoosesCipherCorrectly) {
-    if (cipherWarning == none) {
-        EXPECT_DONT_SHOW_WARNING();
-    } else {
-        EXPECT_SHOW_WARNING(*cipherWarning);
-    }
-
-    EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher(cipherName));
-
-    CryConfig config = creator.create(none);
-    EXPECT_EQ(cipherName, config.Cipher());
-}
-
-INSTANTIATE_TEST_CASE_P(CryConfigCreatorTest_ChooseCipher, CryConfigCreatorTest_ChooseCipher, ValuesIn(CryCiphers::supportedCipherNames()));

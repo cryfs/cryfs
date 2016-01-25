@@ -10,10 +10,6 @@ namespace cryfs {
     //TODO Test
     class CryConfigConsole final {
     public:
-        struct Config {
-            std::string cipher;
-        };
-
         CryConfigConsole(std::shared_ptr<cpputils::Console> console);
         CryConfigConsole(CryConfigConsole &&rhs) = default;
 
