@@ -19,6 +19,7 @@ namespace cryfs {
         string cipherName = "";
         bool askAgain = true;
         while(askAgain) {
+            _console->print("\n");
             int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
             cipherName = ciphers[cipherIndex];
             askAgain = !_showWarningForCipherAndReturnIfOk(cipherName);

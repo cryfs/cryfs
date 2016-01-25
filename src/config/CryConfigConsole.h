@@ -7,7 +7,6 @@
 #include <boost/optional.hpp>
 
 namespace cryfs {
-    //TODO Test
     class CryConfigConsole final {
     public:
         CryConfigConsole(std::shared_ptr<cpputils::Console> console);
