@@ -2,6 +2,7 @@ Version 0.8.5
 ---------------
 * Fix package manager warning when installing the .deb package
 * Offer a default configuration when creating new filesystems
+* If the given base or mount directory doesn't exist, offer to create them
 
 Version 0.8.4
 ---------------

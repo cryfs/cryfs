@@ -5,8 +5,10 @@
 using namespace cryfs;
 using cpputils::Random;
 using cpputils::SCrypt;
+using std::make_shared;
+using cpputils::IOStreamConsole;
 
 int main(int argc, char *argv[]) {
     auto &keyGenerator = Random::OSRandom();
-    return Cli(keyGenerator, SCrypt::DefaultSettings).main(argc, argv);
+    return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>()).main(argc, argv);
 }

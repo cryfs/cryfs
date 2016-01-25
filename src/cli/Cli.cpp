@@ -47,6 +47,7 @@ using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
 using cpputils::SCryptSettings;
+using cpputils::Console;
 using std::cout;
 using std::string;
 using std::endl;
@@ -71,8 +72,8 @@ using boost::chrono::milliseconds;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings) {}
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console) {}
 
     void Cli::_showVersion() {
         cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -174,8 +175,7 @@ namespace cryfs {
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto console = make_shared<IOStreamConsole>();
-            auto config = CryConfigLoader(console, _keyGenerator, _scryptSettings,
+            auto config = CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                           std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForExistingFilesystem),
                                           std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForNewFilesystem),
                                           options.cipher()).loadOrCreate(configFile);
@@ -247,7 +247,14 @@ namespace cryfs {
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
         if (!bf::exists(dir)) {
-            throw std::runtime_error(name+" not found.");
+            bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?");
+            if (create) {
+                if (!bf::create_directory(dir)) {
+                    throw std::runtime_error("Error creating "+name);
+                }
+            } else {
+                throw std::runtime_error(name + " not found.");
+            }
         }
         if (!bf::is_directory(dir)) {
             throw std::runtime_error(name+" is not a directory.");

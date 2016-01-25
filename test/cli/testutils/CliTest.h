@@ -9,10 +9,11 @@
 #include "../../../src/cli/Cli.h"
 #include <messmer/cpp-utils/logging/logging.h>
 #include <messmer/cpp-utils/process/subprocess.h>
+#include "../../testutils/MockConsole.h"
 
 class CliTest : public ::testing::Test {
 public:
-    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false) {}
+    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
 
     cpputils::TempDir _basedir;
     cpputils::TempDir _mountdir;
@@ -20,6 +21,7 @@ public:
     boost::filesystem::path mountdir;
     cpputils::TempFile logfile;
     cpputils::TempFile configfile;
+    std::shared_ptr<MockConsole> console;
 
     void run(std::vector<const char*> args) {
         std::vector<char*> _args;
@@ -29,7 +31,7 @@ public:
             _args.push_back(const_cast<char*>(arg));
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
-        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings).main(_args.size(), _args.data());
+        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data());
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message = "") {

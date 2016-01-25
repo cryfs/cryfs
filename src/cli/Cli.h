@@ -6,13 +6,14 @@
 #include "../config/CryConfigFile.h"
 #include <boost/filesystem/path.hpp>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
+#include <messmer/cpp-utils/io/Console.h>
 #include <messmer/cpp-utils/random/RandomGenerator.h>
 #include "CallAfterTimeout.h"
 
 namespace cryfs {
     class Cli final {
     public:
-        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings);
+        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::shared_ptr<cpputils::Console> console);
         int main(int argc, char *argv[]);
 
     private:
@@ -36,6 +37,7 @@ namespace cryfs {
 
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
+        std::shared_ptr<cpputils::Console> _console;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

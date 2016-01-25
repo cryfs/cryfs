@@ -3,6 +3,7 @@
 namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
+using ::testing::Return;
 using std::vector;
 using cpputils::TempFile;
 
@@ -117,7 +118,16 @@ TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     _basedir.remove();
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?")).WillByDefault(Return(false)); // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     Test_Run_Error("Error: base directory not found");
+}
+
+TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
+    if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+    _basedir.remove();
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?")).WillByDefault(Return(true));
+    Test_Run_Success();
+    EXPECT_TRUE(bf::exists(_basedir.path()) && bf::is_directory(_basedir.path()));
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
@@ -155,7 +165,16 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
     _mountdir.remove();
+    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?")).WillByDefault(Return(false)); // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     Test_Run_Error("Error: mount directory not found");
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
+    if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+    _mountdir.remove();
+    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?")).WillByDefault(Return(true));
+    Test_Run_Success();
+    EXPECT_TRUE(bf::exists(_mountdir.path()) && bf::is_directory(_mountdir.path()));
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
