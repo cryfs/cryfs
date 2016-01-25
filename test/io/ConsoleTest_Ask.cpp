@@ -20,7 +20,6 @@ TEST_F(ConsoleTest_Ask, CrashesWithoutOptions) {
 TEST_F(ConsoleTest_Ask, OneOption) {
   auto chosen = ask("My Question?", {"First Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option"
   });
@@ -32,7 +31,6 @@ TEST_F(ConsoleTest_Ask, OneOption) {
 TEST_F(ConsoleTest_Ask, TwoOptions_ChooseFirst) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -45,7 +43,6 @@ TEST_F(ConsoleTest_Ask, TwoOptions_ChooseFirst) {
 TEST_F(ConsoleTest_Ask, TwoOptions_ChooseSecond) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -58,7 +55,6 @@ TEST_F(ConsoleTest_Ask, TwoOptions_ChooseSecond) {
 TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseFirst) {
   auto chosen = ask("My Other Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Other Question?",
     " [1] 1st Option",
     " [2] 2nd Option",
@@ -72,7 +68,6 @@ TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseFirst) {
 TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseSecond) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] 1st Option",
     " [2] 2nd Option",
@@ -86,7 +81,6 @@ TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseSecond) {
 TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseThird) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option", "3rd Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] 1st Option",
     " [2] 2nd Option",
@@ -100,7 +94,6 @@ TEST_F(ConsoleTest_Ask, ThreeOptions_ChooseThird) {
 TEST_F(ConsoleTest_Ask, InputWithLeadingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -113,7 +106,6 @@ TEST_F(ConsoleTest_Ask, InputWithLeadingSpaces) {
 TEST_F(ConsoleTest_Ask, InputWithFollowingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -126,7 +118,6 @@ TEST_F(ConsoleTest_Ask, InputWithFollowingSpaces) {
 TEST_F(ConsoleTest_Ask, InputWithLeadingAndFollowingSpaces) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -139,7 +130,6 @@ TEST_F(ConsoleTest_Ask, InputWithLeadingAndFollowingSpaces) {
 TEST_F(ConsoleTest_Ask, InputEmptyLine) {
   auto chosen = ask("My Question?", {"First Option", "Second Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] First Option",
     " [2] Second Option"
@@ -156,7 +146,6 @@ TEST_F(ConsoleTest_Ask, InputEmptyLine) {
 TEST_F(ConsoleTest_Ask, InputWrongNumbers) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] 1st Option",
     " [2] 2nd Option",
@@ -179,7 +168,6 @@ TEST_F(ConsoleTest_Ask, InputWrongNumbers) {
 TEST_F(ConsoleTest_Ask, InputNonNumbers) {
   auto chosen = ask("My Question?", {"1st Option", "2nd Option"});
   EXPECT_OUTPUT_LINES({
-    "",
     "My Question?",
     " [1] 1st Option",
     " [2] 2nd Option",
