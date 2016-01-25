@@ -67,7 +67,7 @@ unsigned int IOStreamConsole::ask(const string &question, const vector<string> &
     if(options.size() == 0) {
         throw std::invalid_argument("options should have at least one entry");
     }
-    _output << "\n" << question << "\n";
+    _output << question << "\n";
     for (unsigned int i = 0; i < options.size(); ++i) {
         _output << " [" << (i+1) << "] " << options[i] << "\n";
     }
@@ -90,7 +90,7 @@ function<optional<bool>(const string &input)> parseYesNo() {
 }
 
 bool IOStreamConsole::askYesNo(const string &question) {
-    _output << "\n" << question << "\n";
+    _output << question << "\n";
     return _askForChoice("Your choice [y/n]: ", parseYesNo());
 }
 

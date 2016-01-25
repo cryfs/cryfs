@@ -14,7 +14,7 @@ public:
 
     void EXPECT_RESULT_ON_INPUT(const bool expected, const string &input) {
         auto chosen = askYesNo("Are you sure blablub?");
-        EXPECT_OUTPUT_LINES({"", "Are you sure blablub?"});
+        EXPECT_OUTPUT_LINES({"Are you sure blablub?"});
         EXPECT_OUTPUT_LINE("Your choice [y/n]", ':', " ");
         sendInputLine(input);
         EXPECT_EQ(expected, chosen.get());
@@ -67,7 +67,7 @@ TEST_F(ConsoleTest_AskYesNo, InputWithLeadingAndFollowingSpaces) {
 
 TEST_F(ConsoleTest_AskYesNo, InputEmptyLine) {
     auto chosen = askYesNo("My Question?");
-    EXPECT_OUTPUT_LINES({"", "My Question?"});
+    EXPECT_OUTPUT_LINES({"My Question?"});
     EXPECT_OUTPUT_LINE("Your choice [y/n]", ':', " ");
     sendInputLine("");
     EXPECT_OUTPUT_LINE("Your choice [y/n]", ':', " ");
@@ -79,7 +79,7 @@ TEST_F(ConsoleTest_AskYesNo, InputEmptyLine) {
 
 TEST_F(ConsoleTest_AskYesNo, WrongInput) {
     auto chosen = askYesNo("My Question?");
-    EXPECT_OUTPUT_LINES({"", "My Question?"});
+    EXPECT_OUTPUT_LINES({"My Question?"});
     EXPECT_OUTPUT_LINE("Your choice [y/n]", ':', " ");
     sendInputLine("0");
     EXPECT_OUTPUT_LINE("Your choice [y/n]", ':', " ");
