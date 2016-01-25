@@ -12,14 +12,18 @@ namespace cryfs {
         CryConfigConsole(std::shared_ptr<cpputils::Console> console);
         CryConfigConsole(CryConfigConsole &&rhs) = default;
 
-        std::string askCipher() const;
+        std::string askCipher();
 
-    private:
         static constexpr const char *DEFAULT_CIPHER = "aes-256-gcm";
 
+    private:
+        bool _checkUseDefaultSettings();
+
+        std::string _askCipher() const;
         bool _showWarningForCipherAndReturnIfOk(const std::string &cipherName) const;
 
         std::shared_ptr<cpputils::Console> _console;
+        boost::optional<bool> _useDefaultSettings;
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigConsole);
     };

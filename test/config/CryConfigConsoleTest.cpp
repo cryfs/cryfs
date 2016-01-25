@@ -36,11 +36,20 @@ public:
 
 class CryConfigConsoleTest_Cipher: public CryConfigConsoleTest {};
 
-#define EXPECT_ASK_FOR_CIPHER() EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames())))
+#define EXPECT_ASK_FOR_CIPHER()                                                                                        \
+  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(false));                           \
+  EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 
 TEST_F(CryConfigConsoleTest_Cipher, AsksForCipher) {
-    EXPECT_ASK_FOR_CIPHER().Times(1).WillOnce(ChooseAnyCipher());
+    EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
     cryconsole.askCipher();
+}
+
+TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipher) {
+    EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
+    string cipher = cryconsole.askCipher();
+    EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
 }
 
 class CryConfigConsoleTest_Cipher_Choose: public CryConfigConsoleTest_Cipher, public ::testing::WithParamInterface<string> {

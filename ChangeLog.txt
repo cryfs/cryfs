@@ -1,6 +1,7 @@
 Version 0.8.5
 ---------------
 * Fix package manager warning when installing the .deb package
+* Offer a default configuration when creating new filesystems
 
 Version 0.8.4
 ---------------
@@ -10,15 +11,15 @@ Version 0.8.4
 
 Version 0.8.3
 ---------------
-* Ask for password confirmation when creating new filesystem.
+* Ask for password confirmation when creating new filesystem
 * Check for new CryFS versions and ask the user to update if a new version is available
 * Implemented a mechanism that can show warnings about security bugs to users of a certain CryFS version. Let's hope this won't be necessary ;)
 * Compatibility with GCC 4.8 (that allows compiling on Ubuntu 14.04 for example)
 
 Version 0.8.2
 ---------------
-* Mount directory, base directory, logfile and config file can be specified as relative paths.
-* Improved error messages.
+* Mount directory, base directory, logfile and config file can be specified as relative paths
+* Improved error messages
 
 Version 0.8.1
 ---------------

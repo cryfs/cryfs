@@ -34,15 +34,20 @@ public:
     CryConfigCreator creator;
 };
 
-#define EXPECT_ASK_FOR_CIPHER() EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames())))
+#define EXPECT_ASK_FOR_CIPHER()                                                                                        \
+  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(false));                           \
+  EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
+#define EXPECT_DOES_NOT_ASK_FOR_CIPHER()                                                                               \
+  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(0);                                                   \
+  EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
 
 TEST_F(CryConfigCreatorTest, DoesAskForCipherIfNotSpecified) {
-    EXPECT_ASK_FOR_CIPHER().Times(1).WillOnce(ChooseAnyCipher());
+    EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
     CryConfig config = creator.create(none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfSpecified) {
-    EXPECT_ASK_FOR_CIPHER().Times(0);
+    EXPECT_DOES_NOT_ASK_FOR_CIPHER();
     CryConfig config = creator.create(string("aes-256-gcm"));
 }
 

@@ -10,11 +10,21 @@ using std::vector;
 using std::shared_ptr;
 
 namespace cryfs {
+    constexpr const char *CryConfigConsole::DEFAULT_CIPHER;
+
     CryConfigConsole::CryConfigConsole(shared_ptr<Console> console)
-            : _console(std::move(console)) {
+            : _console(std::move(console)), _useDefaultSettings(none) {
     }
 
-    string CryConfigConsole::askCipher() const {
+    string CryConfigConsole::askCipher() {
+        if (_checkUseDefaultSettings()) {
+            return DEFAULT_CIPHER;
+        } else {
+            return _askCipher();
+        }
+    }
+
+    string CryConfigConsole::_askCipher() const {
         vector<string> ciphers = CryCiphers::supportedCipherNames();
         string cipherName = "";
         bool askAgain = true;
@@ -33,5 +43,12 @@ namespace cryfs {
             return true;
         }
         return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?");
+    }
+
+    bool CryConfigConsole::_checkUseDefaultSettings() {
+        if (_useDefaultSettings == none) {
+            _useDefaultSettings = _console->askYesNo("Use default settings?");
+        }
+        return *_useDefaultSettings;
     }
 }
