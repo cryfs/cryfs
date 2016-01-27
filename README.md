@@ -54,6 +54,8 @@ Requirements
         $ bii setup:cpp
 
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
+  - CMake version >= 3.3
+  - libcurl4 (including development headers) 
   - libFUSE >= 2.8.6 (including development headers)
 
         # Ubuntu
