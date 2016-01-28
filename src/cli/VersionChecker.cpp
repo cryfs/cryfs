@@ -18,10 +18,6 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-    VersionChecker::VersionChecker()
-            :VersionChecker(make_shared<CurlHttpClient>()) {
-    }
-
     VersionChecker::VersionChecker(shared_ptr<HttpClient> httpClient)
             : _versionInfo(_getVersionInfo(std::move(httpClient))) {
     }

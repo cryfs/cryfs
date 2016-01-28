@@ -48,6 +48,7 @@ using cpputils::RandomGenerator;
 using cpputils::unique_ref;
 using cpputils::SCryptSettings;
 using cpputils::Console;
+using cpputils::HttpClient;
 using std::cout;
 using std::string;
 using std::endl;
@@ -72,8 +73,8 @@ using boost::chrono::milliseconds;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console) {}
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient) {}
 
     void Cli::_showVersion() {
         cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -89,7 +90,7 @@ namespace cryfs {
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
-        VersionChecker versionChecker;
+        VersionChecker versionChecker(_httpClient);
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not connect to cryfs.org to check for updates." << endl;
