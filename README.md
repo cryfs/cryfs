@@ -48,7 +48,7 @@ Building from source
 
 Requirements
 ------------
-  - [biicode](https://www.biicode.com/downloads)
+  - [biicode](http://www.biicode.com/downloads)
 
         # After installing, call
         $ bii setup:cpp
