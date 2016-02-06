@@ -11,6 +11,7 @@
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Dir.h"
 #include "../../fs_interface/File.h"
+#include "../../fs_interface/Symlink.h"
 #include "../../fs_interface/OpenFile.h"
 
 class FileSystemTestFixture {
@@ -48,6 +49,14 @@ public:
 	auto file = cpputils::dynamic_pointer_move<fspp::File>(*loaded);
 	EXPECT_NE(boost::none, file);
 	return std::move(*file);
+  }
+
+  cpputils::unique_ref<fspp::Symlink> LoadSymlink(const boost::filesystem::path &path) {
+    auto loaded = device->Load(path);
+    EXPECT_NE(boost::none, loaded);
+    auto symlink = cpputils::dynamic_pointer_move<fspp::Symlink>(*loaded);
+    EXPECT_NE(boost::none, symlink);
+    return std::move(*symlink);
   }
 };
 
