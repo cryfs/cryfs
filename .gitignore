@@ -30,3 +30,6 @@
 # Biicode directory
 bii
 bin
+
+umltest.inner.sh
+umltest.status
