@@ -38,23 +38,17 @@ TYPED_TEST_P(FsppDeviceTest, LoadDirFromRootDir) {
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromEmptyRootDir) {
-  //TODO Change, as soon as it's clear how we want to handle fs errors
-  EXPECT_ANY_THROW(
-    this->device->Load("/nonexisting")
-  );
+  EXPECT_EQ(boost::none, this->device->Load("/nonexisting"));
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromRootDir) {
   this->InitDirStructure();
-  //TODO Change, as soon as it's clear how we want to handle fs errors
-  EXPECT_ANY_THROW(
-    this->device->Load("/nonexisting")
-  );
+  EXPECT_EQ(boost::none, this->device->Load("/nonexisting"));
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromNonexistingDir) {
   this->InitDirStructure();
-  //TODO Change, as soon as it's clear how we want to handle fs errors
+  //TODO Change as soon as we have a concept of how to handle filesystem errors in the interface
   EXPECT_ANY_THROW(
     this->device->Load("/nonexisting/nonexisting2")
   );
@@ -62,18 +56,12 @@ TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromNonexistingDir) {
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromExistingDir) {
   this->InitDirStructure();
-  //TODO Change, as soon as it's clear how we want to handle fs errors
-  EXPECT_ANY_THROW(
-    this->device->Load("/mydir/nonexisting")
-  );
+  EXPECT_EQ(boost::none, this->device->Load("/mydir/nonexisting"));
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadNonexistingFromExistingEmptyDir) {
   this->InitDirStructure();
-  //TODO Change, as soon as it's clear how we want to handle fs errors
-  EXPECT_ANY_THROW(
-    this->device->Load("/myemptydir/nonexisting")
-  );
+  EXPECT_EQ(boost::none, this->device->Load("/myemptydir/nonexisting"));
 }
 
 TYPED_TEST_P(FsppDeviceTest, LoadFileFromDir_Nesting1) {
@@ -97,8 +85,6 @@ TYPED_TEST_P(FsppDeviceTest, LoadDirFromDir_Nesting2) {
 }
 
 //TODO Test statfs
-
-//TODO Test class for symlink tests (like FsppDirTest, FsppFileTest, ...)
 
 REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest,
   InitFilesystem,

@@ -11,6 +11,8 @@
 //Remove this line if you don't want profiling
 //#define FSPP_PROFILE 1
 
+//TODO Test
+
 namespace fspp {
 class Node;
 class File;
