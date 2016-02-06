@@ -130,6 +130,25 @@ unique_ref<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
   return std::move(*lnk);
 }
 
+unique_ref<Node> FilesystemImpl::LoadFileOrSymlink(const bf::path &path) {
+  PROFILE(_loadFileOrSymlinkNanosec);
+  auto node = _device->Load(path);
+  if (node == none) {
+    throw fuse::FuseErrnoException(EIO);
+  }
+  auto file = dynamic_pointer_move<File>(*node);
+  if (file != none) {
+    return std::move(*file);
+  }
+
+  auto symlink = dynamic_pointer_move<Symlink>(*node);
+  if (symlink != none) {
+    return std::move(*symlink);
+  }
+
+  throw fuse::FuseErrnoException(EISDIR);
+}
+
 int FilesystemImpl::openFile(const bf::path &path, int flags) {
   auto file = LoadFile(path);
   return openFile(*file, flags);
@@ -249,9 +268,9 @@ void FilesystemImpl::rmdir(const bf::path &path) {
 
 void FilesystemImpl::unlink(const bf::path &path) {
   PROFILE(_unlinkNanosec);
-  auto file = LoadFile(path);
+  auto node = LoadFileOrSymlink(path);
   PROFILE(_unlinkNanosec_withoutLoading);
-  file->remove();
+  node->remove();
 }
 
 void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {

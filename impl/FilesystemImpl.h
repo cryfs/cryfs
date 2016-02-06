@@ -51,12 +51,14 @@ private:
 	cpputils::unique_ref<File> LoadFile(const boost::filesystem::path &path);
 	cpputils::unique_ref<Dir> LoadDir(const boost::filesystem::path &path);
 	cpputils::unique_ref<Symlink> LoadSymlink(const boost::filesystem::path &path);
+	cpputils::unique_ref<Node> LoadFileOrSymlink(const boost::filesystem::path &path);
 	int openFile(const File &file, int flags);
 
 #ifdef FSPP_PROFILE
     std::atomic<uint64_t> _loadFileNanosec;
     std::atomic<uint64_t> _loadDirNanosec;
     std::atomic<uint64_t> _loadSymlinkNanosec;
+    std::atomic<uint64_t> _loadFileOrSymlinkNanosec;
     std::atomic<uint64_t> _openFileNanosec;
     std::atomic<uint64_t> _flushNanosec;
     std::atomic<uint64_t> _closeFileNanosec;
