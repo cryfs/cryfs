@@ -78,7 +78,11 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, _rootKey));
   }
   auto parent = LoadDirBlob(path.parent_path());
-  const auto &entry = parent->GetChild(path.filename().native());
+  auto optEntry = parent->GetChild(path.filename().native());
+  if (optEntry == boost::none) {
+    return boost::none;
+  }
+  const auto &entry = *optEntry;
 
   if (entry.type == fspp::Dir::EntryType::DIR) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key));
@@ -113,7 +117,11 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
     }
 
-    Key childKey = (*currentDir)->GetChild(component.c_str()).key;
+    auto childOpt = (*currentDir)->GetChild(component.c_str());
+    if (childOpt == boost::none) {
+      throw FuseErrnoException(ENOENT); // Child entry in directory not found
+    }
+    Key childKey = childOpt->key;
     currentBlob = _fsBlobStore->load(childKey);
     if (currentBlob == none) {
       throw FuseErrnoException(ENOENT); // Blob for directory entry not found

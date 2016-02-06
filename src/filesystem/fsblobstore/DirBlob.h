@@ -27,9 +27,9 @@ namespace cryfs {
 
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
 
-            const DirEntry &GetChild(const std::string &name) const;
+            boost::optional<const DirEntry&> GetChild(const std::string &name) const;
 
-            const DirEntry &GetChild(const blockstore::Key &key) const;
+            boost::optional<const DirEntry&> GetChild(const blockstore::Key &key) const;
 
             void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid,
                              gid_t gid);

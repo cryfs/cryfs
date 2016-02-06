@@ -50,7 +50,11 @@ void CryNode::rename(const bf::path &to) {
   }
   //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
   //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
-  const auto &old = (*_parent)->GetChild(_key);
+  auto optOld = (*_parent)->GetChild(_key);
+  if (optOld == boost::none) {
+    throw FuseErrnoException(ENOENT);
+  }
+  const auto &old = *optOld;
   auto mode = old.mode;
   auto uid = old.uid;
   auto gid = old.gid;

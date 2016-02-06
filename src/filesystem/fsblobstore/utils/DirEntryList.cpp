@@ -57,18 +57,22 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
     _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid);
 }
 
-const DirEntry &DirEntryList::get(const string &name) const {
+boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
     auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
         return entry.name == name;
     });
     if (found == _entries.end()) {
-        throw fspp::fuse::FuseErrnoException(ENOENT);
+        return boost::none;
     }
     return *found;
 }
 
-const DirEntry &DirEntryList::get(const Key &key) const {
-    return *_find(key);
+boost::optional<const DirEntry&> DirEntryList::get(const Key &key) const {
+    auto found = _find(key);
+    if (found == _entries.end()) {
+        return boost::none;
+    }
+    return *found;
 }
 
 void DirEntryList::remove(const Key &key) {

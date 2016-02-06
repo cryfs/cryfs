@@ -18,11 +18,11 @@ public:
 
     using Entry = fsblobstore::DirEntry;
 
-    const Entry &GetChild(const std::string &name) const {
+    boost::optional<const Entry&> GetChild(const std::string &name) const {
         return _base->GetChild(name);
     }
 
-    const Entry &GetChild(const blockstore::Key &key) const {
+    boost::optional<const Entry&> GetChild(const blockstore::Key &key) const {
         return _base->GetChild(key);
     }
 
