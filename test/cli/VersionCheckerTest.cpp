@@ -19,7 +19,7 @@ public:
     }
 
     void setVersionInfo(const string &versionInfo) {
-        http->addWebsite("http://www.cryfs.org/version_info.json", versionInfo);
+        http->addWebsite("https://www.cryfs.org/version_info.json", versionInfo);
     }
 
 private:

@@ -10,7 +10,6 @@
 namespace cryfs {
     class VersionChecker final {
     public:
-        VersionChecker();
         //TODO Write a cpputils::shared_ref and use it
         VersionChecker(std::shared_ptr<cpputils::HttpClient> httpClient);
 

@@ -1,6 +1,6 @@
 # cryfs [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
 CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.
-See https://www.cryfs.org
+See [https://www.cryfs.org](https://www.cryfs.org).
 
 This repository contains the filesystem implementation. There are submodules in the following repositores:
 
@@ -48,12 +48,14 @@ Building from source
 
 Requirements
 ------------
-  - [biicode](https://www.biicode.com/downloads)
+  - [biicode](http://www.biicode.com/downloads)
 
         # After installing, call
         $ bii setup:cpp
 
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
+  - CMake version >= 3.3
+  - libcurl4 (including development headers) 
   - libFUSE >= 2.8.6 (including development headers)
 
         # Ubuntu

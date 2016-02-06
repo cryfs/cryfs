@@ -7,8 +7,10 @@
 #include <messmer/cpp-utils/tempfile/TempDir.h>
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include "../../../src/cli/Cli.h"
+#include "../../../src/cli/VersionChecker.h"
 #include <messmer/cpp-utils/logging/logging.h>
 #include <messmer/cpp-utils/process/subprocess.h>
+#include <messmer/cpp-utils/network/FakeHttpClient.h>
 #include "../../testutils/MockConsole.h"
 
 class CliTest : public ::testing::Test {
@@ -23,6 +25,12 @@ public:
     cpputils::TempFile configfile;
     std::shared_ptr<MockConsole> console;
 
+    std::shared_ptr<cpputils::HttpClient> _httpClient() {
+        std::shared_ptr<cpputils::FakeHttpClient> httpClient = std::make_shared<cpputils::FakeHttpClient>();
+        httpClient->addWebsite("https://www.cryfs.org/version_info.json", "{\"version_info\":{\"current\":\"0.8.5\"}}");
+        return httpClient;
+    }
+
     void run(std::vector<const char*> args) {
         std::vector<char*> _args;
         _args.reserve(args.size()+1);
@@ -31,7 +39,7 @@ public:
             _args.push_back(const_cast<char*>(arg));
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
-        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data());
+        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console, _httpClient()).main(_args.size(), _args.data());
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message = "") {

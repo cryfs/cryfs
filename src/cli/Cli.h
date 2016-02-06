@@ -8,12 +8,13 @@
 #include <messmer/cpp-utils/tempfile/TempFile.h>
 #include <messmer/cpp-utils/io/Console.h>
 #include <messmer/cpp-utils/random/RandomGenerator.h>
+#include <messmer/cpp-utils/network/HttpClient.h>
 #include "CallAfterTimeout.h"
 
 namespace cryfs {
     class Cli final {
     public:
-        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::shared_ptr<cpputils::Console> console);
+        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::shared_ptr<cpputils::Console> console, std::shared_ptr<cpputils::HttpClient> httpClient);
         int main(int argc, char *argv[]);
 
     private:
@@ -38,6 +39,7 @@ namespace cryfs {
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
+        std::shared_ptr<cpputils::HttpClient> _httpClient;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };
