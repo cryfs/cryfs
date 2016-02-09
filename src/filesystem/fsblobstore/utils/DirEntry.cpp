@@ -7,15 +7,18 @@ namespace cryfs {
     namespace fsblobstore {
 
         void DirEntry::serialize(uint8_t *dest) const {
+            ASSERT(
+                    ((type == fspp::Dir::EntryType::FILE)    &&  S_ISREG(mode) && !S_ISDIR(mode) && !S_ISLNK(mode)) ||
+                    ((type == fspp::Dir::EntryType::DIR)     && !S_ISREG(mode) &&  S_ISDIR(mode) && !S_ISLNK(mode)) ||
+                    ((type == fspp::Dir::EntryType::SYMLINK) && !S_ISREG(mode) && !S_ISDIR(mode) &&  S_ISLNK(mode))
+                    , "Wrong mode bit set for this type: "+std::to_string(mode & S_IFREG)+", "+std::to_string(mode&S_IFDIR)+", "+std::to_string(mode&S_IFLNK)+", "+std::to_string(static_cast<uint8_t>(type))
+            );
             unsigned int offset = 0;
             *(dest+offset) = static_cast<uint8_t>(type);
             offset += 1;
 
-            std::memcpy(dest+offset, name.c_str(), name.size()+1);
-            offset += name.size() + 1;
-
-            key.ToBinary(dest+offset);
-            offset += key.BINARY_LENGTH;
+            *reinterpret_cast<uint32_t*>(dest+offset) = mode;
+            offset += sizeof(uint32_t);
 
             *reinterpret_cast<uint32_t*>(dest+offset) = uid;
             offset += sizeof(uint32_t);
@@ -23,12 +26,15 @@ namespace cryfs {
             *reinterpret_cast<uint32_t*>(dest+offset) = gid;
             offset += sizeof(uint32_t);
 
-            *reinterpret_cast<uint32_t*>(dest+offset) = mode;
-            offset += sizeof(uint32_t);
-
             offset += _serializeTimeValue(dest + offset, lastAccessTime);
             offset += _serializeTimeValue(dest + offset, lastModificationTime);
             offset += _serializeTimeValue(dest + offset, lastMetadataChangeTime);
+
+            std::memcpy(dest+offset, name.c_str(), name.size()+1);
+            offset += name.size() + 1;
+
+            key.ToBinary(dest+offset);
+            offset += key.BINARY_LENGTH;
 
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
@@ -57,14 +63,26 @@ namespace cryfs {
         }
 
         size_t DirEntry::serializedSize() const {
-            return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize();
+            return 1 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize() + (name.size() + 1) + key.BINARY_LENGTH;
         }
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
-            // Read type magic number (whether it is a dir or a file)
-            fspp::Dir::EntryType type =
-                    static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
+            // Read type magic number (whether it is a dir, file or symlink)
+            fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
             pos += 1;
+
+            mode_t mode = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
+
+            uid_t uid = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
+
+            gid_t gid = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
+
+            timespec lastAccessTime = _deserializeTimeValue(&pos);
+            timespec lastModificationTime = _deserializeTimeValue(&pos);
+            timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
 
             size_t namelength = strlen(pos);
             std::string name(pos, namelength);
@@ -73,22 +91,8 @@ namespace cryfs {
             Key key = Key::FromBinary(pos);
             pos += Key::BINARY_LENGTH;
 
-            uid_t uid = *(uint32_t*)pos;
-            pos += sizeof(uint32_t);
-
-            gid_t gid = *(uint32_t*)pos;
-            pos += sizeof(uint32_t);
-
-            mode_t mode = *(uint32_t*)pos;
-            pos += sizeof(uint32_t);
-
-            timespec lastAccessTime = _deserializeTimeValue(&pos);
-            timespec lastModificationTime = _deserializeTimeValue(&pos);
-            timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
-
             result->emplace_back(type, name, key, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
         }
-
     }
 }
