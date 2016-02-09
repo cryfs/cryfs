@@ -1,7 +1,12 @@
+Version 0.9.0 (unreleased)
+---------------
+* Fully support file access times
+
 Version 0.8.6 (unreleased)
 ---------------
 * Fix a deadlock that was caused when a very high load of parallel resize operations was issued, see https://github.com/cryfs/cryfs/issues/3
-* Fixed a bug that prevented deleting symlinks, see https://github.com/cryfs/cryfs/issues/2
+* Fix a bug that prevented deleting symlinks, see https://github.com/cryfs/cryfs/issues/2
+* Gracefully accept modifications to the file access times instead of failing, although they're not stored yet (they will be stored in 0.9.0). This should fix https://github.com/cryfs/cryfs/issues/4
 
 Version 0.8.5
 ---------------
