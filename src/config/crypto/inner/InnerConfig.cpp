@@ -45,7 +45,7 @@ namespace cryfs {
     void InnerConfig::_checkHeader(Deserializer *deserializer) {
         string header = deserializer->readString();
         if (header != HEADER) {
-            throw std::runtime_error("Invalid header");
+            throw std::runtime_error("Invalid header. Maybe this filesystem was created with a different version of CryFS?");
         }
     }
 

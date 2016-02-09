@@ -34,7 +34,6 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   std::cout << "Loading config file..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
   if (config == none) {
-    LOG(ERROR) << "Could not load config file. Wrong password?";
     return none;
   }
   std::cout << "done" << std::endl;
