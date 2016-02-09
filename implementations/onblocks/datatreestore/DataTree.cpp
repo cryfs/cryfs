@@ -298,7 +298,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
     LastLeaf(_rootNode.get())->resize(newLastLeafSize);
   }
-  ASSERT(newNumBytes == numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
+  ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }
 
 optional_ownership_ptr<DataLeafNode> DataTree::LastLeaf(DataNode *root) {
