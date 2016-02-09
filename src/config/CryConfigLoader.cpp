@@ -3,6 +3,8 @@
 #include <boost/filesystem.hpp>
 #include <messmer/cpp-utils/random/Random.h>
 #include <messmer/cpp-utils/logging/logging.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include <gitversion/version.h>
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -37,10 +39,22 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   std::cout << "done" << std::endl;
-  if (_cipherFromCommandLine != none && config->config()->Cipher() != *_cipherFromCommandLine) {
-    throw std::runtime_error("Filesystem uses "+config->config()->Cipher()+" cipher and not "+*_cipherFromCommandLine+" as specified.");
-  }
+  _checkVersion(*config->config());
+  _checkCipher(*config->config());
   return std::move(*config);
+}
+
+void CryConfigLoader::_checkVersion(const CryConfig &config) {
+  const string allowedVersionPrefix = string() + version::VERSION_COMPONENTS[0] + "." + version::VERSION_COMPONENTS[1] + ".";
+  if (!boost::starts_with(config.Version(), allowedVersionPrefix)) {
+    throw std::runtime_error(string() + "This filesystem was created with CryFS " + config.Version() + " and is incompatible. Please create a new one with your version of CryFS and migrate your data.");
+  }
+}
+
+void CryConfigLoader::_checkCipher(const CryConfig &config) const {
+  if (_cipherFromCommandLine != none && config.Cipher() != *_cipherFromCommandLine) {
+    throw std::runtime_error(string() + "Filesystem uses " + config.Cipher() + " cipher and not " + *_cipherFromCommandLine + " as specified.");
+  }
 }
 
 optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) {

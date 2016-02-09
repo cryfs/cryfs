@@ -15,11 +15,11 @@ using cpputils::Data;
 namespace cryfs {
 
 CryConfig::CryConfig()
-: _rootBlob(""), _encKey(""), _cipher("") {
+: _rootBlob(""), _encKey(""), _cipher(""), _version("") {
 }
 
 CryConfig::CryConfig(CryConfig &&rhs)
-: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)) {
+: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)) {
 }
 
 CryConfig CryConfig::load(const Data &data) {
@@ -32,6 +32,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._rootBlob = pt.get("cryfs.rootblob", "");
   cfg._encKey = pt.get("cryfs.key", "");
   cfg._cipher = pt.get("cryfs.cipher", "");
+  cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
   return cfg;
 }
 
@@ -41,6 +42,7 @@ Data CryConfig::save() const {
   pt.put("cryfs.rootblob", _rootBlob);
   pt.put("cryfs.key", _encKey);
   pt.put("cryfs.cipher", _cipher);
+  pt.put("cryfs.version", _version);
 
   stringstream stream;
   write_json(stream, pt);
@@ -69,6 +71,14 @@ const std::string &CryConfig::Cipher() const {
 
 void CryConfig::SetCipher(const std::string &value) {
   _cipher = value;
+}
+
+const std::string &CryConfig::Version() const {
+  return _version;
+}
+
+void CryConfig::SetVersion(const std::string &value) {
+  _version = value;
 }
 
 }

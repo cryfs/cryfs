@@ -24,6 +24,9 @@ public:
   const std::string &Cipher() const;
   void SetCipher(const std::string &value);
 
+  const std::string &Version() const;
+  void SetVersion(const std::string &value);
+
   static CryConfig load(const cpputils::Data &data);
   cpputils::Data save() const;
 
@@ -31,6 +34,7 @@ private:
   std::string _rootBlob;
   std::string _encKey;
   std::string _cipher;
+  std::string _version;
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };

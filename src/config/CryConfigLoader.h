@@ -21,6 +21,8 @@ public:
 private:
     boost::optional<CryConfigFile> _loadConfig(const boost::filesystem::path &filename);
     CryConfigFile _createConfig(const boost::filesystem::path &filename);
+    static void _checkVersion(const CryConfig &config);
+    void _checkCipher(const CryConfig &config) const;
 
     CryConfigCreator _creator;
     cpputils::SCryptSettings _scryptSettings;
