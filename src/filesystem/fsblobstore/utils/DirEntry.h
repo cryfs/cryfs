@@ -34,6 +34,9 @@ namespace cryfs {
             void serialize(uint8_t* dest) const;
             size_t serializedSize() const;
             static const char *deserializeAndAddToVector(const char *pos, std::vector<DirEntry> *result);
+            static size_t _serializedTimeValueSize();
+            static unsigned int _serializeTimeValue(uint8_t *dest, timespec value);
+            static timespec _deserializeTimeValue(const char **pos);
 
             fspp::Dir::EntryType type;
             std::string name;

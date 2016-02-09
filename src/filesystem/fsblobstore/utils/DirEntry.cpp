@@ -17,28 +17,47 @@ namespace cryfs {
             key.ToBinary(dest+offset);
             offset += key.BINARY_LENGTH;
 
-            *reinterpret_cast<uid_t*>(dest+offset) = uid;
-            offset += sizeof(uid_t);
+            *reinterpret_cast<uint32_t*>(dest+offset) = uid;
+            offset += sizeof(uint32_t);
 
-            *reinterpret_cast<gid_t*>(dest+offset) = gid;
-            offset += sizeof(gid_t);
+            *reinterpret_cast<uint32_t*>(dest+offset) = gid;
+            offset += sizeof(uint32_t);
 
-            *reinterpret_cast<mode_t*>(dest+offset) = mode;
-            offset += sizeof(mode_t);
+            *reinterpret_cast<uint32_t*>(dest+offset) = mode;
+            offset += sizeof(uint32_t);
 
-            static_assert(sizeof(timespec) == 16, "Ensure platform independence of the serialization");
-            *reinterpret_cast<timespec*>(dest+offset) = lastAccessTime;
-            offset += sizeof(timespec);
-            *reinterpret_cast<timespec*>(dest+offset) = lastModificationTime;
-            offset += sizeof(timespec);
-            *reinterpret_cast<timespec*>(dest+offset) = lastMetadataChangeTime;
-            offset += sizeof(timespec);
+            offset += _serializeTimeValue(dest + offset, lastAccessTime);
+            offset += _serializeTimeValue(dest + offset, lastModificationTime);
+            offset += _serializeTimeValue(dest + offset, lastMetadataChangeTime);
 
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
 
+        unsigned int DirEntry::_serializeTimeValue(uint8_t *dest, timespec value) {
+            unsigned int offset = 0;
+            *reinterpret_cast<uint64_t*>(dest+offset) = value.tv_sec;
+            offset += sizeof(uint64_t);
+            *reinterpret_cast<uint32_t*>(dest+offset) = value.tv_nsec;
+            offset += sizeof(uint32_t);
+            ASSERT(offset == _serializedTimeValueSize(), "serialized to wrong size");
+            return offset;
+        }
+
+        size_t DirEntry::_serializedTimeValueSize() {
+            return sizeof(uint64_t) + sizeof(uint32_t);
+        }
+
+        timespec DirEntry::_deserializeTimeValue(const char **pos) {
+            timespec value;
+            value.tv_sec = *(uint64_t*)(*pos);
+            *pos += sizeof(uint64_t);
+            value.tv_nsec = *(uint32_t*)(*pos);
+            *pos += sizeof(uint32_t);
+            return value;
+        }
+
         size_t DirEntry::serializedSize() const {
-            return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t) + 3*sizeof(timespec);
+            return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize();
         }
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
@@ -54,21 +73,18 @@ namespace cryfs {
             Key key = Key::FromBinary(pos);
             pos += Key::BINARY_LENGTH;
 
-            uid_t uid = *(uid_t*)pos;
-            pos += sizeof(uid_t);
+            uid_t uid = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
 
-            gid_t gid = *(gid_t*)pos;
-            pos += sizeof(gid_t);
+            gid_t gid = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
 
-            mode_t mode = *(mode_t*)pos;
-            pos += sizeof(mode_t);
+            mode_t mode = *(uint32_t*)pos;
+            pos += sizeof(uint32_t);
 
-            timespec lastAccessTime = *(timespec*)pos;
-            pos += sizeof(timespec);
-            timespec lastModificationTime = *(timespec*)pos;
-            pos += sizeof(timespec);
-            timespec lastMetadataChangeTime = *(timespec*)pos;
-            pos += sizeof(timespec);
+            timespec lastAccessTime = _deserializeTimeValue(&pos);
+            timespec lastModificationTime = _deserializeTimeValue(&pos);
+            timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
 
             result->emplace_back(type, name, key, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
