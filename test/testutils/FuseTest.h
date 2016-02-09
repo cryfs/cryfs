@@ -68,10 +68,10 @@ public:
     return cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).value();
   }
   MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
-  void utimens(const boost::filesystem::path &path, const timespec ts[2]) override {
-    return utimens(path.c_str(), ts);
+  void utimens(const boost::filesystem::path &path, timespec lastAccessTime, timespec lastModificationTime) override {
+    return utimens(path.c_str(), lastAccessTime, lastModificationTime);
   }
-  MOCK_METHOD2(utimens, void(const char*,const timespec[2]));
+  MOCK_METHOD3(utimens, void(const char*, timespec, timespec));
   MOCK_PATH_METHOD2(statfs, void, struct statvfs*);
   void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) override {
     return createSymlink(to.c_str(), from.c_str(), uid, gid);

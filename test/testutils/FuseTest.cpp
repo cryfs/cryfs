@@ -36,7 +36,7 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, unlink(_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, rename(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, readDir(_)).WillByDefault(defaultAction);
-  ON_CALL(fsimpl, utimens(_,_)).WillByDefault(defaultAction);
+  ON_CALL(fsimpl, utimens(_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, statfs(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, chmod(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, chown(_,_,_)).WillByDefault(defaultAction);
