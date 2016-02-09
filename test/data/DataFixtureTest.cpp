@@ -1,7 +1,7 @@
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "../../data/Data.h"
-#include "../../data/DataFixture.h"
+#include "../../src/data/Data.h"
+#include "../../src/data/DataFixture.h"
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

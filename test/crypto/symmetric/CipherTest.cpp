@@ -1,10 +1,10 @@
-#include <google/gtest/gtest.h>
-#include "../../../crypto/symmetric/Cipher.h"
-#include "../../../crypto/symmetric/ciphers.h"
+#include <gtest/gtest.h>
+#include "../../../src/crypto/symmetric/Cipher.h"
+#include "../../../src/crypto/symmetric/ciphers.h"
 #include "testutils/FakeAuthenticatedCipher.h"
 
-#include "../../../data/DataFixture.h"
-#include "../../../data/Data.h"
+#include "../../../src/data/DataFixture.h"
+#include "../../../src/data/Data.h"
 #include <boost/optional/optional_io.hpp>
 
 using namespace cpputils;

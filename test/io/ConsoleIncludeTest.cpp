@@ -1,3 +1,3 @@
-#include "../../io/Console.h"
+#include "../../src/io/Console.h"
 
 // Test the header can be included without needing additional dependencies

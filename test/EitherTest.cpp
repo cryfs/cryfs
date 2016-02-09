@@ -1,8 +1,8 @@
-#include <google/gtest/gtest.h>
-#include <google/gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <boost/optional/optional_io.hpp>
-#include "../either.h"
-#include "../macros.h"
+#include "../src/either.h"
+#include "../src/macros.h"
 #include <sstream>
 
 //TODO Go through all test cases and think about whether it makes sense to add the same test case but with primitive types.

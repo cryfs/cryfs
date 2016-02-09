@@ -2,13 +2,13 @@
 #ifndef MESSMER_CPPUTILS_TEST_IO_CONSOLETEST_H
 #define MESSMER_CPPUTILS_TEST_IO_CONSOLETEST_H
 
-#include <google/gtest/gtest.h>
+#include <gtest/gtest.h>
 
-#include "../../io/Console.h"
+#include "../../src/io/Console.h"
 
 #include <future>
 #include <thread>
-#include "../../io/pipestream.h"
+#include "../../src/io/pipestream.h"
 
 class ConsoleThread {
 public:

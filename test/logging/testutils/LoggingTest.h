@@ -2,9 +2,9 @@
 #ifndef MESSMER_CPPUTILS_TEST_LOGGING_TESTUTILS_LOGGINGTEST_H
 #define MESSMER_CPPUTILS_TEST_LOGGING_TESTUTILS_LOGGINGTEST_H
 
-#include <google/gtest/gtest.h>
-#include <google/gmock/gmock.h>
-#include "../../../logging/logging.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include "../../../src/logging/logging.h"
 
 class MockLogger final {
 public:

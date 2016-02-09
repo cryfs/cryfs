@@ -1,9 +1,9 @@
-#include <google/gtest/gtest.h>
-#include <google/gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 //Include the ASSERT macro for a debug build
 #undef NDEBUG
-#include "../../assert/assert.h"
+#include "../../src/assert/assert.h"
 
 using testing::MatchesRegex;
 

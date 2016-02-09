@@ -1,6 +1,6 @@
-#include <google/gtest/gtest.h>
-#include "../../../crypto/kdf/DerivedKey.h"
-#include "../../../data/DataFixture.h"
+#include <gtest/gtest.h>
+#include "../../../src/crypto/kdf/DerivedKey.h"
+#include "../../../src/data/DataFixture.h"
 
 using namespace cpputils;
 

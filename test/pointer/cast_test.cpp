@@ -1,8 +1,8 @@
-#include "google/gtest/gtest.h"
-#include "../../pointer/cast.h"
-#include "../../pointer/unique_ref.h"
-#include "../../pointer/unique_ref_boost_optional_gtest_workaround.h"
-#include "google/gmock/gmock.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include "../../src/pointer/cast.h"
+#include "../../src/pointer/unique_ref.h"
+#include "../../src/pointer/unique_ref_boost_optional_gtest_workaround.h"
 
 //TODO There is a lot of duplication here, because each test case is there twice - once for unique_ptr, once for unique_ref. Remove redundancy by using generic test cases.
 //TODO Then also move the unique_ref related test cases there - cast_test.cpp should only contain the unique_ptr related ones.

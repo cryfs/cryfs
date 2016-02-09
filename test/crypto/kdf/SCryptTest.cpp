@@ -1,5 +1,5 @@
-#include <google/gtest/gtest.h>
-#include "../../../crypto/kdf/Scrypt.h"
+#include <gtest/gtest.h>
+#include "../../../src/crypto/kdf/Scrypt.h"
 
 using namespace cpputils;
 

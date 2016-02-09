@@ -1,8 +1,8 @@
-#include "../../data/DataFixture.h"
-#include "../../data/Data.h"
-#include "google/gtest/gtest.h"
+#include "../../src/data/DataFixture.h"
+#include "../../src/data/Data.h"
+#include <gtest/gtest.h>
 
-#include "../../tempfile/TempFile.h"
+#include "../../src/tempfile/TempFile.h"
 
 #include <fstream>
 

@@ -1,6 +1,6 @@
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "../../tempfile/TempDir.h"
+#include "../../src/tempfile/TempDir.h"
 
 #include <fstream>
 

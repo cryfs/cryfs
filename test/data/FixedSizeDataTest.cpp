@@ -1,7 +1,7 @@
-#include "../../data/DataFixture.h"
-#include "../../data/FixedSizeData.h"
-#include "../../data/Data.h"
-#include "google/gtest/gtest.h"
+#include "../../src/data/DataFixture.h"
+#include "../../src/data/FixedSizeData.h"
+#include "../../src/data/Data.h"
+#include <gtest/gtest.h>
 
 
 using ::testing::Test;
