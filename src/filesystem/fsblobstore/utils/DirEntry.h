@@ -36,7 +36,15 @@ namespace cryfs {
             static const char *deserializeAndAddToVector(const char *pos, std::vector<DirEntry> *result);
             static size_t _serializedTimeValueSize();
             static unsigned int _serializeTimeValue(uint8_t *dest, timespec value);
+            static unsigned int _serializeUint8(uint8_t *dest, uint8_t value);
+            static unsigned int _serializeUint32(uint8_t *dest, uint32_t value);
+            static unsigned int _serializeString(uint8_t *dest, const std::string &value);
+            static unsigned int _serializeKey(uint8_t *dest, const blockstore::Key &value);
             static timespec _deserializeTimeValue(const char **pos);
+            static uint8_t _deserializeUint8(const char **pos);
+            static uint32_t _deserializeUint32(const char **pos);
+            static std::string _deserializeString(const char **pos);
+            static blockstore::Key _deserializeKey(const char **pos);
 
             fspp::Dir::EntryType type;
             std::string name;
