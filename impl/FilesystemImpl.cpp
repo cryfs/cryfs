@@ -290,13 +290,13 @@ unique_ref<vector<Dir::Entry>> FilesystemImpl::readDir(const bf::path &path) {
   return dir->children();
 }
 
-void FilesystemImpl::utimens(const bf::path &path, const timespec times[2]) {
+void FilesystemImpl::utimens(const bf::path &path, timespec lastAccessTime, timespec lastModificationTime) {
   PROFILE(_utimensNanosec);
   auto node = _device->Load(path);
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
-    (*node)->utimens(times);
+    (*node)->utimens(lastAccessTime, lastModificationTime);
   }
 }
 

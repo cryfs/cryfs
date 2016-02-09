@@ -525,13 +525,12 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
   }
 }
 
-//TODO
 int Fuse::utimens(const bf::path &path, const timespec times[2]) {
 #ifdef FSPP_LOG
   LOG(DEBUG) << "utimens(" << path << ", _)";
 #endif
   try {
-    _fs->utimens(path, times);
+    _fs->utimens(path, times[0], times[1]);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERROR) << "AssertFailed in Fuse::utimens: " << e.what();
