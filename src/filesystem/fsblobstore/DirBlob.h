@@ -15,6 +15,7 @@ namespace cryfs {
 
         class DirBlob final : public FsBlob {
         public:
+            constexpr static off_t DIR_LSTAT_SIZE = 4096;
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
                                                                     std::function<off_t (const blockstore::Key&)> getLstatSize);
@@ -52,6 +53,8 @@ namespace cryfs {
             void chmodChild(const blockstore::Key &key, mode_t mode);
 
             void chownChild(const blockstore::Key &key, uid_t uid, gid_t gid);
+
+            void utimensChild(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime);
 
             void setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize);
 

@@ -26,6 +26,8 @@ using boost::none;
 namespace cryfs {
 namespace fsblobstore {
 
+constexpr off_t DirBlob::DIR_LSTAT_SIZE;
+
 DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
     FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
   ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
@@ -107,8 +109,7 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
 }
 
 off_t DirBlob::lstat_size() const {
-  //TODO Why do dirs have 4096 bytes in size? Does that make sense?
-  return 4096;
+  return DIR_LSTAT_SIZE;
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
@@ -124,8 +125,9 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_gid = child.gid;
   //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
   result->st_nlink = 1;
-  //TODO Handle file access times
-  result->st_mtime = result->st_ctime = result->st_atime = 0;
+  result->st_atim = child.lastAccessTime;
+  result->st_mtim = child.lastModificationTime;
+  result->st_ctim = child.lastMetadataChangeTime;
   result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
@@ -143,6 +145,12 @@ void DirBlob::chownChild(const Key &key, uid_t uid, gid_t gid) {
   if(_entries.setUidGid(key, uid, gid)) {
     _changed = true;
   }
+}
+
+void DirBlob::utimensChild(const Key &key, timespec lastAccessTime, timespec lastModificationTime) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.setAccessTimes(key, lastAccessTime, lastModificationTime);
+  _changed = true;
 }
 
 void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {

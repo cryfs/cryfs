@@ -26,10 +26,21 @@ namespace cryfs {
             *reinterpret_cast<mode_t*>(dest+offset) = mode;
             offset += sizeof(mode_t);
 
+            //TODO Persist times, see comment in deserializeAndAddToVector()
+            //static_assert(sizeof(timespec) == 16, "Ensure platform independence of the serialization");
+            //*reinterpret_cast<timespec*>(dest+offset) = lastAccessTime;
+            //offset += sizeof(timespec);
+            //*reinterpret_cast<timespec*>(dest+offset) = lastModificationTime;
+            //offset += sizeof(timespec);
+            //*reinterpret_cast<timespec*>(dest+offset) = lastMetadataChangeTime;
+            //offset += sizeof(timespec);
+
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
 
         size_t DirEntry::serializedSize() const {
+            //TODO Persist times, see comment in deserializeAndAddToVector()
+            //return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t) + 3*sizeof(timespec);
             return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
         }
 
@@ -55,7 +66,20 @@ namespace cryfs {
             mode_t mode = *(mode_t*)pos;
             pos += sizeof(mode_t);
 
-            result->emplace_back(type, name, key, mode, uid, gid);
+            //TODO Persist times. This breaks compatibility though - so change cryfs::InnerConfig::HEADER
+            //     This is already implemented, but I commented it out for now, because it would break compatibility.
+            //timespec lastAccessTime = *(timespec*)pos;
+            //pos += sizeof(timespec);
+            //timespec lastModificationTime = *(timespec*)pos;
+            //pos += sizeof(timespec);
+            //timespec lastMetadataChangeTime = *(timespec*)pos;
+            //pos += sizeof(timespec);
+            timespec lastAccessTime;
+            clock_gettime(CLOCK_REALTIME, &lastAccessTime);
+            timespec lastModificationTime = lastAccessTime;
+            timespec lastMetadataChangeTime = lastAccessTime;
+
+            result->emplace_back(type, name, key, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
         }
 

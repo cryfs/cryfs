@@ -10,7 +10,11 @@ namespace cryfs {
 
         struct DirEntry final {
             DirEntry(fspp::Dir::EntryType type_, const std::string &name_, const blockstore::Key &key_, mode_t mode_,
-                  uid_t uid_, gid_t gid_) : type(type_), name(name_), key(key_), mode(mode_), uid(uid_), gid(gid_) {
+                  uid_t uid_, gid_t gid_, timespec lastAccessTime_, timespec lastModificationTime_,
+                     timespec lastMetadataChangeTime_) : type(type_), name(name_), key(key_), mode(mode_), uid(uid_),
+                                                        gid(gid_), lastAccessTime(lastAccessTime_),
+                                                        lastModificationTime(lastModificationTime_),
+                                                        lastMetadataChangeTime(lastMetadataChangeTime_) {
                 switch (type) {
                     case fspp::Dir::EntryType::FILE:
                         mode |= S_IFREG;
@@ -37,6 +41,9 @@ namespace cryfs {
             mode_t mode;
             uid_t uid;
             gid_t gid;
+            struct timespec lastAccessTime;
+            struct timespec lastModificationTime;
+            struct timespec lastMetadataChangeTime;
         };
 
     }

@@ -51,6 +51,10 @@ public:
         return _base->chownChild(key, uid, gid);
     }
 
+    void utimensChild(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->utimensChild(key, lastAccessTime, lastModificationTime);
+    }
+
     void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
         return _base->AddChildDir(name, blobKey, mode, uid, gid);
     }

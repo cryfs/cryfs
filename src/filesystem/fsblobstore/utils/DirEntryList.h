@@ -31,6 +31,7 @@ namespace cryfs {
 
             void setMode(const blockstore::Key &key, mode_t mode);
             bool setUidGid(const blockstore::Key &key, uid_t uid, gid_t gid);
+            void setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime);
 
         private:
             uint64_t _serializedSize() const;
@@ -40,6 +41,7 @@ namespace cryfs {
             std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
+            static timespec _now();
 
             std::vector<DirEntry> _entries;
 

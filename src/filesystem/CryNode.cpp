@@ -64,10 +64,14 @@ void CryNode::rename(const bf::path &to) {
   targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
 }
 
-void CryNode::utimens(const timespec times[2]) {
+void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
   device()->callFsActionCallbacks();
-  //TODO
-  throw FuseErrnoException(ENOTSUP);
+  if (_parent == none) {
+    //We are the root direcory.
+    //TODO What should we do?
+    throw FuseErrnoException(EIO);
+  }
+  (*_parent)->utimensChild(_key, lastAccessTime, lastModificationTime);
 }
 
 void CryNode::remove() {
@@ -100,6 +104,7 @@ void CryNode::stat(struct ::stat *result) const {
     //We are the root directory.
 	//TODO What should we do?
 	result->st_mode = S_IFDIR;
+    result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
   } else {
     (*_parent)->statChild(_key, result);
   }

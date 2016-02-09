@@ -18,7 +18,7 @@ public:
   void chmod(mode_t mode) override;
   void chown(uid_t uid, gid_t gid) override;
   void rename(const boost::filesystem::path &to) override;
-  void utimens(const timespec times[2]) override;
+  void utimens(timespec lastAccessTime, timespec lastModificationTime) override;
   void remove() override;
 
 protected:

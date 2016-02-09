@@ -54,7 +54,8 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
     auto insert_pos = _findUpperBound(blobKey);
-    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid);
+    auto now = _now();
+    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, now, now, now);
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
@@ -137,6 +138,7 @@ void DirEntryList::setMode(const Key &key, mode_t mode) {
     auto found = _find(key);
     ASSERT ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)), "Unknown mode in entry");
     found->mode = mode;
+    found->lastMetadataChangeTime = _now();
 }
 
 bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
@@ -144,13 +146,28 @@ bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
     bool changed = false;
     if (uid != (uid_t)-1) {
         found->uid = uid;
+        found->lastMetadataChangeTime = _now();
         changed = true;
     }
     if (gid != (gid_t)-1) {
         found->gid = gid;
+        found->lastMetadataChangeTime = _now();
         changed = true;
     }
     return changed;
+}
+
+timespec DirEntryList::_now() {
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    return now;
+}
+
+void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
+    auto found = _find(key);
+    found->lastAccessTime = lastAccessTime;
+    found->lastModificationTime = lastModificationTime;
+    found->lastMetadataChangeTime = lastModificationTime;
 }
 
 }
