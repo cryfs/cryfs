@@ -3,7 +3,7 @@ Version 0.9.0 (unreleased)
   (warning) file systems created with earlier CryFS versions are incompatible with this release
 * Fully support file access times
 
-Version 0.8.6 (unreleased)
+Version 0.8.6
 ---------------
 * Fix a deadlock that was caused when a very high load of parallel resize operations was issued, see https://github.com/cryfs/cryfs/issues/3
 * Fix a bug that prevented deleting symlinks, see https://github.com/cryfs/cryfs/issues/2
