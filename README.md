@@ -48,18 +48,16 @@ Building from source
 
 Requirements
 ------------
-  - [biicode](http://www.biicode.com/downloads)
-
-        # After installing, call
-        $ bii setup:cpp
-
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
   - CMake version >= 3.3
   - libcurl4 (including development headers) 
+  - Boost libraries filesystem, system, chrono, thread in version >= 1.56
+  - Crypto++ >= 5.6.3 (TODO Lower minimal version possible?)
   - libFUSE >= 2.8.6 (including development headers)
 
         # Ubuntu
         $ sudo apt-get install libfuse-dev
+        TODO Other install commands
         
         # Fedora
         TODO
@@ -77,18 +75,11 @@ Build
 
  2. Build
 
-        $ bii init -L
-        $ bii configure -D CMAKE_BUILD_TYPE=Release
-        $ bii build
+        $ mkdir cmake && cd cmake
+        $ cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off
+        $ make
         
- 3. (if build failed) Biicode can have a bug sometimes where the first call to configure fails. If that happens, just call it again.
-
- 4. Install
+ 3. Install
 
         $ cd bii/build/messmer_cryfs
         $ sudo make install
-
-You can pass normal make parameters after a double dash.
-This can for example be used to add "-j5" to compile with 5 build threads in parallel:
-
-        $ bii build -- -j5
