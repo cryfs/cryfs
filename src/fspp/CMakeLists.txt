@@ -14,7 +14,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 #endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC _FILE_OFFSET_BITS=64)
-target_link_libraries(${PROJECT_NAME} PRIVATE cpp-utils)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
 target_enable_style_warnings(${PROJECT_NAME})
