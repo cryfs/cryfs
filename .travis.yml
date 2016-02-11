@@ -15,6 +15,7 @@ addons:
   apt:
     packages:
     - libcrypto++-dev
+    - libfuse-dev
 install:
 - wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
 - tar -xf boost.tar.bz2
@@ -24,9 +25,14 @@ install:
 - sudo ./b2 -d0 install
 - cd ..
 - sudo rm -rf boost.tar.bz2 boost_1_56_0
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
+- chmod +x run_with_fuse.sh
 script:
 - mkdir cmake
 - cd cmake
 - cmake ..
 - make -j2
 - ./test/cpp-utils-test
+- ./run_with_fuse.sh ./test/fspp-test
+after_script:
+- rm run_with_fuse.sh
