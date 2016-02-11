@@ -5,4 +5,5 @@ if (BUILD_TESTING)
 
   add_subdirectory(cpp-utils)
   add_subdirectory(fspp)
+  add_subdirectory(parallelaccessstore)
 endif(BUILD_TESTING)
