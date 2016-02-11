@@ -52,11 +52,12 @@ Requirements
     - thread
   - Crypto++ version >= 5.6.3 (including development headers) (TODO Lower minimal version possible?)
   - libFUSE version >= 2.8.6 (including development headers)
+  - Python >= 2.7
 
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev
+        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev python
         
         # Fedora
         TODO
