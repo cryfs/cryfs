@@ -1,1 +1,1 @@
-include(gitversion-1.7/cmake.cmake)
+include(gitversion-1.8/cmake.cmake)

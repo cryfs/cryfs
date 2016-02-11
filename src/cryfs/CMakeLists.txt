@@ -59,3 +59,8 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+
+install(TARGETS cryfs
+        COMPONENT cryfs-cli
+        DESTINATION bin
+        CONFIGURATIONS Release)

@@ -51,13 +51,19 @@ Requirements
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
   - CMake version >= 3.3
   - libcurl4 (including development headers) 
-  - Boost libraries filesystem, system, chrono, program_options, thread in version >= 1.56
-  - Crypto++ >= 5.6.3 (TODO Lower minimal version possible?)
-  - libFUSE >= 2.8.6 (including development headers)
+  - Boost libraries version >= 1.56 (including development headers)
+    - filesystem
+    - system
+    - chrono
+    - program_options
+    - thread
+  - Crypto++ version >= 5.6.3 (including development headers) (TODO Lower minimal version possible?)
+  - libFUSE version >= 2.8.6 (including development headers)
+
+You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install libfuse-dev
-        TODO Other install commands
+        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev
         
         # Fedora
         TODO

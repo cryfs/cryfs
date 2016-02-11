@@ -1,5 +1,3 @@
-include(CTest)
-
 if (BUILD_TESTING)
   include_directories(../src)
 
