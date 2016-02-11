@@ -4,11 +4,6 @@ dist: trusty
 compiler:
 - gcc
 - clang
-before_install:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
-  && chmod +x update_gcc_version.sh
-  && ./update_gcc_version.sh 4.8
-  && rm update_gcc_version.sh
 script:
 - mkdir cmake
 - cd cmake
