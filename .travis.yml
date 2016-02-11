@@ -33,6 +33,6 @@ script:
 - cmake ..
 - make -j2
 - ./test/cpp-utils-test
-- ./run_with_fuse.sh ./test/fspp-test
+- ../run_with_fuse.sh ./test/fspp-test
 after_script:
 - rm run_with_fuse.sh
