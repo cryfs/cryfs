@@ -32,8 +32,8 @@ install:
 script:
 - cmake ..
 - make -j2
-- ./test/cpp-utils-test
-- ./run_with_fuse.sh ./test/fspp-test
-- ./test/parallelaccessstore-test
+- ./test/cpp-utils/cpp-utils-test
+- ./run_with_fuse.sh ./test/fspp/fspp-test
+- ./test/parallelaccessstore/parallelaccessstore-test
 after_script:
 - rm run_with_fuse.sh
