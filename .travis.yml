@@ -36,5 +36,6 @@ script:
 - ./run_with_fuse.sh ./test/fspp/fspp-test
 - ./test/parallelaccessstore/parallelaccessstore-test
 - ./test/blockstore/blockstore-test
+- ./test/blobstore/blobstore-test
 after_script:
 - rm run_with_fuse.sh
