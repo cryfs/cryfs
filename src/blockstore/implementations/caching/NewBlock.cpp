@@ -1,7 +1,7 @@
 #include "NewBlock.h"
 #include "CachingBlockStore.h"
-#include <messmer/cpp-utils/assert/assert.h>
-#include <messmer/cpp-utils/data/DataUtils.h>
+#include <cpp-utils/assert/assert.h>
+#include <cpp-utils/data/DataUtils.h>
 
 using cpputils::Data;
 using boost::none;

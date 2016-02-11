@@ -4,8 +4,8 @@
 
 // This file is meant to be included by BlockStoreTest.h only
 
-#include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/DataFixture.h>
 
 class BlockStoreSizeParameterizedTest {
 public:

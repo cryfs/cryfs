@@ -1,10 +1,10 @@
-#include "../../../../implementations/onblocks/datanodestore/DataNodeView.h"
-#include <google/gtest/gtest.h>
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include <gtest/gtest.h>
 
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include "messmer/blockstore/implementations/testfake/FakeBlock.h"
-#include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/testfake/FakeBlock.h>
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

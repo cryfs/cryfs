@@ -1,8 +1,8 @@
-#include "../../../implementations/testfake/FakeBlock.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlock.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
 
 using blockstore::BlockStore;

@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCK_H_
 
 #include "../../interface/Block.h"
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 
 namespace blockstore {
 namespace inmemory {

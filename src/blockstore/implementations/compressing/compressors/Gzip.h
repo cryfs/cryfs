@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSORS_GZIP_H
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSORS_GZIP_H
 
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 
 namespace blockstore {
     namespace compressing {

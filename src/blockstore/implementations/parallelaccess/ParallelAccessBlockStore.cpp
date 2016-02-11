@@ -2,8 +2,8 @@
 #include "ParallelAccessBlockStore.h"
 #include "ParallelAccessBlockStoreAdapter.h"
 #include <cassert>
-#include <messmer/cpp-utils/pointer/cast.h>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/pointer/cast.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::string;
 using std::promise;

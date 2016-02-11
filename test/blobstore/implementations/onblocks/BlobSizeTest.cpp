@@ -1,6 +1,6 @@
 #include "testutils/BlobStoreTest.h"
-#include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/DataFixture.h>
 
 using namespace blobstore;
 using blockstore::Key;
@@ -21,12 +21,12 @@ constexpr uint32_t BlobSizeTest::MEDIUM_SIZE;
 constexpr uint32_t BlobSizeTest::LARGE_SIZE;
 
 TEST_F(BlobSizeTest, CreatedBlobIsEmpty) {
-  EXPECT_EQ(0, blob->size());
+  EXPECT_EQ(0u, blob->size());
 }
 
 TEST_F(BlobSizeTest, Growing_1Byte) {
   blob->resize(1);
-  EXPECT_EQ(1, blob->size());
+  EXPECT_EQ(1u, blob->size());
 }
 
 TEST_F(BlobSizeTest, Growing_Large) {
@@ -37,24 +37,24 @@ TEST_F(BlobSizeTest, Growing_Large) {
 TEST_F(BlobSizeTest, Shrinking_Empty) {
   blob->resize(LARGE_SIZE);
   blob->resize(0);
-  EXPECT_EQ(0, blob->size());
+  EXPECT_EQ(0u, blob->size());
 }
 
 TEST_F(BlobSizeTest, Shrinking_1Byte) {
   blob->resize(LARGE_SIZE);
   blob->resize(1);
-  EXPECT_EQ(1, blob->size());
+  EXPECT_EQ(1u, blob->size());
 }
 
 TEST_F(BlobSizeTest, ResizingToItself_Empty) {
   blob->resize(0);
-  EXPECT_EQ(0, blob->size());
+  EXPECT_EQ(0u, blob->size());
 }
 
 TEST_F(BlobSizeTest, ResizingToItself_1Byte) {
   blob->resize(1);
   blob->resize(1);
-  EXPECT_EQ(1, blob->size());
+  EXPECT_EQ(1u, blob->size());
 }
 
 TEST_F(BlobSizeTest, ResizingToItself_Large) {
@@ -67,7 +67,7 @@ TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
   Key key = blob->key();
   reset(std::move(blob));
   auto loaded = loadBlob(key);
-  EXPECT_EQ(0, loaded->size());
+  EXPECT_EQ(0u, loaded->size());
 }
 
 TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
@@ -81,34 +81,34 @@ TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
 TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_Empty) {
   int value;
   blob->write(&value, 0, 4);
-  EXPECT_EQ(4, blob->size());
+  EXPECT_EQ(4u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_Empty) {
   int value;
   blob->write(&value, 2, 4);
-  EXPECT_EQ(6, blob->size());
+  EXPECT_EQ(6u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingOverEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
   int value;
   blob->write(&value, 0, 4);
-  EXPECT_EQ(4, blob->size());
+  EXPECT_EQ(4u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
   int value;
   blob->write(&value, 1, 4);
-  EXPECT_EQ(5, blob->size());
+  EXPECT_EQ(5u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
   int value;
   blob->write(&value, 2, 4);
-  EXPECT_EQ(6, blob->size());
+  EXPECT_EQ(6u, blob->size());
 }
 
 TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {

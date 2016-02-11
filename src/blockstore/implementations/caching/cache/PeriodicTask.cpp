@@ -1,5 +1,5 @@
 #include "PeriodicTask.h"
-#include <messmer/cpp-utils/logging/logging.h>
+#include <cpp-utils/logging/logging.h>
 
 using std::function;
 using std::endl;

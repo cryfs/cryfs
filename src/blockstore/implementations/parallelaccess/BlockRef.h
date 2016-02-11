@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_PARALLELACCESS_BLOCKREF_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_PARALLELACCESS_BLOCKREF_H_
 
-#include <messmer/parallelaccessstore/ParallelAccessStore.h>
+#include <parallelaccessstore/ParallelAccessStore.h>
 #include "../../interface/Block.h"
-#include "messmer/cpp-utils/macros.h"
+#include <cpp-utils/macros.h>
 #include <memory>
 
 namespace blockstore {

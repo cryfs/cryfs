@@ -1,7 +1,7 @@
-#include "../../../interface/helpers/BlockStoreWithRandomKeys.h"
-#include "google/gtest/gtest.h"
-#include "google/gmock/gmock.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include "blockstore/interface/helpers/BlockStoreWithRandomKeys.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::_;

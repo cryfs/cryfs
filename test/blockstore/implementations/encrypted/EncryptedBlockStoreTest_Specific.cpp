@@ -1,9 +1,9 @@
-#include <google/gtest/gtest.h>
-#include <messmer/cpp-utils/test/crypto/symmetric/testutils/FakeAuthenticatedCipher.h>
-#include "../../../implementations/encrypted/EncryptedBlockStore.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
-#include "../../../utils/BlockStoreUtils.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <gtest/gtest.h>
+#include "../../../cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include "blockstore/implementations/encrypted/EncryptedBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/utils/BlockStoreUtils.h"
+#include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 

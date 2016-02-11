@@ -3,9 +3,9 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_TESTFAKE_FAKEBLOCK_H_
 
 #include "../../interface/Block.h"
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 
-#include "messmer/cpp-utils/macros.h"
+#include <cpp-utils/macros.h>
 
 namespace blockstore {
 namespace testfake {

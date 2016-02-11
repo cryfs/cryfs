@@ -1,14 +1,14 @@
-#include "../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include <google/gtest/gtest.h>
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include <gtest/gtest.h>
 
-#include "messmer/cpp-utils/pointer/cast.h"
+#include <cpp-utils/pointer/cast.h>
 
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include "messmer/blockstore/implementations/testfake/FakeBlock.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/testfake/FakeBlock.h>
+#include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

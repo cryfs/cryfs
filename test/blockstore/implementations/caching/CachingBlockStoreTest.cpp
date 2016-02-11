@@ -1,8 +1,8 @@
-#include "../../../implementations/caching/CachingBlockStore.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/caching/CachingBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "google/gtest/gtest.h"
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gtest/gtest.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 
 using blockstore::BlockStore;

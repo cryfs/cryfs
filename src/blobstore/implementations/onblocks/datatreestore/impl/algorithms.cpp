@@ -1,10 +1,10 @@
 #include "algorithms.h"
-#include <messmer/cpp-utils/pointer/cast.h>
-#include <messmer/blockstore/utils/Key.h>
+#include <cpp-utils/pointer/cast.h>
+#include <blockstore/utils/Key.h>
 
 #include "../../datanodestore/DataInnerNode.h"
 #include "../../datanodestore/DataNodeStore.h"
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::function;
 using cpputils::optional_ownership_ptr;

@@ -3,9 +3,9 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_DATATREESTORE_H_
 
 #include <memory>
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer/unique_ref.h>
-#include <messmer/blockstore/utils/Key.h>
+#include <cpp-utils/macros.h>
+#include <cpp-utils/pointer/unique_ref.h>
+#include <blockstore/utils/Key.h>
 #include <boost/optional.hpp>
 
 namespace blobstore {

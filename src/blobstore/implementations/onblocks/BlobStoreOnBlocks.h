@@ -3,7 +3,7 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_BLOCKED_BLOBSTOREONBLOCKS_H_
 
 #include "../../interface/BlobStore.h"
-#include "messmer/blockstore/interface/BlockStore.h"
+#include <blockstore/interface/BlockStore.h>
 
 namespace blobstore {
 namespace onblocks {

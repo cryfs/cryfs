@@ -1,6 +1,6 @@
-#include <google/gtest/gtest.h>
-#include <messmer/cpp-utils/pointer/unique_ref.h>
-#include "../../../../implementations/caching/cache/QueueMap.h"
+#include <gtest/gtest.h>
+#include <cpp-utils/pointer/unique_ref.h>
+#include "blockstore/implementations/caching/cache/QueueMap.h"
 #include "testutils/MinimalKeyType.h"
 #include "testutils/CopyableMovableValueType.h"
 

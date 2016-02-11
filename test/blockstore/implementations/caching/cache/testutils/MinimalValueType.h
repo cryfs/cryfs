@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_MINIMALVALUETYPE_H_
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_MINIMALVALUETYPE_H_
 
-#include <messmer/cpp-utils/macros.h>
+#include <cpp-utils/macros.h>
 #include <cassert>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 // This is a not-default-constructible non-copyable but moveable Value type
 class MinimalValueType {

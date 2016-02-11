@@ -1,5 +1,5 @@
 #include "testutils/DataTreeTest.h"
-#include <google/gmock/gmock.h>
+#include <gmock/gmock.h>
 
 using ::testing::_;
 using ::testing::WithParamInterface;
@@ -18,7 +18,7 @@ public:
 
 TEST_F(DataTreeTest_NumStoredBytes, CreatedTreeIsEmpty) {
   auto tree = treeStore.createNewTree();
-  EXPECT_EQ(0, tree->numStoredBytes());
+  EXPECT_EQ(0u, tree->numStoredBytes());
 }
 
 class DataTreeTest_NumStoredBytes_P: public DataTreeTest_NumStoredBytes, public WithParamInterface<uint32_t> {};

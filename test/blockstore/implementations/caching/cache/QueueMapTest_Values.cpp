@@ -1,5 +1,5 @@
 #include "testutils/QueueMapTest.h"
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 class QueueMapTest_Values: public QueueMapTest {};
 

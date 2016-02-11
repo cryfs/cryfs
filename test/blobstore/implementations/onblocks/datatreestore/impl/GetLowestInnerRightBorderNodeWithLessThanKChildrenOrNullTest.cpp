@@ -1,11 +1,11 @@
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #include "../testutils/DataTreeTest.h"
-#include "../../../../../implementations/onblocks/datatreestore/DataTree.h"
-#include "../../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
-#include "../../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include "../../../../../implementations/onblocks/datatreestore/impl/algorithms.h"
+#include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include "blobstore/implementations/onblocks/datatreestore/impl/algorithms.h"
 
 using ::testing::Test;
 using std::pair;

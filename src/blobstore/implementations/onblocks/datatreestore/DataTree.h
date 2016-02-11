@@ -3,12 +3,12 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATATREE_H_
 
 #include <memory>
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer/optional_ownership_ptr.h>
+#include <cpp-utils/macros.h>
+#include <cpp-utils/pointer/optional_ownership_ptr.h>
 #include "../datanodestore/DataNodeView.h"
 //TODO Replace with C++14 once std::shared_mutex is supported
 #include <boost/thread/shared_mutex.hpp>
-#include <messmer/blockstore/utils/Key.h>
+#include <blockstore/utils/Key.h>
 
 namespace blobstore {
 namespace onblocks {

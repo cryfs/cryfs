@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_TESTUTILS_BLOBSTORETEST_H_
 #define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_TESTUTILS_BLOBSTORETEST_H_
 
-#include <google/gtest/gtest.h>
+#include <gtest/gtest.h>
 
-#include "../../../../interface/BlobStore.h"
+#include "blobstore/interface/BlobStore.h"
 
 class BlobStoreTest: public ::testing::Test {
 public:

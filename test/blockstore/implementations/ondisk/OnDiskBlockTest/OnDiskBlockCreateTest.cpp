@@ -1,8 +1,8 @@
-#include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include "google/gtest/gtest.h"
+#include "blockstore/implementations/ondisk/OnDiskBlock.h"
+#include <gtest/gtest.h>
 
-#include <messmer/cpp-utils/tempfile/TempFile.h>
-#include <messmer/cpp-utils/tempfile/TempDir.h>
+#include <cpp-utils/tempfile/TempFile.h>
+#include <cpp-utils/tempfile/TempDir.h>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

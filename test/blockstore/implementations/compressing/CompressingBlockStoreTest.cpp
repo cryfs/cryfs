@@ -1,9 +1,9 @@
-#include "../../../implementations/compressing/CompressingBlockStore.h"
-#include "../../../implementations/compressing/compressors/Gzip.h"
-#include "../../../implementations/compressing/compressors/RunLengthEncoding.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/compressing/CompressingBlockStore.h"
+#include "blockstore/implementations/compressing/compressors/Gzip.h"
+#include "blockstore/implementations/compressing/compressors/RunLengthEncoding.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
 using ::testing::Test;
 

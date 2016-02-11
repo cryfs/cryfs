@@ -1,8 +1,8 @@
 #include "InMemoryBlock.h"
 #include "InMemoryBlockStore.h"
 #include <cstring>
-#include <messmer/cpp-utils/data/DataUtils.h>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/data/DataUtils.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::make_shared;
 using std::istream;

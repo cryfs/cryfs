@@ -1,7 +1,7 @@
 #include "InMemoryBlock.h"
 #include "InMemoryBlockStore.h"
 #include <memory>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::make_unique;
 using std::string;

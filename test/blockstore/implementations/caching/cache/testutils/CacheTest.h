@@ -2,8 +2,8 @@
 #ifndef MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_QUEUEMAPTEST_H_
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_QUEUEMAPTEST_H_
 
-#include <google/gtest/gtest.h>
-#include "../../../../../implementations/caching/cache/Cache.h"
+#include <gtest/gtest.h>
+#include "blockstore/implementations/caching/cache/Cache.h"
 #include "MinimalKeyType.h"
 #include "MinimalValueType.h"
 #include <boost/optional.hpp>

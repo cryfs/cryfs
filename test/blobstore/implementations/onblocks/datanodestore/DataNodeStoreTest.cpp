@@ -1,13 +1,13 @@
-#include "../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include <google/gtest/gtest.h>
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include <gtest/gtest.h>
 
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include "messmer/blockstore/implementations/testfake/FakeBlock.h"
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/testfake/FakeBlock.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using ::testing::Test;
 using cpputils::unique_ref;
@@ -109,29 +109,29 @@ TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {
-  EXPECT_EQ(0, nodeStore->numNodes());
+  EXPECT_EQ(0u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingOneLeafNode) {
   nodeStore->createNewLeafNode();
-  EXPECT_EQ(1, nodeStore->numNodes());
+  EXPECT_EQ(1u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingTheLastNode) {
   auto leaf = nodeStore->createNewLeafNode();
   nodeStore->remove(std::move(leaf));
-  EXPECT_EQ(0, nodeStore->numNodes());
+  EXPECT_EQ(0u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingTwoNodes) {
   auto leaf = nodeStore->createNewLeafNode();
   auto node = nodeStore->createNewInnerNode(*leaf);
-  EXPECT_EQ(2, nodeStore->numNodes());
+  EXPECT_EQ(2u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingANode) {
   auto leaf = nodeStore->createNewLeafNode();
   auto node = nodeStore->createNewInnerNode(*leaf);
   nodeStore->remove(std::move(node));
-  EXPECT_EQ(1, nodeStore->numNodes());
+  EXPECT_EQ(1u, nodeStore->numNodes());
 }

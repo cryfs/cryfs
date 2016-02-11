@@ -3,7 +3,7 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODE_H_
 
 #include "DataNodeView.h"
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 
 namespace blobstore {
 namespace onblocks {

@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_LEAFDATAFIXTURE_H_
 #define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_LEAFDATAFIXTURE_H_
 
-#include <google/gtest/gtest.h>
+#include <gtest/gtest.h>
 
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <cpp-utils/data/DataFixture.h>
 
 // A data fixture containing data for a leaf.
 // The class can fill this data into a given leaf

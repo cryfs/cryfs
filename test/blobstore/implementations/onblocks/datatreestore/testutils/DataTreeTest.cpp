@@ -1,8 +1,8 @@
 #include "DataTreeTest.h"
 
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include <messmer/cpp-utils/pointer/cast.h>
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <cpp-utils/pointer/cast.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;

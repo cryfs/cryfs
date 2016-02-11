@@ -3,9 +3,9 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_NEWBLOCK_H_
 
 #include "../../interface/BlockStore.h"
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 
-#include "messmer/cpp-utils/macros.h"
+#include <cpp-utils/macros.h>
 #include <memory>
 
 namespace blockstore {

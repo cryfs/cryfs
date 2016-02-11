@@ -1,5 +1,5 @@
-#include <google/gtest/gtest.h>
-#include "../../../../implementations/onblocks/utils/Math.h"
+#include <gtest/gtest.h>
+#include "blobstore/implementations/onblocks/utils/Math.h"
 
 #include <limits>
 

@@ -3,7 +3,7 @@
 #include <thread>
 #include <memory>
 #include <future>
-#include <messmer/cpp-utils/lock/ConditionBarrier.h>
+#include <cpp-utils/lock/ConditionBarrier.h>
 
 using namespace blockstore::caching;
 using std::chrono::seconds;

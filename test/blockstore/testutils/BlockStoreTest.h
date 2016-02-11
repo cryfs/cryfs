@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_TESTUTILS_BLOCKSTORETEST_H_
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_TESTUTILS_BLOCKSTORETEST_H_
 
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "../../interface/BlockStore.h"
+#include "blockstore/interface/BlockStore.h"
 
 class BlockStoreTestFixture {
 public:
@@ -45,54 +45,54 @@ TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
   auto blockStore = this->fixture.createBlockStore();
-  EXPECT_EQ(0, blockStore->numBlocks());
+  EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
-  EXPECT_EQ(1, blockStore->numBlocks());
+  EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(cpputils::Data(1));
-  EXPECT_EQ(1, blockStore->numBlocks());
+  EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
-  EXPECT_EQ(0, blockStore->numBlocks());
+  EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks) {
   auto blockStore = this->fixture.createBlockStore();
   auto block1 = blockStore->create(cpputils::Data(1));
   auto block2 = blockStore->create(cpputils::Data(0));
-  EXPECT_EQ(2, blockStore->numBlocks());
+  EXPECT_EQ(2u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(cpputils::Data(1));
   auto block2 = blockStore->create(cpputils::Data(0));
-  EXPECT_EQ(2, blockStore->numBlocks());
+  EXPECT_EQ(2u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block1 = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(0));
-  EXPECT_EQ(2, blockStore->numBlocks());
+  EXPECT_EQ(2u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(0));
-  EXPECT_EQ(2, blockStore->numBlocks());
+  EXPECT_EQ(2u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
@@ -100,7 +100,7 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
-  EXPECT_EQ(1, blockStore->numBlocks());
+  EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStoreTest, CanRemoveModifiedBlock) {
@@ -108,7 +108,7 @@ TYPED_TEST_P(BlockStoreTest, CanRemoveModifiedBlock) {
     auto block = blockStore->create(cpputils::Data(5));
     block->write("data", 0, 4);
     blockStore->remove(std::move(block));
-    EXPECT_EQ(0, blockStore->numBlocks());
+    EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
 #include "BlockStoreTest_Size.h"

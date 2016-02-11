@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_QUEUEMAPTEST_H_
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_QUEUEMAPTEST_H_
 
-#include <google/gtest/gtest.h>
-#include <messmer/cpp-utils/pointer/unique_ref.h>
-#include "../../../../../implementations/caching/cache/QueueMap.h"
+#include <gtest/gtest.h>
+#include <cpp-utils/pointer/unique_ref.h>
+#include "blockstore/implementations/caching/cache/QueueMap.h"
 #include "MinimalKeyType.h"
 #include "MinimalValueType.h"
 #include <boost/optional.hpp>

@@ -2,10 +2,10 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_PARALLELACCESS_PARALLELACCESSBLOCKSTORE_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_PARALLELACCESS_PARALLELACCESSBLOCKSTORE_H_
 
-#include <messmer/parallelaccessstore/ParallelAccessStore.h>
+#include <parallelaccessstore/ParallelAccessStore.h>
 #include "BlockRef.h"
 #include "../../interface/BlockStore.h"
-#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/pointer/unique_ref.h>
 
 namespace blockstore {
 namespace parallelaccess {

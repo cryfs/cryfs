@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATAINNERNODE_CHILDENTRY_H_
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATAINNERNODE_CHILDENTRY_H_
 
-#include <messmer/cpp-utils/macros.h>
+#include <cpp-utils/macros.h>
 
 namespace blobstore{
 namespace onblocks{

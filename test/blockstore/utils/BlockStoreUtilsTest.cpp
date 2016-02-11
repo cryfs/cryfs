@@ -1,7 +1,7 @@
-#include "../../implementations/testfake/FakeBlockStore.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
-#include "../../utils/BlockStoreUtils.h"
-#include "google/gtest/gtest.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include <cpp-utils/data/DataFixture.h>
+#include "blockstore/utils/BlockStoreUtils.h"
+#include <gtest/gtest.h>
 
 #include <memory>
 

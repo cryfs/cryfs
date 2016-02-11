@@ -1,6 +1,6 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::make_shared;
 using std::string;

@@ -2,13 +2,13 @@
 #ifndef MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_DATATREETEST_H_
 #define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_DATATREETEST_H_
 
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "../../../../../implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "../../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
-#include "../../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
-#include "../../../../../implementations/onblocks/datatreestore/DataTree.h"
-#include "../../../../../implementations/onblocks/datatreestore/DataTreeStore.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
+#include "blobstore/implementations/onblocks/datatreestore/DataTreeStore.h"
 
 class DataTreeTest: public ::testing::Test {
 public:

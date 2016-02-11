@@ -1,7 +1,7 @@
-#include "../../../implementations/parallelaccess/ParallelAccessBlockStore.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
 
 using blockstore::BlockStore;

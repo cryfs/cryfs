@@ -1,10 +1,10 @@
 #include "DataInnerNode.h"
 #include "DataLeafNode.h"
 #include "DataNodeStore.h"
-#include "messmer/blockstore/interface/BlockStore.h"
-#include "messmer/blockstore/interface/Block.h"
-#include "messmer/blockstore/utils/BlockStoreUtils.h"
-#include <messmer/cpp-utils/assert/assert.h>
+#include <blockstore/interface/BlockStore.h>
+#include <blockstore/interface/Block.h>
+#include <blockstore/utils/BlockStoreUtils.h>
+#include <cpp-utils/assert/assert.h>
 
 using blockstore::BlockStore;
 using blockstore::Block;

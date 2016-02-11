@@ -1,12 +1,12 @@
-#include "../../../../implementations/ondisk/OnDiskBlock.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
-#include "../../../../utils/FileDoesntExistException.h"
-#include "google/gtest/gtest.h"
+#include "blockstore/implementations/ondisk/OnDiskBlock.h"
+#include <cpp-utils/data/DataFixture.h>
+#include "blockstore/utils/FileDoesntExistException.h"
+#include <gtest/gtest.h>
 
-#include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/tempfile/TempFile.h>
-#include <messmer/cpp-utils/tempfile/TempDir.h>
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cpp-utils/data/Data.h>
+#include <cpp-utils/tempfile/TempFile.h>
+#include <cpp-utils/tempfile/TempDir.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <fstream>
 
 using ::testing::Test;

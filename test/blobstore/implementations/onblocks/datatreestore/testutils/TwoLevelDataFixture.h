@@ -2,10 +2,10 @@
 #ifndef MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_TWOLEVELDATAFIXTURE_H_
 #define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_GROWING_TESTUTILS_TWOLEVELDATAFIXTURE_H_
 
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer/cast.h>
+#include <cpp-utils/macros.h>
+#include <cpp-utils/pointer/cast.h>
 #include "LeafDataFixture.h"
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 //TODO Rename, since we now allow any number of levels
 // A data fixture containing data for a two-level tree (one inner node with leaf children).

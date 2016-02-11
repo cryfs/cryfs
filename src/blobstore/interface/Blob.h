@@ -4,8 +4,8 @@
 
 #include <cstring>
 #include <cstdint>
-#include <messmer/blockstore/utils/Key.h>
-#include <messmer/cpp-utils/data/Data.h>
+#include <blockstore/utils/Key.h>
+#include <cpp-utils/data/Data.h>
 
 namespace blobstore {
 

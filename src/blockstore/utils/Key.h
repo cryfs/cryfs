@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_UTILS_KEY_H_
 
 #include <string>
-#include <messmer/cpp-utils/data/FixedSizeData.h>
+#include <cpp-utils/data/FixedSizeData.h>
 
 namespace blockstore {
 

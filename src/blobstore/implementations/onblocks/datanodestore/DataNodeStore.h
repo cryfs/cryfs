@@ -3,9 +3,9 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODESTORE_H_
 
 #include <memory>
-#include "messmer/cpp-utils/macros.h"
+#include <cpp-utils/macros.h>
 #include "DataNodeView.h"
-#include <messmer/blockstore/utils/Key.h>
+#include <blockstore/utils/Key.h>
 
 namespace blockstore{
 class Block;

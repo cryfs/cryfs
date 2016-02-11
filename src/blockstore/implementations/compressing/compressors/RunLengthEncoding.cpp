@@ -1,6 +1,6 @@
 #include "RunLengthEncoding.h"
 #include <sstream>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 using cpputils::Data;
 using std::string;

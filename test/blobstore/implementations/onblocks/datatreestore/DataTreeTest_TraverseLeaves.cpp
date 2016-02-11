@@ -1,5 +1,5 @@
 #include "testutils/DataTreeTest.h"
-#include <google/gmock/gmock.h>
+#include <gmock/gmock.h>
 
 using ::testing::_;
 

@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
-#include <messmer/blockstore/implementations/compressing/CompressingBlockStore.h>
-#include <messmer/blockstore/implementations/compressing/compressors/RunLengthEncoding.h>
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlockStore.h>
-#include <messmer/blockstore/implementations/inmemory/InMemoryBlock.h>
-#include <messmer/cpp-utils/data/DataFixture.h>
-#include <messmer/cpp-utils/data/Data.h>
-#include "../../../implementations/onblocks/BlobStoreOnBlocks.h"
-#include "../../../implementations/onblocks/BlobOnBlocks.h"
+#include <blockstore/implementations/compressing/CompressingBlockStore.h>
+#include <blockstore/implementations/compressing/compressors/RunLengthEncoding.h>
+#include <blockstore/implementations/inmemory/InMemoryBlockStore.h>
+#include <blockstore/implementations/inmemory/InMemoryBlock.h>
+#include <cpp-utils/data/DataFixture.h>
+#include <cpp-utils/data/Data.h>
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include "blobstore/implementations/onblocks/BlobOnBlocks.h"
 
 using namespace blobstore;
 using namespace blobstore::onblocks;

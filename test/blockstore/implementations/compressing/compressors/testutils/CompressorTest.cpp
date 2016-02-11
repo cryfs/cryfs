@@ -1,7 +1,7 @@
-#include <google/gtest/gtest.h>
-#include "../../../../../implementations/compressing/compressors/Gzip.h"
-#include "../../../../../implementations/compressing/compressors/RunLengthEncoding.h"
-#include <messmer/cpp-utils/data/DataFixture.h>
+#include <gtest/gtest.h>
+#include "blockstore/implementations/compressing/compressors/Gzip.h"
+#include "blockstore/implementations/compressing/compressors/RunLengthEncoding.h"
+#include <cpp-utils/data/DataFixture.h>
 
 using namespace blockstore::compressing;
 using cpputils::Data;

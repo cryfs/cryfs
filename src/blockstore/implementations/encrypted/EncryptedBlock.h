@@ -3,18 +3,18 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 
 #include "../../interface/Block.h"
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/data/Data.h>
 #include "../../interface/BlockStore.h"
 
-#include "messmer/cpp-utils/macros.h"
+#include <cpp-utils/macros.h>
 #include <memory>
 #include <iostream>
 #include <boost/optional.hpp>
-#include <messmer/cpp-utils/crypto/symmetric/Cipher.h>
-#include <messmer/cpp-utils/assert/assert.h>
-#include <messmer/cpp-utils/data/DataUtils.h>
+#include <cpp-utils/crypto/symmetric/Cipher.h>
+#include <cpp-utils/assert/assert.h>
+#include <cpp-utils/data/DataUtils.h>
 #include <mutex>
-#include <messmer/cpp-utils/logging/logging.h>
+#include <cpp-utils/logging/logging.h>
 
 namespace blockstore {
 namespace encrypted {

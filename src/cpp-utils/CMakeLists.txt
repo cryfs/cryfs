@@ -40,7 +40,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE curl)
+target_link_libraries(${PROJECT_NAME} PRIVATE pthread curl)
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package().
 find_library(CryptoPP cryptopp)

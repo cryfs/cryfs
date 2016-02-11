@@ -1,7 +1,7 @@
 #include "testutils/BlobStoreTest.h"
-#include <messmer/cpp-utils/data/Data.h>
-#include <messmer/cpp-utils/data/DataFixture.h>
-#include "../../../implementations/onblocks/datanodestore/DataNodeView.h"
+#include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/DataFixture.h>
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
 
 using cpputils::unique_ref;
 using ::testing::WithParamInterface;
@@ -60,7 +60,7 @@ TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
 TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
   blob->resize(1);
   blob->write(randomData.data(), 32776, 4);
-  EXPECT_EQ(32780, blob->size());
+  EXPECT_EQ(32780u, blob->size());
 }
 
 struct DataRange {

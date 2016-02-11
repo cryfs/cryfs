@@ -5,8 +5,8 @@
 #include "Block.h"
 #include <string>
 #include <boost/optional.hpp>
-#include <messmer/cpp-utils/pointer/unique_ref.h>
-#include <messmer/cpp-utils/data/Data.h>
+#include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/data/Data.h>
 
 namespace blockstore {
 

@@ -1,9 +1,9 @@
 #include "testutils/DataTreeTest.h"
 
-#include "../../../../implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "../../../../implementations/onblocks/datatreestore/DataTreeStore.h"
-#include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/datatreestore/DataTreeStore.h"
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
@@ -49,6 +49,6 @@ TEST_F(DataTreeStoreTest, RemovingTreeRemovesAllNodesOfTheTree) {
   treeStore.remove(std::move(tree1));
 
   //Check that the only remaining node is tree2
-  EXPECT_EQ(1, nodeStore->numNodes());
+  EXPECT_EQ(1u, nodeStore->numNodes());
   EXPECT_NE(none, treeStore.load(tree2_key));
 }

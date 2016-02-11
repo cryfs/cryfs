@@ -7,10 +7,10 @@
 
 #include "impl/algorithms.h"
 
-#include "messmer/cpp-utils/pointer/cast.h"
-#include "messmer/cpp-utils/pointer/optional_ownership_ptr.h"
+#include <cpp-utils/pointer/cast.h>
+#include <cpp-utils/pointer/optional_ownership_ptr.h>
 #include <cmath>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/assert/assert.h>
 
 using blockstore::Key;
 using blobstore::onblocks::datanodestore::DataNodeStore;

@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <cassert>
 #include <boost/optional.hpp>
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/macros.h>
+#include <cpp-utils/assert/assert.h>
 
 namespace blockstore {
 namespace caching {

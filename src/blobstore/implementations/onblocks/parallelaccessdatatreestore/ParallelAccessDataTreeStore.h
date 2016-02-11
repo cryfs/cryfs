@@ -3,9 +3,9 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_PARALLELACCESSDATATREESTORE_H_
 
 #include <memory>
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/blockstore/utils/Key.h>
-#include <messmer/parallelaccessstore/ParallelAccessStore.h>
+#include <cpp-utils/macros.h>
+#include <blockstore/utils/Key.h>
+#include <parallelaccessstore/ParallelAccessStore.h>
 
 namespace blobstore {
 namespace onblocks {

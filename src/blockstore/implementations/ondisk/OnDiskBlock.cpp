@@ -4,8 +4,8 @@
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 #include "../../utils/FileDoesntExistException.h"
-#include <messmer/cpp-utils/data/DataUtils.h>
-#include <messmer/cpp-utils/assert/assert.h>
+#include <cpp-utils/data/DataUtils.h>
+#include <cpp-utils/assert/assert.h>
 
 using std::istream;
 using std::ostream;

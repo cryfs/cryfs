@@ -1,9 +1,9 @@
-#include "../../../implementations/inmemory/InMemoryBlock.h"
-#include "../../../implementations/inmemory/InMemoryBlockStore.h"
+#include "blockstore/implementations/inmemory/InMemoryBlock.h"
+#include "blockstore/implementations/inmemory/InMemoryBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
-#include "google/gtest/gtest.h"
-#include <messmer/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gtest/gtest.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 
 using blockstore::BlockStore;

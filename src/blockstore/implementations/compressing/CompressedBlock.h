@@ -4,8 +4,8 @@
 
 #include "../../interface/Block.h"
 #include "../../interface/BlockStore.h"
-#include <messmer/cpp-utils/data/DataUtils.h>
-#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/data/DataUtils.h>
+#include <cpp-utils/pointer/unique_ref.h>
 #include <mutex>
 
 namespace blockstore {

@@ -1,8 +1,8 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
 #include <cstring>
-#include <messmer/cpp-utils/assert/assert.h>
-#include <messmer/cpp-utils/data/DataUtils.h>
+#include <cpp-utils/assert/assert.h>
+#include <cpp-utils/data/DataUtils.h>
 
 using std::shared_ptr;
 using std::istream;

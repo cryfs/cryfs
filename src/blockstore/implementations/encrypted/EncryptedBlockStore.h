@@ -3,8 +3,8 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCKSTORE_H_
 
 #include "../../interface/BlockStore.h"
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/cpp-utils/pointer/cast.h>
+#include <cpp-utils/macros.h>
+#include <cpp-utils/pointer/cast.h>
 #include "EncryptedBlock.h"
 #include <iostream>
 

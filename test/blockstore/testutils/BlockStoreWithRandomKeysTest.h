@@ -2,9 +2,9 @@
 #ifndef MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTOREWITHRANDOMKEYSTEST_H_
 #define MESSMER_BLOCKSTORE_TEST_TESTUTILS_BLOCKSTOREWITHRANDOMKEYSTEST_H_
 
-#include <google/gtest/gtest.h>
+#include <gtest/gtest.h>
 
-#include "../../interface/BlockStore.h"
+#include "blockstore/interface/BlockStore.h"
 
 class BlockStoreWithRandomKeysTestFixture {
 public:

@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_PERIODICTASK_H_
 
 #include <functional>
-#include <messmer/cpp-utils/thread/LoopThread.h>
+#include <cpp-utils/thread/LoopThread.h>
 #include <boost/chrono.hpp>
 
 namespace blockstore {

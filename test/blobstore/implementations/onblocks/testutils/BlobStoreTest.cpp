@@ -1,7 +1,7 @@
 #include "BlobStoreTest.h"
 
-#include <messmer/blockstore/implementations/testfake/FakeBlockStore.h>
-#include "../../../../implementations/onblocks/BlobStoreOnBlocks.h"
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blockstore::testfake::FakeBlockStore;

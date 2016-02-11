@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INMEMORY_INMEMORYBLOCKSTORE_H_
 
 #include "../../interface/helpers/BlockStoreWithRandomKeys.h"
-#include <messmer/cpp-utils/macros.h>
+#include <cpp-utils/macros.h>
 
 #include <mutex>
 #include <map>

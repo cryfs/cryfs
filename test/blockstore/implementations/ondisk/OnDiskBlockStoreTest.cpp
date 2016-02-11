@@ -1,10 +1,10 @@
-#include "../../../implementations/ondisk/OnDiskBlock.h"
-#include "../../../implementations/ondisk/OnDiskBlockStore.h"
+#include "blockstore/implementations/ondisk/OnDiskBlock.h"
+#include "blockstore/implementations/ondisk/OnDiskBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
-#include "google/gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "messmer/cpp-utils/tempfile/TempDir.h"
+#include <cpp-utils/tempfile/TempDir.h>
 
 
 using blockstore::BlockStore;

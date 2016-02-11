@@ -2,8 +2,8 @@
 #ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_PARALLELACCESSDATATREESTOREADAPTER_H_
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_PARALLELACCESSDATATREESTOREADAPTER_H_
 
-#include <messmer/cpp-utils/macros.h>
-#include <messmer/parallelaccessstore/ParallelAccessStore.h>
+#include <cpp-utils/macros.h>
+#include <parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTreeStore.h"
 #include "../datatreestore/DataTree.h"
 

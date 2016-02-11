@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_DATATREEREF_H_
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_PARALLELACCESSDATATREESTORE_DATATREEREF_H_
 
-#include <messmer/parallelaccessstore/ParallelAccessStore.h>
+#include <parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTree.h"
 
 namespace blobstore {

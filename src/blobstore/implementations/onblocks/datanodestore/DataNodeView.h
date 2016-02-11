@@ -2,11 +2,11 @@
 #ifndef MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODEVIEW_H_
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODEVIEW_H_
 
-#include "messmer/blockstore/interface/Block.h"
+#include <blockstore/interface/Block.h>
 #include "../BlobStoreOnBlocks.h"
 #include "DataInnerNode_ChildEntry.h"
 
-#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/pointer/unique_ref.h>
 
 #include <memory>
 #include <stdexcept>

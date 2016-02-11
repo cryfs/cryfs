@@ -1,14 +1,14 @@
-#include <google/gtest/gtest.h>
+#include <gtest/gtest.h>
 
-#include "../../../../implementations/onblocks/datanodestore/DataInnerNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataLeafNode.h"
-#include "../../../../implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
 
-#include "messmer/blockstore/implementations/testfake/FakeBlockStore.h"
-#include "messmer/blockstore/implementations/testfake/FakeBlock.h"
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/testfake/FakeBlock.h>
 
 #include <memory>
-#include "messmer/cpp-utils/pointer/cast.h"
+#include <cpp-utils/pointer/cast.h>
 
 using ::testing::Test;
 

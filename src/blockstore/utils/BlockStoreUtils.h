@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_UTILS_BLOCKSTOREUTILS_H_
 #define MESSMER_BLOCKSTORE_UTILS_BLOCKSTOREUTILS_H_
 
-#include <messmer/cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/pointer/unique_ref.h>
 
 namespace blockstore {
 class BlockStore;

@@ -1,10 +1,11 @@
-#include <messmer/cpp-utils/crypto/symmetric/ciphers.h>
-#include <messmer/cpp-utils/crypto/symmetric/Cipher.h>
-#include "../../../implementations/encrypted/EncryptedBlockStore.h"
-#include "../../../implementations/testfake/FakeBlockStore.h"
+#include <cpp-utils/crypto/symmetric/ciphers.h>
+#include <cpp-utils/crypto/symmetric/Cipher.h>
+#include "blockstore/implementations/encrypted/EncryptedBlockStore.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
-#include <messmer/cpp-utils/test/crypto/symmetric/testutils/FakeAuthenticatedCipher.h>
-#include "google/gtest/gtest.h"
+//TODO Move FakeAuthenticatedCipher out of test folder to normal folder. Dependencies should not point into tests of other modules.
+#include "../../../cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include <gtest/gtest.h>
 
 using ::testing::Test;
 
