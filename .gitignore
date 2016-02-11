@@ -1,3 +1,3 @@
-build
-cmake
-.idea
+/build
+/cmake
+/.idea
