@@ -51,7 +51,7 @@ Requirements
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
   - CMake version >= 3.3
   - libcurl4 (including development headers) 
-  - Boost libraries filesystem, system, chrono, thread in version >= 1.56
+  - Boost libraries filesystem, system, chrono, program_options, thread in version >= 1.56
   - Crypto++ >= 5.6.3 (TODO Lower minimal version possible?)
   - libFUSE >= 2.8.6 (including development headers)
 

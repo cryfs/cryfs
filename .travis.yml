@@ -1,17 +1,37 @@
 language: cpp
 sudo: required
+dist: trusty
 compiler:
 - gcc
+- clang
+os:
+- linux
+- osx
+matrix:
+  allow_failures:
+    - os: osx
+    - compiler: clang
+addons:
+  apt:
+    packages:
+    - libcrypto++-dev
+    - libfuse-dev
 install:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/update_gcc_version.sh
-  && chmod +x update_gcc_version.sh
-  && ./update_gcc_version.sh 4.8
-  && rm update_gcc_version.sh
-- sudo apt-get install libfuse-dev
-# This is needed for packaging 7z distribution packages
-- sudo apt-get install software-properties-common && sudo add-apt-repository ppa:george-edison55/precise-backports -y && sudo apt-get update
-- sudo apt-get install cmake cmake-data rpm
-# CryFS needs cmake >= 3.3, install it.
+# Install boost
+- wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
+- tar -xf boost.tar.bz2
+- cd boost_1_56_0
+# TODO We should use clang as toolchain for building boost when clang is used for building our code
+- ./bootstrap.sh --with-libraries=filesystem,thread,chrono
+- sudo ./b2 -d0 install
+- cd ..
+- sudo rm -rf boost.tar.bz2 boost_1_56_0
+# Install run_with_fuse.sh
+- mkdir cmake
+- cd cmake
+- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
+- chmod +x run_with_fuse.sh
+# Install cmake >= 3.3
 - wget --no-check-certificate https://cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz
   && tar -xf cmake-3.3.2-Linux-x86_64.tar.gz
   && sudo cp -R cmake-3.3.2-Linux-x86_64/* /usr
@@ -19,35 +39,14 @@ install:
 - cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
-before_script:
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/setup_biicode_project.sh
-  && chmod +x setup_biicode_project.sh
-  && ./setup_biicode_project.sh
-  && rm setup_biicode_project.sh
 script:
-#The configure line is needed as a workaround for the following link, otherwise we wouldn't need "bii configure" at all because "bii build" calls it: http://forum.biicode.com/t/error-could-not-find-the-following-static-boost-libraries-boost-thread/374
-- bii cpp:configure || bii cpp:configure
-# Build cryfs executable
-- bii cpp:build -- -j2
-# Build and run test cases
-- bii cpp:build --target messmer_cryfs_test_main -- -j2
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
-  && chmod +x run_with_fuse.sh
-  && ./run_with_fuse.sh "./bin/messmer_cryfs_test_main"
-  && rm run_with_fuse.sh
-# Make distribution packages
-- bii clean
-- bii cpp:configure -D CMAKE_BUILD_TYPE=Release
-- bii build -- -j2
-- cd bii/build/messmer_cryfs && make package && cd ../../..
-after_success:
-- bii user ${BII_USERNAME} -p ${BII_PASSWORD}
-- bii publish
-#deploy:
-#  provider: biicode
-#  user: ${BII_USERNAME}
-#  password:
-#    secure: ${BII_PASSWORD}
-#  on:
-#    branch: develop
-
+- cmake ..
+- make -j2
+- make package -j2
+- ./test/cpp-utils/cpp-utils-test
+- ./run_with_fuse.sh ./test/fspp/fspp-test
+- ./test/parallelaccessstore/parallelaccessstore-test
+- ./test/blockstore/blockstore-test
+- ./test/blobstore/blobstore-test
+after_script:
+- rm run_with_fuse.sh

@@ -1,0 +1,12 @@
+include(CTest)
+
+if (BUILD_TESTING)
+  include_directories(../src)
+
+  add_subdirectory(cpp-utils)
+  add_subdirectory(fspp)
+  add_subdirectory(parallelaccessstore)
+  add_subdirectory(blockstore)
+  add_subdirectory(blobstore)
+  add_subdirectory(cryfs)
+endif(BUILD_TESTING)
