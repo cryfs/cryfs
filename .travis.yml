@@ -4,6 +4,12 @@ dist: trusty
 compiler:
 - gcc
 - clang
+os:
+- linux
+- osx
+matrix:
+  allow_failures:
+    - os: osx
 addons:
   apt:
     packages:
