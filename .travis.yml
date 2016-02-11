@@ -35,5 +35,6 @@ script:
 - ./test/cpp-utils/cpp-utils-test
 - ./run_with_fuse.sh ./test/fspp/fspp-test
 - ./test/parallelaccessstore/parallelaccessstore-test
+- ./test/blockstore/blockstore-test
 after_script:
 - rm run_with_fuse.sh
