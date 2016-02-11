@@ -16,9 +16,9 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC _FILE_OFFSET_BITS=64)
 target_link_libraries(${PROJECT_NAME} PRIVATE cpp-utils)
 
-add_boost(${PROJECT_NAME} filesystem system thread chrono)
-enable_style_warnings(${PROJECT_NAME})
-activate_cpp14(${PROJECT_NAME})
+target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
+target_enable_style_warnings(${PROJECT_NAME})
+target_activate_cpp14(${PROJECT_NAME})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   if(EXISTS "/usr/local/include/osxfuse")
