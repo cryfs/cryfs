@@ -69,7 +69,7 @@ Build
  
  1. Clone repository
 
-        $ git clone git@github.com:cryfs/cryfs.git cryfs
+        $ git clone https://github.com/cryfs/cryfs.git cryfs
         $ cd cryfs
 
  2. Build
