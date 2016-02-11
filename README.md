@@ -87,5 +87,4 @@ Build
         
  3. Install
 
-        $ cd bii/build/messmer_cryfs
         $ sudo make install
