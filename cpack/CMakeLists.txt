@@ -1,5 +1,3 @@
-include (../vendor/gitversion/gitversion-1.8/cmake.cmake)
-
 # Fix debfiles permissions. Unfortunately, git doesn't store file permissions.
 # When installing the .deb package and these files have the wrong permissions, the package manager complains.
 execute_process(COMMAND /bin/bash -c "chmod 0755 ${CMAKE_CURRENT_SOURCE_DIR}/debfiles/*")
