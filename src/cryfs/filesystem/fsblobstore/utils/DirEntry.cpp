@@ -1,87 +1,116 @@
 #include "DirEntry.h"
 
 using std::vector;
+using std::string;
 using blockstore::Key;
 
 namespace cryfs {
     namespace fsblobstore {
-
         void DirEntry::serialize(uint8_t *dest) const {
+            ASSERT(
+                    ((type == fspp::Dir::EntryType::FILE)    &&  S_ISREG(mode) && !S_ISDIR(mode) && !S_ISLNK(mode)) ||
+                    ((type == fspp::Dir::EntryType::DIR)     && !S_ISREG(mode) &&  S_ISDIR(mode) && !S_ISLNK(mode)) ||
+                    ((type == fspp::Dir::EntryType::SYMLINK) && !S_ISREG(mode) && !S_ISDIR(mode) &&  S_ISLNK(mode))
+                    , "Wrong mode bit set for this type: "+std::to_string(mode & S_IFREG)+", "+std::to_string(mode&S_IFDIR)+", "+std::to_string(mode&S_IFLNK)+", "+std::to_string(static_cast<uint8_t>(type))
+            );
             unsigned int offset = 0;
-            *(dest+offset) = static_cast<uint8_t>(type);
-            offset += 1;
-
-            std::memcpy(dest+offset, name.c_str(), name.size()+1);
-            offset += name.size() + 1;
-
-            key.ToBinary(dest+offset);
-            offset += key.BINARY_LENGTH;
-
-            *reinterpret_cast<uid_t*>(dest+offset) = uid;
-            offset += sizeof(uid_t);
-
-            *reinterpret_cast<gid_t*>(dest+offset) = gid;
-            offset += sizeof(gid_t);
-
-            *reinterpret_cast<mode_t*>(dest+offset) = mode;
-            offset += sizeof(mode_t);
-
-            //TODO Persist times, see comment in deserializeAndAddToVector()
-            //static_assert(sizeof(timespec) == 16, "Ensure platform independence of the serialization");
-            //*reinterpret_cast<timespec*>(dest+offset) = lastAccessTime;
-            //offset += sizeof(timespec);
-            //*reinterpret_cast<timespec*>(dest+offset) = lastModificationTime;
-            //offset += sizeof(timespec);
-            //*reinterpret_cast<timespec*>(dest+offset) = lastMetadataChangeTime;
-            //offset += sizeof(timespec);
-
+            offset += _serializeUint8(dest + offset, static_cast<uint8_t>(type));
+            offset += _serializeUint32(dest + offset, mode);
+            offset += _serializeUint32(dest + offset, uid);
+            offset += _serializeUint32(dest + offset, gid);
+            offset += _serializeTimeValue(dest + offset, lastAccessTime);
+            offset += _serializeTimeValue(dest + offset, lastModificationTime);
+            offset += _serializeTimeValue(dest + offset, lastMetadataChangeTime);
+            offset += _serializeString(dest + offset, name);
+            offset += _serializeKey(dest + offset, key);
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
 
-        size_t DirEntry::serializedSize() const {
-            //TODO Persist times, see comment in deserializeAndAddToVector()
-            //return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t) + 3*sizeof(timespec);
-            return 1 + (name.size() + 1) + key.BINARY_LENGTH + sizeof(uid_t) + sizeof(gid_t) + sizeof(mode_t);
-        }
-
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
-            // Read type magic number (whether it is a dir or a file)
-            fspp::Dir::EntryType type =
-                    static_cast<fspp::Dir::EntryType>(*reinterpret_cast<const unsigned char*>(pos));
-            pos += 1;
-
-            size_t namelength = strlen(pos);
-            std::string name(pos, namelength);
-            pos += namelength + 1;
-
-            Key key = Key::FromBinary(pos);
-            pos += Key::BINARY_LENGTH;
-
-            uid_t uid = *(uid_t*)pos;
-            pos += sizeof(uid_t);
-
-            gid_t gid = *(gid_t*)pos;
-            pos += sizeof(gid_t);
-
-            mode_t mode = *(mode_t*)pos;
-            pos += sizeof(mode_t);
-
-            //TODO Persist times. This breaks compatibility though - so change cryfs::InnerConfig::HEADER
-            //     This is already implemented, but I commented it out for now, because it would break compatibility.
-            //timespec lastAccessTime = *(timespec*)pos;
-            //pos += sizeof(timespec);
-            //timespec lastModificationTime = *(timespec*)pos;
-            //pos += sizeof(timespec);
-            //timespec lastMetadataChangeTime = *(timespec*)pos;
-            //pos += sizeof(timespec);
-            timespec lastAccessTime;
-            clock_gettime(CLOCK_REALTIME, &lastAccessTime);
-            timespec lastModificationTime = lastAccessTime;
-            timespec lastMetadataChangeTime = lastAccessTime;
+            fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(_deserializeUint8(&pos));
+            mode_t mode = _deserializeUint32(&pos);
+            uid_t uid = _deserializeUint32(&pos);
+            gid_t gid = _deserializeUint32(&pos);
+            timespec lastAccessTime = _deserializeTimeValue(&pos);
+            timespec lastModificationTime = _deserializeTimeValue(&pos);
+            timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
+            string name = _deserializeString(&pos);
+            Key key = _deserializeKey(&pos);
 
             result->emplace_back(type, name, key, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
         }
 
+        unsigned int DirEntry::_serializeTimeValue(uint8_t *dest, timespec value) {
+            unsigned int offset = 0;
+            *reinterpret_cast<uint64_t*>(dest+offset) = value.tv_sec;
+            offset += sizeof(uint64_t);
+            *reinterpret_cast<uint32_t*>(dest+offset) = value.tv_nsec;
+            offset += sizeof(uint32_t);
+            ASSERT(offset == _serializedTimeValueSize(), "serialized to wrong size");
+            return offset;
+        }
+
+        size_t DirEntry::_serializedTimeValueSize() {
+            return sizeof(uint64_t) + sizeof(uint32_t);
+        }
+
+        timespec DirEntry::_deserializeTimeValue(const char **pos) {
+            timespec value;
+            value.tv_sec = *(uint64_t*)(*pos);
+            *pos += sizeof(uint64_t);
+            value.tv_nsec = *(uint32_t*)(*pos);
+            *pos += sizeof(uint32_t);
+            return value;
+        }
+
+        unsigned int DirEntry::_serializeUint8(uint8_t *dest, uint8_t value) {
+            *reinterpret_cast<uint8_t*>(dest) = value;
+            return sizeof(uint8_t);
+        }
+
+        uint8_t DirEntry::_deserializeUint8(const char **pos) {
+            uint8_t value = *(uint8_t*)(*pos);
+            *pos += sizeof(uint8_t);
+            return value;
+        }
+
+        unsigned int DirEntry::_serializeUint32(uint8_t *dest, uint32_t value) {
+            *reinterpret_cast<uint32_t*>(dest) = value;
+            return sizeof(uint32_t);
+        }
+
+        uint32_t DirEntry::_deserializeUint32(const char **pos) {
+            uint32_t value = *(uint32_t*)(*pos);
+            *pos += sizeof(uint32_t);
+            return value;
+        }
+
+        unsigned int DirEntry::_serializeString(uint8_t *dest, const string &value) {
+            std::memcpy(dest, value.c_str(), value.size()+1);
+            return value.size() + 1;
+        }
+
+        string DirEntry::_deserializeString(const char **pos) {
+            size_t length = strlen(*pos);
+            string value(*pos, length);
+            *pos += length + 1;
+            return value;
+        }
+
+        unsigned int DirEntry::_serializeKey(uint8_t *dest, const Key &key) {
+            key.ToBinary(dest);
+            return key.BINARY_LENGTH;
+        }
+
+        Key DirEntry::_deserializeKey(const char **pos) {
+            Key key = Key::FromBinary(*pos);
+            *pos += Key::BINARY_LENGTH;
+            return key;
+        }
+
+        size_t DirEntry::serializedSize() const {
+            return 1 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize() + (name.size() + 1) + key.BINARY_LENGTH;
+        }
     }
 }

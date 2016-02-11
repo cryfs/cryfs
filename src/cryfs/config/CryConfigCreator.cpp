@@ -1,5 +1,6 @@
 #include "CryConfigCreator.h"
 #include "CryCipher.h"
+#include <gitversion/version.h>
 
 using cpputils::Console;
 using cpputils::unique_ref;
@@ -21,6 +22,7 @@ namespace cryfs {
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetRootBlob(_generateRootBlobKey());
+        config.SetVersion(version::VERSION_STRING);
         return config;
     }
 

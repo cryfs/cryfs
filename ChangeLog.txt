@@ -1,5 +1,6 @@
 Version 0.9.0 (unreleased)
 ---------------
+  (warning) file systems created with earlier CryFS versions are incompatible with this release
 * Fully support file access times
 * (for developers) New repository layout. All subrepositories have been merged to one directory
 * (for developers) Using CMake instead of biicode as build system
