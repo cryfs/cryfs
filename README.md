@@ -1,13 +1,6 @@
-# cryfs [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
+# CryFS [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
 CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.
 See [https://www.cryfs.org](https://www.cryfs.org).
-
-This repository contains the filesystem implementation. There are submodules in the following repositores:
-
-  - [Blockstore](https://github.com/cryfs/blockstore): Store (encrypted) fixed-size blocks of data in different backends
-  - [Blobstore](https://github.com/cryfs/blobstore): Store resizeable blobs of data using blocks from a blockstore
-  - [ParallelAccessStore](https://github.com/cryfs/parallelaccessstore): Concurrency primitive for Blockstore/Blobstore
-  - [Fs++](https://github.com/cryfs/fspp): Implement a file system against a platform independent interface
 
 Install latest release
 ======================
@@ -59,11 +52,12 @@ Requirements
     - thread
   - Crypto++ version >= 5.6.3 (including development headers) (TODO Lower minimal version possible?)
   - libFUSE version >= 2.8.6 (including development headers)
+  - Python >= 2.7
 
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev
+        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev python
         
         # Fedora
         TODO
@@ -76,7 +70,7 @@ Build
  
  1. Clone repository
 
-        $ git clone git@github.com:cryfs/cryfs.git cryfs
+        $ git clone https://github.com/cryfs/cryfs.git cryfs
         $ cd cryfs
 
  2. Build
