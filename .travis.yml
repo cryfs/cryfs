@@ -48,5 +48,6 @@ script:
 - ./test/parallelaccessstore/parallelaccessstore-test
 - ./test/blockstore/blockstore-test
 - ./test/blobstore/blobstore-test
+- ./test/cryfs/cryfs-test
 after_script:
 - rm run_with_fuse.sh
