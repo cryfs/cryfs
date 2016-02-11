@@ -21,7 +21,7 @@ install:
 - tar -xf boost.tar.bz2
 - cd boost_1_56_0
 # TODO We should use clang as toolchain for building boost when clang is used for building our code
-- ./bootstrap.sh --with-libraries=filesystem,thread
+- ./bootstrap.sh --with-libraries=filesystem,thread,chrono
 - sudo ./b2 -d0 install
 - cd ..
 - sudo rm -rf boost.tar.bz2 boost_1_56_0
