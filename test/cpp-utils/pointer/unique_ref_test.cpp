@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../../src/cpp-utils/pointer/unique_ref.h"
+#include "cpp-utils/pointer/unique_ref.h"
 #include <vector>
 #include <set>
 #include <map>

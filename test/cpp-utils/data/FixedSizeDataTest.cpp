@@ -1,6 +1,6 @@
-#include "../../../src/cpp-utils/data/DataFixture.h"
-#include "../../../src/cpp-utils/data/FixedSizeData.h"
-#include "../../../src/cpp-utils/data/Data.h"
+#include "cpp-utils/data/DataFixture.h"
+#include "cpp-utils/data/FixedSizeData.h"
+#include "cpp-utils/data/Data.h"
 #include <gtest/gtest.h>
 
 

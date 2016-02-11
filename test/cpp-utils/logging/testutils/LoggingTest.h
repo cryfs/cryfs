@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "../../../../src/cpp-utils/logging/logging.h"
+#include "cpp-utils/logging/logging.h"
 
 class MockLogger final {
 public:

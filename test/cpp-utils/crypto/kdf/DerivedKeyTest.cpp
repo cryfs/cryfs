@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "../../../../src/cpp-utils/crypto/kdf/DerivedKey.h"
-#include "../../../../src/cpp-utils/data/DataFixture.h"
+#include "cpp-utils/crypto/kdf/DerivedKey.h"
+#include "cpp-utils/data/DataFixture.h"
 
 using namespace cpputils;
 

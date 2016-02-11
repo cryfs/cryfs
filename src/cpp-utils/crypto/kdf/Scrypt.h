@@ -5,7 +5,7 @@
 #include "../../macros.h"
 #include "../../random/Random.h"
 extern "C" {
-    #include "../../../../vendor/scrypt-1.2.0/lib/crypto/crypto_scrypt.h"
+    #include <scrypt-1.2.0/lib/crypto/crypto_scrypt.h>
 }
 #include <stdexcept>
 #include "DerivedKey.h"

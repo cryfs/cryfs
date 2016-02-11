@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "../../../src/cpp-utils/network/CurlHttpClient.h"
-#include "../../../src/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
+#include "cpp-utils/network/CurlHttpClient.h"
+#include "cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
 
 using std::string;
 using boost::none;

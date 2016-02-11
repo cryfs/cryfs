@@ -1,3 +1,5 @@
+include(CheckCXXCompilerFlag)
+
 ###################################################
 #  Activate C++14
 #
@@ -44,4 +46,19 @@ function(ADD_BOOST TARGET)
     set(Boost_USE_STATIC_LIBS ON)
     target_include_directories(${TARGET} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
     target_link_libraries(${TARGET} PRIVATE ${Boost_LIBRARIES})
+endfunction()
+
+##################################################
+# Specify that a specific minimal version of gcc is required
+#
+# Uses:
+#  REQUIRE_GCC_VERSION(4.9)
+##################################################
+function(REQUIRE_GCC_VERSION)
+    if (CMAKE_COMPILER_IS_GNUCXX)
+        execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+        if (GCC_VERSION VERSION_LESS ${ARGN})
+            message(FATAL_ERROR "Needs at least gcc version ${ARGN}, found gcc ${GCC_VERSION}")
+        endif (GCC_VERSION VERSION_LESS ${ARGN})
+    endif (CMAKE_COMPILER_IS_GNUCXX)
 endfunction()

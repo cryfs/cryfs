@@ -4,11 +4,11 @@
 
 #include <gtest/gtest.h>
 
-#include "../../../src/cpp-utils/io/Console.h"
+#include "cpp-utils/io/Console.h"
 
 #include <future>
 #include <thread>
-#include "../../../src/cpp-utils/io/pipestream.h"
+#include "cpp-utils/io/pipestream.h"
 
 class ConsoleThread {
 public:

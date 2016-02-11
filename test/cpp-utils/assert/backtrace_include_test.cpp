@@ -1,4 +1,4 @@
-#include "../../../src/cpp-utils/assert/backtrace.h"
+#include "cpp-utils/assert/backtrace.h"
 
 // Test the header can be included without needing additional dependencies
 

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "../../../src/cpp-utils/network/FakeHttpClient.h"
-#include "../../../src/cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
+#include "cpp-utils/network/FakeHttpClient.h"
+#include "cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
 
 using boost::none;
 

@@ -2,10 +2,10 @@
 #ifndef MESSMER_CPPUTILS_TEST_CRYPTO_SYMMETRIC_TESTUTILS_FAKEAUTHENTICATEDCIPHER_H_
 #define MESSMER_CPPUTILS_TEST_CRYPTO_SYMMETRIC_TESTUTILS_FAKEAUTHENTICATEDCIPHER_H_
 
-#include "../../../../../src/cpp-utils/crypto/symmetric/Cipher.h"
-#include "../../../../../src/cpp-utils/data/FixedSizeData.h"
-#include "../../../../../src/cpp-utils/data/Data.h"
-#include "../../../../../src/cpp-utils/random/RandomGenerator.h"
+#include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "cpp-utils/data/FixedSizeData.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/random/RandomGenerator.h"
 
 namespace cpputils {
 

@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_LOGGING_LOGGER_H
 #define MESSMER_CPPUTILS_LOGGING_LOGGER_H
 
-#include "../../../vendor/spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 #include "../macros.h"
 
 namespace cpputils {

@@ -1,8 +1,8 @@
-#include "../../../src/cpp-utils/data/DataFixture.h"
-#include "../../../src/cpp-utils/data/Data.h"
+#include "cpp-utils/data/DataFixture.h"
+#include "cpp-utils/data/Data.h"
 #include <gtest/gtest.h>
 
-#include "../../../src/cpp-utils/tempfile/TempFile.h"
+#include "cpp-utils/tempfile/TempFile.h"
 
 #include <fstream>
 

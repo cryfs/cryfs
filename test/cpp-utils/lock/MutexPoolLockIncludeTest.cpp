@@ -1,3 +1,3 @@
-#include "../../../src/cpp-utils/lock/MutexPoolLock.h"
+#include "cpp-utils/lock/MutexPoolLock.h"
 
 // Test the header can be included without needing additional dependencies

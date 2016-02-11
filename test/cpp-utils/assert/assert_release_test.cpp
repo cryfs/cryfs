@@ -3,7 +3,7 @@
 
 //Include the ASSERT macro for a release build
 #define NDEBUG
-#include "../../../src/cpp-utils/assert/assert.h"
+#include "cpp-utils/assert/assert.h"
 
 using testing::MatchesRegex;
 

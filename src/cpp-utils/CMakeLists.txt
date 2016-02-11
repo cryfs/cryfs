@@ -1,5 +1,3 @@
-include(CheckCXXCompilerFlag)
-
 project (cpp-utils)
 
 set(SOURCES
