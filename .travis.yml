@@ -4,6 +4,18 @@ dist: trusty
 compiler:
 - gcc
 - clang
+addons:
+  apt:
+    packages:
+    - libcrypto++-dev
+install:
+- wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
+- tar -xf boost.tar.bz2
+- cd boost_1_56_0
+- ./bootstrap.sh --with-libraries=filesystem,thread
+- sudo ./b2 -d0 install
+- cd ..
+- rm -rf boost.tar.bz2 boost_1_56_0
 script:
 - mkdir cmake
 - cd cmake

@@ -39,7 +39,7 @@ endmacro(ENABLE_STYLE_WARNINGS)
 ##################################################
 function(ADD_BOOST)
   # Load boost libraries
-  find_package(Boost 1.57.0 #TODO Which min version?
+  find_package(Boost 1.55.0 #TODO Which min version?
                REQUIRED
                COMPONENTS ${ARGN})
   set(Boost_USE_STATIC_LIBS ON)
