@@ -11,6 +11,7 @@
 #include <fspp/fuse/Fuse.h>
 #include <fspp/impl/FilesystemImpl.h>
 #include <cpp-utils/process/subprocess.h>
+#include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
 #include "../filesystem/CryDevice.h"
 #include "../config/CryConfigLoader.h"
 #include "program_options/Parser.h"
@@ -19,14 +20,6 @@
 #include <gitversion/version.h>
 
 #include "VersionChecker.h"
-
-#include <pwd.h>
-
-//<limits.h> needed for libc to define PASS_MAX
-#include <limits.h>
-#ifdef PASS_MAX
-#error The used libc implementation has a maximal password size for getpass(). We cannot use it to ask for passwords.
-#endif
 
 //TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
@@ -49,6 +42,8 @@ using cpputils::unique_ref;
 using cpputils::SCryptSettings;
 using cpputils::Console;
 using cpputils::HttpClient;
+using cpputils::DontEchoStdinToStdoutRAII;
+using std::cin;
 using std::cout;
 using std::string;
 using std::endl;
@@ -131,9 +126,9 @@ namespace cryfs {
     }
 
     string Cli::_askPasswordForExistingFilesystem() {
-        string password = getpass("Password: ");
+        string password = _askPasswordFromStdin("Password: ");
         while (!_checkPassword(password)) {
-            password = getpass("Password: ");
+            password = _askPasswordFromStdin("Password: ");
         }
         return password;
     };
@@ -142,7 +137,7 @@ namespace cryfs {
         string password;
         bool again = false;
         do {
-            password = getpass("Password: ");
+            password = _askPasswordFromStdin("Password: ");
             if (!_checkPassword(password)) {
                 again = true;
                 continue;
@@ -157,12 +152,23 @@ namespace cryfs {
     }
 
     bool Cli::_confirmPassword(const string &password) {
-        string confirmPassword = getpass("Confirm Password: ");
+        string confirmPassword = _askPasswordFromStdin("Confirm Password: ");
         if (password != confirmPassword) {
             std::cout << "Passwords don't match" << std::endl;
             return false;
         }
         return true;
+    }
+
+    string Cli::_askPasswordFromStdin(const string &prompt) {
+        DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
+
+        std::cout << prompt << std::flush;
+        string result;
+        std::getline(cin, result);
+        std::cout << std::endl;
+
+        return result;
     }
 
     bf::path Cli::_determineConfigFile(const ProgramOptions &options) {

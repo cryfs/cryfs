@@ -24,6 +24,7 @@ namespace cryfs {
         std::string _getPassword(const program_options::ProgramOptions &options, std::function<std::string()> askPassword);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();
+        static std::string _askPasswordFromStdin(const std::string &prompt);
         static bool _confirmPassword(const std::string &password);
         static bool _checkPassword(const std::string &password);
         void _showVersion();
