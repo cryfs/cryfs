@@ -16,6 +16,8 @@ addons:
     packages:
     - libcrypto++-dev
     - libfuse-dev
+    # Needed to build rpm packages
+    - rpmbuild
 install:
 # Install boost
 - wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
