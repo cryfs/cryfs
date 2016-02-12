@@ -17,6 +17,7 @@ addons:
     - libcrypto++-dev
     - libfuse-dev
 install:
+# Detect number of CPU cores
 - export NUMCORES=`grep -c ^processor /proc/cpuinfo` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
 - echo Using $NUMCORES cores
 # Install boost
@@ -25,7 +26,7 @@ install:
 - cd boost_1_56_0
 # TODO We should use clang as toolchain for building boost when clang is used for building our code
 - ./bootstrap.sh --with-libraries=filesystem,thread,chrono,program_options
-- sudo ./b2 -d0 install
+- sudo ./b2 -d0 -j$NUMCORES install
 - cd ..
 - sudo rm -rf boost.tar.bz2 boost_1_56_0
 # Install run_with_fuse.sh
@@ -38,7 +39,7 @@ install:
 - sudo cp -a /dev/urandom /dev/random
 script:
 - cmake ..
-- make -j2
+- make -j$NUMCORES
 - ./test/cpp-utils/cpp-utils-test
 - ./run_with_fuse.sh ./test/fspp/fspp-test
 - ./test/parallelaccessstore/parallelaccessstore-test
