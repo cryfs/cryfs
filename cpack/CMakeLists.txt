@@ -1,4 +1,7 @@
-if(CMAKE_BUILD_TYPE MATCHES Release)
+# We only allow generating distribution packages if:
+# - it is a release build (to ensure all generated debian packages are fine to be distributed)
+# - tests are not built (because otherwise CPack would start installing googletest with the package as well)
+if(CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_TESTING)
     if("${CMAKE_VERSION}" VERSION_LESS "3.3")
         # Earlier cmake versions generate .deb packages for which the package manager says they're bad quality
         # and asks the user whether they really want to install it. Cmake 3.3 fixes this.
@@ -28,8 +31,8 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
             #set(CPACK_NSIS_CONTACT "messmer@cryfs.org")
             #set(CPACK_NSIS_MODIFY_PATH ON)
         else(WIN32 AND NOT UNIX)
-            set(CPACK_STRIP_FILES "bin/cryfs")
-            set(CPACK_SOURCE_STRIP_FILES "")
+            set(CPACK_STRIP_FILES ON)
+            set(CPACK_SOURCE_STRIP_FILES ON)
         endif(WIN32 AND NOT UNIX)
         set(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
         set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
@@ -42,4 +45,4 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
 
         include(CPack)
     endif("${CMAKE_VERSION}" VERSION_LESS "3.3")
-endif(CMAKE_BUILD_TYPE MATCHES Release)
+endif(CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_TESTING)
