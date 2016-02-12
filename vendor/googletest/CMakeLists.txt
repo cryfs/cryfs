@@ -2,7 +2,7 @@ include(CTest)
 
 if (BUILD_TESTING)
   function(install)
-    # Do nothing. Disable cmake install() commands in googletest.
+    # Do nothing. This disables cmake install() commands in googletest.
   endfunction()
   add_subdirectory(gtest-1.7.0)
 
