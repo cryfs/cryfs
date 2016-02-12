@@ -40,10 +40,10 @@ endfunction(target_enable_style_warnings)
 ##################################################
 function(target_add_boost TARGET)
     # Load boost libraries
+    set(Boost_USE_STATIC_LIBS ON) # Many supported systems don't have boost >= 1.56. Better link it statically.
     find_package(Boost 1.56.0
             REQUIRED
             COMPONENTS ${ARGN})
-    set(Boost_USE_STATIC_LIBS ON)
     target_include_directories(${TARGET} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
     target_link_libraries(${TARGET} PRIVATE ${Boost_LIBRARIES})
 endfunction(target_add_boost)
