@@ -103,7 +103,9 @@ void CryNode::stat(struct ::stat *result) const {
   if(_parent == none) {
     //We are the root directory.
 	//TODO What should we do?
-	result->st_mode = S_IFDIR;
+    result->st_uid = getuid();
+    result->st_gid = getgid();
+	result->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
     result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
   } else {
     (*_parent)->statChild(_key, result);
