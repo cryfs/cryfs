@@ -51,13 +51,14 @@ Requirements
     - program_options
     - thread
   - Crypto++ version >= 5.6.3 (including development headers) (TODO Lower minimal version possible?)
+  - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers)
   - Python >= 2.7
 
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libfuse-dev python
+        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
         
         # Fedora
         TODO
