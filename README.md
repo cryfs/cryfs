@@ -35,6 +35,9 @@ Manual install (Debian)
     sudo apt-get update
     sudo apt-get install cryfs
     
+GUI
+===
+If you want to use a GUI to mount your CryFS volumes, take a look at [zuluCrypt](http://mhogomchungu.github.io/zuluCrypt/). You can simply drag&drop your CryFS encrypted directory into the zuluMount application to mount it.
 
 Building from source
 ====================
