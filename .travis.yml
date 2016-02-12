@@ -17,7 +17,7 @@ addons:
     - libcrypto++-dev
     - libfuse-dev
 install:
-- export NUMCORES=`grep -c ^processor /proc/cpuinfo` && if [ -n "$NUMCORES" ]; do export NUMCORES=`sysctl -n hw.ncpu`; done
+- export NUMCORES=`grep -c ^processor /proc/cpuinfo` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
 - echo Using $NUMCORES cores
 # Install boost
 - wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
