@@ -33,11 +33,6 @@ install:
 - cd cmake
 - wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
 - chmod +x run_with_fuse.sh
-# Install cmake >= 3.3
-- wget --no-check-certificate https://cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz
-  && tar -xf cmake-3.3.2-Linux-x86_64.tar.gz
-  && sudo cp -R cmake-3.3.2-Linux-x86_64/* /usr
-  && rm -r cmake-3.3.2-Linux-x86_64 cmake-3.3.2-Linux-x86_64.tar.gz
 - cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
