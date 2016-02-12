@@ -1,6 +1,4 @@
-# Earlier cmake versions generate .deb packages for which the package manager says they're bad quality
-# and asks the user whether they really want to install it. Cmake 3.3 fixes this.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 include(utils.cmake)
 

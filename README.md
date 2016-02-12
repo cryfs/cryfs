@@ -42,7 +42,7 @@ Building from source
 Requirements
 ------------
   - GCC version >= 4.8 or Clang (TODO which minimal version?)
-  - CMake version >= 3.3
+  - CMake version >= 2.8
   - libcurl4 (including development headers) 
   - Boost libraries version >= 1.56 (including development headers)
     - filesystem
@@ -65,8 +65,8 @@ You can use the following commands to install these requirements
         # Macintosh
         TODO
 
-Build
------
+Build & Install
+---------------
  
  1. Clone repository
 
@@ -82,3 +82,22 @@ Build
  3. Install
 
         $ sudo make install
+
+
+Creating .deb packages
+----------------------
+
+There are additional requirements if you want to create .deb packages. They are:
+ - CMake version >= 3.3
+ - (optional) rpmbuild
+
+ 1. Clone repository
+
+        $ git clone https://github.com/cryfs/cryfs.git cryfs
+        $ cd cryfs
+
+ 2. Build
+
+        $ mkdir cmake && cd cmake
+        $ cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off
+        $ make package
