@@ -39,7 +39,6 @@ install:
 script:
 - cmake ..
 - make -j2
-- make package -j2
 - ./test/cpp-utils/cpp-utils-test
 - ./run_with_fuse.sh ./test/fspp/fspp-test
 - ./test/parallelaccessstore/parallelaccessstore-test
