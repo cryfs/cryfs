@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <boost/optional/optional_io.hpp>
 #include <cryfs/config/crypto/outer/OuterConfig.h>
 
 using cpputils::Data;
@@ -16,6 +15,7 @@ namespace boost {
         return stream << "OuterConfig()";
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 class OuterConfigTest: public ::testing::Test {
 public:

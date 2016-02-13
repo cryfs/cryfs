@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <boost/optional/optional_io.hpp>
 #include <cryfs/config/crypto/CryConfigEncryptor.h>
 
 using std::ostream;
@@ -24,6 +23,7 @@ namespace boost {
         return stream << "CryConfigEncryptor::Decrypted()";
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 class CryConfigEncryptorTest: public ::testing::Test {
 public:
