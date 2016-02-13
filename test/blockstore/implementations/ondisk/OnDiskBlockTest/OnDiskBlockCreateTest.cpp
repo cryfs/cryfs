@@ -62,12 +62,14 @@ INSTANTIATE_TEST_CASE_P(OnDiskBlockCreateSizeTest, OnDiskBlockCreateSizeTest, Va
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskSizeIsCorrect) {
   Data fileContent = Data::LoadFromFile(file.path()).value();
-  EXPECT_EQ(GetParam(), fileContent.size());
+  EXPECT_EQ(GetParam() + OnDiskBlock::formatVersionHeaderSize(), fileContent.size());
 }
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskBlockIsZeroedOut) {
   Data fileContent = Data::LoadFromFile(file.path()).value();
-  EXPECT_EQ(ZEROES, fileContent);
+  Data fileContentWithoutHeader(fileContent.size() - OnDiskBlock::formatVersionHeaderSize());
+  std::memcpy(fileContentWithoutHeader.data(), fileContent.dataOffset(OnDiskBlock::formatVersionHeaderSize()), fileContentWithoutHeader.size());
+  EXPECT_EQ(ZEROES, fileContentWithoutHeader);
 }
 
 // This test is also tested by OnDiskBlockStoreTest, but there the block is created using the BlockStore interface.

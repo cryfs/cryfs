@@ -24,6 +24,9 @@ public:
   void flush() const;
 
 protected:
+  // The FORMAT_VERSION_HEADER is used to allow future versions to have compatibility.
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+
   DataNode(DataNodeView block);
 
   DataNodeView &node();

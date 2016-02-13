@@ -31,19 +31,19 @@ public:
   OnDiskBlockLoadTest():
     dir(),
     key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
-    file(dir.path() / key.ToString()) {
+    file(dir.path() / key.ToString(), false) {
   }
   TempDir dir;
   Key key;
   TempFile file;
 
-  void SetFileSize(size_t size) {
+  void CreateBlockWithSize(size_t size) {
     Data data(size);
-    data.StoreToFile(file.path());
+    OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
   }
 
-  void StoreData(const Data &data) {
-    data.StoreToFile(file.path());
+  void StoreData(Data data) {
+    OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
   }
 
   unique_ref<OnDiskBlock> LoadBlock() {
@@ -57,8 +57,8 @@ public:
 };
 INSTANTIATE_TEST_CASE_P(OnDiskBlockLoadTest, OnDiskBlockLoadTest, Values(0, 1, 5, 1024, 10*1024*1024));
 
-TEST_P(OnDiskBlockLoadTest, FileSizeIsCorrect) {
-  SetFileSize(GetParam());
+TEST_P(OnDiskBlockLoadTest, LoadsCorrectSize) {
+  CreateBlockWithSize(GetParam());
 
   auto block = LoadBlock();
 
@@ -67,7 +67,7 @@ TEST_P(OnDiskBlockLoadTest, FileSizeIsCorrect) {
 
 TEST_P(OnDiskBlockLoadTest, LoadedDataIsCorrect) {
   Data randomData = DataFixture::generate(GetParam());
-  StoreData(randomData);
+  StoreData(randomData.copy());
 
   auto block = LoadBlock();
 

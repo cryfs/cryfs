@@ -55,6 +55,11 @@ private:
   void _encryptToBaseBlock();
   static cpputils::Data _prependKeyHeaderToData(const Key &key, cpputils::Data data);
   static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data);
+  static cpputils::Data _prependFormatHeader(const cpputils::Data &data);
+  static void _checkFormatHeader(const void *data);
+
+  // This header is prepended to blocks to allow future versions to have compatibility.
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
 
   std::mutex _mutex;
 
@@ -64,12 +69,16 @@ private:
 template<class Cipher>
 constexpr unsigned int EncryptedBlock<Cipher>::HEADER_LENGTH;
 
+template<class Cipher>
+constexpr uint16_t EncryptedBlock<Cipher>::FORMAT_VERSION_HEADER;
+
 
 template<class Cipher>
 boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
   cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, std::move(data));
   cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
-  auto baseBlock = baseBlockStore->tryCreate(key, std::move(encrypted));
+  cpputils::Data encryptedWithFormatHeader = _prependFormatHeader(std::move(encrypted));
+  auto baseBlock = baseBlockStore->tryCreate(key, std::move(encryptedWithFormatHeader));
   if (baseBlock == boost::none) {
     //TODO Test this code branch
     return boost::none;
@@ -79,9 +88,17 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
 }
 
 template<class Cipher>
+cpputils::Data EncryptedBlock<Cipher>::_prependFormatHeader(const cpputils::Data &data) {
+  cpputils::Data dataWithHeader(sizeof(FORMAT_VERSION_HEADER) + data.size());
+  std::memcpy(dataWithHeader.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
+  std::memcpy(dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.data(), data.size());
+  return dataWithHeader;
+}
+
+template<class Cipher>
 boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &encKey) {
-  //TODO Change BlockStore so we can read their "class Data" objects instead of "void *data()", and then we can change the Cipher interface to take Data objects instead of "byte *" + size
-  boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data(), baseBlock->size(), encKey);
+  _checkFormatHeader(baseBlock->data());
+  boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data() + sizeof(FORMAT_VERSION_HEADER), baseBlock->size() - sizeof(FORMAT_VERSION_HEADER), encKey);
   if(plaintextWithHeader == boost::none) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
     cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?";
@@ -93,6 +110,13 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
     return boost::none;
   }
   return cpputils::make_unique_ref<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));
+}
+
+template<class Cipher>
+void EncryptedBlock<Cipher>::_checkFormatHeader(const void *data) {
+  if (*reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data) != FORMAT_VERSION_HEADER) {
+    throw std::runtime_error("The encrypted block has the wrong format. Was it created with a newer version of CryFS?");
+  }
 }
 
 template<class Cipher>
@@ -159,7 +183,8 @@ template<class Cipher>
 void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
   if (_dataChanged) {
     cpputils::Data encrypted = Cipher::encrypt((byte*)_plaintextWithHeader.data(), _plaintextWithHeader.size(), _encKey);
-    _baseBlock->write(encrypted.data(), 0, encrypted.size());
+    _baseBlock->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
+    _baseBlock->write(encrypted.data(), sizeof(FORMAT_VERSION_HEADER), encrypted.size());
     _dataChanged = false;
   }
 }

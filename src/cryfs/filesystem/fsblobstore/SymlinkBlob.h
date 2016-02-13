@@ -22,9 +22,7 @@ namespace cryfs {
         private:
             boost::filesystem::path _target;
 
-            static void _checkMagicNumber(const blobstore::Blob &blob);
-
-            static boost::filesystem::path _readTargetFromBlob(const blobstore::Blob &blob);
+            static boost::filesystem::path _readTargetFromBlob(const FsBlobView &blob);
 
             DISALLOW_COPY_AND_ASSIGN(SymlinkBlob);
         };

@@ -6,7 +6,6 @@
 
 #include <blobstore/implementations/onblocks/utils/Math.h>
 #include <cpp-utils/data/Data.h>
-#include "MagicNumbers.h"
 #include "../CryDevice.h"
 #include "FileBlob.h"
 #include "SymlinkBlob.h"
@@ -30,7 +29,7 @@ constexpr off_t DirBlob::DIR_LSTAT_SIZE;
 
 DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
     FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
-  ASSERT(magicNumber() == MagicNumbers::DIR, "Loaded blob is not a directory");
+  ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
 
@@ -46,15 +45,15 @@ void DirBlob::flush() {
 }
 
 unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::function<off_t(const blockstore::Key&)> getLstatSize) {
-  InitializeBlobWithMagicNumber(blob.get(), MagicNumbers::DIR);
+  InitializeBlob(blob.get(), FsBlobView::BlobType::DIR);
   return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
 }
 
 void DirBlob::_writeEntriesToBlob() {
   if (_changed) {
     Data serialized = _entries.serialize();
-    baseBlob().resize(1 + serialized.size());
-    baseBlob().write(serialized.data(), 1, serialized.size());
+    baseBlob().resize(serialized.size());
+    baseBlob().write(serialized.data(), 0, serialized.size());
     _changed = false;
   }
 }
@@ -62,7 +61,7 @@ void DirBlob::_writeEntriesToBlob() {
 void DirBlob::_readEntriesFromBlob() {
   //No lock needed, because this is only called from the constructor.
   Data data = baseBlob().readAll();
-  _entries.deserializeFrom(static_cast<uint8_t*>(data.data()) + 1, data.size() - 1);  // data+1/size-1 because the first byte is the magic number
+  _entries.deserializeFrom(static_cast<uint8_t*>(data.data()), data.size());
 }
 
 void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {

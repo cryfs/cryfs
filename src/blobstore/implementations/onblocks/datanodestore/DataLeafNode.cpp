@@ -16,6 +16,9 @@ DataLeafNode::DataLeafNode(DataNodeView view)
 : DataNode(std::move(view)) {
   ASSERT(node().Depth() == 0, "Leaf node must have depth 0. Is it an inner node instead?");
   ASSERT(numBytes() <= maxStoreableBytes(), "Leaf says it stores more bytes than it has space for");
+  if (node().FormatVersion() != FORMAT_VERSION_HEADER) {
+    throw std::runtime_error("This node format is not supported. Was it created with a newer version of CryFS?");
+  }
 }
 
 DataLeafNode::~DataLeafNode() {
@@ -23,6 +26,7 @@ DataLeafNode::~DataLeafNode() {
 
 unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ref<Block> block) {
   DataNodeView node(std::move(block));
+  node.setFormatVersion(DataNode::FORMAT_VERSION_HEADER);
   node.setDepth(0);
   node.setSize(0);
   //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.

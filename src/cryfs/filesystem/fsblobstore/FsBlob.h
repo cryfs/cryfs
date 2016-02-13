@@ -4,6 +4,7 @@
 
 #include <cpp-utils/pointer/unique_ref.h>
 #include <blobstore/interface/Blob.h>
+#include "FsBlobView.h"
 
 namespace cryfs {
     namespace fsblobstore {
@@ -17,20 +18,17 @@ namespace cryfs {
         protected:
             FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
 
-            blobstore::Blob &baseBlob();
-            const blobstore::Blob &baseBlob() const;
+            FsBlobView &baseBlob();
+            const FsBlobView &baseBlob() const;
 
-            unsigned char magicNumber() const;
-            static unsigned char magicNumber(const blobstore::Blob &blob);
-
-            static void InitializeBlobWithMagicNumber(blobstore::Blob *blob, unsigned char magicNumber);
+            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber);
 
             friend class FsBlobStore;
             virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
 
         private:
 
-            cpputils::unique_ref<blobstore::Blob> _baseBlob;
+            FsBlobView _baseBlob;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlob);
         };
@@ -48,34 +46,23 @@ namespace cryfs {
         }
 
         inline const blockstore::Key &FsBlob::key() const {
-            return _baseBlob->key();
+            return _baseBlob.key();
         }
 
-        inline const blobstore::Blob &FsBlob::baseBlob() const {
-            return *_baseBlob;
+        inline const FsBlobView &FsBlob::baseBlob() const {
+            return _baseBlob;
         }
 
-        inline blobstore::Blob &FsBlob::baseBlob() {
-            return *_baseBlob;
+        inline FsBlobView &FsBlob::baseBlob() {
+            return _baseBlob;
         }
 
-        inline unsigned char FsBlob::magicNumber(const blobstore::Blob &blob) {
-            unsigned char value;
-            blob.read(&value, 0, 1);
-            return value;
-        }
-
-        inline unsigned char FsBlob::magicNumber() const {
-            return magicNumber(*_baseBlob);
-        }
-
-        inline void FsBlob::InitializeBlobWithMagicNumber(blobstore::Blob *blob, unsigned char magicNumber) {
-            blob->resize(1);
-            blob->write(&magicNumber, 0, 1);
+        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber) {
+            FsBlobView::InitializeBlob(blob, magicNumber);
         }
 
         inline cpputils::unique_ref<blobstore::Blob> FsBlob::releaseBaseBlob() {
-            return std::move(_baseBlob);
+            return _baseBlob.releaseBaseBlob();
         }
     }
 }

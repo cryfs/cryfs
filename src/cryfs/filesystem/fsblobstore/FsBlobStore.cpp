@@ -2,7 +2,6 @@
 #include "FileBlob.h"
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
-#include "MagicNumbers.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -38,12 +37,12 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::Key &key
     if (blob == none) {
         return none;
     }
-    unsigned char magicNumber = FsBlob::magicNumber(**blob);
-    if (magicNumber == MagicNumbers::FILE) {
+    FsBlobView::BlobType blobType = FsBlobView::blobType(**blob);
+    if (blobType == FsBlobView::BlobType::FILE) {
         return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob)));
-    } else if (magicNumber == MagicNumbers::DIR) {
+    } else if (blobType == FsBlobView::BlobType::DIR) {
         return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _getLstatSize()));
-    } else if (magicNumber == MagicNumbers::SYMLINK) {
+    } else if (blobType == FsBlobView::BlobType::SYMLINK) {
         return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob)));
     } else {
         ASSERT(false, "Unknown magic number");

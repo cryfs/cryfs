@@ -56,8 +56,10 @@ public:
   }
 
   void EXPECT_STORED_FILE_DATA_CORRECT() {
-    Data actual = Data::LoadFromFile(file.path()).value();
-    EXPECT_EQ(randomData, actual);
+    Data fileContent = Data::LoadFromFile(file.path()).value();
+    Data fileContentWithoutHeader(fileContent.size() - OnDiskBlock::formatVersionHeaderSize());
+    std::memcpy(fileContentWithoutHeader.data(), fileContent.dataOffset(OnDiskBlock::formatVersionHeaderSize()), fileContentWithoutHeader.size());
+    EXPECT_EQ(randomData, fileContentWithoutHeader);
   }
 };
 INSTANTIATE_TEST_CASE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));

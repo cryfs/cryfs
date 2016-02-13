@@ -14,6 +14,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
+constexpr uint16_t DataNode::FORMAT_VERSION_HEADER;
+
 DataNode::DataNode(DataNodeView node)
 : _node(std::move(node)) {
 }

@@ -26,6 +26,7 @@ set(SOURCES
     filesystem/fsblobstore/utils/DirEntry.cpp
     filesystem/fsblobstore/utils/DirEntryList.cpp
     filesystem/fsblobstore/FsBlobStore.cpp
+    filesystem/fsblobstore/FsBlobView.cpp
     filesystem/fsblobstore/FileBlob.cpp
     filesystem/fsblobstore/FsBlob.cpp
     filesystem/fsblobstore/SymlinkBlob.cpp

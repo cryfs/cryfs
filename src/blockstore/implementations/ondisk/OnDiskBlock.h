@@ -19,6 +19,10 @@ public:
   OnDiskBlock(const Key &key, const boost::filesystem::path &filepath, cpputils::Data data);
   ~OnDiskBlock();
 
+  static const std::string FORMAT_VERSION_HEADER_PREFIX;
+  static const std::string FORMAT_VERSION_HEADER;
+  static unsigned int formatVersionHeaderSize();
+
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
@@ -32,11 +36,16 @@ public:
   void resize(size_t newSize) override;
 
 private:
+
+  static bool _isAcceptedCryfsHeader(const cpputils::Data &data);
+  static bool _isOtherCryfsHeader(const cpputils::Data &data);
+  static void _checkHeader(std::istream *str);
+
   const boost::filesystem::path _filepath;
   cpputils::Data _data;
   bool _dataChanged;
 
-  void _fillDataWithZeroes();
+  static boost::optional<cpputils::Data> _loadFromDisk(const boost::filesystem::path &filepath);
   void _storeToDisk() const;
 
   std::mutex _mutex;

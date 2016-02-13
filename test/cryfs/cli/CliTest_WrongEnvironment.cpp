@@ -60,11 +60,9 @@ public:
         if (GetParam().runningInForeground) {
             result.push_back("-f");
         }
-        // Test case should be non-interactive, so don't ask for cipher or password.
+        // Test case should be non-interactive, so don't ask for cipher.
         result.push_back("--cipher");
         result.push_back("aes-256-gcm");
-        result.push_back("--extpass");
-        result.push_back("echo mypassword");
         return result;
     }
 };

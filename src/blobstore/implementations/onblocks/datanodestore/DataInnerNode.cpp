@@ -15,6 +15,9 @@ namespace datanodestore {
 DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
   ASSERT(depth() > 0, "Inner node can't have depth 0. Is this a leaf maybe?");
+  if (node().FormatVersion() != FORMAT_VERSION_HEADER) {
+    throw std::runtime_error("This node format is not supported. Was it created with a newer version of CryFS?");
+  }
 }
 
 DataInnerNode::~DataInnerNode() {
@@ -22,6 +25,7 @@ DataInnerNode::~DataInnerNode() {
 
 unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNode &first_child) {
   DataNodeView node(std::move(block));
+  node.setFormatVersion(DataNode::FORMAT_VERSION_HEADER);
   node.setDepth(first_child.depth() + 1);
   node.setSize(1);
   auto result = make_unique_ref<DataInnerNode>(std::move(node));

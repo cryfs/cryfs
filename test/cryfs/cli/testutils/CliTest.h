@@ -39,6 +39,10 @@ public:
             _args.push_back(const_cast<char*>(arg));
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
+        // Write 2x 'pass\n' to stdin so Cryfs can read it as password (+ password confirmation prompt)
+        std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
+        std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
+        // Run Cryfs
         cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console, _httpClient()).main(_args.size(), _args.data());
     }
 

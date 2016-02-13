@@ -28,10 +28,12 @@ public:
 
   //Total size of the header
   static constexpr uint32_t HEADERSIZE_BYTES = 8;
+  //Where in the header is the format version field (used to allow compatibility with future versions of CryFS)
+  static constexpr uint32_t FORMAT_VERSION_OFFSET_BYTES = 0; //format version uses 2 bytes
   //Where in the header is the depth field
-  static constexpr uint32_t DEPTH_OFFSET_BYTES = 0;
+  static constexpr uint32_t DEPTH_OFFSET_BYTES = 3; // depth uses 1 byte
   //Where in the header is the size field (for inner nodes: number of children, for leafs: content data size)
-  static constexpr uint32_t SIZE_OFFSET_BYTES = 4;
+  static constexpr uint32_t SIZE_OFFSET_BYTES = 4; // size uses 4 bytes
 
 
   //Size of a block (header + data region)
@@ -65,6 +67,14 @@ public:
   ~DataNodeView() {}
 
   DataNodeView(DataNodeView &&rhs) = default;
+
+  uint16_t FormatVersion() const {
+    return *((uint8_t*)_block->data()+DataNodeLayout::FORMAT_VERSION_OFFSET_BYTES);
+  }
+
+  void setFormatVersion(uint16_t value) {
+    _block->write(&value, DataNodeLayout::FORMAT_VERSION_OFFSET_BYTES, sizeof(value));
+  }
 
   uint8_t Depth() const {
     return *((uint8_t*)_block->data()+DataNodeLayout::DEPTH_OFFSET_BYTES);
