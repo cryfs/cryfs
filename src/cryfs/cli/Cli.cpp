@@ -107,13 +107,8 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_getPassword(const ProgramOptions &options, function<string()> askPassword) {
-        string password;
-        if (options.extPass() == none) {
-            password = askPassword();
-        } else {
-            password = cpputils::Subprocess::call(*options.extPass());
-        }
+    string Cli::_getPassword(function<string()> askPassword) {
+        string password = askPassword();
         //Remove trailing newline
         if (password[password.size()-1] == '\n') {
             password.resize(password.size()-1);
@@ -183,8 +178,8 @@ namespace cryfs {
         try {
             auto configFile = _determineConfigFile(options);
             auto config = CryConfigLoader(_console, _keyGenerator, _scryptSettings,
-                                          std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForExistingFilesystem),
-                                          std::bind(&Cli::_getPassword, this, std::cref(options), &Cli::_askPasswordForNewFilesystem),
+                                          std::bind(&Cli::_getPassword, this, &Cli::_askPasswordForExistingFilesystem),
+                                          std::bind(&Cli::_getPassword, this, &Cli::_askPasswordForNewFilesystem),
                                           options.cipher()).loadOrCreate(configFile);
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;

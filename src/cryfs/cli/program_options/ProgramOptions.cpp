@@ -11,10 +11,9 @@ namespace bf = boost::filesystem;
 ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir, const optional<bf::path> &configFile,
                                bool foreground, const optional<double> &unmountAfterIdleMinutes,
                                const optional<bf::path> &logFile, const optional<string> &cipher,
-                               const optional<string> &extPass, const vector<char*> &fuseOptions)
+                               const vector<char*> &fuseOptions)
     :_baseDir(baseDir), _mountDir(nullptr), _configFile(configFile), _foreground(foreground),
-     _cipher(cipher), _unmountAfterIdleMinutes(unmountAfterIdleMinutes), _logFile(logFile), _extPass(extPass),
-     _fuseOptions(fuseOptions) {
+     _cipher(cipher), _unmountAfterIdleMinutes(unmountAfterIdleMinutes), _logFile(logFile), _fuseOptions(fuseOptions) {
 
     string mountDirStr = mountDir.native();
     _mountDir = new char[mountDirStr.size()+1];
@@ -28,7 +27,7 @@ ProgramOptions::ProgramOptions(ProgramOptions &&rhs)
     :_baseDir(std::move(rhs._baseDir)), _mountDir(std::move(rhs._mountDir)), _configFile(std::move(rhs._configFile)),
      _foreground(std::move(rhs._foreground)), _cipher(std::move(rhs._cipher)),
      _unmountAfterIdleMinutes(std::move(rhs._unmountAfterIdleMinutes)), _logFile(std::move(rhs._logFile)),
-     _extPass(std::move(rhs._extPass)), _fuseOptions(std::move(rhs._fuseOptions)) {
+     _fuseOptions(std::move(rhs._fuseOptions)) {
     rhs._mountDir = nullptr;
 }
 
@@ -64,10 +63,6 @@ const optional<bf::path> &ProgramOptions::logFile() const {
 
 const optional<string> &ProgramOptions::cipher() const {
     return _cipher;
-}
-
-const optional<string> &ProgramOptions::extPass() const {
-    return _extPass;
 }
 
 const vector<char *> &ProgramOptions::fuseOptions() const {

@@ -3,6 +3,9 @@ Version 0.9.0 (unreleased)
   (warning) file systems created with earlier CryFS versions are incompatible with this release
 * Fully support file access times
 * Fix: Password is read from stdin, not from glibc getpass(). This enables external tools (e.g. GUIs) to pass in the password without problems.
+* Remove --extpass parameter, because that encourages tool writers to do bad things like storing a password in a file and using --extpass="cat filename".
+  The password can now be passed in to stdin without problems, so tools should use that.
+* Works with zuluMount GUI, https://mhogomchungu.github.io/zuluCrypt/
 * (for developers) New repository layout. All subrepositories have been merged to one directory
 * (for developers) Using CMake instead of biicode as build system
 

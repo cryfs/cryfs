@@ -16,7 +16,7 @@ namespace cryfs {
                            const boost::optional<boost::filesystem::path> &configFile,
                            bool foreground, const boost::optional<double> &unmountAfterIdleMinutes,
                            const boost::optional<boost::filesystem::path> &logFile,
-                           const boost::optional<std::string> &cipher, const boost::optional<std::string> &extPass,
+                           const boost::optional<std::string> &cipher,
                            const std::vector<char *> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs);
             ~ProgramOptions();
@@ -28,7 +28,6 @@ namespace cryfs {
             const boost::optional<std::string> &cipher() const;
             const boost::optional<double> &unmountAfterIdleMinutes() const;
             const boost::optional<boost::filesystem::path> &logFile() const;
-            const boost::optional<std::string> &extPass() const;
             const std::vector<char *> &fuseOptions() const;
 
         private:
@@ -39,7 +38,6 @@ namespace cryfs {
             boost::optional<std::string> _cipher;
             boost::optional<double> _unmountAfterIdleMinutes;
             boost::optional<boost::filesystem::path> _logFile;
-            boost::optional<std::string> _extPass;
             std::vector<char *> _fuseOptions;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);

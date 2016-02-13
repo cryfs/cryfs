@@ -61,12 +61,8 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         cipher = vm["cipher"].as<string>();
         _checkValidCipher(*cipher, supportedCiphers);
     }
-    optional<string> extPass = none;
-    if (vm.count("extpass")) {
-        extPass = vm["extpass"].as<string>();
-    }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, extPass, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, options.second);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -114,7 +110,6 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("cipher", po::value<string>(), "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
-            ("extpass", po::value<string>(), "External program to use for password input")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
             ;
     desc->add(options);
