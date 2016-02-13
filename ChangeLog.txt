@@ -6,6 +6,7 @@ Version 0.9.0 (unreleased)
 * Remove --extpass parameter, because that encourages tool writers to do bad things like storing a password in a file and using --extpass="cat filename".
   The password can now be passed in to stdin without problems, so tools should use that.
 * Works with zuluMount GUI, https://mhogomchungu.github.io/zuluCrypt/
+* Introduce version flags for file system entities to allow future CryFS versions to be backwards-compatible even if the format changes.
 * (for developers) New repository layout. All subrepositories have been merged to one directory
 * (for developers) Using CMake instead of biicode as build system
 
