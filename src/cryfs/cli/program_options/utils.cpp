@@ -15,7 +15,9 @@ namespace cryfs {
             vector<char*> afterDoubleDash;
             afterDoubleDash.reserve(options.size()-beforeDoubleDash.size()+1);
             afterDoubleDash.push_back(options[0]);
-            std::copy(doubleDashIterator+1, options.end(), std::back_inserter(afterDoubleDash));
+            if (options.end() >= doubleDashIterator+1) {
+                std::copy(doubleDashIterator + 1, options.end(), std::back_inserter(afterDoubleDash));
+            }
             return make_pair(
                     beforeDoubleDash,
                     afterDoubleDash
