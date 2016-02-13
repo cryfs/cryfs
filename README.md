@@ -44,7 +44,7 @@ Building from source
 
 Requirements
 ------------
-  - GCC version >= 4.8 or Clang (TODO which minimal version?)
+  - GCC version >= 4.8 or Clang >= 3.5
   - CMake version >= 2.8
   - libcurl4 (including development headers) 
   - Boost libraries version >= 1.56 (including development headers)
