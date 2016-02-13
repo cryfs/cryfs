@@ -209,8 +209,11 @@ namespace cryfs {
                 device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
             }
 
+#ifdef __APPLE__
+            std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
+#else
             std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
-
+#endif
             vector<char *> fuseOptions = options.fuseOptions();
             fuse.run(fuseOptions.size(), fuseOptions.data());
         } catch (const std::exception &e) {
