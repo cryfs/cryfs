@@ -63,6 +63,13 @@ function(require_gcc_version VERSION)
     endif (CMAKE_COMPILER_IS_GNUCXX)
 endfunction(require_gcc_version)
 
+
+##################################################
+# Specify that a specific minimal version of clang is required
+#
+# Uses:
+#  require_clang_version(3.5)
+##################################################
 function(require_clang_version VERSION)
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${VERSION})
