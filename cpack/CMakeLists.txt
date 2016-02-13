@@ -1,7 +1,8 @@
 # We only allow generating distribution packages if:
 # - it is a release build (to ensure all generated debian packages are fine to be distributed)
 # - tests are not built (because otherwise CPack would start installing googletest with the package as well)
-if(CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_TESTING)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILDTYPE)
+if(BUILDTYPE MATCHES RELEASE AND NOT BUILD_TESTING)
     if("${CMAKE_VERSION}" VERSION_LESS "3.3")
         # Earlier cmake versions generate .deb packages for which the package manager says they're bad quality
         # and asks the user whether they really want to install it. Cmake 3.3 fixes this.
