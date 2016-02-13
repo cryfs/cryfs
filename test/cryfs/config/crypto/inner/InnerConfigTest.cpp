@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <boost/optional/optional_io.hpp>
 #include <cryfs/config/crypto/inner/InnerConfig.h>
 
 using cpputils::Data;
@@ -15,6 +14,7 @@ namespace boost {
         return stream << "InnerConfig(" << config.cipherName << ", [data])";
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 TEST(InnerConfigTest, SomeValues) {
     Data serialized = InnerConfig{"myciphername", DataFixture::generate(1024)}.serialize();

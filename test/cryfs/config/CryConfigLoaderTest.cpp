@@ -4,7 +4,6 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <boost/optional/optional_io.hpp>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -25,6 +24,7 @@ namespace boost {
         return stream << "CryConfigFile()";
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 //TODO Test loading with same/different --cipher argument
 

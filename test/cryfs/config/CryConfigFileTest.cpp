@@ -2,7 +2,6 @@
 
 #include <cryfs/config/CryConfigFile.h>
 #include <cpp-utils/tempfile/TempFile.h>
-#include <boost/optional/optional_io.hpp>
 
 using namespace cryfs;
 using cpputils::TempFile;
@@ -17,10 +16,11 @@ namespace bf = boost::filesystem;
 namespace boost {
     inline std::ostream &operator<<(std::ostream &out, const CryConfigFile &file) {
         UNUSED(file);
-        out << "ConfigFile";
+        out << "ConfigFile()";
         return out;
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 class CryConfigFileTest: public ::testing::Test {
 public:

@@ -137,7 +137,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   callFsActionCallbacks();
-  throw FuseErrnoException(ENOTSUP);
+  // TODO What should we report here?
 }
 
 unique_ref<FileBlobRef> CryDevice::CreateFileBlob() {

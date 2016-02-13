@@ -2,7 +2,6 @@
 #include <cryfs/config/crypto/CryConfigEncryptorFactory.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using cpputils::SCrypt;
 using cpputils::AES256_GCM;
@@ -18,7 +17,7 @@ namespace boost {
         return stream << "CryConfigEncryptor::Decrypted()";
     }
 }
-
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 class CryConfigEncryptorFactoryTest: public ::testing::Test {
 public:

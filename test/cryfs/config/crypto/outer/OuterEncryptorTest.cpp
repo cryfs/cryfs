@@ -2,7 +2,6 @@
 #include <cryfs/config/crypto/outer/OuterEncryptor.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <boost/optional/optional_io.hpp>
 
 using std::ostream;
 using boost::none;
@@ -19,6 +18,7 @@ namespace boost {
         return stream << "cpputils::Data()";
     }
 }
+#include <boost/optional/optional_io.hpp>
 
 class OuterEncryptorTest : public ::testing::Test {
 public:
