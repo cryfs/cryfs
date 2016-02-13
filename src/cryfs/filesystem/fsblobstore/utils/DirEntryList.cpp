@@ -1,5 +1,6 @@
 #include "DirEntryList.h"
 #include <limits>
+#include <cpp-utils/system/clock_gettime.h>
 
 //TODO Get rid of that in favor of better error handling
 #include <fspp/fuse/FuseErrnoException.h>
