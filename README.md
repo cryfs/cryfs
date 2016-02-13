@@ -61,13 +61,13 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        $ sudo apt-get install g++ cmake libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
         
         # Fedora
         TODO
         
         # Macintosh
-        TODO
+        brew install cmake boost cryptopp osxfuse
 
 Build & Install
 ---------------
