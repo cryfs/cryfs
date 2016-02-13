@@ -112,7 +112,8 @@ optional<Data> OnDiskBlock::_loadFromDisk(const bf::path &filepath) {
   }
   _checkHeader(&file);
   Data result = Data::LoadFromStream(file);
-  return result;
+  //TODO With newer compilers, "return result;" would be enough
+  return boost::optional<Data>(std::move(result));
 }
 
 void OnDiskBlock::_checkHeader(istream *str) {
