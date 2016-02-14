@@ -777,18 +777,18 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
 
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
+  LOG(INFO) << "Filesystem started.";
+
   _running = true;
 
 #ifdef FSPP_LOG
   cpputils::logging::setLevel(DEBUG);
 #endif
-
-  LOG(INFO) << "Filesystem started.";
 }
 
 void Fuse::destroy() {
-  _running = false;
   LOG(INFO) << "Filesystem stopped.";
+  _running = false;
 }
 
 int Fuse::access(const bf::path &path, int mask) {
