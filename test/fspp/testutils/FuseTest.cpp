@@ -22,8 +22,8 @@ FuseTest::FuseTest(): fsimpl() {
   auto successAction = Return();
   ON_CALL(fsimpl, openFile(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, closeFile(_)).WillByDefault(defaultAction);
-  ON_CALL(fsimpl, lstat(_,_)).WillByDefault(defaultAction);
-  ON_CALL(fsimpl, fstat(_,_)).WillByDefault(defaultAction);
+  ON_CALL(fsimpl, lstat(_,_)).WillByDefault(Throw(FuseErrnoException(ENOENT)));
+  ON_CALL(fsimpl, fstat(_,_)).WillByDefault(Throw(FuseErrnoException(ENOENT)));
   ON_CALL(fsimpl, truncate(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, ftruncate(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, read(_,_,_,_)).WillByDefault(defaultAction);
@@ -45,6 +45,7 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, chown(_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, createSymlink(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, readSymlink(_,_,_)).WillByDefault(defaultAction);
+  ReturnIsDirOnLstat("/");
 }
 
 unique_ref<FuseTest::TempTestFS> FuseTest::TestFS() {
