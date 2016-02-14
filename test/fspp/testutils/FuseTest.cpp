@@ -19,7 +19,6 @@ MockFilesystem::~MockFilesystem() {}
 
 FuseTest::FuseTest(): fsimpl() {
   auto defaultAction = Throw(FuseErrnoException(EIO));
-  auto successAction = Return();
   ON_CALL(fsimpl, openFile(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, closeFile(_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, lstat(_,_)).WillByDefault(Throw(FuseErrnoException(ENOENT)));
@@ -30,7 +29,7 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, write(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, fsync(_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, fdatasync(_)).WillByDefault(defaultAction);
-  ON_CALL(fsimpl, access(_,_)).WillByDefault(successAction);
+  ON_CALL(fsimpl, access(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, createAndOpenFile(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, mkdir(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, rmdir(_)).WillByDefault(defaultAction);
@@ -45,6 +44,8 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, chown(_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, createSymlink(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, readSymlink(_,_,_)).WillByDefault(defaultAction);
+
+  EXPECT_CALL(fsimpl, access(_,_)).WillRepeatedly(Return());
   ReturnIsDirOnLstat("/");
 }
 
