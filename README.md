@@ -80,7 +80,7 @@ Build & Install
  2. Build
 
         $ mkdir cmake && cd cmake
-        $ cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off
+        $ cmake .. -DCMAKE_BUILD_TYPE=Release
         $ make
         
  3. Install
