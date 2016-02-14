@@ -1,6 +1,6 @@
-Version 0.9.0 (unreleased)
+Version 0.9.0
 ---------------
-  (warning) file systems created with earlier CryFS versions are incompatible with this release
+  (warning) file systems created with earlier CryFS versions are incompatible with this release.
 * Fully support file access times
 * Fix: Password is read from stdin, not from glibc getpass(). This enables external tools (e.g. GUIs) to pass in the password without problems.
 * Remove --extpass parameter, because that encourages tool writers to do bad things like storing a password in a file and using --extpass="cat filename".
