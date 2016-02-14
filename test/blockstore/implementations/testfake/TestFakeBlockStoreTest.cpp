@@ -3,7 +3,7 @@
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include <gtest/gtest.h>
-
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::BlockStore;
 using blockstore::BlockStoreWithRandomKeys;
