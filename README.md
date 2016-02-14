@@ -88,10 +88,13 @@ Build & Install
         $ sudo make install
         
 You can pass the following variables to CMake (using *-Dvariablename=value*):
- - **CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols
- - **BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time)
- - **FUSE_LIB_PATH**=[path]: Path to the directory containing the fuse library (or osxfuse library on Mac)
- - **CRYPTOPP_LIB_PATH**=[path]: Path to the directory containing the Crypto++ library
+ - -D**CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols
+ - -D**BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time)
+ 
+On most systems, CMake should find the libraries automatically.
+If this doesn't work for you, you can use the following CMake variables:
+ - -D**FUSE_LIB_PATH**=[path]: Path to the directory containing the fuse library (or osxfuse library on Mac)
+ - -D**CRYPTOPP_LIB_PATH**=[path]: Path to the directory containing the Crypto++ library
 
 
 Creating .deb packages
