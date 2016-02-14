@@ -21,7 +21,9 @@ target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(${PROJECT_NAME} PRIVATE osxfuse)
- else(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(${PROJECT_NAME} PRIVATE fuse)
+  find_library(FUSE osxfuse)
+else(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  find_library(FUSE fuse)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${FUSE})
