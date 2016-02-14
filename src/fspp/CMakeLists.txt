@@ -9,13 +9,12 @@ set(SOURCES
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # This is needed by boost thread
-#if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-#  target_link_libraries(${PROJECT_NAME} PRIVATE rt)
-#endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  target_link_libraries(${PROJECT_NAME} PRIVATE rt)
+endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC _FILE_OFFSET_BITS=64)
 target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils)
-target_link_libraries(${PROJECT_NAME} PUBLIC rt)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
 target_enable_style_warnings(${PROJECT_NAME})
