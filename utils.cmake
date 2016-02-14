@@ -45,7 +45,7 @@ function(target_add_boost TARGET)
             REQUIRED
             COMPONENTS ${ARGN})
     target_include_directories(${TARGET} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-    target_link_libraries(${TARGET} PRIVATE ${Boost_LIBRARIES})
+    target_link_libraries(${TARGET} PUBLIC ${Boost_LIBRARIES})
 endfunction(target_add_boost)
 
 ##################################################

@@ -37,10 +37,10 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # This is needed by boost thread
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  target_link_libraries(${PROJECT_NAME} PRIVATE rt)
+  target_link_libraries(${PROJECT_NAME} PUBLIC rt)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE pthread curl)
+target_link_libraries(${PROJECT_NAME} PUBLIC pthread curl)
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package() instead of find_library().
 find_library_with_path(CryptoPP cryptopp CRYPTOPP_LIB_PATH)
