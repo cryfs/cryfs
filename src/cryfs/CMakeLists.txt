@@ -1,5 +1,3 @@
-#TODO gitversion
-
 project (cryfs)
 
 set(SOURCES
