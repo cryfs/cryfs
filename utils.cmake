@@ -63,7 +63,6 @@ function(require_gcc_version VERSION)
     endif (CMAKE_COMPILER_IS_GNUCXX)
 endfunction(require_gcc_version)
 
-
 ##################################################
 # Specify that a specific minimal version of clang is required
 #
@@ -77,3 +76,30 @@ function(require_clang_version VERSION)
         endif (CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${VERSION})
     endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endfunction(require_clang_version)
+
+##################################################
+# Find the location of a library and return its full path in OUTPUT_VARIABLE.
+# If PATH_VARIABLE points to a defined variable, then the library will only be searched in this path.
+# If PATH_VARIABLE points to a undefined variable, default system locations will be searched.
+#
+# Uses (the following will search for fuse in system locations by default, and if the user passes -DFUSE_LIB_PATH to cmake, it will only search in this path.
+#  find_library_with_path(MYLIBRARY fuse FUSE_LIB_PATH)
+#  target_link_library(target ${MYLIBRARY})
+##################################################
+function(find_library_with_path OUTPUT_VARIABLE LIBRARY_NAME PATH_VARIABLE)
+    if(${PATH_VARIABLE})
+        find_library(${OUTPUT_VARIABLE} ${LIBRARY_NAME} PATHS ${${PATH_VARIABLE}} NO_DEFAULT_PATH)
+        if (${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+            message(FATAL_ERROR "Didn't find ${LIBRARY_NAME} in path specified by the ${PATH_VARIABLE} parameter (${${PATH_VARIABLE}}). Pass in the correct path or remove the parameter to try common system locations.")
+        else(${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+            message(STATUS "Found ${LIBRARY_NAME} in user-defined path ${${PATH_VARIABLE}}")
+        endif(${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+    else(${PATH_VARIABLE})
+        find_library(${OUTPUT_VARIABLE} ${LIBRARY_NAME})
+        if (${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+            message(FATAL_ERROR "Didn't find ${LIBRARY_NAME} library. If ${LIBRARY_NAME} is installed, try passing in the library location with -D${PATH_VARIABLE}=/path/to/${LIBRARY_NAME}/lib.")
+        else(${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+            message(STATUS "Found ${LIBRARY_NAME} in system location")
+        endif(${OUTPUT_VARIABLE} MATCHES NOTFOUND)
+    endif(${PATH_VARIABLE})
+endfunction(find_library_with_path)

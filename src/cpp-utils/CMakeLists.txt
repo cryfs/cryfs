@@ -43,7 +43,7 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 target_link_libraries(${PROJECT_NAME} PRIVATE pthread curl)
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package() instead of find_library().
-find_library(CryptoPP cryptopp $ENV{CRYPTOPP_LIB_PATH})
+find_library_with_path(CryptoPP cryptopp CRYPTOPP_LIB_PATH)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CryptoPP} scrypt spdlog)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread)

@@ -22,9 +22,10 @@ target_activate_cpp14(${PROJECT_NAME})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_FIND_FRAMEWORK LAST)
-  find_library(FUSE osxfuse $ENV{FUSE_LIB_PATH})
+  set(FUSE_LIB_NAME "osxfuse")
 else(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  find_library(FUSE fuse $ENV{FUSE_LIB_PATH})
+  set(FUSE_LIB_NAME "fuse")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
+find_library_with_path(FUSE ${FUSE_LIB_NAME} FUSE_LIB_PATH)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
