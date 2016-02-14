@@ -236,7 +236,11 @@ bool Fuse::running() const {
 
 void Fuse::stop() {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
+#ifdef __APPLE__
+  int ret = system(("umount " + _mountdir.native()).c_str());
+#else
   int ret = system(("fusermount -z -u " + _mountdir.native()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
+#endif
   if (ret != 0) {
     LOG(ERROR) << "Could not unmount filesystem";
   }
