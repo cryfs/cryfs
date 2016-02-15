@@ -17,11 +17,6 @@ using blockstore::Key;
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-ParallelAccessFsBlobStore::ParallelAccessFsBlobStore(unique_ref<CachingFsBlobStore> baseBlobStore)
-    : _baseBlobStore(std::move(baseBlobStore)),
-      _parallelAccessStore(make_unique_ref<ParallelAccessFsBlobStoreAdapter>(_baseBlobStore.get())) {
-}
-
 optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const Key &key) {
     return _parallelAccessStore.load(key, [this] (cachingfsblobstore::FsBlobRef *blob) {
         cachingfsblobstore::FileBlobRef *fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(blob);
@@ -39,11 +34,6 @@ optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const Key &key) 
         }
         ASSERT(false, "Unknown blob type loaded");
     });
-}
-
-void ParallelAccessFsBlobStore::remove(unique_ref<FsBlobRef> blob) {
-    Key key = blob->key();
-    return _parallelAccessStore.remove(key, std::move(blob));
 }
 
 unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob() {
@@ -75,14 +65,6 @@ unique_ref<SymlinkBlobRef> ParallelAccessFsBlobStore::createSymlinkBlob(const bf
         ASSERT(symlinkBlob != nullptr, "Wrong resource given");
         return make_unique_ref<SymlinkBlobRef>(symlinkBlob);
     });
-}
-
-std::function<off_t (const blockstore::Key &key)> ParallelAccessFsBlobStore::_getLstatSize() {
-    return [this] (const blockstore::Key &key) {
-        auto blob = load(key);
-        ASSERT(blob != none, "Blob not found");
-        return (*blob)->lstat_size();
-    };
 }
 
 }

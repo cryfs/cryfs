@@ -130,7 +130,8 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 
   return std::move(*currentBlob);
 
-  //TODO Running the python script, waiting for "Create files in sequential order...", then going into dir ~/tmp/cryfs-mount-.../Bonnie.../ and calling "ls"
+  //TODO (I think this is resolved, but I should test it)
+  //     Running the python script, waiting for "Create files in sequential order...", then going into dir ~/tmp/cryfs-mount-.../Bonnie.../ and calling "ls"
   //     crashes cryfs with a sigsegv.
   //     Possible reason: Many parallel changes to a directory blob are a race condition. Need something like ParallelAccessStore!
 }

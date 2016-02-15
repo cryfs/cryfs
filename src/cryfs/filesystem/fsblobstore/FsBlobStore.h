@@ -31,6 +31,37 @@ namespace cryfs {
 
             DISALLOW_COPY_AND_ASSIGN(FsBlobStore);
         };
+
+        inline FsBlobStore::FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore)
+                : _baseBlobStore(std::move(baseBlobStore)) {
+        }
+
+        inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob() {
+            auto blob = _baseBlobStore->create();
+            return FileBlob::InitializeEmptyFile(std::move(blob));
+        }
+
+        inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob() {
+            auto blob = _baseBlobStore->create();
+            return DirBlob::InitializeEmptyDir(std::move(blob), _getLstatSize());
+        }
+
+        inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target) {
+            auto blob = _baseBlobStore->create();
+            return SymlinkBlob::InitializeSymlink(std::move(blob), target);
+        }
+
+        inline void FsBlobStore::remove(cpputils::unique_ref<FsBlob> blob) {
+            _baseBlobStore->remove(blob->releaseBaseBlob());
+        }
+
+        inline std::function<off_t (const blockstore::Key &)> FsBlobStore::_getLstatSize() {
+            return [this] (const blockstore::Key &key) {
+                auto blob = load(key);
+                ASSERT(blob != boost::none, "Blob not found");
+                return (*blob)->lstat_size();
+            };
+        }
     }
 }
 

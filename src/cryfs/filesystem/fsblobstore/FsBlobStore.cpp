@@ -14,24 +14,6 @@ using std::function;
 namespace cryfs {
 namespace fsblobstore {
 
-FsBlobStore::FsBlobStore(unique_ref<BlobStore> baseBlobStore): _baseBlobStore(std::move(baseBlobStore)) {
-}
-
-unique_ref<FileBlob> FsBlobStore::createFileBlob() {
-    auto blob = _baseBlobStore->create();
-    return FileBlob::InitializeEmptyFile(std::move(blob));
-}
-
-unique_ref<DirBlob> FsBlobStore::createDirBlob() {
-    auto blob = _baseBlobStore->create();
-    return DirBlob::InitializeEmptyDir(std::move(blob), _getLstatSize());
-}
-
-unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const bf::path &target) {
-    auto blob = _baseBlobStore->create();
-    return SymlinkBlob::InitializeSymlink(std::move(blob), target);
-}
-
 boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::Key &key) {
     auto blob = _baseBlobStore->load(key);
     if (blob == none) {
@@ -47,18 +29,6 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::Key &key
     } else {
         ASSERT(false, "Unknown magic number");
     }
-}
-
-void FsBlobStore::remove(cpputils::unique_ref<FsBlob> blob) {
-    _baseBlobStore->remove(blob->releaseBaseBlob());
-}
-
-function<off_t (const Key &)> FsBlobStore::_getLstatSize() {
-    return [this] (const Key &key) {
-        auto blob = load(key);
-        ASSERT(blob != none, "Blob not found");
-        return (*blob)->lstat_size();
-    };
 }
 
 }

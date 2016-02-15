@@ -7,6 +7,7 @@
 #include "DirBlobRef.h"
 #include "SymlinkBlobRef.h"
 #include "../cachingfsblobstore/CachingFsBlobStore.h"
+#include "ParallelAccessFsBlobStoreAdapter.h"
 
 namespace cryfs {
     namespace parallelaccessfsblobstore {
@@ -35,6 +36,25 @@ namespace cryfs {
 
             DISALLOW_COPY_AND_ASSIGN(ParallelAccessFsBlobStore);
         };
+
+        inline ParallelAccessFsBlobStore::ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore)
+                : _baseBlobStore(std::move(baseBlobStore)),
+                  _parallelAccessStore(cpputils::make_unique_ref<ParallelAccessFsBlobStoreAdapter>(_baseBlobStore.get())) {
+        }
+
+        void ParallelAccessFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
+            blockstore::Key key = blob->key();
+            return _parallelAccessStore.remove(key, std::move(blob));
+        }
+
+        std::function<off_t (const blockstore::Key &key)> ParallelAccessFsBlobStore::_getLstatSize() {
+            return [this] (const blockstore::Key &key) {
+                auto blob = load(key);
+                ASSERT(blob != boost::none, "Blob not found");
+                return (*blob)->lstat_size();
+            };
+        }
+        
     }
 }
 

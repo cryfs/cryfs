@@ -38,6 +38,46 @@ namespace cryfs {
 
             DISALLOW_COPY_AND_ASSIGN(CachingFsBlobStore);
         };
+
+
+        inline CachingFsBlobStore::CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore)
+                : _baseBlobStore(std::move(baseBlobStore)), _cache() {
+        }
+
+        inline CachingFsBlobStore::~CachingFsBlobStore() {
+        }
+
+        inline cpputils::unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob() {
+            // This already creates the file blob in the underlying blobstore.
+            // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
+            // and probably not worth it here.
+            return cpputils::make_unique_ref<FileBlobRef>(_baseBlobStore->createFileBlob(), this);
+        }
+
+        inline cpputils::unique_ref<DirBlobRef> CachingFsBlobStore::createDirBlob() {
+            // This already creates the file blob in the underlying blobstore.
+            // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
+            // and probably not worth it here.
+            return cpputils::make_unique_ref<DirBlobRef>(_baseBlobStore->createDirBlob(), this);
+        }
+
+        inline cpputils::unique_ref<SymlinkBlobRef> CachingFsBlobStore::createSymlinkBlob(const boost::filesystem::path &target) {
+            // This already creates the file blob in the underlying blobstore.
+            // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
+            // and probably not worth it here.
+            return cpputils::make_unique_ref<SymlinkBlobRef>(_baseBlobStore->createSymlinkBlob(target), this);
+        }
+
+        inline void CachingFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
+            auto baseBlob = blob->releaseBaseBlob();
+            return _baseBlobStore->remove(std::move(baseBlob));
+        }
+
+        inline void CachingFsBlobStore::releaseForCache(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob) {
+            blockstore::Key key = baseBlob->key();
+            _cache.push(key, std::move(baseBlob));
+        }
+
     }
 }
 
