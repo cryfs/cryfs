@@ -56,7 +56,7 @@ Requirements
     - thread
   - Crypto++ version >= 5.6.3 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
-  - libFUSE version >= 2.8.6 (including development headers)
+  - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
 
 You can use the following commands to install these requirements
@@ -68,7 +68,7 @@ You can use the following commands to install these requirements
         TODO
         
         # Macintosh
-        brew install cmake boost cryptopp osxfuse
+        brew install cmake boost cryptopp openssl
 
 Build & Install
 ---------------
@@ -96,6 +96,9 @@ On most systems, CMake should find the libraries automatically.
 If this doesn't work for you, you can use the following CMake variables:
  - -D**FUSE_LIB_PATH**=[path]: Path to the directory containing the fuse library (or osxfuse library on Mac)
  - -D**CRYPTOPP_LIB_PATH**=[path]: Path to the directory containing the Crypto++ library
+
+If your build can't find header files (this was reported on Mac OS X for openssl and fuse headers),
+you can add include paths using *-DCMAKE_CXX_FLAGS="-I/path/to/header/files -I/path/to/other/header/files"*.
 
 
 Creating .deb packages
