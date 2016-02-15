@@ -6,13 +6,10 @@
 #include <cpp-utils/macros.h>
 #include <blockstore/utils/Key.h>
 #include <parallelaccessstore/ParallelAccessStore.h>
+#include "../datatreestore/DataTreeStore.h"
 
 namespace blobstore {
 namespace onblocks {
-namespace datatreestore {
-class DataTreeStore;
-class DataTree;
-}
 namespace parallelaccessdatatreestore {
 class DataTreeRef;
 
@@ -29,12 +26,24 @@ public:
 
   void remove(cpputils::unique_ref<DataTreeRef> tree);
 
+  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
+  uint64_t numNodes() const;
+  uint64_t estimateSpaceForNumNodesLeft() const;
+
 private:
   cpputils::unique_ref<datatreestore::DataTreeStore> _dataTreeStore;
   parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key> _parallelAccessStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessDataTreeStore);
 };
+
+inline uint64_t ParallelAccessDataTreeStore::numNodes() const {
+    return _dataTreeStore->numNodes();
+}
+
+inline uint64_t ParallelAccessDataTreeStore::estimateSpaceForNumNodesLeft() const {
+    return _dataTreeStore->estimateSpaceForNumNodesLeft();
+}
 
 }
 }

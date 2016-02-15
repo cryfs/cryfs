@@ -22,6 +22,7 @@ public:
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
   void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
+  uint64_t estimateNumFreeBytes() const override;
 
   //This function should only be used by test cases
   void __setKey(const typename Cipher::EncryptionKey &encKey);
@@ -77,6 +78,11 @@ void EncryptedBlockStore<Cipher>::remove(cpputils::unique_ref<Block> block) {
 template<class Cipher>
 uint64_t EncryptedBlockStore<Cipher>::numBlocks() const {
   return _baseBlockStore->numBlocks();
+}
+
+template<class Cipher>
+uint64_t EncryptedBlockStore<Cipher>::estimateNumFreeBytes() const {
+  return _baseBlockStore->estimateNumFreeBytes();
 }
 
 template<class Cipher>

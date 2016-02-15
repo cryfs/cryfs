@@ -67,6 +67,10 @@ uint64_t CachingBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks() + _numNewBlocks;
 }
 
+uint64_t CachingBlockStore::estimateNumFreeBytes() const {
+  return _baseBlockStore->estimateNumFreeBytes();
+}
+
 void CachingBlockStore::release(unique_ref<Block> block) {
   Key key = block->key();
   _cache.push(key, std::move(block));

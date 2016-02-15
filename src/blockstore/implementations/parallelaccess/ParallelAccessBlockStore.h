@@ -20,6 +20,7 @@ public:
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
   void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
+  uint64_t estimateNumFreeBytes() const override;
 
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;

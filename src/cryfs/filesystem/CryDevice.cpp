@@ -138,7 +138,16 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   callFsActionCallbacks();
-  // TODO What should we report here?
+  uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
+  uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
+  fsstat->f_bsize = BLOCKSIZE_BYTES;
+  fsstat->f_blocks = numUsedBlocks + numFreeBlocks;
+  fsstat->f_bfree = numFreeBlocks;
+  fsstat->f_bavail = numFreeBlocks;
+  fsstat->f_files = numUsedBlocks + numFreeBlocks;
+  fsstat->f_ffree = numFreeBlocks;
+  fsstat->f_namemax = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
+  //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
 }
 
 unique_ref<FileBlobRef> CryDevice::CreateFileBlob() {

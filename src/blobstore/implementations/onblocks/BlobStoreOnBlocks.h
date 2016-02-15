@@ -3,6 +3,7 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_BLOCKED_BLOBSTOREONBLOCKS_H_
 
 #include "../../interface/BlobStore.h"
+#include "BlobOnBlocks.h"
 #include <blockstore/interface/BlockStore.h>
 
 namespace blobstore {
@@ -22,6 +23,10 @@ public:
   boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) override;
 
   void remove(cpputils::unique_ref<Blob> blob) override;
+
+  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
+  uint64_t numBlocks() const override;
+  uint64_t estimateSpaceForNumBlocksLeft() const override;
 
 private:
   cpputils::unique_ref<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;

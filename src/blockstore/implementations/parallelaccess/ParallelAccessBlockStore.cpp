@@ -56,5 +56,9 @@ uint64_t ParallelAccessBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
 }
 
+uint64_t ParallelAccessBlockStore::estimateNumFreeBytes() const {
+  return _baseBlockStore->estimateNumFreeBytes();
+}
+
 }
 }

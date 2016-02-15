@@ -17,6 +17,8 @@ using datatreestore::DataTreeStore;
 using datatreestore::DataTree;
 namespace parallelaccessdatatreestore {
 
+//TODO Here and for other stores (DataTreeStore, ...): Make small functions inline
+
 ParallelAccessDataTreeStore::ParallelAccessDataTreeStore(unique_ref<DataTreeStore> dataTreeStore)
   : _dataTreeStore(std::move(dataTreeStore)), _parallelAccessStore(make_unique_ref<ParallelAccessDataTreeStoreAdapter>(_dataTreeStore.get())) {
 }
@@ -38,6 +40,8 @@ void ParallelAccessDataTreeStore::remove(unique_ref<DataTreeRef> tree) {
   Key key = tree->key();
   return _parallelAccessStore.remove(key, std::move(tree));
 }
+
+
 
 }
 }

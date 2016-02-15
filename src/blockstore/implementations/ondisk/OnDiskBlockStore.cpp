@@ -1,5 +1,6 @@
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
+#include <sys/statvfs.h>
 
 using std::string;
 using cpputils::Data;
@@ -46,6 +47,12 @@ void OnDiskBlockStore::remove(unique_ref<Block> block) {
 
 uint64_t OnDiskBlockStore::numBlocks() const {
   return std::distance(bf::directory_iterator(_rootdir), bf::directory_iterator());
+}
+
+uint64_t OnDiskBlockStore::estimateNumFreeBytes() const {
+  struct statvfs stat;
+  ::statvfs(_rootdir.c_str(), &stat);
+  return stat.f_bsize*stat.f_bavail;
 }
 
 }

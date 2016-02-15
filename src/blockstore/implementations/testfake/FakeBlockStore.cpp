@@ -76,5 +76,12 @@ uint64_t FakeBlockStore::numBlocks() const {
   return _blocks.size();
 }
 
+uint64_t FakeBlockStore::estimateNumFreeBytes() const {
+  //For windows, see http://stackoverflow.com/a/2513561/829568
+  long numRAMPages = sysconf(_SC_PHYS_PAGES);
+  long pageSize = sysconf(_SC_PAGE_SIZE);
+  return numRAMPages*pageSize;
+}
+
 }
 }

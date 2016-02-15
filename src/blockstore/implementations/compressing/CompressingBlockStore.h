@@ -19,6 +19,7 @@ public:
     boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
     void remove(cpputils::unique_ref<Block> block) override;
     uint64_t numBlocks() const override;
+    uint64_t estimateNumFreeBytes() const override;
 
 private:
     cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -69,6 +70,11 @@ void CompressingBlockStore<Compressor>::remove(cpputils::unique_ref<Block> block
 template<class Compressor>
 uint64_t CompressingBlockStore<Compressor>::numBlocks() const {
     return _baseBlockStore->numBlocks();
+}
+
+template<class Compressor>
+uint64_t CompressingBlockStore<Compressor>::estimateNumFreeBytes() const {
+    return _baseBlockStore->estimateNumFreeBytes();
 }
 
 }

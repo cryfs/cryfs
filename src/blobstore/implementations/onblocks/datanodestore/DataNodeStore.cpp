@@ -92,6 +92,10 @@ uint64_t DataNodeStore::numNodes() const {
   return _blockstore->numBlocks();
 }
 
+uint64_t DataNodeStore::estimateSpaceForNumNodesLeft() const {
+  return _blockstore->estimateNumFreeBytes() / _layout.blocksizeBytes();
+}
+
 void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
   if (inner != nullptr) {

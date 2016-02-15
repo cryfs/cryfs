@@ -41,7 +41,9 @@ public:
 
   void removeSubtree(cpputils::unique_ref<DataNode> node);
 
+  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t numNodes() const;
+  uint64_t estimateSpaceForNumNodesLeft() const;
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
 private:

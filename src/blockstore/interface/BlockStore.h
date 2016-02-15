@@ -22,6 +22,8 @@ public:
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
   virtual void remove(cpputils::unique_ref<Block> block) = 0;
   virtual uint64_t numBlocks() const = 0;
+  //TODO Test estimateNumFreeBytes in all block stores
+  virtual uint64_t estimateNumFreeBytes() const = 0;
 
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {
     while(true) {

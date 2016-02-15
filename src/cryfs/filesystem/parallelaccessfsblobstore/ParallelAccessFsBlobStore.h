@@ -26,6 +26,8 @@ namespace cryfs {
             cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
+            uint64_t numBlocks() const;
+            uint64_t estimateSpaceForNumBlocksLeft() const;
 
         private:
 
@@ -42,19 +44,26 @@ namespace cryfs {
                   _parallelAccessStore(cpputils::make_unique_ref<ParallelAccessFsBlobStoreAdapter>(_baseBlobStore.get())) {
         }
 
-        void ParallelAccessFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
+        inline void ParallelAccessFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
             blockstore::Key key = blob->key();
             return _parallelAccessStore.remove(key, std::move(blob));
         }
 
-        std::function<off_t (const blockstore::Key &key)> ParallelAccessFsBlobStore::_getLstatSize() {
+        inline std::function<off_t (const blockstore::Key &key)> ParallelAccessFsBlobStore::_getLstatSize() {
             return [this] (const blockstore::Key &key) {
                 auto blob = load(key);
                 ASSERT(blob != boost::none, "Blob not found");
                 return (*blob)->lstat_size();
             };
         }
-        
+
+        inline uint64_t ParallelAccessFsBlobStore::numBlocks() const {
+            return _baseBlobStore->numBlocks();
+        }
+
+        inline uint64_t ParallelAccessFsBlobStore::estimateSpaceForNumBlocksLeft() const {
+            return _baseBlobStore->estimateSpaceForNumBlocksLeft();
+        }
     }
 }
 

@@ -7,12 +7,10 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <blockstore/utils/Key.h>
 #include <boost/optional.hpp>
+#include "../datanodestore/DataNodeStore.h"
 
 namespace blobstore {
 namespace onblocks {
-namespace datanodestore {
-class DataNodeStore;
-}
 namespace datatreestore {
 class DataTree;
 
@@ -27,11 +25,23 @@ public:
 
   void remove(cpputils::unique_ref<DataTree> tree);
 
+  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
+  uint64_t numNodes() const;
+  uint64_t estimateSpaceForNumNodesLeft() const;
+
 private:
   cpputils::unique_ref<datanodestore::DataNodeStore> _nodeStore;
 
   DISALLOW_COPY_AND_ASSIGN(DataTreeStore);
 };
+
+inline uint64_t DataTreeStore::numNodes() const {
+    return _nodeStore->numNodes();
+}
+
+inline uint64_t DataTreeStore::estimateSpaceForNumNodesLeft() const {
+    return _nodeStore->estimateSpaceForNumNodesLeft();
+}
 
 }
 }

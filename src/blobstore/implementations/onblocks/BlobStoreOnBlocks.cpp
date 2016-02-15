@@ -28,29 +28,38 @@ using datatreestore::DataTreeStore;
 using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint32_t blocksizeBytes)
-: _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
+        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
 }
 
 unique_ref<Blob> BlobStoreOnBlocks::create() {
-  return make_unique_ref<BlobOnBlocks>(_dataTreeStore->createNewTree());
+    return make_unique_ref<BlobOnBlocks>(_dataTreeStore->createNewTree());
 }
 
 optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
-  auto tree = _dataTreeStore->load(key);
-  if (tree == none) {
-  	return none;
-  }
-  return optional<unique_ref<Blob>>(make_unique_ref<BlobOnBlocks>(std::move(*tree)));
+    auto tree = _dataTreeStore->load(key);
+    if (tree == none) {
+        return none;
+    }
+    return optional<unique_ref<Blob>>(make_unique_ref<BlobOnBlocks>(std::move(*tree)));
 }
 
 void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
-  auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
-  ASSERT(_blob != none, "Passed Blob in BlobStoreOnBlocks::remove() is not a BlobOnBlocks.");
-  _dataTreeStore->remove((*_blob)->releaseTree());
+    auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
+    ASSERT(_blob != none, "Passed Blob in BlobStoreOnBlocks::remove() is not a BlobOnBlocks.");
+    _dataTreeStore->remove((*_blob)->releaseTree());
 }
+
+uint64_t BlobStoreOnBlocks::numBlocks() const {
+    return _dataTreeStore->numNodes();
+}
+
+uint64_t BlobStoreOnBlocks::estimateSpaceForNumBlocksLeft() const {
+    return _dataTreeStore->estimateSpaceForNumNodesLeft();
+}
+
 
 }
 }
