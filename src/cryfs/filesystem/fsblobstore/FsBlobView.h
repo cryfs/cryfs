@@ -52,6 +52,7 @@ namespace cryfs {
         cpputils::Data readAll() const override {
             cpputils::Data data = _baseBlob->readAll();
             cpputils::Data dataWithoutHeader(data.size() - sizeof(FORMAT_VERSION_HEADER) - 1);
+            //Can we avoid this memcpy? Maybe by having Data::subdata() that returns a reference to the same memory region? Should we?
             std::memcpy(dataWithoutHeader.data(), data.dataOffset(sizeof(FORMAT_VERSION_HEADER) + 1), dataWithoutHeader.size());
             return dataWithoutHeader;
         }

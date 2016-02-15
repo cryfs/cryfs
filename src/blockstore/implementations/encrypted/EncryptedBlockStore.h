@@ -48,7 +48,7 @@ Key EncryptedBlockStore<Cipher>::createKey() {
 template<class Cipher>
 boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::tryCreate(const Key &key, cpputils::Data data) {
   //TODO Test that this returns boost::none when base blockstore returns nullptr  (for all pass-through-blockstores)
-  //TODO Easier implementation? This is only so complicated because of the case EncryptedBlock -> Block
+  //TODO Easier implementation? This is only so complicated because of the cast EncryptedBlock -> Block
   auto result = EncryptedBlock<Cipher>::TryCreateNew(_baseBlockStore.get(), key, std::move(data), _encKey);
   if (result == boost::none) {
     return boost::none;

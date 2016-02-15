@@ -75,8 +75,10 @@ constexpr uint16_t EncryptedBlock<Cipher>::FORMAT_VERSION_HEADER;
 
 template<class Cipher>
 boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
+  //TODO Is it possible to avoid copying the whole plaintext data into plaintextWithHeader? Maybe an encrypt() object that has an .addData() function and concatenates all data for encryption? Maybe Crypto++ offers this functionality already.
   cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, std::move(data));
   cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
+  //TODO Avoid copying the whole encrypted block into a encryptedWithFormatHeader by creating a Data object with full size and then giving it as an encryption target to Cipher::encrypt()
   cpputils::Data encryptedWithFormatHeader = _prependFormatHeader(std::move(encrypted));
   auto baseBlock = baseBlockStore->tryCreate(key, std::move(encryptedWithFormatHeader));
   if (baseBlock == boost::none) {
