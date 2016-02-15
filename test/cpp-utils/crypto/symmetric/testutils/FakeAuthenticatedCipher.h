@@ -90,14 +90,14 @@ namespace cpputils {
     private:
         static int32_t _parity(const byte *data, unsigned int size) {
           int32_t parity = 34343435; // some init value
-          int32_t *intData = (int32_t *) data;
+          const int32_t *intData = reinterpret_cast<const int32_t *>(data);
           unsigned int intSize = size / sizeof(int32_t);
           for (unsigned int i = 0; i < intSize; ++i) {
-            parity += intData[i];
+            parity = ((int64_t)parity) + intData[i];
           }
           unsigned int remainingBytes = size - 4 * intSize;
           for (unsigned int i = 0; i < remainingBytes; ++i) {
-            parity += (data[4 * intSize + i] << (24 - 8 * i));
+            parity = ((int64_t)parity) + (data[4 * intSize + i] << (24 - 8 * i));
           }
           return parity;
         }
