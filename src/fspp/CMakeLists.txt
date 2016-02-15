@@ -18,7 +18,9 @@ target_activate_cpp14(${PROJECT_NAME})
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_FIND_FRAMEWORK LAST)
   set(FUSE_LIB_NAME "osxfuse")
-else(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  # Add a default location for homebrew-installed openssl on Mac OS X to include search path
+  target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC /usr/local/include/osxfuse)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(FUSE_LIB_NAME "fuse")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 

@@ -88,9 +88,12 @@ Build & Install
 
         $ sudo make install
         
-You can pass the following variables to CMake (using *-Dvariablename=value*):
+You can pass the following variables to the *cmake* command (using *-Dvariablename=value*):
  - -D**CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
  - -D**BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
+ 
+Troubleshooting
+---------------
  
 On most systems, CMake should find the libraries automatically.
 If this doesn't work for you, you can use the following CMake variables:
