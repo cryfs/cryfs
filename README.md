@@ -98,7 +98,10 @@ If this doesn't work for you, you can use the following CMake variables:
  - -D**CRYPTOPP_LIB_PATH**=[path]: Path to the directory containing the Crypto++ library
 
 If your build can't find header files (this was reported on Mac OS X for openssl and fuse headers),
-you can add include paths using *-DCMAKE_CXX_FLAGS="-I/path/to/header/files -I/path/to/other/header/files"*.
+you can add include paths using *-DCMAKE_CXX_FLAGS="-I/path/to/header/files"* or *-DCMAKE_C_FLAGS.
+Example:
+
+    $ cmake .. -DCMAKE_C_FLAGS="-I/usr/local/opt/openssl/include" -DCMAKE_CXX_FLAGS="-I/usr/local/include/osxfuse"
 
 
 Creating .deb packages
