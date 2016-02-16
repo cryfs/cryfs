@@ -20,7 +20,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(FUSE_LIB_NAME "osxfuse")
   # Add a default location for homebrew-installed openssl on Mac OS X to include search path
   target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC /usr/local/include/osxfuse)
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+else(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(FUSE_LIB_NAME "fuse")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
