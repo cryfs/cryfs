@@ -1,7 +1,6 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
 #include <cpp-utils/assert/assert.h>
-#include <sys/sysctl.h>
 #include <cpp-utils/system/get_total_memory.h>
 
 using std::make_shared;

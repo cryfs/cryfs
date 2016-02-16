@@ -1,4 +1,7 @@
 #include "get_total_memory.h"
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace cpputils{
     namespace system {
