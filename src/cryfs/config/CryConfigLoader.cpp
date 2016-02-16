@@ -33,7 +33,7 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
 
 optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   string password = _askPasswordForExistingFilesystem();
-  std::cout << "Loading config file..." << std::flush;
+  std::cout << "Loading config file (this can take some time)..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
   if (config == none) {
     return none;
@@ -69,7 +69,7 @@ CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
   auto config = _creator.create(_cipherFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
-  std::cout << "Creating config file..." << std::flush;
+  std::cout << "Creating config file (this can take some time)..." << std::flush;
   auto result = CryConfigFile::create(filename, std::move(config), password, _scryptSettings);
   std::cout << "done" << std::endl;
   return result;

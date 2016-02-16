@@ -22,7 +22,7 @@ namespace cpputils {
     class SCrypt final {
     public:
         static constexpr SCryptSettings ParanoidSettings = SCryptSettings {32, 1048576, 8, 16};
-        static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 524288, 1, 1};
+        static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 1048576, 4, 1};
         static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 1};
 
         SCrypt() {}
