@@ -51,7 +51,7 @@ function(target_add_boost TARGET)
     find_package(Boost 1.56.0
             REQUIRED
             COMPONENTS ${ARGN})
-    target_include_directories(${TARGET} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+    target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_libraries(${TARGET} PUBLIC ${Boost_LIBRARIES})
     if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
       # Also link to rt, because boost thread needs that.
