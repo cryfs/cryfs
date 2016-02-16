@@ -6,7 +6,6 @@ project (scrypt C)
 # but we use the config.h it creates somewhere on the way (see target_compile_options below).
 string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILDTYPE)
 set(SCRYPT_CFLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILDTYPE}}")
-set(SCRYPT_CPPFLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILDTYPE}}")
 
 # Add a default location for homebrew-installed openssl on Mac OS X to include search path
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -15,7 +14,7 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 ExternalProject_Add(scrypt_original
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt
-        CONFIGURE_COMMAND /usr/bin/env CC=${CMAKE_C_COMPILER} CFLAGS=${SCRYPT_CFLAGS} CPPFLAGS=${SCRYPT_CPPFLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/configure --prefix=${CMAKE_BINARY_DIR}/vendor/scrypt/
+        CONFIGURE_COMMAND /usr/bin/env CC=${CMAKE_C_COMPILER} CFLAGS=${SCRYPT_CFLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/configure --prefix=${CMAKE_BINARY_DIR}/vendor/scrypt/
         PREFIX ${CMAKE_BINARY_DIR}/vendor/scrypt/
         BUILD_COMMAND ${MAKE}
 )
