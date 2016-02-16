@@ -2,6 +2,7 @@
 #include "InMemoryBlockStore.h"
 #include <memory>
 #include <cpp-utils/assert/assert.h>
+#include <cpp-utils/system/get_total_memory.h>
 
 using std::make_unique;
 using std::string;
@@ -53,10 +54,7 @@ uint64_t InMemoryBlockStore::numBlocks() const {
 }
 
 uint64_t InMemoryBlockStore::estimateNumFreeBytes() const {
-  //For windows, see http://stackoverflow.com/a/2513561/829568
-  long numRAMPages = sysconf(_SC_PHYS_PAGES);
-  long pageSize = sysconf(_SC_PAGE_SIZE);
-  return numRAMPages*pageSize;
+  return cpputils::system::get_total_memory();
 }
 
 }
