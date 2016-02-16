@@ -40,7 +40,14 @@ endfunction(target_enable_style_warnings)
 ##################################################
 function(target_add_boost TARGET)
     # Load boost libraries
-    set(Boost_USE_STATIC_LIBS ON) # Many supported systems don't have boost >= 1.56. Better link it statically.
+    if(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
+        # Many supported systems don't have boost >= 1.56. Better link it statically.
+        message(STATUS "Boost will be statically linked")
+        set(Boost_USE_STATIC_LIBS ON)
+    else(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
+        message(STATUS "Boost will be dynamically linked")
+        set(Boost_USE_STATIC_LIBS OFF)
+    endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
     find_package(Boost 1.56.0
             REQUIRED
             COMPONENTS ${ARGN})
