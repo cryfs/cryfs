@@ -6,6 +6,7 @@
 #include "../../utils/FileDoesntExistException.h"
 #include <cpp-utils/data/DataUtils.h>
 #include <cpp-utils/assert/assert.h>
+#include <cpp-utils/logging/logging.h>
 
 using std::istream;
 using std::ostream;
@@ -20,6 +21,7 @@ using boost::optional;
 using boost::none;
 
 namespace bf = boost::filesystem;
+using namespace cpputils::logging;
 
 namespace blockstore {
 namespace ondisk {
@@ -83,7 +85,7 @@ void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
   ASSERT(bf::is_regular_file(filepath), "Block not found on disk");
   bool retval = bf::remove(filepath);
   if (!retval) {
-    throw std::runtime_error("Couldn't find block to remove");
+    LOG(ERROR) << "Couldn't find block " << key.ToString() << " to remove";
   }
 }
 
