@@ -1,8 +1,8 @@
-Version 0.9.1 (unreleased)
+Version 0.9.1
 ---------------
 * Report file system usage statistics to the operating system (e.g. amount of space used). This information can be queried using the 'df' tool on linux. See https://github.com/cryfs/cryfs/commit/68acc27e88ff5209ca55ddb4e91f5a449d77fb54
 * Use stronger scrypt parameters when generating the config file key from the user password. This makes it a bit more secure, but also takes a bit longer to load a file system. See https://github.com/cryfs/cryfs/commit/7f1493ab9210319cab008e71d4ee8f4d7d920f39
-* Fix a bug where deleting a non-empty directory could leave some blocks over.
+* Fix a bug where deleting a non-empty directory could leave some blocks over. See https://github.com/cryfs/cryfs/commit/df041ac84511e4560c4f099cd8cc089d08e05737
 
 Version 0.9.0
 ---------------
