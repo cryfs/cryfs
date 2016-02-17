@@ -2,6 +2,7 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdexcept>
 
 namespace cpputils{
     namespace system {
