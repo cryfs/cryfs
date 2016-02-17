@@ -105,7 +105,7 @@ On most systems, CMake should find the libraries automatically. However, that do
 
     If you want to link boost dynamically (e.g. you don't have the static libraries), use the following:
 
-        cmake ..  -DBoost_USE_STATIC_LIBS=off
+        cmake .. -DBoost_USE_STATIC_LIBS=off
 
 2. **Fuse/Osxfuse library not found**
 
