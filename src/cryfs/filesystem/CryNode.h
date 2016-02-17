@@ -19,7 +19,6 @@ public:
   void chown(uid_t uid, gid_t gid) override;
   void rename(const boost::filesystem::path &to) override;
   void utimens(timespec lastAccessTime, timespec lastModificationTime) override;
-  void remove() override;
 
 protected:
   CryNode();
@@ -30,6 +29,8 @@ protected:
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
 
   virtual fspp::Dir::EntryType getType() const = 0;
+
+  void removeNode();
 
 private:
   CryDevice *_device;

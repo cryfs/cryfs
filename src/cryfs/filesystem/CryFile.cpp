@@ -51,4 +51,9 @@ fspp::Dir::EntryType CryFile::getType() const {
   return fspp::Dir::EntryType::FILE;
 }
 
+void CryFile::remove() {
+  device()->callFsActionCallbacks();
+  removeNode();
+}
+
 }

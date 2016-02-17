@@ -28,6 +28,9 @@ namespace cryfs {
 
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
 
+            //TODO Test NumChildren()
+            size_t NumChildren() const;
+
             boost::optional<const DirEntry&> GetChild(const std::string &name) const;
 
             boost::optional<const DirEntry&> GetChild(const blockstore::Key &key) const;

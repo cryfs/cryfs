@@ -169,5 +169,9 @@ cpputils::unique_ref<blobstore::Blob> DirBlob::releaseBaseBlob() {
   return FsBlob::releaseBaseBlob();
 }
 
+size_t DirBlob::NumChildren() const {
+  return _entries.size();
+}
+
 }
 }

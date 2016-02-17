@@ -22,6 +22,10 @@ public:
         return _base->GetChild(key);
     }
 
+    size_t NumChildren() const {
+        return _base->NumChildren();
+    }
+
     void RemoveChild(const blockstore::Key &key) {
         return _base->RemoveChild(key);
     }

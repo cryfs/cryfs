@@ -74,8 +74,7 @@ void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
   (*_parent)->utimensChild(_key, lastAccessTime, lastModificationTime);
 }
 
-void CryNode::remove() {
-  device()->callFsActionCallbacks();
+void CryNode::removeNode() {
   //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
   if (_parent == none) {
     //We are the root direcory.

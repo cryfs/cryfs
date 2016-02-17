@@ -18,6 +18,8 @@ public:
 
   fspp::Dir::EntryType getType() const override;
 
+  void remove() override;
+
 private:
   cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> LoadBlob() const;
 

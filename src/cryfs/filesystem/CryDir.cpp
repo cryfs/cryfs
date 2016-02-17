@@ -79,4 +79,16 @@ void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid
   blob->AddChildSymlink(name, child->key(), uid, gid);
 }
 
+void CryDir::remove() {
+  device()->callFsActionCallbacks();
+  {
+    auto blob = LoadBlob();
+    if (0 != blob->NumChildren()) {
+      throw FuseErrnoException(ENOTEMPTY);
+    }
+  }
+  //TODO removeNode() calls CryDevice::RemoveBlob, which loads the blob again. So we're loading it twice. Should be optimized.
+  removeNode();
+}
+
 }

@@ -50,4 +50,9 @@ bf::path CrySymlink::target() const {
   return blob->target();
 }
 
+void CrySymlink::remove() {
+  device()->callFsActionCallbacks();
+  removeNode();
+}
+
 }
