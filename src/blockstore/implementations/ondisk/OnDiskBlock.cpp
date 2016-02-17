@@ -81,7 +81,10 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &root
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
   auto filepath = rootdir / key.ToString();
   ASSERT(bf::is_regular_file(filepath), "Block not found on disk");
-  bf::remove(filepath);
+  bool retval = bf::remove(filepath);
+  if (!retval) {
+    throw std::runtime_error("Couldn't find block to remove");
+  }
 }
 
 void OnDiskBlock::_storeToDisk() const {
