@@ -279,7 +279,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
 //TODO access
 //TODO rename
 //TODO utimens
-//TODO rmdir
+//TODO rmdir (also test that deleting a non-empty dir returns ENOTEMPTY, because otherwise there might not be any unlink syscalls for the entries issued)
 //TODO chmod
 //TODO chown
 //TODO mkdir with uid/gid
