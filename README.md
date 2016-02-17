@@ -94,17 +94,42 @@ You can pass the following variables to the *cmake* command (using *-Dvariablena
  
 Troubleshooting
 ---------------
- 
-On most systems, CMake should find the libraries automatically.
-If this doesn't work for you, you can use the following CMake variables:
- - -D**FUSE_LIB_PATH**=[path]: Path to the directory containing the fuse library (or osxfuse library on Mac)
- - -D**CRYPTOPP_LIB_PATH**=[path]: Path to the directory containing the Crypto++ library
 
-If your build can't find header files (this was reported on Mac OS X for openssl and fuse headers),
-you can add include paths using *-DCMAKE_CXX_FLAGS="-I/path/to/header/files"* or *-DCMAKE_C_FLAGS.
-Example:
+On most systems, CMake should find the libraries automatically. However, that doesn't always work.
 
-    $ cmake .. -DCMAKE_C_FLAGS="-I/usr/local/opt/openssl/include" -DCMAKE_CXX_FLAGS="-I/usr/local/include/osxfuse"
+1. **Boost headers not found**
+
+    Pass in the boost include path with
+
+        cmake .. -DBoost_INCLUDE_DIRS=/path/to/boost/headers
+
+    If you want to link boost dynamically (e.g. you don't have the static libraries), use the following:
+
+        cmake ..  -DBoost_USE_STATIC_LIBS=off
+
+2. **Fuse/Osxfuse library not found**
+
+    Pass in the library path with
+
+        cmake .. -DFUSE_LIB_PATH=/path/to/fuse/or/osxfuse
+
+3. **Fuse/Osxfuse headers not found**
+
+    Pass in the include path with
+
+        cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/osxfuse/headers"
+
+4. **CryptoPP library not found**
+
+    Pass in the library path with
+
+        cmake .. -DCRYPTOPP_LIB_PATH=/path/to/cryptopp
+
+5. **Openssl headers not found**
+
+    Pass in the include path with
+
+        cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
 
 
 Creating .deb packages
