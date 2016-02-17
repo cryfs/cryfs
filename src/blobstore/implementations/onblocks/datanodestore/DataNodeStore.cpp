@@ -97,6 +97,7 @@ uint64_t DataNodeStore::estimateSpaceForNumNodesLeft() const {
 }
 
 void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
+  //TODO Make this faster by not loading the leaves but just deleting them. Can be recognized, because of the depth of their parents.
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
   if (inner != nullptr) {
     for (uint32_t i = 0; i < inner->numChildren(); ++i) {
