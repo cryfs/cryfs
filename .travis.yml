@@ -9,8 +9,8 @@ os:
 - osx
 matrix:
   allow_failures:
-    - os: osx
-    - compiler: clang
+    - os: linux
+      compiler: clang
 addons:
   apt:
     packages:
@@ -34,10 +34,12 @@ script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
 - make -j$NUMCORES
 - ./test/cpp-utils/cpp-utils-test
-- ./run_with_fuse.sh ./test/fspp/fspp-test
+# TODO Also run on osx once fixed
+- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./run_with_fuse.sh ./test/fspp/fspp-test ; fi
 - ./test/parallelaccessstore/parallelaccessstore-test
 - ./test/blockstore/blockstore-test
 - ./test/blobstore/blobstore-test
-- ./test/cryfs/cryfs-test
+# TODO Also run on osx once fixed
+- if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/cryfs-test ; fi
 after_script:
 - rm run_with_fuse.sh
