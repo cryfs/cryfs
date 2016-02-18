@@ -1,3 +1,8 @@
+Version 0.9.2
+---------------
+* Experimental support for installing CryFS on Mac OS X using homebrew
+  (0.9.2 is not released for Linux)
+
 Version 0.9.1
 ---------------
 * Report file system usage statistics to the operating system (e.g. amount of space used). This information can be queried using the 'df' tool on linux. See https://github.com/cryfs/cryfs/commit/68acc27e88ff5209ca55ddb4e91f5a449d77fb54
