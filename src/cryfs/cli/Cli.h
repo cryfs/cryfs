@@ -9,6 +9,7 @@
 #include <cpp-utils/io/Console.h>
 #include <cpp-utils/random/RandomGenerator.h>
 #include <cpp-utils/network/HttpClient.h>
+#include <cryfs/filesystem/CryDevice.h>
 #include "CallAfterTimeout.h"
 
 namespace cryfs {
@@ -36,6 +37,7 @@ namespace cryfs {
         std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name);
         void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name);
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
+        void _sanityCheckFilesystem(CryDevice *device);
 
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;

@@ -18,6 +18,7 @@
 #include <boost/filesystem.hpp>
 
 #include <gitversion/version.h>
+#include <cryfs/filesystem/CryDir.h>
 
 #include "VersionChecker.h"
 
@@ -60,6 +61,7 @@ using boost::chrono::duration;
 using boost::chrono::duration_cast;
 using boost::chrono::minutes;
 using boost::chrono::milliseconds;
+using cpputils::dynamic_pointer_move;
 
 //TODO Delete a large file in parallel possible? Takes a long time right now...
 //TODO Improve parallelity.
@@ -197,6 +199,7 @@ namespace cryfs {
             auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
             auto config = _loadOrCreateConfig(options);
             CryDevice device(std::move(config), std::move(blockStore));
+            _sanityCheckFilesystem(&device);
             fspp::FilesystemImpl fsimpl(&device);
             fspp::fuse::Fuse fuse(&fsimpl);
 
@@ -221,6 +224,19 @@ namespace cryfs {
         } catch (...) {
             LOG(ERROR) << "Crashed";
         }
+    }
+
+    void Cli::_sanityCheckFilesystem(CryDevice *device) {
+        //Try to list contents of base directory
+        auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
+        if (_rootDir == none) {
+            throw std::runtime_error("Couldn't find root blob");
+        }
+        auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
+        if (rootDir == none) {
+            throw std::runtime_error("Base directory blob doesn't contain a directory");
+        }
+        (*rootDir)->children(); // Load children
     }
 
     optional<unique_ref<CallAfterTimeout>> Cli::_createIdleCallback(optional<double> minutes, function<void()> callback) {

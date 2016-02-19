@@ -275,7 +275,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   // On FreeBSD, trying to do anything with the mountpoint ends up
   // opening it, and then using the FD for an fgetattr.  So in the
   // special case of a path of "/", I need to do a getattr on the
-  // underlying root directory instead of doing the fgetattr().
+  // underlying base directory instead of doing the fgetattr().
   // TODO Check if necessary
   if (path.native() == "/") {
     return getattr(path, stbuf);
