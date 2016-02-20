@@ -21,6 +21,7 @@
 #include <cryfs/filesystem/CryDir.h>
 
 #include "VersionChecker.h"
+#include "VersionCompare.h"
 
 //TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
@@ -90,8 +91,8 @@ namespace cryfs {
         VersionChecker versionChecker(_httpClient);
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
-            cout << "Could not connect to cryfs.org to check for updates." << endl;
-        } else if (*newestVersion != version::VERSION_STRING) {
+            cout << "Could not check for updates." << endl;
+        } else if (VersionCompare::isOlderThan(version::VERSION_STRING, *newestVersion)) {
             cout << "CryFS " << *newestVersion << " is released. Please update." << endl;
         }
         optional<string> securityWarning = versionChecker.securityWarningFor(version::VERSION_STRING);

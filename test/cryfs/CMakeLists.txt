@@ -10,6 +10,7 @@ set(SOURCES
     cli/program_options/ParserTest.cpp
     cli/CliTest_ShowingHelp.cpp
     cli/VersionCheckerTest.cpp
+    cli/VersionCompareTest.cpp
     config/crypto/CryConfigEncryptorFactoryTest.cpp
     config/crypto/outer/OuterConfigTest.cpp
     config/crypto/outer/OuterEncryptorTest.cpp

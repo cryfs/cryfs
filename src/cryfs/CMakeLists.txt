@@ -3,6 +3,7 @@ project (cryfs)
 set(SOURCES
     cli/Cli.cpp
     cli/VersionChecker.cpp
+    cli/VersionCompare.cpp
     cli/CallAfterTimeout.cpp
     cli/program_options/utils.cpp
     cli/program_options/ProgramOptions.cpp
