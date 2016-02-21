@@ -19,6 +19,7 @@ namespace cryfs {
         int main(int argc, char *argv[]);
 
     private:
+        void _checkForUpdates();
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
         boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher);
@@ -40,8 +41,6 @@ namespace cryfs {
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
         void _sanityCheckFilesystem(CryDevice *device);
 
-        static const std::string CRYFS_FRONTEND_KEY;
-        static const std::string CRYFS_FRONTEND_NONINTERACTIVE;
 
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;

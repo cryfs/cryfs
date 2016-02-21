@@ -3,6 +3,7 @@ Version 0.9.3 (unreleased)
 * It's easier for tools and scripts to use CryFS:
   If an environment variable CRYFS_FRONTEND=noninteractive is set, we don't ask for options (but take default values for everything that's not specified on command line).
   Furthermore, we won't ask for password confirmation when creating a file system but the password only has to be sent once to stdin.
+* You can disable the automatic update check by setting CRYFS_NO_UPDATE_CHECK=true in your environment.
 
 Version 0.9.2
 ---------------

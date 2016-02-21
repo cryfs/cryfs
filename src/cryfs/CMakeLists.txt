@@ -5,6 +5,7 @@ set(SOURCES
     cli/VersionChecker.cpp
     cli/VersionCompare.cpp
     cli/CallAfterTimeout.cpp
+    cli/Environment.cpp
     cli/program_options/utils.cpp
     cli/program_options/ProgramOptions.cpp
     cli/program_options/Parser.cpp

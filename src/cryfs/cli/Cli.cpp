@@ -22,6 +22,7 @@
 
 #include "VersionChecker.h"
 #include "VersionCompare.h"
+#include "Environment.h"
 
 //TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
@@ -70,15 +71,10 @@ using cpputils::dynamic_pointer_move;
 //TODO Performance difference when setting compiler parameter -maes for scrypt?
 
 namespace cryfs {
-    const string Cli::CRYFS_FRONTEND_KEY = "CRYFS_FRONTEND";
-    const string Cli::CRYFS_FRONTEND_NONINTERACTIVE = "noninteractive";
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false) {
-        char *frontend = std::getenv(CRYFS_FRONTEND_KEY.c_str());
-        if (frontend != nullptr && frontend == CRYFS_FRONTEND_NONINTERACTIVE) {
-            _noninteractive = true;
-        }
+        _noninteractive = Environment::isNoninteractive();
     }
 
     void Cli::_showVersion() {
@@ -95,6 +91,13 @@ namespace cryfs {
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
+        if (!Environment::noUpdateCheck()) {
+            _checkForUpdates();
+        }
+        cout << endl;
+    }
+
+    void Cli::_checkForUpdates() {
         VersionChecker versionChecker(_httpClient);
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
@@ -106,7 +109,6 @@ namespace cryfs {
         if (securityWarning != none) {
             cout << *securityWarning << endl;
         }
-        cout << endl;
     }
 
     bool Cli::_checkPassword(const string &password) {
