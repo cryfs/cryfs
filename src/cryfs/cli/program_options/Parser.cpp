@@ -138,5 +138,16 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
     po::options_description desc;
     _addAllowedOptions(&desc);
     cerr << desc << endl;
+    cerr << "Environment variables:\n"
+         << " CRYFS_FRONTEND=noninteractive   Work better together with tools.\n"
+         << "                                 With this option set, CryFS won't ask\n"
+         << "                                 anything, but use default values for any\n"
+         << "                                 options you didn't specify on command line.\n"
+         << "                                 Furthermore, it won't ask you to enter a new\n"
+         << "                                 password a second time (password confirmation).\n"
+         << " CRYFS_NO_UPDATE_CHECK=true      By default, CryFS connects to the internet to\n"
+         << "                                 check for known security vulnerabilities and\n"
+         << "                                 new versions. This option disables this.\n"
+         << endl;
     exit(1);
 }
