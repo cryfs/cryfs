@@ -11,12 +11,13 @@ namespace cryfs {
         static bool isNoninteractive();
         static bool noUpdateCheck();
 
-    private:
-        Environment() = delete;
-
         static const std::string FRONTEND_KEY;
         static const std::string FRONTEND_NONINTERACTIVE;
         static const std::string NOUPDATECHECK_KEY;
+
+    private:
+        Environment() = delete;
+
     };
 
 }

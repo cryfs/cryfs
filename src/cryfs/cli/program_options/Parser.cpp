@@ -2,6 +2,7 @@
 #include "utils.h"
 #include <iostream>
 #include <boost/optional.hpp>
+#include <cryfs/cli/Environment.h>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
@@ -139,15 +140,14 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
     _addAllowedOptions(&desc);
     cerr << desc << endl;
     cerr << "Environment variables:\n"
-         << " CRYFS_FRONTEND=noninteractive   Work better together with tools.\n"
-         << "                                 With this option set, CryFS won't ask\n"
-         << "                                 anything, but use default values for any\n"
-         << "                                 options you didn't specify on command line.\n"
-         << "                                 Furthermore, it won't ask you to enter a new\n"
-         << "                                 password a second time (password confirmation).\n"
-         << " CRYFS_NO_UPDATE_CHECK=true      By default, CryFS connects to the internet to\n"
-         << "                                 check for known security vulnerabilities and\n"
-         << "                                 new versions. This option disables this.\n"
+         << "  " << Environment::FRONTEND_KEY << "=" << Environment::FRONTEND_NONINTERACTIVE << "\n"
+         << "\tWork better together with tools.\n"
+         << "\tWith this option set, CryFS won't ask anything, but use default values\n"
+         << "\tfor options you didn't specify on command line. Furthermore, it won't\n"
+         << "\task you to enter a new password a second time (password confirmation).\n"
+         << "  " << Environment::NOUPDATECHECK_KEY << "=true\n"
+         << "\tBy default, CryFS connects to the internet to check for known\n"
+         << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
          << endl;
     exit(1);
 }
