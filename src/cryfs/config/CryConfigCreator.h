@@ -11,7 +11,7 @@
 namespace cryfs {
     class CryConfigCreator final {
     public:
-        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator);
+        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator, bool noninteractive);
         CryConfigCreator(CryConfigCreator &&rhs) = default;
 
         CryConfig create(const boost::optional<std::string> &cipherFromCommandLine);

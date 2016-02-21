@@ -9,7 +9,7 @@
 namespace cryfs {
     class CryConfigConsole final {
     public:
-        CryConfigConsole(std::shared_ptr<cpputils::Console> console);
+        CryConfigConsole(std::shared_ptr<cpputils::Console> console, bool noninteractive);
         CryConfigConsole(CryConfigConsole &&rhs) = default;
 
         std::string askCipher();
@@ -17,6 +17,7 @@ namespace cryfs {
         static constexpr const char *DEFAULT_CIPHER = "aes-256-gcm";
 
     private:
+
         bool _checkUseDefaultSettings();
 
         std::string _askCipher() const;

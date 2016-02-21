@@ -12,8 +12,8 @@ using std::shared_ptr;
 namespace cryfs {
     constexpr const char *CryConfigConsole::DEFAULT_CIPHER;
 
-    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console)
-            : _console(std::move(console)), _useDefaultSettings(none) {
+    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console, bool noninteractive)
+            : _console(std::move(console)), _useDefaultSettings(noninteractive ? optional<bool>(true) : none) {
     }
 
     string CryConfigConsole::askCipher() {

@@ -21,10 +21,11 @@ namespace cryfs {
     private:
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
+        boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
-        std::string _getPassword(std::function<std::string()> askPassword);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();
+        static std::string _askPasswordNoninteractive();
         static std::string _askPasswordFromStdin(const std::string &prompt);
         static bool _confirmPassword(const std::string &password);
         static bool _checkPassword(const std::string &password);
@@ -39,10 +40,14 @@ namespace cryfs {
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
         void _sanityCheckFilesystem(CryDevice *device);
 
+        static const std::string CRYFS_FRONTEND_KEY;
+        static const std::string CRYFS_FRONTEND_NONINTERACTIVE;
+
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
         std::shared_ptr<cpputils::HttpClient> _httpClient;
+        bool _noninteractive;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

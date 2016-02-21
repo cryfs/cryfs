@@ -26,41 +26,39 @@ namespace boost {
 }
 #include <boost/optional/optional_io.hpp>
 
-//TODO Test loading with same/different --cipher argument
-
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
 public:
     CryConfigLoaderTest(): file(false) {}
 
-    CryConfigLoader loader(const string &password, const optional<string> &cipher = none) {
-        auto askPassword = [password] {return password;};
-        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher);
+    CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
+        auto askPassword = [password] { return password;};
+        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, noninteractive);
     }
 
-    CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none) {
+    CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_FALSE(file.exists());
-        return loader(password, cipher).loadOrCreate(file.path()).value();
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path()).value();
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none) {
+    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_TRUE(file.exists());
-        return loader(password, cipher).loadOrCreate(file.path());
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path());
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -86,9 +84,19 @@ TEST_F(CryConfigLoaderTest, DoesntLoadIfWrongPassword) {
 }
 
 TEST_F(CryConfigLoaderTest, DoesntLoadIfDifferentCipher) {
-    Create("mypassword", string("aes-256-gcm"));
+    Create("mypassword", string("aes-256-gcm"), false);
     try {
-        Load("mypassword", string("aes-256-cfb"));
+        Load("mypassword", string("aes-256-cfb"), false);
+        EXPECT_TRUE(false); // Should throw exception
+    } catch (const std::runtime_error &e) {
+        EXPECT_EQ(string("Filesystem uses aes-256-gcm cipher and not aes-256-cfb as specified."), e.what());
+    }
+}
+
+TEST_F(CryConfigLoaderTest, DoesntLoadIfDifferentCipher_Noninteractive) {
+    Create("mypassword", string("aes-256-gcm"), true);
+    try {
+        Load("mypassword", string("aes-256-cfb"), true);
         EXPECT_TRUE(false); // Should throw exception
     } catch (const std::runtime_error &e) {
         EXPECT_EQ(string("Filesystem uses aes-256-gcm cipher and not aes-256-cfb as specified."), e.what());
@@ -98,6 +106,11 @@ TEST_F(CryConfigLoaderTest, DoesntLoadIfDifferentCipher) {
 TEST_F(CryConfigLoaderTest, DoesLoadIfSameCipher) {
     Create("mypassword", string("aes-256-gcm"));
     Load("mypassword", string("aes-256-gcm"));
+}
+
+TEST_F(CryConfigLoaderTest, DoesLoadIfSameCipher_Noninteractive) {
+    Create("mypassword", string("aes-128-gcm"), true);
+    Load("mypassword", string("aes-128-gcm"), true);
 }
 
 TEST_F(CryConfigLoaderTest, RootBlob_Load) {

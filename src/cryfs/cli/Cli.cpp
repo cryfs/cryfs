@@ -70,9 +70,16 @@ using cpputils::dynamic_pointer_move;
 //TODO Performance difference when setting compiler parameter -maes for scrypt?
 
 namespace cryfs {
+    const string Cli::CRYFS_FRONTEND_KEY = "CRYFS_FRONTEND";
+    const string Cli::CRYFS_FRONTEND_NONINTERACTIVE = "noninteractive";
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient) {}
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false) {
+        char *frontend = std::getenv(CRYFS_FRONTEND_KEY.c_str());
+        if (frontend != nullptr && frontend == CRYFS_FRONTEND_NONINTERACTIVE) {
+            _noninteractive = true;
+        }
+    }
 
     void Cli::_showVersion() {
         cout << "CryFS Version " << version::VERSION_STRING << endl;
@@ -110,19 +117,6 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_getPassword(function<string()> askPassword) {
-        string password = askPassword();
-        //Remove trailing newline
-        if (password[password.size()-1] == '\n') {
-            password.resize(password.size()-1);
-        }
-        //Check that password is valid
-        if (!_checkPassword(password)) {
-            throw std::runtime_error("Password invalid.");
-        }
-        return password;
-    }
-
     string Cli::_askPasswordForExistingFilesystem() {
         string password = _askPasswordFromStdin("Password: ");
         while (!_checkPassword(password)) {
@@ -158,6 +152,15 @@ namespace cryfs {
         return true;
     }
 
+    string Cli::_askPasswordNoninteractive() {
+        //TODO Test
+        string password = _askPasswordFromStdin("Password: ");
+        if (!_checkPassword(password)) {
+            throw std::runtime_error("Invalid password. Password cannot be empty.");
+        }
+        return password;
+    }
+
     string Cli::_askPasswordFromStdin(const string &prompt) {
         DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
 
@@ -165,6 +168,11 @@ namespace cryfs {
         string result;
         std::getline(cin, result);
         std::cout << std::endl;
+
+        //Remove trailing newline
+        if (result[result.size()-1] == '\n') {
+            result.resize(result.size()-1);
+        }
 
         return result;
     }
@@ -180,10 +188,7 @@ namespace cryfs {
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto config = CryConfigLoader(_console, _keyGenerator, _scryptSettings,
-                                          std::bind(&Cli::_getPassword, this, &Cli::_askPasswordForExistingFilesystem),
-                                          std::bind(&Cli::_getPassword, this, &Cli::_askPasswordForNewFilesystem),
-                                          options.cipher()).loadOrCreate(configFile);
+            auto config = _loadOrCreateConfigFile(configFile, options.cipher());
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
@@ -192,6 +197,20 @@ namespace cryfs {
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(1);
+        }
+    }
+
+    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher) {
+        if (_noninteractive) {
+            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
+                                   &Cli::_askPasswordNoninteractive,
+                                   &Cli::_askPasswordNoninteractive,
+                                   cipher, _noninteractive).loadOrCreate(configFilePath);
+        } else {
+            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
+                                   &Cli::_askPasswordForExistingFilesystem,
+                                   &Cli::_askPasswordForNewFilesystem,
+                                   cipher, _noninteractive).loadOrCreate(configFilePath);
         }
     }
 
@@ -269,6 +288,10 @@ namespace cryfs {
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
         if (!bf::exists(dir)) {
+            if (_noninteractive) {
+                //If we use the noninteractive frontend, don't ask whether to create the directory, but just fail.
+                throw std::runtime_error(name + " not found");
+            }
             bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?");
             if (create) {
                 if (!bf::create_directory(dir)) {

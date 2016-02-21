@@ -37,7 +37,7 @@ public:
 
   CryConfigFile loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none).loadOrCreate(config.path()).value();
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, true).loadOrCreate(config.path()).value();
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

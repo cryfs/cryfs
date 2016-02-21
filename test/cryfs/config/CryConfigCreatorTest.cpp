@@ -28,10 +28,12 @@ class CryConfigCreatorTest: public ::testing::Test {
 public:
     CryConfigCreatorTest()
             : console(make_shared<MockConsole>()),
-              creator(console, cpputils::Random::PseudoRandom()) {
+              creator(console, cpputils::Random::PseudoRandom(), false),
+              noninteractiveCreator(console, cpputils::Random::PseudoRandom(), true) {
     }
     shared_ptr<MockConsole> console;
     CryConfigCreator creator;
+    CryConfigCreator noninteractiveCreator;
 };
 
 #define EXPECT_ASK_FOR_CIPHER()                                                                                        \
@@ -49,6 +51,11 @@ TEST_F(CryConfigCreatorTest, DoesAskForCipherIfNotSpecified) {
 TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfSpecified) {
     EXPECT_DOES_NOT_ASK_FOR_CIPHER();
     CryConfig config = creator.create(string("aes-256-gcm"));
+}
+
+TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfNoninteractive) {
+    EXPECT_DOES_NOT_ASK_FOR_CIPHER();
+    CryConfig config = noninteractiveCreator.create(none);
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {

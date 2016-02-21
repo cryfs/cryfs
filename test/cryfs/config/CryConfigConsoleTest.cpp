@@ -28,10 +28,12 @@ class CryConfigConsoleTest: public ::testing::Test {
 public:
     CryConfigConsoleTest()
             : console(make_shared<MockConsole>()),
-              cryconsole(console) {
+              cryconsole(console, false),
+              noninteractiveCryconsole(console, true) {
     }
     shared_ptr<MockConsole> console;
     CryConfigConsole cryconsole;
+    CryConfigConsole noninteractiveCryconsole;
 };
 
 class CryConfigConsoleTest_Cipher: public CryConfigConsoleTest {};
@@ -49,6 +51,13 @@ TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipher) {
     EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(true));
     EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
     string cipher = cryconsole.askCipher();
+    EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
+}
+
+TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipherWhenNoninteractiveEnvironment) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("default"))).Times(0);
+    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
+    string cipher = noninteractiveCryconsole.askCipher();
     EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
 }
 
