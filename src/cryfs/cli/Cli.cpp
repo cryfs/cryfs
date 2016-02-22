@@ -93,6 +93,8 @@ namespace cryfs {
 #endif
         if (!Environment::noUpdateCheck()) {
             _checkForUpdates();
+        } else {
+            cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
         }
         cout << endl;
     }
