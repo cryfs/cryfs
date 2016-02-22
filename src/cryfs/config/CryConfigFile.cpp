@@ -49,7 +49,8 @@ optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &
         // Migrate it to new format
         configFile.save();
     }
-    return configFile;
+    //TODO For newer compilers, this works without std::move
+    return std::move(configFile);
 }
 
 CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
