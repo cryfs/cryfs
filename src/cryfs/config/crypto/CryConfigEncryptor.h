@@ -5,8 +5,6 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/data/Deserializer.h>
 #include <cpp-utils/data/Serializer.h>
-#include <cpp-utils/crypto/kdf/DerivedKeyConfig.h>
-#include <cpp-utils/crypto/kdf/DerivedKey.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "inner/InnerEncryptor.h"
 #include "outer/OuterEncryptor.h"
@@ -22,19 +20,20 @@ namespace cryfs {
         struct Decrypted {
             cpputils::Data data;
             std::string cipherName;
+            bool wasInDeprecatedConfigFormat;
         };
 
-        CryConfigEncryptor(cpputils::DerivedKey<MaxTotalKeySize> derivedKey);
+        CryConfigEncryptor(cpputils::FixedSizeData<MaxTotalKeySize> derivedKey, cpputils::Data _kdfParameters);
 
         cpputils::Data encrypt(const cpputils::Data &plaintext, const std::string &cipherName) const;
         boost::optional<Decrypted> decrypt(const cpputils::Data &data) const;
 
     private:
-        boost::optional<InnerConfig> _loadInnerConfig(const cpputils::Data &data) const;
         cpputils::unique_ref<OuterEncryptor> _outerEncryptor() const;
         cpputils::unique_ref<InnerEncryptor> _innerEncryptor(const std::string &cipherName) const;
 
-        cpputils::DerivedKey<MaxTotalKeySize> _derivedKey;
+        cpputils::FixedSizeData<MaxTotalKeySize> _derivedKey;
+        cpputils::Data _kdfParameters;
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigEncryptor);
     };

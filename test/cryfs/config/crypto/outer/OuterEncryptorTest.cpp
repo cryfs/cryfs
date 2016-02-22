@@ -9,7 +9,6 @@ using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using cpputils::DerivedKeyConfig;
 using namespace cryfs;
 
 // This is needed for google test
@@ -22,10 +21,13 @@ namespace boost {
 
 class OuterEncryptorTest : public ::testing::Test {
 public:
+    Data kdfParameters() {
+        return DataFixture::generate(128);
+    }
+
     unique_ref<OuterEncryptor> makeOuterEncryptor() {
         auto key = DataFixture::generateFixedSize<OuterEncryptor::Cipher::EncryptionKey::BINARY_LENGTH>();
-        auto salt = DataFixture::generate(128);
-        return make_unique_ref<OuterEncryptor>(key, DerivedKeyConfig(std::move(salt), 1024, 1, 2));
+        return make_unique_ref<OuterEncryptor>(key, kdfParameters());
     }
 };
 

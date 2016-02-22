@@ -4,11 +4,14 @@
 
 #include "../../macros.h"
 #include "../../random/Random.h"
+#include "../../pointer/unique_ref.h"
+#include "PasswordBasedKDF.h"
+
 extern "C" {
     #include <scrypt/lib/crypto/crypto_scrypt.h>
 }
 #include <stdexcept>
-#include "DerivedKey.h"
+#include "SCryptParameters.h"
 
 namespace cpputils {
 
@@ -19,36 +22,29 @@ namespace cpputils {
         uint32_t p;
     };
 
-    class SCrypt final {
+    class SCrypt final : public PasswordBasedKDF {
     public:
         static constexpr SCryptSettings ParanoidSettings = SCryptSettings {32, 1048576, 8, 16};
         static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 1048576, 4, 1};
         static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 1};
 
-        SCrypt() {}
+        static unique_ref<SCrypt> forNewKey(const SCryptSettings &settings);
+        static unique_ref<SCrypt> forExistingKey(const Data &parameters);
 
-        template<size_t KEYSIZE>
-        DerivedKey<KEYSIZE> generateKey(const std::string &password, const SCryptSettings &settings) {
-            auto salt = Random::PseudoRandom().get(settings.SALT_LEN);
-            auto config = DerivedKeyConfig(std::move(salt), settings.N, settings.r, settings.p);
-            auto key = generateKeyFromConfig<KEYSIZE>(password, config);
-            return DerivedKey<KEYSIZE>(std::move(config), key);
-        }
+        const Data &kdfParameters() const override;
 
-        template<size_t KEYSIZE>
-        FixedSizeData<KEYSIZE> generateKeyFromConfig(const std::string &password, const DerivedKeyConfig &config) {
-            auto key = FixedSizeData<KEYSIZE>::Null();
-            int errorcode = crypto_scrypt(reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
-                          reinterpret_cast<const uint8_t*>(config.salt().data()), config.salt().size(),
-                          config.N(), config.r(), config.p(),
-                          static_cast<uint8_t*>(key.data()), KEYSIZE);
-            if (errorcode != 0) {
-                throw std::runtime_error("Error running scrypt key derivation.");
-            }
-            return key;
-        }
+        SCrypt(SCryptParameters config);
+
+    protected:
+        void derive(void *destination, size_t size, const std::string &password) override;
 
     private:
+        void _checkCallOnlyOnce();
+
+        SCryptParameters _config;
+        Data _serializedConfig;
+        bool _wasGeneratedBefore;
+
         DISALLOW_COPY_AND_ASSIGN(SCrypt);
     };
 }

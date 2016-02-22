@@ -4,7 +4,8 @@
 
 using cpputils::Data;
 using cpputils::DataFixture;
-using cpputils::DerivedKeyConfig;
+using cpputils::Deserializer;
+using cpputils::Serializer;
 using boost::none;
 using std::ostream;
 using namespace cryfs;
@@ -19,39 +20,36 @@ namespace boost {
 
 class OuterConfigTest: public ::testing::Test {
 public:
-    Data salt() {
+    Data kdfParameters() {
         return DataFixture::generate(128, 2);
     }
-    uint64_t N = 1024;
-    uint8_t r = 1;
-    uint8_t p = 2;
 };
 
 TEST_F(OuterConfigTest, SomeValues) {
-    Data serialized = OuterConfig{DerivedKeyConfig(salt(), N, r, p), DataFixture::generate(1024)}.serialize();
+    Data serialized = OuterConfig{kdfParameters(), DataFixture::generate(1024), false}.serialize();
     OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
-    EXPECT_EQ(DerivedKeyConfig(salt(), N, r, p), deserialized.keyConfig);
+    EXPECT_EQ(kdfParameters(), deserialized.kdfParameters);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, DataEmpty) {
-    Data serialized = OuterConfig{DerivedKeyConfig(salt(), N, r, p), Data(0)}.serialize();
+    Data serialized = OuterConfig{kdfParameters(), Data(0), false}.serialize();
     OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
-    EXPECT_EQ(DerivedKeyConfig(salt(), N, r, p), deserialized.keyConfig);
+    EXPECT_EQ(kdfParameters(), deserialized.kdfParameters);
     EXPECT_EQ(Data(0), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, KeyConfigEmpty) {
-    Data serialized = OuterConfig{DerivedKeyConfig(Data(0), 0, 0, 0), DataFixture::generate(1024)}.serialize();
+    Data serialized = OuterConfig{Data(0), DataFixture::generate(1024), false}.serialize();
     OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
-    EXPECT_EQ(DerivedKeyConfig(Data(0), 0, 0, 0), deserialized.keyConfig);
+    EXPECT_EQ(Data(0), deserialized.kdfParameters);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, DataAndKeyConfigEmpty) {
-    Data serialized = OuterConfig{DerivedKeyConfig(Data(0), 0, 0, 0), Data(0)}.serialize();
+    Data serialized = OuterConfig{Data(0), Data(0), false}.serialize();
     OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
-    EXPECT_EQ(DerivedKeyConfig(Data(0), 0, 0, 0), deserialized.keyConfig);
+    EXPECT_EQ(Data(0), deserialized.kdfParameters);
     EXPECT_EQ(Data(0), deserialized.encryptedInnerConfig);
 }
 

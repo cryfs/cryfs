@@ -8,8 +8,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::DataFixture;
 using cpputils::Data;
-using cpputils::DerivedKeyConfig;
-using cpputils::DerivedKey;
+using cpputils::FixedSizeData;
 using cpputils::AES128_CFB;
 using cpputils::AES256_GCM;
 using cpputils::Twofish256_GCM;
@@ -29,7 +28,7 @@ class CryConfigEncryptorTest: public ::testing::Test {
 public:
 
     unique_ref<CryConfigEncryptor> makeEncryptor() {
-        return make_unique_ref<CryConfigEncryptor>(_derivedKey());
+        return make_unique_ref<CryConfigEncryptor>(_derivedKey(), _kdfParameters());
     }
 
     Data changeInnerCipherFieldTo(Data data, const string &newCipherName) {
@@ -39,16 +38,17 @@ public:
     }
 
 private:
-    DerivedKey<CryConfigEncryptor::MaxTotalKeySize> _derivedKey() {
-        auto salt = DataFixture::generate(128, 2);
-        auto keyConfig = DerivedKeyConfig(std::move(salt), 1024, 1, 2);
-        auto key = DataFixture::generateFixedSize<CryConfigEncryptor::MaxTotalKeySize>(3);
-        return DerivedKey<CryConfigEncryptor::MaxTotalKeySize>(std::move(keyConfig), std::move(key));
+    FixedSizeData<CryConfigEncryptor::MaxTotalKeySize> _derivedKey() {
+        return DataFixture::generateFixedSize<CryConfigEncryptor::MaxTotalKeySize>(3);
+    }
+
+    Data _kdfParameters() {
+        return DataFixture::generate(128, 2);
     }
 
     unique_ref<OuterEncryptor> _outerEncryptor() {
-        auto outerKey = _derivedKey().key().take<CryConfigEncryptor::OuterKeySize>();
-        return make_unique_ref<OuterEncryptor>(outerKey, _derivedKey().config());
+        auto outerKey = _derivedKey().take<CryConfigEncryptor::OuterKeySize>();
+        return make_unique_ref<OuterEncryptor>(outerKey, _kdfParameters());
     }
 
     InnerConfig _decryptInnerConfig(const Data &data) {

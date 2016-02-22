@@ -13,19 +13,19 @@ namespace cpputils {
     //TODO Test operator==/!=
     //TODO Use SCryptSettings as a member here instead of storing _N, _r, _p.
 
-    class DerivedKeyConfig final {
+    class SCryptParameters final {
     public:
-        DerivedKeyConfig(Data salt, uint64_t N, uint32_t r, uint32_t p)
+        SCryptParameters(Data salt, uint64_t N, uint32_t r, uint32_t p)
                 : _salt(std::move(salt)),
                   _N(N), _r(r), _p(p) { }
 
-        DerivedKeyConfig(const DerivedKeyConfig &rhs)
+        SCryptParameters(const SCryptParameters &rhs)
                 :_salt(rhs._salt.copy()),
                  _N(rhs._N), _r(rhs._r), _p(rhs._p) { }
 
-        DerivedKeyConfig(DerivedKeyConfig &&rhs) = default;
+        SCryptParameters(SCryptParameters &&rhs) = default;
 
-        DerivedKeyConfig &operator=(const DerivedKeyConfig &rhs) {
+        SCryptParameters &operator=(const SCryptParameters &rhs) {
             _salt = rhs._salt.copy();
             _N = rhs._N;
             _r = rhs._r;
@@ -33,7 +33,7 @@ namespace cpputils {
             return *this;
         }
 
-        DerivedKeyConfig &operator=(DerivedKeyConfig &&rhs) = default;
+        SCryptParameters &operator=(SCryptParameters &&rhs) = default;
 
         const Data &salt() const {
             return _salt;
@@ -51,24 +51,31 @@ namespace cpputils {
             return _p;
         }
 
-        void serialize(Serializer *destination) const;
+        cpputils::Data serialize() const;
 
-        size_t serializedSize() const;
+        static SCryptParameters deserialize(const cpputils::Data &data);
 
-        static DerivedKeyConfig deserialize(Deserializer *source);
+#ifndef CRYFS_NO_COMPATIBILITY
+        static SCryptParameters deserializeOldFormat(cpputils::Deserializer *deserializer);
+        size_t serializedSize() const {
+            return _serializedSize();
+        }
+#endif
 
     private:
+        size_t _serializedSize() const;
+
         Data _salt;
         uint64_t _N;
         uint32_t _r;
         uint32_t _p;
     };
 
-    inline bool operator==(const DerivedKeyConfig &lhs, const DerivedKeyConfig &rhs) {
+    inline bool operator==(const SCryptParameters &lhs, const SCryptParameters &rhs) {
         return lhs.salt() == rhs.salt() && lhs.N() == rhs.N() && lhs.r() == rhs.r() && lhs.p() == rhs.p();
     }
 
-    inline bool operator!=(const DerivedKeyConfig &lhs, const DerivedKeyConfig &rhs) {
+    inline bool operator!=(const SCryptParameters &lhs, const SCryptParameters &rhs) {
         return !operator==(lhs, rhs);
     }
 

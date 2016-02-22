@@ -18,8 +18,7 @@ namespace cryfs {
 
     private:
 
-        static cpputils::DerivedKey<CryConfigEncryptor::MaxTotalKeySize> _deriveKey(const cpputils::DerivedKeyConfig &keyConfig, const std::string &password);
-        static boost::optional<std::string> _loadCipherName(const OuterEncryptor &outerEncryptor, const OuterConfig &outerConfig);
+        static cpputils::unique_ref<CryConfigEncryptor> _deriveKey(cpputils::unique_ref<cpputils::SCrypt> kdf, const std::string &password);
     };
 }
 

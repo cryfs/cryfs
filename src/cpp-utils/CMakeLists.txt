@@ -2,9 +2,9 @@ project (cpp-utils)
 
 set(SOURCES
         crypto/symmetric/ciphers.cpp
-        crypto/kdf/DerivedKey.cpp
         crypto/kdf/Scrypt.cpp
-        crypto/kdf/DerivedKeyConfig.cpp
+        crypto/kdf/SCryptParameters.cpp
+        crypto/kdf/PasswordBasedKDF.cpp
         crypto/RandomPadding.cpp
         process/daemonize.cpp
         process/subprocess.cpp

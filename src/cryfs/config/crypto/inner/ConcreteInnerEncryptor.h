@@ -3,7 +3,6 @@
 #define MESSMER_CRYFS_SRC_CONFIG_CRYPTO_INNER_CONCRETECRYCONFIGENCRYPTOR_H
 
 #include <cpp-utils/crypto/RandomPadding.h>
-#include <cpp-utils/crypto/kdf/DerivedKey.h>
 
 #include "InnerEncryptor.h"
 #include "InnerConfig.h"

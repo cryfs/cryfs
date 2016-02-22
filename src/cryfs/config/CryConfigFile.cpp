@@ -44,7 +44,12 @@ optional<CryConfigFile> CryConfigFile::load(const bf::path &path, const string &
         LOG(ERROR) << "Inner cipher algorithm used to encrypt config file doesn't match config value";
         return none;
     }
-    return CryConfigFile(path, std::move(config), std::move(*encryptor));
+    auto configFile = CryConfigFile(path, std::move(config), std::move(*encryptor));
+    if (decrypted->wasInDeprecatedConfigFormat) {
+        // Migrate it to new format
+        configFile.save();
+    }
+    return configFile;
 }
 
 CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
