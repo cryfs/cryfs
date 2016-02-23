@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/cli/VersionCompare.h>
+#include <cryfs-cli/VersionCompare.h>
 
 using namespace cryfs;
 using std::string;

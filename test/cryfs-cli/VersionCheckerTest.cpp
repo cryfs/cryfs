@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/cli/VersionChecker.h>
+#include <cryfs-cli/VersionChecker.h>
 #include <cpp-utils/network/FakeHttpClient.h>
 #include <cpp-utils/pointer/unique_ref.h>
 

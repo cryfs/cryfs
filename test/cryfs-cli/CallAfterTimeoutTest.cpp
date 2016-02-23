@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/pointer/unique_ref.h>
-#include <cryfs/cli/CallAfterTimeout.h>
+#include <cryfs-cli/CallAfterTimeout.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

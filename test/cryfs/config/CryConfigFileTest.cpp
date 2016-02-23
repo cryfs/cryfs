@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-
 #include <cryfs/config/CryConfigFile.h>
 #include <cpp-utils/tempfile/TempFile.h>
 

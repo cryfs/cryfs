@@ -1,5 +1,5 @@
 #include "testutils/ProgramOptionsTestBase.h"
-#include <cryfs/cli/program_options/Parser.h>
+#include <cryfs-cli/program_options/Parser.h>
 #include <cryfs/config/CryCipher.h>
 
 using namespace cryfs;

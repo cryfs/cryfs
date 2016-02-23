@@ -1,17 +1,6 @@
 project (cryfs-test)
 
 set(SOURCES
-    cli/CallAfterTimeoutTest.cpp
-    cli/testutils/CliTest.cpp
-    cli/CliTest_Setup.cpp
-    cli/CliTest_WrongEnvironment.cpp
-    cli/program_options/UtilsTest.cpp
-    cli/program_options/ProgramOptionsTest.cpp
-    cli/program_options/ParserTest.cpp
-    cli/CliTest_ShowingHelp.cpp
-    cli/EnvironmentTest.cpp
-    cli/VersionCheckerTest.cpp
-    cli/VersionCompareTest.cpp
     config/crypto/CryConfigEncryptorFactoryTest.cpp
     config/crypto/outer/OuterConfigTest.cpp
     config/crypto/outer/OuterEncryptorTest.cpp
@@ -30,7 +19,7 @@ set(SOURCES
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} googletest cryfs_lib)
+target_link_libraries(${PROJECT_NAME} googletest cryfs)
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 
 target_enable_style_warnings(${PROJECT_NAME})

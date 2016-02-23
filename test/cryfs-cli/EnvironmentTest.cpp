@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/cli/Environment.h>
+#include <cryfs-cli/Environment.h>
 #include <boost/optional.hpp>
 
 using namespace cryfs;

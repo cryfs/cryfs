@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-
 #include <cryfs/config/CryConfig.h>
 
 using namespace cryfs;

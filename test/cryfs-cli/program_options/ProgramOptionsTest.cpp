@@ -1,5 +1,5 @@
 #include "testutils/ProgramOptionsTestBase.h"
-#include <cryfs/cli/program_options/ProgramOptions.h>
+#include <cryfs-cli/program_options/ProgramOptions.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using namespace cryfs::program_options;

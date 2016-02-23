@@ -12,8 +12,8 @@
 #include <fspp/impl/FilesystemImpl.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
-#include "../filesystem/CryDevice.h"
-#include "../config/CryConfigLoader.h"
+#include <cryfs/filesystem/CryDevice.h>
+#include <cryfs/config/CryConfigLoader.h>
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 

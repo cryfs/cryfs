@@ -1,4 +1,4 @@
-#include "cli/Cli.h"
+#include "Cli.h"
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/network/CurlHttpClient.h>

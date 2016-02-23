@@ -2,7 +2,7 @@
 #include "utils.h"
 #include <iostream>
 #include <boost/optional.hpp>
-#include <cryfs/cli/Environment.h>
+#include <cryfs-cli/Environment.h>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
