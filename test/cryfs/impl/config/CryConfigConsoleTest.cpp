@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <cryfs/config/CryConfigConsole.h>
-#include <cryfs/config/CryCipher.h>
+#include <cryfs/impl/config/CryConfigConsole.h>
+#include <cryfs/impl/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
 

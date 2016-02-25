@@ -11,7 +11,7 @@
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/network/FakeHttpClient.h>
-#include "../../cryfs/testutils/MockConsole.h"
+#include "../../cryfs/impl/testutils/MockConsole.h"
 
 class CliTest : public ::testing::Test {
 public:

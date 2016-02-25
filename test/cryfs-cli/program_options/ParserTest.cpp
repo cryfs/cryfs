@@ -1,6 +1,6 @@
 #include "testutils/ProgramOptionsTestBase.h"
 #include <cryfs-cli/program_options/Parser.h>
-#include <cryfs/config/CryCipher.h>
+#include <cryfs/impl/config/CryCipher.h>
 
 using namespace cryfs;
 using namespace cryfs::program_options;

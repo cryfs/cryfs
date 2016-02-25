@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/config/crypto/outer/OuterEncryptor.h>
+#include <cryfs/impl/config/crypto/outer/OuterEncryptor.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
 

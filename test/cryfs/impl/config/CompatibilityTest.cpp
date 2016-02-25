@@ -5,7 +5,7 @@
 #include <cryptopp/hex.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/tempfile/TempFile.h>
-#include <cryfs/config/CryConfigFile.h>
+#include <cryfs/impl/config/CryConfigFile.h>
 
 using std::vector;
 using cpputils::Data;

@@ -12,13 +12,13 @@
 #include <fspp/impl/FilesystemImpl.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
-#include <cryfs/filesystem/CryDevice.h>
-#include <cryfs/config/CryConfigLoader.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 
 #include <gitversion/version.h>
-#include <cryfs/filesystem/CryDir.h>
+#include <cryfs/impl/filesystem/CryDir.h>
 
 #include "VersionChecker.h"
 #include "VersionCompare.h"

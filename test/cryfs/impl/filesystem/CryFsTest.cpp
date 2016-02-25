@@ -3,12 +3,12 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/pointer/cast.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include <cryfs/filesystem/CryDevice.h>
-#include <cryfs/filesystem/CryDir.h>
-#include <cryfs/filesystem/CryFile.h>
-#include <cryfs/filesystem/CryOpenFile.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/CryDir.h>
+#include <cryfs/impl/filesystem/CryFile.h>
+#include <cryfs/impl/filesystem/CryOpenFile.h>
 #include "../testutils/MockConsole.h"
-#include <cryfs/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 

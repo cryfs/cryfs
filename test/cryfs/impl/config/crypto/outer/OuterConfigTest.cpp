@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <cryfs/config/crypto/outer/OuterConfig.h>
+#include <cryfs/impl/config/crypto/outer/OuterConfig.h>
 
 using cpputils::Data;
 using cpputils::DataFixture;

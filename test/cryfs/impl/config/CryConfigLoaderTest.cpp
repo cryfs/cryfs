@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
 #include "../testutils/MockConsole.h"
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>

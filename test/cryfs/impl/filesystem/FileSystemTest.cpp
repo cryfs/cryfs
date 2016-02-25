@@ -2,8 +2,8 @@
 #include <fspp/fstest/FsTest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 
-#include <cryfs/filesystem/CryDevice.h>
-#include <cryfs/config/CryConfigLoader.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
 #include "../testutils/MockConsole.h"
 
 using cpputils::unique_ref;

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cryfs/config/CryConfig.h>
+#include <cryfs/impl/config/CryConfig.h>
 
 using namespace cryfs;
 using cpputils::Data;

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
-#include <cryfs/config/crypto/inner/InnerConfig.h>
+#include <cryfs/impl/config/crypto/inner/InnerConfig.h>
 
 using cpputils::Data;
 using cpputils::DataFixture;

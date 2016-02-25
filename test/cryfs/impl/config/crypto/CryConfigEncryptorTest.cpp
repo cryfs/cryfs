@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <cryfs/config/crypto/CryConfigEncryptor.h>
+#include <cryfs/impl/config/crypto/CryConfigEncryptor.h>
 
 using std::ostream;
 using cpputils::unique_ref;
