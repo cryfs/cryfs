@@ -1,7 +1,6 @@
-project (cryfs)
+project (cryfs-lib)
 
 set(SOURCES
-        cryfs.cpp
         config/crypto/outer/OuterConfig.cpp
         config/crypto/outer/OuterEncryptor.cpp
         config/crypto/CryConfigEncryptorFactory.cpp
@@ -42,15 +41,34 @@ set(SOURCES
         filesystem/CryDevice.cpp
 )
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME cryfs)
-target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore blobstore fspp) # TODO Check that dependent projects don't get this linked in
-target_add_boost(${PROJECT_NAME} program_options chrono) # TODO Check that dependent projects don't get boost added (use PRIVATE here)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore blobstore fspp)
+target_add_boost(${PROJECT_NAME} program_options chrono)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
 target_git_version_init(${PROJECT_NAME})
 
-#install(TARGETS ${PROJECT_NAME}
-#        DESTINATION lib
-#        CONFIGURATIONS Release
-#)
+# Needed so it can be linked in to the shared cryfs library
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE on)
+
+
+project(cryfs)
+
+add_library(${PROJECT_NAME} SHARED cryfs.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE cryfs-lib) # TODO Check that dependent projects don't get this linked in
+target_enable_style_warnings(${PROJECT_NAME})
+target_activate_cpp14(${PROJECT_NAME})
+
+# The library should only export the functions we declared to be exported
+include(GenerateExportHeader)
+add_compiler_export_flags(EXPORT_FLAGS)
+separate_arguments(EXPORT_FLAGS)
+target_compile_options(${PROJECT_NAME} PRIVATE ${EXPORT_FLAGS})
+generate_export_header(${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR})
+
+install(TARGETS ${PROJECT_NAME}
+        DESTINATION lib
+        CONFIGURATIONS Release
+)
