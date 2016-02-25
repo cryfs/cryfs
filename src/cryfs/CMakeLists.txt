@@ -19,3 +19,8 @@ install(TARGETS ${PROJECT_NAME}
         DESTINATION lib
         CONFIGURATIONS Release
 )
+install(FILES
+        cryfs.h
+        ${PROJECT_BINARY_DIR}/cryfs_export.h
+        DESTINATION include/cryfs
+)
