@@ -1,3 +1,5 @@
+add_subdirectory(lib_usage_test)
+
 project (cryfs-test)
 
 set(SOURCES

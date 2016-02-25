@@ -1,7 +1,7 @@
 project (cryfs)
 
-set(LIB_SOURCES
-#    cryfs.cpp
+set(SOURCES
+        cryfs.cpp
         config/crypto/outer/OuterConfig.cpp
         config/crypto/outer/OuterEncryptor.cpp
         config/crypto/CryConfigEncryptorFactory.cpp
@@ -42,9 +42,9 @@ set(LIB_SOURCES
         filesystem/CryDevice.cpp
 )
 
-add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME cryfs)
-target_link_libraries(${PROJECT_NAME} PRIVATE cpp-utils blockstore blobstore fspp) # TODO Check that dependent projects don't get this linked in
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore blobstore fspp) # TODO Check that dependent projects don't get this linked in
 target_add_boost(${PROJECT_NAME} program_options chrono) # TODO Check that dependent projects don't get boost added (use PRIVATE here)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})

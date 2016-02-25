@@ -48,3 +48,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 )
 add_dependencies(${PROJECT_NAME} scrypt_original)
 target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0)
+
+# Needed so it can be linked in to the shared cryfs library
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE on)

@@ -6,11 +6,12 @@
 extern "C" {
 #endif
 
-struct cryfs_load_handle;
+typedef struct cryfs_load_context cryfs_load_context;
+typedef enum {cryfs_success = 0} cryfs_status;
 
-cryfs_load_handle *cryfs_load_init();
-void cryfs_load_free(cryfs_load_handle *handle);
-const char *cryfs_test(cryfs_load_handle *handle);
+cryfs_status cryfs_load_init(cryfs_load_context **context) __attribute__((warn_unused_result));
+void cryfs_load_free(cryfs_load_context *context);
+const char *cryfs_test(cryfs_load_context *context) __attribute__((warn_unused_result));
 
 #ifdef __cplusplus
 }
