@@ -2,7 +2,14 @@ add_subdirectory(impl)
 
 project(cryfs)
 
-add_library(${PROJECT_NAME} SHARED cryfs.cpp)
+set(SOURCES
+        cryfs.cpp
+        lib/cryfs_load_context.cpp
+        lib/cryfs_mount_handle.cpp
+        lib/mount_handle_list.cpp
+)
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE cryfs-impl)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
