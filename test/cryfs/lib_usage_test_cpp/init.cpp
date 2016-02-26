@@ -1,7 +1,10 @@
 #include <cryfs/cryfspp.h>
+#include <iostream>
+
+using namespace std;
 
 int main() {
     //TODO Write code here that includes and uses the library
-    printf("Success\n");
-    exit(0);
+    cout << "Success\n";
+    return 0;
 }
