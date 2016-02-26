@@ -28,7 +28,7 @@ cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **handle
     return context->load(handle);
 }
 
-cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, char *output, size_t max_output_size) {
+cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char **output) {
     // TODO Implement
     static constexpr const char *CIPHERNAME = "aes-256-gcm";
     std::memcpy(output, CIPHERNAME, strlen(CIPHERNAME)+1);

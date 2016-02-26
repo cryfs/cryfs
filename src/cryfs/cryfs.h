@@ -27,7 +27,7 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load(cryfs_l
 CRYFS_EXPORT void cryfs_load_free(cryfs_load_context *context);
 
 // Mounting a file system
-CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, char *output, size_t max_output_size);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char **output);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *logfile);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t unmount_idle_sec);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount(cryfs_mount_handle *handle, const char *mountdir);
