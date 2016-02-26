@@ -6,7 +6,7 @@
 #include <cpp-utils/macros.h>
 #include "mount_handle_list.h"
 
-class cryfs_load_context final {
+struct cryfs_load_context final {
 public:
     cryfs_load_context();
 

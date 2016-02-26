@@ -3,6 +3,7 @@
 #define CRYFS_MOUNT_HANDLE_LIST_H
 
 #include <cpp-utils/pointer/unique_ref.h>
+#include <vector>
 #include "cryfs_mount_handle.h"
 
 // This class keeps ownership of created mount handles and destroys them in its destructor.

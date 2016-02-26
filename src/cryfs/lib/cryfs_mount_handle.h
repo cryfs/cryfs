@@ -5,7 +5,7 @@
 #include <cpp-utils/macros.h>
 #include <boost/optional.hpp>
 
-class cryfs_mount_handle final {
+struct cryfs_mount_handle final {
 public:
     cryfs_mount_handle(const std::string &basedir, const boost::optional<std::string> &configFile, const std::string &password);
 
