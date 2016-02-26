@@ -9,7 +9,7 @@
 #ifdef __MACH__
 #include <sys/time.h>
 #define CLOCK_REALTIME 0
-int clock_gettime(int /*clk_id*/, struct timespec *result) {
+inline int clock_gettime(int /*clk_id*/, struct timespec *result) {
     struct timeval now;
     int rv = gettimeofday(&now, nullptr);
     if (rv) {
