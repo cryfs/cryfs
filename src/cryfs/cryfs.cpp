@@ -3,6 +3,8 @@
 #include "cryfs.h"
 #include "lib/cryfs_load_context.h"
 
+using std::string;
+
 cryfs_status cryfs_load_init(cryfs_load_context **context) {
     *context = new cryfs_load_context;
     return cryfs_success;
@@ -12,16 +14,16 @@ void cryfs_load_free(cryfs_load_context *context) {
     delete context;
 }
 
-cryfs_status cryfs_load_set_basedir(cryfs_load_context *context, const char *basedir) {
-    return context->set_basedir(basedir);
+cryfs_status cryfs_load_set_basedir(cryfs_load_context *context, const char *basedir, size_t basedir_length) {
+    return context->set_basedir(string(basedir, basedir_length));
 }
 
 cryfs_status cryfs_load_set_password(cryfs_load_context *context, const char *password, size_t password_length) {
-    return context->set_password(password, password_length);
+    return context->set_password(string(password, password_length));
 }
 
-cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const char *configfile) {
-    return context->set_externalconfig(configfile);
+cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const char *configfile, size_t configfile_length) {
+    return context->set_externalconfig(string(configfile, configfile_length));
 }
 
 cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **handle) {
@@ -35,7 +37,7 @@ cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char *
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *logfile) {
+cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *logfile, size_t logfile_length) {
     //TODO Implement
     return cryfs_success;
 }
@@ -45,8 +47,8 @@ cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t u
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount(cryfs_mount_handle *handle, const char *mountdir) {
+cryfs_status cryfs_mount(cryfs_mount_handle *handle, const char *mountdir, size_t mountdir_length) {
     //TODO Implement
-    std::cout << "Heyho, congrats! I'm mounting to " << mountdir << ". Ok, not actually, this is only a dummy..." << std::endl;
+    std::cout << "Heyho, congrats! I'm mounting to " << string(mountdir, mountdir_length) << ". Ok, not actually, this is only a dummy..." << std::endl;
     return cryfs_success;
 }

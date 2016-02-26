@@ -7,17 +7,17 @@ cryfs_load_context::cryfs_load_context()
         : _basedir(boost::none), _password(boost::none), _configfile(boost::none) {
 }
 
-cryfs_status cryfs_load_context::set_basedir(const char *basedir) {
+cryfs_status cryfs_load_context::set_basedir(const string &basedir) {
     _basedir = basedir;
     return cryfs_success;
 }
 
-cryfs_status cryfs_load_context::set_password(const char *password, size_t password_length) {
-    _password = string(password, password_length);
+cryfs_status cryfs_load_context::set_password(const string &password) {
+    _password = password;
     return cryfs_success;
 }
 
-cryfs_status cryfs_load_context::set_externalconfig(const char *configfile) {
+cryfs_status cryfs_load_context::set_externalconfig(const string &configfile) {
     _configfile = configfile;
     return cryfs_success;
 }
