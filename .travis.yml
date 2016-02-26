@@ -42,6 +42,7 @@ script:
 # TODO Also run on osx once fixed
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/impl/cryfs-impl-test ; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/lib_usage_test/cryfs-lib-usage-test ; fi
+- if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/lib_usage_test_cpp/cryfs-lib-usage-test-cpp ; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/cryfs-cli-test ; fi
 after_script:
 - rm run_with_fuse.sh
