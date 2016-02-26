@@ -2,6 +2,7 @@
 #define CRYFS_CRYFS_LOAD_CONTEXT_H
 
 #include "../cryfs.h"
+#include <string>
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
 #include "mount_handle_list.h"

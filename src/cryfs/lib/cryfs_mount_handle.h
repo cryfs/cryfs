@@ -3,6 +3,7 @@
 
 #include "../cryfs.h"
 #include <cpp-utils/macros.h>
+#include <string>
 #include <boost/optional.hpp>
 
 struct cryfs_mount_handle final {
