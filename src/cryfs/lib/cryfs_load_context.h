@@ -4,7 +4,8 @@
 #include "../cryfs.h"
 #include <string>
 #include <boost/optional.hpp>
-#include <cpp-utils/macros.h>
+#include <boost/filesystem/path.hpp>
+#include "../impl/config/CryConfigFile.h"
 #include "mount_handle_list.h"
 
 struct cryfs_load_context final {
@@ -20,9 +21,13 @@ public:
     cryfs_status load(cryfs_mount_handle **handle);
 
 private:
-    boost::optional<std::string> _basedir;
+    boost::optional<boost::filesystem::path> _basedir;
     boost::optional<std::string> _password;
-    boost::optional<std::string> _configfile;
+    boost::optional<boost::filesystem::path> _configfile;
+
+    boost::optional<cryfs::CryConfigFile> _load_config_file() const;
+    boost::filesystem::path _determine_configfile_path() const;
+    static bool _check_version(const cryfs::CryConfig &config);
 
     mount_handle_list _keepHandleOwnership;
 

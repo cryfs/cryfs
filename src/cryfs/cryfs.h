@@ -15,7 +15,11 @@ typedef struct cryfs_mount_handle cryfs_mount_handle;
 typedef enum {
     cryfs_success = 0,
     cryfs_error_BASEDIR_NOT_SET = -1,
-    cryfs_error_PASSWORD_NOT_SET = -2
+    cryfs_error_PASSWORD_NOT_SET = -2,
+    cryfs_error_CONFIGFILE_DOESNT_EXIST = -3,
+    cryfs_error_BASEDIR_DOESNT_EXIST = -4,
+    cryfs_error_FILESYSTEM_NOT_FOUND = -5,
+    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -6
 } cryfs_status;
 
 // Loading a file system

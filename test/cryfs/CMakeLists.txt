@@ -1,3 +1,4 @@
 add_subdirectory(impl)
 add_subdirectory(lib_usage_test)
+add_subdirectory(lib_link_test)
 add_subdirectory(lib_usage_test_cpp)

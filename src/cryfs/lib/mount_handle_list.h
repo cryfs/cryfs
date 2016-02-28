@@ -5,13 +5,14 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <vector>
 #include "cryfs_mount_handle.h"
+#include "../impl/config/CryConfigFile.h"
 
 // This class keeps ownership of created mount handles and destroys them in its destructor.
 class mount_handle_list final {
 public:
     mount_handle_list();
 
-    cryfs_mount_handle *create(const std::string &basedir, const boost::optional<std::string> &configFile, const std::string &password);
+    cryfs_mount_handle *create(const boost::filesystem::path &basedir, cryfs::CryConfigFile config);
 
 private:
     std::vector<cpputils::unique_ref<cryfs_mount_handle>> _createdHandles;
