@@ -94,3 +94,4 @@ TEST_F(C_Library, load_withexternalconfig) {
 
 //TODO Add test cases that load a file system successfully (with and without external config)
 //TODO Add test cases loading file systems with an incompatible version
+//TODO Add test cases for all existing error codes

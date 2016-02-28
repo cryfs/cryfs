@@ -6,6 +6,7 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
 #include "../impl/config/CryConfigFile.h"
+#include "../impl/filesystem/CryDevice.h"
 #include "mount_handle_list.h"
 
 struct cryfs_load_context final {
@@ -25,9 +26,10 @@ private:
     boost::optional<std::string> _password;
     boost::optional<boost::filesystem::path> _configfile;
 
-    boost::optional<cryfs::CryConfigFile> _load_config_file() const;
+    boost::optional<cryfs::CryConfigFile> _load_configfile() const;
     boost::filesystem::path _determine_configfile_path() const;
     static bool _check_version(const cryfs::CryConfig &config);
+    static bool _sanity_check_filesystem(cryfs::CryDevice *device);
 
     mount_handle_list _keepHandleOwnership;
 

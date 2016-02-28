@@ -1,17 +1,27 @@
 #include <cpp-utils/assert/assert.h>
-#include "cryfs_load_context.h"
-#include "../impl/config/CryConfigLoader.h"
-#include <boost/algorithm/string/predicate.hpp>
+#include <cpp-utils/logging/logging.h>
 #include <gitversion/version.h>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include "../impl/config/CryConfigLoader.h"
+#include "../impl/filesystem/CryDir.h"
+#include "cryfs_load_context.h"
 
+using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using std::string;
 using boost::none;
 using boost::optional;
 namespace bf = boost::filesystem;
 
+using cryfs::CryDevice;
+using cryfs::CryDir;
 using cryfs::CryConfig;
 using cryfs::CryConfigFile;
 using cryfs::CryConfigLoader;
+using blockstore::ondisk::OnDiskBlockStore;
+
+using namespace cpputils::logging;
 
 cryfs_load_context::cryfs_load_context()
         : _basedir(boost::none), _password(boost::none), _configfile(boost::none) {
@@ -45,27 +55,27 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     if (_password == none) {
         return cryfs_error_PASSWORD_NOT_SET;
     }
-    auto config_file = _load_config_file();
-    if (config_file == none) {
+    auto configfile = _load_configfile();
+    if (configfile == none) {
         //TODO More detailed error reporting. Config file not found? Invalid config file header (i.e. invalid config file)? Decryption failed (i.e. wrong password)?
         return cryfs_error_FILESYSTEM_NOT_FOUND;
     }
-    if(!_check_version(*config_file->config())) {
+    if(!_check_version(*configfile->config())) {
         return cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION;
     }
     //TODO CLI caller needs to check cipher if specified on command line
 
-    //TODO Actually load the file system here and pass the CryDevice instance to cryfs_mount_handle. This way, we can throw loading errors here already.
-    *handle = _keepHandleOwnership.create(*_basedir, std::move(*config_file));
+    auto blockstore = make_unique_ref<OnDiskBlockStore>(*_basedir);
+    auto crydevice = make_unique_ref<CryDevice>(std::move(*configfile), std::move(blockstore));
+    if (!_sanity_check_filesystem(crydevice.get())) {
+        return cryfs_error_FILESYSTEM_INVALID;
+    }
+
+    *handle = _keepHandleOwnership.create(std::move(crydevice));
     return cryfs_success;
 }
 
-bool cryfs_load_context::_check_version(const CryConfig &config) {
-    const string allowedVersionPrefix = string() + version::VERSION_COMPONENTS[0] + "." + version::VERSION_COMPONENTS[1] + ".";
-    return boost::starts_with(config.Version(), allowedVersionPrefix);
-}
-
-optional<CryConfigFile> cryfs_load_context::_load_config_file() const {
+optional<CryConfigFile> cryfs_load_context::_load_configfile() const {
     bf::path configfilePath = _determine_configfile_path();
     if (!bf::is_regular_file(configfilePath)) {
         return none;
@@ -81,4 +91,24 @@ bf::path cryfs_load_context::_determine_configfile_path() const {
         return *_configfile;
     }
     return *_basedir / "cryfs.config";
+}
+
+bool cryfs_load_context::_check_version(const CryConfig &config) {
+    const string allowedVersionPrefix = string() + version::VERSION_COMPONENTS[0] + "." + version::VERSION_COMPONENTS[1] + ".";
+    return boost::starts_with(config.Version(), allowedVersionPrefix);
+}
+
+bool cryfs_load_context::_sanity_check_filesystem(CryDevice *device) {
+    //Try to list contents of base directory
+    auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
+    if (_rootDir == none) {
+        LOG(ERROR) << "Couldn't find root blob";
+        return false;
+    }
+    auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
+    if (rootDir == none) {
+        LOG(ERROR) << "Root blob isn't a directory";
+        return false;
+    }
+    return true;
 }

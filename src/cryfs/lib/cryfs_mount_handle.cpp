@@ -1,11 +1,9 @@
 #include "cryfs_mount_handle.h"
 
-using boost::optional;
-using std::string;
-using cryfs::CryConfigFile;
-namespace bf = boost::filesystem;
+using cpputils::unique_ref;
+using cryfs::CryDevice;
 
-cryfs_mount_handle::cryfs_mount_handle(const bf::path &basedir, CryConfigFile config)
-    :_basedir(basedir), _config(std::move(config)) {
+cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
+    :_crydevice(std::move(crydevice)) {
 }
 
