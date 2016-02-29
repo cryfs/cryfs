@@ -18,10 +18,9 @@ typedef enum {
     cryfs_error_PASSWORD_NOT_SET = -2,
     cryfs_error_CONFIGFILE_DOESNT_EXIST = -3,
     cryfs_error_BASEDIR_DOESNT_EXIST = -4,
-    cryfs_error_FILESYSTEM_NOT_FOUND = -5,
-    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -6,
-    cryfs_error_FILESYSTEM_INVALID = -7,
-    cryfs_error_DECRYPTION_FAILED = -8
+    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -5,
+    cryfs_error_FILESYSTEM_INVALID = -6,
+    cryfs_error_DECRYPTION_FAILED = -7
 } cryfs_status;
 
 // Loading a file system

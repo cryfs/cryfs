@@ -47,6 +47,16 @@ public:
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
     }
 
+    CryConfigFile create_configfile_for_incompatible_cryfs_version(const bf::path &configfile_path) {
+        CryConfig config;
+        config.SetCipher("aes-256-gcm");
+        config.SetEncryptionKey(AES256_GCM::CreateKey(Random::PseudoRandom()).ToString());
+        config.SetRootBlob("");
+        config.SetVersion("0.8.0");
+
+        return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
+    }
+
     void remove_all_blocks_in(const bf::path &dir) {
         for (bf::directory_iterator iter(dir); iter != bf::directory_iterator(); ++iter) {
             if (iter->path().filename() != "cryfs.config") {
@@ -146,4 +156,11 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile_withexternalconfig
     EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
-//TODO Add test cases loading file systems with an incompatible version returns cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION
+TEST_F(C_Library_Test_With_Filesystem, load_incompatible_version) {
+    create_filesystem(basedir.path());
+    create_configfile_for_incompatible_cryfs_version(externalconfig.path());
+    set_basedir();
+    set_externalconfig();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION);
+}

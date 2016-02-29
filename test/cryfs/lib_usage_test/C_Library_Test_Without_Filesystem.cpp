@@ -78,5 +78,3 @@ TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir_withexternalconfig) 
     set_password();
     EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
 }
-
-//TODO Add test cases for all existing error codes (here or in C_Library_Test_With_Filesystem)
