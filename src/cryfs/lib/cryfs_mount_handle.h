@@ -18,6 +18,7 @@ public:
 private:
     cpputils::unique_ref<cryfs::CryDevice> _crydevice;
     std::string _cipher;
+    boost::optional<boost::filesystem::path> _mountdir;
 
     DISALLOW_COPY_AND_ASSIGN(cryfs_mount_handle);
 };

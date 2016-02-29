@@ -24,7 +24,10 @@ namespace bf = boost::filesystem;
 class Mount_Test : public C_Library_Test {
 public:
     TempDir basedir;
+    TempDir mountdir;
     static const string PASSWORD;
+    static const string NOTEXISTING_DIR;
+    static const string INVALID_DIR;
 
     void create_filesystem(const bf::path &basedir, const string &cipher) {
         auto configfile = create_configfile(basedir / "cryfs.config", cipher);
@@ -58,6 +61,8 @@ public:
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
+const string Mount_Test::NOTEXISTING_DIR = "/some/notexisting/dir";
+const string Mount_Test::INVALID_DIR = "pathname_with_some_invalid_characters_$% ä*.\\\"[]:;|=,";
 
 TEST_F(Mount_Test, setup) {
     // Just test that the test setup works
@@ -74,6 +79,24 @@ TEST_F(Mount_Test, get_cipher_2) {
     // Just test that the test setup works
     cryfs_mount_handle *handle = create_and_load_filesystem("twofish-256-gcm");
     EXPECT_EQ("twofish-256-gcm", get_ciphername(handle));
+}
+
+TEST_F(Mount_Test, set_mountdir_notexisting) {
+    // Just test that the test setup works
+    cryfs_mount_handle *handle = create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, NOTEXISTING_DIR.c_str(), NOTEXISTING_DIR.size()));
+}
+
+TEST_F(Mount_Test, set_mountdir_invalid) {
+    // Just test that the test setup works
+    cryfs_mount_handle *handle = create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, INVALID_DIR.c_str(), INVALID_DIR.size()));
+}
+
+TEST_F(Mount_Test, set_mountdir_valid) {
+    // Just test that the test setup works
+    cryfs_mount_handle *handle = create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
 }
 
 //TODO Test it takes the correct config file when there is an external one specified but there also is one in the directory (for example the test could look at the cipher used to distinguish)

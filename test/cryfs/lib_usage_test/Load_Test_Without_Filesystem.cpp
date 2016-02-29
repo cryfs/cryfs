@@ -7,7 +7,7 @@ namespace bf = boost::filesystem;
 
 class Load_Test_Without_Filesystem : public C_Library_Test {
 public:
-    const string INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\"[]:;|=,";
+    const string INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\\\"[]:;|=,";
     const string NONEXISTENT_PATH = "/some/nonexistent/path";
     const string PASSWORD = "mypassword";
     TempFile _existing_file;

@@ -23,7 +23,8 @@ typedef enum {
     cryfs_error_BASEDIR_DOESNT_EXIST = -4,
     cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -5,
     cryfs_error_FILESYSTEM_INVALID = -6,
-    cryfs_error_DECRYPTION_FAILED = -7
+    cryfs_error_DECRYPTION_FAILED = -7,
+    cryfs_error_MOUNTDIR_DOESNT_EXIST = -8
 } cryfs_status;
 
 typedef struct cryfs_load_context cryfs_load_context;
