@@ -30,25 +30,23 @@ cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **handle
     return context->load(handle);
 }
 
+cryfs_status cryfs_mount_set_mountdir(cryfs_mount_handle *handle, const char *mountdir, size_t mountdir_length) {
+    return handle->set_mountdir(string(mountdir, mountdir_length));
+}
+
 cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char **output) {
-    // TODO Implement
-    static constexpr const char *CIPHERNAME = "aes-256-gcm";
-    std::memcpy(output, CIPHERNAME, strlen(CIPHERNAME)+1);
+    *output = handle->get_ciphername();
     return cryfs_success;
 }
 
 cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *logfile, size_t logfile_length) {
-    //TODO Implement
-    return cryfs_success;
+    return handle->set_logfile(string(logfile, logfile_length));
 }
 
 cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t unmount_idle_sec) {
-    //TODO Implement
-    return cryfs_success;
+    return handle->set_unmount_idle(std::chrono::seconds(unmount_idle_sec));
 }
 
-cryfs_status cryfs_mount(cryfs_mount_handle *handle, const char *mountdir, size_t mountdir_length) {
-    //TODO Implement
-    std::cout << "Heyho, congrats! I'm mounting to " << string(mountdir, mountdir_length) << ". Ok, not actually, this is only a dummy..." << std::endl;
-    return cryfs_success;
+cryfs_status cryfs_mount(cryfs_mount_handle *handle) {
+    return handle->mount();
 }

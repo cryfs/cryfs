@@ -8,6 +8,13 @@ struct cryfs_mount_handle final {
 public:
     cryfs_mount_handle(cpputils::unique_ref<cryfs::CryDevice> crydevice);
 
+    const char *get_ciphername() const;
+    cryfs_status set_mountdir(const std::string &mountdir);
+    cryfs_status set_logfile(const boost::filesystem::path &logfile);
+    cryfs_status set_unmount_idle(const std::chrono::seconds timeout);
+
+    cryfs_status mount();
+
 private:
     cpputils::unique_ref<cryfs::CryDevice> _crydevice;
 
