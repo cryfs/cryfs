@@ -129,4 +129,21 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob_withexternalconfig) 
     EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INVALID);
 }
 
+TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile) {
+    create_filesystem(basedir.path(), externalconfig.path());
+    bf::remove(basedir.path() / "cryfs.config");
+    set_basedir();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
+}
+
+TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile_withexternalconfig) {
+    create_filesystem(basedir.path(), externalconfig.path());
+    set_basedir();
+    set_externalconfig();
+    externalconfig.remove();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
+}
+
 //TODO Add test cases loading file systems with an incompatible version returns cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION

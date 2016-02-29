@@ -66,16 +66,6 @@ TEST_F(C_Library_Test_Without_Filesystem, load_without_password) {
     EXPECT_LOAD_ERROR(cryfs_error_PASSWORD_NOT_SET);
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_withoutconfigfile) {
-    set_existing_basedir();
-    {
-        TempFile tmpConfigFile;
-        set_externalconfig(tmpConfigFile.path());
-    } // Here tmpConfigFile gets removed
-    set_password();
-    EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
-}
-
 TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir) {
     set_existing_basedir();
     set_password();
