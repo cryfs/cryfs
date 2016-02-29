@@ -7,6 +7,7 @@ namespace bf = boost::filesystem;
 
 class C_Library_Test_Without_Filesystem : public C_Library_Test {
 public:
+    const string INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\"[]:;|=,";
     const string NONEXISTENT_PATH = "/some/nonexistent/path";
     const string PASSWORD = "mypassword";
     TempFile _existing_file;
@@ -36,12 +37,20 @@ TEST_F(C_Library_Test_Without_Filesystem, basedir_doesnt_exist) {
     EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
 }
 
+TEST_F(C_Library_Test_Without_Filesystem, basedir_invalid) {
+    EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
+}
+
 TEST_F(C_Library_Test_Without_Filesystem, basedir_valid) {
     EXPECT_EQ(cryfs_success, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, externalconfig_doesnt_exist) {
     EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load_set_externalconfig(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
+}
+
+TEST_F(C_Library_Test_Without_Filesystem, externalconfig_invalid) {
+    EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load_set_externalconfig(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, externalconfig_valid) {
