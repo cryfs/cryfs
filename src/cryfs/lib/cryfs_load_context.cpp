@@ -9,6 +9,7 @@
 
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
+using cpputils::either;
 using std::string;
 using boost::none;
 using boost::optional;
@@ -56,17 +57,21 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
         return cryfs_error_PASSWORD_NOT_SET;
     }
     auto configfile = _load_configfile();
-    if (configfile == none) {
-        //TODO More detailed error reporting. Config file not found? Invalid config file header (i.e. invalid config file)? Decryption failed (i.e. wrong password)?
-        return cryfs_error_FILESYSTEM_NOT_FOUND;
+    if (configfile.is_left()) {
+        switch (configfile.left()) {
+            case CryConfigFile::LoadError::ConfigFileNotFound:
+                return cryfs_error_CONFIGFILE_DOESNT_EXIST;
+            case CryConfigFile::LoadError::DecryptionFailed:
+                return cryfs_error_DECRYPTION_FAILED;
+        }
     }
-    if(!_check_version(*configfile->config())) {
+    if(!_check_version(*configfile.right().config())) {
         return cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION;
     }
     //TODO CLI caller needs to check cipher if specified on command line
 
     auto blockstore = make_unique_ref<OnDiskBlockStore>(*_basedir);
-    auto crydevice = make_unique_ref<CryDevice>(std::move(*configfile), std::move(blockstore));
+    auto crydevice = make_unique_ref<CryDevice>(std::move(configfile.right()), std::move(blockstore));
     if (!_sanity_check_filesystem(crydevice.get())) {
         return cryfs_error_FILESYSTEM_INVALID;
     }
@@ -75,14 +80,10 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     return cryfs_success;
 }
 
-optional<CryConfigFile> cryfs_load_context::_load_configfile() const {
+either<CryConfigFile::LoadError, CryConfigFile> cryfs_load_context::_load_configfile() const {
     bf::path configfilePath = _determine_configfile_path();
-    if (!bf::is_regular_file(configfilePath)) {
-        return none;
-    }
     ASSERT(_password != none, "password not set");
-    auto config = CryConfigFile::load(configfilePath, *_password);
-    return config;
+    return CryConfigFile::load(configfilePath, *_password);
 }
 
 bf::path cryfs_load_context::_determine_configfile_path() const {
@@ -108,6 +109,12 @@ bool cryfs_load_context::_sanity_check_filesystem(CryDevice *device) {
     auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
     if (rootDir == none) {
         LOG(ERROR) << "Root blob isn't a directory";
+        return false;
+    }
+    try {
+        (*rootDir)->children();
+    } catch (const std::exception &e) {
+        // Couldn't load root blob
         return false;
     }
     return true;

@@ -24,7 +24,7 @@ public:
 
     CryConfigFile loadConfigFromHex(const string &configFileContentHex) {
         storeHexToFile(configFileContentHex);
-        return CryConfigFile::load(file.path(), "mypassword").value();
+        return CryConfigFile::load(file.path(), "mypassword").right();
     }
 
 private:

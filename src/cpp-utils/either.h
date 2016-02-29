@@ -4,6 +4,7 @@
 
 #include <boost/optional.hpp>
 #include <iostream>
+#include "assert/assert.h"
 
 namespace cpputils {
 
@@ -77,6 +78,7 @@ namespace cpputils {
         }
 
         const Left &left() const& {
+            ASSERT(is_left(), "Tried to get left side of an either which is right.");
             return _left;
         }
         Left &left() & {
@@ -87,6 +89,7 @@ namespace cpputils {
         }
 
         const Right &right() const& {
+            ASSERT(is_right(), "Tried to get right side of an either which is left.");
             return _right;
         }
         Right &right() & {

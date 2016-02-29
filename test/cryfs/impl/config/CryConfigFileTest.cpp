@@ -43,7 +43,7 @@ public:
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword") {
-        return CryConfigFile::load(file.path(), password);
+        return CryConfigFile::load(file.path(), password).right_opt();
     }
 
     void CreateWithCipher(const string &cipher) {

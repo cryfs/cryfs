@@ -35,13 +35,13 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
-  if (config == none) {
+  if (config.is_left()) {
     return none;
   }
   std::cout << "done" << std::endl;
-  _checkVersion(*config->config());
-  _checkCipher(*config->config());
-  return std::move(*config);
+  _checkVersion(*config.right().config());
+  _checkCipher(*config.right().config());
+  return std::move(config.right());
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {

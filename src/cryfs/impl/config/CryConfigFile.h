@@ -7,6 +7,7 @@
 #include "CryConfig.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "crypto/CryConfigEncryptorFactory.h"
+#include <cpp-utils/either.h>
 
 namespace cryfs {
     class CryConfigFile final {
@@ -15,7 +16,8 @@ namespace cryfs {
         ~CryConfigFile();
 
         static CryConfigFile create(const boost::filesystem::path &path, CryConfig config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
-        static boost::optional<CryConfigFile> load(const boost::filesystem::path &path, const std::string &password);
+        enum class LoadError {ConfigFileNotFound, DecryptionFailed};
+        static cpputils::either<LoadError, CryConfigFile> load(const boost::filesystem::path &path, const std::string &password);
         void save() const;
 
         CryConfig *config();

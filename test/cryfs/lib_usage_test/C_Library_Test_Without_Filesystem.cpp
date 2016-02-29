@@ -60,11 +60,23 @@ TEST_F(C_Library_Test_Without_Filesystem, load_without_password) {
     EXPECT_EQ(nullptr, handle);
 }
 
+TEST_F(C_Library_Test_Without_Filesystem, load_withoutconfigfile) {
+    EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+    {
+        TempFile tmpConfigFile;
+        EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, tmpConfigFile.path().native().c_str(), tmpConfigFile.path().native().size()));
+    } // Here tmpConfigFile gets removed
+    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
+    cryfs_mount_handle *handle = nullptr;
+    EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load(context, &handle));
+    EXPECT_EQ(nullptr, handle);
+}
+
 TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir) {
     EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
     EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
     cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_FILESYSTEM_NOT_FOUND, cryfs_load(context, &handle));
+    EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load(context, &handle));
     EXPECT_EQ(nullptr, handle);
 }
 
@@ -73,7 +85,7 @@ TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir_withexternalconfig) 
     EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
     EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
     cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_FILESYSTEM_NOT_FOUND, cryfs_load(context, &handle));
+    EXPECT_EQ(cryfs_error_DECRYPTION_FAILED, cryfs_load(context, &handle));
     EXPECT_EQ(nullptr, handle);
 }
 
