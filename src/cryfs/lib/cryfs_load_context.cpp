@@ -32,6 +32,7 @@ cryfs_status cryfs_load_context::set_basedir(const string &basedir) {
     if (!bf::is_directory(basedir)) {
         return cryfs_error_BASEDIR_DOESNT_EXIST;
     }
+    //TODO Handle (and add test cases for) missing permissions
     _basedir = basedir;
     return cryfs_success;
 }
@@ -45,6 +46,7 @@ cryfs_status cryfs_load_context::set_externalconfig(const string &configfile) {
     if (!bf::is_regular_file(configfile)) {
         return cryfs_error_CONFIGFILE_DOESNT_EXIST;
     }
+    //TODO Handle (and add test cases for) missing permissions
     _configfile = configfile;
     return cryfs_success;
 }

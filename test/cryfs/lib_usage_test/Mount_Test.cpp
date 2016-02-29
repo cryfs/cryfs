@@ -26,9 +26,11 @@ public:
     cryfs_mount_handle *handle = nullptr;
     TempDir basedir;
     TempDir mountdir;
+    TempFile logfile;
     static const string PASSWORD;
     static const string NOTEXISTING_DIR;
-    static const string INVALID_DIR;
+    static const string NOTEXISTING_LOGFILE;
+    static const string INVALID_PATH;
 
     void create_filesystem(const bf::path &basedir, const string &cipher) {
         auto configfile = create_configfile(basedir / "cryfs.config", cipher);
@@ -65,7 +67,8 @@ public:
 };
 const string Mount_Test::PASSWORD = "mypassword";
 const string Mount_Test::NOTEXISTING_DIR = "/some/notexisting/dir";
-const string Mount_Test::INVALID_DIR = "pathname_with_some_invalid_characters_$% ä*.\\\"[]:;|=,";
+const string Mount_Test::NOTEXISTING_LOGFILE = "/some/file/with/a/notexisting/parent/dir";
+const string Mount_Test::INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\\\"[]:;|=,";
 
 TEST_F(Mount_Test, setup) {
     // Just test that the test setup works
@@ -89,12 +92,33 @@ TEST_F(Mount_Test, set_mountdir_notexisting) {
 
 TEST_F(Mount_Test, set_mountdir_invalid) {
     create_and_load_filesystem();
-    EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, INVALID_DIR.c_str(), INVALID_DIR.size()));
+    EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
 TEST_F(Mount_Test, set_mountdir_valid) {
     create_and_load_filesystem();
     EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+}
+
+TEST_F(Mount_Test, set_logfile_notexisting) {
+    create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_INVALID_LOGFILE, cryfs_mount_set_logfile(handle, NOTEXISTING_LOGFILE.c_str(), NOTEXISTING_LOGFILE.size()));
+}
+
+TEST_F(Mount_Test, set_logfile_invalid) {
+    create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_INVALID_LOGFILE, cryfs_mount_set_logfile(handle, INVALID_PATH.c_str(), INVALID_PATH.size()));
+}
+
+TEST_F(Mount_Test, set_logfile_valid_notexisting) {
+    create_and_load_filesystem();
+    logfile.remove();
+    EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, logfile.path().native().c_str(), logfile.path().native().size()));
+}
+
+TEST_F(Mount_Test, set_logfile_valid_existing) {
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, logfile.path().native().c_str(), logfile.path().native().size()));
 }
 
 TEST_F(Mount_Test, mount_without_mountdir) {

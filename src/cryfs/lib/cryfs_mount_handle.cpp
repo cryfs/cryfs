@@ -20,13 +20,17 @@ cryfs_status cryfs_mount_handle::set_mountdir(const std::string &mountdir) {
     if (!bf::is_directory(mountdir)) {
         return cryfs_error_MOUNTDIR_DOESNT_EXIST;
     }
+    //TODO Handle (and add test cases for) missing permissions
     _mountdir = mountdir;
     return cryfs_success;
 }
 
 cryfs_status cryfs_mount_handle::set_logfile(const boost::filesystem::path &logfile) {
-    //TODO
-    //_logfile = logfile;
+    if (!bf::is_directory(logfile.parent_path())) {
+        return cryfs_error_INVALID_LOGFILE;
+    }
+    //TODO Handle (and add test cases for) missing write permissions (or create file permissions)
+    _logfile = logfile;
     return cryfs_success;
 }
 
