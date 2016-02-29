@@ -37,6 +37,9 @@ cryfs_status cryfs_mount_handle::set_unmount_idle(const std::chrono::seconds tim
 }
 
 cryfs_status cryfs_mount_handle::mount() {
+    if (_mountdir == none) {
+        return cryfs_error_MOUNTDIR_NOT_SET;
+    }
     //TODO
     return cryfs_success;
 }

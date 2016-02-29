@@ -23,6 +23,7 @@ namespace bf = boost::filesystem;
 
 class Mount_Test : public C_Library_Test {
 public:
+    cryfs_mount_handle *handle = nullptr;
     TempDir basedir;
     TempDir mountdir;
     static const string PASSWORD;
@@ -45,19 +46,21 @@ public:
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
     }
 
-    cryfs_mount_handle *create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
+    void create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
         create_filesystem(basedir.path(), cipher);
         EXPECT_EQ(cryfs_success, cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
         EXPECT_EQ(cryfs_success, cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-        cryfs_mount_handle *handle;
         EXPECT_EQ(cryfs_success, cryfs_load(context, &handle));
-        return handle;
     }
 
     string get_ciphername(cryfs_mount_handle *handle) {
         const char *result = nullptr;
         EXPECT_SUCCESS(cryfs_mount_get_ciphername(handle, &result));
         return result;
+    }
+
+    void set_mountdir() {
+        EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
@@ -70,33 +73,39 @@ TEST_F(Mount_Test, setup) {
 }
 
 TEST_F(Mount_Test, get_cipher_1) {
-    // Just test that the test setup works
-    cryfs_mount_handle *handle = create_and_load_filesystem("aes-256-gcm");
+    create_and_load_filesystem("aes-256-gcm");
     EXPECT_EQ("aes-256-gcm", get_ciphername(handle));
 }
 
 TEST_F(Mount_Test, get_cipher_2) {
-    // Just test that the test setup works
-    cryfs_mount_handle *handle = create_and_load_filesystem("twofish-256-gcm");
+    create_and_load_filesystem("twofish-256-gcm");
     EXPECT_EQ("twofish-256-gcm", get_ciphername(handle));
 }
 
 TEST_F(Mount_Test, set_mountdir_notexisting) {
-    // Just test that the test setup works
-    cryfs_mount_handle *handle = create_and_load_filesystem();
+    create_and_load_filesystem();
     EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, NOTEXISTING_DIR.c_str(), NOTEXISTING_DIR.size()));
 }
 
 TEST_F(Mount_Test, set_mountdir_invalid) {
-    // Just test that the test setup works
-    cryfs_mount_handle *handle = create_and_load_filesystem();
+    create_and_load_filesystem();
     EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, INVALID_DIR.c_str(), INVALID_DIR.size()));
 }
 
 TEST_F(Mount_Test, set_mountdir_valid) {
-    // Just test that the test setup works
-    cryfs_mount_handle *handle = create_and_load_filesystem();
+    create_and_load_filesystem();
     EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+}
+
+TEST_F(Mount_Test, mount_without_mountdir) {
+    create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_MOUNTDIR_NOT_SET, cryfs_mount(handle));
+}
+
+TEST_F(Mount_Test, mount) {
+    create_and_load_filesystem();
+    set_mountdir();
+    EXPECT_SUCCESS(cryfs_mount(handle));
 }
 
 //TODO Test it takes the correct config file when there is an external one specified but there also is one in the directory (for example the test could look at the cipher used to distinguish)
