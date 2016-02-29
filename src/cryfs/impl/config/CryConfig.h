@@ -13,6 +13,7 @@ class CryConfig final {
 public:
   //TODO No default constructor, pass in config values instead!
   CryConfig();
+
   CryConfig(CryConfig &&rhs);
 
   const std::string &RootBlob() const;

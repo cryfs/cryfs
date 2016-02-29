@@ -73,6 +73,10 @@ void CryConfigFile::save() const {
 }
 
 CryConfig *CryConfigFile::config() {
+    return const_cast<CryConfig*>(const_cast<const CryConfigFile*>(this)->config());
+}
+
+const CryConfig *CryConfigFile::config() const {
     return &_config;
 }
 

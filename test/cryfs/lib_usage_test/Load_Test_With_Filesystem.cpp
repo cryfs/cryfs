@@ -21,9 +21,9 @@ using boost::none;
 
 namespace bf = boost::filesystem;
 
-class C_Library_Test_With_Filesystem : public C_Library_Test {
+class Load_Test_With_Filesystem : public C_Library_Test {
 public:
-    C_Library_Test_With_Filesystem(): basedir(), externalconfig(false) {}
+    Load_Test_With_Filesystem(): basedir(), externalconfig(false) {}
 
     void create_filesystem(const bf::path &basedir, const optional<bf::path> &configfile_path = none) {
         bf::path actual_configfile_path;
@@ -86,20 +86,20 @@ public:
     static const std::string PASSWORD;
 };
 
-const std::string C_Library_Test_With_Filesystem::PASSWORD = "mypassword";
+const std::string Load_Test_With_Filesystem::PASSWORD = "mypassword";
 
-TEST_F(C_Library_Test_With_Filesystem, setup) {
+TEST_F(Load_Test_With_Filesystem, setup) {
         //Do nothing, just test that the file system can be setup properly
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load) {
+TEST_F(Load_Test_With_Filesystem, load) {
     create_filesystem(basedir.path());
     set_basedir();
     set_password();
     EXPECT_LOAD_SUCCESS();
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_withexternalconfig) {
+TEST_F(Load_Test_With_Filesystem, load_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
     set_basedir();
     set_externalconfig();
@@ -107,14 +107,14 @@ TEST_F(C_Library_Test_With_Filesystem, load_withexternalconfig) {
     EXPECT_LOAD_SUCCESS();
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_wrongpassword) {
+TEST_F(Load_Test_With_Filesystem, load_wrongpassword) {
     create_filesystem(basedir.path());
     set_basedir();
     set_password("wrong_password");
     EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_wrongpassword_withexternalconfig) {
+TEST_F(Load_Test_With_Filesystem, load_wrongpassword_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
     set_basedir();
     set_externalconfig();
@@ -122,7 +122,7 @@ TEST_F(C_Library_Test_With_Filesystem, load_wrongpassword_withexternalconfig) {
     EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob) {
+TEST_F(Load_Test_With_Filesystem, load_missingrootblob) {
     create_filesystem(basedir.path());
     remove_all_blocks_in(basedir.path());
     set_basedir();
@@ -130,7 +130,7 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob) {
     EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INVALID);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob_withexternalconfig) {
+TEST_F(Load_Test_With_Filesystem, load_missingrootblob_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
     remove_all_blocks_in(basedir.path());
     set_basedir();
@@ -139,7 +139,7 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob_withexternalconfig) 
     EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INVALID);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile) {
+TEST_F(Load_Test_With_Filesystem, load_missingconfigfile) {
     create_filesystem(basedir.path(), externalconfig.path());
     bf::remove(basedir.path() / "cryfs.config");
     set_basedir();
@@ -147,7 +147,7 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile) {
     EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile_withexternalconfig) {
+TEST_F(Load_Test_With_Filesystem, load_missingconfigfile_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
     set_basedir();
     set_externalconfig();
@@ -156,7 +156,7 @@ TEST_F(C_Library_Test_With_Filesystem, load_missingconfigfile_withexternalconfig
     EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
-TEST_F(C_Library_Test_With_Filesystem, load_incompatible_version) {
+TEST_F(Load_Test_With_Filesystem, load_incompatible_version) {
     create_filesystem(basedir.path());
     create_configfile_for_incompatible_cryfs_version(externalconfig.path());
     set_basedir();

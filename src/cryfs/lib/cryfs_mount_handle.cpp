@@ -4,13 +4,13 @@ using cpputils::unique_ref;
 using cryfs::CryDevice;
 
 cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
-    :_crydevice(std::move(crydevice)) {
+    : _crydevice(std::move(crydevice)),
+      // Copy it to make sure we have a valid pointer even if CryDevice invalidates it
+      _cipher(_crydevice->config().Cipher()) {
 }
 
 const char *cryfs_mount_handle::get_ciphername() const {
-    //TODO Implement
-    static constexpr const char *CIPHER = "aes-256-gcm";
-    return CIPHER;
+    return _cipher.c_str();
 }
 
 cryfs_status cryfs_mount_handle::set_mountdir(const std::string &mountdir) {

@@ -35,6 +35,7 @@ public:
 
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
 
+  const CryConfig &config() const;
   void callFsActionCallbacks() const;
 
 private:
@@ -42,6 +43,7 @@ private:
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;
+  CryConfigFile _configFile;
   std::vector<std::function<void()>> _onFsAction;
 
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);

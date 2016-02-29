@@ -59,6 +59,7 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
         )
       ),
   _rootKey(GetOrCreateRootKey(&configFile)),
+  _configFile(std::move(configFile)),
   _onFsAction() {
 }
 
@@ -66,6 +67,10 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob =  _fsBlobStore->createDirBlob();
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
   return rootBlob->key();
+}
+
+const CryConfig &CryDevice::config() const {
+  return *_configFile.config();
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {

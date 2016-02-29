@@ -21,6 +21,7 @@ namespace cryfs {
         void save() const;
 
         CryConfig *config();
+        const CryConfig *config() const;
 
     private:
         CryConfigFile(const boost::filesystem::path &path, CryConfig config, cpputils::unique_ref<CryConfigEncryptor> encryptor);

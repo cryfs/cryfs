@@ -17,6 +17,7 @@ public:
 
 private:
     cpputils::unique_ref<cryfs::CryDevice> _crydevice;
+    std::string _cipher;
 
     DISALLOW_COPY_AND_ASSIGN(cryfs_mount_handle);
 };

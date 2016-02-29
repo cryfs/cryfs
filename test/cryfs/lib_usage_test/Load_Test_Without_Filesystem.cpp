@@ -5,7 +5,7 @@ using cpputils::TempDir;
 using cpputils::TempFile;
 namespace bf = boost::filesystem;
 
-class C_Library_Test_Without_Filesystem : public C_Library_Test {
+class Load_Test_Without_Filesystem : public C_Library_Test {
 public:
     const string INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\"[]:;|=,";
     const string NONEXISTENT_PATH = "/some/nonexistent/path";
@@ -28,60 +28,60 @@ public:
     }
 };
 
-TEST_F(C_Library_Test_Without_Filesystem, init_and_free) {
+TEST_F(Load_Test_Without_Filesystem, init_and_free) {
     // Don't do anything in here.
     // This tests that the constructor successfully initializes the context and it can be freed in the destructor.
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, basedir_doesnt_exist) {
+TEST_F(Load_Test_Without_Filesystem, basedir_doesnt_exist) {
     EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, basedir_invalid) {
+TEST_F(Load_Test_Without_Filesystem, basedir_invalid) {
     EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, basedir_valid) {
+TEST_F(Load_Test_Without_Filesystem, basedir_valid) {
     EXPECT_EQ(cryfs_success, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, externalconfig_doesnt_exist) {
+TEST_F(Load_Test_Without_Filesystem, externalconfig_doesnt_exist) {
     EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load_set_externalconfig(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, externalconfig_invalid) {
+TEST_F(Load_Test_Without_Filesystem, externalconfig_invalid) {
     EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load_set_externalconfig(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, externalconfig_valid) {
+TEST_F(Load_Test_Without_Filesystem, externalconfig_valid) {
     EXPECT_EQ(cryfs_success, cryfs_load_set_externalconfig(context, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, password) {
+TEST_F(Load_Test_Without_Filesystem, password) {
     EXPECT_EQ(cryfs_success, cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_without_basedir) {
+TEST_F(Load_Test_Without_Filesystem, load_without_basedir) {
     EXPECT_LOAD_ERROR(cryfs_error_BASEDIR_NOT_SET);
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_with_invalid_basedir) {
+TEST_F(Load_Test_Without_Filesystem, load_with_invalid_basedir) {
     EXPECT_FAIL(cryfs_load_set_basedir(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
     EXPECT_LOAD_ERROR(cryfs_error_BASEDIR_NOT_SET);
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_without_password) {
+TEST_F(Load_Test_Without_Filesystem, load_without_password) {
     set_existing_basedir();
     EXPECT_LOAD_ERROR(cryfs_error_PASSWORD_NOT_SET);
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir) {
+TEST_F(Load_Test_Without_Filesystem, load_emptybasedir) {
     set_existing_basedir();
     set_password();
     EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
-TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir_withexternalconfig) {
+TEST_F(Load_Test_Without_Filesystem, load_emptybasedir_withexternalconfig) {
     set_existing_basedir();
     set_externalconfig(_existing_file.path());
     set_password();
