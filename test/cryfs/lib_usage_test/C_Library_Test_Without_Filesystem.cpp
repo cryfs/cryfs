@@ -13,6 +13,18 @@ public:
     const string EXISTING_FILE = _existing_file.path().native();
     TempDir _existing_dir;
     const string EXISTING_DIR = _existing_dir.path().native();
+
+    void set_existing_basedir() {
+        EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+    }
+
+    void set_externalconfig(const bf::path &configPath) {
+        EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, configPath.native().c_str(), configPath.native().size()));
+    }
+
+    void set_password() {
+        EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
+    }
 };
 
 TEST_F(C_Library_Test_Without_Filesystem, init_and_free) {
@@ -41,52 +53,40 @@ TEST_F(C_Library_Test_Without_Filesystem, password) {
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_without_basedir) {
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_BASEDIR_NOT_SET, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    EXPECT_LOAD_ERROR(cryfs_error_BASEDIR_NOT_SET);
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_with_invalid_basedir) {
     EXPECT_FAIL(cryfs_load_set_basedir(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_BASEDIR_NOT_SET, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    EXPECT_LOAD_ERROR(cryfs_error_BASEDIR_NOT_SET);
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_without_password) {
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_PASSWORD_NOT_SET, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_existing_basedir();
+    EXPECT_LOAD_ERROR(cryfs_error_PASSWORD_NOT_SET);
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_withoutconfigfile) {
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+    set_existing_basedir();
     {
         TempFile tmpConfigFile;
-        EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, tmpConfigFile.path().native().c_str(), tmpConfigFile.path().native().size()));
+        set_externalconfig(tmpConfigFile.path());
     } // Here tmpConfigFile gets removed
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir) {
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_existing_basedir();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_CONFIGFILE_DOESNT_EXIST);
 }
 
 TEST_F(C_Library_Test_Without_Filesystem, load_emptybasedir_withexternalconfig) {
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
-    EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_DECRYPTION_FAILED, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_existing_basedir();
+    set_externalconfig(_existing_file.path());
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
 }
 
 //TODO Add test cases for all existing error codes (here or in C_Library_Test_With_Filesystem)

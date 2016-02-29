@@ -55,6 +55,22 @@ public:
         }
     }
 
+    void set_basedir(const optional<bf::path> &_basedir = none) {
+        bf::path actual_basedir = basedir.path();
+        if (_basedir != none) {
+            actual_basedir = *_basedir;
+        }
+        EXPECT_SUCCESS(cryfs_load_set_basedir(context, actual_basedir.native().c_str(), actual_basedir.native().size()));
+    }
+
+    void set_password(const string &password = PASSWORD) {
+        EXPECT_SUCCESS(cryfs_load_set_password(context, password.c_str(), password.size()));
+    }
+
+    void set_externalconfig() {
+        EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, externalconfig.path().native().c_str(), externalconfig.path().native().size()));
+    }
+
     TempDir basedir;
     TempFile externalconfig;
     static const std::string PASSWORD;
@@ -68,52 +84,49 @@ TEST_F(C_Library_Test_With_Filesystem, setup) {
 
 TEST_F(C_Library_Test_With_Filesystem, load) {
     create_filesystem(basedir.path());
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_success, cryfs_load(context, &handle));
-    EXPECT_NE(nullptr, handle);
+    set_basedir();
+    set_password();
+    EXPECT_LOAD_SUCCESS();
 }
 
 TEST_F(C_Library_Test_With_Filesystem, load_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, externalconfig.path().native().c_str(), externalconfig.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_success, cryfs_load(context, &handle));
-    EXPECT_NE(nullptr, handle);
+    set_basedir();
+    set_externalconfig();
+    set_password();
+    EXPECT_LOAD_SUCCESS();
 }
 
 TEST_F(C_Library_Test_With_Filesystem, load_wrongpassword) {
-    const std::string WRONG_PASSWORD = "wrong_password";
     create_filesystem(basedir.path());
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, WRONG_PASSWORD.c_str(), WRONG_PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_DECRYPTION_FAILED, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_basedir();
+    set_password("wrong_password");
+    EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
+}
+
+TEST_F(C_Library_Test_With_Filesystem, load_wrongpassword_withexternalconfig) {
+    create_filesystem(basedir.path(), externalconfig.path());
+    set_basedir();
+    set_externalconfig();
+    set_password("wrong_password");
+    EXPECT_LOAD_ERROR(cryfs_error_DECRYPTION_FAILED);
 }
 
 TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob) {
     create_filesystem(basedir.path());
     remove_all_blocks_in(basedir.path());
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_FILESYSTEM_INVALID, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_basedir();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INVALID);
 }
 
 TEST_F(C_Library_Test_With_Filesystem, load_missingrootblob_withexternalconfig) {
     create_filesystem(basedir.path(), externalconfig.path());
     remove_all_blocks_in(basedir.path());
-    EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, externalconfig.path().native().c_str(), externalconfig.path().native().size()));
-    EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-    cryfs_mount_handle *handle = nullptr;
-    EXPECT_EQ(cryfs_error_FILESYSTEM_INVALID, cryfs_load(context, &handle));
-    EXPECT_EQ(nullptr, handle);
+    set_basedir();
+    set_externalconfig();
+    set_password();
+    EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INVALID);
 }
 
 //TODO Add test cases loading file systems with an incompatible version returns cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION
