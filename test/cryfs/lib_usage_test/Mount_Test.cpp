@@ -64,6 +64,12 @@ TEST_F(Mount_Test, setup) {
     create_and_load_filesystem();
 }
 
+TEST_F(Mount_Test, get_cipher_1) {
+    // Just test that the test setup works
+    cryfs_mount_handle *handle = create_and_load_filesystem("aes-256-gcm");
+    EXPECT_EQ("aes-256-gcm", get_ciphername(handle));
+}
+
 TEST_F(Mount_Test, get_cipher_2) {
     // Just test that the test setup works
     cryfs_mount_handle *handle = create_and_load_filesystem("twofish-256-gcm");
