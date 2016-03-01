@@ -20,10 +20,15 @@ namespace cryfs {
     CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
-        config.SetEncryptionKey(_generateEncKey(config.Cipher()));
-        config.SetRootBlob(_generateRootBlobKey());
         config.SetVersion(version::VERSION_STRING);
+        config.SetBlocksizeBytes(_generateBlocksizeBytes());
+        config.SetRootBlob(_generateRootBlobKey());
+        config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         return config;
+    }
+
+    uint32_t CryConfigCreator::_generateBlocksizeBytes() {
+        return _configConsole.askBlocksizeBytes();
     }
 
     string CryConfigCreator::_generateCipher(const optional<string> &cipherFromCommandLine) {

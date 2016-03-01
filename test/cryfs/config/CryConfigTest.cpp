@@ -76,3 +76,45 @@ TEST_F(CryConfigTest, Cipher_AfterSaveAndLoad) {
     CryConfig loaded = SaveAndLoad(std::move(cfg));
     EXPECT_EQ("mycipher", loaded.Cipher());
 }
+
+TEST_F(CryConfigTest, Version_Init) {
+    EXPECT_EQ("", cfg.Version());
+}
+
+TEST_F(CryConfigTest, Version) {
+    cfg.SetVersion("0.9.1");
+    EXPECT_EQ("0.9.1", cfg.Version());
+}
+
+TEST_F(CryConfigTest, Version_AfterMove) {
+    cfg.SetCipher("0.9.1");
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ("0.9.1", moved.Cipher());
+}
+
+TEST_F(CryConfigTest, Version_AfterSaveAndLoad) {
+    cfg.SetCipher("0.9.2");
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ("0.9.2", loaded.Cipher());
+}
+
+TEST_F(CryConfigTest, BlocksizeBytes_Init) {
+    EXPECT_EQ(0u, cfg.BlocksizeBytes());
+}
+
+TEST_F(CryConfigTest, BlocksizeBytes) {
+    cfg.SetBlocksizeBytes(4*1024*1024);
+    EXPECT_EQ(4*1024*1024u, cfg.BlocksizeBytes());
+}
+
+TEST_F(CryConfigTest, BlocksizeBytes_AfterMove) {
+    cfg.SetBlocksizeBytes(32*1024);
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ(32*1024u, moved.BlocksizeBytes());
+}
+
+TEST_F(CryConfigTest, BlocksizeBytes_AfterSaveAndLoad) {
+    cfg.SetBlocksizeBytes(10*1024);
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ(10*1024u, loaded.BlocksizeBytes());
+}
