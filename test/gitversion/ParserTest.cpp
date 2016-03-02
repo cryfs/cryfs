@@ -33,6 +33,17 @@ TEST(ParserTest, TestReleaseVersion_3) {
     EXPECT_EQ("",    info.versionTag);
 }
 
+TEST(ParserTest, TestDirtyReleaseVersion) {
+    VersionInfo info = Parser::parse("0.9.0+0.g5753e4f.dirty");
+    EXPECT_EQ("0",   info.majorVersion);
+    EXPECT_EQ("9",   info.minorVersion);
+    EXPECT_TRUE(     info.isDevVersion);
+    EXPECT_FALSE(    info.isStableVersion);
+    EXPECT_EQ("5753e4f", info.gitCommitId);
+    EXPECT_EQ("",    info.versionTag);
+}
+
+
 TEST(ParserTest, TestDevVersion) {
     VersionInfo info = Parser::parse("0.9.0+2.g0123abcdef");
     EXPECT_EQ("0",   info.majorVersion);
@@ -60,6 +71,16 @@ TEST(ParserTest, TestReleaseVersion_StableTag) {
     EXPECT_FALSE(    info.isDevVersion);
     EXPECT_TRUE(     info.isStableVersion);
     EXPECT_EQ("",    info.gitCommitId);
+    EXPECT_EQ("stable",    info.versionTag);
+}
+
+TEST(ParserTest, TestDirtyReleaseVersion_StableTag) {
+    VersionInfo info = Parser::parse("0.9.0-stable+0.g5753e4f.dirty");
+    EXPECT_EQ("0",   info.majorVersion);
+    EXPECT_EQ("9",   info.minorVersion);
+    EXPECT_TRUE(     info.isDevVersion);
+    EXPECT_FALSE(    info.isStableVersion);
+    EXPECT_EQ("5753e4f", info.gitCommitId);
     EXPECT_EQ("stable",    info.versionTag);
 }
 
@@ -93,6 +114,16 @@ TEST(ParserTest, TestReleaseVersion_AlphaTag) {
     EXPECT_EQ("alpha",    info.versionTag);
 }
 
+TEST(ParserTest, TestDirtyReleaseVersion_AlphaTag) {
+    VersionInfo info = Parser::parse("0.9.0-alpha+0.g5753e4f.dirty");
+    EXPECT_EQ("0",   info.majorVersion);
+    EXPECT_EQ("9",   info.minorVersion);
+    EXPECT_TRUE(     info.isDevVersion);
+    EXPECT_FALSE(    info.isStableVersion);
+    EXPECT_EQ("5753e4f", info.gitCommitId);
+    EXPECT_EQ("alpha",    info.versionTag);
+}
+
 TEST(ParserTest, TestDevVersion_AlphaTag) {
     VersionInfo info = Parser::parse("0.9.0-alpha+2.g0123abcdef");
     EXPECT_EQ("0",   info.majorVersion);
@@ -123,6 +154,16 @@ TEST(ParserTest, TestReleaseVersion_RCTag) {
     EXPECT_EQ("rc1",    info.versionTag);
 }
 
+TEST(ParserTest, TestDirtyReleaseVersion_RCTag) {
+    VersionInfo info = Parser::parse("0.9.0-rc1+0.g5753e4f.dirty");
+    EXPECT_EQ("0",   info.majorVersion);
+    EXPECT_EQ("9",   info.minorVersion);
+    EXPECT_TRUE(     info.isDevVersion);
+    EXPECT_FALSE(    info.isStableVersion);
+    EXPECT_EQ("5753e4f", info.gitCommitId);
+    EXPECT_EQ("rc1",    info.versionTag);
+}
+
 TEST(ParserTest, TestDevVersion_RCTag) {
     VersionInfo info = Parser::parse("0.9.0-rc1+2.g0123abcdef");
     EXPECT_EQ("0",   info.majorVersion);
@@ -143,4 +184,4 @@ TEST(ParserTest, TestDirtyDevVersion_RCTag) {
     EXPECT_EQ("rc1",    info.versionTag);
 }
 
-//TODO Dirty non-dev version
+//TODO Dirty non-dev version 0.7.0+0.g5753e4f.dirty
