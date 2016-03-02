@@ -392,12 +392,12 @@ def get_root():
         # versioneer.py was first imported, even in later projects.
         me = os.path.realpath(os.path.abspath(__file__))
         if os.path.splitext(me)[0] != os.path.splitext(versioneer_py)[0]:
+            # -- (MESSMER) changed this to output to stderr instead of stdout, since it caused problems on some systems --
             print("Warning: build in %s is using versioneer.py from %s"
-                  % (os.path.dirname(me), versioneer_py))
+                  % (os.path.dirname(me), versioneer_py), file=sys.stderr)
     except NameError:
         pass
     return root
-
 
 def get_config_from_root(root):
     """Read the project setup.cfg file to determine Versioneer config."""
