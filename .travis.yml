@@ -33,6 +33,7 @@ install:
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
 - make -j$NUMCORES
+- ./test/gitversion/gitversion-test
 - ./test/cpp-utils/cpp-utils-test
 # TODO Also run on osx once fixed
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./run_with_fuse.sh ./test/fspp/fspp-test ; fi

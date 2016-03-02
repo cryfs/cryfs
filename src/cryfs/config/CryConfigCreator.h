@@ -19,6 +19,7 @@ namespace cryfs {
         std::string _generateCipher(const boost::optional<std::string> &cipherFromCommandLine);
         std::string _generateEncKey(const std::string &cipher);
         std::string _generateRootBlobKey();
+        uint32_t _generateBlocksizeBytes();
 
         std::shared_ptr<cpputils::Console> _console;
         CryConfigConsole _configConsole;

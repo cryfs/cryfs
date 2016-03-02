@@ -4,3 +4,6 @@ umltest.status
 /cmake
 /.idea
 *~
+
+gitversion/*.pyc
+gitversion/__pycache__
