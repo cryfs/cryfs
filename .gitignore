@@ -5,5 +5,5 @@ umltest.status
 /.idea
 *~
 
-gitversion/*.pyc
-gitversion/__pycache__
+src/gitversion/*.pyc
+src/gitversion/__pycache__
