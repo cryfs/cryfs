@@ -21,7 +21,7 @@ namespace gitversion {
         tie(result.majorVersion, result.minorVersion, result.versionTag) = _extractMajorMinorTag(versionNumber);
         result.isDevVersion = (versionInfo != none);
         result.isStableVersion = !result.isDevVersion && (result.versionTag == "" || result.versionTag == "stable");
-        if (versionInfo != none) {
+        if (versionInfo != none && *versionInfo != "unknown") {
             result.gitCommitId = _extractGitCommitId(*versionInfo);
         } else {
             result.gitCommitId = "";
@@ -47,20 +47,25 @@ namespace gitversion {
     };
 
     tuple<string, string, string> Parser::_extractMajorMinorTag(const string &versionNumber) {
-        regex splitRegex("^([0-9]+)\\.([0-9]+)\\.[0-9\\.]*(-(.*))?$");
+        regex splitRegex("^([0-9]+)(\\.([0-9]+))?(\\.[0-9\\.]*)?(-(.*))?$");
         smatch match;
         regex_match(versionNumber, match, splitRegex);
         if(match[0] != versionNumber) {
             throw std::logic_error("First match group should be whole string");
         }
-        if(match.size() != 5) {
+        if(match.size() != 7) {
             throw std::logic_error("Wrong number of match groups");
         }
-        if(match[3].matched) {
-            return std::make_tuple(match[1], match[2], match[4]);
-        } else {
-            return std::make_tuple(match[1], match[2], "");
+        string major = match[1];
+        string minor = "0";
+        if (match[3].matched) {
+            minor = match[3];
         }
+        string tag = "";
+        if (match[6].matched) {
+            tag = match[6];
+        }
+        return std::make_tuple(major, minor, tag);
     };
 
     string Parser::_extractGitCommitId(const string &versionInfo) {

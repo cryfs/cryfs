@@ -3,6 +3,16 @@
 
 using namespace gitversion;
 
+TEST(ParserTest, TestUnknownVersion) {
+    VersionInfo info = Parser::parse("0+unknown");
+    EXPECT_EQ("0",   info.majorVersion);
+    EXPECT_EQ("0",   info.minorVersion);
+    EXPECT_TRUE(     info.isDevVersion);
+    EXPECT_FALSE(    info.isStableVersion);
+    EXPECT_EQ("",    info.gitCommitId);
+    EXPECT_EQ("",    info.versionTag);
+}
+
 TEST(ParserTest, TestReleaseVersion_1) {
     VersionInfo info = Parser::parse("0.9.2");
     EXPECT_EQ("0",   info.majorVersion);
@@ -183,5 +193,3 @@ TEST(ParserTest, TestDirtyDevVersion_RCTag) {
     EXPECT_EQ("0123abcdef", info.gitCommitId);
     EXPECT_EQ("rc1",    info.versionTag);
 }
-
-//TODO Dirty non-dev version 0.7.0+0.g5753e4f.dirty
