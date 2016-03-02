@@ -4,7 +4,7 @@
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/logging/logging.h>
 #include <boost/algorithm/string/predicate.hpp>
-#include <gitversion/version.h>
+#include <gitversion/gitversion.h>
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -45,7 +45,7 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {
-  const string allowedVersionPrefix = string() + version::VERSION_COMPONENTS[0] + "." + version::VERSION_COMPONENTS[1] + ".";
+  const string allowedVersionPrefix = string() + gitversion::MajorVersion() + "." + gitversion::MinorVersion() + ".";
   if (!boost::starts_with(config.Version(), allowedVersionPrefix)) {
     throw std::runtime_error(string() + "This filesystem was created with CryFS " + config.Version() + " and is incompatible. Please create a new one with your version of CryFS and migrate your data.");
   }
