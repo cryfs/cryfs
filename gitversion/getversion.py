@@ -2,4 +2,4 @@
 
 import versioneer
 
-print versioneer.get_version()
+print(versioneer.get_version())
