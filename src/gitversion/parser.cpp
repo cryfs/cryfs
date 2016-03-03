@@ -1,15 +1,14 @@
 #include "parser.h"
-#include <regex>
+#include <sstream>
 
 using std::string;
 using std::pair;
 using std::tuple;
 using std::tie;
-using std::regex;
-using std::smatch;
-using std::regex_match;
 using boost::optional;
 using boost::none;
+using std::istringstream;
+using std::getline;
 
 namespace gitversion {
 
@@ -30,55 +29,53 @@ namespace gitversion {
     }
 
     pair<string, optional<string>> Parser::_splitAtPlusSign(const string &versionString) {
-        regex splitRegex("^([^+]+)(\\+([^+]+))?$");
-        smatch match;
-        regex_match(versionString, match, splitRegex);
-        if(match[0] != versionString) {
-            throw std::logic_error("First match group should be whole string");
-        }
-        if(match.size() != 4) {
-            throw std::logic_error("Wrong number of match groups");
-        }
-        if (match[2].matched) {
-            return std::make_pair(match[1], optional<string>(match[3]));
+        istringstream stream(versionString);
+        string versionNumber;
+        getline(stream, versionNumber, '+');
+        if (!stream.good()) {
+            return std::make_pair(versionNumber, none);
         } else {
-            return std::make_pair(match[1], none);
+            string versionInfo;
+            getline(stream, versionInfo);
+            return std::make_pair(versionNumber, versionInfo);
         }
     };
 
     tuple<string, string, string> Parser::_extractMajorMinorTag(const string &versionNumber) {
-        regex splitRegex("^([0-9]+)(\\.([0-9]+))?(\\.[0-9\\.]*)?(-(.*))?$");
-        smatch match;
-        regex_match(versionNumber, match, splitRegex);
-        if(match[0] != versionNumber) {
-            throw std::logic_error("First match group should be whole string");
+        istringstream stream(versionNumber);
+        string major, minor, hotfix, tag;
+        getline(stream, major, '.');
+        if (!stream.good()) {
+            minor = "0";
+        } else {
+            getline(stream, minor, '.');
         }
-        if(match.size() != 7) {
-            throw std::logic_error("Wrong number of match groups");
+        if (!stream.good()) {
+            hotfix = "0";
+        } else {
+            getline(stream, hotfix, '-');
         }
-        string major = match[1];
-        string minor = "0";
-        if (match[3].matched) {
-            minor = match[3];
-        }
-        string tag = "";
-        if (match[6].matched) {
-            tag = match[6];
+        if (!stream.good()) {
+            tag = "";
+        } else {
+            getline(stream, tag);
         }
         return std::make_tuple(major, minor, tag);
     };
 
     string Parser::_extractGitCommitId(const string &versionInfo) {
-        regex extractRegex("^[0-9]+\\.g([0-9a-f]+)(\\..*)?$");
-        smatch match;
-        regex_match(versionInfo, match, extractRegex);
-        if(match[0] != versionInfo) {
-            throw std::logic_error("First match group should be whole string");
+        istringstream stream(versionInfo);
+        string commitsSinceTag;
+        getline(stream, commitsSinceTag, '.');
+        if (!stream.good()) {
+            throw std::logic_error("Invalid version information: Missing delimiter after commitsSinceTag.");
         }
-        if(match.size() != 3) {
-            throw std::logic_error("Wrong number of match groups");
+        string gitCommitId;
+        getline(stream, gitCommitId, '.');
+        if (gitCommitId[0] != 'g') {
+            throw std::logic_error("Invalid version information: Git commit id component doesn't start with 'g'.");
         }
-        return match[1];
+        return gitCommitId.substr(1);
     }
 
 }
