@@ -193,7 +193,7 @@ namespace cryfs {
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto config = _loadOrCreateConfigFile(configFile, options.cipher());
+            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes());
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
@@ -205,17 +205,17 @@ namespace cryfs {
         }
     }
 
-    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher) {
+    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, _noninteractive).loadOrCreate(configFilePath);
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, _noninteractive).loadOrCreate(configFilePath);
         }
     }
 

@@ -25,10 +25,10 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, bool noninteractive)
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, bool noninteractive)
     : _creator(std::move(console), keyGenerator, noninteractive), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
-      _cipherFromCommandLine(cipherFromCommandLine) {
+      _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
 
 optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
@@ -66,7 +66,7 @@ optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) 
 }
 
 CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
-  auto config = _creator.create(_cipherFromCommandLine);
+  auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
   std::cout << "Creating config file (this can take some time)..." << std::flush;

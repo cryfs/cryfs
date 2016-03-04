@@ -62,8 +62,12 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         cipher = vm["cipher"].as<string>();
         _checkValidCipher(*cipher, supportedCiphers);
     }
+    optional<uint32_t> blocksizeBytes = none;
+    if (vm.count("blocksize-bytes")) {
+        blocksizeBytes = vm["blocksize-bytes"].as<uint32_t>();
+    }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, options.second);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -108,7 +112,8 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("help,h", "show help message")
             ("config,c", po::value<string>(), "Configuration file")
             ("foreground,f", "Run CryFS in foreground.")
-            ("cipher", po::value<string>(), "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers")
+            ("cipher", po::value<string>(), "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers.")
+            ("blocksize-bytes", po::value<uint32_t>(), "The block size used when storing ciphertext blocks (in bytes).")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
