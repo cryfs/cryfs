@@ -17,7 +17,7 @@
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 
-#include <gitversion/version.h>
+#include <gitversion/gitversion.h>
 #include <cryfs/impl/filesystem/CryDir.h>
 
 #include "VersionChecker.h"
@@ -68,7 +68,8 @@ using cpputils::dynamic_pointer_move;
 //TODO Delete a large file in parallel possible? Takes a long time right now...
 //TODO Improve parallelity.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
-//TODO Performance difference when setting compiler parameter -maes for scrypt?
+//TODO Can we improve performance by setting compiler parameter -maes for scrypt?
+//TODO Running nano in a cryfs file system, editing and saving an existing file shows "file was modified since opening".
 
 namespace cryfs {
 
@@ -78,11 +79,11 @@ namespace cryfs {
     }
 
     void Cli::_showVersion() {
-        cout << "CryFS Version " << version::VERSION_STRING << endl;
-        if (version::IS_DEV_VERSION) {
-            cout << "WARNING! This is a development version based on git commit " << version::GIT_COMMIT_ID <<
+        cout << "CryFS Version " << gitversion::VersionString() << endl;
+        if (gitversion::IsDevVersion()) {
+            cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
             ". Please do not use in production!" << endl;
-        } else if (!version::IS_STABLE_VERSION) {
+        } else if (!gitversion::IsStableVersion()) {
             cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
         } else {
             //TODO This is even shown for stable version numbers like 0.8 - remove once we reach 1.0
@@ -104,10 +105,10 @@ namespace cryfs {
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;
-        } else if (VersionCompare::isOlderThan(version::VERSION_STRING, *newestVersion)) {
+        } else if (VersionCompare::isOlderThan(gitversion::VersionString(), *newestVersion)) {
             cout << "CryFS " << *newestVersion << " is released. Please update." << endl;
         }
-        optional<string> securityWarning = versionChecker.securityWarningFor(version::VERSION_STRING);
+        optional<string> securityWarning = versionChecker.securityWarningFor(gitversion::VersionString());
         if (securityWarning != none) {
             cout << *securityWarning << endl;
         }

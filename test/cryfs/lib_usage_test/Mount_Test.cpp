@@ -3,7 +3,7 @@
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include "testutils/C_Library_Test.h"
-#include <gitversion/version.h>
+#include <gitversion/gitversion.h>
 
 using cryfs::CryConfig;
 using cryfs::CryConfigFile;
@@ -43,7 +43,7 @@ public:
         config.SetCipher(cipher);
         config.SetEncryptionKey(CryCiphers::find(cipher).createKey(Random::PseudoRandom()));
         config.SetRootBlob("");
-        config.SetVersion(version::VERSION_STRING);
+        config.SetVersion(gitversion::VersionString());
 
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
     }

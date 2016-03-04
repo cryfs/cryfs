@@ -15,11 +15,11 @@ using cpputils::Data;
 namespace cryfs {
 
 CryConfig::CryConfig()
-: _rootBlob(""), _encKey(""), _cipher(""), _version("") {
+: _rootBlob(""), _encKey(""), _cipher(""), _version(""), _blocksizeBytes(0) {
 }
 
 CryConfig::CryConfig(CryConfig &&rhs)
-: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)) {
+: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)), _blocksizeBytes(rhs._blocksizeBytes) {
 }
 
 CryConfig CryConfig::load(const Data &data) {
@@ -33,6 +33,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._encKey = pt.get("cryfs.key", "");
   cfg._cipher = pt.get("cryfs.cipher", "");
   cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
+  cfg._blocksizeBytes = pt.get<uint32_t>("cryfs.blocksizeBytes", 32 * 1024); // TODO Put here the actual block size value of earlier CryFS versions
   return cfg;
 }
 
@@ -43,6 +44,7 @@ Data CryConfig::save() const {
   pt.put("cryfs.key", _encKey);
   pt.put("cryfs.cipher", _cipher);
   pt.put("cryfs.version", _version);
+  pt.put<uint32_t>("cryfs.blocksizeBytes", _blocksizeBytes);
 
   stringstream stream;
   write_json(stream, pt);
@@ -79,6 +81,14 @@ const std::string &CryConfig::Version() const {
 
 void CryConfig::SetVersion(const std::string &value) {
   _version = value;
+}
+
+uint32_t CryConfig::BlocksizeBytes() const {
+  return _blocksizeBytes;
+}
+
+void CryConfig::SetBlocksizeBytes(uint32_t value) {
+  _blocksizeBytes = value;
 }
 
 }

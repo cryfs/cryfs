@@ -1,6 +1,6 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
-#include <gitversion/version.h>
+#include <gitversion/gitversion.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include "../impl/config/CryConfigLoader.h"
@@ -97,7 +97,7 @@ bf::path cryfs_load_context::_determine_configfile_path() const {
 }
 
 bool cryfs_load_context::_check_version(const CryConfig &config) {
-    const string allowedVersionPrefix = string() + version::VERSION_COMPONENTS[0] + "." + version::VERSION_COMPONENTS[1] + ".";
+    const string allowedVersionPrefix = string() + gitversion::MajorVersion() + "." + gitversion::MinorVersion() + ".";
     return boost::starts_with(config.Version(), allowedVersionPrefix);
 }
 

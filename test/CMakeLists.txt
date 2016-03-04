@@ -1,6 +1,7 @@
 if (BUILD_TESTING)
   include_directories(../src)
 
+  add_subdirectory(gitversion)
   add_subdirectory(cpp-utils)
   add_subdirectory(fspp)
   add_subdirectory(parallelaccessstore)

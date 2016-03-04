@@ -42,6 +42,10 @@ class CryConfigConsoleTest_Cipher: public CryConfigConsoleTest {};
   EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(false));                           \
   EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 
+#define EXPECT_ASK_FOR_BLOCKSIZE()                                                                                     \
+  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(false));                           \
+  EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(1)
+
 TEST_F(CryConfigConsoleTest_Cipher, AsksForCipher) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
     cryconsole.askCipher();
@@ -59,6 +63,18 @@ TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipherWhenNoninteractiveEnviron
     EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
     string cipher = noninteractiveCryconsole.askCipher();
     EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
+}
+
+TEST_F(CryConfigConsoleTest_Cipher, AsksForBlocksize) {
+    EXPECT_ASK_FOR_BLOCKSIZE().WillOnce(Return(0));
+    cryconsole.askBlocksizeBytes();
+}
+
+TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultBlocksizeWhenNoninteractiveEnvironment) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("default"))).Times(0);
+    EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(0);
+    uint32_t blocksize = noninteractiveCryconsole.askBlocksizeBytes();
+    EXPECT_EQ(CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES, blocksize);
 }
 
 class CryConfigConsoleTest_Cipher_Choose: public CryConfigConsoleTest_Cipher, public ::testing::WithParamInterface<string> {

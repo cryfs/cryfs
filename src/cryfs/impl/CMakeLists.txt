@@ -43,11 +43,10 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME cryfs)
-target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore blobstore fspp)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore blobstore fspp gitversion)
 target_add_boost(${PROJECT_NAME} program_options chrono)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
-target_git_version_init(${PROJECT_NAME})
 
 # Needed so it can be linked in to the shared cryfs library
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE on)
