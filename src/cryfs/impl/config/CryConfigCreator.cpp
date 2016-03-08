@@ -17,18 +17,23 @@ namespace cryfs {
         :_console(console), _configConsole(console, noninteractive), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
-    CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine) {
+    CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetVersion(gitversion::VersionString());
-        config.SetBlocksizeBytes(_generateBlocksizeBytes());
+        config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
         config.SetRootBlob(_generateRootBlobKey());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         return config;
     }
 
-    uint32_t CryConfigCreator::_generateBlocksizeBytes() {
-        return _configConsole.askBlocksizeBytes();
+    uint32_t CryConfigCreator::_generateBlocksizeBytes(const optional<uint32_t> &blocksizeBytesFromCommandLine) {
+        if (blocksizeBytesFromCommandLine != none) {
+            // TODO Check block size is valid (i.e. large enough)
+            return *blocksizeBytesFromCommandLine;
+        } else {
+            return _configConsole.askBlocksizeBytes();
+        }
     }
 
     string CryConfigCreator::_generateCipher(const optional<string> &cipherFromCommandLine) {

@@ -21,10 +21,10 @@ function(target_activate_cpp14 TARGET)
                 message(FATAL_ERROR "Compiler doesn't support C++14")
             endif()
         endif(COMPILER_HAS_CPP14_SUPPORT)
-        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            target_compile_options(${TARGET} PUBLIC -stdlib=libc++)
-        endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     endif("${CMAKE_VERSION}" VERSION_GREATER "3.1")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${TARGET} PUBLIC -stdlib=libc++)
+    endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endfunction(target_activate_cpp14)
 
 #################################################

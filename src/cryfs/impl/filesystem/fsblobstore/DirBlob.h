@@ -17,10 +17,10 @@ namespace cryfs {
         public:
             constexpr static off_t DIR_LSTAT_SIZE = 4096;
 
-            static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
+            static cpputils::unique_ref<DirBlob> InitializeEmptyDir(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob,
                                                                     std::function<off_t (const blockstore::Key&)> getLstatSize);
 
-            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize);
+            DirBlob(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize);
 
             ~DirBlob();
 
@@ -68,6 +68,7 @@ namespace cryfs {
 
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
 
+            FsBlobStore *_fsBlobStore;
             std::function<off_t (const blockstore::Key&)> _getLstatSize;
             DirEntryList _entries;
             mutable std::mutex _mutex;

@@ -19,7 +19,7 @@ namespace datanodestore {
 //TODO Move DataNodeLayout into own file
 class DataNodeLayout final {
 public:
-  constexpr DataNodeLayout(uint32_t blocksizeBytes)
+  constexpr DataNodeLayout(uint64_t blocksizeBytes)
     :_blocksizeBytes(
         (HEADERSIZE_BYTES + 2*sizeof(DataInnerNode_ChildEntry) <= blocksizeBytes)
         ? blocksizeBytes
@@ -37,22 +37,21 @@ public:
 
 
   //Size of a block (header + data region)
-  constexpr uint32_t blocksizeBytes() const {
+  constexpr uint64_t blocksizeBytes() const {
     return _blocksizeBytes;
   }
 
   //Number of bytes in the data region of a node
-  constexpr uint32_t datasizeBytes() const {
+  constexpr uint64_t datasizeBytes() const {
     return _blocksizeBytes - HEADERSIZE_BYTES;
   }
 
   //Maximum number of children an inner node can store
-  constexpr uint32_t maxChildrenPerInnerNode() const {
+  constexpr uint64_t maxChildrenPerInnerNode() const {
     return datasizeBytes() / sizeof(DataInnerNode_ChildEntry);
   }
 
   //Maximum number of bytes a leaf can store
-  //We are returning uint64_t here, because calculations involving maxBytesPerLeaf most probably should use 64bit integers to support blobs >4GB.
   constexpr uint64_t maxBytesPerLeaf() const {
     return datasizeBytes();
   }

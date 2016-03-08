@@ -14,12 +14,12 @@ namespace cryfs {
         CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator, bool noninteractive);
         CryConfigCreator(CryConfigCreator &&rhs) = default;
 
-        CryConfig create(const boost::optional<std::string> &cipherFromCommandLine);
+        CryConfig create(const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine);
     private:
         std::string _generateCipher(const boost::optional<std::string> &cipherFromCommandLine);
         std::string _generateEncKey(const std::string &cipher);
         std::string _generateRootBlobKey();
-        uint32_t _generateBlocksizeBytes();
+        uint32_t _generateBlocksizeBytes(const boost::optional<uint32_t> &blocksizeBytesFromCommandLine);
 
         std::shared_ptr<cpputils::Console> _console;
         CryConfigConsole _configConsole;

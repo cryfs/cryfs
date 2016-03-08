@@ -16,7 +16,7 @@ class ParallelAccessDataTreeStore;
 
 class BlobStoreOnBlocks final: public BlobStore {
 public:
-  BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint32_t blocksizeBytes);
+  BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint64_t blocksizeBytes);
   ~BlobStoreOnBlocks();
 
   cpputils::unique_ref<Blob> create() override;
@@ -24,7 +24,8 @@ public:
 
   void remove(cpputils::unique_ref<Blob> blob) override;
 
-  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
+  //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
+  uint64_t blocksizeBytes() const override;
   uint64_t numBlocks() const override;
   uint64_t estimateSpaceForNumBlocksLeft() const override;
 

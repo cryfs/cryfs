@@ -13,13 +13,21 @@ matrix:
       compiler: clang
 addons:
   apt:
+    sources:
+      # Both needed for clang 3.7
+      - llvm-toolchain-precise-3.7
+      - ubuntu-toolchain-r-test
     packages:
+    - clang-3.7
     - libcrypto++-dev
     - libfuse-dev
 install:
+# Use new clang
+- if [ "${TRAVIS_OS_NAME}" == "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
 # Detect number of CPU cores
 - export NUMCORES=`grep -c ^processor /proc/cpuinfo` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
 - echo Using $NUMCORES cores
+# Install dependencies
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./travis.install_boost.sh; fi
 - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew upgrade boost && brew install cryptopp osxfuse; fi
 # Install run_with_fuse.sh

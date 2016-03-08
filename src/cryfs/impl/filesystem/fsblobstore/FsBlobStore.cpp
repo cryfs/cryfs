@@ -23,7 +23,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::Key &key
     if (blobType == FsBlobView::BlobType::FILE) {
         return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob)));
     } else if (blobType == FsBlobView::BlobType::DIR) {
-        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _getLstatSize()));
+        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(this, std::move(*blob), _getLstatSize()));
     } else if (blobType == FsBlobView::BlobType::SYMLINK) {
         return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob)));
     } else {

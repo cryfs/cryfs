@@ -166,7 +166,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
     return;
   }
 
-  uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), endIndex);
+  uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
   uint32_t numLeaves = this->_numLeaves(*_rootNode); // TODO Querying the size causes a tree traversal down to the leaves. Possible without querying the size?
   if (_rootNode->depth() < neededTreeDepth) {
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
@@ -250,7 +250,7 @@ unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
-  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), (uint32_t)root.depth()-1);
+  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)root.depth()-1);
 }
 
 uint64_t DataTree::numStoredBytes() const {

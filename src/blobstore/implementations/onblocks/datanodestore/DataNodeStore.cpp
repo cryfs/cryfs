@@ -20,7 +20,7 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint32_t blocksizeBytes)
+DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint64_t blocksizeBytes)
 : _blockstore(std::move(blockstore)), _layout(blocksizeBytes) {
 }
 
@@ -94,6 +94,10 @@ uint64_t DataNodeStore::numNodes() const {
 
 uint64_t DataNodeStore::estimateSpaceForNumNodesLeft() const {
   return _blockstore->estimateNumFreeBytes() / _layout.blocksizeBytes();
+}
+
+uint64_t DataNodeStore::blocksizeBytes() const {
+  return _layout.blocksizeBytes();
 }
 
 void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
