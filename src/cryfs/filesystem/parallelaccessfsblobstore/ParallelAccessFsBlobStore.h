@@ -26,6 +26,7 @@ namespace cryfs {
             cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
+            uint64_t blocksizeBytes() const;
             uint64_t numBlocks() const;
             uint64_t estimateSpaceForNumBlocksLeft() const;
 
@@ -55,6 +56,10 @@ namespace cryfs {
                 ASSERT(blob != boost::none, "Blob not found");
                 return (*blob)->lstat_size();
             };
+        }
+
+        inline uint64_t ParallelAccessFsBlobStore::blocksizeBytes() const {
+            return _baseBlobStore->blocksizeBytes();
         }
 
         inline uint64_t ParallelAccessFsBlobStore::numBlocks() const {

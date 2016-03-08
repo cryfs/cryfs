@@ -37,8 +37,6 @@ public:
 
 private:
 
-  static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
-
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;

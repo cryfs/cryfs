@@ -45,8 +45,6 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-constexpr uint32_t CryDevice::BLOCKSIZE_BYTES;
-
 CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore)
 : _fsBlobStore(
       make_unique_ref<ParallelAccessFsBlobStore>(
@@ -55,7 +53,7 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
             make_unique_ref<BlobStoreOnBlocks>(
               make_unique_ref<CachingBlockStore>(
                 CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore))
-              ), BLOCKSIZE_BYTES)))
+              ), configFile.config()->BlocksizeBytes())))
         )
       ),
   _rootKey(GetOrCreateRootKey(&configFile)),
@@ -140,7 +138,7 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   callFsActionCallbacks();
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
   uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
-  fsstat->f_bsize = BLOCKSIZE_BYTES;
+  fsstat->f_bsize = _fsBlobStore->blocksizeBytes();
   fsstat->f_blocks = numUsedBlocks + numFreeBlocks;
   fsstat->f_bfree = numFreeBlocks;
   fsstat->f_bavail = numFreeBlocks;
