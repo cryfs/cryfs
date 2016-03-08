@@ -17,8 +17,6 @@ namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
-
   CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
@@ -38,6 +36,8 @@ public:
   void callFsActionCallbacks() const;
 
 private:
+
+  static constexpr uint32_t BLOCKSIZE_BYTES = 32 * 1024;
 
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 

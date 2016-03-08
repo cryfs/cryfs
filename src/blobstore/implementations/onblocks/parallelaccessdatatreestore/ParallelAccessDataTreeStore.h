@@ -26,7 +26,8 @@ public:
 
   void remove(cpputils::unique_ref<DataTreeRef> tree);
 
-  //TODO Test numBlocks/estimateSpaceForNumBlocksLeft
+  //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
+  uint64_t blocksizeBytes() const;
   uint64_t numNodes() const;
   uint64_t estimateSpaceForNumNodesLeft() const;
 
