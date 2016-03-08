@@ -33,7 +33,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._encKey = pt.get("cryfs.key", "");
   cfg._cipher = pt.get("cryfs.cipher", "");
   cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
-  cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32 * 1024); // CryFS <= 0.9.1 used a 32KB block size.
+  cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32 * 1024); // CryFS <= 0.9.2 used a 32KB block size.
   return cfg;
 }
 
