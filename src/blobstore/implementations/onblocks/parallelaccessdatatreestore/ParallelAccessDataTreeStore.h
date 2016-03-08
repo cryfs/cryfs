@@ -38,6 +38,10 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessDataTreeStore);
 };
 
+inline uint64_t ParallelAccessDataTreeStore::blocksizeBytes() const {
+    return _dataTreeStore->blocksizeBytes();
+}
+
 inline uint64_t ParallelAccessDataTreeStore::numNodes() const {
     return _dataTreeStore->numNodes();
 }
