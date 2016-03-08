@@ -27,8 +27,8 @@ namespace fsblobstore {
 
 constexpr off_t DirBlob::DIR_LSTAT_SIZE;
 
-DirBlob::DirBlob(unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
-    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
+DirBlob::DirBlob(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize) :
+    FsBlob(std::move(blob)), _fsBlobStore(fsBlobStore), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -44,9 +44,9 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, std::function<off_t(const blockstore::Key&)> getLstatSize) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<off_t(const blockstore::Key&)> getLstatSize) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::DIR);
-  return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
+  return make_unique_ref<DirBlob>(fsBlobStore, std::move(blob), getLstatSize);
 }
 
 void DirBlob::_writeEntriesToBlob() {
@@ -136,7 +136,7 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
-  result->st_blksize = CryDevice::BLOCKSIZE_BYTES; //TODO FsBlobStore::BLOCKSIZE_BYTES would be cleaner
+  result->st_blksize = _fsBlobStore->blocksizeBytes();
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {

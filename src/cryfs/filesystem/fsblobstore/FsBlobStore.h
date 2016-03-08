@@ -25,6 +25,8 @@ namespace cryfs {
             uint64_t numBlocks() const;
             uint64_t estimateSpaceForNumBlocksLeft() const;
 
+            uint64_t blocksizeBytes() const;
+
         private:
 
             std::function<off_t(const blockstore::Key &)> _getLstatSize();
@@ -45,7 +47,7 @@ namespace cryfs {
 
         inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob() {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(std::move(blob), _getLstatSize());
+            return DirBlob::InitializeEmptyDir(this, std::move(blob), _getLstatSize());
         }
 
         inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target) {
@@ -71,6 +73,10 @@ namespace cryfs {
                 ASSERT(blob != boost::none, "Blob not found");
                 return (*blob)->lstat_size();
             };
+        }
+
+        inline uint64_t FsBlobStore::blocksizeBytes() const {
+            return _baseBlobStore->blocksizeBytes();
         }
     }
 }

@@ -11,6 +11,7 @@
 
 namespace blobstore {
 
+//TODO Remove this interface. We'll only use BlobStoreOnBlocks and never a different one. Rename BlobStoreOnBlocks to simply BlobStore.
 class BlobStore {
 public:
   virtual ~BlobStore() {}
@@ -21,6 +22,7 @@ public:
 
   virtual uint64_t numBlocks() const = 0;
   virtual uint64_t estimateSpaceForNumBlocksLeft() const = 0;
+  virtual uint64_t blocksizeBytes() const = 0;
 };
 
 }

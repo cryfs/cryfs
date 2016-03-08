@@ -11,9 +11,11 @@ namespace bf = boost::filesystem;
 ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir, const optional<bf::path> &configFile,
                                bool foreground, const optional<double> &unmountAfterIdleMinutes,
                                const optional<bf::path> &logFile, const optional<string> &cipher,
+                               const optional<uint32_t> &blocksizeBytes,
                                const vector<char*> &fuseOptions)
     :_baseDir(baseDir), _mountDir(nullptr), _configFile(configFile), _foreground(foreground),
-     _cipher(cipher), _unmountAfterIdleMinutes(unmountAfterIdleMinutes), _logFile(logFile), _fuseOptions(fuseOptions) {
+     _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
+     _logFile(logFile), _fuseOptions(fuseOptions) {
 
     string mountDirStr = mountDir.native();
     _mountDir = new char[mountDirStr.size()+1];
@@ -63,6 +65,10 @@ const optional<bf::path> &ProgramOptions::logFile() const {
 
 const optional<string> &ProgramOptions::cipher() const {
     return _cipher;
+}
+
+const optional<uint32_t> &ProgramOptions::blocksizeBytes() const {
+    return _blocksizeBytes;
 }
 
 const vector<char *> &ProgramOptions::fuseOptions() const {

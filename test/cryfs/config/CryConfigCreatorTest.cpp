@@ -62,72 +62,82 @@ public:
 TEST_F(CryConfigCreatorTest, DoesAskForCipherIfNotSpecified) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfSpecified) {
     AnswerNoToDefaultSettings();
     EXPECT_DOES_NOT_ASK_FOR_CIPHER();
-    CryConfig config = creator.create(string("aes-256-gcm"));
+    CryConfig config = creator.create(string("aes-256-gcm"), none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfUsingDefaultSettings) {
     AnswerYesToDefaultSettings();
     EXPECT_DOES_NOT_ASK_FOR_CIPHER();
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForCipherIfNoninteractive) {
     EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS();
     EXPECT_DOES_NOT_ASK_FOR_CIPHER();
-    CryConfig config = noninteractiveCreator.create(none);
+    CryConfig config = noninteractiveCreator.create(none, none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesAskForBlocksizeIfNotSpecified) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_BLOCKSIZE().WillOnce(Return(1));
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
 }
 
-//TODO DoesNotAskForCipherIfSpecified
+TEST_F(CryConfigCreatorTest, DoesNotAskForBlocksizeIfSpecified) {
+    AnswerNoToDefaultSettings();
+    EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE();
+    CryConfig config = creator.create(none, 10*1024u);
+}
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForBlocksizeIfNoninteractive) {
     EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS();
     EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE();
-    CryConfig config = noninteractiveCreator.create(none);
+    CryConfig config = noninteractiveCreator.create(none, none);
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForBlocksizeIfUsingDefaultSettings) {
     AnswerYesToDefaultSettings();
     EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE();
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
     AnswerNoToDefaultSettings();
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
     EXPECT_EQ("", config.RootBlob()); // This tells CryFS to create a new root blob
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("mars-448-gcm"));
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
     cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-256-gcm"));
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
     cpputils::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-128-gcm"));
-    CryConfig config = creator.create(none);
+    CryConfig config = creator.create(none, none);
     cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+}
+
+TEST_F(CryConfigCreatorTest, DoesNotAskForAnythingIfEverythingIsSpecified) {
+    EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS();
+    EXPECT_DOES_NOT_ASK_FOR_CIPHER();
+    CryConfig config = noninteractiveCreator.create(string("aes-256-gcm"), 10*1024u);
 }
 
 //TODO Add test cases ensuring that the values entered are correctly taken
