@@ -27,8 +27,8 @@ public:
   const std::string &Version() const;
   void SetVersion(const std::string &value);
 
-  uint32_t BlocksizeBytes() const;
-  void SetBlocksizeBytes(uint32_t value);
+  uint64_t BlocksizeBytes() const;
+  void SetBlocksizeBytes(uint64_t value);
 
   static CryConfig load(const cpputils::Data &data);
   cpputils::Data save() const;
@@ -38,7 +38,7 @@ private:
   std::string _encKey;
   std::string _cipher;
   std::string _version;
-  uint32_t _blocksizeBytes;
+  uint64_t _blocksizeBytes;
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };

@@ -33,7 +33,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._encKey = pt.get("cryfs.key", "");
   cfg._cipher = pt.get("cryfs.cipher", "");
   cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
-  cfg._blocksizeBytes = pt.get<uint32_t>("cryfs.blocksizeBytes", 32 * 1024); // TODO Put here the actual block size value of earlier CryFS versions
+  cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32 * 1024); // CryFS <= 0.9.1 used a 32KB block size.
   return cfg;
 }
 
@@ -44,7 +44,7 @@ Data CryConfig::save() const {
   pt.put("cryfs.key", _encKey);
   pt.put("cryfs.cipher", _cipher);
   pt.put("cryfs.version", _version);
-  pt.put<uint32_t>("cryfs.blocksizeBytes", _blocksizeBytes);
+  pt.put<uint64_t>("cryfs.blocksizeBytes", _blocksizeBytes);
 
   stringstream stream;
   write_json(stream, pt);
@@ -83,11 +83,11 @@ void CryConfig::SetVersion(const std::string &value) {
   _version = value;
 }
 
-uint32_t CryConfig::BlocksizeBytes() const {
+uint64_t CryConfig::BlocksizeBytes() const {
   return _blocksizeBytes;
 }
 
-void CryConfig::SetBlocksizeBytes(uint32_t value) {
+void CryConfig::SetBlocksizeBytes(uint64_t value) {
   _blocksizeBytes = value;
 }
 
