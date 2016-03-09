@@ -34,6 +34,10 @@ cryfs_status cryfs_mount_set_mountdir(cryfs_mount_handle *handle, const char *mo
     return handle->set_mountdir(string(mountdir, mountdir_length));
 }
 
+cryfs_status cryfs_mount_add_fuse_argument(cryfs_mount_handle *handle, const char *argument, size_t argument_length) {
+    return handle->add_fuse_argument(string(argument, argument_length));
+}
+
 cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char **output) {
     *output = handle->get_ciphername();
     return cryfs_success;

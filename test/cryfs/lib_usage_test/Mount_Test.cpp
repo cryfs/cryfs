@@ -43,6 +43,7 @@ public:
         config.SetCipher(cipher);
         config.SetEncryptionKey(CryCiphers::find(cipher).createKey(Random::PseudoRandom()));
         config.SetRootBlob("");
+        config.SetBlocksizeBytes(32*1024);
         config.SetVersion(gitversion::VersionString());
 
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
@@ -119,6 +120,27 @@ TEST_F(Mount_Test, set_logfile_valid_notexisting) {
 TEST_F(Mount_Test, set_logfile_valid_existing) {
     create_and_load_filesystem();
     EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, logfile.path().native().c_str(), logfile.path().native().size()));
+}
+
+TEST_F(Mount_Test, set_unmount_idle) {
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_set_unmount_idle(handle, 1000));
+}
+
+TEST_F(Mount_Test, set_fuse_argument) {
+    const std::string ARGUMENT = "argument";
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT.c_str(), ARGUMENT.size()));
+}
+
+TEST_F(Mount_Test, set_fuse_argument_multiple) {
+    const std::string ARGUMENT1 = "argument1";
+    const std::string ARGUMENT2 = "another argument";
+    const std::string ARGUMENT3 = "and a thirt one";
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT1.c_str(), ARGUMENT1.size()));
+    EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT2.c_str(), ARGUMENT2.size()));
+    EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT3.c_str(), ARGUMENT3.size()));
 }
 
 TEST_F(Mount_Test, mount_without_mountdir) {

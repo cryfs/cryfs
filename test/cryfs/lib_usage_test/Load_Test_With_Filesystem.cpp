@@ -42,6 +42,7 @@ public:
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(AES256_GCM::CreateKey(Random::PseudoRandom()).ToString());
         config.SetRootBlob("");
+        config.SetBlocksizeBytes(32*1024);
         config.SetVersion(gitversion::VersionString());
 
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
