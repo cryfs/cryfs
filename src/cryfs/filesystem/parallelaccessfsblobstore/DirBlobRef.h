@@ -35,8 +35,8 @@ public:
     }
 
     void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
-                  mode_t mode, uid_t uid, gid_t gid) {
-        return _base->AddChild(name, blobKey, type, mode, uid, gid);
+                  mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChild(name, blobKey, type, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
     void statChild(const blockstore::Key &key, struct ::stat *result) const {
@@ -55,16 +55,16 @@ public:
         return _base->utimensChild(key, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
-        return _base->AddChildDir(name, blobKey, mode, uid, gid);
+    void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildDir(name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
-        return _base->AddChildFile(name, blobKey, mode, uid, gid);
+    void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildFile(name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid) {
-        return _base->AddChildSymlink(name, blobKey, uid, gid);
+    void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildSymlink(name, blobKey, uid, gid, lastAccessTime, lastModificationTime);
     }
 
     void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const {

@@ -82,15 +82,15 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   }
   const auto &entry = *optEntry;
 
-  if (entry.type == fspp::Dir::EntryType::DIR) {
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key));
-  } else if (entry.type == fspp::Dir::EntryType::FILE) {
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), entry.key));
-  } else if (entry.type == fspp::Dir::EntryType::SYMLINK) {
-	return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), entry.key));
-  } else {
-    ASSERT(false, "Unknown entry type");
+  switch(entry.type()) {
+    case fspp::Dir::EntryType::DIR:
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key()));
+    case fspp::Dir::EntryType::FILE:
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), entry.key()));
+    case  fspp::Dir::EntryType::SYMLINK:
+	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), entry.key()));
   }
+  ASSERT(false, "Switch/case not exhaustive");
 }
 
 unique_ref<DirBlobRef> CryDevice::LoadDirBlob(const bf::path &path) {
@@ -119,7 +119,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
     if (childOpt == boost::none) {
       throw FuseErrnoException(ENOENT); // Child entry in directory not found
     }
-    Key childKey = childOpt->key;
+    Key childKey = childOpt->key();
     currentBlob = _fsBlobStore->load(childKey);
     if (currentBlob == none) {
       throw FuseErrnoException(ENOENT); // Blob for directory entry not found

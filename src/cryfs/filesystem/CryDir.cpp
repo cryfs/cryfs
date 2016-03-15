@@ -9,6 +9,7 @@
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
+#include "fsblobstore/utils/time.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -39,7 +40,8 @@ CryDir::~CryDir() {
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   device()->callFsActionCallbacks();
   auto child = device()->CreateFileBlob();
-  LoadBlob()->AddChildFile(name, child->key(), mode, uid, gid);
+  auto now = fsblobstore::time::now();
+  LoadBlob()->AddChildFile(name, child->key(), mode, uid, gid, now, now);
   return make_unique_ref<CryOpenFile>(device(), std::move(child));
 }
 
@@ -47,7 +49,8 @@ void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   auto child = device()->CreateDirBlob();
-  blob->AddChildDir(name, child->key(), mode, uid, gid);
+  auto now = fsblobstore::time::now();
+  blob->AddChildDir(name, child->key(), mode, uid, gid, now, now);
 }
 
 unique_ref<DirBlobRef> CryDir::LoadBlob() const {
@@ -76,7 +79,8 @@ void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   auto child = device()->CreateSymlinkBlob(target);
-  blob->AddChildSymlink(name, child->key(), uid, gid);
+  auto now = fsblobstore::time::now();
+  blob->AddChildSymlink(name, child->key(), uid, gid, now, now);
 }
 
 void CryDir::remove() {

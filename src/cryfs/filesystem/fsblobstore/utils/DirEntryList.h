@@ -20,7 +20,7 @@ namespace cryfs {
             void deserializeFrom(const void *data, uint64_t size);
 
             void add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
-                     mode_t mode, uid_t uid, gid_t gid);
+                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             boost::optional<const DirEntry&> get(const std::string &name) const;
             boost::optional<const DirEntry&> get(const blockstore::Key &key) const;
             void remove(const blockstore::Key &key);
@@ -41,7 +41,6 @@ namespace cryfs {
             std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
-            static timespec _now();
 
             std::vector<DirEntry> _entries;
 

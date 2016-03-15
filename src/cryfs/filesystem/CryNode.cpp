@@ -56,13 +56,15 @@ void CryNode::rename(const bf::path &to) {
     throw FuseErrnoException(ENOENT);
   }
   const auto &old = *optOld;
-  auto mode = old.mode;
-  auto uid = old.uid;
-  auto gid = old.gid;
+  auto mode = old.mode();
+  auto uid = old.uid();
+  auto gid = old.gid();
+  auto lastAccessTime = old.lastAccessTime();
+  auto lastModificationTime = old.lastModificationTime();
   (*_parent)->RemoveChild(_key);
   (*_parent)->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
+  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {

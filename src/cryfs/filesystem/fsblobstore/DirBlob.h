@@ -36,16 +36,15 @@ namespace cryfs {
             boost::optional<const DirEntry&> GetChild(const blockstore::Key &key) const;
 
             void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid,
-                             gid_t gid);
+                             gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid,
-                              gid_t gid);
+                              gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
-            void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid);
+            void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
-                          mode_t mode,
-                          uid_t uid, gid_t gid);
+                          mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             void RemoveChild(const blockstore::Key &key);
 
