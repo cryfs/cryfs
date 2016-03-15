@@ -18,8 +18,8 @@ Manual install (Ubuntu)
 
     # Add apt repository
     sudo sh -c "echo \"deb http://apt.cryfs.org/ubuntu `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
-    
-    # Install cryfs 
+
+    # Install cryfs
     sudo apt-get update
     sudo apt-get install cryfs
 
@@ -30,11 +30,11 @@ Manual install (Debian)
 
     # Add apt repository
     sudo sh -c "echo \"deb http://apt.cryfs.org/debian `lsb_release -s -c` main\" > /etc/apt/sources.list.d/cryfs.list"
-    
-    # Install cryfs 
+
+    # Install cryfs
     sudo apt-get update
     sudo apt-get install cryfs
-    
+
 GUI
 ===
 If you want to use a GUI to mount your CryFS volumes, take a look at the [cryfs-gui project](https://github.com/mhogomchungu/cryfs-gui). You have to install the GUI **and** also CryFS itself for it to work.
@@ -47,7 +47,7 @@ Requirements
   - Git (for getting the source code)
   - GCC version >= 4.8 or Clang >= 3.7
   - CMake version >= 2.8
-  - libcurl4 (including development headers) 
+  - libcurl4 (including development headers)
   - Boost libraries version >= 1.56 (including development headers)
     - filesystem
     - system
@@ -63,16 +63,16 @@ You can use the following commands to install these requirements
 
         # Ubuntu
         $ sudo apt-get install git g++ cmake libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
-        
+
         # Fedora
-        TODO
-        
+        sudo dnf install git gcc-c++ cmake libcurl-devel boost-devel boost-static cryptopp-devel openssl-devel fuse-devel python
+
         # Macintosh
         brew install cmake boost cryptopp openssl
 
 Build & Install
 ---------------
- 
+
  1. Clone repository
 
         $ git clone https://github.com/cryfs/cryfs.git cryfs
@@ -83,15 +83,15 @@ Build & Install
         $ mkdir cmake && cd cmake
         $ cmake ..
         $ make
-        
+
  3. Install
 
         $ sudo make install
-        
+
 You can pass the following variables to the *cmake* command (using *-Dvariablename=value*):
  - -D**CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
  - -D**BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
- 
+
 Troubleshooting
 ---------------
 
