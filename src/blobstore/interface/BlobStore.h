@@ -22,7 +22,8 @@ public:
 
   virtual uint64_t numBlocks() const = 0;
   virtual uint64_t estimateSpaceForNumBlocksLeft() const = 0;
-  virtual uint64_t blocksizeBytes() const = 0;
+  //virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
+  virtual uint64_t virtualBlocksizeBytes() const = 0;
 };
 
 }

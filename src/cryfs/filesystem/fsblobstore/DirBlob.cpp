@@ -138,7 +138,7 @@ void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
 #endif
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
-  result->st_blksize = _fsBlobStore->blocksizeBytes();
+  result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {

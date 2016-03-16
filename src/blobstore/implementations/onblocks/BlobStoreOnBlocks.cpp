@@ -27,8 +27,8 @@ using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
 using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
-BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint64_t blocksizeBytes)
-        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), blocksizeBytes)))) {
+BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint64_t physicalBlocksizeBytes)
+        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), physicalBlocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {
@@ -52,8 +52,8 @@ void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
     _dataTreeStore->remove((*_blob)->releaseTree());
 }
 
-uint64_t BlobStoreOnBlocks::blocksizeBytes() const {
-    return _dataTreeStore->blocksizeBytes();
+uint64_t BlobStoreOnBlocks::virtualBlocksizeBytes() const {
+    return _dataTreeStore->virtualBlocksizeBytes();
 }
 
 uint64_t BlobStoreOnBlocks::numBlocks() const {

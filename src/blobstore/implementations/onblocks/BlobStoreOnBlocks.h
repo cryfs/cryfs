@@ -16,7 +16,7 @@ class ParallelAccessDataTreeStore;
 
 class BlobStoreOnBlocks final: public BlobStore {
 public:
-  BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint64_t blocksizeBytes);
+  BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint64_t physicalBlocksizeBytes);
   ~BlobStoreOnBlocks();
 
   cpputils::unique_ref<Blob> create() override;
@@ -25,7 +25,8 @@ public:
   void remove(cpputils::unique_ref<Blob> blob) override;
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
-  uint64_t blocksizeBytes() const override;
+  //virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
+  uint64_t virtualBlocksizeBytes() const override;
   uint64_t numBlocks() const override;
   uint64_t estimateSpaceForNumBlocksLeft() const override;
 

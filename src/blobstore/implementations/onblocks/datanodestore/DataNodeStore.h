@@ -21,7 +21,7 @@ class DataInnerNode;
 
 class DataNodeStore final {
 public:
-  DataNodeStore(cpputils::unique_ref<blockstore::BlockStore> blockstore, uint64_t blocksizeBytes);
+  DataNodeStore(cpputils::unique_ref<blockstore::BlockStore> blockstore, uint64_t physicalBlocksizeBytes);
   ~DataNodeStore();
 
   static constexpr uint8_t MAX_DEPTH = 10;
@@ -42,7 +42,7 @@ public:
   void removeSubtree(cpputils::unique_ref<DataNode> node);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
-  uint64_t blocksizeBytes() const;
+  uint64_t virtualBlocksizeBytes() const;
   uint64_t numNodes() const;
   uint64_t estimateSpaceForNumNodesLeft() const;
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()

@@ -25,7 +25,7 @@ namespace cryfs {
             uint64_t numBlocks() const;
             uint64_t estimateSpaceForNumBlocksLeft() const;
 
-            uint64_t blocksizeBytes() const;
+            uint64_t virtualBlocksizeBytes() const;
 
         private:
 
@@ -75,8 +75,8 @@ namespace cryfs {
             };
         }
 
-        inline uint64_t FsBlobStore::blocksizeBytes() const {
-            return _baseBlobStore->blocksizeBytes();
+        inline uint64_t FsBlobStore::virtualBlocksizeBytes() const {
+            return _baseBlobStore->virtualBlocksizeBytes();
         }
     }
 }

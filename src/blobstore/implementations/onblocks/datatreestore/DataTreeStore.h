@@ -26,7 +26,7 @@ public:
   void remove(cpputils::unique_ref<DataTree> tree);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
-  uint64_t blocksizeBytes() const;
+  uint64_t virtualBlocksizeBytes() const;
   uint64_t numNodes() const;
   uint64_t estimateSpaceForNumNodesLeft() const;
 
@@ -44,8 +44,8 @@ inline uint64_t DataTreeStore::estimateSpaceForNumNodesLeft() const {
     return _nodeStore->estimateSpaceForNumNodesLeft();
 }
 
-inline uint64_t DataTreeStore::blocksizeBytes() const {
-    return _nodeStore->blocksizeBytes();
+inline uint64_t DataTreeStore::virtualBlocksizeBytes() const {
+    return _nodeStore->virtualBlocksizeBytes();
 }
 
 }

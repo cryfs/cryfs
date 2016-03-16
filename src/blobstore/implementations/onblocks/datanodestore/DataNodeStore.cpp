@@ -20,8 +20,8 @@ namespace blobstore {
 namespace onblocks {
 namespace datanodestore {
 
-DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint64_t blocksizeBytes)
-: _blockstore(std::move(blockstore)), _layout(blocksizeBytes) {
+DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint64_t physicalBlocksizeBytes)
+: _blockstore(std::move(blockstore)), _layout(_blockstore->blockSizeFromPhysicalBlockSize(physicalBlocksizeBytes)) {
 }
 
 DataNodeStore::~DataNodeStore() {
@@ -96,7 +96,7 @@ uint64_t DataNodeStore::estimateSpaceForNumNodesLeft() const {
   return _blockstore->estimateNumFreeBytes() / _layout.blocksizeBytes();
 }
 
-uint64_t DataNodeStore::blocksizeBytes() const {
+uint64_t DataNodeStore::virtualBlocksizeBytes() const {
   return _layout.blocksizeBytes();
 }
 

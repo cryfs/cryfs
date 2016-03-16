@@ -138,7 +138,7 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   callFsActionCallbacks();
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
   uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
-  fsstat->f_bsize = _fsBlobStore->blocksizeBytes();
+  fsstat->f_bsize = _fsBlobStore->virtualBlocksizeBytes();
   fsstat->f_blocks = numUsedBlocks + numFreeBlocks;
   fsstat->f_bfree = numFreeBlocks;
   fsstat->f_bavail = numFreeBlocks;
