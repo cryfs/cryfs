@@ -25,6 +25,10 @@ public:
   //TODO Test estimateNumFreeBytes in all block stores
   virtual uint64_t estimateNumFreeBytes() const = 0;
 
+  // Returns, how much space a block has if we allow it to take the given physical block size (i.e. after removing headers, checksums, whatever else).
+  // This can be used to create blocks with a certain physical block size.
+  virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0;
+
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {
     while(true) {
       //TODO Copy (data.copy()) necessary?

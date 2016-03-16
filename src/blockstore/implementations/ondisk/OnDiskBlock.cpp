@@ -155,5 +155,12 @@ void OnDiskBlock::flush() {
   }
 }
 
+uint64_t OnDiskBlock::blockSizeFromPhysicalBlockSize(uint64_t blockSize) {
+  if(blockSize <= formatVersionHeaderSize()) {
+    return 0;
+  }
+  return blockSize - formatVersionHeaderSize();
+}
+
 }
 }

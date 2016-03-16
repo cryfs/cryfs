@@ -23,6 +23,7 @@ public:
   void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
+  uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
 
   //This function should only be used by test cases
   void __setKey(const typename Cipher::EncryptionKey &encKey);
@@ -88,6 +89,11 @@ uint64_t EncryptedBlockStore<Cipher>::estimateNumFreeBytes() const {
 template<class Cipher>
 void EncryptedBlockStore<Cipher>::__setKey(const typename Cipher::EncryptionKey &encKey) {
   _encKey = encKey;
+}
+
+template<class Cipher>
+uint64_t EncryptedBlockStore<Cipher>::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return EncryptedBlock<Cipher>::blockSizeFromPhysicalBlockSize(_baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize));
 }
 
 }

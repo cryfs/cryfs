@@ -81,5 +81,9 @@ uint64_t FakeBlockStore::estimateNumFreeBytes() const {
   return cpputils::system::get_total_memory();
 }
 
+uint64_t FakeBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return blockSize;
+}
+
 }
 }

@@ -57,5 +57,9 @@ uint64_t InMemoryBlockStore::estimateNumFreeBytes() const {
   return cpputils::system::get_total_memory();
 }
 
+uint64_t InMemoryBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return blockSize;
+}
+
 }
 }

@@ -20,6 +20,7 @@ public:
     void remove(cpputils::unique_ref<Block> block) override;
     uint64_t numBlocks() const override;
     uint64_t estimateNumFreeBytes() const override;
+    uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
 
 private:
     cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -75,6 +76,13 @@ uint64_t CompressingBlockStore<Compressor>::numBlocks() const {
 template<class Compressor>
 uint64_t CompressingBlockStore<Compressor>::estimateNumFreeBytes() const {
     return _baseBlockStore->estimateNumFreeBytes();
+}
+
+template<class Compressor>
+uint64_t CompressingBlockStore<Compressor>::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+    //We probably have more since we're compressing, but we don't know exactly how much.
+    //The best we can do is ignore the compression step here.
+    return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
 }
 
 }

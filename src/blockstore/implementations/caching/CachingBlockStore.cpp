@@ -92,5 +92,9 @@ void CachingBlockStore::flush() {
   _cache.flush();
 }
 
+uint64_t CachingBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
 }
 }

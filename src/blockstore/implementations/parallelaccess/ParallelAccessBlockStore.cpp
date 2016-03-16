@@ -60,5 +60,9 @@ uint64_t ParallelAccessBlockStore::estimateNumFreeBytes() const {
   return _baseBlockStore->estimateNumFreeBytes();
 }
 
+uint64_t ParallelAccessBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
 }
 }
