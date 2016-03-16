@@ -43,6 +43,10 @@ public:
         return _base->statChild(key, result);
     }
 
+    void statChildExceptSize(const blockstore::Key &key, struct ::stat *result) const {
+        return _base->statChildExceptSize(key, result);
+    }
+
     void chmodChild(const blockstore::Key &key, mode_t mode) {
         return _base->chmodChild(key, mode);
     }

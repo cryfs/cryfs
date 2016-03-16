@@ -6,6 +6,7 @@ Version 0.9.3 (unreleased)
 * You can disable the automatic update check by setting CRYFS_NO_UPDATE_CHECK=true in your environment.
 * Building CryFS from the GitHub tarball (i.e. when there is no .git directory present) works.
 * The ciphertext block size is configurable. You can use the "--blocksize-bytes" command line argument. If not specified, CryFS will ask you for a block size when creating a file system.
+* Fix fstat (a bug in the fstat implementation caused problems with some text editors (e.g. nano) falsely thinking a file changed since they opened it).
 
 Version 0.9.2
 ---------------

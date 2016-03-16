@@ -25,8 +25,7 @@ public:
 	  file.stat(&st1);
 	  callback(st1);
 	  file.open(O_RDONLY)->stat(&st2);
-      //TODO Enable this line
-	  //callback(st2);
+	  callback(st2);
   }
 
   void EXPECT_SIZE(uint64_t expectedSize, const fspp::File &file) {

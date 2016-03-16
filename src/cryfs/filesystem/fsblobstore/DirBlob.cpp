@@ -112,13 +112,16 @@ off_t DirBlob::lstat_size() const {
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
+  statChildExceptSize(key, result);
+  result->st_size = _getLstatSize(key);
+}
+
+void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
   auto childOpt = GetChild(key);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
   }
   const auto &child = *childOpt;
-  //TODO Loading the blob for only getting the size of the file/symlink is not very performant.
-  //     Furthermore, this is the only reason why DirBlob needs a pointer to _fsBlobStore, which is ugly
   result->st_mode = child.mode();
   result->st_uid = child.uid();
   result->st_gid = child.gid();
@@ -133,7 +136,6 @@ void DirBlob::statChild(const Key &key, struct ::stat *result) const {
   result->st_mtim = child.lastModificationTime();
   result->st_ctim = child.lastMetadataChangeTime();
 #endif
-  result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
   result->st_blksize = _fsBlobStore->blocksizeBytes();

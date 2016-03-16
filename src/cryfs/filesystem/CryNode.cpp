@@ -17,6 +17,7 @@ using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
+using std::shared_ptr;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
@@ -28,8 +29,11 @@ namespace cryfs {
 
 CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, const Key &key)
 : _device(device),
-  _parent(std::move(parent)),
+  _parent(none),
   _key(key) {
+  if (parent != none) {
+    _parent = cpputils::to_unique_ptr(std::move(*parent));
+  }
 }
 
 CryNode::~CryNode() {
@@ -42,10 +46,15 @@ void CryNode::access(int mask) const {
   throw FuseErrnoException(ENOTSUP);
 }
 
+shared_ptr<const DirBlobRef> CryNode::parent() const {
+  ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
+  return *_parent;
+}
+
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
@@ -70,7 +79,7 @@ void CryNode::rename(const bf::path &to) {
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
@@ -80,7 +89,7 @@ void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
 void CryNode::removeNode() {
   //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
@@ -103,7 +112,7 @@ unique_ref<FsBlobRef> CryNode::LoadBlob() const {
 void CryNode::stat(struct ::stat *result) const {
   device()->callFsActionCallbacks();
   if(_parent == none) {
-    //We are the base directory.
+    //We are the root directory.
 	//TODO What should we do?
     result->st_uid = getuid();
     result->st_gid = getgid();
@@ -130,7 +139,7 @@ void CryNode::stat(struct ::stat *result) const {
 void CryNode::chmod(mode_t mode) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
@@ -140,7 +149,7 @@ void CryNode::chmod(mode_t mode) {
 void CryNode::chown(uid_t uid, gid_t gid) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-	//We are the base direcory.
+	//We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }

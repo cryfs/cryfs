@@ -41,8 +41,9 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
   device()->callFsActionCallbacks();
   auto child = device()->CreateFileBlob();
   auto now = fsblobstore::time::now();
-  LoadBlob()->AddChildFile(name, child->key(), mode, uid, gid, now, now);
-  return make_unique_ref<CryOpenFile>(device(), std::move(child));
+  auto dirBlob = LoadBlob();
+  dirBlob->AddChildFile(name, child->key(), mode, uid, gid, now, now);
+  return make_unique_ref<CryOpenFile>(device(), cpputils::to_unique_ptr(std::move(dirBlob)), std::move(child));
 }
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
