@@ -55,8 +55,7 @@ void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
-    //TODO What should we do?
-    throw FuseErrnoException(EIO);
+    throw FuseErrnoException(EBUSY);
   }
   //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
   //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
