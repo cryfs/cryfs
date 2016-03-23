@@ -246,8 +246,6 @@ TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
   );
 }
 
-
-
 REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   Children_RootDir_Empty,
   Children_RootDir_OneFile_Directly,
@@ -283,7 +281,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
 //TODO chmod
 //TODO chown
 //TODO mkdir with uid/gid
-
-//TODO Test permission flags
+//TODO createAndOpenFile: all stat values correctly set (1. in the OpenFile instance returned from createAndOpenFile and 2. on an lstat on the file object afterwards)
+//TODO Test all operations do (or don't) affect dir timestamps correctly
 
 #endif

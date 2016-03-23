@@ -34,6 +34,10 @@ public:
         return _base->RemoveChild(key);
     }
 
+    void RemoveChild(const std::string &name) {
+        return _base->RemoveChild(name);
+    }
+
     void flush() {
         return _base->flush();
     }

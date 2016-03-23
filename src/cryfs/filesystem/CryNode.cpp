@@ -57,22 +57,17 @@ void CryNode::rename(const bf::path &to) {
     //We are the root direcory.
     throw FuseErrnoException(EBUSY);
   }
-  //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
-  //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
-  auto optOld = (*_parent)->GetChild(_key);
-  if (optOld == boost::none) {
-    throw FuseErrnoException(ENOENT);
-  }
-  const auto &old = *optOld;
-  auto mode = old.mode();
-  auto uid = old.uid();
-  auto gid = old.gid();
-  auto lastAccessTime = old.lastAccessTime();
-  auto lastModificationTime = old.lastModificationTime();
-  (*_parent)->RemoveChild(_key);
-  (*_parent)->flush();
   auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid, lastAccessTime, lastModificationTime);
+  auto old = (*_parent)->GetChild(_key);
+  if (old == boost::none) {
+    throw FuseErrnoException(EIO);
+  }
+  std::string oldName = old->name(); // Store, because the next line invalidates the 'old' object
+  if (oldName != to.filename().native()) {
+    targetDir->AddChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
+                        old->lastAccessTime(), old->lastModificationTime());
+    (*_parent)->RemoveChild(oldName);
+  }
 }
 
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {

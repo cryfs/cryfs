@@ -46,6 +46,8 @@ namespace cryfs {
             void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
                           mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
+            void RemoveChild(const std::string &name);
+
             void RemoveChild(const blockstore::Key &key);
 
             void flush();

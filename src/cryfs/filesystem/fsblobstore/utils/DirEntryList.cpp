@@ -59,9 +59,7 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
-        return entry.name() == name;
-    });
+    auto found = _findByName(name);
     if (found == _entries.end()) {
         return boost::none;
     }
@@ -69,19 +67,36 @@ boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const Key &key) const {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     if (found == _entries.end()) {
         return boost::none;
     }
     return *found;
 }
 
-void DirEntryList::remove(const Key &key) {
-    auto found = _find(key);
+void DirEntryList::remove(const string &name) {
+    auto found = _findByName(name);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     _entries.erase(found);
 }
 
-vector<DirEntry>::iterator DirEntryList::_find(const Key &key) {
+void DirEntryList::remove(const Key &key) {
+    auto lowerBound = _findLowerBound(key);
+    auto upperBound = std::find_if(lowerBound, _entries.end(), [&key] (const DirEntry &entry) {
+        return entry.key() != key;
+    });
+    _entries.erase(lowerBound, upperBound);
+}
+
+vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) const {
+    return std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
+        return entry.name() == name;
+    });
+}
+
+vector<DirEntry>::iterator DirEntryList::_findByKey(const Key &key) {
     auto found = _findLowerBound(key);
     if (found == _entries.end() || found->key() != key) {
         throw fspp::fuse::FuseErrnoException(ENOENT);
@@ -118,8 +133,8 @@ vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::functi
     return iter;
 }
 
-vector<DirEntry>::const_iterator DirEntryList::_find(const Key &key) const {
-    return const_cast<DirEntryList*>(this)->_find(key);
+vector<DirEntry>::const_iterator DirEntryList::_findByKey(const Key &key) const {
+    return const_cast<DirEntryList*>(this)->_findByKey(key);
 }
 
 size_t DirEntryList::size() const {
@@ -135,13 +150,13 @@ DirEntryList::const_iterator DirEntryList::end() const {
 }
 
 void DirEntryList::setMode(const Key &key, mode_t mode) {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     ASSERT ((S_ISREG(mode) && S_ISREG(found->mode())) || (S_ISDIR(mode) && S_ISDIR(found->mode())) || (S_ISLNK(mode)), "Unknown mode in entry");
     found->setMode(mode);
 }
 
 bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     bool changed = false;
     if (uid != (uid_t)-1) {
         found->setUid(uid);
@@ -155,7 +170,7 @@ bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
 }
 
 void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     found->setLastAccessTime(lastAccessTime);
     found->setLastModificationTime(lastModificationTime);
 }

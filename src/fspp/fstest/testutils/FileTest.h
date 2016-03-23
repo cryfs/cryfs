@@ -16,6 +16,8 @@ public:
 	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
 	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
 	file_nested = cpputils::to_unique_ptr(this->LoadFile("/mydir/mynestedfile"));
+
+	this->LoadDir("/")->createDir("mydir2", this->MODE_PUBLIC, 0, 0);
   }
   std::unique_ptr<fspp::File> file_root;
   std::unique_ptr<fspp::File> file_nested;

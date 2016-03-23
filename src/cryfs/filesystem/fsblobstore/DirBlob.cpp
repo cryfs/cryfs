@@ -93,6 +93,12 @@ boost::optional<const DirEntry&> DirBlob::GetChild(const Key &key) const {
   return _entries.get(key);
 }
 
+void DirBlob::RemoveChild(const string &name) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.remove(name);
+  _changed = true;
+}
+
 void DirBlob::RemoveChild(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.remove(key);

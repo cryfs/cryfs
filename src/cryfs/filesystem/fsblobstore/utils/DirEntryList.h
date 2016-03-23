@@ -23,6 +23,7 @@ namespace cryfs {
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             boost::optional<const DirEntry&> get(const std::string &name) const;
             boost::optional<const DirEntry&> get(const blockstore::Key &key) const;
+            void remove(const std::string &name);
             void remove(const blockstore::Key &key);
 
             size_t size() const;
@@ -36,8 +37,9 @@ namespace cryfs {
         private:
             uint64_t _serializedSize() const;
             bool _hasChild(const std::string &name) const;
-            std::vector<DirEntry>::iterator _find(const blockstore::Key &key);
-            std::vector<DirEntry>::const_iterator _find(const blockstore::Key &key) const;
+            std::vector<DirEntry>::const_iterator _findByName(const std::string &name) const;
+            std::vector<DirEntry>::iterator _findByKey(const blockstore::Key &key);
+            std::vector<DirEntry>::const_iterator _findByKey(const blockstore::Key &key) const;
             std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);

@@ -26,5 +26,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppOpenFileTest,
 //TODO Test flush
 //TODO Test fsync
 //TODO Test fdatasync
+//TODO Test stat on file that was just created (i.e. the OpenFile instance returned by createAndOpenFile)
+//TODO Test all operations do (or don't) affect file timestamps correctly
 
 #endif
