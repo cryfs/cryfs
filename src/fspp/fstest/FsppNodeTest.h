@@ -253,4 +253,4 @@ REGISTER_NODE_TEST_CASES(
 //TODO chmod
 //TODO chown
 
-//TODO Test all operations do (or don't) affect dir timestamps correctly
+//TODO Test all operations do (or don't) affect timestamps correctly
