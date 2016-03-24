@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+//TODO Address elements by name instead of by key when accessing them. Who knows whether there is two hard links for the same blob.
+
 namespace cryfs {
     namespace fsblobstore {
 
