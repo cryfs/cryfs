@@ -269,9 +269,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
 );
 
 //TODO access
-//TODO rename
 //TODO unlink
 //TODO Test all operations do (or don't) affect file timestamps correctly (including rename, which shouldn't modify access/modify time, but inode change time)
-//TODO (here and in other fstest operations): Test error paths
 
 #endif

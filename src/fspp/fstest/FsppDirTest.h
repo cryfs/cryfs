@@ -273,13 +273,8 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   CreateDir_AlreadyExisting
 );
 
-//TODO stat
-//TODO access
-//TODO rename
-//TODO utimens
+
 //TODO rmdir (also test that deleting a non-empty dir returns ENOTEMPTY, because otherwise there might not be any unlink syscalls for the entries issued)
-//TODO chmod
-//TODO chown
 //TODO mkdir with uid/gid
 //TODO createAndOpenFile: all stat values correctly set (1. in the OpenFile instance returned from createAndOpenFile and 2. on an lstat on the file object afterwards)
 //TODO Test all operations do (or don't) affect dir timestamps correctly

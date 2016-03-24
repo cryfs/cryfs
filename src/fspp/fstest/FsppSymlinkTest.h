@@ -51,5 +51,6 @@ REGISTER_TYPED_TEST_CASE_P(FsppSymlinkTest,
 );
 
 //TODO Other tests?
+//TODO Test all operations do (or don't) affect dir timestamps correctly
 
 #endif
