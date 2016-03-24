@@ -43,7 +43,7 @@ namespace cryfs {
 
             void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
-            void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
+            void AddOrOverwriteChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
                           mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             void RemoveChild(const std::string &name);
@@ -66,6 +66,8 @@ namespace cryfs {
 
         private:
 
+            void _addChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
+                          mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void _readEntriesFromBlob();
             void _writeEntriesToBlob();
 

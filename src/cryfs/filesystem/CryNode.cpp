@@ -63,8 +63,8 @@ void CryNode::rename(const bf::path &to) {
     throw FuseErrnoException(EIO);
   }
   std::string oldName = old->name(); // Store, because if targetDir == *_parent, then the 'old' object will be invalidated after we add something to targetDir
-  if (oldName != to.filename().native()) {
-    targetDir->AddChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
+  if (targetDir->key() != (*_parent)->key() || oldName != to.filename().native()) {
+    targetDir->AddOrOverwriteChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
                         old->lastAccessTime(), old->lastModificationTime());
     (*_parent)->RemoveChild(oldName);
   }

@@ -43,10 +43,7 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
 }
 
 bool DirEntryList::_hasChild(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
-        return entry.name() == name;
-    });
-    return found != _entries.end();
+    return _entries.end() != _findByName(name);
 }
 
 void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
@@ -54,8 +51,38 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
+    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+}
+
+void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     auto insert_pos = _findUpperBound(blobKey);
     _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
+}
+
+void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    auto found = _findByName(name);
+    if (found != _entries.end()) {
+        _overwrite(&*found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    } else {
+        _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    }
+}
+
+void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    if (entry->type() != entryType) {
+        if (entry->type() == fspp::Dir::EntryType::DIR) {
+            // new path is an existing directory, but old path is not a directory
+            throw fspp::fuse::FuseErrnoException(EISDIR);
+        }
+        if (entryType == fspp::Dir::EntryType::DIR) {
+            // oldpath is a directory, and newpath exists but is not a directory.
+            throw fspp::fuse::FuseErrnoException(ENOTDIR);
+        }
+    }
+    *entry = DirEntry(entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
@@ -90,10 +117,14 @@ void DirEntryList::remove(const Key &key) {
     _entries.erase(lowerBound, upperBound);
 }
 
-vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) const {
+vector<DirEntry>::iterator DirEntryList::_findByName(const string &name) {
     return std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
         return entry.name() == name;
     });
+}
+
+vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) const {
+    return const_cast<DirEntryList*>(this)->_findByName(name);
 }
 
 vector<DirEntry>::iterator DirEntryList::_findByKey(const Key &key) {

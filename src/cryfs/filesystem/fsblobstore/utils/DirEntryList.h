@@ -21,6 +21,8 @@ namespace cryfs {
 
             void add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            void addOrOverwrite(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             boost::optional<const DirEntry&> get(const std::string &name) const;
             boost::optional<const DirEntry&> get(const blockstore::Key &key) const;
             void remove(const std::string &name);
@@ -37,12 +39,17 @@ namespace cryfs {
         private:
             uint64_t _serializedSize() const;
             bool _hasChild(const std::string &name) const;
+            std::vector<DirEntry>::iterator _findByName(const std::string &name);
             std::vector<DirEntry>::const_iterator _findByName(const std::string &name) const;
             std::vector<DirEntry>::iterator _findByKey(const blockstore::Key &key);
             std::vector<DirEntry>::const_iterator _findByKey(const blockstore::Key &key) const;
             std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
+            void _add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            void _overwrite(DirEntry *entry, const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             std::vector<DirEntry> _entries;
 

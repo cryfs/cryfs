@@ -54,7 +54,15 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
 
-    void Test_Rename_RootToNested() {
+    void Test_Rename_RootToNested_SameName() {
+        CreateDir("/mydir");
+        auto node = CreateNode("/oldname");
+        node->rename("/mydir/oldname");
+        EXPECT_EQ(boost::none, this->device->Load("/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/mydir/oldname"));
+    }
+
+    void Test_Rename_RootToNested_NewName() {
         CreateDir("/mydir");
         auto node = CreateNode("/oldname");
         node->rename("/mydir/newname");
@@ -62,7 +70,15 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
 
-    void Test_Rename_NestedToRoot() {
+    void Test_Rename_NestedToRoot_SameName() {
+        CreateDir("/mydir");
+        auto node = CreateNode("/mydir/oldname");
+        node->rename("/oldname");
+        EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/oldname"));
+    }
+
+    void Test_Rename_NestedToRoot_NewName() {
         CreateDir("/mydir");
         auto node = CreateNode("/mydir/oldname");
         node->rename("/newname");
@@ -70,7 +86,16 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
 
-    void Test_Rename_NestedToNested() {
+    void Test_Rename_NestedToNested_SameName() {
+        CreateDir("/mydir");
+        CreateDir("/mydir2");
+        auto node = CreateNode("/mydir/oldname");
+        node->rename("/mydir2/oldname");
+        EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/mydir2/oldname"));
+    }
+
+    void Test_Rename_NestedToNested_NewName() {
         CreateDir("/mydir");
         CreateDir("/mydir2");
         auto node = CreateNode("/mydir/oldname");
@@ -95,22 +120,70 @@ public:
         }
     }
 
-private:
-    void CreateDir(const boost::filesystem::path &path) {
-        this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    void Test_Rename_Overwrite() {
+        auto node = CreateNode("/oldname");
+        CreateNode("/newname");
+        node->rename("/newname");
+        EXPECT_EQ(boost::none, this->device->Load("/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
 
-    void CreateFile(const boost::filesystem::path &path) {
-        this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    void Test_Rename_Overwrite_DoesntHaveSameEntryTwice() {
+        auto node = CreateNode("/oldname");
+        CreateNode("/newname");
+        EXPECT_EQ(4u, this->LoadDir("/")->children()->size()); // 4, because of '.' and '..'
+        node->rename("/newname");
+        EXPECT_EQ(3u, this->LoadDir("/")->children()->size()); // 3, because of '.' and '..'
     }
+
+    void Test_Rename_Overwrite_DirWithFile() {
+        auto file = CreateFile("/oldname");
+        CreateDir("/newname");
+        try {
+            file->rename("/newname");
+            EXPECT_TRUE(false); // expect throw
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(EISDIR, e.getErrno());
+        }
+        EXPECT_NE(boost::none, this->device->Load("/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/newname"));
+    }
+
+    void Test_Rename_Overwrite_FileWithDir() {
+        auto dir = CreateDir("/oldname");
+        CreateFile("/newname");
+        try {
+            dir->rename("/newname");
+            EXPECT_TRUE(false); // expect throw
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(ENOTDIR, e.getErrno());
+        }
+        EXPECT_NE(boost::none, this->device->Load("/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/newname"));
+    }
+
+protected:
+    cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
+        this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+        return this->LoadDir(path);
+    }
+
+    cpputils::unique_ref<fspp::File> CreateFile(const boost::filesystem::path &path) {
+        this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+        return this->LoadFile(path);
+    }
+
+    cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path) {
+        this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
+        return this->LoadSymlink(path);
+    };
 };
 
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_File: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
     cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {
-        this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
-        return this->LoadFile(path);
+        return this->CreateFile(path);
     }
 };
 
@@ -118,8 +191,7 @@ template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Dir: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
     cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {
-        this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
-        return this->LoadDir(path);
+        return this->CreateDir(path);
     }
 };
 
@@ -127,8 +199,7 @@ template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Symlink: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
     cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {
-        this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
-        return this->LoadSymlink(path);
+        return this->CreateSymlink(path);
     }
 };
 
@@ -155,11 +226,18 @@ REGISTER_NODE_TEST_CASES(
     Rename_TargetParentDirIsFile,
     Rename_InRoot,
     Rename_InNested,
-    Rename_RootToNested,
-    Rename_NestedToRoot,
-    Rename_NestedToNested,
+    Rename_RootToNested_SameName,
+    Rename_RootToNested_NewName,
+    Rename_NestedToRoot_SameName,
+    Rename_NestedToRoot_NewName,
+    Rename_NestedToNested_SameName,
+    Rename_NestedToNested_NewName,
     Rename_ToItself,
-    Rename_RootDir
+    Rename_RootDir,
+    Rename_Overwrite,
+    Rename_Overwrite_DoesntHaveSameEntryTwice,
+    Rename_Overwrite_DirWithFile,
+    Rename_Overwrite_FileWithDir
 );
 
 #endif

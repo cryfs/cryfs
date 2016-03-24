@@ -8,6 +8,7 @@ Version 0.9.3 (unreleased)
 * The ciphertext block size is configurable. You can use the "--blocksize-bytes" command line argument. If not specified, CryFS will ask you for a block size when creating a file system.
 * Fix fstat (a bug in the fstat implementation caused problems with some text editors (e.g. nano) falsely thinking a file changed since they opened it).
 * Fix rename (when trying to rename a file to an already existing file name, a bug deleted it instead).
+* Rename operation allows overwriting existing files.
 
 Version 0.9.2
 ---------------

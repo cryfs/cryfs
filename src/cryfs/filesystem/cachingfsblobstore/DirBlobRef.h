@@ -42,9 +42,9 @@ public:
         return _base->flush();
     }
 
-    void AddChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
+    void AddOrOverwriteChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
                   mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChild(name, blobKey, type, mode, uid, gid, lastAccessTime, lastModificationTime);
+        return _base->AddOrOverwriteChild(name, blobKey, type, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
     void statChild(const blockstore::Key &key, struct ::stat *result) const {
