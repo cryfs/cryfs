@@ -1,14 +1,21 @@
 Version 0.9.3 (unreleased)
 ---------------
+New Features:
+* The ciphertext block size is configurable. You can use the "--blocksize" command line argument.
+  If not specified, CryFS will ask you for a block size when creating a file system.
 * It's easier for tools and scripts to use CryFS:
-  If an environment variable CRYFS_FRONTEND=noninteractive is set, we don't ask for options (but take default values for everything that's not specified on command line).
-  Furthermore, we won't ask for password confirmation when creating a file system but the password only has to be sent once to stdin.
+  If an environment variable CRYFS_FRONTEND=noninteractive is set, we don't ask for options
+  (but take default values for everything that's not specified on command line).
+  Furthermore, in noninteractive mode, we won't ask for password confirmation when creating a file system.
+  The password only has to be sent once to stdin.
 * You can disable the automatic update check by setting CRYFS_NO_UPDATE_CHECK=true in your environment.
+
+Fixed Bugs:
 * Building CryFS from the GitHub tarball (i.e. when there is no .git directory present) works.
-* The ciphertext block size is configurable. You can use the "--blocksize" command line argument. If not specified, CryFS will ask you for a block size when creating a file system.
-* Fix fstat (a bug in the fstat implementation caused problems with some text editors (e.g. nano) falsely thinking a file changed since they opened it).
-* Fix rename (when trying to rename a file to an already existing file name, a bug deleted it instead).
-* Rename operation allows overwriting existing files.
+* A bug in the fstat implementation caused problems with some text editors (e.g. nano) falsely thinking a file changed since they opened it.
+* When trying to rename a file to an already existing file name, a bug deleted it instead.
+* Rename operation allows overwriting existing files, as specified in the rename(2) man page.
+
 
 Version 0.9.2
 ---------------
