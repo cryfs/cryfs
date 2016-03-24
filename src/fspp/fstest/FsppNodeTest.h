@@ -25,6 +25,20 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
+    void Test_Rename_TargetParentDirIsFile() {
+        auto node = CreateNode("/oldname");
+        CreateFile("/somefile");
+        try {
+            node->rename("/somefile/newname");
+            EXPECT_TRUE(false); // Expect it throws an exception
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(ENOTDIR, e.getErrno());
+        }
+        //Files should still exist
+        EXPECT_NE(boost::none, this->device->Load("/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/somefile"));
+    }
+
     void Test_Rename_InRoot() {
         auto node = CreateNode("/oldname");
         node->rename("/newname");
@@ -71,9 +85,23 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
+    void Test_Rename_RootDir() {
+        auto root = this->LoadDir("/");
+        try {
+            root->rename("/newname");
+            EXPECT_TRUE(false); // expect throws
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(EBUSY, e.getErrno());
+        }
+    }
+
 private:
     void CreateDir(const boost::filesystem::path &path) {
         this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    }
+
+    void CreateFile(const boost::filesystem::path &path) {
+        this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
     }
 };
 
@@ -124,12 +152,14 @@ public:
  */
 REGISTER_NODE_TEST_CASES(
     Rename_TargetParentDirDoesntExist,
+    Rename_TargetParentDirIsFile,
     Rename_InRoot,
     Rename_InNested,
     Rename_RootToNested,
     Rename_NestedToRoot,
     Rename_NestedToNested,
-    Rename_ToItself
+    Rename_ToItself,
+    Rename_RootDir
 );
 
 #endif
