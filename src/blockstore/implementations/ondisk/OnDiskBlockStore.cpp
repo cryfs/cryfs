@@ -55,5 +55,9 @@ uint64_t OnDiskBlockStore::estimateNumFreeBytes() const {
   return stat.f_bsize*stat.f_bavail;
 }
 
+uint64_t OnDiskBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return OnDiskBlock::blockSizeFromPhysicalBlockSize(blockSize);
+}
+
 }
 }

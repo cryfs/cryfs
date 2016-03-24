@@ -1,6 +1,6 @@
 #include "DirEntryList.h"
 #include <limits>
-#include <cpp-utils/system/clock_gettime.h>
+#include "time.h"
 
 //TODO Get rid of that in favor of better error handling
 #include <fspp/fuse/FuseErrnoException.h>
@@ -43,26 +43,50 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
 }
 
 bool DirEntryList::_hasChild(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
-        return entry.name == name;
-    });
-    return found != _entries.end();
+    return _entries.end() != _findByName(name);
 }
 
 void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
-                            uid_t uid, gid_t gid) {
+                            uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
+    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+}
+
+void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     auto insert_pos = _findUpperBound(blobKey);
-    auto now = _now();
-    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, now, now, now);
+    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
+}
+
+void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    auto found = _findByName(name);
+    if (found != _entries.end()) {
+        _overwrite(&*found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    } else {
+        _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    }
+}
+
+void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    if (entry->type() != entryType) {
+        if (entry->type() == fspp::Dir::EntryType::DIR) {
+            // new path is an existing directory, but old path is not a directory
+            throw fspp::fuse::FuseErrnoException(EISDIR);
+        }
+        if (entryType == fspp::Dir::EntryType::DIR) {
+            // oldpath is a directory, and newpath exists but is not a directory.
+            throw fspp::fuse::FuseErrnoException(ENOTDIR);
+        }
+    }
+    *entry = DirEntry(entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
-    auto found = std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
-        return entry.name == name;
-    });
+    auto found = _findByName(name);
     if (found == _entries.end()) {
         return boost::none;
     }
@@ -70,21 +94,42 @@ boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const Key &key) const {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     if (found == _entries.end()) {
         return boost::none;
     }
     return *found;
 }
 
-void DirEntryList::remove(const Key &key) {
-    auto found = _find(key);
+void DirEntryList::remove(const string &name) {
+    auto found = _findByName(name);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     _entries.erase(found);
 }
 
-vector<DirEntry>::iterator DirEntryList::_find(const Key &key) {
+void DirEntryList::remove(const Key &key) {
+    auto lowerBound = _findLowerBound(key);
+    auto upperBound = std::find_if(lowerBound, _entries.end(), [&key] (const DirEntry &entry) {
+        return entry.key() != key;
+    });
+    _entries.erase(lowerBound, upperBound);
+}
+
+vector<DirEntry>::iterator DirEntryList::_findByName(const string &name) {
+    return std::find_if(_entries.begin(), _entries.end(), [&name] (const DirEntry &entry) {
+        return entry.name() == name;
+    });
+}
+
+vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) const {
+    return const_cast<DirEntryList*>(this)->_findByName(name);
+}
+
+vector<DirEntry>::iterator DirEntryList::_findByKey(const Key &key) {
     auto found = _findLowerBound(key);
-    if (found == _entries.end() || found->key != key) {
+    if (found == _entries.end() || found->key() != key) {
         throw fspp::fuse::FuseErrnoException(ENOENT);
     }
     return found;
@@ -92,13 +137,13 @@ vector<DirEntry>::iterator DirEntryList::_find(const Key &key) {
 
 vector<DirEntry>::iterator DirEntryList::_findLowerBound(const Key &key) {
     return _findFirst(key, [&key] (const DirEntry &entry) {
-        return !std::less<Key>()(entry.key, key);
+        return !std::less<Key>()(entry.key(), key);
     });
 }
 
 vector<DirEntry>::iterator DirEntryList::_findUpperBound(const Key &key) {
     return _findFirst(key, [&key] (const DirEntry &entry) {
-        return std::less<Key>()(key, entry.key);
+        return std::less<Key>()(key, entry.key());
     });
 }
 
@@ -119,8 +164,8 @@ vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::functi
     return iter;
 }
 
-vector<DirEntry>::const_iterator DirEntryList::_find(const Key &key) const {
-    return const_cast<DirEntryList*>(this)->_find(key);
+vector<DirEntry>::const_iterator DirEntryList::_findByKey(const Key &key) const {
+    return const_cast<DirEntryList*>(this)->_findByKey(key);
 }
 
 size_t DirEntryList::size() const {
@@ -136,39 +181,29 @@ DirEntryList::const_iterator DirEntryList::end() const {
 }
 
 void DirEntryList::setMode(const Key &key, mode_t mode) {
-    auto found = _find(key);
-    ASSERT ((S_ISREG(mode) && S_ISREG(found->mode)) || (S_ISDIR(mode) && S_ISDIR(found->mode)) || (S_ISLNK(mode)), "Unknown mode in entry");
-    found->mode = mode;
-    found->lastMetadataChangeTime = _now();
+    auto found = _findByKey(key);
+    ASSERT ((S_ISREG(mode) && S_ISREG(found->mode())) || (S_ISDIR(mode) && S_ISDIR(found->mode())) || (S_ISLNK(mode)), "Unknown mode in entry");
+    found->setMode(mode);
 }
 
 bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
-    auto found = _find(key);
+    auto found = _findByKey(key);
     bool changed = false;
     if (uid != (uid_t)-1) {
-        found->uid = uid;
-        found->lastMetadataChangeTime = _now();
+        found->setUid(uid);
         changed = true;
     }
     if (gid != (gid_t)-1) {
-        found->gid = gid;
-        found->lastMetadataChangeTime = _now();
+        found->setGid(gid);
         changed = true;
     }
     return changed;
 }
 
-timespec DirEntryList::_now() {
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    return now;
-}
-
 void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
-    auto found = _find(key);
-    found->lastAccessTime = lastAccessTime;
-    found->lastModificationTime = lastModificationTime;
-    found->lastMetadataChangeTime = lastModificationTime;
+    auto found = _findByKey(key);
+    found->setLastAccessTime(lastAccessTime);
+    found->setLastModificationTime(lastModificationTime);
 }
 
 }

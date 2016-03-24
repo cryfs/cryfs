@@ -30,7 +30,11 @@ public:
   Data data;
 
   blockstore::Key CreateBlockDirectlyWithFixtureAndReturnKey() {
-    return blockStore->create(data)->key();
+    return CreateBlockReturnKey(data);
+  }
+
+  blockstore::Key CreateBlockReturnKey(const Data &initData) {
+    return blockStore->create(initData)->key();
   }
 
   blockstore::Key CreateBlockWriteFixtureToItAndReturnKey() {
@@ -111,4 +115,31 @@ TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentBlockIdFails_WriteSeparately
   auto key2 = CopyBaseBlock(key);
   auto loaded = blockStore->load(key2);
   EXPECT_EQ(boost::none, loaded);
+}
+
+TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_zerophysical) {
+  EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(0));
+}
+
+TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_zerovirtual) {
+  auto key = CreateBlockReturnKey(Data(0));
+  auto base = baseBlockStore->load(key).value();
+  EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(base->size()));
+}
+
+TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
+  // This tests that a potential if/else in blockSizeFromPhysicalBlockSize that catches negative values has the
+  // correct boundary set. We test the highest value that is negative and the smallest value that is positive.
+  auto physicalSizeForVirtualSizeZero = baseBlockStore->load(CreateBlockReturnKey(Data(0))).value()->size();
+  if (physicalSizeForVirtualSizeZero > 0) {
+    EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(physicalSizeForVirtualSizeZero - 1));
+  }
+  EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(physicalSizeForVirtualSizeZero));
+  EXPECT_EQ(1u, blockStore->blockSizeFromPhysicalBlockSize(physicalSizeForVirtualSizeZero + 1));
+}
+
+TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_positive) {
+  auto key = CreateBlockReturnKey(Data(10*1024));
+  auto base = baseBlockStore->load(key).value();
+  EXPECT_EQ(10*1024u, blockStore->blockSizeFromPhysicalBlockSize(base->size()));
 }

@@ -36,6 +36,7 @@ public:
   void remove(cpputils::unique_ref<Block> block) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
+  uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
 
   void updateData(const Key &key, const cpputils::Data &data);
 

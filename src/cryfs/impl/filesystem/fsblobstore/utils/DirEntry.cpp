@@ -8,21 +8,22 @@ namespace cryfs {
     namespace fsblobstore {
         void DirEntry::serialize(uint8_t *dest) const {
             ASSERT(
-                    ((type == fspp::Dir::EntryType::FILE)    &&  S_ISREG(mode) && !S_ISDIR(mode) && !S_ISLNK(mode)) ||
-                    ((type == fspp::Dir::EntryType::DIR)     && !S_ISREG(mode) &&  S_ISDIR(mode) && !S_ISLNK(mode)) ||
-                    ((type == fspp::Dir::EntryType::SYMLINK) && !S_ISREG(mode) && !S_ISDIR(mode) &&  S_ISLNK(mode))
-                    , "Wrong mode bit set for this type: "+std::to_string(mode & S_IFREG)+", "+std::to_string(mode&S_IFDIR)+", "+std::to_string(mode&S_IFLNK)+", "+std::to_string(static_cast<uint8_t>(type))
+                    ((_type == fspp::Dir::EntryType::FILE) && S_ISREG(_mode) && !S_ISDIR(_mode) && !S_ISLNK(_mode)) ||
+                    ((_type == fspp::Dir::EntryType::DIR) && !S_ISREG(_mode) && S_ISDIR(_mode) && !S_ISLNK(_mode)) ||
+                    ((_type == fspp::Dir::EntryType::SYMLINK) && !S_ISREG(_mode) && !S_ISDIR(_mode) && S_ISLNK(_mode))
+                    , "Wrong mode bit set for this type: " + std::to_string(_mode & S_IFREG) + ", " + std::to_string(
+                    _mode & S_IFDIR) + ", " + std::to_string(_mode & S_IFLNK) + ", " + std::to_string(static_cast<uint8_t>(_type))
             );
             unsigned int offset = 0;
-            offset += _serializeUint8(dest + offset, static_cast<uint8_t>(type));
-            offset += _serializeUint32(dest + offset, mode);
-            offset += _serializeUint32(dest + offset, uid);
-            offset += _serializeUint32(dest + offset, gid);
-            offset += _serializeTimeValue(dest + offset, lastAccessTime);
-            offset += _serializeTimeValue(dest + offset, lastModificationTime);
-            offset += _serializeTimeValue(dest + offset, lastMetadataChangeTime);
-            offset += _serializeString(dest + offset, name);
-            offset += _serializeKey(dest + offset, key);
+            offset += _serializeUint8(dest + offset, static_cast<uint8_t>(_type));
+            offset += _serializeUint32(dest + offset, _mode);
+            offset += _serializeUint32(dest + offset, _uid);
+            offset += _serializeUint32(dest + offset, _gid);
+            offset += _serializeTimeValue(dest + offset, _lastAccessTime);
+            offset += _serializeTimeValue(dest + offset, _lastModificationTime);
+            offset += _serializeTimeValue(dest + offset, _lastMetadataChangeTime);
+            offset += _serializeString(dest + offset, _name);
+            offset += _serializeKey(dest + offset, _key);
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
 
@@ -110,7 +111,8 @@ namespace cryfs {
         }
 
         size_t DirEntry::serializedSize() const {
-            return 1 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize() + (name.size() + 1) + key.BINARY_LENGTH;
+            return 1 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize() + (
+                    _name.size() + 1) + _key.BINARY_LENGTH;
         }
     }
 }

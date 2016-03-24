@@ -37,7 +37,7 @@ unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
 unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
-  return make_unique_ref<CryOpenFile>(device(), std::move(blob));
+  return make_unique_ref<CryOpenFile>(device(), parent(), std::move(blob));
 }
 
 void CryFile::truncate(off_t size) const {

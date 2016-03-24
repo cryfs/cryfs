@@ -17,6 +17,7 @@ using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
+using std::shared_ptr;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
@@ -28,8 +29,11 @@ namespace cryfs {
 
 CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, const Key &key)
 : _device(device),
-  _parent(std::move(parent)),
+  _parent(none),
   _key(key) {
+  if (parent != none) {
+    _parent = cpputils::to_unique_ptr(std::move(*parent));
+  }
 }
 
 CryNode::~CryNode() {
@@ -42,33 +46,34 @@ void CryNode::access(int mask) const {
   throw FuseErrnoException(ENOTSUP);
 }
 
+shared_ptr<const DirBlobRef> CryNode::parent() const {
+  ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
+  return *_parent;
+}
+
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
-    //TODO What should we do?
+    //We are the root direcory.
+    throw FuseErrnoException(EBUSY);
+  }
+  auto targetDir = _device->LoadDirBlob(to.parent_path());
+  auto old = (*_parent)->GetChild(_key);
+  if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
-  //TODO More efficient implementation possible: directly rename when it's actually not moved to a different directory
-  //     It's also quite ugly code because in the parent==targetDir case, it depends on _parent not overriding the changes made by targetDir.
-  auto optOld = (*_parent)->GetChild(_key);
-  if (optOld == boost::none) {
-    throw FuseErrnoException(ENOENT);
+  std::string oldName = old->name(); // Store, because if targetDir == *_parent, then the 'old' object will be invalidated after we add something to targetDir
+  if (targetDir->key() != (*_parent)->key() || oldName != to.filename().native()) {
+    targetDir->AddOrOverwriteChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
+                        old->lastAccessTime(), old->lastModificationTime());
+    (*_parent)->RemoveChild(oldName);
   }
-  const auto &old = *optOld;
-  auto mode = old.mode;
-  auto uid = old.uid;
-  auto gid = old.gid;
-  (*_parent)->RemoveChild(_key);
-  (*_parent)->flush();
-  auto targetDir = _device->LoadDirBlob(to.parent_path());
-  targetDir->AddChild(to.filename().native(), _key, getType(), mode, uid, gid);
 }
 
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
@@ -78,7 +83,7 @@ void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
 void CryNode::removeNode() {
   //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
@@ -101,7 +106,7 @@ unique_ref<FsBlobRef> CryNode::LoadBlob() const {
 void CryNode::stat(struct ::stat *result) const {
   device()->callFsActionCallbacks();
   if(_parent == none) {
-    //We are the base directory.
+    //We are the root directory.
 	//TODO What should we do?
     result->st_uid = getuid();
     result->st_gid = getgid();
@@ -128,7 +133,7 @@ void CryNode::stat(struct ::stat *result) const {
 void CryNode::chmod(mode_t mode) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the base direcory.
+    //We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
@@ -138,7 +143,7 @@ void CryNode::chmod(mode_t mode) {
 void CryNode::chown(uid_t uid, gid_t gid) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-	//We are the base direcory.
+	//We are the root direcory.
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }

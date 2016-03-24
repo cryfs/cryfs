@@ -418,6 +418,8 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   LOG(DEBUG) << "rename(" << from << ", " << to << ")";
 #endif
   try {
+    ASSERT(from.is_absolute(), "from has to be an absolute path");
+    ASSERT(to.is_absolute(), "rename target has to be an absolute path. If this assert throws, we have to add code here that makes the path absolute.");
     _fs->rename(from, to);
     return 0;
   } catch(const cpputils::AssertFailed &e) {

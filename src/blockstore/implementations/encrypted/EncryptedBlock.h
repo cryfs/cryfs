@@ -31,6 +31,8 @@ public:
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
+  static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
+
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
   EncryptedBlock(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key, cpputils::Data plaintextWithHeader);
   ~EncryptedBlock();
@@ -196,6 +198,14 @@ cpputils::unique_ref<Block> EncryptedBlock<Cipher>::releaseBlock() {
   std::unique_lock<std::mutex> lock(_mutex);
   _encryptToBaseBlock();
   return std::move(_baseBlock);
+}
+
+template<class Cipher>
+uint64_t EncryptedBlock<Cipher>::blockSizeFromPhysicalBlockSize(uint64_t blockSize) {
+  if (blockSize <= Cipher::ciphertextSize(HEADER_LENGTH) + sizeof(FORMAT_VERSION_HEADER)) {
+    return 0;
+  }
+  return Cipher::plaintextSize(blockSize - sizeof(FORMAT_VERSION_HEADER)) - HEADER_LENGTH;
 }
 
 }

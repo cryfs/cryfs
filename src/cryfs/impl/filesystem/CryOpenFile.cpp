@@ -8,8 +8,10 @@
 
 namespace bf = boost::filesystem;
 
+using std::shared_ptr;
 using cpputils::unique_ref;
 using cryfs::parallelaccessfsblobstore::FileBlobRef;
+using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 //TODO Get rid of this in favor of a exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -17,8 +19,8 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, unique_ref<FileBlobRef> fileBlob)
-: _device(device), _fileBlob(std::move(fileBlob)) {
+CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<const DirBlobRef> parent, unique_ref<FileBlobRef> fileBlob)
+: _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
 }
 
 CryOpenFile::~CryOpenFile() {
@@ -32,9 +34,8 @@ void CryOpenFile::flush() {
 
 void CryOpenFile::stat(struct ::stat *result) const {
   _device->callFsActionCallbacks();
-  result->st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IWUSR;
+  _parent->statChildExceptSize(_fileBlob->key(), result);
   result->st_size = _fileBlob->size();
-  return;
 }
 
 void CryOpenFile::truncate(off_t size) const {

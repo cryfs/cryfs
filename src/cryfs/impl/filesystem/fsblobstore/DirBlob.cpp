@@ -64,22 +64,29 @@ void DirBlob::_readEntriesFromBlob() {
   _entries.deserializeFrom(static_cast<uint8_t*>(data.data()), data.size());
 }
 
-void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
-  AddChild(name, blobKey, fspp::Dir::EntryType::DIR, mode, uid, gid);
+void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  _addChild(name, blobKey, fspp::Dir::EntryType::DIR, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid) {
-  AddChild(name, blobKey, fspp::Dir::EntryType::FILE, mode, uid, gid);
+void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  _addChild(name, blobKey, fspp::Dir::EntryType::FILE, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirBlob::AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid) {
-  AddChild(name, blobKey, fspp::Dir::EntryType::SYMLINK, S_IFLNK | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH, uid, gid);
+void DirBlob::AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  _addChild(name, blobKey, fspp::Dir::EntryType::SYMLINK, S_IFLNK | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirBlob::AddChild(const std::string &name, const Key &blobKey,
-    fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid) {
+void DirBlob::_addChild(const std::string &name, const Key &blobKey,
+    fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _entries.add(name, blobKey, entryType, mode, uid, gid);
+  _entries.add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+  _changed = true;
+}
+
+void DirBlob::AddOrOverwriteChild(const std::string &name, const Key &blobKey,
+                       fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.addOrOverwrite(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
   _changed = true;
 }
 
@@ -93,6 +100,12 @@ boost::optional<const DirEntry&> DirBlob::GetChild(const Key &key) const {
   return _entries.get(key);
 }
 
+void DirBlob::RemoveChild(const string &name) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.remove(name);
+  _changed = true;
+}
+
 void DirBlob::RemoveChild(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.remove(key);
@@ -103,7 +116,7 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
   std::unique_lock<std::mutex> lock(_mutex);
   result->reserve(result->size() + _entries.size());
   for (const auto &entry : _entries) {
-    result->emplace_back(entry.type, entry.name);
+    result->emplace_back(entry.type(), entry.name());
   }
 }
 
@@ -112,31 +125,33 @@ off_t DirBlob::lstat_size() const {
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
+  statChildExceptSize(key, result);
+  result->st_size = _getLstatSize(key);
+}
+
+void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
   auto childOpt = GetChild(key);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
   }
   const auto &child = *childOpt;
-  //TODO Loading the blob for only getting the size of the file/symlink is not very performant.
-  //     Furthermore, this is the only reason why DirBlob needs a pointer to _fsBlobStore, which is ugly
-  result->st_mode = child.mode;
-  result->st_uid = child.uid;
-  result->st_gid = child.gid;
+  result->st_mode = child.mode();
+  result->st_uid = child.uid();
+  result->st_gid = child.gid();
   //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
   result->st_nlink = 1;
 #ifdef __APPLE__
-  result->st_atimespec = child.lastAccessTime;
-  result->st_mtimespec = child.lastModificationTime;
-  result->st_ctimespec = child.lastMetadataChangeTime;
+  result->st_atimespec = child.lastAccessTime();
+  result->st_mtimespec = child.lastModificationTime();
+  result->st_ctimespec = child.lastMetadataChangeTime();
 #else
-  result->st_atim = child.lastAccessTime;
-  result->st_mtim = child.lastModificationTime;
-  result->st_ctim = child.lastMetadataChangeTime;
+  result->st_atim = child.lastAccessTime();
+  result->st_mtim = child.lastModificationTime();
+  result->st_ctim = child.lastMetadataChangeTime();
 #endif
-  result->st_size = _getLstatSize(key);
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
-  result->st_blksize = _fsBlobStore->blocksizeBytes();
+  result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {

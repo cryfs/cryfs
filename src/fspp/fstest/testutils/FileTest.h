@@ -16,35 +16,55 @@ public:
 	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
 	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
 	file_nested = cpputils::to_unique_ptr(this->LoadFile("/mydir/mynestedfile"));
+
+	this->LoadDir("/")->createDir("mydir2", this->MODE_PUBLIC, 0, 0);
   }
   std::unique_ptr<fspp::File> file_root;
   std::unique_ptr<fspp::File> file_nested;
 
+  void IN_STAT(const fspp::File &file, std::function<void (struct stat)> callback) {
+	  struct stat st1, st2;
+	  file.stat(&st1);
+	  callback(st1);
+	  file.open(O_RDONLY)->stat(&st2);
+	  callback(st2);
+  }
+
   void EXPECT_SIZE(uint64_t expectedSize, const fspp::File &file) {
-	EXPECT_SIZE_IN_FILE(expectedSize, file);
+	IN_STAT(file, [expectedSize] (struct stat st) {
+		EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
+	});
+
+	EXPECT_NUMBYTES_READABLE(expectedSize, file);
+  }
+
+  void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, const fspp::File &file) {
 	auto openFile = file.open(O_RDONLY);
-	EXPECT_SIZE_IN_OPEN_FILE(expectedSize, *openFile);
-	EXPECT_NUMBYTES_READABLE(expectedSize, *openFile);
-  }
-
-  void EXPECT_SIZE_IN_FILE(uint64_t expectedSize, const fspp::File &file) {
-	struct stat st;
-	file.stat(&st);
-    EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
-  }
-
-  void EXPECT_SIZE_IN_OPEN_FILE(uint64_t expectedSize, const fspp::OpenFile &file) {
-	struct stat st;
-	file.stat(&st);
-    EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
-  }
-
-  void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, const fspp::OpenFile &file) {
 	cpputils::Data data(expectedSize);
 	//Try to read one byte more than the expected size
-	ssize_t readBytes = file.read(data.data(), expectedSize+1, 0);
+	ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
 	//and check that it only read the expected size (but also not less)
 	EXPECT_EQ(expectedSize, (uint64_t)readBytes);
+  }
+
+  void EXPECT_ATIME_EQ(struct timespec expected, struct stat st) {
+#ifdef __APPLE__
+      EXPECT_EQ(expected.tv_sec, st.st_atimespec.tv_sec);
+      EXPECT_EQ(expected.tv_nsec, st.st_atimespec.tv_nsec);
+#else
+	  EXPECT_EQ(expected.tv_sec, st.st_atim.tv_sec);
+	  EXPECT_EQ(expected.tv_nsec, st.st_atim.tv_nsec);
+#endif
+  }
+
+  void EXPECT_MTIME_EQ(struct timespec expected, struct stat st) {
+#ifdef __APPLE__
+      EXPECT_EQ(expected.tv_sec, st.st_mtimespec.tv_sec);
+      EXPECT_EQ(expected.tv_nsec, st.st_mtimespec.tv_nsec);
+#else
+      EXPECT_EQ(expected.tv_sec, st.st_mtim.tv_sec);
+      EXPECT_EQ(expected.tv_nsec, st.st_mtim.tv_nsec);
+#endif
   }
 };
 

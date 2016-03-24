@@ -22,6 +22,7 @@ public:
   static const std::string FORMAT_VERSION_HEADER_PREFIX;
   static const std::string FORMAT_VERSION_HEADER;
   static unsigned int formatVersionHeaderSize();
+  static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
 
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);

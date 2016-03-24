@@ -135,3 +135,16 @@ TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingANode) {
   nodeStore->remove(std::move(node));
   EXPECT_EQ(1u, nodeStore->numNodes());
 }
+
+TEST_F(DataNodeStoreTest, PhysicalBlockSize_Leaf) {
+  auto leaf = nodeStore->createNewLeafNode();
+  auto block = blockStore->load(leaf->key()).value();
+  EXPECT_EQ(BLOCKSIZE_BYTES, block->size());
+}
+
+TEST_F(DataNodeStoreTest, PhysicalBlockSize_Inner) {
+  auto leaf = nodeStore->createNewLeafNode();
+  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto block = blockStore->load(node->key()).value();
+  EXPECT_EQ(BLOCKSIZE_BYTES, block->size());
+}

@@ -27,7 +27,7 @@ public:
   void remove(cpputils::unique_ref<DataTreeRef> tree);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
-  uint64_t blocksizeBytes() const;
+  uint64_t virtualBlocksizeBytes() const;
   uint64_t numNodes() const;
   uint64_t estimateSpaceForNumNodesLeft() const;
 
@@ -38,8 +38,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessDataTreeStore);
 };
 
-inline uint64_t ParallelAccessDataTreeStore::blocksizeBytes() const {
-    return _dataTreeStore->blocksizeBytes();
+inline uint64_t ParallelAccessDataTreeStore::virtualBlocksizeBytes() const {
+    return _dataTreeStore->virtualBlocksizeBytes();
 }
 
 inline uint64_t ParallelAccessDataTreeStore::numNodes() const {

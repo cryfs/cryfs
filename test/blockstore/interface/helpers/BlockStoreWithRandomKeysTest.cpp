@@ -31,6 +31,7 @@ public:
   void remove(unique_ref<Block> block) {UNUSED(block);}
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
   MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
+  MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));
 };
 
 class BlockMock: public Block {
