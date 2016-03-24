@@ -5,7 +5,7 @@ Version 0.9.3 (unreleased)
   Furthermore, we won't ask for password confirmation when creating a file system but the password only has to be sent once to stdin.
 * You can disable the automatic update check by setting CRYFS_NO_UPDATE_CHECK=true in your environment.
 * Building CryFS from the GitHub tarball (i.e. when there is no .git directory present) works.
-* The ciphertext block size is configurable. You can use the "--blocksize-bytes" command line argument. If not specified, CryFS will ask you for a block size when creating a file system.
+* The ciphertext block size is configurable. You can use the "--blocksize" command line argument. If not specified, CryFS will ask you for a block size when creating a file system.
 * Fix fstat (a bug in the fstat implementation caused problems with some text editors (e.g. nano) falsely thinking a file changed since they opened it).
 * Fix rename (when trying to rename a file to an already existing file name, a bug deleted it instead).
 * Rename operation allows overwriting existing files.

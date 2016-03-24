@@ -107,6 +107,11 @@ TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven_Float) {
     EXPECT_EQ(0.5, options.unmountAfterIdleMinutes().value());
 }
 
+TEST_F(ProgramOptionsParserTest, BlocksizeGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--blocksize", "10240", "/home/user/mountDir"});
+    EXPECT_EQ(10240u, options.blocksizeBytes().value());
+}
+
 TEST_F(ProgramOptionsParserTest, InvalidCipher) {
     EXPECT_DEATH(
         parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"}),
