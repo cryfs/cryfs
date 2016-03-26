@@ -136,7 +136,6 @@ TEST_F(CryConfigTest, BlocksizeBytes_AfterMove) {
 
 TEST_F(CryConfigTest, BlocksizeBytes_AfterSaveAndLoad) {
     cfg.SetBlocksizeBytes(10*1024);
-    cfg.SetVersion("0.9.3"); // This is a workaround, because we overwrite ths blocksizeBytes config value for versions smaller than 0.9.3
     CryConfig loaded = SaveAndLoad(std::move(cfg));
     EXPECT_EQ(10*1024u, loaded.BlocksizeBytes());
 }
