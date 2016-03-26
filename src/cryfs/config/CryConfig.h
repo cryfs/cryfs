@@ -27,6 +27,9 @@ public:
   const std::string &Version() const;
   void SetVersion(const std::string &value);
 
+  const std::string &CreatedWithVersion() const;
+  void SetCreatedWithVersion(const std::string &value);
+
   uint64_t BlocksizeBytes() const;
   void SetBlocksizeBytes(uint64_t value);
 
@@ -38,6 +41,7 @@ private:
   std::string _encKey;
   std::string _cipher;
   std::string _version;
+  std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);

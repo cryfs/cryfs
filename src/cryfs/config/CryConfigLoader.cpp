@@ -40,6 +40,10 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   }
   std::cout << "done" << std::endl;
   _checkVersion(*config->config());
+  if (config->config()->Version() != gitversion::VersionString()) {
+    config->config()->SetVersion(gitversion::VersionString());
+    config->save();
+  }
   _checkCipher(*config->config());
   return std::move(*config);
 }

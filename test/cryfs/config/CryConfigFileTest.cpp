@@ -126,6 +126,48 @@ TEST_F(CryConfigFileTest, Cipher_SaveAndLoad) {
     EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
 }
 
+TEST_F(CryConfigFileTest, Version_Init) {
+    CryConfigFile created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created.config()->Version());
+}
+
+TEST_F(CryConfigFileTest, Version_CreateAndLoad) {
+    CryConfig cfg = Config();
+    cfg.SetVersion("0.9.2");
+    Create(std::move(cfg));
+    CryConfigFile loaded = Load().value();
+    EXPECT_EQ("0.9.2", loaded.config()->Version());
+}
+
+TEST_F(CryConfigFileTest, Version_SaveAndLoad) {
+    CryConfigFile created = CreateAndLoadEmpty();
+    created.config()->SetVersion("0.9.2");
+    created.save();
+    CryConfigFile loaded = Load().value();
+    EXPECT_EQ("0.9.2", loaded.config()->Version());
+}
+
+TEST_F(CryConfigFileTest, CreatedWithVersion_Init) {
+    CryConfigFile created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created.config()->Version());
+}
+
+TEST_F(CryConfigFileTest, CreatedWithVersion_CreateAndLoad) {
+    CryConfig cfg = Config();
+    cfg.SetCreatedWithVersion("0.9.2");
+    Create(std::move(cfg));
+    CryConfigFile loaded = Load().value();
+    EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
+}
+
+TEST_F(CryConfigFileTest, CreatedWithVersion_SaveAndLoad) {
+    CryConfigFile created = CreateAndLoadEmpty();
+    created.config()->SetCreatedWithVersion("0.9.2");
+    created.save();
+    CryConfigFile loaded = Load().value();
+    EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
+}
+
 //Test that the encrypted config file has the same size, no matter how big the plaintext config data.
 TEST_F(CryConfigFileTest, ConfigFileHasFixedSize) {
     TempFile file1(false);

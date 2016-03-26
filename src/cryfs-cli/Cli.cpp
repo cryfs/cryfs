@@ -21,7 +21,7 @@
 #include <gitversion/gitversion.h>
 
 #include "VersionChecker.h"
-#include "VersionCompare.h"
+#include <gitversion/VersionCompare.h>
 #include "Environment.h"
 
 //TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
@@ -64,6 +64,7 @@ using boost::chrono::duration_cast;
 using boost::chrono::minutes;
 using boost::chrono::milliseconds;
 using cpputils::dynamic_pointer_move;
+using gitversion::VersionCompare;
 
 //TODO Delete a large file in parallel possible? Takes a long time right now...
 //TODO Improve parallelity.
