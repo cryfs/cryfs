@@ -16,12 +16,28 @@ namespace gitversion {
         unsigned long v2_minor = std::stoul(v2.minorVersion);
         unsigned long v1_hotfix = std::stoul(v1.hotfixVersion);
         unsigned long v2_hotfix = std::stoul(v2.hotfixVersion);
-        int versionTagCompare = strcmp(v1.versionTag.c_str(), v2.versionTag.c_str());
+        int versionTagCompare = _versionTagCompare(v1.versionTag, v2.versionTag);
         return (v1_major < v2_major) || ((v1_major == v2_major) && (
                 (v1_minor < v2_minor) || ((v1_minor == v2_minor) && (
                  (v1_hotfix < v2_hotfix) || ((v1_hotfix == v2_hotfix) && (
                   (0 > versionTagCompare) || ((0 == versionTagCompare) && (
                    (v1.commitsSinceTag < v2.commitsSinceTag)
         ))))))));
+    }
+
+    int VersionCompare::_versionTagCompare(const string &tag1, const string &tag2) {
+        if (tag1 == "") {
+            if (tag2 == "") {
+                return 0;
+            } else {
+                return 1;
+            }
+        } else {
+            if (tag2 == "") {
+                return -1;
+            } else {
+                return strcmp(tag1.c_str(), tag2.c_str());
+            }
+        }
     }
 }
