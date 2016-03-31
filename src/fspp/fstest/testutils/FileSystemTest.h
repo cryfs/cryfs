@@ -58,6 +58,21 @@ public:
     EXPECT_NE(boost::none, symlink);
     return std::move(*symlink);
   }
+
+  cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
+    this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    return this->LoadDir(path);
+  }
+
+  cpputils::unique_ref<fspp::File> CreateFile(const boost::filesystem::path &path) {
+    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    return this->LoadFile(path);
+  }
+
+  cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path) {
+    this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
+    return this->LoadSymlink(path);
+  }
 };
 
 

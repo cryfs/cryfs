@@ -22,6 +22,7 @@ public:
   std::unique_ptr<fspp::File> file_root;
   std::unique_ptr<fspp::File> file_nested;
 
+  //TODO IN_STAT still needed after moving it to FsppNodeTest?
   void IN_STAT(const fspp::File &file, std::function<void (struct stat)> callback) {
 	  struct stat st1, st2;
 	  file.stat(&st1);

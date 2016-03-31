@@ -158,9 +158,6 @@ public:
     }
 };
 
-/*
- * Register each of the given test cases for all three classes: FsppNodeTest_File, FsppNodeTest_Dir and FsppNodeTest_Symlink
- */
 REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     TargetParentDirDoesntExist,
     TargetParentDirIsFile,
@@ -185,12 +182,5 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
 //TODO Test for rename (success AND error cases) that stat values stay unchanged (i.e. mode, uid, gid, access times, ...)
 //TODO Test for rename (success AND error cases) that contents stay unchanged (i.e. file contents, directory children, symlink target)
 //TODO (here and in other fstest operations): Test error paths
-
-//TODO Move other applicable test cases from FsppFileTest to here (e.g. utimens, chmod, ...)
-//TODO stat
-//TODO access
-//TODO utimens
-//TODO chmod
-//TODO chown
 
 //TODO Test all operations do (or don't) affect timestamps correctly

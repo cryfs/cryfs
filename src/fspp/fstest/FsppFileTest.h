@@ -55,22 +55,6 @@ public:
 	this->EXPECT_SIZE(0, *file);
   }
 
-  void Test_Stat_CreatedFileIsEmpty(fspp::File *file) {
-	this->EXPECT_SIZE(0, *file);
-  }
-
-  void Test_Stat_Nlink(fspp::File *file) {
-      this->IN_STAT(*file, [] (struct stat st) {
-         EXPECT_EQ(1u, st.st_nlink);
-      });
-  }
-
-  void Test_Stat_IsFile(fspp::File *file) {
-      this->IN_STAT(*file, [] (struct stat st) {
-          EXPECT_TRUE(S_ISREG(st.st_mode));
-      });
-  }
-
   void Test_Chown_Uid(fspp::File *file) {
       file->chown(100, 200);
       this->IN_STAT(*file, [] (struct stat st){
@@ -177,30 +161,6 @@ TYPED_TEST_P(FsppFileTest, Truncate_ShrinkTo0_Nested) {
   this->Test_Truncate_ShrinkTo0(this->file_nested.get());
 }
 
-TYPED_TEST_P(FsppFileTest, Stat_IsFile) {
-    this->Test_Stat_IsFile(this->file_root.get());
-}
-
-TYPED_TEST_P(FsppFileTest, Stat_IsFile_Nested) {
-    this->Test_Stat_IsFile(this->file_nested.get());
-}
-
-TYPED_TEST_P(FsppFileTest, Stat_CreatedFileIsEmpty) {
-  this->Test_Stat_CreatedFileIsEmpty(this->file_root.get());
-}
-
-TYPED_TEST_P(FsppFileTest, Stat_CreatedFileIsEmpty_Nested) {
-  this->Test_Stat_CreatedFileIsEmpty(this->file_nested.get());
-}
-
-TYPED_TEST_P(FsppFileTest, Stat_Nlink) {
-    this->Test_Stat_Nlink(this->file_root.get());
-}
-
-TYPED_TEST_P(FsppFileTest, Stat_Nlink_Nested) {
-    this->Test_Stat_Nlink(this->file_nested.get());
-}
-
 TYPED_TEST_P(FsppFileTest, Chown_Uid) {
     this->Test_Chown_Uid(this->file_root.get());
 }
@@ -252,12 +212,6 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
   Truncate_Shrink_Nested,
   Truncate_ShrinkTo0,
   Truncate_ShrinkTo0_Nested,
-  Stat_CreatedFileIsEmpty,
-  Stat_CreatedFileIsEmpty_Nested,
-  Stat_Nlink,
-  Stat_Nlink_Nested,
-  Stat_IsFile,
-  Stat_IsFile_Nested,
   Chown_Uid,
   Chown_Uid_Nested,
   Chown_Gid,
@@ -271,5 +225,11 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
 //TODO access
 //TODO unlink
 //TODO Test all operations do (or don't) affect file timestamps correctly (including rename, which shouldn't modify access/modify time, but inode change time)
+
+//TODO Move applicable test cases to new instances of FsppNodeTest (like FsppNodeTest_Rename) (e.g. utimens, chmod, ...)
+//TODO access
+//TODO utimens
+//TODO chmod
+//TODO chown
 
 #endif
