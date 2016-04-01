@@ -22,7 +22,7 @@ containsElement () {
 }
 
 get_repo_url () {
-  if [[ "$DISTRIBUTION" == "Debian" ]]; then
+  if [[ "$DISTRIBUTION" == "Debian" ]] || [[ "$DISTRIBUTION" == "Devuan" ]]; then
     if ! containsElement $DISTRIBUTION_VERSION $DEBIAN_VERSIONS; then
       echo Unsupported Debian Version: $DISTRIBUTION_VERSION 1>&2
       exit 1
