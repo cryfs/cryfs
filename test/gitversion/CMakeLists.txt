@@ -2,6 +2,7 @@ project (gitversion-test)
 
 set(SOURCES
     ParserTest.cpp
+    VersionCompareTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

@@ -16,22 +16,23 @@ namespace gitversion {
         VersionInfo result;
         string versionNumber;
         optional<string> versionInfo;
-        tie(versionNumber, versionInfo) = _splitAtPlusSign(versionString);
-        tie(result.majorVersion, result.minorVersion, result.versionTag) = _extractMajorMinorTag(versionNumber);
+        tie(versionNumber, versionInfo) = _splitAt(versionString, '+');
+        tie(result.majorVersion, result.minorVersion, result.hotfixVersion, result.versionTag) = _extractMajorMinorHotfixTag(versionNumber);
         result.isDevVersion = (versionInfo != none);
         result.isStableVersion = !result.isDevVersion && (result.versionTag == "" || result.versionTag == "stable");
         if (versionInfo != none && *versionInfo != "unknown") {
-            result.gitCommitId = _extractGitCommitId(*versionInfo);
+            tie(result.gitCommitId, result.commitsSinceTag) = _extractGitCommitIdAndCommitsSinceTag(*versionInfo);
         } else {
             result.gitCommitId = "";
+            result.commitsSinceTag = 0;
         }
         return result;
     }
 
-    pair<string, optional<string>> Parser::_splitAtPlusSign(const string &versionString) {
+    pair<string, optional<string>> Parser::_splitAt(const string &versionString, char delimiter) {
         istringstream stream(versionString);
         string versionNumber;
-        getline(stream, versionNumber, '+');
+        getline(stream, versionNumber, delimiter);
         if (!stream.good()) {
             return std::make_pair(versionNumber, none);
         } else {
@@ -39,11 +40,23 @@ namespace gitversion {
             getline(stream, versionInfo);
             return std::make_pair(versionNumber, versionInfo);
         }
-    };
+    }
 
-    tuple<string, string, string> Parser::_extractMajorMinorTag(const string &versionNumber) {
+    tuple<string, string, string, string> Parser::_extractMajorMinorHotfixTag(const string &versionNumber) {
+        string majorMinorHotfix;
+        optional<string> versionTag;
+        tie(majorMinorHotfix, versionTag) = _splitAt(versionNumber, '-');
+        string major, minor, hotfix;
+        tie(major, minor, hotfix) = _extractMajorMinorHotfix(majorMinorHotfix);
+        if (versionTag == none) {
+            versionTag = "";
+        }
+        return std::make_tuple(major, minor, hotfix, *versionTag);
+    }
+
+    tuple<string, string, string> Parser::_extractMajorMinorHotfix(const string &versionNumber) {
         istringstream stream(versionNumber);
-        string major, minor, hotfix, tag;
+        string major, minor, hotfix;
         getline(stream, major, '.');
         if (!stream.good()) {
             minor = "0";
@@ -53,29 +66,24 @@ namespace gitversion {
         if (!stream.good()) {
             hotfix = "0";
         } else {
-            getline(stream, hotfix, '-');
+            getline(stream, hotfix);
         }
-        if (!stream.good()) {
-            tag = "";
-        } else {
-            getline(stream, tag);
-        }
-        return std::make_tuple(major, minor, tag);
+        return std::make_tuple(major, minor, hotfix);
     };
 
-    string Parser::_extractGitCommitId(const string &versionInfo) {
+    std::tuple<string, unsigned long> Parser::_extractGitCommitIdAndCommitsSinceTag(const string &versionInfo) {
         istringstream stream(versionInfo);
         string commitsSinceTag;
         getline(stream, commitsSinceTag, '.');
         if (!stream.good()) {
-            throw std::logic_error("Invalid version information: Missing delimiter after commitsSinceTag.");
+            throw std::logic_error("Invalid version information: Missing delimiter after commitsSinceTag (versionInfo: "+versionInfo+").");
         }
         string gitCommitId;
         getline(stream, gitCommitId, '.');
         if (gitCommitId[0] != 'g') {
-            throw std::logic_error("Invalid version information: Git commit id component doesn't start with 'g'.");
+            throw std::logic_error("Invalid version information: Git commit id component doesn't start with 'g' (versionInfo: "+versionInfo+").");
         }
-        return gitCommitId.substr(1);
+        return std::make_tuple(gitCommitId.substr(1), std::stoul(commitsSinceTag));
     }
 
 }

@@ -4,6 +4,7 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
+#include <gitversion/gitversion.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -60,6 +61,13 @@ public:
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
         auto cfg = loader(password, false).loadOrCreate(file.path()).value();
         cfg.config()->SetEncryptionKey(encKey);
+        cfg.save();
+    }
+
+    void CreateWithVersion(const string &version, const string &password = "mypassword") {
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        cfg.config()->SetVersion(version);
+        cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
 
@@ -146,4 +154,25 @@ TEST_F(CryConfigLoaderTest, Cipher_Create) {
     auto created = Create();
     //aes-256-gcm is the default cipher chosen by mockConsole()
     EXPECT_EQ("aes-256-gcm", created.config()->Cipher());
+}
+
+TEST_F(CryConfigLoaderTest, Version_Load) {
+    CreateWithVersion("0.9.2");
+    auto loaded = Load().value();
+    EXPECT_EQ(gitversion::VersionString(), loaded.config()->Version());
+    EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
+}
+
+TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOnLoad) {
+    CreateWithVersion("0.9.2", "mypassword");
+    Load().value();
+    auto configFile = CryConfigFile::load(file.path(), "mypassword").right_opt().value();
+    EXPECT_EQ(gitversion::VersionString(), configFile.config()->Version());
+    EXPECT_EQ("0.9.2", configFile.config()->CreatedWithVersion());
+}
+
+TEST_F(CryConfigLoaderTest, Version_Create) {
+    auto created = Create();
+    EXPECT_EQ(gitversion::VersionString(), created.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
 }

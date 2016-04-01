@@ -14,6 +14,8 @@ namespace gitversion {
         std::string gitCommitId;
         std::string majorVersion;
         std::string minorVersion;
+        std::string hotfixVersion;
+        unsigned int commitsSinceTag;
     };
 
     class Parser final {
@@ -21,9 +23,10 @@ namespace gitversion {
         static VersionInfo parse(const std::string &versionString);
 
     private:
-        static std::pair<std::string, boost::optional<std::string>> _splitAtPlusSign(const std::string &versionString);
-        static std::tuple<std::string, std::string, std::string> _extractMajorMinorTag(const std::string &versionNumber);
-        static std::string _extractGitCommitId(const std::string &versionInfo);
+        static std::pair<std::string, boost::optional<std::string>> _splitAt(const std::string &versionString, char delimiter);
+        static std::tuple<std::string, std::string, std::string, std::string> _extractMajorMinorHotfixTag(const std::string &versionNumber);
+        static std::tuple<std::string, std::string, std::string> _extractMajorMinorHotfix(const std::string &versionNumber);
+        static std::tuple<std::string, unsigned long> _extractGitCommitIdAndCommitsSinceTag(const std::string &versionInfo);
     };
 }
 

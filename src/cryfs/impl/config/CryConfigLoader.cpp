@@ -5,6 +5,7 @@
 #include <cpp-utils/logging/logging.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
+#include <gitversion/VersionCompare.h>
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -21,6 +22,7 @@ using std::vector;
 using std::string;
 using std::function;
 using std::shared_ptr;
+using gitversion::VersionCompare;
 using namespace cpputils::logging;
 
 namespace cryfs {
@@ -39,7 +41,18 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   std::cout << "done" << std::endl;
+
   _checkVersion(*config.right().config());
+#ifndef CRYFS_NO_COMPATIBILITY
+  //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
+  if (VersionCompare::isOlderThan(config.right().config()->Version(), "0.9.3-rc1")) {
+    config.right().config()->SetBlocksizeBytes(32832);
+  }
+#endif
+  if (config.right().config()->Version() != gitversion::VersionString()) {
+    config.right().config()->SetVersion(gitversion::VersionString());
+    config.right().save();
+  }
   _checkCipher(*config.right().config());
   return std::move(config.right());
 }

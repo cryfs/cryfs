@@ -4,6 +4,7 @@
 #include <cryfs/impl/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
+#include <gitversion/gitversion.h>
 
 using namespace cryfs;
 
@@ -138,6 +139,16 @@ TEST_F(CryConfigCreatorTest, DoesNotAskForAnythingIfEverythingIsSpecified) {
     EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS();
     EXPECT_DOES_NOT_ASK_FOR_CIPHER();
     CryConfig config = noninteractiveCreator.create(string("aes-256-gcm"), 10*1024u);
+}
+
+TEST_F(CryConfigCreatorTest, SetsCorrectCreatedWithVersion) {
+    CryConfig config = noninteractiveCreator.create(none, none);
+    EXPECT_EQ(gitversion::VersionString(), config.CreatedWithVersion());
+}
+
+TEST_F(CryConfigCreatorTest, SetsCorrectVersion) {
+    CryConfig config = noninteractiveCreator.create(none, none);
+    EXPECT_EQ(gitversion::VersionString(), config.Version());
 }
 
 //TODO Add test cases ensuring that the values entered are correctly taken

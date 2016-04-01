@@ -87,15 +87,36 @@ TEST_F(CryConfigTest, Version) {
 }
 
 TEST_F(CryConfigTest, Version_AfterMove) {
-    cfg.SetCipher("0.9.1");
+    cfg.SetVersion("0.9.1");
     CryConfig moved = std::move(cfg);
-    EXPECT_EQ("0.9.1", moved.Cipher());
+    EXPECT_EQ("0.9.1", moved.Version());
 }
 
 TEST_F(CryConfigTest, Version_AfterSaveAndLoad) {
-    cfg.SetCipher("0.9.2");
+    cfg.SetVersion("0.9.2");
     CryConfig loaded = SaveAndLoad(std::move(cfg));
-    EXPECT_EQ("0.9.2", loaded.Cipher());
+    EXPECT_EQ("0.9.2", loaded.Version());
+}
+
+TEST_F(CryConfigTest, CreatedWithVersion_Init) {
+    EXPECT_EQ("", cfg.CreatedWithVersion());
+}
+
+TEST_F(CryConfigTest, CreatedWithVersion) {
+    cfg.SetCreatedWithVersion("0.9.3");
+    EXPECT_EQ("0.9.3", cfg.CreatedWithVersion());
+}
+
+TEST_F(CryConfigTest, CreatedWithVersion_AfterMove) {
+    cfg.SetCreatedWithVersion("0.9.3");
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ("0.9.3", moved.CreatedWithVersion());
+}
+
+TEST_F(CryConfigTest, CreatedWithVersion_AfterSaveAndLoad) {
+    cfg.SetCreatedWithVersion("0.9.3");
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ("0.9.3", loaded.CreatedWithVersion());
 }
 
 TEST_F(CryConfigTest, BlocksizeBytes_Init) {
