@@ -49,7 +49,7 @@ script:
 - ./test/blockstore/blockstore-test
 - ./test/blobstore/blobstore-test
 # TODO Also run on osx once fixed
-- if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/cryfs-test || exit 1; fi
-- if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
+- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs/cryfs-test || exit 1; fi
+- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
 after_script:
 - rm run_with_fuse.sh
