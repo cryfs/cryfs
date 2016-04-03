@@ -16,6 +16,8 @@ Fixed Bugs:
 * When trying to rename a file to an already existing file name, a bug deleted it instead.
 * Rename operation allows overwriting existing files, as specified in the rename(2) man page.
 
+Compatibility:
+* The generated .deb packages for Debian also work for the Devuan operating system.
 
 Version 0.9.2
 ---------------
