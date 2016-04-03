@@ -1,4 +1,4 @@
-Version 0.9.3 (unreleased)
+Version 0.9.3
 ---------------
 New Features:
 * The ciphertext block size is configurable. You can use the "--blocksize" command line argument.
