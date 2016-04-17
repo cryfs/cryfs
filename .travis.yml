@@ -42,7 +42,7 @@ install:
 - pip install --user cpp-coveralls
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage"
-- make -j$NUMCORES VERBOSE=1
+- make -j$NUMCORES
 - ./test/gitversion/gitversion-test
 - ./test/cpp-utils/cpp-utils-test
 # TODO Also run on osx once fixed
