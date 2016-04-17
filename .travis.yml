@@ -56,4 +56,5 @@ script:
 after_script:
 - rm run_with_fuse.sh
 after_success:
-- coveralls --exclude /usr --exclude vendor --exclude test --gcov-options '\-lp'
+- coveralls --help
+- coveralls --build-root . --exclude /usr/ --exclude vendor/ --exclude test/ --gcov-options '\-lp'
