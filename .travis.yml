@@ -44,7 +44,7 @@ install:
 - export LDFLAGS="--coverage"
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
-- make -j$NUMCORES
+- make -j$NUMCORES VERBOSE=1
 - ./test/gitversion/gitversion-test
 - ./test/cpp-utils/cpp-utils-test
 # TODO Also run on osx once fixed
