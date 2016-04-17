@@ -38,6 +38,9 @@ install:
 - cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
+# Install coveralls
+- pip install --user cpp-coveralls
+- export CXXFLAGS="--coverage"
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
 - make -j$NUMCORES
@@ -53,3 +56,5 @@ script:
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
 after_script:
 - rm run_with_fuse.sh
+after_success:
+- coveralls --exclude vendor --exclude test --gcov-options '\-lp'
