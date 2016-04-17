@@ -41,6 +41,7 @@ install:
 # Install coveralls
 - pip install --user cpp-coveralls
 - export CXXFLAGS="--coverage"
+- export LDFLAGS="--coverage"
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
 - make -j$NUMCORES
