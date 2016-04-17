@@ -39,7 +39,7 @@ install:
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
 # Install coveralls
-- pip install --user cpp-coveralls
+#- pip install --user cpp-coveralls
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage"
 - make -j$NUMCORES
@@ -59,4 +59,4 @@ after_success:
 # Run codecov.io
 - bash <(curl -s https://codecov.io/bash)
 # Run coveralls
-- coveralls --build-root . --root .. --exclude /usr --exclude CMakeFiles --exclude vendor --exclude test --gcov-options '\-lp'
+#- coveralls --build-root . --root .. --exclude /usr --exclude CMakeFiles --exclude vendor --exclude test --gcov-options '\-lp'
