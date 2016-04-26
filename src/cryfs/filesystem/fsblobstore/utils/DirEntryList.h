@@ -24,7 +24,8 @@ namespace cryfs {
             void add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void addOrOverwrite(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
-                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                     std::function<void (const blockstore::Key &key)> onOverwritten);
             boost::optional<const DirEntry&> get(const std::string &name) const;
             boost::optional<const DirEntry&> get(const blockstore::Key &key) const;
             void remove(const std::string &name);
@@ -50,7 +51,7 @@ namespace cryfs {
             std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
             void _add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
-            void _overwrite(DirEntry *entry, const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+            void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
                       mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             std::vector<DirEntry> _entries;

@@ -15,6 +15,7 @@ set(SOURCES
     config/CryConfigLoaderTest.cpp
     config/CryConfigConsoleTest.cpp
     filesystem/CryFsTest.cpp
+    filesystem/CryNodeTest.cpp
     filesystem/FileSystemTest.cpp
 )
 

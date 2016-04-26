@@ -61,16 +61,18 @@ void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::Entry
 }
 
 void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
-                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                       std::function<void (const blockstore::Key &key)> onOverwritten) {
     auto found = _findByName(name);
     if (found != _entries.end()) {
-        _overwrite(&*found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+        onOverwritten(found->key());
+        _overwrite(found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     } else {
         _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 }
 
-void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
                         uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     if (entry->type() != entryType) {
         if (entry->type() == fspp::Dir::EntryType::DIR) {
@@ -82,7 +84,10 @@ void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &bl
             throw fspp::fuse::FuseErrnoException(ENOTDIR);
         }
     }
-    *entry = DirEntry(entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
+    // The new entry has possibly a different key, so it has to be in a different list position (list is ordered by keys).
+    // That's why we remove-and-add instead of just modifying the existing entry.
+    _entries.erase(entry);
+    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {

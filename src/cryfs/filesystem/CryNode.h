@@ -12,6 +12,8 @@ namespace cryfs {
 
 class CryNode: public virtual fspp::Node {
 public:
+  virtual ~CryNode();
+
   CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, const blockstore::Key &key);
   void access(int mask) const override;
   void stat(struct ::stat *result) const override;
@@ -22,7 +24,6 @@ public:
 
 protected:
   CryNode();
-  virtual ~CryNode();
 
   CryDevice *device();
   const CryDevice *device() const;

@@ -65,28 +65,32 @@ void DirBlob::_readEntriesFromBlob() {
 }
 
 void DirBlob::AddChildDir(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  std::unique_lock<std::mutex> lock(_mutex);
   _addChild(name, blobKey, fspp::Dir::EntryType::DIR, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 void DirBlob::AddChildFile(const std::string &name, const Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  std::unique_lock<std::mutex> lock(_mutex);
   _addChild(name, blobKey, fspp::Dir::EntryType::FILE, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 void DirBlob::AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+  std::unique_lock<std::mutex> lock(_mutex);
   _addChild(name, blobKey, fspp::Dir::EntryType::SYMLINK, S_IFLNK | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 void DirBlob::_addChild(const std::string &name, const Key &blobKey,
     fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-  std::unique_lock<std::mutex> lock(_mutex);
   _entries.add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
   _changed = true;
 }
 
-void DirBlob::AddOrOverwriteChild(const std::string &name, const Key &blobKey,
-                       fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirBlob::AddOrOverwriteChild(const std::string &name, const Key &blobKey, fspp::Dir::EntryType entryType,
+                                  mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                                  std::function<void (const blockstore::Key &key)> onOverwritten) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _entries.addOrOverwrite(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+
+  _entries.addOrOverwrite(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
   _changed = true;
 }
 

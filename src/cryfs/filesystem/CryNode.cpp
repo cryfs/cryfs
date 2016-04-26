@@ -64,8 +64,11 @@ void CryNode::rename(const bf::path &to) {
   }
   std::string oldName = old->name(); // Store, because if targetDir == *_parent, then the 'old' object will be invalidated after we add something to targetDir
   if (targetDir->key() != (*_parent)->key() || oldName != to.filename().native()) {
+    auto onOverwritten = [this] (const blockstore::Key &key) {
+      device()->RemoveBlob(key);
+    };
     targetDir->AddOrOverwriteChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
-                        old->lastAccessTime(), old->lastModificationTime());
+                        old->lastAccessTime(), old->lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldName);
   }
 }
