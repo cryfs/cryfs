@@ -102,6 +102,7 @@ void Cache<Key, Value, MAX_ENTRIES>::_makeSpaceForEntry(std::unique_lock<std::mu
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::_deleteEntry(std::unique_lock<std::mutex> *lock) {
+  ASSERT(lock->owns_lock(), "The operations in this function require a locked mutex");
   auto key = _cachedBlocks.peekKey();
   ASSERT(key != boost::none, "There was no entry to delete");
   cpputils::MutexPoolLock<Key> lockEntryFromBeingPopped(&_currentlyFlushingEntries, *key);
@@ -134,7 +135,7 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginningParallel(s
   std::vector<std::future<void>> waitHandles;
   for (unsigned int i = 0; i < numThreads; ++i) {
     waitHandles.push_back(std::async(std::launch::async, [this, matches] {
-      _deleteMatchingEntriesAtBeginning(matches);
+        _deleteMatchingEntriesAtBeginning(matches);
     }));
   }
   for (auto & waitHandle : waitHandles) {
@@ -154,6 +155,7 @@ bool Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntryAtBeginning(std::functi
   std::unique_lock<std::mutex> lock(_mutex);
   if (_cachedBlocks.size() > 0 && matches(*_cachedBlocks.peek())) {
     _deleteEntry(&lock);
+    ASSERT(lock.owns_lock(), "Something strange happened with the lock. It should be locked again when we come back.");
     return true;
   } else {
     return false;

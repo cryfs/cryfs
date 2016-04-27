@@ -8,11 +8,13 @@
 #include <algorithm>
 #include "../assert/assert.h"
 #include "../macros.h"
+#include "CombinedLock.h"
 
 //TODO Test
 //TODO Rename package to synchronization
 //TODO Rename to MutexPool
 namespace cpputils {
+
     template<class LockName>
     class LockPool final {
     public:
@@ -26,7 +28,7 @@ namespace cpputils {
 
         std::vector<LockName> _lockedLocks;
         std::mutex _mutex;
-        std::condition_variable _cv;
+        std::condition_variable_any _cv;
 
         DISALLOW_COPY_AND_ASSIGN(LockPool);
     };
@@ -42,15 +44,14 @@ namespace cpputils {
     inline void LockPool<LockName>::lock(const LockName &lock, std::unique_lock<std::mutex> *lockToFreeWhileWaiting) {
         std::unique_lock<std::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
         if (_isLocked(lock)) {
-            if(lockToFreeWhileWaiting != nullptr) {
-                lockToFreeWhileWaiting->unlock();
-            }
-            _cv.wait(mutexLock, [this, &lock]{
+            // Order of locking/unlocking is important and should be the same order as everywhere else to prevent deadlocks.
+            // Since when entering the function, lockToFreeWhileWaiting is already locked and mutexLock is locked afterwards,
+            // the condition variable should do it in the same order. We use combinedLock for this.
+            CombinedLock combinedLock(lockToFreeWhileWaiting, &mutexLock);
+            _cv.wait(combinedLock, [this, &lock]{
                 return !_isLocked(lock);
             });
-            if(lockToFreeWhileWaiting != nullptr) {
-                lockToFreeWhileWaiting->lock();
-            }
+            ASSERT(mutexLock.owns_lock() && lockToFreeWhileWaiting->owns_lock(), "Locks haven't been correctly relocked");
         }
         _lockedLocks.push_back(lock);
     }
