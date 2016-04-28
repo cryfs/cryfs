@@ -19,9 +19,10 @@ DirEntryList::DirEntryList() : _entries() {
 Data DirEntryList::serialize() const {
     Data serialized(_serializedSize());
     unsigned int offset = 0;
-    for (const auto &entry : _entries) {
-        entry.serialize(static_cast<uint8_t*>(serialized.dataOffset(offset)));
-        offset += entry.serializedSize();
+    for (auto iter = _entries.begin(); iter != _entries.end(); ++iter) {
+        ASSERT(iter == _entries.begin() || std::less<Key>()((iter-1)->key(), iter->key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
+        iter->serialize(static_cast<uint8_t*>(serialized.dataOffset(offset)));
+        offset += iter->serializedSize();
     }
     return serialized;
 }
@@ -39,6 +40,7 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
     const char *pos = static_cast<const char*>(data);
     while (pos < static_cast<const char*>(data) + size) {
         pos = DirEntry::deserializeAndAddToVector(pos, &_entries);
+        ASSERT(_entries.size() == 1 || std::less<Key>()(_entries[_entries.size()-2].key(), _entries[_entries.size()-1].key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
     }
 }
 
@@ -70,6 +72,22 @@ void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::
     } else {
         _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
+}
+
+void DirEntryList::rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten) {
+    auto foundSameName = _findByName(name);
+    if (foundSameName != _entries.end()) {
+        onOverwritten(foundSameName->key());
+        _entries.erase(foundSameName);
+    }
+
+    ASSERT(_findByName(name) == _entries.end(), "There is still an entry with this name. That means there was a duplicate.");
+
+    auto elementToRename = _findByKey(key);
+    std::string oldName = elementToRename->name();
+    ASSERT(elementToRename != _entries.end(), "Didn't find element to rename");
+    elementToRename->setName(name);
+    ASSERT(_findByName(oldName) == _entries.end(), "There is an entry with the old name left. That means there was a duplicate.");
 }
 
 void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,

@@ -47,6 +47,8 @@ namespace cryfs {
                           mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                           std::function<void (const blockstore::Key &key)> onOverwritten);
 
+            void RenameChild(const blockstore::Key &key, const std::string &newName, std::function<void (const blockstore::Key &key)> onOverwritten);
+
             void RemoveChild(const std::string &name);
 
             void RemoveChild(const blockstore::Key &key);

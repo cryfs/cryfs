@@ -48,6 +48,10 @@ public:
         return _base->AddOrOverwriteChild(name, blobKey, type, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
     }
 
+    void RenameChild(const blockstore::Key &key, const std::string &newName, std::function<void (const blockstore::Key &key)> onOverwritten) {
+        return _base->RenameChild(key, newName, onOverwritten);
+    }
+
     void statChild(const blockstore::Key &key, struct ::stat *result) const {
         return _base->statChild(key, result);
     }

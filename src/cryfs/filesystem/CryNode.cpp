@@ -62,14 +62,16 @@ void CryNode::rename(const bf::path &to) {
   if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
-  std::string oldName = old->name(); // Store, because if targetDir == *_parent, then the 'old' object will be invalidated after we add something to targetDir
-  if (targetDir->key() != (*_parent)->key() || oldName != to.filename().native()) {
-    auto onOverwritten = [this] (const blockstore::Key &key) {
+  fsblobstore::DirEntry oldEntry = *old; // Copying this and not only keeping the reference is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
+  auto onOverwritten = [this] (const blockstore::Key &key) {
       device()->RemoveBlob(key);
-    };
-    targetDir->AddOrOverwriteChild(to.filename().native(), old->key(), old->type(), old->mode(), old->uid(), old->gid(),
-                        old->lastAccessTime(), old->lastModificationTime(), onOverwritten);
-    (*_parent)->RemoveChild(oldName);
+  };
+  if (targetDir->key() == (*_parent)->key()) {
+    targetDir->RenameChild(oldEntry.key(), to.filename().native(), onOverwritten);
+  } else {
+    targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.key(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
+                                   oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
+    (*_parent)->RemoveChild(oldEntry.name());
   }
 }
 

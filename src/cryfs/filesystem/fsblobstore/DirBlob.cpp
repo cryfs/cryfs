@@ -89,8 +89,13 @@ void DirBlob::AddOrOverwriteChild(const std::string &name, const Key &blobKey, f
                                   mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                                   std::function<void (const blockstore::Key &key)> onOverwritten) {
   std::unique_lock<std::mutex> lock(_mutex);
-
   _entries.addOrOverwrite(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
+  _changed = true;
+}
+
+void DirBlob::RenameChild(const blockstore::Key &key, const std::string &newName, std::function<void (const blockstore::Key &key)> onOverwritten) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.rename(key, newName, onOverwritten);
   _changed = true;
 }
 
