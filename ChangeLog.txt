@@ -9,7 +9,7 @@ Fixed Bugs:
 * Fix a potential deadlock in the cache
 
 Compatibility:
-* The generated .deb packages work for Ubuntu 16.04
+* The generated .deb packages work for any Ubuntu/Debian based distribution, but will not install the package source for automatic updates if it's an unsupported operating system.
 
 Version 0.9.3
 ---------------
