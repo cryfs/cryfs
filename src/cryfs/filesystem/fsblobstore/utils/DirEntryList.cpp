@@ -76,18 +76,15 @@ void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::
 
 void DirEntryList::rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten) {
     auto foundSameName = _findByName(name);
-    if (foundSameName != _entries.end()) {
+    if (foundSameName != _entries.end() && foundSameName->key() != key) {
         onOverwritten(foundSameName->key());
         _entries.erase(foundSameName);
     }
-
-    ASSERT(_findByName(name) == _entries.end(), "There is still an entry with this name. That means there was a duplicate.");
 
     auto elementToRename = _findByKey(key);
     std::string oldName = elementToRename->name();
     ASSERT(elementToRename != _entries.end(), "Didn't find element to rename");
     elementToRename->setName(name);
-    ASSERT(_findByName(oldName) == _entries.end(), "There is an entry with the old name left. That means there was a duplicate.");
 }
 
 void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
