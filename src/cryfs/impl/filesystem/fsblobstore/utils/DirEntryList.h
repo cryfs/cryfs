@@ -54,6 +54,7 @@ namespace cryfs {
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
                       mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            static void _checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType);
 
             std::vector<DirEntry> _entries;
 
