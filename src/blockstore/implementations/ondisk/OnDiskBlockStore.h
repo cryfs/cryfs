@@ -24,6 +24,10 @@ public:
 
 private:
   const boost::filesystem::path _rootdir;
+#ifndef CRYFS_NO_COMPATIBILITY
+  void _migrateBlockStore();
+  bool _isValidBlockKey(const std::string &key);
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(OnDiskBlockStore);
 };

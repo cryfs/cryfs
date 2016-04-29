@@ -7,6 +7,7 @@ using cpputils::Data;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
+using std::vector;
 
 namespace bf = boost::filesystem;
 
@@ -22,7 +23,36 @@ OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
       throw std::runtime_error("Base directory is not a directory");
   }
   //TODO Test for read access, write access, enter (x) access, and throw runtime_error in case
+#ifndef CRYFS_NO_COMPATIBILITY
+  _migrateBlockStore();
+#endif
 }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+void OnDiskBlockStore::_migrateBlockStore() {
+  vector<string> blocksToMigrate;
+  for (auto entry = bf::directory_iterator(_rootdir); entry != bf::directory_iterator(); ++entry) {
+    if (bf::is_regular_file(entry->path()) && _isValidBlockKey(entry->path().filename().native())) {
+      blocksToMigrate.push_back(entry->path().filename().native());
+    }
+  }
+  if (blocksToMigrate.size() != 0) {
+    std::cout << "Migrating CryFS filesystem..." << std::flush;
+    for (auto key : blocksToMigrate) {
+      Key::FromString(key); // Assert that it can be parsed as a key
+      string dir = key.substr(0, 3);
+      string file = key.substr(3);
+      bf::create_directory(dir);
+      bf::rename(_rootdir / key, _rootdir / dir / file);
+    }
+    std::cout << "done" << std::endl;
+  }
+}
+
+bool OnDiskBlockStore::_isValidBlockKey(const string &key) {
+  return key.size() == 32 && key.find_first_not_of("0123456789ABCDEF") == string::npos;
+}
+#endif
 
 //TODO Do I have to lock tryCreate/remove and/or load? Or does ParallelAccessBlockStore take care of that?
 
@@ -46,7 +76,11 @@ void OnDiskBlockStore::remove(unique_ref<Block> block) {
 }
 
 uint64_t OnDiskBlockStore::numBlocks() const {
-  return std::distance(bf::directory_iterator(_rootdir), bf::directory_iterator());
+  uint64_t count = 0;
+  for (auto entry = bf::directory_iterator(_rootdir); entry != bf::directory_iterator(); ++entry) {
+    count += std::distance(bf::directory_iterator(entry->path()), bf::directory_iterator());
+  }
+  return count;
 }
 
 uint64_t OnDiskBlockStore::estimateNumFreeBytes() const {

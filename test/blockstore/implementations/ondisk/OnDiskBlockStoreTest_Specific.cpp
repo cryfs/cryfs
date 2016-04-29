@@ -7,6 +7,7 @@ using ::testing::Test;
 using cpputils::TempDir;
 using cpputils::Data;
 using std::ifstream;
+using blockstore::Key;
 
 using namespace blockstore::ondisk;
 
@@ -23,8 +24,8 @@ public:
     return blockStore.create(initData)->key();
   }
 
-  uint64_t getPhysicalBlockSize(const blockstore::Key &key) {
-    ifstream stream((baseDir.path() / key.ToString()).c_str());
+  uint64_t getPhysicalBlockSize(const Key &key) {
+    ifstream stream((baseDir.path() / key.ToString().substr(0,3) / key.ToString().substr(3)).c_str());
     stream.seekg(0, stream.end);
     return stream.tellg();
   }
@@ -55,4 +56,12 @@ TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_positive) {
   auto key = CreateBlockReturnKey(Data(10*1024));
   auto baseSize = getPhysicalBlockSize(key);
   EXPECT_EQ(10*1024u, blockStore.blockSizeFromPhysicalBlockSize(baseSize));
+}
+
+TEST_F(OnDiskBlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocksWithSameKeyPrefix) {
+  const Key key1 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A13");
+  const Key key2 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A14");
+  EXPECT_NE(boost::none, blockStore.tryCreate(key1, cpputils::Data(0)));
+  EXPECT_NE(boost::none, blockStore.tryCreate(key2, cpputils::Data(0)));
+  EXPECT_EQ(2u, blockStore.numBlocks());
 }

@@ -1,5 +1,8 @@
 Version 0.9.4 (unreleased)
 ---------------
+Improvements:
+* Ciphertext blocks are split into subdirectories (before, all were on top level) to reduce number of files per directory. Some unix tools don't work well with directories with too many entries.
+
 Fixed Bugs:
 * Renaming a file to an existing file (i.e. overwriting an existing file) didn't free the allocated memory for the overwritten file
 * Renaming a file to an existing file could hurt an invariant in the directory layout (directory entries have to be sorted) and doing so could cause files to seemingly disappear.

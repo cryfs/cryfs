@@ -23,7 +23,7 @@ public:
   // Don't create the temp file yet (therefore pass false to the TempFile constructor)
   : dir(),
     key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
-    file(dir.path() / key.ToString(), false) {
+    file(dir.path() / key.ToString().substr(0,3) / key.ToString().substr(3), false) {
   }
   TempDir dir;
   Key key;
