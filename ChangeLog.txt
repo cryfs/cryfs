@@ -1,4 +1,4 @@
-Version 0.9.4 (unreleased)
+Version 0.9.4
 ---------------
 Improvements:
 * Ciphertext blocks are split into subdirectories (before, all were on top level) to reduce number of files per directory. Some unix tools don't work well with directories with too many entries.
