@@ -46,7 +46,6 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
   if (config->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config->config()->Version(), "0.9.3-rc1")) {
     config->config()->SetBlocksizeBytes(32832);
-    std::cout << "Workaround BlockSize" << std::endl;
   }
 #endif
   if (config->config()->Version() != gitversion::VersionString()) {
