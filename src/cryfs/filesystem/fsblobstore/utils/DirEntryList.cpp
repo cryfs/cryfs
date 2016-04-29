@@ -77,28 +77,30 @@ void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::
 void DirEntryList::rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten) {
     auto foundSameName = _findByName(name);
     if (foundSameName != _entries.end() && foundSameName->key() != key) {
+        _checkAllowedOverwrite(foundSameName->type(), _findByKey(key)->type());
         onOverwritten(foundSameName->key());
         _entries.erase(foundSameName);
     }
 
-    auto elementToRename = _findByKey(key);
-    std::string oldName = elementToRename->name();
-    ASSERT(elementToRename != _entries.end(), "Didn't find element to rename");
-    elementToRename->setName(name);
+    _findByKey(key)->setName(name);
 }
 
-void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
-                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-    if (entry->type() != entryType) {
-        if (entry->type() == fspp::Dir::EntryType::DIR) {
+void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType) {
+    if (oldType != newType) {
+        if (oldType == fspp::Dir::EntryType::DIR) {
             // new path is an existing directory, but old path is not a directory
             throw fspp::fuse::FuseErrnoException(EISDIR);
         }
-        if (entryType == fspp::Dir::EntryType::DIR) {
+        if (newType == fspp::Dir::EntryType::DIR) {
             // oldpath is a directory, and newpath exists but is not a directory.
             throw fspp::fuse::FuseErrnoException(ENOTDIR);
         }
     }
+}
+
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    _checkAllowedOverwrite(entry->type(), entryType);
     // The new entry has possibly a different key, so it has to be in a different list position (list is ordered by keys).
     // That's why we remove-and-add instead of just modifying the existing entry.
     _entries.erase(entry);
