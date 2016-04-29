@@ -19,9 +19,10 @@ DirEntryList::DirEntryList() : _entries() {
 Data DirEntryList::serialize() const {
     Data serialized(_serializedSize());
     unsigned int offset = 0;
-    for (const auto &entry : _entries) {
-        entry.serialize(static_cast<uint8_t*>(serialized.dataOffset(offset)));
-        offset += entry.serializedSize();
+    for (auto iter = _entries.begin(); iter != _entries.end(); ++iter) {
+        ASSERT(iter == _entries.begin() || std::less<Key>()((iter-1)->key(), iter->key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
+        iter->serialize(static_cast<uint8_t*>(serialized.dataOffset(offset)));
+        offset += iter->serializedSize();
     }
     return serialized;
 }
@@ -39,6 +40,7 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
     const char *pos = static_cast<const char*>(data);
     while (pos < static_cast<const char*>(data) + size) {
         pos = DirEntry::deserializeAndAddToVector(pos, &_entries);
+        ASSERT(_entries.size() == 1 || std::less<Key>()(_entries[_entries.size()-2].key(), _entries[_entries.size()-1].key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
     }
 }
 
@@ -61,16 +63,34 @@ void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::Entry
 }
 
 void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
-                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                       std::function<void (const blockstore::Key &key)> onOverwritten) {
     auto found = _findByName(name);
     if (found != _entries.end()) {
-        _overwrite(&*found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+        onOverwritten(found->key());
+        _overwrite(found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     } else {
         _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 }
 
-void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten) {
+    auto foundSameName = _findByName(name);
+    if (foundSameName != _entries.end()) {
+        onOverwritten(foundSameName->key());
+        _entries.erase(foundSameName);
+    }
+
+    ASSERT(_findByName(name) == _entries.end(), "There is still an entry with this name. That means there was a duplicate.");
+
+    auto elementToRename = _findByKey(key);
+    std::string oldName = elementToRename->name();
+    ASSERT(elementToRename != _entries.end(), "Didn't find element to rename");
+    elementToRename->setName(name);
+    ASSERT(_findByName(oldName) == _entries.end(), "There is an entry with the old name left. That means there was a duplicate.");
+}
+
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
                         uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     if (entry->type() != entryType) {
         if (entry->type() == fspp::Dir::EntryType::DIR) {
@@ -82,7 +102,10 @@ void DirEntryList::_overwrite(DirEntry *entry, const string &name, const Key &bl
             throw fspp::fuse::FuseErrnoException(ENOTDIR);
         }
     }
-    *entry = DirEntry(entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
+    // The new entry has possibly a different key, so it has to be in a different list position (list is ordered by keys).
+    // That's why we remove-and-add instead of just modifying the existing entry.
+    _entries.erase(entry);
+    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {

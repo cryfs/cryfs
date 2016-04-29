@@ -6,9 +6,6 @@
 
 set -e
 
-DEBIAN_VERSIONS="jessie"
-UBUNTU_VERSIONS="precise trusty vivid wily"
-
 DEBIAN_REPO_URL="http://apt.cryfs.org/debian"
 UBUNTU_REPO_URL="http://apt.cryfs.org/ubuntu"
 
@@ -22,21 +19,13 @@ containsElement () {
 }
 
 get_repo_url () {
-  if [[ "$DISTRIBUTION" == "Debian" ]]; then
-    if ! containsElement $DISTRIBUTION_VERSION $DEBIAN_VERSIONS; then
-      echo Unsupported Debian Version: $DISTRIBUTION_VERSION 1>&2
-      exit 1
-    fi
+  if [[ "$DISTRIBUTION" == "Debian" ]] || [[ "$DISTRIBUTION" == "Devuan" ]]; then
     echo $DEBIAN_REPO_URL
   elif [[ "$DISTRIBUTION" == "Ubuntu" ]]; then
-    if ! containsElement $DISTRIBUTION_VERSION $UBUNTU_VERSIONS; then
-      echo Unsupported Ubuntu Version: $DISTRIBUTION_VERSION 1>&2
-      exit 1
-    fi
     echo $UBUNTU_REPO_URL
   else
-    echo Unsupported Operating System: $DISTRIBUTION 1>&2
-    exit 1
+    echo Not adding package source because $DISTRIBUTION is not supported. Please keep CryFS manually up to date. 1>&2
+    exit 0
   fi
 }
 

@@ -210,4 +210,8 @@ void CryDevice::callFsActionCallbacks() const {
   }
 }
 
+uint64_t CryDevice::numBlocks() const {
+  return _fsBlobStore->numBlocks();
+}
+
 }

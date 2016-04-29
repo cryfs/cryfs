@@ -179,7 +179,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
 TEST_P(DataTreeTest_ResizeNumBytes_P, DepthFlagsAreCorrect) {
   tree->resizeNumBytes(newSize);
   tree->flush();
-  uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()));
+  uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()) - 0.00000000001); // The subtraction takes care of double inaccuracies if newNumberOfLeaves == maxChildrenPerInnerNode
   CHECK_DEPTH(depth, tree->key());
 }
 

@@ -1,4 +1,14 @@
-Version 0.9.3 (unreleased)
+Version 0.9.4 (unreleased)
+---------------
+Fixed Bugs:
+* Renaming a file to an existing file (i.e. overwriting an existing file) didn't free the allocated memory for the overwritten file
+* Renaming a file to an existing file could hurt an invariant in the directory layout (directory entries have to be sorted) and doing so could cause files to seemingly disappear.
+* Fix a potential deadlock in the cache
+
+Compatibility:
+* The generated .deb packages work for Ubuntu 16.04
+
+Version 0.9.3
 ---------------
 New Features:
 * The ciphertext block size is configurable. You can use the "--blocksize" command line argument.
@@ -16,6 +26,8 @@ Fixed Bugs:
 * When trying to rename a file to an already existing file name, a bug deleted it instead.
 * Rename operation allows overwriting existing files, as specified in the rename(2) man page.
 
+Compatibility:
+* The generated .deb packages for Debian also work for the Devuan operating system.
 
 Version 0.9.2
 ---------------

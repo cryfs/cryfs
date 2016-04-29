@@ -36,6 +36,8 @@ public:
   const CryConfig &config() const;
   void callFsActionCallbacks() const;
 
+  uint64_t numBlocks() const;
+
 private:
 
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;

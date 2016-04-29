@@ -14,6 +14,7 @@ if(BUILDTYPE MATCHES RELEASE AND NOT BUILD_TESTING)
 
         set(CPACK_GENERATOR TGZ DEB RPM)
         set(CPACK_PACKAGE_NAME "cryfs")
+        get_git_version(GITVERSION_VERSION_STRING)
         set(CPACK_PACKAGE_VERSION "${GITVERSION_VERSION_STRING}")
         set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Encrypt your files and store them in the cloud.")
         set(CPACK_PACKAGE_DESCRIPTION "CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.")
