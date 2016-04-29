@@ -1,7 +1,7 @@
 #ifndef MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
-#include <cryfs/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>

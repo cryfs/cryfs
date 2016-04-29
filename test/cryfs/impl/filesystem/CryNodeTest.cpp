@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include "testutils/CryTestBase.h"
-#include <cryfs/filesystem/CryDir.h>
-#include <cryfs/filesystem/CryFile.h>
-#include <cryfs/filesystem/CryOpenFile.h>
+#include <cryfs/impl/filesystem/CryDir.h>
+#include <cryfs/impl/filesystem/CryFile.h>
+#include <cryfs/impl/filesystem/CryOpenFile.h>
 
 using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
