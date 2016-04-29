@@ -131,7 +131,7 @@ public:
         EXPECT_EQ(3u, this->LoadDir("/")->children()->size()); // 3, because of '.' and '..'
     }
 
-    void Test_Overwrite_DirWithFile() {
+    void Test_Overwrite_DirWithFile_InSameDir() {
         auto file = this->CreateFile("/oldname");
         this->CreateDir("/newname");
         try {
@@ -144,7 +144,22 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
 
-    void Test_Overwrite_FileWithDir() {
+    void Test_Overwrite_DirWithFile_InDifferentDir() {
+        this->CreateDir("/parent1");
+        this->CreateDir("/parent2");
+        auto file = this->CreateFile("/parent1/oldname");
+        this->CreateDir("/parent2/newname");
+        try {
+            file->rename("/parent2/newname");
+            EXPECT_TRUE(false); // expect throw
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(EISDIR, e.getErrno());
+        }
+        EXPECT_NE(boost::none, this->device->Load("/parent1/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
+    }
+
+    void Test_Overwrite_FileWithDir_InSameDir() {
         auto dir = this->CreateDir("/oldname");
         this->CreateFile("/newname");
         try {
@@ -155,6 +170,21 @@ public:
         }
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
+    }
+
+    void Test_Overwrite_FileWithDir_InDifferentDir() {
+        this->CreateDir("/parent1");
+        this->CreateDir("/parent2");
+        auto dir = this->CreateDir("/parent1/oldname");
+        this->CreateFile("/parent2/newname");
+        try {
+            dir->rename("/parent2/newname");
+            EXPECT_TRUE(false); // expect throw
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(ENOTDIR, e.getErrno());
+        }
+        EXPECT_NE(boost::none, this->device->Load("/parent1/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
 };
 
@@ -173,8 +203,10 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     RootDir,
     Overwrite,
     Overwrite_DoesntHaveSameEntryTwice,
-    Overwrite_DirWithFile,
-    Overwrite_FileWithDir
+    Overwrite_DirWithFile_InSameDir,
+    Overwrite_DirWithFile_InDifferentDir,
+    Overwrite_FileWithDir_InSameDir,
+    Overwrite_FileWithDir_InDifferentDir
 );
 
 #endif
