@@ -42,7 +42,7 @@ void OnDiskBlockStore::_migrateBlockStore() {
       Key::FromString(key); // Assert that it can be parsed as a key
       string dir = key.substr(0, 3);
       string file = key.substr(3);
-      bf::create_directory(dir);
+      bf::create_directory(_rootdir / dir);
       bf::rename(_rootdir / key, _rootdir / dir / file);
     }
     std::cout << "done" << std::endl;
