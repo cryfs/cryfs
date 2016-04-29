@@ -61,6 +61,9 @@ void CryConfigLoader::_checkVersion(const CryConfig &config) {
   if (!boost::starts_with(config.Version(), allowedVersionPrefix)) {
     throw std::runtime_error(string() + "This filesystem was created with CryFS " + config.Version() + " and is incompatible. Please create a new one with your version of CryFS and migrate your data.");
   }
+  if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
+    throw std::runtime_error(string() + "This filesystem was used with CryFS " + config.Version() + " and should not be opened with older versions anymore. Please update your CryFS version.");
+  }
 }
 
 void CryConfigLoader::_checkCipher(const CryConfig &config) const {
