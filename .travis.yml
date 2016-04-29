@@ -53,7 +53,6 @@ script:
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/lib_usage_test/cryfs-lib-usage-test || exit 1; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/lib_link_test/cryfs-lib-link-test || exit 1; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux"]; then ./test/cryfs/lib_usage_test_cpp/cryfs-lib-usage-test-cpp || exit 1; fi
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs/cryfs-test || exit 1; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
 after_script:
 - rm run_with_fuse.sh
