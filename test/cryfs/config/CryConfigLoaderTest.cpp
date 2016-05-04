@@ -5,6 +5,7 @@
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <gitversion/gitversion.h>
+#include <gitversion/VersionCompare.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -16,6 +17,7 @@ using std::string;
 using std::ostream;
 using ::testing::Return;
 using ::testing::_;
+using ::testing::HasSubstr;
 
 using namespace cryfs;
 
@@ -29,11 +31,13 @@ namespace boost {
 
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
 public:
-    CryConfigLoaderTest(): file(false) {}
+    CryConfigLoaderTest(): file(false) {
+        console = mockConsole();
+    }
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
         auto askPassword = [password] { return password;};
-        return CryConfigLoader(mockConsole(), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, none, noninteractive);
+        return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, none, noninteractive);
     }
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
@@ -71,6 +75,24 @@ public:
         cfg.save();
     }
 
+    string olderVersion() {
+        string olderVersion;
+        if (std::stol(gitversion::MinorVersion()) > 0) {
+            olderVersion = gitversion::MajorVersion() + "." + std::to_string(std::stol(gitversion::MinorVersion()) - 1);
+        } else {
+            olderVersion = std::to_string(std::stol(gitversion::MajorVersion()) - 1) + "." + gitversion::MinorVersion();
+        }
+        assert(gitversion::VersionCompare::isOlderThan(olderVersion, gitversion::VersionString()));
+        return olderVersion;
+    }
+
+    string newerVersion() {
+        string newerVersion = gitversion::MajorVersion()+"."+std::to_string(std::stol(gitversion::MinorVersion())+1);
+        assert(gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), newerVersion));
+        return newerVersion;
+    }
+
+    std::shared_ptr<MockConsole> console;
     TempFile file;
 };
 
@@ -175,4 +197,43 @@ TEST_F(CryConfigLoaderTest, Version_Create) {
     auto created = Create();
     EXPECT_EQ(gitversion::VersionString(), created.config()->Version());
     EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
+}
+
+TEST_F(CryConfigLoaderTest, RefusesToLoadNewerFilesystem) {
+    string version = newerVersion();
+    CreateWithVersion(version);
+    try {
+        Load();
+        EXPECT_TRUE(false); // expect throw
+    } catch (const std::runtime_error &e) {
+        EXPECT_THAT(e.what(), HasSubstr("Please update your CryFS version"));
+    }
+}
+
+TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(1).WillOnce(Return(true));
+
+    string version = olderVersion();
+    CreateWithVersion(version);
+    EXPECT_NE(boost::none, Load());
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(0);
+
+    CreateWithVersion(gitversion::VersionString());
+    EXPECT_NE(boost::none, Load());
+}
+
+TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(1).WillOnce(Return(false));
+
+    string version = olderVersion();
+    CreateWithVersion(version);
+    try {
+        Load();
+        EXPECT_TRUE(false); // expect throw
+    } catch (const std::runtime_error &e) {
+        EXPECT_THAT(e.what(), HasSubstr("Not migrating file system"));
+    }
 }

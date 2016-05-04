@@ -28,7 +28,7 @@ using namespace cpputils::logging;
 namespace cryfs {
 
 CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, bool noninteractive)
-    : _creator(std::move(console), keyGenerator, noninteractive), _scryptSettings(scryptSettings),
+    : _console(console), _creator(console, keyGenerator, noninteractive), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
@@ -57,12 +57,13 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {
-  const string allowedVersionPrefix = string() + gitversion::MajorVersion() + "." + gitversion::MinorVersion() + ".";
-  if (!boost::starts_with(config.Version(), allowedVersionPrefix)) {
-    throw std::runtime_error(string() + "This filesystem was created with CryFS " + config.Version() + " and is incompatible. Please create a new one with your version of CryFS and migrate your data.");
-  }
   if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
-    throw std::runtime_error(string() + "This filesystem was used with CryFS " + config.Version() + " and should not be opened with older versions anymore. Please update your CryFS version.");
+    throw std::runtime_error(string() + "This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. Please update your CryFS version.");
+  }
+  if (gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?")) {
+      throw std::runtime_error(string() + "Not migrating file system.");
+    }
   }
 }
 
