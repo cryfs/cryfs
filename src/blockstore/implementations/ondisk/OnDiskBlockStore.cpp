@@ -78,7 +78,9 @@ void OnDiskBlockStore::remove(unique_ref<Block> block) {
 uint64_t OnDiskBlockStore::numBlocks() const {
   uint64_t count = 0;
   for (auto entry = bf::directory_iterator(_rootdir); entry != bf::directory_iterator(); ++entry) {
-    count += std::distance(bf::directory_iterator(entry->path()), bf::directory_iterator());
+    if (bf::is_directory(entry->path())) {
+      count += std::distance(bf::directory_iterator(entry->path()), bf::directory_iterator());
+    }
   }
   return count;
 }
