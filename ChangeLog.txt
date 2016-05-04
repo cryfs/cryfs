@@ -1,3 +1,11 @@
+Version 0.9.5 (unreleased)
+---------------
+Fixed Bugs:
+* Fixed a bug that prevented mounting a file system on Mac OS X.
+
+Improvements:
+* When mounting an old file system, CryFS will ask before migrating it to the newest version.
+
 Version 0.9.4
 ---------------
 Improvements:
