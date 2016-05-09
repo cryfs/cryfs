@@ -56,8 +56,13 @@ void OnDiskBlock::resize(size_t newSize) {
   _dataChanged = true;
 }
 
+bf::path OnDiskBlock::_getFilepath(const bf::path &rootdir, const Key &key) {
+  string keyStr = key.ToString();
+  return rootdir / keyStr.substr(0,3) / keyStr.substr(3);
+}
+
 optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &rootdir, const Key &key) {
-  auto filepath = rootdir / key.ToString();
+  auto filepath = _getFilepath(rootdir, key);
   try {
     boost::optional<Data> data = _loadFromDisk(filepath);
     if (data == none) {
@@ -70,7 +75,8 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &root
 }
 
 optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
-  auto filepath = rootdir / key.ToString();
+  auto filepath = _getFilepath(rootdir, key);
+  bf::create_directory(filepath.parent_path());
   if (bf::exists(filepath)) {
     return none;
   }
@@ -81,11 +87,14 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &root
 }
 
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
-  auto filepath = rootdir / key.ToString();
+  auto filepath = _getFilepath(rootdir, key);
   ASSERT(bf::is_regular_file(filepath), "Block not found on disk");
   bool retval = bf::remove(filepath);
   if (!retval) {
     LOG(ERROR) << "Couldn't find block " << key.ToString() << " to remove";
+  }
+  if (bf::is_empty(filepath.parent_path())) {
+    bf::remove(filepath.parent_path());
   }
 }
 

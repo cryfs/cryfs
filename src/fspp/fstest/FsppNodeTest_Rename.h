@@ -115,12 +115,22 @@ public:
         }
     }
 
-    void Test_Overwrite() {
+    void Test_Overwrite_InSameDir() {
         auto node = this->CreateNode("/oldname");
         this->CreateNode("/newname");
         node->rename("/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
+    }
+
+    void Test_Overwrite_InDifferentDir() {
+        this->CreateDir("/parent1");
+        this->CreateDir("/parent2");
+        auto node = this->CreateNode("/parent1/oldname");
+        this->CreateNode("/parent2/newname");
+        node->rename("/parent2/newname");
+        EXPECT_EQ(boost::none, this->device->Load("/parent1/oldname"));
+        EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
 
     void Test_Overwrite_DoesntHaveSameEntryTwice() {
@@ -201,7 +211,8 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     NestedToNested_NewName,
     ToItself,
     RootDir,
-    Overwrite,
+    Overwrite_InSameDir,
+    Overwrite_InDifferentDir,
     Overwrite_DoesntHaveSameEntryTwice,
     Overwrite_DirWithFile_InSameDir,
     Overwrite_DirWithFile_InDifferentDir,

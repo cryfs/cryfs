@@ -1,12 +1,23 @@
-Version 0.9.4 (unreleased)
+Version 0.9.5 (unreleased)
 ---------------
+Fixed Bugs:
+* Fixed a bug that prevented mounting a file system on Mac OS X.
+
+Improvements:
+* When mounting an old file system, CryFS will ask before migrating it to the newest version.
+
+Version 0.9.4
+---------------
+Improvements:
+* Ciphertext blocks are split into subdirectories (before, all were on top level) to reduce number of files per directory. Some unix tools don't work well with directories with too many entries.
+
 Fixed Bugs:
 * Renaming a file to an existing file (i.e. overwriting an existing file) didn't free the allocated memory for the overwritten file
 * Renaming a file to an existing file could hurt an invariant in the directory layout (directory entries have to be sorted) and doing so could cause files to seemingly disappear.
 * Fix a potential deadlock in the cache
 
 Compatibility:
-* The generated .deb packages work for Ubuntu 16.04
+* The generated .deb packages work for any Ubuntu/Debian based distribution, but will not install the package source for automatic updates if it's an unsupported operating system.
 
 Version 0.9.3
 ---------------
