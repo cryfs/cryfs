@@ -10,7 +10,7 @@ using cpputils::CurlHttpClient;
 using std::make_shared;
 using cpputils::IOStreamConsole;
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     auto &keyGenerator = Random::OSRandom();
     return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>(), make_shared<CurlHttpClient>()).main(argc, argv);
 }

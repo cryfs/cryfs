@@ -6,19 +6,12 @@
 
 class ProgramOptionsTestBase: public ::testing::Test {
 public:
-    std::vector<char*> options(std::initializer_list<const char*> options) {
-        std::vector<char*> result;
-        for (auto option : options) {
-            result.push_back(const_cast<char*>(option));
-        }
-        return result;
-    }
 
-    void EXPECT_VECTOR_EQ(std::initializer_list<const char*> expected, const std::vector<char*> &actual) {
-        std::vector<const char*> expectedVec(expected);
-        EXPECT_EQ(expectedVec.size(), actual.size());
+    void EXPECT_VECTOR_EQ(std::initializer_list<std::string> expected, const std::vector<std::string> &actual) {
+        std::vector<std::string> expectedVec(expected);
+        ASSERT_EQ(expectedVec.size(), actual.size());
         for(unsigned int i = 0; i < expectedVec.size(); ++i) {
-            EXPECT_EQ(std::string(expectedVec[i]), std::string(actual[i]));
+            EXPECT_EQ(expectedVec[i], actual[i]);
         }
     }
 };
