@@ -12,6 +12,7 @@ cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
       _cipher(_crydevice->config().Cipher()),
       _mountdir(none),
       _unmount_idle(none),
+      _run_in_foreground(false),
       _fuse_arguments() {
 }
 
@@ -25,6 +26,11 @@ cryfs_status cryfs_mount_handle::set_mountdir(const string &mountdir) {
     }
     //TODO Handle (and add test cases for) missing permissions
     _mountdir = mountdir;
+    return cryfs_success;
+}
+
+cryfs_status cryfs_mount_handle::set_run_in_foreground(bool run_in_foreground) {
+    _run_in_foreground = run_in_foreground;
     return cryfs_success;
 }
 

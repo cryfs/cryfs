@@ -101,6 +101,16 @@ TEST_F(Mount_Test, set_mountdir_valid) {
     EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
 }
 
+TEST_F(Mount_Test, set_run_in_foreground_true) {
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_set_run_in_foreground(handle, true));
+}
+
+TEST_F(Mount_Test, set_run_in_foreground_false) {
+    create_and_load_filesystem();
+    EXPECT_SUCCESS(cryfs_mount_set_run_in_foreground(handle, false));
+}
+
 TEST_F(Mount_Test, set_logfile_notexisting) {
     create_and_load_filesystem();
     EXPECT_EQ(cryfs_error_INVALID_LOGFILE, cryfs_mount_set_logfile(handle, NOTEXISTING_LOGFILE.c_str(), NOTEXISTING_LOGFILE.size()));

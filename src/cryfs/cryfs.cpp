@@ -30,6 +30,10 @@ cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **handle
     return context->load(handle);
 }
 
+cryfs_status cryfs_mount_set_run_in_foreground(cryfs_mount_handle *handle, bool run_in_foreground) {
+    return handle->set_run_in_foreground(run_in_foreground);
+}
+
 cryfs_status cryfs_mount_set_mountdir(cryfs_mount_handle *handle, const char *mountdir, size_t mountdir_length) {
     return handle->set_mountdir(string(mountdir, mountdir_length));
 }

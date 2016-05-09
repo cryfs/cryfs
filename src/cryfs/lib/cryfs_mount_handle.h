@@ -10,6 +10,7 @@ public:
 
     const char *get_ciphername() const;
     cryfs_status set_mountdir(const std::string &mountdir);
+    cryfs_status set_run_in_foreground(bool foreground);
     cryfs_status set_logfile(const boost::filesystem::path &logfile);
     cryfs_status set_unmount_idle(const std::chrono::seconds timeout);
     cryfs_status add_fuse_argument(const std::string &argument);
@@ -22,6 +23,7 @@ private:
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;
     boost::optional<std::chrono::seconds> _unmount_idle;
+    bool _run_in_foreground;
     std::vector<std::string> _fuse_arguments;
 
     DISALLOW_COPY_AND_ASSIGN(cryfs_mount_handle);
