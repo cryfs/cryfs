@@ -25,21 +25,21 @@ class Load_Test_With_Filesystem : public C_Library_Test {
 public:
     Load_Test_With_Filesystem(): basedir(), externalconfig(false) {}
 
-    void create_filesystem(const bf::path &basedir, const optional<bf::path> &configfile_path = none) {
+    void create_filesystem(const bf::path &basedir, const optional<bf::path> &configfile_path = none, const std::string &cipher = "aes-256-gcm") {
         bf::path actual_configfile_path;
         if (configfile_path == none) {
             actual_configfile_path = basedir / "cryfs.config";
         } else {
             actual_configfile_path = *configfile_path;
         }
-        auto configfile = create_configfile(actual_configfile_path);
+        auto configfile = create_configfile(actual_configfile_path, cipher);
         auto blockstore = make_unique_ref<OnDiskBlockStore>(basedir);
         CryDevice device(std::move(configfile), std::move(blockstore));
     }
 
-    CryConfigFile create_configfile(const bf::path &configfile_path) {
+    CryConfigFile create_configfile(const bf::path &configfile_path, const std::string &cipher) {
         CryConfig config;
-        config.SetCipher("aes-256-gcm");
+        config.SetCipher(cipher);
         config.SetEncryptionKey(AES256_GCM::CreateKey(Random::PseudoRandom()).ToString());
         config.SetRootBlob("");
         config.SetBlocksizeBytes(32*1024);
@@ -61,7 +61,7 @@ public:
     void remove_all_blocks_in(const bf::path &dir) {
         for (bf::directory_iterator iter(dir); iter != bf::directory_iterator(); ++iter) {
             if (iter->path().filename() != "cryfs.config") {
-                bf::remove(iter->path());
+                bf::remove_all(iter->path());
             }
         }
     }
@@ -80,6 +80,29 @@ public:
 
     void set_externalconfig() {
         EXPECT_SUCCESS(cryfs_load_set_externalconfig(context, externalconfig.path().native().c_str(), externalconfig.path().native().size()));
+    }
+
+    cryfs_mount_handle *load_with_externalconfig() {
+        set_basedir();
+        set_password();
+        set_externalconfig();
+        cryfs_mount_handle *handle = nullptr;
+        EXPECT_SUCCESS(cryfs_load(context, &handle));
+        return handle;
+    }
+
+    cryfs_mount_handle *load_with_internalconfig() {
+        set_basedir();
+        set_password();
+        cryfs_mount_handle *handle = nullptr;
+        EXPECT_SUCCESS(cryfs_load(context, &handle));
+        return handle;
+    }
+
+    void EXPECT_CIPHER_IS(const std::string &expectedCipher, cryfs_mount_handle *handle) {
+        const char *actualCipher = nullptr;
+        EXPECT_SUCCESS(cryfs_mount_get_ciphername(handle, &actualCipher));
+        EXPECT_EQ(expectedCipher, std::string(actualCipher));
     }
 
     TempDir basedir;
@@ -164,4 +187,30 @@ TEST_F(Load_Test_With_Filesystem, load_incompatible_version) {
     set_externalconfig();
     set_password();
     EXPECT_LOAD_ERROR(cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION);
+}
+
+TEST_F(Load_Test_With_Filesystem, load_takescorrectconfigfile_onlyinternal) {
+    create_filesystem(basedir.path(), none, "aes-256-gcm"); // passing none as config file creates an internal config file
+    auto handle = load_with_internalconfig();
+    EXPECT_CIPHER_IS("aes-256-gcm", handle);
+}
+
+TEST_F(Load_Test_With_Filesystem, load_takescorrectconfigfile_onlyexternal) {
+    create_filesystem(basedir.path(), externalconfig.path(), "aes-256-gcm");
+    auto handle = load_with_externalconfig();
+    EXPECT_CIPHER_IS("aes-256-gcm", handle);
+}
+
+TEST_F(Load_Test_With_Filesystem, load_takescorrectconfigfile_takeexternal) {
+    create_filesystem(basedir.path(), none, "aes-256-gcm");
+    create_configfile(externalconfig.path(), "twofish-256-cfb");
+    auto handle = load_with_externalconfig();
+    EXPECT_CIPHER_IS("twofish-256-cfb", handle);
+}
+
+TEST_F(Load_Test_With_Filesystem, load_takescorrectconfigfile_takeinternal) {
+    create_filesystem(basedir.path(), none, "aes-256-gcm");
+    create_configfile(externalconfig.path(), "twofish-256-cfb");
+    auto handle = load_with_internalconfig();
+    EXPECT_CIPHER_IS("aes-256-gcm", handle);
 }

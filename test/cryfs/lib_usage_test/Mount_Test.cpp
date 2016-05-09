@@ -153,5 +153,3 @@ TEST_F(Mount_Test, mount) {
     set_mountdir();
     EXPECT_SUCCESS(cryfs_mount(handle));
 }
-
-//TODO Test it takes the correct config file when there is an external one specified but there also is one in the directory (for example the test could look at the cipher used to distinguish)
