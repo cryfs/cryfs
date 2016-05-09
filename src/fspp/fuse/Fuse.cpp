@@ -210,6 +210,11 @@ fuse_operations *operations() {
 }
 
 Fuse::~Fuse() {
+  for(char *arg : _argv) {
+    delete arg;
+    arg = nullptr;
+  }
+  _argv.clear();
 }
 
 Fuse::Fuse(Filesystem *fs)
@@ -224,10 +229,25 @@ void Fuse::_logUnknownException() {
   LOG(ERROR) << "Unknown exception thrown";
 }
 
-void Fuse::run(int argc, char **argv) {
-  vector<char*> _argv(argv, argv + argc);
-  _mountdir = argv[1];
+void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
+  _mountdir = mountdir;
+
+  ASSERT(_argv.size() == 0, "Filesystem already started");
+
+  _argv.reserve(2 + fuseOptions.size());
+  _argv.push_back(_create_c_string("fspp")); // The first argument is the executable name
+  _argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
+  for (const string &option : fuseOptions) {
+    _argv.push_back(_create_c_string(option));
+  }
   fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
+}
+
+char *Fuse::_create_c_string(const string &str) {
+  // The memory allocated here is destroyed in the destructor of the Fuse class.
+  char *c_str = new char[str.size()+1];
+  std::memcpy(c_str, str.c_str(), str.size()+1);
+  return c_str;
 }
 
 bool Fuse::running() const {

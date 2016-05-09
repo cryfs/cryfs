@@ -243,8 +243,7 @@ namespace cryfs {
 #else
             std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
 #endif
-            vector<char *> fuseOptions = options.fuseOptions();
-            fuse.run(fuseOptions.size(), fuseOptions.data());
+            fuse.run(options.mountDir(), options.fuseOptions());
         } catch (const std::exception &e) {
             LOG(ERROR) << "Crashed: " << e.what();
         } catch (...) {
@@ -363,7 +362,7 @@ namespace cryfs {
         return false;
     }
 
-    int Cli::main(int argc, char *argv[]) {
+    int Cli::main(int argc, const char *argv[]) {
         cpputils::showBacktraceOnSigSegv();
         _showVersion();
 

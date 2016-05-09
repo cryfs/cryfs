@@ -9,12 +9,11 @@ using std::string;
 
 namespace cryfs {
     namespace program_options {
-        pair<vector<char*>, vector<char*>> splitAtDoubleDash(const vector<char*> &options) {
+        pair<vector<string>, vector<string>> splitAtDoubleDash(const vector<string> &options) {
             auto doubleDashIterator = std::find(options.begin(), options.end(), string("--"));
-            vector<char*> beforeDoubleDash(options.begin(), doubleDashIterator);
-            vector<char*> afterDoubleDash;
-            afterDoubleDash.reserve(options.size()-beforeDoubleDash.size()+1);
-            afterDoubleDash.push_back(options[0]);
+            vector<string> beforeDoubleDash(options.begin(), doubleDashIterator);
+            vector<string> afterDoubleDash;
+            afterDoubleDash.reserve(options.size()-beforeDoubleDash.size());
             if (options.end() >= doubleDashIterator+1) {
                 std::copy(doubleDashIterator + 1, options.end(), std::back_inserter(afterDoubleDash));
             }

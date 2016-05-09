@@ -15,12 +15,12 @@ using std::string;
 using boost::optional;
 using boost::none;
 
-Parser::Parser(int argc, char *argv[])
+Parser::Parser(int argc, const char *argv[])
         :_options(_argsToVector(argc, argv)) {
 }
 
-vector<char*> Parser::_argsToVector(int argc, char *argv[]) {
-    vector<char*> result;
+vector<string> Parser::_argsToVector(int argc, const char *argv[]) {
+    vector<string> result;
     for(int i = 0; i < argc; ++i) {
         result.push_back(argv[i]);
     }
@@ -28,7 +28,7 @@ vector<char*> Parser::_argsToVector(int argc, char *argv[]) {
 }
 
 ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
-    pair<vector<char*>, vector<char*>> options = splitAtDoubleDash(_options);
+    pair<vector<string>, vector<string>> options = splitAtDoubleDash(_options);
     po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
 
     if (!vm.count("base-dir")) {
@@ -77,7 +77,7 @@ void Parser::_checkValidCipher(const string &cipher, const vector<string> &suppo
     }
 }
 
-po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options, const vector<string> &supportedCiphers) {
+po::variables_map Parser::_parseOptionsOrShowHelp(const vector<string> &options, const vector<string> &supportedCiphers) {
     try {
         return _parseOptions(options, supportedCiphers);
     } catch(const std::exception &e) {
@@ -86,14 +86,15 @@ po::variables_map Parser::_parseOptionsOrShowHelp(const vector<char*> options, c
     }
 }
 
-po::variables_map Parser::_parseOptions(const vector<char*> options, const vector<string> &supportedCiphers) {
+po::variables_map Parser::_parseOptions(const vector<string> &options, const vector<string> &supportedCiphers) {
     po::options_description desc;
     po::positional_options_description positional_desc;
     _addAllowedOptions(&desc);
     _addPositionalOptionForBaseDir(&desc, &positional_desc);
 
     po::variables_map vm;
-    po::store(po::command_line_parser(options.size(), options.data())
+    vector<const char*> _options = _to_const_char_vector(options);
+    po::store(po::command_line_parser(_options.size(), _options.data())
                       .options(desc).positional(positional_desc).run(), vm);
     if (vm.count("help")) {
         _showHelpAndExit();
@@ -104,6 +105,15 @@ po::variables_map Parser::_parseOptions(const vector<char*> options, const vecto
     po::notify(vm);
 
     return vm;
+}
+
+vector<const char*> Parser::_to_const_char_vector(const vector<string> &options) {
+    vector<const char*> result;
+    result.reserve(options.size());
+    for (const string &option : options) {
+        result.push_back(option.c_str());
+    }
+    return result;
 }
 
 void Parser::_addAllowedOptions(po::options_description *desc) {

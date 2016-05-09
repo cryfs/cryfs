@@ -21,7 +21,7 @@ public:
   explicit Fuse(Filesystem *fs);
   ~Fuse();
 
-  void run(int argc, char **argv);
+  void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   bool running() const;
   void stop();
 
@@ -59,9 +59,11 @@ public:
 private:
   static void _logException(const std::exception &e);
   static void _logUnknownException();
+  static char *_create_c_string(const std::string &str);
 
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
+  std::vector<char*> _argv;
   bool _running;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);

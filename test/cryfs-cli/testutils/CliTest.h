@@ -32,11 +32,11 @@ public:
     }
 
     void run(std::vector<const char*> args) {
-        std::vector<char*> _args;
+        std::vector<const char*> _args;
         _args.reserve(args.size()+1);
-        _args.push_back(const_cast<char*>("cryfs"));
+        _args.push_back("cryfs");
         for (const char *arg : args) {
-            _args.push_back(const_cast<char*>(arg));
+            _args.push_back(arg);
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
         // Write 2x 'pass\n' to stdin so Cryfs can read it as password (+ password confirmation prompt)
