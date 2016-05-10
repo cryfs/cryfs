@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CRYFS_CRYFS_MOUNT_HANDLE_H
 #define CRYFS_CRYFS_MOUNT_HANDLE_H
 

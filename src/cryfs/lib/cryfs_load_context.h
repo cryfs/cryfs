@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CRYFS_CRYFS_LOAD_CONTEXT_H
 #define CRYFS_CRYFS_LOAD_CONTEXT_H
 
