@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "cryfs_export.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
