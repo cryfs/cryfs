@@ -87,7 +87,6 @@ Action<void(int, struct ::stat*)> FuseTest::ReturnIsFileFstatWithSize(size_t siz
       result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
       result->st_nlink = 1;
       result->st_size = size;
-      std::cout << "Return size: " << size <<std::endl;
   });
 }
 
