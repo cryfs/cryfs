@@ -51,9 +51,9 @@ public:
 
     void create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
         create_filesystem(basedir.path(), cipher);
-        EXPECT_EQ(cryfs_success, cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
-        EXPECT_EQ(cryfs_success, cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
-        EXPECT_EQ(cryfs_success, cryfs_load(context, &handle));
+        EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
+        EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
+        EXPECT_SUCCESS(cryfs_load(context, &handle));
     }
 
     string get_ciphername(cryfs_mount_handle *handle) {
@@ -146,7 +146,7 @@ TEST_F(Mount_Test, set_fuse_argument) {
 TEST_F(Mount_Test, set_fuse_argument_multiple) {
     const std::string ARGUMENT1 = "argument1";
     const std::string ARGUMENT2 = "another argument";
-    const std::string ARGUMENT3 = "and a thirt one";
+    const std::string ARGUMENT3 = "and a third one";
     create_and_load_filesystem();
     EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT1.c_str(), ARGUMENT1.size()));
     EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, ARGUMENT2.c_str(), ARGUMENT2.size()));
