@@ -85,7 +85,6 @@ cryfs_status cryfs_mount_handle::mount() {
 
 void cryfs_mount_handle::_init_logfile() {
     spdlog::drop("cryfs");
-    //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
     if (_logfile != none) {
         cpputils::logging::setLogger(
                 spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", _logfile->native()));

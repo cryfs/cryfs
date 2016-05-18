@@ -5,6 +5,7 @@ set(SOURCES
         Load_Test_Without_Filesystem.cpp
         Mount_Test.cpp
         Unmount_Test.cpp
+        testutils/UnmountAfterTimeout.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

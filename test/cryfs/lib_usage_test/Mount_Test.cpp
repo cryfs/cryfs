@@ -4,6 +4,7 @@
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include "testutils/C_Library_Test.h"
 #include <gitversion/gitversion.h>
+#include "testutils/UnmountAfterTimeout.h"
 
 using cryfs::CryConfig;
 using cryfs::CryConfigFile;
@@ -64,6 +65,14 @@ public:
 
     void set_mountdir() {
         EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+    }
+
+    void set_run_in_foreground(bool foreground = true) {
+        EXPECT_SUCCESS(cryfs_mount_set_run_in_foreground(handle, foreground));
+    }
+
+    void mount() {
+        EXPECT_SUCCESS(cryfs_mount(handle));
     }
 
     void unmount() {
@@ -169,3 +178,28 @@ TEST_F(Mount_Test, mount) {
     std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
     unmount(); // cleanup
 }
+
+TEST_F(Mount_Test, mount_in_background) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+    mount();
+    // Test it is running in background. If it weren't, the call to mount() would be blocking and the test wouldn't continue.
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    unmount(); // cleanup
+}
+
+TEST_F(Mount_Test, mount_in_foreground) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+
+    UnmountAfterTimeout unmounter(mountdir.path());
+    mount();
+    EXPECT_TRUE(unmounter.timeoutPassed()); // Expect that we only get here once the unmount timeout passed.
+}
+
+//TODO mount_logfilenotspecified_foreground_logstostderr
+//TODO mount_logfilenotspecified_background_logstosyslog
+//TODO mount_logfilespecified_foreground_logstofile
+//TODO mount_logfilespecified_background_logstofile
