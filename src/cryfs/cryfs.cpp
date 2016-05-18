@@ -2,6 +2,7 @@
 #include <iostream>
 #include "cryfs.h"
 #include "lib/cryfs_load_context.h"
+#include "lib/cryfs_unmounter.h"
 
 using std::string;
 
@@ -57,4 +58,8 @@ cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t u
 
 cryfs_status cryfs_mount(cryfs_mount_handle *handle) {
     return handle->mount();
+}
+
+cryfs_status cryfs_unmount(const char *mountdir, size_t mountdir_length) {
+    return cryfs_unmounter::unmount(string(mountdir, mountdir_length));
 }

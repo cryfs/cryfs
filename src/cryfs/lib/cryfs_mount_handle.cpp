@@ -1,9 +1,13 @@
+#include <fspp/impl/FilesystemImpl.h>
+#include <fspp/fuse/Fuse.h>
+#include <cpp-utils/process/daemonize.h>
 #include "cryfs_mount_handle.h"
 
 using cpputils::unique_ref;
 using cryfs::CryDevice;
 using boost::none;
 using std::string;
+using std::vector;
 namespace bf = boost::filesystem;
 
 cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
@@ -57,6 +61,37 @@ cryfs_status cryfs_mount_handle::mount() {
     if (_mountdir == none) {
         return cryfs_error_MOUNTDIR_NOT_SET;
     }
-    //TODO
+
+    _init_logfile();
+
+    fspp::FilesystemImpl fsimpl(_crydevice.get());
+    fspp::fuse::Fuse fuse(&fsimpl);
+
+    //TODO Test auto unmounting after idle timeout
+    //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
+    /*auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
+    if (idleUnmounter != none) {
+        device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
+    }*/
+
+    if (_run_in_foreground) {
+        fuse.runInForeground(*_mountdir, _fuse_arguments);
+    } else {
+        fuse.runInBackground(*_mountdir, _fuse_arguments);
+    }
+
     return cryfs_success;
+}
+
+void cryfs_mount_handle::_init_logfile() {
+    spdlog::drop("cryfs");
+    //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
+    if (_logfile != none) {
+        cpputils::logging::setLogger(
+                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", _logfile->native()));
+    } else if (_run_in_foreground) {
+        cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
+    } else {
+        cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
+    }
 }

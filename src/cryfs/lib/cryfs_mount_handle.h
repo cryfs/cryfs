@@ -19,6 +19,8 @@ public:
     cryfs_status mount();
 
 private:
+    void _init_logfile();
+
     cpputils::unique_ref<cryfs::CryDevice> _crydevice;
     std::string _cipher;
     boost::optional<boost::filesystem::path> _mountdir;

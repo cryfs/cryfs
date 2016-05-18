@@ -65,6 +65,10 @@ public:
     void set_mountdir() {
         EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
     }
+
+    void unmount() {
+        EXPECT_SUCCESS(cryfs_unmount(mountdir.path().native().c_str(), mountdir.path().native().size()));
+    }
 };
 const string Mount_Test::PASSWORD = "mypassword";
 const string Mount_Test::NOTEXISTING_DIR = "/some/notexisting/dir";
@@ -162,4 +166,6 @@ TEST_F(Mount_Test, mount) {
     create_and_load_filesystem();
     set_mountdir();
     EXPECT_SUCCESS(cryfs_mount(handle));
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    unmount(); // cleanup
 }

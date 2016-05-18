@@ -7,6 +7,7 @@ set(SOURCES
         lib/cryfs_load_context.cpp
         lib/cryfs_mount_handle.cpp
         lib/mount_handle_list.cpp
+        lib/cryfs_unmounter.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
