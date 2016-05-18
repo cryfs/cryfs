@@ -14,18 +14,20 @@
 
 using namespace cpputils::logging;
 
+using std::function;
+
 namespace cpputils {
 
     //TODO Test daemonize()
 
-    void daemonize() {
+    void daemonize(function<void ()> childProgram) {
             pid_t pid = fork();
             if (pid < 0) {
-                exit(EXIT_FAILURE);
+                throw std::runtime_error("fork() failed.");
             }
             if (pid > 0) {
-                //We're the parent process. Exit.
-                exit(EXIT_SUCCESS);
+                // We're the parent process. Return.
+                return;
             }
 
             // We're the child process.
@@ -38,7 +40,7 @@ namespace cpputils {
                 exit(EXIT_FAILURE);
             }
 
-            // Change the current working directory to a directory that's always existin
+            // Change the current working directory to a directory that's always existing
             if ((chdir("/")) < 0) {
                 LOG(ERROR) << "Failed to change working directory for daemon process";
                 exit(EXIT_FAILURE);
@@ -48,5 +50,11 @@ namespace cpputils {
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
             close(STDERR_FILENO);
+
+            // Call child program
+            childProgram();
+
+            // Exit (child process shouldn't return to code that created it)
+            exit(EXIT_SUCCESS);
     };
 }
