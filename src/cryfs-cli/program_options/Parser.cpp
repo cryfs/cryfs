@@ -46,9 +46,6 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         configfile = bf::absolute(vm["config"].as<string>());
     }
     bool foreground = vm.count("foreground");
-    if (foreground) {
-        options.second.push_back(const_cast<char*>("-f"));
-    }
     optional<double> unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();

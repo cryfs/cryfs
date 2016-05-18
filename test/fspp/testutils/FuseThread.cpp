@@ -20,7 +20,7 @@ FuseThread::FuseThread(Fuse *fuse)
 
 void FuseThread::start(const bf::path &mountDir, const vector<string> &fuseOptions) {
   _child = thread([this, mountDir, fuseOptions] () {
-    _fuse->run(mountDir, fuseOptions);
+    _fuse->runInForeground(mountDir, fuseOptions);
   });
   //Wait until it is running (busy waiting is simple and doesn't hurt much here)
   while(!_fuse->running()) {}

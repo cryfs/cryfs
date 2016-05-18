@@ -21,7 +21,8 @@ public:
   explicit Fuse(Filesystem *fs);
   ~Fuse();
 
-  void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  void runInBackground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  void runInForeground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   bool running() const;
   void stop();
 
@@ -60,6 +61,8 @@ private:
   static void _logException(const std::exception &e);
   static void _logUnknownException();
   static char *_create_c_string(const std::string &str);
+  static void _removeAndWarnIfExists(std::vector<std::string> *fuseOptions, const std::string &option);
+  void _run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
 
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
