@@ -18,7 +18,8 @@ set(SOURCES
     process/subprocess_include_test.cpp
     process/pipe/PipeDescriptorTest.cpp
     process/pipe/PipeStreamEndpointTest.cpp
-        process/pipe/PipeReadWriteTest.cpp
+    process/pipe/PipeReadWriteTest.cpp
+    process/pipe/PipeBuilderTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp
