@@ -5,6 +5,7 @@
 #include "testutils/C_Library_Test.h"
 #include <gitversion/gitversion.h>
 #include "testutils/UnmountAfterTimeout.h"
+#include <fstream>
 
 using cryfs::CryConfig;
 using cryfs::CryConfigFile;
@@ -50,11 +51,17 @@ public:
         return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
     }
 
-    void create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
-        create_filesystem(basedir.path(), cipher);
+    void load_filesystem() {
+        handle = nullptr;
         EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
         EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
         EXPECT_SUCCESS(cryfs_load(context, &handle));
+        EXPECT_NE(nullptr, handle);
+    }
+
+    void create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
+        create_filesystem(basedir.path(), cipher);
+        load_filesystem();
     }
 
     string get_ciphername(cryfs_mount_handle *handle) {
@@ -77,6 +84,27 @@ public:
 
     void unmount() {
         EXPECT_SUCCESS(cryfs_unmount(mountdir.path().native().c_str(), mountdir.path().native().size()));
+    }
+
+    void mount_filesystem() {
+        set_mountdir();
+        mount();
+    }
+
+    void create_and_mount_filesystem() {
+        create_and_load_filesystem();
+        mount_filesystem();
+        std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    }
+
+    void reload_and_mount_filesystem() {
+        reinit_context();
+        load_filesystem();
+        mount_filesystem();
+    }
+
+    void create_file(const bf::path &filepath) {
+        std::ofstream(filepath.c_str());
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
@@ -179,6 +207,24 @@ TEST_F(Mount_Test, mount) {
     unmount(); // cleanup
 }
 
+TEST_F(Mount_Test, try_mount_twice_before_unmount) {
+    create_and_load_filesystem();
+    set_mountdir();
+    EXPECT_SUCCESS(cryfs_mount(handle));
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    EXPECT_EQ(cryfs_error_MOUNTHANDLE_ALREADY_USED, cryfs_mount(handle));
+    unmount(); // cleanup
+}
+
+TEST_F(Mount_Test, try_mount_twice_after_unmount) {
+    create_and_load_filesystem();
+    set_mountdir();
+    EXPECT_SUCCESS(cryfs_mount(handle));
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    unmount();
+    EXPECT_EQ(cryfs_error_MOUNTHANDLE_ALREADY_USED, cryfs_mount(handle));
+}
+
 TEST_F(Mount_Test, mount_in_background) {
     create_and_load_filesystem();
     set_mountdir();
@@ -199,7 +245,33 @@ TEST_F(Mount_Test, mount_in_foreground) {
     EXPECT_TRUE(unmounter.timeoutPassed()); // Expect that we only get here once the unmount timeout passed.
 }
 
+TEST_F(Mount_Test, mountdir_is_correct) {
+    const auto filepath = mountdir.path() / "myfile";
+    create_and_mount_filesystem();
+    EXPECT_FALSE(bf::exists(filepath));
+    create_file(filepath);
+    EXPECT_TRUE(bf::exists(filepath));
+    std::this_thread::sleep_for(std::chrono::seconds(2)); // TODO This is needed, because the current implementation of daemonize() doesn't return to call the CryDevice destructor on unmount, so Cache won't be written back. Has to be fixed!
+    unmount();
+    EXPECT_FALSE(bf::exists(filepath));
+    reload_and_mount_filesystem();
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+    EXPECT_TRUE(bf::exists(filepath));
+    unmount();
+}
+
+TEST_F(Mount_Test, basedir_is_correct) {
+    create_and_mount_filesystem();
+    auto numBasedirEntries = std::distance(bf::recursive_directory_iterator(basedir.path()), bf::recursive_directory_iterator());
+    create_file(mountdir.path() / "myfile");
+    unmount();
+    auto newNumBasedirEntries = std::distance(bf::recursive_directory_iterator(basedir.path()), bf::recursive_directory_iterator());
+    EXPECT_GT(newNumBasedirEntries, numBasedirEntries);
+}
+
 //TODO mount_logfilenotspecified_foreground_logstostderr
 //TODO mount_logfilenotspecified_background_logstosyslog
 //TODO mount_logfilespecified_foreground_logstofile
 //TODO mount_logfilespecified_background_logstofile
+//TODO Test fuse arguments are applied correctly (choose an easy-to-check argument. allowother for example?)
+//TODO Test unmount_idle

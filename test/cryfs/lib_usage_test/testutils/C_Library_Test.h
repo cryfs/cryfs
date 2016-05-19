@@ -21,6 +21,11 @@ public:
 
     cryfs_load_context *context;
 
+    void reinit_context() {
+        cryfs_load_free(context);
+        EXPECT_SUCCESS(cryfs_load_init(&context));
+    }
+
     void EXPECT_LOAD_SUCCESS() {
         cryfs_mount_handle *handle = nullptr;
         EXPECT_EQ(cryfs_success, cryfs_load(context, &handle));

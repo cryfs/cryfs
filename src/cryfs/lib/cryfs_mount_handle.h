@@ -21,7 +21,7 @@ public:
 private:
     void _init_logfile();
 
-    cpputils::unique_ref<cryfs::CryDevice> _crydevice;
+    std::unique_ptr<cryfs::CryDevice> _crydevice;
     std::string _cipher;
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;

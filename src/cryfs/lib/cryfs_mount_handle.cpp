@@ -11,7 +11,7 @@ using std::vector;
 namespace bf = boost::filesystem;
 
 cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
-    : _crydevice(std::move(crydevice)),
+    : _crydevice(cpputils::to_unique_ptr(std::move(crydevice))),
       // Copy it to make sure we have a valid pointer even if CryDevice invalidates it
       _cipher(_crydevice->config().Cipher()),
       _mountdir(none),
@@ -62,6 +62,10 @@ cryfs_status cryfs_mount_handle::mount() {
         return cryfs_error_MOUNTDIR_NOT_SET;
     }
 
+    if (nullptr == _crydevice) {
+        return cryfs_error_MOUNTHANDLE_ALREADY_USED;
+    }
+
     _init_logfile();
 
     fspp::FilesystemImpl fsimpl(_crydevice.get());
@@ -79,6 +83,8 @@ cryfs_status cryfs_mount_handle::mount() {
     } else {
         fuse.runInBackground(*_mountdir, _fuse_arguments);
     }
+    
+    _crydevice = nullptr; // Free CryDevice in this process
 
     return cryfs_success;
 }
