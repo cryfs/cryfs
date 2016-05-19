@@ -20,7 +20,7 @@ using namespace fspp::fuse;
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 
 // Remove the following line, if you don't want to output each fuse operation on the console
-//#define FSPP_LOG 1
+#define FSPP_LOG 1
 
 namespace {
 int fusepp_getattr(const char *path, struct stat *stbuf) {

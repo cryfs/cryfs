@@ -6,6 +6,11 @@ set(SOURCES
         crypto/kdf/SCryptParameters.cpp
         crypto/kdf/PasswordBasedKDF.cpp
         crypto/RandomPadding.cpp
+        process/pipe/PipeBuilder.cpp
+        process/pipe/PipeDescriptor.cpp
+        process/pipe/PipeReader.cpp
+        process/pipe/PipeStreamEndpoint.cpp
+        process/pipe/PipeWriter.cpp
         process/daemonize.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp

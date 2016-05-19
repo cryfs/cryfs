@@ -16,6 +16,9 @@ set(SOURCES
     pointer/unique_ref_include_test.cpp
     process/daemonize_include_test.cpp
     process/subprocess_include_test.cpp
+    process/pipe/PipeDescriptorTest.cpp
+    process/pipe/PipeStreamEndpointTest.cpp
+        process/pipe/PipeReadWriteTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp
