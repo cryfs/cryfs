@@ -11,7 +11,10 @@ set(SOURCES
         process/pipe/PipeReader.cpp
         process/pipe/PipeStreamEndpoint.cpp
         process/pipe/PipeWriter.cpp
-        process/daemonize.cpp
+        process/daemon/daemonize.cpp
+        process/daemon/Messages.cpp
+        process/daemon/PipeFromChild.cpp
+        process/daemon/PipeToParent.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp
         tempfile/TempDir.cpp

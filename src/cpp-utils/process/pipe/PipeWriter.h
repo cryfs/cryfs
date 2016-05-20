@@ -14,7 +14,7 @@ namespace cpputils {
             PipeWriter(PipeDescriptor fd);
             PipeWriter(PipeWriter &&rhs) = default;
 
-            void write(const std::string &str);
+            void send(const std::string &str);
 
         private:
             PipeStreamEndpoint _stream;

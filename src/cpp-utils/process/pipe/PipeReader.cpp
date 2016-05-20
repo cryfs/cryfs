@@ -9,7 +9,7 @@ using namespace cpputils::process;
 PipeReader::PipeReader(PipeDescriptor fd): _stream(std::move(fd), "r") {
 }
 
-string PipeReader::read() {
+string PipeReader::receive() {
     uint64_t len;
     size_t res = fread(&len, sizeof(len), 1, _stream.stream());
     if (res != 1) {

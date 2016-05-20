@@ -17,35 +17,35 @@ public:
 TEST_F(PipeReadWriteTest, write_then_read) {
     std::thread writeThread([this]() {
         PipeWriter writer = builder.writer();
-        writer.write("Hello");
+        writer.send("Hello");
     });
     writeThread.join();
 
     PipeReader reader = builder.reader();
-    EXPECT_EQ("Hello", reader.read());
+    EXPECT_EQ("Hello", reader.receive());
 }
 
 TEST_F(PipeReadWriteTest, read_then_write) {
     std::thread writeThread([this]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         PipeWriter writer = builder.writer();
-        writer.write("Hello");
+        writer.send("Hello");
     });
 
     PipeReader reader = builder.reader();
-    EXPECT_EQ("Hello", reader.read());
+    EXPECT_EQ("Hello", reader.receive());
     writeThread.join();
 }
 
 TEST_F(PipeReadWriteTest, newline_in_message) {
     std::thread writeThread([this]() {
         PipeWriter writer = builder.writer();
-        writer.write("Hello\n New line");
+        writer.send("Hello\n New line");
     });
     writeThread.join();
 
     PipeReader reader = builder.reader();
-    EXPECT_EQ("Hello\n New line", reader.read());
+    EXPECT_EQ("Hello\n New line", reader.receive());
 }
 
 TEST_F(PipeReadWriteTest, interprocess) {
@@ -57,12 +57,12 @@ TEST_F(PipeReadWriteTest, interprocess) {
         // We're the child process. Send message.
         builder.closeReader();
         PipeWriter writer = builder.writer();
-        writer.write("Hello world");
+        writer.send("Hello world");
         exit(0);
     }
 
     // We're the parent process
     builder.closeWriter();
     PipeReader reader = builder.reader();
-    EXPECT_EQ("Hello world", reader.read());
+    EXPECT_EQ("Hello world", reader.receive());
 }

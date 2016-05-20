@@ -20,6 +20,7 @@ set(SOURCES
     process/pipe/PipeStreamEndpointTest.cpp
     process/pipe/PipeReadWriteTest.cpp
     process/pipe/PipeBuilderTest.cpp
+    process/daemon/DaemonPipeReadWriteTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp

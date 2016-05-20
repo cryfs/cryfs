@@ -8,7 +8,7 @@ using std::string;
 PipeWriter::PipeWriter(PipeDescriptor fd): _stream(std::move(fd), "w") {
 }
 
-void PipeWriter::write(const string &str) {
+void PipeWriter::send(const string &str) {
     uint64_t len = str.size();
     size_t res = fwrite(&len, sizeof(len), 1, _stream.stream());
     if (res != 1) {

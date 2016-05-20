@@ -8,7 +8,7 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <csignal>
-#include <cpp-utils/process/daemonize.h>
+#include <cpp-utils/process/daemon/daemonize.h>
 
 using std::vector;
 using std::string;
@@ -16,6 +16,7 @@ using std::string;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 using namespace fspp::fuse;
+namespace process = cpputils::process;
 
 #define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
 
@@ -242,7 +243,9 @@ void Fuse::runInBackground(const bf::path &mountdir, const vector<string> &fuseO
   vector<string> realFuseOptions = fuseOptions;
   _removeAndWarnIfExists(&realFuseOptions, "-f");
   _removeAndWarnIfExists(&realFuseOptions, "-d");
-  cpputils::daemonize(std::bind(&Fuse::_run, this, mountdir, realFuseOptions));
+  process::daemonize([this, &mountdir, &realFuseOptions] (process::PipeToParent *pipeToParent) {
+      _run(mountdir, realFuseOptions);
+  });
 }
 
 void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {

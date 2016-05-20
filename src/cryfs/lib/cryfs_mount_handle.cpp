@@ -1,6 +1,6 @@
 #include <fspp/impl/FilesystemImpl.h>
 #include <fspp/fuse/Fuse.h>
-#include <cpp-utils/process/daemonize.h>
+#include <cpp-utils/process/daemon/daemonize.h>
 #include "cryfs_mount_handle.h"
 
 using cpputils::unique_ref;

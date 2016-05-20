@@ -14,7 +14,7 @@ namespace cpputils {
             PipeReader(PipeDescriptor fd);
             PipeReader(PipeReader &&rhs) = default;
 
-            std::string read();
+            std::string receive();
 
         private:
             constexpr static const uint64_t MAX_READ_SIZE = 10 * 1024 * 1024;
