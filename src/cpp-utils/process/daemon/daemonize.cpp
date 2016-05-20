@@ -20,7 +20,6 @@ using std::function;
 namespace cpputils {
 namespace process {
 
-//TODO Test daemonize()
 
 PipeFromChild daemonize(function<void (PipeToParent *)> childProgram) {
     PipeBuilder pipe;
@@ -38,6 +37,8 @@ PipeFromChild daemonize(function<void (PipeToParent *)> childProgram) {
     PipeToParent pipeToParent(pipe.writer());
 
     // We're the child process.
+    pipe.closeReader();
+
     umask(0);
 
     // Create a new SID for the child process
@@ -63,6 +64,7 @@ PipeFromChild daemonize(function<void (PipeToParent *)> childProgram) {
         childProgram(&pipeToParent);
     } catch (const std::exception &e) {
         pipeToParent.notifyError(e.what());
+        exit(EXIT_FAILURE);
     }
 
     // Exit (child process shouldn't return to code that created it)
