@@ -2,16 +2,25 @@
 
 #include <cpp-utils/process/pipe/PipeBuilder.h>
 #include <thread>
+#include <cpp-utils/data/Data.h>
 
 using cpputils::process::PipeBuilder;
 using cpputils::process::PipeReader;
 using cpputils::process::PipeWriter;
+using cpputils::Data;
 using std::unique_ptr;
 using std::make_unique;
+using std::string;
 
 class PipeReadWriteTest : public ::testing::Test {
 public:
     PipeBuilder builder;
+
+    string stringWithSize(size_t size) {
+        Data data(size);
+        std::memset(data.data(), 'a', data.size());
+        return string((char*)data.data(), data.size());
+    }
 };
 
 TEST_F(PipeReadWriteTest, write_then_read) {
@@ -46,6 +55,27 @@ TEST_F(PipeReadWriteTest, newline_in_message) {
 
     PipeReader reader = builder.reader();
     EXPECT_EQ("Hello\n New line", reader.receive());
+}
+
+TEST_F(PipeReadWriteTest, WriteMaximumSize) {
+    string str = stringWithSize(PipeReader::MAX_READ_SIZE);
+    std::thread writeThread([this, str]() {
+        PipeWriter writer = builder.writer();
+        writer.send(str);
+    });
+    writeThread.join();
+
+    PipeReader reader = builder.reader();
+    EXPECT_EQ(str, reader.receive());
+}
+
+TEST_F(PipeReadWriteTest, WriteLargerThanMaximumSize) {
+    string str = stringWithSize(PipeReader::MAX_READ_SIZE+1);
+    PipeWriter writer = builder.writer();
+    EXPECT_THROW(
+      writer.send(str),
+      std::runtime_error
+    );
 }
 
 TEST_F(PipeReadWriteTest, interprocess) {
