@@ -23,7 +23,7 @@ string PipeReader::receive() {
 
     Data message(len);
     res = fread(message.data(), len, 1, _stream.stream());
-    if (res != len) {
+    if (res != 1) {
         throw std::runtime_error("Reading message from pipe failed.");
     }
 

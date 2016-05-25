@@ -22,7 +22,7 @@ void PipeWriter::send(const string &str) {
         throw std::runtime_error("Writing message length to pipe failed.");
     }
     res = fwrite(str.c_str(), len, 1, _stream.stream());
-    if (res != len) {
+    if (res != 1) {
         throw std::runtime_error("Writing message to pipe failed.");
     }
     fflush(_stream.stream());

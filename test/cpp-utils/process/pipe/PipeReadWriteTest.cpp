@@ -63,10 +63,11 @@ TEST_F(PipeReadWriteTest, WriteMaximumSize) {
         PipeWriter writer = builder.writer();
         writer.send(str);
     });
-    writeThread.join();
 
     PipeReader reader = builder.reader();
     EXPECT_EQ(str, reader.receive());
+
+    writeThread.join();
 }
 
 TEST_F(PipeReadWriteTest, WriteLargerThanMaximumSize) {
