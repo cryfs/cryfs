@@ -1,6 +1,6 @@
 #include "DirEntryList.h"
 #include <limits>
-#include "time.h"
+#include <cpp-utils/system/time.h>
 
 //TODO Get rid of that in favor of better error handling
 #include <fspp/fuse/FuseErrnoException.h>
@@ -59,7 +59,7 @@ void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryT
 void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     auto insert_pos = _findUpperBound(blobKey);
-    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, time::now());
+    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, cpputils::time::now());
 }
 
 void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,

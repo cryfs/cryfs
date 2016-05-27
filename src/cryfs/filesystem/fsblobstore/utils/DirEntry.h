@@ -4,7 +4,7 @@
 
 #include <blockstore/utils/Key.h>
 #include <fspp/fs_interface/Dir.h>
-#include "time.h"
+#include <cpp-utils/system/time.h>
 
 namespace cryfs {
     namespace fsblobstore {
@@ -166,7 +166,7 @@ namespace cryfs {
         }
 
         inline void DirEntry::_updateLastMetadataChangeTime() {
-            setLastMetadataChangeTime(time::now());
+            setLastMetadataChangeTime(cpputils::time::now());
         }
 
     }
