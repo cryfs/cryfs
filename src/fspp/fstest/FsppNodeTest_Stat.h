@@ -80,5 +80,3 @@ REGISTER_TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly,
 #endif
 
 //TODO More test cases
-
-//TODO Test all operations do (or don't) affect timestamps correctly
