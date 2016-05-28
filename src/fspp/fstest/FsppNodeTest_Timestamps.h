@@ -62,17 +62,209 @@ public:
         EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
     }
 
-    void Test_Rename() {
-        auto node = this->CreateNode("/mynode");
+    void Test_Rename_Error_TargetParentDirDoesntExist() {
+        auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
-            node->rename("newnodename");
+            try {
+                node->rename("/notexistingdir/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(ENOENT, e.getErrno()); //Rename fails, everything is ok.
+            }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
     }
 
-    // TODO Other rename cases (e.g. failed renames/error paths, moving to different dir, ...) from FsppNodeTest_Rename
+    void Test_Rename_Error_TargetParentDirIsFile() {
+        auto node = this->CreateNode("/oldname");
+        this->CreateFile("/somefile");
+        auto operation = [&node] () {
+            try {
+                node->rename("/somefile/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    }
+
+    void Test_Rename_Error_RootDir() {
+        // TODO Re-enable this test once the root dir stores timestamps correctly
+        /*
+        auto root = this->LoadDir("/");
+        auto operation = [&root] () {
+            try {
+                root->rename("/newname");
+                EXPECT_TRUE(false); // expect throws
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(EBUSY, e.getErrno()); //Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*root, operation);
+         */
+    }
+
+    void Test_Rename_InRoot() {
+        auto node = this->CreateNode("/oldname");
+        auto operation = [&node] () {
+            node->rename("/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_InNested() {
+        this->CreateDir("/mydir");
+        auto node = this->CreateNode("/mydir/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_RootToNested_SameName() {
+        this->CreateDir("/mydir");
+        auto node = this->CreateNode("/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir/oldname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_RootToNested_NewName() {
+        this->CreateDir("/mydir");
+        auto node = this->CreateNode("/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_NestedToRoot_SameName() {
+        this->CreateDir("/mydir");
+        auto node = this->CreateNode("/mydir/oldname");
+        auto operation = [&node] () {
+            node->rename("/oldname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_NestedToRoot_NewName() {
+        this->CreateDir("/mydir");
+        auto node = this->CreateNode("/mydir/oldname");
+        auto operation = [&node] () {
+            node->rename("/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_NestedToNested_SameName() {
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        auto node = this->CreateNode("/mydir1/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir2/oldname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_NestedToNested_NewName() {
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        auto node = this->CreateNode("/mydir1/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir2/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_ToItself() {
+        auto node = this->CreateNode("/oldname");
+        auto operation = [&node] () {
+            node->rename("/oldname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_InSameDir() {
+        auto node = this->CreateNode("/oldname");
+        this->CreateNode("/newname");
+        auto operation = [&node] () {
+            node->rename("/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_InDifferentDir() {
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        this->CreateNode("/mydir2/newname");
+        auto node = this->CreateNode("/mydir1/oldname");
+        auto operation = [&node] () {
+            node->rename("/mydir2/newname");
+        };
+        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_Error_DirWithFile_InSameDir() {
+        auto node = this->CreateFile("/oldname");
+        this->CreateDir("/newname");
+        auto operation = [&node] () {
+            try {
+                node->rename("/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(EISDIR, e.getErrno()); //Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_Error_DirWithFile_InDifferentDir() {
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        auto node = this->CreateFile("/mydir1/oldname");
+        this->CreateDir("/mydir2/newname");
+        auto operation = [&node] () {
+            try {
+                node->rename("/mydir2/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(EISDIR, e.getErrno());//Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_Error_FileWithDir_InSameDir() {
+        auto node = this->CreateDir("/oldname");
+        this->CreateFile("/newname");
+        auto operation = [&node] () {
+            try {
+                node->rename("/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    }
+
+    void Test_Rename_Overwrite_Error_FileWithDir_InDifferentDir() {
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        auto node = this->CreateDir("/mydir1/oldname");
+        this->CreateFile("/mydir2/newname");
+        auto operation = [&node] () {
+            try {
+                node->rename("/mydir2/newname");
+                EXPECT_TRUE(false); // expect rename to fail
+            } catch (const fspp::fuse::FuseErrnoException &e) {
+                EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
+            }
+        };
+        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    }
 
     void Test_Utimens() {
         auto node = this->CreateNode("/mynode");
@@ -93,7 +285,24 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Timestamps,
     Chmod,
     Chown,
     Access,
-    Rename,
+    Rename_Error_TargetParentDirDoesntExist,
+    Rename_Error_TargetParentDirIsFile,
+    Rename_Error_RootDir,
+    Rename_InRoot,
+    Rename_InNested,
+    Rename_RootToNested_SameName,
+    Rename_RootToNested_NewName,
+    Rename_NestedToRoot_SameName,
+    Rename_NestedToRoot_NewName,
+    Rename_NestedToNested_SameName,
+    Rename_NestedToNested_NewName,
+    Rename_ToItself,
+    Rename_Overwrite_InSameDir,
+    Rename_Overwrite_InDifferentDir,
+    Rename_Overwrite_Error_DirWithFile_InSameDir,
+    Rename_Overwrite_Error_DirWithFile_InDifferentDir,
+    Rename_Overwrite_Error_FileWithDir_InSameDir,
+    Rename_Overwrite_Error_FileWithDir_InDifferentDir,
     Utimens
 );
 

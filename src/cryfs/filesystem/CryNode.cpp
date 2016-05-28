@@ -72,6 +72,8 @@ void CryNode::rename(const bf::path &to) {
     targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.key(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
                                    oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
+    // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
+    _parent = cpputils::to_unique_ptr(std::move(targetDir));
   }
 }
 

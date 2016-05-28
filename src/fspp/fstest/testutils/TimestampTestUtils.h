@@ -70,9 +70,34 @@ public:
     }
 
     void EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(const fspp::Node &node, std::function<void()> operation) {
-        EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(node, operation);
-        EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(node, operation);
-        EXPECT_OPERATION_DOESNT_UPDATE_METADATACHANGE_TIMESTAMP(node, operation);
+        // equivalent to the following, but implemented separately because operation() should only be called once.
+        // EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(node, operation);
+        // EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(node, operation);
+        // EXPECT_OPERATION_DOESNT_UPDATE_METADATACHANGE_TIMESTAMP(node, operation);
+        ensureNodeTimestampsAreOld(node);
+        struct stat oldStat = stat(node);
+        operation();
+        struct stat newStat = stat(node);
+        EXPECT_EQ(oldStat.st_atim, newStat.st_atim);
+        EXPECT_EQ(oldStat.st_mtim, newStat.st_mtim);
+        EXPECT_LE(oldStat.st_ctim, newStat.st_ctim);
+    }
+
+    void EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+        // equivalent to the following, but implemented separately because operation() should only be called once.
+        // EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(node, operation);
+        // EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(node, operation);
+        // EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(node, operation);
+        ensureNodeTimestampsAreOld(node);
+        struct stat oldStat = stat(node);
+        timespec lowerBound = cpputils::time::now();
+        operation();
+        timespec upperBound = cpputils::time::now();
+        struct stat newStat = stat(node);
+        EXPECT_EQ(oldStat.st_atim, newStat.st_atim);
+        EXPECT_EQ(oldStat.st_mtim, newStat.st_mtim);
+        EXPECT_LE(lowerBound, newStat.st_ctim);
+        EXPECT_GE(upperBound, newStat.st_ctim);
     }
 
     struct stat stat(const fspp::Node &node) {
