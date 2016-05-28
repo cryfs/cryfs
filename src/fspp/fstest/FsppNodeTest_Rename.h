@@ -225,5 +225,3 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
 //TODO Test for rename (success AND error cases) that stat values stay unchanged (i.e. mode, uid, gid, access times, ...)
 //TODO Test for rename (success AND error cases) that contents stay unchanged (i.e. file contents, directory children, symlink target)
 //TODO (here and in other fstest operations): Test error paths
-
-//TODO Test all operations do (or don't) affect timestamps correctly
