@@ -40,6 +40,7 @@ CryNode::~CryNode() {
 }
 
 void CryNode::access(int mask) const {
+  (void)mask;
   device()->callFsActionCallbacks();
   //TODO
   return;
