@@ -16,6 +16,20 @@ ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir
     :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground),
      _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
      _logFile(logFile), _fuseOptions(fuseOptions) {
+
+    auto hasNoOption = [&](const char *opt) {
+        for (const string& it : _fuseOptions) {
+            if (std::strncmp(it.c_str(), opt, std::strlen(opt))) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    if (hasNoOption("subtype=cryfs") && hasNoOption("fsname=cryfs@")) {
+               _fuseOptions.push_back("-ofsname=cryfs@"+baseDir.native());
+               _fuseOptions.push_back("-osubtype=cryfs");
+    }
 }
 
 const bf::path &ProgramOptions::baseDir() const {
