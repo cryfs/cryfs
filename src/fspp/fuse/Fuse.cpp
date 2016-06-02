@@ -217,8 +217,8 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs)
-  :_fs(fs), _mountdir(), _running(false) {
+Fuse::Fuse(Filesystem *fs, const std::string &fsname)
+  :_fs(fs), _mountdir(), _running(false), _fsname(fsname) {
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -235,7 +235,7 @@ void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
   ASSERT(_argv.size() == 0, "Filesystem already started");
 
   _argv.reserve(2 + fuseOptions.size());
-  _argv.push_back(_create_c_string("cryfs")); // The first argument is the executable name
+  _argv.push_back(_create_c_string(_fsname)); // The first argument is the file system name
   _argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
   for (const string &option : fuseOptions) {
     _argv.push_back(_create_c_string(option));

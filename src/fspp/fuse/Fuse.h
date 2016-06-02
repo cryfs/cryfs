@@ -18,7 +18,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs);
+  explicit Fuse(Filesystem *fs, const std::string &fsname);
   ~Fuse();
 
   void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
@@ -65,6 +65,7 @@ private:
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
   bool _running;
+  std::string _fsname;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };
