@@ -35,6 +35,7 @@ unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
 }
 
 unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
+  // TODO Should we honor open flags?
   UNUSED(flags);
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();

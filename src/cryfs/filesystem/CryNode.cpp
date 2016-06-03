@@ -41,11 +41,10 @@ CryNode::~CryNode() {
 }
 
 void CryNode::access(int mask) const {
+  // TODO Should we implement access()?
   UNUSED(mask);
   device()->callFsActionCallbacks();
-  //TODO
   return;
-  throw FuseErrnoException(ENOTSUP);
 }
 
 shared_ptr<const DirBlobRef> CryNode::parent() const {

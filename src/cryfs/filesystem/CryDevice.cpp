@@ -135,6 +135,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+  // TODO Do we need path for something? What does it represent from fuse side?
   UNUSED(path);
   callFsActionCallbacks();
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
