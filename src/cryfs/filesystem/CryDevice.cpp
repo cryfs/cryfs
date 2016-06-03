@@ -135,6 +135,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+  UNUSED(path);
   callFsActionCallbacks();
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
   uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();

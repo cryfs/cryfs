@@ -217,8 +217,8 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs)
-  :_fs(fs), _mountdir(), _running(false) {
+Fuse::Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname)
+  :_fs(fs), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -235,10 +235,26 @@ void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
   ASSERT(_argv.size() == 0, "Filesystem already started");
 
   _argv.reserve(2 + fuseOptions.size());
-  _argv.push_back(_create_c_string("fspp")); // The first argument is the executable name
+  _argv.push_back(_create_c_string(_fstype)); // The first argument is the file system name
   _argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
   for (const string &option : fuseOptions) {
     _argv.push_back(_create_c_string(option));
+  }
+  if(_fsname != boost::none) {
+    auto hasNoOption = [&](const char *opt) {
+      for (const string& it : fuseOptions) {
+        if (std::strncmp(it.c_str(), opt, std::strlen(opt))) {
+            return false;
+        }
+      }
+      return true;
+    };
+    if (hasNoOption("subtype=") && hasNoOption("fsname=")) {
+      _argv.push_back(_create_c_string("-o"));
+      _argv.push_back(_create_c_string("fsname="+*_fsname));
+      _argv.push_back(_create_c_string("-o"));
+      _argv.push_back(_create_c_string("subtype="+_fstype));
+    }
   }
   fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
 }

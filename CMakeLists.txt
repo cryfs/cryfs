@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+project(cryfs)
+
 include(utils.cmake)
 
 require_gcc_version(4.8)
