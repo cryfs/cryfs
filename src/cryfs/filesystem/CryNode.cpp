@@ -8,6 +8,7 @@
 #include <fspp/fuse/FuseErrnoException.h>
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/clock_gettime.h>
+#include <cpp-utils/system/stat.h>
 
 namespace bf = boost::filesystem;
 
@@ -123,15 +124,9 @@ void CryNode::stat(struct ::stat *result) const {
     result->st_nlink = 1;
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
-#ifdef __APPLE__
-    result->st_atimespec = now;
-    result->st_mtimespec = now;
-    result->st_ctimespec = now;
-#else
     result->st_atim = now;
     result->st_mtim = now;
     result->st_ctim = now;
-#endif
   } else {
     (*_parent)->statChild(_key, result);
   }

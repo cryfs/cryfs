@@ -9,6 +9,7 @@
 #include "../CryDevice.h"
 #include "FileBlob.h"
 #include "SymlinkBlob.h"
+#include <cpp-utils/system/stat.h>
 
 using std::vector;
 using std::string;
@@ -149,15 +150,9 @@ void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
   result->st_gid = child.gid();
   //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
   result->st_nlink = 1;
-#ifdef __APPLE__
-  result->st_atimespec = child.lastAccessTime();
-  result->st_mtimespec = child.lastModificationTime();
-  result->st_ctimespec = child.lastMetadataChangeTime();
-#else
   result->st_atim = child.lastAccessTime();
   result->st_mtim = child.lastModificationTime();
   result->st_ctim = child.lastMetadataChangeTime();
-#endif
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
   result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
   result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();

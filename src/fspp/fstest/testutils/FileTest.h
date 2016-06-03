@@ -5,6 +5,7 @@
 #include "FileSystemTest.h"
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/system/stat.h>
 
 template<class ConcreteFileSystemTestFixture>
 class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
@@ -49,23 +50,13 @@ public:
   }
 
   void EXPECT_ATIME_EQ(struct timespec expected, struct stat st) {
-#ifdef __APPLE__
-      EXPECT_EQ(expected.tv_sec, st.st_atimespec.tv_sec);
-      EXPECT_EQ(expected.tv_nsec, st.st_atimespec.tv_nsec);
-#else
 	  EXPECT_EQ(expected.tv_sec, st.st_atim.tv_sec);
 	  EXPECT_EQ(expected.tv_nsec, st.st_atim.tv_nsec);
-#endif
   }
 
   void EXPECT_MTIME_EQ(struct timespec expected, struct stat st) {
-#ifdef __APPLE__
-      EXPECT_EQ(expected.tv_sec, st.st_mtimespec.tv_sec);
-      EXPECT_EQ(expected.tv_nsec, st.st_mtimespec.tv_nsec);
-#else
       EXPECT_EQ(expected.tv_sec, st.st_mtim.tv_sec);
       EXPECT_EQ(expected.tv_nsec, st.st_mtim.tv_nsec);
-#endif
   }
 };
 

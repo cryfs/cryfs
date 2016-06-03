@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_FSTEST_TESTUTILS_TIMESTAMPTESTUTILS_H_
 
 #include <cpp-utils/system/time.h>
+#include <cpp-utils/system/stat.h>
 
 class TimestampTestUtils {
 public:

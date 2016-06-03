@@ -5,6 +5,7 @@
 #include "testutils/FsppNodeTest.h"
 #include "../fuse/FuseErrnoException.h"
 #include "testutils/TimestampTestUtils.h"
+#include <cpp-utils/system/stat.h>
 
 using namespace cpputils::time;
 using std::function;
