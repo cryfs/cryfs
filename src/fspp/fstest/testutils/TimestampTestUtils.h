@@ -81,7 +81,7 @@ public:
         struct stat newStat = stat(node);
         EXPECT_EQ(oldStat.st_atim, newStat.st_atim);
         EXPECT_EQ(oldStat.st_mtim, newStat.st_mtim);
-        EXPECT_LE(oldStat.st_ctim, newStat.st_ctim);
+        EXPECT_EQ(oldStat.st_ctim, newStat.st_ctim);
     }
 
     void EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
@@ -113,14 +113,14 @@ public:
         return result;
     }
 
-private:
-
     void ensureNodeTimestampsAreOld(const fspp::Node &node) {
         waitUntilClockProgresses();
         EXPECT_LT(stat(node).st_atim, cpputils::time::now());
         EXPECT_LT(stat(node).st_mtim, cpputils::time::now());
         EXPECT_LT(stat(node).st_ctim, cpputils::time::now());
     }
+
+private:
 
     void waitUntilClockProgresses() {
         auto start = cpputils::time::now();
