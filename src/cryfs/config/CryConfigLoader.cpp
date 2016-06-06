@@ -58,7 +58,9 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {
   if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
-    throw std::runtime_error(string() + "This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. Please update your CryFS version.");
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?")) {
+      throw std::runtime_error("Not trying to load file system.");
+    }
   }
   if (gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?")) {
