@@ -5,24 +5,25 @@
 #include <cpp-utils/system/time.h>
 #include <cpp-utils/system/stat.h>
 
+template<typename NodeType>
 class TimestampTestUtils {
 public:
-    void EXPECT_ACCESS_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
+    void EXPECT_ACCESS_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const NodeType &node) {
         EXPECT_LE(lowerBound, stat(node).st_atim);
         EXPECT_GE(upperBound, stat(node).st_atim);
     }
 
-    void EXPECT_MODIFICATION_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
+    void EXPECT_MODIFICATION_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const NodeType &node) {
         EXPECT_LE(lowerBound, stat(node).st_mtim);
         EXPECT_GE(upperBound, stat(node).st_mtim);
     }
 
-    void EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
+    void EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const NodeType &node) {
         EXPECT_LE(lowerBound, stat(node).st_ctim);
         EXPECT_GE(upperBound, stat(node).st_ctim);
     }
 
-    void EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec oldTime = stat(node).st_atim;
         operation();
@@ -30,7 +31,7 @@ public:
         EXPECT_EQ(oldTime, newTime);
     }
 
-    void EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec oldTime = stat(node).st_mtim;
         operation();
@@ -38,7 +39,7 @@ public:
         EXPECT_EQ(oldTime, newTime);
     }
 
-    void EXPECT_OPERATION_DOESNT_UPDATE_METADATACHANGE_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_DOESNT_UPDATE_METADATACHANGE_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec oldTime = stat(node).st_ctim;
         operation();
@@ -46,7 +47,7 @@ public:
         EXPECT_EQ(oldTime, newTime);
     }
 
-    void EXPECT_OPERATION_UPDATES_ACCESS_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_UPDATES_ACCESS_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec lowerBound = cpputils::time::now();
         operation();
@@ -54,7 +55,7 @@ public:
         EXPECT_ACCESS_TIMESTAMP_BETWEEN(lowerBound, upperBound, node);
     }
 
-    void EXPECT_OPERATION_UPDATES_MODIFICATION_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_UPDATES_MODIFICATION_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec lowerBound = cpputils::time::now();
         operation();
@@ -62,7 +63,7 @@ public:
         EXPECT_MODIFICATION_TIMESTAMP_BETWEEN(lowerBound, upperBound, node);
     }
 
-    void EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         ensureNodeTimestampsAreOld(node);
         timespec lowerBound = cpputils::time::now();
         operation();
@@ -70,7 +71,7 @@ public:
         EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, node);
     }
 
-    void EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(const NodeType &node, std::function<void()> operation) {
         // equivalent to the following, but implemented separately because operation() should only be called once.
         // EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(node, operation);
         // EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(node, operation);
@@ -84,7 +85,7 @@ public:
         EXPECT_EQ(oldStat.st_ctim, newStat.st_ctim);
     }
 
-    void EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(const fspp::Node &node, std::function<void()> operation) {
+    void EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(const NodeType &node, std::function<void()> operation) {
         // equivalent to the following, but implemented separately because operation() should only be called once.
         // EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(node, operation);
         // EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(node, operation);
@@ -101,7 +102,7 @@ public:
         EXPECT_GE(upperBound, newStat.st_ctim);
     }
 
-    struct stat stat(const fspp::Node &node) {
+    struct stat stat(const NodeType &node) {
         struct stat st;
         node.stat(&st);
         return st;
@@ -113,7 +114,7 @@ public:
         return result;
     }
 
-    void ensureNodeTimestampsAreOld(const fspp::Node &node) {
+    void ensureNodeTimestampsAreOld(const NodeType &node) {
         waitUntilClockProgresses();
         EXPECT_LT(stat(node).st_atim, cpputils::time::now());
         EXPECT_LT(stat(node).st_mtim, cpputils::time::now());
