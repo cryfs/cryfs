@@ -8,26 +8,27 @@ template<class ConcreteFileSystemTestFixture>
 class FsppDeviceTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
   void Test_Load_While_Loaded() {
-    auto file = this->CreateFile("/myfile");
-    auto operation = [this, &file] () {
-        this->device->Load("/myfile");
+    auto node = this->CreateNode("/mynode");
+    auto operation = [this, &node] () {
+        this->device->Load("/mynode");
     };
-    this->EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*file, operation);
+    this->EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
   }
 
   void Test_Load_While_Not_Loaded() {
     struct stat oldStat;
     {
-        auto file = this->CreateFile("/myfile");
-        oldStat = stat(*file);
-        this->ensureNodeTimestampsAreOld(*file);
+        auto node = this->CreateNode("/mynode");
+        oldStat = stat(*node);
+        this->ensureNodeTimestampsAreOld(*node);
     }
 
     this->device->Load("/myfile");
 
-    auto file = this->device->Load("/myfile");
+    auto node = this->device->Load("/mynode");
 
-    struct stat newStat = stat(*file.value());
+    //Test that timestamps didn't change
+    struct stat newStat = stat(*node.value());
     EXPECT_EQ(oldStat.st_atim, newStat.st_atim);
     EXPECT_EQ(oldStat.st_mtim, newStat.st_mtim);
     EXPECT_EQ(oldStat.st_ctim, newStat.st_ctim);
