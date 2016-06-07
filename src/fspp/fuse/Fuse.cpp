@@ -241,14 +241,14 @@ void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
 
 vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> &fuseOptions) {
   vector<char *> argv;
-  _argv.reserve(6 + fuseOptions.size()); // fuseOptions + executable name + mountdir + 2x fuse options (subtype, fsname), each taking 2 entries ("-o", "key=value").
-  _argv.push_back(_create_c_string(_fstype)); // The first argument (executable name) is the file system type
-  _argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
+  argv.reserve(6 + fuseOptions.size()); // fuseOptions + executable name + mountdir + 2x fuse options (subtype, fsname), each taking 2 entries ("-o", "key=value").
+  argv.push_back(_create_c_string(_fstype)); // The first argument (executable name) is the file system type
+  argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
   for (const string &option : fuseOptions) {
-    _argv.push_back(_create_c_string(option));
+    argv.push_back(_create_c_string(option));
   }
-  _add_fuse_option_if_not_exists(&_argv, "subtype", _fstype);
-  _add_fuse_option_if_not_exists(&_argv, "fsname", _fsname.get_value_or(_fstype));
+  _add_fuse_option_if_not_exists(&argv, "subtype", _fstype);
+  _add_fuse_option_if_not_exists(&argv, "fsname", _fsname.get_value_or(_fstype));
   return argv;
 }
 
