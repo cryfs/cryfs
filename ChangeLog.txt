@@ -2,6 +2,7 @@ Version 0.9.5 (unreleased)
 ---------------
 Fixed Bugs:
 * Fixed a bug that prevented mounting a file system on Mac OS X.
+* File system operations correctly update the timestamps (access time, modification time and status change time).
 
 Improvements:
 * When mounting an old file system, CryFS will ask before migrating it to the newest version.
