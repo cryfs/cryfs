@@ -44,8 +44,9 @@ fspp::Dir::EntryType CrySymlink::getType() const {
   return fspp::Dir::EntryType::SYMLINK;
 }
 
-bf::path CrySymlink::target() const {
+bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
+  parent()->updateAccessTimestampForChild(key());
   auto blob = LoadBlob();
   return blob->target();
 }

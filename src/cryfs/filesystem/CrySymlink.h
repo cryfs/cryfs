@@ -14,7 +14,7 @@ public:
   CrySymlink(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, const blockstore::Key &key);
   ~CrySymlink();
 
-  boost::filesystem::path target() const override;
+  boost::filesystem::path target() override;
 
   fspp::Dir::EntryType getType() const override;
 
