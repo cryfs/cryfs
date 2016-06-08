@@ -21,11 +21,14 @@ string PipeReader::receive() {
         throw std::runtime_error("Message too large.");
     }
 
+    if (len == 0) {
+        return string();
+    }
+
     Data message(len);
     res = fread(message.data(), len, 1, _stream.stream());
     if (res != 1) {
         throw std::runtime_error("Reading message from pipe failed.");
     }
-
     return string((const char*)message.data(), message.size());
 }
