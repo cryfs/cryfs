@@ -107,10 +107,6 @@ CryDevice::DirBlobWithParent CryDevice::LoadDirBlobWithParent(const bf::path &pa
   return DirBlobWithParent{std::move(*dir), std::move(blob.parent)};
 }
 
-unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
-  return LoadBlobWithParent(path).blob;
-}
-
 CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   optional<unique_ref<DirBlobRef>> parentBlob = none;
   optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootKey);

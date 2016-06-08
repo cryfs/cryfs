@@ -24,8 +24,7 @@ public:
   cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob();
   cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob();
   cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target);
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key); //TODO Do I still need this function?
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const boost::filesystem::path &path);
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key);
   struct DirBlobWithParent {
       cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
       boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
