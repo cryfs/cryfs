@@ -230,6 +230,7 @@ void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAcces
 
 void DirEntryList::updateAccessTimestampForChild(const blockstore::Key &key) {
     auto found = _findByKey(key);
+    // TODO Think about implementing relatime behavior. Currently, CryFS follows strictatime.
     found->setLastAccessTime(cpputils::time::now());
 }
 
