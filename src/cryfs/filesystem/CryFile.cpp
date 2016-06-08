@@ -12,6 +12,7 @@ using fspp::fuse::FuseErrnoException;
 
 using blockstore::Key;
 using boost::none;
+using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -20,8 +21,8 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, const Key &key)
-: CryNode(device, std::move(parent), key) {
+CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const Key &key)
+: CryNode(device, std::move(parent), std::move(grandparent), key) {
 }
 
 CryFile::~CryFile() {
@@ -56,6 +57,10 @@ fspp::Dir::EntryType CryFile::getType() const {
 
 void CryFile::remove() {
   device()->callFsActionCallbacks();
+  if (grandparent() != none) {
+    //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
+    (*grandparent())->updateModificationTimestampForChild(parent()->key());
+  }
   removeNode();
 }
 

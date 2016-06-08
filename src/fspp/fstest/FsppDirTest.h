@@ -17,14 +17,14 @@ public:
   }
 
   void EXPECT_CHILDREN_ARE(const boost::filesystem::path &path, const std::initializer_list<fspp::Dir::Entry> expected) {
-	EXPECT_CHILDREN_ARE(*this->LoadDir(path), expected);
+	EXPECT_CHILDREN_ARE(this->LoadDir(path).get(), expected);
   }
 
-  void EXPECT_CHILDREN_ARE(const fspp::Dir &dir, const std::initializer_list<fspp::Dir::Entry> expected) {
+  void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
 	std::vector<fspp::Dir::Entry> expectedChildren = expected;
 	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
 	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
-	EXPECT_UNORDERED_EQ(expectedChildren, *dir.children());
+	EXPECT_UNORDERED_EQ(expectedChildren, *dir->children());
   }
 
   template<class Entry>
@@ -63,7 +63,7 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_Empty) {
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_Directly) {
   auto rootdir = this->LoadDir("/");
   rootdir->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-  this->EXPECT_CHILDREN_ARE(*rootdir, {
+  this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     FileEntry("myfile")
   });
 }
@@ -78,7 +78,7 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_AfterReloadingDir) {
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_Directly) {
   auto rootdir = this->LoadDir("/");
   rootdir->createDir("mydir", this->MODE_PUBLIC, 0, 0);
-  this->EXPECT_CHILDREN_ARE(*rootdir, {
+  this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     DirEntry("mydir")
   });
 }
@@ -108,7 +108,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_Directly) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
   auto dir = this->LoadDir("/mydir");
   dir->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-  this->EXPECT_CHILDREN_ARE(*dir, {
+  this->EXPECT_CHILDREN_ARE(dir.get(), {
     FileEntry("myfile")
   });
 }
@@ -125,7 +125,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_Directly) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
   auto dir = this->LoadDir("/mydir");
   dir->createDir("mysubdir", this->MODE_PUBLIC, 0, 0);
-  this->EXPECT_CHILDREN_ARE(*dir, {
+  this->EXPECT_CHILDREN_ARE(dir.get(), {
     DirEntry("mysubdir")
   });
 }

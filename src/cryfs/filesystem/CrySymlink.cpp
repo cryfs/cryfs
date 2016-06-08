@@ -25,8 +25,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, const Key &key)
-: CryNode(device, std::move(parent), key) {
+CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const Key &key)
+: CryNode(device, std::move(parent), std::move(grandparent), key) {
 }
 
 CrySymlink::~CrySymlink() {
@@ -53,6 +53,10 @@ bf::path CrySymlink::target() {
 
 void CrySymlink::remove() {
   device()->callFsActionCallbacks();
+  if (grandparent() != none) {
+    //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
+    (*grandparent())->updateModificationTimestampForChild(parent()->key());
+  }
   removeNode();
 }
 

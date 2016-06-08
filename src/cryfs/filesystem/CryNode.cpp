@@ -28,13 +28,18 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, const Key &key)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const Key &key)
 : _device(device),
   _parent(none),
+  _grandparent(none),
   _key(key) {
+
+  ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
+
   if (parent != none) {
     _parent = cpputils::to_unique_ptr(std::move(*parent));
   }
+  _grandparent = std::move(grandparent);
 }
 
 CryNode::~CryNode() {
@@ -47,6 +52,10 @@ void CryNode::access(int mask) const {
   return;
 }
 
+bool CryNode::isRootDir() const {
+  return _parent == none;
+}
+
 shared_ptr<const DirBlobRef> CryNode::parent() const {
   ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
   return *_parent;
@@ -57,29 +66,56 @@ shared_ptr<DirBlobRef> CryNode::parent() {
   return *_parent;
 }
 
+optional<DirBlobRef*> CryNode::grandparent() {
+  if (_grandparent == none) {
+    return none;
+  }
+  return _grandparent->get();
+}
+
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
     throw FuseErrnoException(EBUSY);
   }
-  auto targetDir = _device->LoadDirBlob(to.parent_path());
+  auto targetDirWithParent = _device->LoadDirBlobWithParent(to.parent_path());
+  auto targetDir = std::move(targetDirWithParent.blob);
+  auto targetDirParent = std::move(targetDirWithParent.parent);
+
   auto old = (*_parent)->GetChild(_key);
   if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
-  fsblobstore::DirEntry oldEntry = *old; // Copying this and not only keeping the reference is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
+  fsblobstore::DirEntry oldEntry = *old; // Copying this (instead of only keeping the reference) is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
   auto onOverwritten = [this] (const blockstore::Key &key) {
       device()->RemoveBlob(key);
   };
+  _updateParentModificationTimestamp();
   if (targetDir->key() == (*_parent)->key()) {
     targetDir->RenameChild(oldEntry.key(), to.filename().native(), onOverwritten);
   } else {
+    _updateTargetDirModificationTimestamp(*targetDir, std::move(targetDirParent));
     targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.key(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
                                    oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
     _parent = cpputils::to_unique_ptr(std::move(targetDir));
+  }
+}
+
+void CryNode::_updateParentModificationTimestamp() {
+  if (_grandparent != none) {
+    // TODO Handle timestamps of the root directory (_grandparent == none) correctly.
+    ASSERT(_parent != none, "Grandparent is set, so also parent has to be set");
+    (*_grandparent)->updateModificationTimestampForChild((*_parent)->key());
+  }
+}
+
+void CryNode::_updateTargetDirModificationTimestamp(const DirBlobRef &targetDir, optional<unique_ref<DirBlobRef>> targetDirParent) {
+  if (targetDirParent != none) {
+    // TODO Handle timestamps of the root directory (targetDirParent == none) correctly.
+    (*targetDirParent)->updateModificationTimestampForChild(targetDir.key());
   }
 }
 
