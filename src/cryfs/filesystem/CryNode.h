@@ -27,6 +27,7 @@ protected:
 
   CryDevice *device();
   const CryDevice *device() const;
+  const blockstore::Key &key() const;
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
   std::shared_ptr<const parallelaccessfsblobstore::DirBlobRef> parent() const;
   std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent();

@@ -12,6 +12,7 @@
 #include "FsppOpenFileTest.h"
 #include "FsppDeviceTest_Timestamps.h"
 #include "FsppNodeTest_Timestamps.h"
+#include "FsppFileTest_Timestamps.h"
 #include "FsppOpenFileTest_Timestamps.h"
 
 #define FSPP_ADD_FILESYTEM_TESTS(FS_NAME, FIXTURE) \
@@ -19,6 +20,7 @@
   INSTANTIATE_NODE_TEST_CASE(   FS_NAME, FsppDeviceTest_Timestamps,     FIXTURE);  \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppDirTest,                   FIXTURE);  \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppFileTest,                  FIXTURE);  \
+  INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppFileTest_Timestamps,       FIXTURE);  \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppSymlinkTest,               FIXTURE);  \
   INSTANTIATE_NODE_TEST_CASE(   FS_NAME, FsppNodeTest_Rename,           FIXTURE);  \
   INSTANTIATE_NODE_TEST_CASE(   FS_NAME, FsppNodeTest_Stat,             FIXTURE);  \

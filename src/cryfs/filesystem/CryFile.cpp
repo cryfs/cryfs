@@ -46,6 +46,7 @@ void CryFile::truncate(off_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   blob->resize(size);
+  parent()->updateModificationTimestampForChild(key());
 }
 
 fspp::Dir::EntryType CryFile::getType() const {

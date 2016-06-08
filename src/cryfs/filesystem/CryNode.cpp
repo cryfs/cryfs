@@ -116,6 +116,10 @@ unique_ref<FsBlobRef> CryNode::LoadBlob() const {
   return _device->LoadBlob(_key);
 }
 
+const blockstore::Key &CryNode::key() const {
+  return _key;
+}
+
 void CryNode::stat(struct ::stat *result) const {
   device()->callFsActionCallbacks();
   if(_parent == none) {
