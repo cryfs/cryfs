@@ -55,12 +55,12 @@ void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
 
 void CryOpenFile::fsync() {
   _device->callFsActionCallbacks();
-  //throw FuseErrnoException(ENOTSUP);
+  _fileBlob->flush();
 }
 
 void CryOpenFile::fdatasync() {
   _device->callFsActionCallbacks();
-  //throw FuseErrnoException(ENOTSUP);
+  _fileBlob->flush();
 }
 
 }
