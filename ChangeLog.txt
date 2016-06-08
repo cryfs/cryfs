@@ -2,9 +2,12 @@ Version 0.9.5 (unreleased)
 ---------------
 Fixed Bugs:
 * Fixed a bug that prevented mounting a file system on Mac OS X.
+* File system operations correctly update the timestamps (access time, modification time and status change time).
+* Reacts correctly to fsync() and fdatasync() syscalls by flushing the corresponding data to the disk.
 
 Improvements:
 * When mounting an old file system, CryFS will ask before migrating it to the newest version.
+* Operating system tools like the mount command or /proc/self/mountinfo report correct file system type and also report the base directory.
 
 Version 0.9.4
 ---------------

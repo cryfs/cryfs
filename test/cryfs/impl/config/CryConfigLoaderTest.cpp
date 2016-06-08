@@ -199,14 +199,24 @@ TEST_F(CryConfigLoaderTest, Version_Create) {
     EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
 }
 
-TEST_F(CryConfigLoaderTest, RefusesToLoadNewerFilesystem) {
+TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"))).Times(1).WillOnce(Return(true));
+
+    string version = newerVersion();
+    CreateWithVersion(version);
+    EXPECT_NE(boost::none, Load());
+}
+
+TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"))).Times(1).WillOnce(Return(false));
+
     string version = newerVersion();
     CreateWithVersion(version);
     try {
         Load();
         EXPECT_TRUE(false); // expect throw
     } catch (const std::runtime_error &e) {
-        EXPECT_THAT(e.what(), HasSubstr("Please update your CryFS version"));
+        EXPECT_THAT(e.what(), HasSubstr("Not trying to load file system"));
     }
 }
 

@@ -24,54 +24,54 @@ public:
 
   void Test_Truncate_DontChange1(fspp::File *file) {
 	file->truncate(0);
-	this->EXPECT_SIZE(0, *file);
+	this->EXPECT_SIZE(0, file);
   }
 
   void Test_Truncate_GrowTo1(fspp::File *file) {
 	file->truncate(1);
-	this->EXPECT_SIZE(1, *file);
+	this->EXPECT_SIZE(1, file);
   }
 
   void Test_Truncate_Grow(fspp::File *file) {
 	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, *file);
+	this->EXPECT_SIZE(10*1024*1024, file);
   }
 
   void Test_Truncate_DontChange2(fspp::File *file) {
 	file->truncate(10*1024*1024);
 	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, *file);
+	this->EXPECT_SIZE(10*1024*1024, file);
   }
 
   void Test_Truncate_Shrink(fspp::File *file) {
     file->truncate(10*1024*1024);
     file->truncate(5*1024*1024);
-    this->EXPECT_SIZE(5*1024*1024, *file);
+    this->EXPECT_SIZE(5*1024*1024, file);
   }
 
   void Test_Truncate_ShrinkTo0(fspp::File *file) {
 	file->truncate(10*1024*1024);
 	file->truncate(0);
-	this->EXPECT_SIZE(0, *file);
+	this->EXPECT_SIZE(0, file);
   }
 
   void Test_Chown_Uid(fspp::File *file) {
       file->chown(100, 200);
-      this->IN_STAT(*file, [] (struct stat st){
+      this->IN_STAT(file, [] (struct stat st){
           EXPECT_EQ(100u, st.st_uid);
       });
   }
 
   void Test_Chown_Gid(fspp::File *file) {
     file->chown(100, 200);
-    this->IN_STAT(*file, [] (struct stat st){
+    this->IN_STAT(file, [] (struct stat st){
         EXPECT_EQ(200u, st.st_gid);
     });
   }
 
   void Test_Chmod(fspp::File *file) {
     file->chmod(S_IFREG | S_IRUSR | S_IWOTH);
-    this->IN_STAT(*file, [] (struct stat st){
+    this->IN_STAT(file, [] (struct stat st){
         EXPECT_EQ((mode_t)(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
     });
   }
@@ -80,7 +80,7 @@ public:
     struct timespec ATIME; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
     struct timespec MTIME; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
     file->utimens(ATIME, MTIME);
-    this->IN_STAT(*file, [this, ATIME, MTIME] (struct stat st) {
+    this->IN_STAT(file, [this, ATIME, MTIME] (struct stat st) {
         this->EXPECT_ATIME_EQ(ATIME, st);
         this->EXPECT_MTIME_EQ(MTIME, st);
     });

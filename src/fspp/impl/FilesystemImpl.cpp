@@ -151,12 +151,12 @@ unique_ref<Node> FilesystemImpl::LoadFileOrSymlink(const bf::path &path) {
 
 int FilesystemImpl::openFile(const bf::path &path, int flags) {
   auto file = LoadFile(path);
-  return openFile(*file, flags);
+  return openFile(file.get(), flags);
 }
 
-int FilesystemImpl::openFile(const File &file, int flags) {
+int FilesystemImpl::openFile(File *file, int flags) {
   PROFILE(_openFileNanosec);
-  return _open_files.open(file.open(flags));
+  return _open_files.open(file->open(flags));
 }
 
 void FilesystemImpl::flush(int descriptor) {

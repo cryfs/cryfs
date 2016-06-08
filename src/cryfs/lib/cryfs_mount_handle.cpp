@@ -10,10 +10,11 @@ using std::string;
 using std::vector;
 namespace bf = boost::filesystem;
 
-cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice)
+cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice, const bf::path &basedir)
     : _crydevice(cpputils::to_unique_ptr(std::move(crydevice))),
       // Copy it to make sure we have a valid pointer even if CryDevice invalidates it
       _cipher(_crydevice->config().Cipher()),
+      _basedir(basedir),
       _mountdir(none),
       _unmount_idle(none),
       _run_in_foreground(false),
@@ -69,7 +70,7 @@ cryfs_status cryfs_mount_handle::mount() {
     _init_logfile();
 
     fspp::FilesystemImpl fsimpl(_crydevice.get());
-    fspp::fuse::Fuse fuse(&fsimpl);
+    fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+_basedir.native());
 
     //TODO Test auto unmounting after idle timeout
     //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").

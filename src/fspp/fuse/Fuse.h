@@ -8,6 +8,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
 
 namespace fspp {
@@ -18,7 +19,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs);
+  explicit Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname);
   ~Fuse();
 
   void runInBackground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
@@ -63,11 +64,16 @@ private:
   static char *_create_c_string(const std::string &str);
   static void _removeAndWarnIfExists(std::vector<std::string> *fuseOptions, const std::string &option);
   void _run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  static bool _has_option(const std::vector<char *> &vec, const std::string &key);
+  std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  void _add_fuse_option_if_not_exists(std::vector<char *> *argv, const std::string &key, const std::string &value);
 
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
   bool _running;
+  std::string _fstype;
+  boost::optional<std::string> _fsname;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };

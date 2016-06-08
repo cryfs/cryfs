@@ -24,9 +24,12 @@ public:
   cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob();
   cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob();
   cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target);
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key); //TODO Do I still need this function?
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const boost::filesystem::path &path);
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob(const boost::filesystem::path &path);
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key);
+  struct DirBlobWithParent {
+      cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
+      boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
+  };
+  DirBlobWithParent LoadDirBlobWithParent(const boost::filesystem::path &path);
   void RemoveBlob(const blockstore::Key &key);
 
   void onFsAction(std::function<void()> callback);
@@ -49,6 +52,12 @@ private:
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
   blockstore::Key CreateRootBlobAndReturnKey();
   static cpputils::unique_ref<blockstore::BlockStore> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore> baseBlockStore);
+
+  struct BlobWithParent {
+      cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> blob;
+      boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
+  };
+  BlobWithParent LoadBlobWithParent(const boost::filesystem::path &path);
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };

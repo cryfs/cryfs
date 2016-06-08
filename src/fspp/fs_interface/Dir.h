@@ -32,7 +32,7 @@ public:
 
   //TODO Allow alternative implementation returning only children names without more information
   //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
-  virtual cpputils::unique_ref<std::vector<Entry>> children() const = 0;
+  virtual cpputils::unique_ref<std::vector<Entry>> children() = 0;
 };
 
 }

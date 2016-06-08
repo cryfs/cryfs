@@ -12,7 +12,7 @@ class mount_handle_list final {
 public:
     mount_handle_list();
 
-    cryfs_mount_handle *create(cpputils::unique_ref<cryfs::CryDevice> crydevice);
+    cryfs_mount_handle *create(cpputils::unique_ref<cryfs::CryDevice> crydevice, const boost::filesystem::path &basedir);
 
 private:
     std::vector<cpputils::unique_ref<cryfs_mount_handle>> _createdHandles;

@@ -219,8 +219,8 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs)
-  :_fs(fs), _mountdir(), _running(false) {
+Fuse::Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname)
+  :_fs(fs), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -264,13 +264,37 @@ void Fuse::_run(const bf::path &mountdir, const vector<string> &fuseOptions) {
 
   ASSERT(_argv.size() == 0, "Filesystem already started");
 
-  _argv.reserve(2 + fuseOptions.size());
-  _argv.push_back(_create_c_string("fspp")); // The first argument is the executable name
-  _argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
-  for (const string &option : fuseOptions) {
-    _argv.push_back(_create_c_string(option));
-  }
+  _argv = _build_argv(mountdir, fuseOptions);
+
   fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
+}
+
+vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> &fuseOptions) {
+  vector<char *> argv;
+  argv.reserve(6 + fuseOptions.size()); // fuseOptions + executable name + mountdir + 2x fuse options (subtype, fsname), each taking 2 entries ("-o", "key=value").
+  argv.push_back(_create_c_string(_fstype)); // The first argument (executable name) is the file system type
+  argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
+  for (const string &option : fuseOptions) {
+    argv.push_back(_create_c_string(option));
+  }
+  _add_fuse_option_if_not_exists(&argv, "subtype", _fstype);
+  _add_fuse_option_if_not_exists(&argv, "fsname", _fsname.get_value_or(_fstype));
+  return argv;
+}
+
+void Fuse::_add_fuse_option_if_not_exists(vector<char *> *argv, const string &key, const string &value) {
+  if(!_has_option(*argv, key)) {
+    argv->push_back(_create_c_string("-o"));
+    argv->push_back(_create_c_string(key + "=" + value));
+  }
+}
+
+bool Fuse::_has_option(const vector<char *> &vec, const string &key) {
+  string key_with_prefix = key + "+";
+  auto found = std::find_if(vec.begin(), vec.end(), [&key_with_prefix](const char *entry) {
+      return std::strncmp(key_with_prefix.c_str(), entry, key_with_prefix.size());
+  });
+  return found != vec.end();
 }
 
 char *Fuse::_create_c_string(const string &str) {

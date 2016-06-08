@@ -78,7 +78,7 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
         return cryfs_error_FILESYSTEM_INVALID;
     }
 
-    *handle = _keepHandleOwnership.create(std::move(crydevice));
+    *handle = _keepHandleOwnership.create(std::move(crydevice), *_basedir);
     return cryfs_success;
 }
 

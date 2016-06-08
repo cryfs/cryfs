@@ -4,7 +4,9 @@
 
 #include <blockstore/utils/Key.h>
 #include <fspp/fs_interface/Dir.h>
-#include "time.h"
+#include <cpp-utils/system/time.h>
+
+// TODO Implement (and test) atime, noatime, strictatime, relatime mount options
 
 namespace cryfs {
     namespace fsblobstore {
@@ -43,7 +45,6 @@ namespace cryfs {
             void setLastModificationTime(timespec value);
 
             timespec lastMetadataChangeTime() const;
-            void setLastMetadataChangeTime(timespec value);
 
         private:
             static size_t _serializedTimeValueSize();
@@ -159,14 +160,11 @@ namespace cryfs {
 
         inline void DirEntry::setLastModificationTime(timespec value) {
             _lastModificationTime = value;
-        }
-
-        inline void DirEntry::setLastMetadataChangeTime(timespec value) {
-            _lastMetadataChangeTime = value;
+            _updateLastMetadataChangeTime();
         }
 
         inline void DirEntry::_updateLastMetadataChangeTime() {
-            setLastMetadataChangeTime(time::now());
+            _lastMetadataChangeTime = cpputils::time::now();
         }
 
     }

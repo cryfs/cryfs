@@ -72,15 +72,20 @@ const CryConfig &CryDevice::config() const {
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
+  // TODO Split into smaller functions
   ASSERT(path.is_absolute(), "Non absolute path given");
 
   callFsActionCallbacks();
 
   if (path.parent_path().empty()) {
     //We are asked to load the base directory '/'.
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, _rootKey));
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootKey));
   }
-  auto parent = LoadDirBlob(path.parent_path());
+
+  auto parentWithGrandparent = LoadDirBlobWithParent(path.parent_path());
+  auto parent = std::move(parentWithGrandparent.blob);
+  auto grandparent = std::move(parentWithGrandparent.parent);
+
   auto optEntry = parent->GetChild(path.filename().native());
   if (optEntry == boost::none) {
     return boost::none;
@@ -89,33 +94,35 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 
   switch(entry.type()) {
     case fspp::Dir::EntryType::DIR:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), entry.key()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry.key()));
     case fspp::Dir::EntryType::FILE:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), entry.key()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry.key()));
     case  fspp::Dir::EntryType::SYMLINK:
-	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), entry.key()));
+	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry.key()));
   }
   ASSERT(false, "Switch/case not exhaustive");
 }
 
-unique_ref<DirBlobRef> CryDevice::LoadDirBlob(const bf::path &path) {
-  auto blob = LoadBlob(path);
-  auto dir = dynamic_pointer_move<DirBlobRef>(blob);
+CryDevice::DirBlobWithParent CryDevice::LoadDirBlobWithParent(const bf::path &path) {
+  auto blob = LoadBlobWithParent(path);
+  auto dir = dynamic_pointer_move<DirBlobRef>(blob.blob);
   if (dir == none) {
     throw FuseErrnoException(ENOTDIR); // Loaded blob is not a directory
   }
-  return std::move(*dir);
+  return DirBlobWithParent{std::move(*dir), std::move(blob.parent)};
 }
 
-unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
-  auto currentBlob = _fsBlobStore->load(_rootKey);
-  if (currentBlob == none) {
+CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
+  optional<unique_ref<DirBlobRef>> parentBlob = none;
+  optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootKey);
+  if (currentBlobOpt == none) {
     LOG(ERROR) << "Could not load root blob. Is the base directory accessible?";
     throw FuseErrnoException(EIO);
   }
+  unique_ref<FsBlobRef> currentBlob = std::move(*currentBlobOpt);
 
   for (const bf::path &component : path.relative_path()) {
-    auto currentDir = dynamic_pointer_move<DirBlobRef>(*currentBlob);
+    auto currentDir = dynamic_pointer_move<DirBlobRef>(currentBlob);
     if (currentDir == none) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
     }
@@ -125,13 +132,15 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
       throw FuseErrnoException(ENOENT); // Child entry in directory not found
     }
     Key childKey = childOpt->key();
-    currentBlob = _fsBlobStore->load(childKey);
-    if (currentBlob == none) {
+    auto nextBlob = _fsBlobStore->load(childKey);
+    if (nextBlob == none) {
       throw FuseErrnoException(ENOENT); // Blob for directory entry not found
     }
+    parentBlob = std::move(*currentDir);
+    currentBlob = std::move(*nextBlob);
   }
 
-  return std::move(*currentBlob);
+  return BlobWithParent{std::move(currentBlob), std::move(parentBlob)};
 
   //TODO (I think this is resolved, but I should test it)
   //     Running the python script, waiting for "Create files in sequential order...", then going into dir ~/tmp/cryfs-mount-.../Bonnie.../ and calling "ls"
@@ -140,6 +149,8 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const bf::path &path) {
 }
 
 void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+  // TODO Do we need path for something? What does it represent from fuse side?
+  UNUSED(path);
   callFsActionCallbacks();
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
   uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();

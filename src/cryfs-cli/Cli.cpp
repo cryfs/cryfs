@@ -227,7 +227,7 @@ namespace cryfs {
             CryDevice device(std::move(config), std::move(blockStore));
             _sanityCheckFilesystem(&device);
             fspp::FilesystemImpl fsimpl(&device);
-            fspp::fuse::Fuse fuse(&fsimpl);
+            fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+options.baseDir().native());
 
             _initLogfile(options);
 

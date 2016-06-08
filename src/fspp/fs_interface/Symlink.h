@@ -13,7 +13,7 @@ class Symlink: public virtual Node {
 public:
   virtual ~Symlink() {}
 
-  virtual boost::filesystem::path target() const = 0;
+  virtual boost::filesystem::path target() = 0;
 };
 
 }

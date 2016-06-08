@@ -8,7 +8,7 @@
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Rename: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
-    void Test_TargetParentDirDoesntExist() {
+    void Test_Error_TargetParentDirDoesntExist() {
         auto node = this->CreateNode("/oldname");
         try {
             node->rename("/notexistingdir/newname");
@@ -20,7 +20,7 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
-    void Test_TargetParentDirIsFile() {
+    void Test_Error_TargetParentDirIsFile() {
         auto node = this->CreateNode("/oldname");
         this->CreateFile("/somefile");
         try {
@@ -32,6 +32,16 @@ public:
         //Files should still exist
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/somefile"));
+    }
+
+    void Test_Error_RootDir() {
+        auto root = this->LoadDir("/");
+        try {
+            root->rename("/newname");
+            EXPECT_TRUE(false); // expect throws
+        } catch (const fspp::fuse::FuseErrnoException &e) {
+            EXPECT_EQ(EBUSY, e.getErrno());
+        }
     }
 
     void Test_InRoot() {
@@ -105,16 +115,6 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
-    void Test_RootDir() {
-        auto root = this->LoadDir("/");
-        try {
-            root->rename("/newname");
-            EXPECT_TRUE(false); // expect throws
-        } catch (const fspp::fuse::FuseErrnoException &e) {
-            EXPECT_EQ(EBUSY, e.getErrno());
-        }
-    }
-
     void Test_Overwrite_InSameDir() {
         auto node = this->CreateNode("/oldname");
         this->CreateNode("/newname");
@@ -141,7 +141,7 @@ public:
         EXPECT_EQ(3u, this->LoadDir("/")->children()->size()); // 3, because of '.' and '..'
     }
 
-    void Test_Overwrite_DirWithFile_InSameDir() {
+    void Test_Overwrite_Error_DirWithFile_InSameDir() {
         auto file = this->CreateFile("/oldname");
         this->CreateDir("/newname");
         try {
@@ -154,7 +154,7 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
 
-    void Test_Overwrite_DirWithFile_InDifferentDir() {
+    void Test_Overwrite_Error_DirWithFile_InDifferentDir() {
         this->CreateDir("/parent1");
         this->CreateDir("/parent2");
         auto file = this->CreateFile("/parent1/oldname");
@@ -169,7 +169,7 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
 
-    void Test_Overwrite_FileWithDir_InSameDir() {
+    void Test_Overwrite_Error_FileWithDir_InSameDir() {
         auto dir = this->CreateDir("/oldname");
         this->CreateFile("/newname");
         try {
@@ -182,7 +182,7 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
 
-    void Test_Overwrite_FileWithDir_InDifferentDir() {
+    void Test_Overwrite_Error_FileWithDir_InDifferentDir() {
         this->CreateDir("/parent1");
         this->CreateDir("/parent2");
         auto dir = this->CreateDir("/parent1/oldname");
@@ -196,11 +196,24 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/parent1/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
+
+    void Test_CanRenameTwice() {
+        // Test that the node object stays valid after a rename, even if it now points to an entry of a different parent directory.
+        this->CreateDir("/mydir1");
+        this->CreateDir("/mydir2");
+        auto node = this->CreateNode("/oldname");
+        node->rename("/mydir1/newname");
+        node->rename("/mydir2/newname");
+        EXPECT_EQ(boost::none, this->device->Load("/oldname"));
+        EXPECT_EQ(boost::none, this->device->Load("/mydir1/newname"));
+        EXPECT_NE(boost::none, this->device->Load("/mydir2/newname"));
+    }
 };
 
 REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
-    TargetParentDirDoesntExist,
-    TargetParentDirIsFile,
+    Error_TargetParentDirDoesntExist,
+    Error_TargetParentDirIsFile,
+    Error_RootDir,
     InRoot,
     InNested,
     RootToNested_SameName,
@@ -210,14 +223,14 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     NestedToNested_SameName,
     NestedToNested_NewName,
     ToItself,
-    RootDir,
     Overwrite_InSameDir,
     Overwrite_InDifferentDir,
     Overwrite_DoesntHaveSameEntryTwice,
-    Overwrite_DirWithFile_InSameDir,
-    Overwrite_DirWithFile_InDifferentDir,
-    Overwrite_FileWithDir_InSameDir,
-    Overwrite_FileWithDir_InDifferentDir
+    Overwrite_Error_DirWithFile_InSameDir,
+    Overwrite_Error_DirWithFile_InDifferentDir,
+    Overwrite_Error_FileWithDir_InSameDir,
+    Overwrite_Error_FileWithDir_InDifferentDir,
+    CanRenameTwice
 );
 
 #endif
@@ -225,5 +238,3 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
 //TODO Test for rename (success AND error cases) that stat values stay unchanged (i.e. mode, uid, gid, access times, ...)
 //TODO Test for rename (success AND error cases) that contents stay unchanged (i.e. file contents, directory children, symlink target)
 //TODO (here and in other fstest operations): Test error paths
-
-//TODO Test all operations do (or don't) affect timestamps correctly

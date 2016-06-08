@@ -53,7 +53,7 @@ unique_ref<FuseTest::TempTestFS> FuseTest::TestFS() {
   return make_unique_ref<TempTestFS>(&fsimpl);
 }
 
-FuseTest::TempTestFS::TempTestFS(MockFilesystem *fsimpl): _mountDir(), _fuse(fsimpl), _fuse_thread(&_fuse) {
+FuseTest::TempTestFS::TempTestFS(MockFilesystem *fsimpl): _mountDir(), _fuse(fsimpl, "fusetest", boost::none), _fuse_thread(&_fuse) {
   _fuse_thread.start(_mountDir.path(), {});
 }
 

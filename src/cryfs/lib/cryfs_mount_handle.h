@@ -7,7 +7,7 @@
 
 struct cryfs_mount_handle final {
 public:
-    cryfs_mount_handle(cpputils::unique_ref<cryfs::CryDevice> crydevice);
+    cryfs_mount_handle(cpputils::unique_ref<cryfs::CryDevice> crydevice, const boost::filesystem::path &basedir);
 
     const char *get_ciphername() const;
     cryfs_status set_mountdir(const std::string &mountdir);
@@ -23,6 +23,7 @@ private:
 
     std::unique_ptr<cryfs::CryDevice> _crydevice;
     std::string _cipher;
+    boost::filesystem::path _basedir;
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;
     boost::optional<std::chrono::seconds> _unmount_idle;
