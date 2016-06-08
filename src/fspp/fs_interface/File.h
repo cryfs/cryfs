@@ -13,8 +13,8 @@ class File: public virtual Node {
 public:
   virtual ~File() {}
 
-  virtual cpputils::unique_ref<OpenFile> open(int flags) const = 0;
-  virtual void truncate(off_t size) const = 0;
+  virtual cpputils::unique_ref<OpenFile> open(int flags) = 0;
+  virtual void truncate(off_t size) = 0;
 };
 
 }

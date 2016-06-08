@@ -29,6 +29,7 @@ protected:
   const CryDevice *device() const;
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
   std::shared_ptr<const parallelaccessfsblobstore::DirBlobRef> parent() const;
+  std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent();
 
   virtual fspp::Dir::EntryType getType() const = 0;
 

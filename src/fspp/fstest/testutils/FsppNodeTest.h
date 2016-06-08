@@ -9,8 +9,8 @@
 
 class FsppNodeTestBase {
 public:
-    virtual void IN_STAT(const fspp::Node &node, std::function<void (struct stat)> callback) = 0;
-    virtual void EXPECT_SIZE(uint64_t expectedSize, const fspp::Node &node) = 0;
+    virtual void IN_STAT(fspp::Node *node, std::function<void (struct stat)> callback) = 0;
+    virtual void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) = 0;
 };
 
 /**
@@ -29,24 +29,24 @@ public:
 
 class FsppNodeTest_File_Helper: public virtual FsppNodeTestBase {
 public:
-    void IN_STAT(const fspp::Node &file, std::function<void (struct stat)> callback) override {
+    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
         struct stat st1, st2;
-        file.stat(&st1);
+        file->stat(&st1);
         callback(st1);
-        dynamic_cast<const fspp::File &>(file).open(O_RDONLY)->stat(&st2);
+        dynamic_cast<fspp::File &>(*file).open(O_RDONLY)->stat(&st2);
         callback(st2);
     }
 
-    void EXPECT_SIZE(uint64_t expectedSize, const fspp::Node &node) override {
+    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
         IN_STAT(node, [expectedSize] (struct stat st) {
             EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
         });
 
-        EXPECT_NUMBYTES_READABLE(expectedSize, dynamic_cast<const fspp::File&>(node));
+        EXPECT_NUMBYTES_READABLE(expectedSize, dynamic_cast<fspp::File*>(node));
     }
 
-    void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, const fspp::File &file) {
-        auto openFile = file.open(O_RDONLY);
+    void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::File *file) {
+        auto openFile = file->open(O_RDONLY);
         cpputils::Data data(expectedSize);
         //Try to read one byte more than the expected size
         ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
@@ -57,13 +57,13 @@ public:
 
 class FsppNodeTest_Dir_Helper: public virtual FsppNodeTestBase {
 public:
-    void IN_STAT(const fspp::Node &file, std::function<void (struct stat)> callback) override {
+    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
         struct stat st;
-        file.stat(&st);
+        file->stat(&st);
         callback(st);
     }
 
-    void EXPECT_SIZE(uint64_t expectedSize, const fspp::Node &node) override {
+    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
         IN_STAT(node, [expectedSize] (struct stat st) {
             EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
         });
@@ -72,13 +72,13 @@ public:
 
 class FsppNodeTest_Symlink_Helper: public virtual FsppNodeTestBase {
 public:
-    void IN_STAT(const fspp::Node &file, std::function<void (struct stat)> callback) override {
+    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
         struct stat st;
-        file.stat(&st);
+        file->stat(&st);
         callback(st);
     }
 
-    void EXPECT_SIZE(uint64_t expectedSize, const fspp::Node &node) override {
+    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
         IN_STAT(node, [expectedSize] (struct stat st) {
             EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
         });

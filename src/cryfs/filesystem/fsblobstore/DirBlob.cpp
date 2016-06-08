@@ -158,6 +158,16 @@ void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
   result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
 }
 
+void DirBlob::updateAccessTimestampForChild(const Key &key) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.updateAccessTimestampForChild(key);
+}
+
+void DirBlob::updateModificationTimestampForChild(const Key &key) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _entries.updateModificationTimestampForChild(key);
+}
+
 void DirBlob::chmodChild(const Key &key, mode_t mode) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.setMode(key, mode);

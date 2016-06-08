@@ -14,8 +14,8 @@ public:
   CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, const blockstore::Key &key);
   ~CryFile();
 
-  cpputils::unique_ref<fspp::OpenFile> open(int flags) const override;
-  void truncate(off_t size) const override;
+  cpputils::unique_ref<fspp::OpenFile> open(int flags) override;
+  void truncate(off_t size) override;
   fspp::Dir::EntryType getType() const override;
   void remove() override;
 

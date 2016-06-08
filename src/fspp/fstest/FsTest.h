@@ -9,9 +9,10 @@
 #include "FsppSymlinkTest.h"
 #include "FsppNodeTest_Rename.h"
 #include "FsppNodeTest_Stat.h"
-#include "FsppNodeTest_Timestamps.h"
 #include "FsppOpenFileTest.h"
 #include "FsppDeviceTest_Timestamps.h"
+#include "FsppNodeTest_Timestamps.h"
+#include "FsppOpenFileTest_Timestamps.h"
 
 #define FSPP_ADD_FILESYTEM_TESTS(FS_NAME, FIXTURE) \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppDeviceTest,                FIXTURE);  \
@@ -26,5 +27,7 @@
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppNodeTest_Stat_DirOnly,     FIXTURE);  \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppNodeTest_Stat_SymlinkOnly, FIXTURE);  \
   INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppOpenFileTest,              FIXTURE);  \
+  INSTANTIATE_TYPED_TEST_CASE_P(FS_NAME, FsppOpenFileTest_Timestamps,   FIXTURE);  \
+
 
 #endif

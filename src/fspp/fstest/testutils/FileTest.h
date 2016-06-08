@@ -24,15 +24,15 @@ public:
   std::unique_ptr<fspp::File> file_nested;
 
   //TODO IN_STAT still needed after moving it to FsppNodeTest?
-  void IN_STAT(const fspp::File &file, std::function<void (struct stat)> callback) {
+  void IN_STAT(fspp::File *file, std::function<void (struct stat)> callback) {
 	  struct stat st1, st2;
-	  file.stat(&st1);
+	  file->stat(&st1);
 	  callback(st1);
-	  file.open(O_RDONLY)->stat(&st2);
+	  file->open(O_RDONLY)->stat(&st2);
 	  callback(st2);
   }
 
-  void EXPECT_SIZE(uint64_t expectedSize, const fspp::File &file) {
+  void EXPECT_SIZE(uint64_t expectedSize, fspp::File *file) {
 	IN_STAT(file, [expectedSize] (struct stat st) {
 		EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
 	});
@@ -40,8 +40,8 @@ public:
 	EXPECT_NUMBYTES_READABLE(expectedSize, file);
   }
 
-  void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, const fspp::File &file) {
-	auto openFile = file.open(O_RDONLY);
+  void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::File *file) {
+	auto openFile = file->open(O_RDONLY);
 	cpputils::Data data(expectedSize);
 	//Try to read one byte more than the expected size
 	ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);

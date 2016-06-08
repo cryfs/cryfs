@@ -10,7 +10,7 @@ class FsppNodeTest_Stat: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
     void Test_Nlink() {
         auto node = this->CreateNode("/mynode");
-        this->IN_STAT(*node, [] (struct stat st) {
+        this->IN_STAT(node.get(), [] (struct stat st) {
             EXPECT_EQ(1u, st.st_nlink);
         });
     }
@@ -24,12 +24,12 @@ TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, CreatedFileIsEmpty) {
     auto file = this->CreateFile("/myfile");
-    this->EXPECT_SIZE(0, *file);
+    this->EXPECT_SIZE(0, file.get());
 }
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {
     auto file = this->CreateFile("/myfile");
-    this->IN_STAT(*file, [] (struct stat st) {
+    this->IN_STAT(file.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISREG(st.st_mode));
     });
 }
@@ -42,7 +42,7 @@ TYPED_TEST_CASE_P(FsppNodeTest_Stat_DirOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
     auto file = this->CreateDir("/mydir");
-    this->IN_STAT(*file, [] (struct stat st) {
+    this->IN_STAT(file.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISDIR(st.st_mode));
     });
 }
@@ -55,7 +55,7 @@ TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_SymlinkOnly, SymlinkIsSymlink) {
     auto file = this->CreateSymlink("/mysymlink");
-    this->IN_STAT(*file, [] (struct stat st) {
+    this->IN_STAT(file.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISLNK(st.st_mode));
     });
 }

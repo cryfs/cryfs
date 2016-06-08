@@ -34,7 +34,7 @@ unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
   return std::move(*file_blob);
 }
 
-unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
+unique_ref<fspp::OpenFile> CryFile::open(int flags) {
   // TODO Should we honor open flags?
   UNUSED(flags);
   device()->callFsActionCallbacks();
@@ -42,7 +42,7 @@ unique_ref<fspp::OpenFile> CryFile::open(int flags) const {
   return make_unique_ref<CryOpenFile>(device(), parent(), std::move(blob));
 }
 
-void CryFile::truncate(off_t size) const {
+void CryFile::truncate(off_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
   blob->resize(size);

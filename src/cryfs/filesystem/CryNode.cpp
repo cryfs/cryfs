@@ -52,6 +52,11 @@ shared_ptr<const DirBlobRef> CryNode::parent() const {
   return *_parent;
 }
 
+shared_ptr<DirBlobRef> CryNode::parent() {
+  ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
+  return *_parent;
+}
+
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {

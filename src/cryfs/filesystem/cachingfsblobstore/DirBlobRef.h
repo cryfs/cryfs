@@ -60,6 +60,14 @@ public:
         return _base->statChildExceptSize(key, result);
     }
 
+    void updateAccessTimestampForChild(const blockstore::Key &key) {
+        return _base->updateAccessTimestampForChild(key);
+    }
+
+    void updateModificationTimestampForChild(const blockstore::Key &key) {
+        return _base->updateModificationTimestampForChild(key);
+    }
+
     void chmodChild(const blockstore::Key &key, mode_t mode) {
         return _base->chmodChild(key, mode);
     }

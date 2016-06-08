@@ -59,6 +59,10 @@ namespace cryfs {
 
             void statChildExceptSize(const blockstore::Key &key, struct ::stat *result) const;
 
+            void updateAccessTimestampForChild(const blockstore::Key &key);
+
+            void updateModificationTimestampForChild(const blockstore::Key &key);
+
             void chmodChild(const blockstore::Key &key, mode_t mode);
 
             void chownChild(const blockstore::Key &key, uid_t uid, gid_t gid);

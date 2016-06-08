@@ -228,5 +228,15 @@ void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAcces
     found->setLastModificationTime(lastModificationTime);
 }
 
+void DirEntryList::updateAccessTimestampForChild(const blockstore::Key &key) {
+    auto found = _findByKey(key);
+    found->setLastAccessTime(cpputils::time::now());
+}
+
+void DirEntryList::updateModificationTimestampForChild(const blockstore::Key &key) {
+    auto found = _findByKey(key);
+    found->setLastModificationTime(cpputils::time::now());
+}
+
 }
 }
