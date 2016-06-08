@@ -12,7 +12,7 @@ public:
     auto operation = [this, &node] () {
         this->device->Load("/mynode");
     };
-    this->EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
   }
 
   void Test_Load_While_Not_Loaded() {

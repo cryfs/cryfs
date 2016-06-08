@@ -29,7 +29,7 @@ public:
             struct stat st;
             node->stat(&st);
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Chmod() {
@@ -38,9 +38,7 @@ public:
         auto operation = [&node, mode] () {
             node->chmod(mode);
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Chown() {
@@ -50,9 +48,7 @@ public:
         auto operation = [&node, uid, gid] () {
             node->chown(uid, gid);
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_ACCESS_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_DOESNT_UPDATE_MODIFICATION_TIMESTAMP(*node, operation);
-        EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Access() {
@@ -60,7 +56,7 @@ public:
         auto operation = [&node] () {
             node->access(0);
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Error_TargetParentDirDoesntExist() {
@@ -73,7 +69,7 @@ public:
                 EXPECT_EQ(ENOENT, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Error_TargetParentDirIsFile() {
@@ -87,7 +83,7 @@ public:
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Error_RootDir() {
@@ -102,7 +98,7 @@ public:
                 EXPECT_EQ(EBUSY, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*root, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
          */
     }
 
@@ -111,7 +107,7 @@ public:
         auto operation = [&node] () {
             node->rename("/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_InNested() {
@@ -120,7 +116,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_RootToNested_SameName() {
@@ -129,7 +125,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir/oldname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_RootToNested_NewName() {
@@ -138,7 +134,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_NestedToRoot_SameName() {
@@ -147,7 +143,7 @@ public:
         auto operation = [&node] () {
             node->rename("/oldname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_NestedToRoot_NewName() {
@@ -156,7 +152,7 @@ public:
         auto operation = [&node] () {
             node->rename("/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_NestedToNested_SameName() {
@@ -166,7 +162,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir2/oldname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_NestedToNested_NewName() {
@@ -176,7 +172,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir2/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_ToItself() {
@@ -184,7 +180,7 @@ public:
         auto operation = [&node] () {
             node->rename("/oldname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_Overwrite_InSameDir() {
@@ -193,7 +189,7 @@ public:
         auto operation = [&node] () {
             node->rename("/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_Overwrite_InDifferentDir() {
@@ -204,7 +200,7 @@ public:
         auto operation = [&node] () {
             node->rename("/mydir2/newname");
         };
-        EXPECT_OPERATION_ONLY_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAccessTimestamp, ExpectDoesntUpdateModificationTimestamp, ExpectUpdatesMetadataTimestamp});
     }
 
     void Test_Rename_Overwrite_Error_DirWithFile_InSameDir() {
@@ -218,7 +214,7 @@ public:
                 EXPECT_EQ(EISDIR, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Overwrite_Error_DirWithFile_InDifferentDir() {
@@ -234,7 +230,7 @@ public:
                 EXPECT_EQ(EISDIR, e.getErrno());//Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Overwrite_Error_FileWithDir_InSameDir() {
@@ -248,7 +244,7 @@ public:
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Rename_Overwrite_Error_FileWithDir_InDifferentDir() {
@@ -264,7 +260,7 @@ public:
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
             }
         };
-        EXPECT_OPERATION_DOESNT_UPDATE_TIMESTAMPS(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectDoesntUpdateAnyTimestamps});
     }
 
     void Test_Utimens() {
@@ -274,7 +270,7 @@ public:
         auto operation = [&node, atime, mtime] () {
             node->utimens(atime, mtime);
         };
-        EXPECT_OPERATION_UPDATES_METADATACHANGE_TIMESTAMP(*node, operation);
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*node, operation, {ExpectUpdatesMetadataTimestamp});
         EXPECT_EQ(atime, stat(*node).st_atim);
         EXPECT_EQ(mtime, stat(*node).st_mtim);
     }
