@@ -1,6 +1,7 @@
 #include "PipeDescriptor.h"
 #include "../../logging/logging.h"
 #include "../../assert/assert.h"
+#include <unistd.h>
 
 using namespace cpputils::process;
 using namespace cpputils::logging;
