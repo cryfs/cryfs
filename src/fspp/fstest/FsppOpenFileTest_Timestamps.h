@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppOpenFileTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::OpenFile> {
+class FsppOpenFileTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
     cpputils::unique_ref<fspp::OpenFile> CreateAndOpenFile(const boost::filesystem::path &path) {
         return this->CreateFile(path)->open(O_RDWR);

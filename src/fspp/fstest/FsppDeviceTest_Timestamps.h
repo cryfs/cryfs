@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppDeviceTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::Node> {
+class FsppDeviceTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
   void Test_Load_While_Loaded() {
     auto node = this->CreateNode("/mynode");
@@ -20,7 +20,7 @@ public:
     {
         auto node = this->CreateNode("/mynode");
         oldStat = stat(*node);
-        this->ensureNodeTimestampsAreOld(*node);
+        this->ensureNodeTimestampsAreOld(oldStat);
     }
 
     this->device->Load("/myfile");

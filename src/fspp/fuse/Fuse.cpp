@@ -704,11 +704,9 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
   }
 }
 
-//TODO
 int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
-  //TODO Implement it
-  LOG(WARN) << "Called non-implemented flush(" << path << ", _)";
+  LOG(WARN) << "flush(" << path << ", _)";
 #endif
   UNUSED(path);
   try {
