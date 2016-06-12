@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppFileTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::Node> {
+class FsppFileTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
     cpputils::unique_ref<fspp::File> CreateFileWithSize(const boost::filesystem::path &path, off_t size) {
         auto file = this->CreateFile(path);

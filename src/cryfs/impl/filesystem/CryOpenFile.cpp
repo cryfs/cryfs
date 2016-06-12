@@ -30,6 +30,7 @@ CryOpenFile::~CryOpenFile() {
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();
   _fileBlob->flush();
+  _parent->flush();
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
@@ -59,6 +60,7 @@ void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
 void CryOpenFile::fsync() {
   _device->callFsActionCallbacks();
   _fileBlob->flush();
+  _parent->flush();
 }
 
 void CryOpenFile::fdatasync() {

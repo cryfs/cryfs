@@ -161,11 +161,13 @@ void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
 void DirBlob::updateAccessTimestampForChild(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.updateAccessTimestampForChild(key);
+  _changed = true;
 }
 
 void DirBlob::updateModificationTimestampForChild(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.updateModificationTimestampForChild(key);
+  _changed = true;
 }
 
 void DirBlob::chmodChild(const Key &key, mode_t mode) {

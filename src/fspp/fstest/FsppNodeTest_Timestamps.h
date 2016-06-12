@@ -11,7 +11,7 @@ using namespace cpputils::time;
 using std::function;
 
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::Node> {
+class FsppNodeTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
 
     void Test_Create() {

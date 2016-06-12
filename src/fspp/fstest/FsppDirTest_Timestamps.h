@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppDirTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::Node> {
+class FsppDirTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
 };
 TYPED_TEST_CASE_P(FsppDirTest_Timestamps);
@@ -131,7 +131,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty_inRootDir) {
 }*/
 
 template<class ConcreteFileSystemTestFixture>
-class FsppDirTest_Timestamps_Entries: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<fspp::Node> {
+class FsppDirTest_Timestamps_Entries: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
 public:
 
     void Test_deleteChild() {
