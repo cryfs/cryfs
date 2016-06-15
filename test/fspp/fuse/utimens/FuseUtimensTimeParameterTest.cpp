@@ -24,7 +24,7 @@ INSTANTIATE_TEST_CASE_P(FuseUtimensTimeParameterTest, FuseUtimensTimeParameterTe
 
 TEST_P(FuseUtimensTimeParameterTest, Utimens) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, utimens(StrEq(FILENAME), TimeSpecEq(GetParam()[0]), TimeSpecEq(GetParam()[1])))
+  EXPECT_CALL(*fsimpl, utimens(StrEq(FILENAME), TimeSpecEq(GetParam()[0]), TimeSpecEq(GetParam()[1])))
     .Times(1).WillOnce(Return());
 
   Utimens(FILENAME, GetParam()[0], GetParam()[1]);

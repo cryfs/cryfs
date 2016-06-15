@@ -27,7 +27,7 @@ private:
     boost::optional<std::string> _password;
     boost::optional<boost::filesystem::path> _configfile;
 
-    cpputils::either<cryfs::CryConfigFile::LoadError, cryfs::CryConfigFile> _load_configfile() const;
+    cpputils::either<cryfs::CryConfigFile::LoadError, cpputils::unique_ref<cryfs::CryConfigFile>> _load_configfile() const;
     boost::filesystem::path _determine_configfile_path() const;
     static bool _check_version(const cryfs::CryConfig &config);
     static bool _sanity_check_filesystem(cryfs::CryDevice *device);

@@ -15,6 +15,7 @@ using std::stringstream;
 using std::istream;
 using cpputils::Data;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using cpputils::SCryptSettings;
 using cpputils::either;
 namespace bf = boost::filesystem;
@@ -26,7 +27,7 @@ CryConfigFile::~CryConfigFile() {
     //We do not call save() here, because we do not want the config file to be re-encrypted on each filesystem run
 }
 
-either<CryConfigFile::LoadError, CryConfigFile> CryConfigFile::load(const bf::path &path, const string &password) {
+either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(const bf::path &path, const string &password) {
     auto encryptedConfigData = Data::LoadFromFile(path);
     if (encryptedConfigData == none) {
         return LoadError::ConfigFileNotFound;
@@ -44,21 +45,21 @@ either<CryConfigFile::LoadError, CryConfigFile> CryConfigFile::load(const bf::pa
         LOG(ERROR) << "Inner cipher algorithm used to encrypt config file doesn't match config value";
         return LoadError::DecryptionFailed;
     }
-    auto configFile = CryConfigFile(path, std::move(config), std::move(*encryptor));
+    auto configFile = make_unique_ref<CryConfigFile>(CryConfigFile(path, std::move(config), std::move(*encryptor)));
     if (decrypted->wasInDeprecatedConfigFormat) {
         // Migrate it to new format
-        configFile.save();
+        configFile->save();
     }
     //TODO For newer compilers, this works without std::move
     return std::move(configFile);
 }
 
-CryConfigFile CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
+unique_ref<CryConfigFile> CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(password, scryptSettings));
-    result.save();
+    auto result = make_unique_ref<CryConfigFile>(CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(password, scryptSettings)));
+    result->save();
     return result;
 }
 

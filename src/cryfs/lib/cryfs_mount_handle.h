@@ -4,10 +4,11 @@
 
 #include "../cryfs.h"
 #include "../impl/filesystem/CryDevice.h"
+#include <fspp/impl/FilesystemImpl.h>
 
 struct cryfs_mount_handle final {
 public:
-    cryfs_mount_handle(cpputils::unique_ref<cryfs::CryDevice> crydevice, const boost::filesystem::path &basedir);
+    cryfs_mount_handle(std::shared_ptr<cryfs::CryConfigFile> config, const boost::filesystem::path &basedir);
 
     const char *get_ciphername() const;
     cryfs_status set_mountdir(const std::string &mountdir);
@@ -20,9 +21,9 @@ public:
 
 private:
     void _init_logfile();
+    std::shared_ptr<fspp::FilesystemImpl> _init_filesystem();
 
-    std::unique_ptr<cryfs::CryDevice> _crydevice;
-    std::string _cipher;
+    std::shared_ptr<cryfs::CryConfigFile> _config;
     boost::filesystem::path _basedir;
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;

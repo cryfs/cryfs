@@ -15,7 +15,7 @@ INSTANTIATE_TEST_CASE_P(FuseTruncateErrorTest, FuseTruncateErrorTest, Values(EAC
 
 TEST_P(FuseTruncateErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, truncate(StrEq(FILENAME), _))
+  EXPECT_CALL(*fsimpl, truncate(StrEq(FILENAME), _))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = TruncateFileReturnError(FILENAME, 0);

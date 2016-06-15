@@ -29,7 +29,7 @@ INSTANTIATE_TEST_CASE_P(FuseWriteErrorTest, FuseWriteErrorTest, Values(EAGAIN, E
 
 
 TEST_P(FuseWriteErrorTest, ReturnErrorOnFirstWriteCall) {
-  EXPECT_CALL(fsimpl, write(0, _, _, _))
+  EXPECT_CALL(*fsimpl, write(0, _, _, _))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT];
@@ -43,13 +43,13 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnSecondWriteCall) {
   // We store the number of bytes the first call could successfully write and check later that our
   // write syscall returns exactly this number of bytes
   size_t successfullyWrittenBytes = -1;
-  EXPECT_CALL(fsimpl, write(0, _, _, Eq(0)))
+  EXPECT_CALL(*fsimpl, write(0, _, _, Eq(0)))
     .Times(1)
     .WillOnce(Invoke([&successfullyWrittenBytes](int, const void*, size_t count, off_t) {
       // Store the number of successfully written bytes
       successfullyWrittenBytes = count;
     }));
-  EXPECT_CALL(fsimpl, write(0, _, _, Ne(0)))
+  EXPECT_CALL(*fsimpl, write(0, _, _, Ne(0)))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT];

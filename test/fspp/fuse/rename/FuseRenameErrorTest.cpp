@@ -16,7 +16,7 @@ INSTANTIATE_TEST_CASE_P(FuseRenameErrorTest, FuseRenameErrorTest, Values(EACCES,
 TEST_P(FuseRenameErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME1);
   ReturnDoesntExistOnLstat(FILENAME2);
-  EXPECT_CALL(fsimpl, rename(StrEq(FILENAME1), StrEq(FILENAME2)))
+  EXPECT_CALL(*fsimpl, rename(StrEq(FILENAME1), StrEq(FILENAME2)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = RenameReturnError(FILENAME1, FILENAME2);

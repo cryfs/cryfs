@@ -17,7 +17,7 @@ namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
+  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
@@ -46,7 +46,7 @@ private:
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::Key _rootKey;
-  CryConfigFile _configFile;
+  std::shared_ptr<CryConfigFile> _configFile;
   std::vector<std::function<void()>> _onFsAction;
 
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);

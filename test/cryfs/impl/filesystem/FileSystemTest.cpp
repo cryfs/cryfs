@@ -30,7 +30,7 @@ public:
     auto askPassword = [] {return "mypassword";};
     auto config = CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true)
             .loadOrCreate(configFile.path()).value();
-    return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
+    return make_unique_ref<CryDevice>(cpputils::to_unique_ptr(std::move(config)), std::move(blockStore));
   }
 
   cpputils::TempFile configFile;

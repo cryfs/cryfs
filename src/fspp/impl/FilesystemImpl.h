@@ -21,7 +21,7 @@ class OpenFile;
 
 class FilesystemImpl final: public fuse::Filesystem {
 public:
-  explicit FilesystemImpl(Device *device);
+  explicit FilesystemImpl(cpputils::unique_ref<Device> device);
 	virtual ~FilesystemImpl();
 
 	int openFile(const boost::filesystem::path &path, int flags) override;
@@ -94,7 +94,7 @@ private:
     std::atomic<uint64_t> _readSymlinkNanosec_withoutLoading;
 #endif
 
-	Device *_device;
+	cpputils::unique_ref<Device> _device;
 	FuseOpenFileList _open_files;
 
   DISALLOW_COPY_AND_ASSIGN(FilesystemImpl);

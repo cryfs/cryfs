@@ -45,19 +45,19 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore)
+CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, unique_ref<BlockStore> blockStore)
 : _fsBlobStore(
       make_unique_ref<ParallelAccessFsBlobStore>(
         make_unique_ref<CachingFsBlobStore>(
           make_unique_ref<FsBlobStore>(
             make_unique_ref<BlobStoreOnBlocks>(
               make_unique_ref<CachingBlockStore>(
-                CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore))
-              ), configFile.config()->BlocksizeBytes())))
+                CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore))
+              ), configFile->config()->BlocksizeBytes())))
         )
       ),
-  _rootKey(GetOrCreateRootKey(&configFile)),
-  _configFile(std::move(configFile)),
+  _rootKey(GetOrCreateRootKey(configFile.get())),
+  _configFile(configFile),
   _onFsAction() {
 }
 
@@ -68,7 +68,7 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
 }
 
 const CryConfig &CryDevice::config() const {
-  return *_configFile.config();
+  return *_configFile->config();
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {

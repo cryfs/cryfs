@@ -56,7 +56,7 @@ public:
     testFile = std::make_unique<InMemoryFile>(DataFixture::generate(testData.fileSize()));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
-    EXPECT_CALL(fsimpl, read(0, _, _, _))
+    EXPECT_CALL(*fsimpl, read(0, _, _, _))
       .WillRepeatedly(ReadFromFile);
   }
 

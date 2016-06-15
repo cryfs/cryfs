@@ -75,7 +75,7 @@ using gitversion::VersionCompare;
 namespace cryfs {
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false) {
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false), _idleUnmounter(none), _device(none) {
         _noninteractive = Environment::isNoninteractive();
     }
 
@@ -191,7 +191,7 @@ namespace cryfs {
         return *configFile;
     }
 
-    CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
+    shared_ptr<CryConfigFile> Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
             auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes());
@@ -199,14 +199,14 @@ namespace cryfs {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
             }
-            return std::move(*config);
+            return cpputils::to_unique_ptr(std::move(*config));
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(1);
         }
     }
 
-    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
+    optional<unique_ref<CryConfigFile>> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
@@ -224,19 +224,26 @@ namespace cryfs {
         try {
             auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
             auto config = _loadOrCreateConfig(options);
-            CryDevice device(std::move(config), std::move(blockStore));
-            _sanityCheckFilesystem(&device);
-            fspp::FilesystemImpl fsimpl(&device);
-            fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+options.baseDir().native());
+            _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(config, std::move(blockStore)));
+            _sanityCheckFilesystem(_device->get());
+
+            unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
+
+            auto initFilesystem = [this, &options, &fuse] {
+                ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
+
+                //TODO Test auto unmounting after idle timeout
+                _idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse->stop();});
+                if (_idleUnmounter != none) {
+                    (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
+                }
+
+                return make_shared<fspp::FilesystemImpl>(std::move(*_device));
+            };
+
+            fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, "cryfs", "cryfs@"+options.baseDir().native());
 
             _initLogfile(options);
-
-            //TODO Test auto unmounting after idle timeout
-            //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
-            auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
-            if (idleUnmounter != none) {
-                device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
-            }
 
 #ifdef __APPLE__
             std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
@@ -244,9 +251,9 @@ namespace cryfs {
             std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
 #endif
             if (options.foreground()) {
-                fuse.runInForeground(options.mountDir(), options.fuseOptions());
+                fuse->runInForeground(options.mountDir(), options.fuseOptions());
             } else {
-                fuse.runInBackground(options.mountDir(), options.fuseOptions());
+                fuse->runInBackground(options.mountDir(), options.fuseOptions());
             }
         } catch (const std::exception &e) {
             LOG(ERROR) << "Crashed: " << e.what();

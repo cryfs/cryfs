@@ -21,6 +21,7 @@ using cpputils::AES256_GCM;
 using cpputils::SCrypt;
 using boost::optional;
 using boost::none;
+using std::shared_ptr;
 namespace bf = boost::filesystem;
 
 class Mount_Test : public C_Library_Test {
@@ -37,10 +38,10 @@ public:
     void create_filesystem(const bf::path &basedir, const string &cipher) {
         auto configfile = create_configfile(basedir / "cryfs.config", cipher);
         auto blockstore = make_unique_ref<OnDiskBlockStore>(basedir);
-        CryDevice device(std::move(configfile), std::move(blockstore));
+        CryDevice device(configfile, std::move(blockstore));
     }
 
-    CryConfigFile create_configfile(const bf::path &configfile_path, const string &cipher) {
+    shared_ptr<CryConfigFile> create_configfile(const bf::path &configfile_path, const string &cipher) {
         CryConfig config;
         config.SetCipher(cipher);
         config.SetEncryptionKey(CryCiphers::find(cipher).createKey(Random::PseudoRandom()));
@@ -48,7 +49,7 @@ public:
         config.SetBlocksizeBytes(32*1024);
         config.SetVersion(gitversion::VersionString());
 
-        return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
+        return cpputils::to_unique_ptr(CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings));
     }
 
     void load_filesystem() {
@@ -205,24 +206,6 @@ TEST_F(Mount_Test, mount) {
     EXPECT_SUCCESS(cryfs_mount(handle));
     std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
     unmount(); // cleanup
-}
-
-TEST_F(Mount_Test, try_mount_twice_before_unmount) {
-    create_and_load_filesystem();
-    set_mountdir();
-    EXPECT_SUCCESS(cryfs_mount(handle));
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
-    EXPECT_EQ(cryfs_error_MOUNTHANDLE_ALREADY_USED, cryfs_mount(handle));
-    unmount(); // cleanup
-}
-
-TEST_F(Mount_Test, try_mount_twice_after_unmount) {
-    create_and_load_filesystem();
-    set_mountdir();
-    EXPECT_SUCCESS(cryfs_mount(handle));
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
-    unmount();
-    EXPECT_EQ(cryfs_error_MOUNTHANDLE_ALREADY_USED, cryfs_mount(handle));
 }
 
 TEST_F(Mount_Test, mount_in_background) {

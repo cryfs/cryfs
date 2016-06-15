@@ -27,9 +27,8 @@ typedef enum {
     cryfs_error_DECRYPTION_FAILED = -7,
     cryfs_error_MOUNTDIR_DOESNT_EXIST = -8,
     cryfs_error_MOUNTDIR_NOT_SET = -9,
-    cryfs_error_MOUNTHANDLE_ALREADY_USED = -10,
-    cryfs_error_INVALID_LOGFILE = -11,
-    cryfs_error_UNMOUNT_FAILED = -12
+    cryfs_error_INVALID_LOGFILE = -10,
+    cryfs_error_UNMOUNT_FAILED = -11
 } cryfs_status;
 
 typedef struct cryfs_load_context cryfs_load_context;

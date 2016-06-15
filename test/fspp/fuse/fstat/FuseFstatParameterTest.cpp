@@ -31,7 +31,7 @@ TEST_P(FuseFstatParameterTest, FileDescriptorIsCorrect) {
   ReturnDoesntExistOnLstat(FILENAME);
   OnCreateAndOpenReturnFileDescriptor(FILENAME, GetParam());
 
-  EXPECT_CALL(fsimpl, fstat(Eq(GetParam()), _)).Times(1).WillOnce(ReturnIsFileFstat);
+  EXPECT_CALL(*fsimpl, fstat(Eq(GetParam()), _)).Times(1).WillOnce(ReturnIsFileFstat);
 
   CallFstat(FILENAME);
 }

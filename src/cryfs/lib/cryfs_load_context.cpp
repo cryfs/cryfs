@@ -8,6 +8,7 @@
 #include "cryfs_load_context.h"
 
 using cpputils::make_unique_ref;
+using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
 using cpputils::either;
 using std::string;
@@ -58,31 +59,32 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     if (_password == none) {
         return cryfs_error_PASSWORD_NOT_SET;
     }
-    auto configfile = _load_configfile();
-    if (configfile.is_left()) {
-        switch (configfile.left()) {
+    auto configfileEither = _load_configfile();
+    if (configfileEither.is_left()) {
+        switch (configfileEither.left()) {
             case CryConfigFile::LoadError::ConfigFileNotFound:
                 return cryfs_error_CONFIGFILE_DOESNT_EXIST;
             case CryConfigFile::LoadError::DecryptionFailed:
                 return cryfs_error_DECRYPTION_FAILED;
         }
     }
-    if(!_check_version(*configfile.right().config())) {
+    std::shared_ptr<CryConfigFile> configfile = cpputils::to_unique_ptr(std::move(configfileEither.right()));
+    if(!_check_version(*configfile->config())) {
         return cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION;
     }
     //TODO CLI caller needs to check cipher if specified on command line
 
     auto blockstore = make_unique_ref<OnDiskBlockStore>(*_basedir);
-    auto crydevice = make_unique_ref<CryDevice>(std::move(configfile.right()), std::move(blockstore));
-    if (!_sanity_check_filesystem(crydevice.get())) {
+    CryDevice crydevice(configfile, std::move(blockstore));
+    if (!_sanity_check_filesystem(&crydevice)) {
         return cryfs_error_FILESYSTEM_INVALID;
     }
 
-    *handle = _keepHandleOwnership.create(std::move(crydevice), *_basedir);
+    *handle = _keepHandleOwnership.create(configfile, *_basedir);
     return cryfs_success;
 }
 
-either<CryConfigFile::LoadError, CryConfigFile> cryfs_load_context::_load_configfile() const {
+either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> cryfs_load_context::_load_configfile() const {
     bf::path configfilePath = _determine_configfile_path();
     ASSERT(_password != none, "password not set");
     return CryConfigFile::load(configfilePath, *_password);

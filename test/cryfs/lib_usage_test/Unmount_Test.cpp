@@ -16,6 +16,7 @@ using cpputils::AES256_GCM;
 using cpputils::SCrypt;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using std::shared_ptr;
 using blockstore::ondisk::OnDiskBlockStore;
 namespace bf = boost::filesystem;
 
@@ -31,7 +32,7 @@ public:
         CryDevice device(std::move(configfile), std::move(blockstore));
     }
 
-    CryConfigFile create_configfile(const bf::path &configfile_path) {
+    shared_ptr<CryConfigFile> create_configfile(const bf::path &configfile_path) {
         CryConfig config;
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(CryCiphers::find("aes-256-gcm").createKey(Random::PseudoRandom()));
@@ -39,7 +40,7 @@ public:
         config.SetBlocksizeBytes(32*1024);
         config.SetVersion(gitversion::VersionString());
 
-        return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
+        return cpputils::to_unique_ptr(CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings));
     }
 
     void create_and_mount_filesystem() {

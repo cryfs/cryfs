@@ -21,8 +21,8 @@ namespace cryfs {
     private:
         void _checkForUpdates();
         void _runFilesystem(const program_options::ProgramOptions &options);
-        CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
-        boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes);
+        std::shared_ptr<CryConfigFile> _loadOrCreateConfig(const program_options::ProgramOptions &options);
+        boost::optional<cpputils::unique_ref<CryConfigFile>> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();
@@ -47,6 +47,8 @@ namespace cryfs {
         std::shared_ptr<cpputils::Console> _console;
         std::shared_ptr<cpputils::HttpClient> _httpClient;
         bool _noninteractive;
+        boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idleUnmounter;
+        boost::optional<cpputils::unique_ref<CryDevice>> _device;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

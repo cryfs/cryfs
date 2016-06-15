@@ -30,7 +30,7 @@ TEST_P(FuseFstatErrorTest, ReturnedErrorCodeIsCorrect) {
   ReturnDoesntExistOnLstat(FILENAME);
   OnCreateAndOpenReturnFileDescriptor(FILENAME, 0);
 
-  EXPECT_CALL(fsimpl, fstat(Eq(0), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
+  EXPECT_CALL(*fsimpl, fstat(Eq(0), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   auto fs = TestFS();
 

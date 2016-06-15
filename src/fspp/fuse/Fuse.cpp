@@ -9,12 +9,17 @@
 #include <cpp-utils/logging/logging.h>
 #include <csignal>
 #include <cpp-utils/process/daemon/daemonize.h>
+#include "InvalidFilesystem.h"
 
 using std::vector;
 using std::string;
 
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
+using cpputils::make_unique_ref;
+using cpputils::unique_ref;
+using std::make_shared;
+using std::shared_ptr;
 using namespace fspp::fuse;
 namespace process = cpputils::process;
 
@@ -219,8 +224,8 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname)
-  :_fs(fs), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
+Fuse::Fuse(std::function<shared_ptr<Filesystem> ()> init, const std::string &fstype, const boost::optional<std::string> &fsname)
+  :_init(init), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -712,7 +717,6 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
   }
 }
 
-//TODO
 int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
 #ifdef FSPP_LOG
   LOG(DEBUG) << "statfs(" << path << ", _)";
@@ -853,6 +857,8 @@ void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
   LOG(INFO) << "Filesystem started.";
 
+  _fs = _init();
+
   _running = true;
 
 #ifdef FSPP_LOG
@@ -861,6 +867,7 @@ void Fuse::init(fuse_conn_info *conn) {
 }
 
 void Fuse::destroy() {
+  _fs = make_shared<InvalidFilesystem>();
   LOG(INFO) << "Filesystem stopped.";
   _running = false;
 }

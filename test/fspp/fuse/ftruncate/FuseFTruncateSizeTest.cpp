@@ -15,7 +15,7 @@ INSTANTIATE_TEST_CASE_P(FuseFTruncateSizeTest, FuseFTruncateSizeTest, Values(0, 
 TEST_P(FuseFTruncateSizeTest, FTruncateFile) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, 0);
-  EXPECT_CALL(fsimpl, ftruncate(Eq(0), GetParam()))
+  EXPECT_CALL(*fsimpl, ftruncate(Eq(0), GetParam()))
     .Times(1).WillOnce(Return());
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(0);

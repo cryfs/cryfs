@@ -12,7 +12,7 @@ INSTANTIATE_TEST_CASE_P(FuseOpenFlagsTest, FuseOpenFlagsTest, Values(O_RDWR, O_R
 
 TEST_P(FuseOpenFlagsTest, testFlags) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), OpenFlagsEq(GetParam())))
+  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), OpenFlagsEq(GetParam())))
     .Times(1).WillOnce(Return(0));
 
   OpenFile(FILENAME, GetParam());

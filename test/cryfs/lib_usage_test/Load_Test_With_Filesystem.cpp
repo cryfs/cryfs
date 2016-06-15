@@ -18,6 +18,7 @@ using cpputils::AES256_GCM;
 using cpputils::SCrypt;
 using boost::optional;
 using boost::none;
+using std::shared_ptr;
 
 namespace bf = boost::filesystem;
 
@@ -34,10 +35,10 @@ public:
         }
         auto configfile = create_configfile(actual_configfile_path, cipher);
         auto blockstore = make_unique_ref<OnDiskBlockStore>(basedir);
-        CryDevice device(std::move(configfile), std::move(blockstore));
+        CryDevice device(configfile, std::move(blockstore));
     }
 
-    CryConfigFile create_configfile(const bf::path &configfile_path, const std::string &cipher) {
+    shared_ptr<CryConfigFile> create_configfile(const bf::path &configfile_path, const std::string &cipher) {
         CryConfig config;
         config.SetCipher(cipher);
         config.SetEncryptionKey(AES256_GCM::CreateKey(Random::PseudoRandom()).ToString());
@@ -45,17 +46,17 @@ public:
         config.SetBlocksizeBytes(32*1024);
         config.SetVersion(gitversion::VersionString());
 
-        return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
+        return cpputils::to_unique_ptr(CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings));
     }
 
-    CryConfigFile create_configfile_for_incompatible_cryfs_version(const bf::path &configfile_path) {
+    shared_ptr<CryConfigFile> create_configfile_for_incompatible_cryfs_version(const bf::path &configfile_path) {
         CryConfig config;
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(AES256_GCM::CreateKey(Random::PseudoRandom()).ToString());
         config.SetRootBlob("");
         config.SetVersion("0.8.0");
 
-        return CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings);
+        return cpputils::to_unique_ptr(CryConfigFile::create(configfile_path, std::move(config), PASSWORD, SCrypt::TestSettings));
     }
 
     void remove_all_blocks_in(const bf::path &dir) {

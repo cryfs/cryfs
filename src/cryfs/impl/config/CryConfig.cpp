@@ -20,10 +20,6 @@ CryConfig::CryConfig()
 : _rootBlob(""), _encKey(""), _cipher(""), _version(""), _createdWithVersion(""), _blocksizeBytes(0) {
 }
 
-CryConfig::CryConfig(CryConfig &&rhs)
-: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)), _createdWithVersion(std::move(rhs._createdWithVersion)), _blocksizeBytes(rhs._blocksizeBytes) {
-}
-
 CryConfig CryConfig::load(const Data &data) {
   stringstream stream;
   data.StoreToStream(stream);

@@ -41,7 +41,7 @@ struct stat FuseLstatTest::CallDirLstatWithImpl(function<void(struct stat*)> imp
 }
 
 struct stat FuseLstatTest::CallLstatWithImpl(function<void(struct stat*)> implementation) {
-  EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, struct ::stat *stat) {
+  EXPECT_CALL(*fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, struct ::stat *stat) {
     implementation(stat);
   }));
 

@@ -11,7 +11,7 @@ class FuseRmdirDirnameTest: public FuseRmdirTest {
 
 TEST_F(FuseRmdirDirnameTest, Rmdir) {
   ReturnIsDirOnLstat("/mydir");
-  EXPECT_CALL(fsimpl, rmdir(StrEq("/mydir")))
+  EXPECT_CALL(*fsimpl, rmdir(StrEq("/mydir")))
     // After rmdir was called, lstat should return that it doesn't exist anymore
     // This is needed to make the ::rmdir() syscall pass.
     .Times(1).WillOnce(FromNowOnReturnDoesntExistOnLstat());
@@ -22,7 +22,7 @@ TEST_F(FuseRmdirDirnameTest, Rmdir) {
 TEST_F(FuseRmdirDirnameTest, RmdirNested) {
   ReturnIsDirOnLstat("/mydir");
   ReturnIsDirOnLstat("/mydir/mysubdir");
-  EXPECT_CALL(fsimpl, rmdir(StrEq("/mydir/mysubdir")))
+  EXPECT_CALL(*fsimpl, rmdir(StrEq("/mydir/mysubdir")))
     // After rmdir was called, lstat should return that it doesn't exist anymore
     // This is needed to make the ::rmdir() syscall pass.
     .Times(1).WillOnce(FromNowOnReturnDoesntExistOnLstat());
@@ -34,7 +34,7 @@ TEST_F(FuseRmdirDirnameTest, RmdirNested2) {
   ReturnIsDirOnLstat("/mydir");
   ReturnIsDirOnLstat("/mydir/mydir2");
   ReturnIsDirOnLstat("/mydir/mydir2/mydir3");
-  EXPECT_CALL(fsimpl, rmdir(StrEq("/mydir/mydir2/mydir3")))
+  EXPECT_CALL(*fsimpl, rmdir(StrEq("/mydir/mydir2/mydir3")))
     // After rmdir was called, lstat should return that it doesn't exist anymore
     // This is needed to make the ::rmdir() syscall pass.
     .Times(1).WillOnce(FromNowOnReturnDoesntExistOnLstat());

@@ -19,7 +19,7 @@ INSTANTIATE_TEST_CASE_P(FuseFdatasyncFileDescriptorTest, FuseFdatasyncFileDescri
 TEST_P(FuseFdatasyncFileDescriptorTest, FileDescriptorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
-  EXPECT_CALL(fsimpl, fdatasync(Eq(GetParam())))
+  EXPECT_CALL(*fsimpl, fdatasync(Eq(GetParam())))
     .Times(1).WillOnce(Return());
 
   FdatasyncFile(FILENAME);

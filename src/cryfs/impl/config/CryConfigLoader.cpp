@@ -33,7 +33,7 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
 
-optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
+optional<unique_ref<CryConfigFile>> CryConfigLoader::_loadConfig(const bf::path &filename) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
@@ -42,18 +42,18 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   }
   std::cout << "done" << std::endl;
 
-  _checkVersion(*config.right().config());
+  _checkVersion(*config.right()->config());
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
-  if (config.right().config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config.right().config()->Version(), "0.9.3-rc1")) {
-    config.right().config()->SetBlocksizeBytes(32832);
+  if (config.right()->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config.right()->config()->Version(), "0.9.3-rc1")) {
+    config.right()->config()->SetBlocksizeBytes(32832);
   }
 #endif
-  if (config.right().config()->Version() != gitversion::VersionString()) {
-    config.right().config()->SetVersion(gitversion::VersionString());
-    config.right().save();
+  if (config.right()->config()->Version() != gitversion::VersionString()) {
+    config.right()->config()->SetVersion(gitversion::VersionString());
+    config.right()->save();
   }
-  _checkCipher(*config.right().config());
+  _checkCipher(*config.right()->config());
   return std::move(config.right());
 }
 
@@ -76,7 +76,7 @@ void CryConfigLoader::_checkCipher(const CryConfig &config) const {
   }
 }
 
-optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) {
+optional<unique_ref<CryConfigFile>> CryConfigLoader::loadOrCreate(const bf::path &filename) {
   if (bf::exists(filename)) {
     return _loadConfig(filename);
   } else {
@@ -84,7 +84,7 @@ optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) 
   }
 }
 
-CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
+unique_ref<CryConfigFile> CryConfigLoader::_createConfig(const bf::path &filename) {
   auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();

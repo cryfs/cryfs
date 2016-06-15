@@ -2,18 +2,22 @@
 #include <fspp/fuse/Fuse.h>
 #include <cpp-utils/process/daemon/daemonize.h>
 #include "cryfs_mount_handle.h"
+#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
 
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 using cryfs::CryDevice;
+using cryfs::CryConfigFile;
 using boost::none;
 using std::string;
 using std::vector;
+using std::shared_ptr;
+using std::make_shared;
+using blockstore::ondisk::OnDiskBlockStore;
 namespace bf = boost::filesystem;
 
-cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice, const bf::path &basedir)
-    : _crydevice(cpputils::to_unique_ptr(std::move(crydevice))),
-      // Copy it to make sure we have a valid pointer even if CryDevice invalidates it
-      _cipher(_crydevice->config().Cipher()),
+cryfs_mount_handle::cryfs_mount_handle(shared_ptr<CryConfigFile> config, const bf::path &basedir)
+    : _config(config),
       _basedir(basedir),
       _mountdir(none),
       _unmount_idle(none),
@@ -22,7 +26,7 @@ cryfs_mount_handle::cryfs_mount_handle(unique_ref<CryDevice> crydevice, const bf
 }
 
 const char *cryfs_mount_handle::get_ciphername() const {
-    return _cipher.c_str();
+    return _config->config()->Cipher().c_str();
 }
 
 cryfs_status cryfs_mount_handle::set_mountdir(const string &mountdir) {
@@ -63,14 +67,24 @@ cryfs_status cryfs_mount_handle::mount() {
         return cryfs_error_MOUNTDIR_NOT_SET;
     }
 
-    if (nullptr == _crydevice) {
-        return cryfs_error_MOUNTHANDLE_ALREADY_USED;
+    fspp::fuse::Fuse fuse(std::bind(&cryfs_mount_handle::_init_filesystem, this), "cryfs", "cryfs@"+_basedir.native());
+
+    if (_run_in_foreground) {
+        fuse.runInForeground(*_mountdir, _fuse_arguments);
+    } else {
+        fuse.runInBackground(*_mountdir, _fuse_arguments);
     }
 
+    return cryfs_success;
+}
+
+shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem() {
     _init_logfile();
 
-    fspp::FilesystemImpl fsimpl(_crydevice.get());
-    fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+_basedir.native());
+    auto blockstore = make_unique_ref<OnDiskBlockStore>(_basedir);
+    auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore));
+
+    auto fsimpl = make_shared<fspp::FilesystemImpl>(std::move(crydevice));
 
     //TODO Test auto unmounting after idle timeout
     //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
@@ -79,15 +93,7 @@ cryfs_status cryfs_mount_handle::mount() {
         device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
     }*/
 
-    if (_run_in_foreground) {
-        fuse.runInForeground(*_mountdir, _fuse_arguments);
-    } else {
-        fuse.runInBackground(*_mountdir, _fuse_arguments);
-    }
-    
-    _crydevice = nullptr; // Free CryDevice in this process
-
-    return cryfs_success;
+    return fsimpl;
 }
 
 void cryfs_mount_handle::_init_logfile() {

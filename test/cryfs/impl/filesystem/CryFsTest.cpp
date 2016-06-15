@@ -26,6 +26,7 @@ using cpputils::SCrypt;
 using cpputils::Data;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
+using std::shared_ptr;
 
 namespace bf = boost::filesystem;
 using namespace cryfs;
@@ -35,9 +36,10 @@ public:
   CryFsTest(): rootdir(), config(false) {
   }
 
-  CryConfigFile loadOrCreateConfig() {
+  shared_ptr<CryConfigFile> loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true).loadOrCreate(config.path()).value();
+    auto configFile = CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true).loadOrCreate(config.path()).value();
+    return cpputils::to_unique_ptr(std::move(configFile));
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {

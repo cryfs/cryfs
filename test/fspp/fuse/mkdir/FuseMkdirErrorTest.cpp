@@ -16,7 +16,7 @@ INSTANTIATE_TEST_CASE_P(FuseMkdirErrorTest, FuseMkdirErrorTest, Values(EACCES, E
 
 TEST_F(FuseMkdirErrorTest, NoError) {
   ReturnDoesntExistOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, mkdir(StrEq(DIRNAME), _, _, _))
+  EXPECT_CALL(*fsimpl, mkdir(StrEq(DIRNAME), _, _, _))
     .Times(1).WillOnce(FromNowOnReturnIsDirOnLstat());
 
   int error = MkdirReturnError(DIRNAME, 0);
@@ -25,7 +25,7 @@ TEST_F(FuseMkdirErrorTest, NoError) {
 
 TEST_P(FuseMkdirErrorTest, ReturnedErrorIsCorrect) {
   ReturnDoesntExistOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, mkdir(StrEq(DIRNAME), _, _, _))
+  EXPECT_CALL(*fsimpl, mkdir(StrEq(DIRNAME), _, _, _))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = MkdirReturnError(DIRNAME, 0);

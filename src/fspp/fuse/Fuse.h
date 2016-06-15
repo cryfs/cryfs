@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
-#include <cpp-utils/macros.h>
+#include <cpp-utils/pointer/unique_ref.h>
 
 namespace fspp {
 class Device;
@@ -19,7 +19,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname);
+  explicit Fuse(std::function<std::shared_ptr<Filesystem> ()> init, const std::string &fstype, const boost::optional<std::string> &fsname);
   ~Fuse();
 
   void runInBackground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
@@ -68,7 +68,8 @@ private:
   std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   void _add_fuse_option_if_not_exists(std::vector<char *> *argv, const std::string &key, const std::string &value);
 
-  Filesystem *_fs;
+  std::function<std::shared_ptr<Filesystem> ()> _init;
+  std::shared_ptr<Filesystem> _fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
   bool _running;

@@ -15,7 +15,7 @@ INSTANTIATE_TEST_CASE_P(FuseRmdirErrorTest, FuseRmdirErrorTest, Values(EACCES, E
 
 TEST_P(FuseRmdirErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, rmdir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, rmdir(StrEq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = RmdirReturnError(DIRNAME);

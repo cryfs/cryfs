@@ -90,7 +90,7 @@ public:
 
   class TempTestFS {
   public:
-    TempTestFS(MockFilesystem *fsimpl);
+    TempTestFS(std::shared_ptr<MockFilesystem> fsimpl);
     virtual ~TempTestFS();
   public:
     const boost::filesystem::path &mountDir() const;
@@ -102,7 +102,7 @@ public:
 
   cpputils::unique_ref<TempTestFS> TestFS();
 
-  MockFilesystem fsimpl;
+  std::shared_ptr<MockFilesystem> fsimpl;
 
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
