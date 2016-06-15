@@ -227,13 +227,11 @@ namespace cryfs {
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(config, std::move(blockStore)));
             _sanityCheckFilesystem(_device->get());
 
-            unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
-
-            auto initFilesystem = [this, &options, &fuse] {
+            auto initFilesystem = [this, &options] (fspp::fuse::Fuse *fuse){
                 ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
 
                 //TODO Test auto unmounting after idle timeout
-                _idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse->stop();});
+                _idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [fuse] {fuse->stop();});
                 if (_idleUnmounter != none) {
                     (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
                 }
@@ -241,7 +239,7 @@ namespace cryfs {
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));
             };
 
-            fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, "cryfs", "cryfs@"+options.baseDir().native());
+            auto fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, "cryfs", "cryfs@" + options.baseDir().native());
 
             _initLogfile(options);
 

@@ -224,7 +224,7 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(std::function<shared_ptr<Filesystem> ()> init, const std::string &fstype, const boost::optional<std::string> &fsname)
+Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, const std::string &fstype, const boost::optional<std::string> &fsname)
   :_init(init), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
 }
 
@@ -857,7 +857,7 @@ void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
   LOG(INFO) << "Filesystem started.";
 
-  _fs = _init();
+  _fs = _init(this);
 
   _running = true;
 

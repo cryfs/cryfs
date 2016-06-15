@@ -57,7 +57,7 @@ unique_ref<FuseTest::TempTestFS> FuseTest::TestFS() {
 
 FuseTest::TempTestFS::TempTestFS(shared_ptr<MockFilesystem> fsimpl)
  :_mountDir(),
-  _fuse([fsimpl] {return fsimpl;}, "fusetest", boost::none), _fuse_thread(&_fuse) {
+  _fuse([fsimpl] (Fuse*) {return fsimpl;}, "fusetest", boost::none), _fuse_thread(&_fuse) {
 
   _fuse_thread.start(_mountDir.path(), {});
 }
