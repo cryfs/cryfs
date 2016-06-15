@@ -5,6 +5,8 @@
 #include "../cryfs.h"
 #include "../impl/filesystem/CryDevice.h"
 #include <fspp/impl/FilesystemImpl.h>
+#include <fspp/fuse/Fuse.h>
+#include "utils/CallAfterTimeout.h"
 
 struct cryfs_mount_handle final {
 public:
@@ -21,7 +23,8 @@ public:
 
 private:
     void _init_logfile();
-    std::shared_ptr<fspp::FilesystemImpl> _init_filesystem();
+    std::shared_ptr<fspp::FilesystemImpl> _init_filesystem(fspp::fuse::Fuse *fuse);
+    void _create_idle_unmounter(fspp::fuse::Fuse *fuse, cryfs::CryDevice *device);
 
     std::shared_ptr<cryfs::CryConfigFile> _config;
     boost::filesystem::path _basedir;
@@ -30,6 +33,8 @@ private:
     boost::optional<std::chrono::seconds> _unmount_idle;
     bool _run_in_foreground;
     std::vector<std::string> _fuse_arguments;
+
+    boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idle_unmounter;
 
     DISALLOW_COPY_AND_ASSIGN(cryfs_mount_handle);
 };

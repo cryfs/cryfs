@@ -22,7 +22,8 @@ cryfs_mount_handle::cryfs_mount_handle(shared_ptr<CryConfigFile> config, const b
       _mountdir(none),
       _unmount_idle(none),
       _run_in_foreground(false),
-      _fuse_arguments() {
+      _fuse_arguments(),
+      _idle_unmounter(none) {
 }
 
 const char *cryfs_mount_handle::get_ciphername() const {
@@ -67,7 +68,7 @@ cryfs_status cryfs_mount_handle::mount() {
         return cryfs_error_MOUNTDIR_NOT_SET;
     }
 
-    fspp::fuse::Fuse fuse(std::bind(&cryfs_mount_handle::_init_filesystem, this), "cryfs", "cryfs@"+_basedir.native());
+    fspp::fuse::Fuse fuse(std::bind(&cryfs_mount_handle::_init_filesystem, this, std::placeholders::_1), "cryfs", "cryfs@"+_basedir.native());
 
     if (_run_in_foreground) {
         fuse.runInForeground(*_mountdir, _fuse_arguments);
@@ -78,7 +79,7 @@ cryfs_status cryfs_mount_handle::mount() {
     return cryfs_success;
 }
 
-shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem() {
+shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem(fspp::fuse::Fuse *fuse) {
     _init_logfile();
 
     auto blockstore = make_unique_ref<OnDiskBlockStore>(_basedir);
@@ -87,11 +88,7 @@ shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem() {
     auto fsimpl = make_shared<fspp::FilesystemImpl>(std::move(crydevice));
 
     //TODO Test auto unmounting after idle timeout
-    //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
-    /*auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
-    if (idleUnmounter != none) {
-        device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
-    }*/
+    _create_idle_unmounter(fuse, crydevice.get());
 
     return fsimpl;
 }
@@ -106,4 +103,18 @@ void cryfs_mount_handle::_init_logfile() {
     } else {
         cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
     }
+}
+
+void cryfs_mount_handle::_create_idle_unmounter(fspp::fuse::Fuse *fuse, cryfs::CryDevice *device) {
+    if (_unmount_idle == none) {
+        return; // Idle unmounter not requested by user
+    }
+
+    ASSERT(_idle_unmounter == none, "Tried to create two idle unmounters");
+
+    auto duration = boost::chrono::milliseconds(1000 * _unmount_idle->count());
+    _idle_unmounter = make_unique_ref<CallAfterTimeout>(duration, [fuse] {
+        fuse->stop();
+    });
+    device->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idle_unmounter->get()));
 }

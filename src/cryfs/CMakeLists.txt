@@ -8,6 +8,7 @@ set(SOURCES
         lib/cryfs_mount_handle.cpp
         lib/mount_handle_list.cpp
         lib/cryfs_unmounter.cpp
+        lib/utils/CallAfterTimeout.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
