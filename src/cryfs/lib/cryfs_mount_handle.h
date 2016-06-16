@@ -16,7 +16,7 @@ public:
     cryfs_status set_mountdir(const std::string &mountdir);
     cryfs_status set_run_in_foreground(bool foreground);
     cryfs_status set_logfile(const boost::filesystem::path &logfile);
-    cryfs_status set_unmount_idle(const std::chrono::seconds timeout);
+    cryfs_status set_unmount_idle(const boost::chrono::milliseconds unmount_idle);
     cryfs_status add_fuse_argument(const std::string &argument);
 
     cryfs_status mount();
@@ -30,7 +30,7 @@ private:
     boost::filesystem::path _basedir;
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;
-    boost::optional<std::chrono::seconds> _unmount_idle;
+    boost::optional<boost::chrono::milliseconds> _unmount_idle;
     bool _run_in_foreground;
     std::vector<std::string> _fuse_arguments;
 

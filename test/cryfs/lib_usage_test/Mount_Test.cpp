@@ -79,6 +79,10 @@ public:
         EXPECT_SUCCESS(cryfs_mount_set_run_in_foreground(handle, foreground));
     }
 
+    void set_unmount_idle_milliseconds(int milliseconds) {
+        EXPECT_SUCCESS(cryfs_mount_set_unmount_idle_milliseconds(handle, milliseconds));
+    }
+
     void mount() {
         EXPECT_SUCCESS(cryfs_mount(handle));
     }
@@ -105,6 +109,12 @@ public:
 
     void create_file(const bf::path &filepath) {
         std::ofstream(filepath.c_str());
+    }
+
+    std::chrono::milliseconds duration_timer(std::function<void()> func) {
+        std::chrono::high_resolution_clock::time_point beginTime = std::chrono::high_resolution_clock::now();
+        func();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - beginTime);
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
@@ -173,9 +183,9 @@ TEST_F(Mount_Test, set_logfile_valid_existing) {
     EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, logfile.path().native().c_str(), logfile.path().native().size()));
 }
 
-TEST_F(Mount_Test, set_unmount_idle) {
+TEST_F(Mount_Test, set_unmount_idle_milliseconds) {
     create_and_load_filesystem();
-    EXPECT_SUCCESS(cryfs_mount_set_unmount_idle(handle, 1000));
+    EXPECT_SUCCESS(cryfs_mount_set_unmount_idle_milliseconds(handle, 1000));
 }
 
 TEST_F(Mount_Test, set_fuse_argument) {
@@ -221,7 +231,7 @@ TEST_F(Mount_Test, mount_in_foreground) {
     set_mountdir();
     set_run_in_foreground(true);
 
-    UnmountAfterTimeout unmounter(mountdir.path());
+    UnmountAfterTimeout unmounter(mountdir.path(), boost::chrono::milliseconds(2000));
     mount();
     EXPECT_TRUE(unmounter.timeoutPassed()); // Expect that we only get here once the unmount timeout passed.
 }
@@ -253,4 +263,38 @@ TEST_F(Mount_Test, basedir_is_correct) {
 //TODO mount_logfilespecified_foreground_logstofile
 //TODO mount_logfilespecified_background_logstofile
 //TODO Test fuse arguments are applied correctly (choose an easy-to-check argument. allowother for example?)
-//TODO Test unmount_idle
+
+TEST_F(Mount_Test, unmount_idle_zero) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+    auto duration = duration_timer([this] {
+        mount();
+    });
+    EXPECT_LT(duration, std::chrono::milliseconds(1000));
+}
+
+TEST_F(Mount_Test, unmount_idle_small) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(1000);
+    auto duration = duration_timer([this] {
+        mount();
+    });
+    EXPECT_GT(duration, std::chrono::milliseconds(500));
+    EXPECT_LT(duration, std::chrono::milliseconds(1500));
+}
+
+TEST_F(Mount_Test, unmount_idle_large) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(5000);
+    auto duration = duration_timer([this] {
+        mount();
+    });
+    EXPECT_GT(duration, std::chrono::milliseconds(4500));
+    EXPECT_LT(duration, std::chrono::milliseconds(5500));
+}

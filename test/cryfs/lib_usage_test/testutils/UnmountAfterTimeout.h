@@ -9,9 +9,9 @@
 
 class UnmountAfterTimeout final {
 public:
-    UnmountAfterTimeout(const boost::filesystem::path &mountdir): _unmountThread(), _timeoutPassed(false) {
-      _unmountThread = boost::thread([mountdir, this]() {
-          boost::this_thread::sleep_for(TIMEOUT);
+    UnmountAfterTimeout(const boost::filesystem::path &mountdir, boost::chrono::milliseconds timeout): _unmountThread(), _timeoutPassed(false) {
+      _unmountThread = boost::thread([mountdir, timeout, this]() {
+          boost::this_thread::sleep_for(timeout);
           _timeoutPassed = true;
           if (cryfs_success != cryfs_unmount(mountdir.native().c_str(), mountdir.native().size())) {
               std::cerr << "Unmounting failed" << std::endl;
@@ -29,7 +29,6 @@ public:
     }
 
 private:
-    static constexpr boost::chrono::seconds TIMEOUT = boost::chrono::seconds(2);
     boost::thread _unmountThread;
     bool _timeoutPassed;
 

@@ -53,7 +53,7 @@ cryfs_status cryfs_mount_handle::set_logfile(const bf::path &logfile) {
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount_handle::set_unmount_idle(const std::chrono::seconds unmount_idle) {
+cryfs_status cryfs_mount_handle::set_unmount_idle(const boost::chrono::milliseconds unmount_idle) {
     _unmount_idle = unmount_idle;
     return cryfs_success;
 }
@@ -84,13 +84,10 @@ shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem(fspp::fuse
 
     auto blockstore = make_unique_ref<OnDiskBlockStore>(_basedir);
     auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore));
-
-    auto fsimpl = make_shared<fspp::FilesystemImpl>(std::move(crydevice));
-
-    //TODO Test auto unmounting after idle timeout
+    
     _create_idle_unmounter(fuse, crydevice.get());
 
-    return fsimpl;
+    return make_shared<fspp::FilesystemImpl>(std::move(crydevice));
 }
 
 void cryfs_mount_handle::_init_logfile() {
@@ -112,8 +109,7 @@ void cryfs_mount_handle::_create_idle_unmounter(fspp::fuse::Fuse *fuse, cryfs::C
 
     ASSERT(_idle_unmounter == none, "Tried to create two idle unmounters");
 
-    auto duration = boost::chrono::milliseconds(1000 * _unmount_idle->count());
-    _idle_unmounter = make_unique_ref<CallAfterTimeout>(duration, [fuse] {
+    _idle_unmounter = make_unique_ref<CallAfterTimeout>(*_unmount_idle, [fuse] {
         fuse->stop();
     });
     device->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idle_unmounter->get()));

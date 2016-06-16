@@ -52,8 +52,8 @@ cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *log
     return handle->set_logfile(string(logfile, logfile_length));
 }
 
-cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t unmount_idle_sec) {
-    return handle->set_unmount_idle(std::chrono::seconds(unmount_idle_sec));
+cryfs_status cryfs_mount_set_unmount_idle_milliseconds(cryfs_mount_handle *handle, uint32_t unmount_idle_milliseconds) {
+    return handle->set_unmount_idle(boost::chrono::milliseconds(unmount_idle_milliseconds));
 }
 
 cryfs_status cryfs_mount(cryfs_mount_handle *handle) {

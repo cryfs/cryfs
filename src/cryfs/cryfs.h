@@ -47,7 +47,7 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_get_ci
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_run_in_foreground(cryfs_mount_handle *handle, bool run_in_foreground);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_mountdir(cryfs_mount_handle *handle, const char *mountdir, size_t mountdir_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_logfile(cryfs_mount_handle *handle, const char *logfile, size_t logfile_length);
-CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_unmount_idle(cryfs_mount_handle *handle, uint32_t unmount_idle_sec);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_set_unmount_idle_milliseconds(cryfs_mount_handle *handle, uint32_t unmount_idle_milliseconds);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_add_fuse_argument(cryfs_mount_handle *handle, const char *argument, size_t argument_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount(cryfs_mount_handle *handle);
 
