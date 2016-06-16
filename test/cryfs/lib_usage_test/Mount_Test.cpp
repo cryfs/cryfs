@@ -95,7 +95,6 @@ public:
     void create_and_mount_filesystem() {
         create_and_load_filesystem();
         mount_filesystem();
-        std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
     }
 
     void reload_and_mount_filesystem() {
@@ -204,7 +203,7 @@ TEST_F(Mount_Test, mount) {
     create_and_load_filesystem();
     set_mountdir();
     EXPECT_SUCCESS(cryfs_mount(handle));
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
+
     unmount(); // cleanup
 }
 
@@ -214,7 +213,6 @@ TEST_F(Mount_Test, mount_in_background) {
     set_run_in_foreground(false);
     mount();
     // Test it is running in background. If it weren't, the call to mount() would be blocking and the test wouldn't continue.
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
     unmount(); // cleanup
 }
 
@@ -234,11 +232,9 @@ TEST_F(Mount_Test, mountdir_is_correct) {
     EXPECT_FALSE(bf::exists(filepath));
     create_file(filepath);
     EXPECT_TRUE(bf::exists(filepath));
-    std::this_thread::sleep_for(std::chrono::seconds(2)); // TODO This is needed, because the current implementation of daemonize() doesn't return to call the CryDevice destructor on unmount, so Cache won't be written back. Has to be fixed!
     unmount();
     EXPECT_FALSE(bf::exists(filepath));
     reload_and_mount_filesystem();
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
     EXPECT_TRUE(bf::exists(filepath));
     unmount();
 }

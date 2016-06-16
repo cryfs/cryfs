@@ -8,7 +8,6 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <csignal>
-#include <cpp-utils/process/daemon/daemonize.h>
 #include "InvalidFilesystem.h"
 
 using std::vector;
@@ -20,6 +19,8 @@ using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using std::make_shared;
 using std::shared_ptr;
+using boost::optional;
+using boost::none;
 using namespace fspp::fuse;
 namespace process = cpputils::process;
 
@@ -225,7 +226,7 @@ Fuse::~Fuse() {
 }
 
 Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, const std::string &fstype, const boost::optional<std::string> &fsname)
-  :_init(init), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
+  :_init(init), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname), _pipeToParent(nullptr) {
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -248,9 +249,16 @@ void Fuse::runInBackground(const bf::path &mountdir, const vector<string> &fuseO
   vector<string> realFuseOptions = fuseOptions;
   _removeAndWarnIfExists(&realFuseOptions, "-f");
   _removeAndWarnIfExists(&realFuseOptions, "-d");
-  process::daemonize([this, &mountdir, &realFuseOptions] (process::PipeToParent *pipeToParent) {
+  process::PipeFromChild pipe = process::daemonize([this, &mountdir, &realFuseOptions] (process::PipeToParent *pipeToParent) {
+      // Fuse::init() is called by libfuse when ready and will notify the parent using _pipeToParent
+      _pipeToParent = pipeToParent;
       _run(mountdir, realFuseOptions);
   });
+
+  optional<string> error = pipe.waitForReadyReturnError();
+  if (error != none) {
+    throw std::runtime_error("Failed to mount file system: " + *error);
+  }
 }
 
 void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {
@@ -855,15 +863,31 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
 
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
-  LOG(INFO) << "Filesystem started.";
+  try {
 
-  _fs = _init(this);
+    LOG(INFO) << "Filesystem started.";
 
-  _running = true;
+    _fs = _init(this);
+
+    _running = true;
 
 #ifdef FSPP_LOG
-  cpputils::logging::setLevel(DEBUG);
+    cpputils::logging::setLevel(DEBUG);
 #endif
+    if (nullptr != _pipeToParent) {
+      _pipeToParent->notifyReady();
+    }
+  } catch (const std::exception &e) {
+    if (nullptr != _pipeToParent) {
+      _pipeToParent->notifyError(string() + "Error initializing file system: " + e.what());
+    }
+    throw;
+  } catch (...) {
+    if (nullptr != _pipeToParent) {
+      _pipeToParent->notifyError("Unknown error initializing file system");
+    }
+    throw;
+  }
 }
 
 void Fuse::destroy() {

@@ -14,6 +14,7 @@ namespace process {
         PipeFromChild(PipeReader reader);
         PipeFromChild(PipeFromChild &&rhs) = default;
 
+        // TODO Give this a timeout parameter
         boost::optional<std::string> waitForReadyReturnError();
     private:
         PipeReader _reader;

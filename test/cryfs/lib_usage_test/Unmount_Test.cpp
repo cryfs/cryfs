@@ -62,7 +62,6 @@ const string Unmount_Test::PASSWORD = "mypassword";
 
 TEST_F(Unmount_Test, mount_and_unmount) {
   create_and_mount_filesystem();
-  std::this_thread::sleep_for(std::chrono::seconds(1)); // TODO Make cryfs_mount wait until mounted instead
   EXPECT_SUCCESS(unmount());
 }
 

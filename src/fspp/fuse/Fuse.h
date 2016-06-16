@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
+#include <cpp-utils/process/daemon/daemonize.h>
 #include <cpp-utils/pointer/unique_ref.h>
 
 namespace fspp {
@@ -75,6 +76,7 @@ private:
   bool _running;
   std::string _fstype;
   boost::optional<std::string> _fsname;
+  cpputils::process::PipeToParent *_pipeToParent;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };
