@@ -8,6 +8,7 @@ set(SOURCES
         crypto/RandomPadding.cpp
         process/pipe/PipeBuilder.cpp
         process/pipe/PipeDescriptor.cpp
+        process/pipe/PipeNotReadableError.cpp
         process/pipe/PipeReader.cpp
         process/pipe/PipeStreamEndpoint.cpp
         process/pipe/PipeWriter.cpp

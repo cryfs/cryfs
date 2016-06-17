@@ -76,6 +76,30 @@ TEST_F(DaemonizeTest, Exception) {
     EXPECT_EQ("My error message", childPipe.waitForReadyReturnError().value());
 }
 
+TEST_F(DaemonizeTest, ChildExitSuccess) {
+    PipeFromChild childPipe = daemonize([](PipeToParent *) {
+        exit(EXIT_SUCCESS);
+    });
+
+    EXPECT_EQ("Child exited before being ready.", childPipe.waitForReadyReturnError().value());
+}
+
+TEST_F(DaemonizeTest, ChildExitFailure) {
+    PipeFromChild childPipe = daemonize([](PipeToParent *) {
+        exit(EXIT_FAILURE);
+    });
+
+    EXPECT_EQ("Child exited before being ready.", childPipe.waitForReadyReturnError().value());
+}
+
+TEST_F(DaemonizeTest, ChildAbort) {
+    PipeFromChild childPipe = daemonize([](PipeToParent *) {
+        abort();
+    });
+
+    EXPECT_EQ("Child exited before being ready.", childPipe.waitForReadyReturnError().value());
+}
+
 TEST_F(DaemonizeTest, ChildCwdIsRoot) {
     daemonizeWithChildExpect([]() {
         return bf::current_path() == bf::path("/");

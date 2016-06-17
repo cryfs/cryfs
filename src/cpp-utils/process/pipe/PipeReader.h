@@ -6,6 +6,7 @@
 #include "PipeStreamEndpoint.h"
 #include <cstdint>
 #include <string>
+#include "PipeNotReadableError.h"
 
 namespace cpputils {
     namespace process {

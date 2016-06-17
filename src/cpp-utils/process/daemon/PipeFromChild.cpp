@@ -11,7 +11,12 @@ PipeFromChild::PipeFromChild(PipeReader reader)
 }
 
 optional<std::string> PipeFromChild::waitForReadyReturnError() {
-    string msg = _reader.receive();
+    string msg;
+    try {
+        msg = _reader.receive();
+    } catch (const PipeNotReadableError &e) {
+        return string("Child exited before being ready.");
+    }
     if (msg == Messages::READY) {
         return none;
     } else if (msg == Messages::ERROR) {
