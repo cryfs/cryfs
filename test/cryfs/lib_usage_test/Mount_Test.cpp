@@ -91,6 +91,10 @@ public:
         EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, path.native().c_str(), path.native().size()));
     }
 
+    void add_fuse_argument(const std::string &argument) {
+        EXPECT_SUCCESS(cryfs_mount_add_fuse_argument(handle, argument.c_str(), argument.size()));
+    }
+
     void mount() {
         EXPECT_SUCCESS(cryfs_mount(handle));
     }
@@ -140,6 +144,10 @@ public:
     string loadFileContent(const bf::path &path) {
         std::ifstream file(path.c_str());
         return string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    }
+
+    void createFile(const bf::path &path) {
+        std::ofstream(path.native().c_str());
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
@@ -532,4 +540,18 @@ TEST_F(Mount_Test, mount_logfilespecified_background_logstofile) {
     EXPECT_THAT(filecontent, MatchesRegex(".*Filesystem started.*Filesystem stopped.*"));
 }
 
-//TODO Test fuse arguments are applied correctly (choose an easy-to-check argument. allowother for example?)
+TEST_F(Mount_Test, mount_fusearguments) {
+    create_and_load_filesystem();
+    set_mountdir();
+    createFile(mountdir.path() / "myfile");
+
+    // Expect mounting to fail because mountdir is not empty
+    EXPECT_ANY_THROW(mount());
+
+    add_fuse_argument("-o");
+    add_fuse_argument("nonempty");
+
+    // Now expect mounting to succeed
+    mount();
+    unmount();
+}
