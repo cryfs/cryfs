@@ -1,3 +1,4 @@
+#include <gmock/gmock.h>
 #include <cryfs/impl/config/CryConfig.h>
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
@@ -23,6 +24,9 @@ using boost::optional;
 using boost::none;
 using std::shared_ptr;
 namespace bf = boost::filesystem;
+using testing::MatchesRegex;
+using testing::HasSubstr;
+using testing::Not;
 
 class Mount_Test : public C_Library_Test {
 public:
@@ -83,6 +87,10 @@ public:
         EXPECT_SUCCESS(cryfs_mount_set_unmount_idle_milliseconds(handle, milliseconds));
     }
 
+    void set_logfile(const bf::path &path) {
+        EXPECT_SUCCESS(cryfs_mount_set_logfile(handle, path.native().c_str(), path.native().size()));
+    }
+
     void mount() {
         EXPECT_SUCCESS(cryfs_mount(handle));
     }
@@ -115,6 +123,23 @@ public:
         std::chrono::high_resolution_clock::time_point beginTime = std::chrono::high_resolution_clock::now();
         func();
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - beginTime);
+    }
+
+    std::string captureStderr(std::function<void()> func) {
+        testing::internal::CaptureStderr();
+        func();
+        return testing::internal::GetCapturedStderr();
+    }
+
+    std::string captureStdout(std::function<void()> func) {
+        testing::internal::CaptureStdout();
+        func();
+        return testing::internal::GetCapturedStdout();
+    }
+
+    string loadFileContent(const bf::path &path) {
+        std::ifstream file(path.c_str());
+        return string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     }
 };
 const string Mount_Test::PASSWORD = "mypassword";
@@ -258,12 +283,6 @@ TEST_F(Mount_Test, basedir_is_correct) {
     EXPECT_GT(newNumBasedirEntries, numBasedirEntries);
 }
 
-//TODO mount_logfilenotspecified_foreground_logstostderr
-//TODO mount_logfilenotspecified_background_logstosyslog
-//TODO mount_logfilespecified_foreground_logstofile
-//TODO mount_logfilespecified_background_logstofile
-//TODO Test fuse arguments are applied correctly (choose an easy-to-check argument. allowother for example?)
-
 TEST_F(Mount_Test, unmount_idle_zero) {
     create_and_load_filesystem();
     set_mountdir();
@@ -298,3 +317,219 @@ TEST_F(Mount_Test, unmount_idle_large) {
     EXPECT_GT(duration, std::chrono::milliseconds(4500));
     EXPECT_LT(duration, std::chrono::milliseconds(5500));
 }
+
+TEST_F(Mount_Test, mount_logfilenotspecified_foreground_logstostderr) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+
+    string stderr = captureStderr([this] {
+        mount();
+    });
+    EXPECT_THAT(stderr, MatchesRegex(".*Filesystem started.*Filesystem stopped.*"));
+}
+
+TEST_F(Mount_Test, mount_logfilenotspecified_foreground_doesntlogstostdout) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+
+    string stdout = captureStdout([this] {
+        mount();
+    });
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem stopped")));
+}
+
+/* TODO Don't know how to test this, because syslog is hard to access platform independently.
+ *      http://stackoverflow.com/questions/37867356/capture-syslog-for-test-cases/37867750#37867750
+ *      Maybe use DI to insert logging into all classes?
+ *
+TEST_F(Mount_Test, mount_logfilenotspecified_foreground_doesntlogstosyslog) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+
+    string syslog = captureSyslog([this] {
+        mount();
+    });
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem stopped")));
+}*/
+
+TEST_F(Mount_Test, mount_logfilespecified_foreground_doesntlogstostderr) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+    TempFile file;
+    set_logfile(file.path());
+
+    string stderr = captureStderr([this] {
+        mount();
+    });
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem stopped")));
+}
+
+TEST_F(Mount_Test, mount_logfilespecified_foreground_doesntlogstostdout) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+    TempFile file;
+    set_logfile(file.path());
+
+    string stdout = captureStdout([this] {
+        mount();
+    });
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem stopped")));
+}
+
+/* TODO Don't know how to test this, because syslog is hard to access platform independently.
+ *      http://stackoverflow.com/questions/37867356/capture-syslog-for-test-cases/37867750#37867750
+ *      Maybe use DI to insert logging into all classes?
+ *
+TEST_F(Mount_Test, mount_logfilespecified_foreground_doesntlogstosyslog) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+    TempFile file;
+    set_logfile(file.path());
+
+    string syslog = captureSyslog([this] {
+        mount();
+    });
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem stopped")));
+}*/
+
+
+TEST_F(Mount_Test, mount_logfilespecified_foreground_logstofile) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(true);
+    set_unmount_idle_milliseconds(0);
+    TempFile file;
+    set_logfile(file.path());
+
+    mount();
+
+    string filecontent = loadFileContent(file.path());
+    EXPECT_THAT(filecontent, MatchesRegex(".*Filesystem started.*Filesystem stopped.*"));
+}
+
+/* TODO Don't know how to test this, because syslog is hard to access platform independently.
+ *      http://stackoverflow.com/questions/37867356/capture-syslog-for-test-cases/37867750#37867750
+ *      Maybe use DI to insert logging into all classes?
+ *
+TEST_F(Mount_Test, mount_logfilenotspecified_background_logstosyslog) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+
+    string syslog = captureSyslog([this] {
+        mount();
+        unmount();
+    });
+
+    EXPECT_THAT(syslog, MatchesRegex(".*Filesystem started.*Filesystem stopped.*"));
+}*/
+
+TEST_F(Mount_Test, mount_logfilenotspecified_background_doesntlogstostdout) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+
+    string stdout = captureStdout([this] {
+        mount();
+        unmount();
+    });
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem stopped")));
+}
+
+TEST_F(Mount_Test, mount_logfilenotspecified_background_doesntlogstostderr) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+
+    string stderr = captureStderr([this] {
+        mount();
+        unmount();
+    });
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem stopped")));
+}
+
+TEST_F(Mount_Test, mount_logfilespecified_background_doesntlogstostderr) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+    TempFile file;
+    set_logfile(file.path());
+
+    string stderr = captureStderr([this] {
+        mount();
+        unmount();
+    });
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stderr, Not(HasSubstr("Filesystem stopped")));
+}
+
+TEST_F(Mount_Test, mount_logfilespecified_background_doesntlogstostdout) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+    TempFile file;
+    set_logfile(file.path());
+
+    string stdout = captureStdout([this] {
+        mount();
+        unmount();
+    });
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(stdout, Not(HasSubstr("Filesystem stopped")));
+}
+
+/* TODO Don't know how to test this, because syslog is hard to access platform independently.
+ *      http://stackoverflow.com/questions/37867356/capture-syslog-for-test-cases/37867750#37867750
+ *      Maybe use DI to insert logging into all classes?
+ *
+TEST_F(Mount_Test, mount_logfilespecified_background_doesntlogstosyslog) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+    TempFile file;
+    set_logfile(file.path());
+
+    string syslog = captureSyslog([this] {
+        mount();
+        unmount();
+    });
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem started")));
+    EXPECT_THAT(syslog, Not(HasSubstr("Filesystem stopped")));
+}*/
+
+TEST_F(Mount_Test, mount_logfilespecified_background_logstofile) {
+    create_and_load_filesystem();
+    set_mountdir();
+    set_run_in_foreground(false);
+    TempFile file;
+    set_logfile(file.path());
+
+    mount();
+    unmount();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500)); // give cryfs some time to exit and flush the log
+
+    string filecontent = loadFileContent(file.path());
+
+    EXPECT_THAT(filecontent, MatchesRegex(".*Filesystem started.*Filesystem stopped.*"));
+}
+
+//TODO Test fuse arguments are applied correctly (choose an easy-to-check argument. allowother for example?)

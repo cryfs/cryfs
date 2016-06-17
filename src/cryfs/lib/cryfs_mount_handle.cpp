@@ -84,7 +84,7 @@ shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem(fspp::fuse
 
     auto blockstore = make_unique_ref<OnDiskBlockStore>(_basedir);
     auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore));
-    
+
     _create_idle_unmounter(fuse, crydevice.get());
 
     return make_shared<fspp::FilesystemImpl>(std::move(crydevice));

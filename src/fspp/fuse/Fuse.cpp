@@ -864,10 +864,9 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
   try {
+    _fs = _init(this);
 
     LOG(INFO) << "Filesystem started.";
-
-    _fs = _init(this);
 
     _running = true;
 
@@ -894,6 +893,7 @@ void Fuse::destroy() {
   _fs = make_shared<InvalidFilesystem>();
   LOG(INFO) << "Filesystem stopped.";
   _running = false;
+  cpputils::logging::logger()->flush();
 }
 
 int Fuse::access(const bf::path &path, int mask) {
