@@ -6,6 +6,7 @@
 
 #include <cpp-utils/data/Data.h>
 #include <iostream>
+#include <cpp-utils/data/FixedSizeData.h>
 
 namespace cryfs {
 
@@ -33,6 +34,10 @@ public:
   uint64_t BlocksizeBytes() const;
   void SetBlocksizeBytes(uint64_t value);
 
+  using FilesystemID = cpputils::FixedSizeData<16>;
+  const FilesystemID &FilesystemId() const;
+  void SetFilesystemId(const FilesystemID &value);
+
   static CryConfig load(const cpputils::Data &data);
   cpputils::Data save() const;
 
@@ -43,6 +48,7 @@ private:
   std::string _version;
   std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
+  FilesystemID _filesystemId;
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };

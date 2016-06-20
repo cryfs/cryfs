@@ -1,10 +1,12 @@
 #include "CryConfigCreator.h"
 #include "CryCipher.h"
 #include <gitversion/gitversion.h>
+#include <cpp-utils/random/Random.h>
 
 using cpputils::Console;
 using cpputils::unique_ref;
 using cpputils::RandomGenerator;
+using cpputils::Random;
 using std::string;
 using std::shared_ptr;
 using std::vector;
@@ -25,6 +27,7 @@ namespace cryfs {
         config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
         config.SetRootBlob(_generateRootBlobKey());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
+        config.SetFilesystemId(_generateFilesystemID());
         return config;
     }
 
@@ -56,5 +59,9 @@ namespace cryfs {
     string CryConfigCreator::_generateRootBlobKey() {
         //An empty root blob entry will tell CryDevice to create a new root blob
         return "";
+    }
+
+    CryConfig::FilesystemID CryConfigCreator::_generateFilesystemID() {
+        return Random::PseudoRandom().getFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
     }
 }

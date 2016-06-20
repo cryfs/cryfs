@@ -4,6 +4,7 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
+#include <cpp-utils/data/DataFixture.h>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
 
@@ -11,6 +12,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::SCrypt;
+using cpputils::DataFixture;
 using boost::optional;
 using boost::none;
 using std::string;
@@ -72,6 +74,12 @@ public:
         auto cfg = loader(password, false).loadOrCreate(file.path()).value();
         cfg.config()->SetVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
+        cfg.save();
+    }
+
+    void CreateWithFilesystemID(const CryConfig::FilesystemID &filesystemId, const string &password = "mypassword") {
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
     }
 
@@ -197,6 +205,18 @@ TEST_F(CryConfigLoaderTest, Version_Create) {
     auto created = Create();
     EXPECT_EQ(gitversion::VersionString(), created.config()->Version());
     EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
+}
+
+TEST_F(CryConfigLoaderTest, FilesystemID_Load) {
+    auto fixture = DataFixture::generateFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
+    CreateWithFilesystemID(fixture);
+    auto loaded = Load().value();
+    EXPECT_EQ(fixture, loaded.config()->FilesystemId());
+}
+
+TEST_F(CryConfigLoaderTest, FilesystemID_Create) {
+    auto created = Create();
+    EXPECT_NE(CryConfig::FilesystemID::Null(), created.config()->FilesystemId());
 }
 
 TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
