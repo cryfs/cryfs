@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include <cryfs/impl/config/CryConfig.h>
+#include <cpp-utils/data/DataFixture.h>
 
 using namespace cryfs;
 using cpputils::Data;
+using cpputils::DataFixture;
 
 class CryConfigTest: public ::testing::Test {
 public:
@@ -174,4 +176,28 @@ TEST_F(CryConfigTest, BlocksizeBytes_AfterSaveAndLoad) {
     cfg.SetBlocksizeBytes(10*1024);
     CryConfig loaded = SaveAndLoad(std::move(cfg));
     EXPECT_EQ(10*1024u, loaded.BlocksizeBytes());
+}
+
+TEST_F(CryConfigTest, FilesystemID_Init) {
+    EXPECT_EQ(CryConfig::FilesystemID::Null(), cfg.FilesystemId());
+}
+
+TEST_F(CryConfigTest, FilesystemID) {
+    auto fixture = DataFixture::generateFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
+    cfg.SetFilesystemId(fixture);
+    EXPECT_EQ(fixture, cfg.FilesystemId());
+}
+
+TEST_F(CryConfigTest, FilesystemID_AfterMove) {
+    auto fixture = DataFixture::generateFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
+    cfg.SetFilesystemId(fixture);
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ(fixture, moved.FilesystemId());
+}
+
+TEST_F(CryConfigTest, FilesystemID_AfterSaveAndLoad) {
+    auto fixture = DataFixture::generateFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
+    cfg.SetFilesystemId(fixture);
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ(fixture, loaded.FilesystemId());
 }
