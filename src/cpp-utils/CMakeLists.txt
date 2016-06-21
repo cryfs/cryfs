@@ -32,6 +32,7 @@ set(SOURCES
         assert/backtrace.cpp
         assert/AssertFailed.cpp
         system/get_total_memory.cpp
+        system/homedir.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

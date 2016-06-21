@@ -11,9 +11,11 @@
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore.h>
+#include <blockstore/implementations/versioncounting/VersionCountingBlockStore.h>
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"
 #include "../config/CryCipher.h"
+#include <cpp-utils/system/homedir.h>
 
 using std::string;
 
@@ -27,6 +29,7 @@ using blockstore::encrypted::EncryptedBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
+using blockstore::versioncounting::VersionCountingBlockStore;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -52,10 +55,16 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
           make_unique_ref<FsBlobStore>(
             make_unique_ref<BlobStoreOnBlocks>(
               make_unique_ref<CachingBlockStore>(
-                CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore))
-              ), configFile.config()->BlocksizeBytes())))
+                make_unique_ref<VersionCountingBlockStore>(
+                  CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore)),
+                  _integrityFilePath(configFile.config()->FilesystemId())
+                )
+              )
+            , configFile.config()->BlocksizeBytes())
+          )
         )
-      ),
+      )
+    ),
   _rootKey(GetOrCreateRootKey(&configFile)),
   _onFsAction() {
 }
@@ -64,6 +73,22 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob =  _fsBlobStore->createDirBlob();
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
   return rootBlob->key();
+}
+
+bf::path CryDevice::_integrityFilePath(const CryConfig::FilesystemID &filesystemId) {
+  bf::path app_dir = cpputils::system::home_directory() / ".cryfs";
+  _createDirIfNotExists(app_dir);
+  bf::path filesystems_dir = app_dir / "filesystems";
+  _createDirIfNotExists(filesystems_dir);
+  bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
+  _createDirIfNotExists(this_filesystem_dir);
+  return this_filesystem_dir / "integritydata.knownblockversions";
+}
+
+void CryDevice::_createDirIfNotExists(const bf::path &path) {
+  if (!bf::exists(path)) {
+    bf::create_directory(path);
+  }
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
