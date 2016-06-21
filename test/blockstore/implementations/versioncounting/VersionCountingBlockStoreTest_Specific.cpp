@@ -3,6 +3,7 @@
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/utils/BlockStoreUtils.h"
 #include <cpp-utils/data/DataFixture.h>
+#include <cpp-utils/tempfile/TempFile.h>
 
 using ::testing::Test;
 
@@ -10,6 +11,7 @@ using cpputils::DataFixture;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::TempFile;
 
 using blockstore::testfake::FakeBlockStore;
 
@@ -19,10 +21,12 @@ class VersionCountingBlockStoreTest: public Test {
 public:
   static constexpr unsigned int BLOCKSIZE = 1024;
   VersionCountingBlockStoreTest():
+    stateFile(false),
     baseBlockStore(new FakeBlockStore),
-    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), KnownBlockVersions())),
+    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), KnownBlockVersions(stateFile.path()))),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
+  TempFile stateFile;
   FakeBlockStore *baseBlockStore;
   unique_ref<VersionCountingBlockStore> blockStore;
   Data data;

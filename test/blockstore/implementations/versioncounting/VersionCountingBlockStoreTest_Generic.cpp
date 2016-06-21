@@ -2,6 +2,7 @@
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "../../testutils/BlockStoreTest.h"
 #include <gtest/gtest.h>
+#include <cpp-utils/tempfile/TempFile.h>
 
 using ::testing::Test;
 
@@ -14,11 +15,15 @@ using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
+using cpputils::TempFile;
 
 class VersionCountingBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
+   VersionCountingBlockStoreTestFixture() :stateFile(false) {}
+
+  TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), KnownBlockVersions());
+    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), KnownBlockVersions(stateFile.path()));
   }
 };
 
