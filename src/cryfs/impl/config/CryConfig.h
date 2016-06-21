@@ -48,8 +48,6 @@ private:
   std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
-
-  DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };
 
 }
