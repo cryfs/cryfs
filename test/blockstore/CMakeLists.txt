@@ -34,6 +34,9 @@ set(SOURCES
     implementations/caching/cache/CacheTest_RaceCondition.cpp
     implementations/caching/cache/PeriodicTaskTest.cpp
     implementations/caching/cache/QueueMapTest_Peek.cpp
+    implementations/versioncounting/KnownBlockVersionsTest.cpp
+    implementations/versioncounting/VersionCountingBlockStoreTest_Generic.cpp
+    implementations/versioncounting/VersionCountingBlockStoreTest_Specific.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

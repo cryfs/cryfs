@@ -27,6 +27,9 @@ set(SOURCES
   implementations/caching/cache/QueueMap.cpp
   implementations/caching/CachedBlock.cpp
   implementations/caching/NewBlock.cpp
+  implementations/versioncounting/VersionCountingBlock.cpp
+  implementations/versioncounting/VersionCountingBlockStore.cpp
+  implementations/versioncounting/KnownBlockVersions.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
