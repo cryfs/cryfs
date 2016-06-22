@@ -33,7 +33,8 @@ namespace blockstore {
 
             void _loadStateFile();
             static void _checkHeader(std::ifstream *file);
-            static boost::optional<std::pair<Key, uint64_t>> _readEntry(std::ifstream *file);
+            static std::pair<Key, uint64_t> _readEntry(std::ifstream *file);
+            static void _checkIsEof(std::ifstream *file);
             void _saveStateFile() const;
 
             DISALLOW_COPY_AND_ASSIGN(KnownBlockVersions);

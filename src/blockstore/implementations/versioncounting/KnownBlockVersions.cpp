@@ -59,33 +59,33 @@ void KnownBlockVersions::_loadStateFile() {
     _checkHeader(&file);
     file.read((char*)&_myClientId, sizeof(_myClientId));
     ASSERT(file.good(), "Error reading file");
+    uint64_t numEntries;
+    file.read((char*)&numEntries, sizeof(numEntries));
+    ASSERT(file.good(), "Error reading file");
 
     _knownVersions.clear();
-    optional<pair<Key, uint64_t>> entry = _readEntry(&file);
-    while(none != entry) {
-        _knownVersions.insert(*entry);
-        entry = _readEntry(&file);
+    _knownVersions.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
+    for (uint64_t i = 0 ; i < numEntries; ++i) {
+        auto entry = _readEntry(&file);
+        _knownVersions.insert(entry);
     }
-    ASSERT(file.eof(), "Didn't read until end of file");
+
+    _checkIsEof(&file);
 };
 
 void KnownBlockVersions::_checkHeader(std::ifstream *file) {
     char actualHeader[HEADER.size()];
     file->read(actualHeader, HEADER.size());
+    ASSERT(file->good(), "Error reading file");
     if (HEADER != string(actualHeader, HEADER.size())) {
         throw std::runtime_error("Invalid local state: Invalid integrity file header.");
     }
 }
 
-optional<pair<Key, uint64_t>> KnownBlockVersions::_readEntry(std::ifstream *file) {
-    ASSERT(file->good(), "Error reading file");
+pair<Key, uint64_t> KnownBlockVersions::_readEntry(std::ifstream *file) {
     pair<Key, uint64_t> result(Key::Null(), 0);
 
     file->read((char*)result.first.data(), result.first.BINARY_LENGTH);
-    if (file->eof()) {
-        // Couldn't read another entry. File end.
-        return none;
-    }
     ASSERT(file->good(), "Error reading file");
     file->read((char*)&result.second, sizeof(result.second));
     ASSERT(file->good(), "Error reading file");
@@ -93,10 +93,20 @@ optional<pair<Key, uint64_t>> KnownBlockVersions::_readEntry(std::ifstream *file
     return result;
 };
 
+void KnownBlockVersions::_checkIsEof(std::ifstream *file) {
+    char dummy;
+    file->read(&dummy, sizeof(dummy));
+    if (!file->eof()) {
+        throw std::runtime_error("There are more entries in the file than advertised");
+    }
+}
+
 void KnownBlockVersions::_saveStateFile() const {
     std::ofstream file(_stateFilePath.native().c_str());
     file.write(HEADER.c_str(), HEADER.size());
     file.write((char*)&_myClientId, sizeof(_myClientId));
+    uint64_t numEntries = _knownVersions.size();
+    file.write((char*)&numEntries, sizeof(numEntries));
     for (const auto &entry : _knownVersions) {
         file.write((char*)entry.first.data(), entry.first.BINARY_LENGTH);
         file.write((char*)&entry.second, sizeof(entry.second));
