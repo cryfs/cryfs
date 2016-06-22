@@ -30,6 +30,7 @@ set(SOURCES
   implementations/versioncounting/VersionCountingBlock.cpp
   implementations/versioncounting/VersionCountingBlockStore.cpp
   implementations/versioncounting/KnownBlockVersions.cpp
+  implementations/versioncounting/ClientIdAndBlockKey.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

@@ -3,6 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_CLIENTIDANDBLOCKKEY_H_
 
 #include <utility>
+#include "../../utils/Key.h"
 
 namespace blockstore {
     namespace versioncounting {
