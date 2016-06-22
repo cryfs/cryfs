@@ -34,17 +34,12 @@ KnownBlockVersions::~KnownBlockVersions() {
 bool KnownBlockVersions::checkAndUpdateVersion(const Key &key, uint64_t version) {
     ASSERT(_valid, "Object not valid due to a std::move");
 
-    auto found = _knownVersions.find(key);
-    if (found == _knownVersions.end()) {
-        _knownVersions.emplace(key, version);
-        return true;
-    }
-
-    if (found->second > version) {
+    uint64_t &found = _knownVersions[key]; // If the entry doesn't exist, this creates it with value 0.
+    if (found > version) {
         return false;
     }
 
-    found->second = version;
+    found = version;
     return true;
 }
 
