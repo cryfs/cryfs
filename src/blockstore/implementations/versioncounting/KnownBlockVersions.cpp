@@ -13,7 +13,7 @@ using cpputils::Random;
 namespace blockstore {
 namespace versioncounting {
 
-const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;0\0";
+const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;0";
 
 KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath)
         :_knownVersions(), _stateFilePath(stateFilePath), _myClientId(0), _valid(true) {
