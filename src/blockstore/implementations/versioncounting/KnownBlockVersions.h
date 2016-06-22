@@ -6,6 +6,8 @@
 #include <blockstore/utils/Key.h>
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
+#include "ClientIdAndBlockKey.h"
+#include <cpp-utils/data/Deserializer.h>
 
 namespace blockstore {
     namespace versioncounting {
@@ -17,14 +19,14 @@ namespace blockstore {
             ~KnownBlockVersions();
 
             __attribute__((warn_unused_result))
-            bool checkAndUpdateVersion(const Key &key, uint64_t version);
+            bool checkAndUpdateVersion(uint32_t clientId, const Key &key, uint64_t version);
 
             void updateVersion(const Key &key, uint64_t version);
 
             uint32_t myClientId() const;
 
         private:
-            std::unordered_map<Key, uint64_t> _knownVersions;
+            std::unordered_map<ClientIdAndBlockKey, uint64_t> _knownVersions;
             boost::filesystem::path _stateFilePath;
             uint32_t _myClientId;
             bool _valid;
@@ -32,9 +34,7 @@ namespace blockstore {
             static const std::string HEADER;
 
             void _loadStateFile();
-            static void _checkHeader(std::ifstream *file);
-            static std::pair<Key, uint64_t> _readEntry(std::ifstream *file);
-            static void _checkIsEof(std::ifstream *file);
+            static std::pair<ClientIdAndBlockKey, uint64_t> _readEntry(cpputils::Deserializer *deserializer);
             void _saveStateFile() const;
 
             DISALLOW_COPY_AND_ASSIGN(KnownBlockVersions);

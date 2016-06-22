@@ -54,7 +54,8 @@ private:
   static cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data);
   static void _checkFormatHeader(const cpputils::Data &data);
   static uint64_t _readVersion(const cpputils::Data &data);
-  static bool _versionIsNondecreasing(const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions);
+  static uint32_t _readClientId(const cpputils::Data &data);
+  static bool _versionIsNondecreasing(uint32_t clientId, const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions);
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
@@ -93,8 +94,9 @@ inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCounti
   cpputils::Data data(baseBlock->size());
   std::memcpy(data.data(), baseBlock->data(), data.size());
   _checkFormatHeader(data);
+  uint32_t lastClientId = _readClientId(data);
   uint64_t version = _readVersion(data);
-  if(!_versionIsNondecreasing(baseBlock->key(), version, knownBlockVersions)) {
+  if(!_versionIsNondecreasing(lastClientId, baseBlock->key(), version, knownBlockVersions)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
     cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed due to wrong version number. Was the block rolled back by an attacker?";
     return boost::none;
@@ -108,14 +110,20 @@ inline void VersionCountingBlock::_checkFormatHeader(const cpputils::Data &data)
   }
 }
 
+inline uint32_t VersionCountingBlock::_readClientId(const cpputils::Data &data) {
+  uint32_t clientId;
+  std::memcpy(&clientId, data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), sizeof(clientId));
+  return clientId;
+}
+
 inline uint64_t VersionCountingBlock::_readVersion(const cpputils::Data &data) {
   uint64_t version;
   std::memcpy(&version, data.dataOffset(sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t)), sizeof(version));
   return version;
 }
 
-inline bool VersionCountingBlock::_versionIsNondecreasing(const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions) {
-  return knownBlockVersions->checkAndUpdateVersion(key, version);
+inline bool VersionCountingBlock::_versionIsNondecreasing(uint32_t clientId, const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions) {
+  return knownBlockVersions->checkAndUpdateVersion(clientId, key, version);
 }
 
 inline VersionCountingBlock::VersionCountingBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data dataWithHeader, uint64_t version, KnownBlockVersions *knownBlockVersions)

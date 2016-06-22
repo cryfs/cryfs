@@ -1,6 +1,8 @@
 #include <fstream>
 #include <cpp-utils/random/Random.h>
 #include "KnownBlockVersions.h"
+#include <cpp-utils/data/Serializer.h>
+#include <cpp-utils/data/Deserializer.h>
 
 namespace bf = boost::filesystem;
 using std::unordered_map;
@@ -8,7 +10,10 @@ using std::pair;
 using std::string;
 using boost::optional;
 using boost::none;
+using cpputils::Data;
 using cpputils::Random;
+using cpputils::Serializer;
+using cpputils::Deserializer;
 
 namespace blockstore {
 namespace versioncounting {
@@ -31,10 +36,10 @@ KnownBlockVersions::~KnownBlockVersions() {
     }
 }
 
-bool KnownBlockVersions::checkAndUpdateVersion(const Key &key, uint64_t version) {
+bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const Key &key, uint64_t version) {
     ASSERT(_valid, "Object not valid due to a std::move");
 
-    uint64_t &found = _knownVersions[key]; // If the entry doesn't exist, this creates it with value 0.
+    uint64_t &found = _knownVersions[{clientId, key}]; // If the entry doesn't exist, this creates it with value 0.
     if (found > version) {
         return false;
     }
@@ -44,73 +49,59 @@ bool KnownBlockVersions::checkAndUpdateVersion(const Key &key, uint64_t version)
 }
 
 void KnownBlockVersions::updateVersion(const Key &key, uint64_t version) {
-    if (!checkAndUpdateVersion(key, version)) {
+    if (!checkAndUpdateVersion(_myClientId, key, version)) {
         throw std::logic_error("Tried to decrease block version");
     }
 }
 
 void KnownBlockVersions::_loadStateFile() {
-    std::ifstream file(_stateFilePath.native().c_str());
-    if (!file.good()) {
+    optional<Data> file = Data::LoadFromFile(_stateFilePath);
+    if (file == none) {
         // File doesn't exist means we loaded empty state. Assign a random client id.
         _myClientId = *reinterpret_cast<uint32_t*>(Random::PseudoRandom().getFixedSize<sizeof(uint32_t)>().data());
         return;
     }
-    _checkHeader(&file);
-    file.read((char*)&_myClientId, sizeof(_myClientId));
-    ASSERT(file.good(), "Error reading file");
-    uint64_t numEntries;
-    file.read((char*)&numEntries, sizeof(numEntries));
-    ASSERT(file.good(), "Error reading file");
+
+    Deserializer deserializer(&*file);
+    if (HEADER != deserializer.readString()) {
+        throw std::runtime_error("Invalid local state: Invalid integrity file header.");
+    }
+    _myClientId = deserializer.readUint32();
+    uint64_t numEntries = deserializer.readUint64();
 
     _knownVersions.clear();
     _knownVersions.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
     for (uint64_t i = 0 ; i < numEntries; ++i) {
-        auto entry = _readEntry(&file);
+        auto entry = _readEntry(&deserializer);
         _knownVersions.insert(entry);
     }
 
-    _checkIsEof(&file);
+    deserializer.finished();
 };
 
-void KnownBlockVersions::_checkHeader(std::ifstream *file) {
-    char actualHeader[HEADER.size()];
-    file->read(actualHeader, HEADER.size());
-    ASSERT(file->good(), "Error reading file");
-    if (HEADER != string(actualHeader, HEADER.size())) {
-        throw std::runtime_error("Invalid local state: Invalid integrity file header.");
-    }
-}
+pair<ClientIdAndBlockKey, uint64_t> KnownBlockVersions::_readEntry(Deserializer *deserializer) {
+    uint32_t clientId = deserializer->readUint32();
+    Key blockKey = deserializer->readFixedSizeData<Key::BINARY_LENGTH>();
+    uint64_t version = deserializer->readUint64();
 
-pair<Key, uint64_t> KnownBlockVersions::_readEntry(std::ifstream *file) {
-    pair<Key, uint64_t> result(Key::Null(), 0);
-
-    file->read((char*)result.first.data(), result.first.BINARY_LENGTH);
-    ASSERT(file->good(), "Error reading file");
-    file->read((char*)&result.second, sizeof(result.second));
-    ASSERT(file->good(), "Error reading file");
-
-    return result;
+    return {{clientId, blockKey}, version};
 };
-
-void KnownBlockVersions::_checkIsEof(std::ifstream *file) {
-    char dummy;
-    file->read(&dummy, sizeof(dummy));
-    if (!file->eof()) {
-        throw std::runtime_error("There are more entries in the file than advertised");
-    }
-}
 
 void KnownBlockVersions::_saveStateFile() const {
-    std::ofstream file(_stateFilePath.native().c_str());
-    file.write(HEADER.c_str(), HEADER.size());
-    file.write((char*)&_myClientId, sizeof(_myClientId));
     uint64_t numEntries = _knownVersions.size();
-    file.write((char*)&numEntries, sizeof(numEntries));
+
+    Serializer serializer(Serializer::StringSize(HEADER) + sizeof(uint32_t) + sizeof(uint64_t) + numEntries * (sizeof(uint32_t) + Key::BINARY_LENGTH + sizeof(uint64_t)));
+    serializer.writeString(HEADER);
+    serializer.writeUint32(_myClientId);
+    serializer.writeUint64(numEntries);
+
     for (const auto &entry : _knownVersions) {
-        file.write((char*)entry.first.data(), entry.first.BINARY_LENGTH);
-        file.write((char*)&entry.second, sizeof(entry.second));
+        serializer.writeUint32(entry.first.clientId);
+        serializer.writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.blockKey);
+        serializer.writeUint64(entry.second);
     }
+
+    serializer.finished().StoreToFile(_stateFilePath);
 }
 
 uint32_t KnownBlockVersions::myClientId() const {
