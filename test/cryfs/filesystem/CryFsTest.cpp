@@ -9,6 +9,8 @@
 #include <cryfs/filesystem/CryOpenFile.h>
 #include "../testutils/MockConsole.h"
 #include <cryfs/config/CryConfigLoader.h>
+#include <cpp-utils/system/homedir.h>
+#include "../testutils/TestWithFakeHomeDirectory.h"
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -24,13 +26,14 @@ using cpputils::Console;
 using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::Data;
+using cpputils::system::FakeHomeDirectoryRAII;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
 
 namespace bf = boost::filesystem;
 using namespace cryfs;
 
-class CryFsTest: public Test, public TestWithMockConsole {
+class CryFsTest: public Test, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
   CryFsTest(): rootdir(), config(false) {
   }

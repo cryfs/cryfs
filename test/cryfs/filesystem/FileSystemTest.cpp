@@ -5,6 +5,7 @@
 #include <cryfs/filesystem/CryDevice.h>
 #include <cryfs/config/CryConfigLoader.h>
 #include "../testutils/MockConsole.h"
+#include "../testutils/TestWithFakeHomeDirectory.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -19,7 +20,7 @@ using blockstore::testfake::FakeBlockStore;
 
 using namespace cryfs;
 
-class CryFsTestFixture: public FileSystemTestFixture, public TestWithMockConsole {
+class CryFsTestFixture: public FileSystemTestFixture, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
   CryFsTestFixture()
   // Don't create config tempfile yet

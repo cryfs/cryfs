@@ -5,8 +5,9 @@
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
+#include "../../testutils/TestWithFakeHomeDirectory.h"
 
-class CryTestBase {
+class CryTestBase : public TestWithFakeHomeDirectory {
 public:
     CryTestBase(): _configFile(false), _device(nullptr) {
         auto fakeBlockStore = cpputils::make_unique_ref<blockstore::testfake::FakeBlockStore>();

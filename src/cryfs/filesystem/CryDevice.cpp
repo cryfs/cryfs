@@ -76,7 +76,7 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
 }
 
 bf::path CryDevice::_integrityFilePath(const CryConfig::FilesystemID &filesystemId) {
-  bf::path app_dir = cpputils::system::home_directory() / ".cryfs";
+  bf::path app_dir = cpputils::system::HomeDirectory::get() / ".cryfs";
   _createDirIfNotExists(app_dir);
   bf::path filesystems_dir = app_dir / "filesystems";
   _createDirIfNotExists(filesystems_dir);
