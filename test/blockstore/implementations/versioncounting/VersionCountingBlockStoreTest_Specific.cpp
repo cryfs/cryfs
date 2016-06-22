@@ -46,6 +46,13 @@ public:
     return result;
   }
 
+  Data loadBlock(const blockstore::Key &key) {
+    auto block = blockStore->load(key).value();
+    Data result(block->size());
+    std::memcpy(result.data(), block->data(), data.size());
+    return result;
+  }
+
   void modifyBlock(const blockstore::Key &key) {
     auto block = blockStore->load(key).value();
     uint64_t data = 5;
@@ -58,14 +65,64 @@ public:
     block->write(data.data(), 0, data.size());
   }
 
+  void decreaseVersionNumber(const blockstore::Key &key) {
+    auto baseBlock = baseBlockStore->load(key).value();
+    uint64_t version = *(uint64_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::VERSION_HEADER_OFFSET);
+    ASSERT(version > 1, "Can't decrease the lowest allowed version number");
+    version -= 1;
+    baseBlock->write((char*)&version, VersionCountingBlock::VERSION_HEADER_OFFSET, sizeof(version));
+  }
+
+  void changeClientId(const blockstore::Key &key) {
+    auto baseBlock = baseBlockStore->load(key).value();
+    uint32_t clientId = *(uint32_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::CLIENTID_HEADER_OFFSET);
+    clientId += 1;
+    baseBlock->write((char*)&clientId, VersionCountingBlock::CLIENTID_HEADER_OFFSET, sizeof(clientId));
+  }
+
 private:
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlockStoreTest);
 };
 
-TEST_F(VersionCountingBlockStoreTest, DoesntAllowRollbacks) {
+// Test that a decreasing version number is not allowed
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_1) {
   auto key = CreateBlockReturnKey();
   Data oldBaseBlock = loadBaseBlock(key);
   modifyBlock(key);
+  rollbackBaseBlock(key, oldBaseBlock);
+  EXPECT_EQ(boost::none, blockStore->load(key));
+}
+
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_2) {
+  auto key = CreateBlockReturnKey();
+  // Increase the version number
+  modifyBlock(key);
+  // Decrease the version number again
+  decreaseVersionNumber(key);
+  EXPECT_EQ(boost::none, blockStore->load(key));
+}
+
+// Test that a different client doesn't need to have a higher version number (i.e. version numbers are per client).
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesAllowDecreasingVersionNumberForDifferentClient) {
+  auto key = CreateBlockReturnKey();
+  // Increase the version number
+  modifyBlock(key);
+  // Fake a modification by a different client with lower version numbers
+  changeClientId(key);
+  decreaseVersionNumber(key);
+  EXPECT_NE(boost::none, blockStore->load(key));
+}
+
+// Test that it doesn't allow a rollback to the "newest" block of a client, when this block was superseded by a version of a different client
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowSameVersionNumberForOldClient) {
+  auto key = CreateBlockReturnKey();
+  // Increase the version number
+  modifyBlock(key);
+  Data oldBaseBlock = loadBaseBlock(key);
+  // Fake a modification by a different client with lower version numbers
+  changeClientId(key);
+  loadBlock(key); // make the block store know about this other client's modification
+  // Rollback to old client
   rollbackBaseBlock(key, oldBaseBlock);
   EXPECT_EQ(boost::none, blockStore->load(key));
 }

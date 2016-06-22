@@ -19,24 +19,24 @@ public:
 
     void EXPECT_VERSION_IS(uint64_t version, KnownBlockVersions *testobj, blockstore::Key &key, uint32_t clientId) {
         EXPECT_FALSE(testobj->checkAndUpdateVersion(clientId, key, version-1));
-        EXPECT_TRUE(testobj->checkAndUpdateVersion(clientId, key, version));
+        EXPECT_TRUE(testobj->checkAndUpdateVersion(clientId, key, version+1));
     }
 };
 
-TEST_F(KnownBlockVersionsTest, update_newEntry_zero) {
-    testobj.updateVersion(key, 0);
+TEST_F(KnownBlockVersionsTest, update_newEntry_lowversion) {
+    testobj.updateVersion(key, 1);
 }
 
-TEST_F(KnownBlockVersionsTest, update_newEntry_nonzero) {
+TEST_F(KnownBlockVersionsTest, update_newEntry_highversion) {
     testobj.updateVersion(key, 100);
 }
 
-TEST_F(KnownBlockVersionsTest, update_existingEntry_equal_zero) {
-    testobj.updateVersion(key, 0);
-    testobj.updateVersion(key, 0);
+TEST_F(KnownBlockVersionsTest, update_existingEntry_equal_lowversion) {
+    testobj.updateVersion(key, 1);
+    testobj.updateVersion(key, 1);
 }
 
-TEST_F(KnownBlockVersionsTest, update_existingEntry_equal_nonzero) {
+TEST_F(KnownBlockVersionsTest, update_existingEntry_equal_highversion) {
     testobj.updateVersion(key, 100);
     testobj.updateVersion(key, 100);
 }
@@ -58,20 +58,20 @@ TEST_F(KnownBlockVersionsTest, update_updatesOwnClientId) {
     EXPECT_VERSION_IS(100, &testobj, key, testobj.myClientId());
 }
 
-TEST_F(KnownBlockVersionsTest, checkAndUpdate_newEntry_zero) {
-    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 0));
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_newEntry_lowversion) {
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 1));
 }
 
-TEST_F(KnownBlockVersionsTest, checkAndUpdate_newEntry_nonzero) {
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_newEntry_highversion) {
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
 }
 
-TEST_F(KnownBlockVersionsTest, checkAndUpdate_existingEntry_equal_zero) {
-    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 0));
-    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 0));
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_existingEntry_equal_lowversion) {
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 1));
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 1));
 }
 
-TEST_F(KnownBlockVersionsTest, checkAndUpdate_existingEntry_equal_nonzero) {
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_existingEntry_equal_highversion) {
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
 }
@@ -114,11 +114,22 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdate_twoEntriesDontInfluenceEachOther_d
     EXPECT_VERSION_IS(100, &testobj, key, clientId2);
 }
 
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_allowsRollbackToSameClientWithSameVersionNumber) {
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
+}
+
+TEST_F(KnownBlockVersionsTest, checkAndUpdate_doesntAllowRollbackToOldClientWithSameVersionNumber) {
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 100));
+    EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId2, key, 10));
+    EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 100));
+}
+
 TEST_F(KnownBlockVersionsTest, saveAndLoad_empty) {
     TempFile stateFile(false);
     KnownBlockVersions(stateFile.path());
 
-    EXPECT_TRUE(KnownBlockVersions(stateFile.path()).checkAndUpdateVersion(clientId, key, 0));
+    EXPECT_TRUE(KnownBlockVersions(stateFile.path()).checkAndUpdateVersion(clientId, key, 1));
 }
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_oneentry) {
@@ -142,4 +153,17 @@ TEST_F(KnownBlockVersionsTest, saveAndLoad_threeentries) {
     EXPECT_VERSION_IS(100, &obj, key, obj.myClientId());
     EXPECT_VERSION_IS(50, &obj, key2, obj.myClientId());
     EXPECT_VERSION_IS(150, &obj, key, clientId);
+}
+
+TEST_F(KnownBlockVersionsTest, saveAndLoad_lastUpdateClientIdIsStored) {
+    {
+        KnownBlockVersions obj(stateFile.path());
+        EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 100));
+        EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, key, 10));
+    }
+
+    KnownBlockVersions obj(stateFile.path());
+    EXPECT_FALSE(obj.checkAndUpdateVersion(clientId, key, 100));
+    EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, key, 10));
+    EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 101));
 }

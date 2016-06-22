@@ -16,10 +16,10 @@
 #include <cpp-utils/data/DataUtils.h>
 #include <mutex>
 #include <cpp-utils/logging/logging.h>
+#include "../../../../vendor/googletest/gtest-1.7.0/googletest/include/gtest/gtest_prod.h"
 
 namespace blockstore {
 namespace versioncounting {
-class VersionCountingBlockStore;
 
 // TODO Is an implementation that doesn't keep an in-memory copy but just passes through write() calls to the underlying block store (including a write call to the version number each time) faster?
 
@@ -59,12 +59,16 @@ private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-  static constexpr uint64_t VERSION_ZERO = 0;
-  static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
+  static constexpr uint64_t VERSION_ZERO = 1; // lowest block version is '1', because that is required by class KnownBlockVersions.
 
   std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
+
+public:
+    static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
+    static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
+    static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
 };
 
 
@@ -84,8 +88,8 @@ inline cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClie
   static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId) + sizeof(version), "Wrong header length");
   cpputils::Data result(data.size() + HEADER_LENGTH);
   std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(result.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &myClientId, sizeof(myClientId));
-  std::memcpy(result.dataOffset(sizeof(FORMAT_VERSION_HEADER)+sizeof(myClientId)), &version, sizeof(version));
+  std::memcpy(result.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
+  std::memcpy(result.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
   std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
   return result;
 }
@@ -112,13 +116,13 @@ inline void VersionCountingBlock::_checkFormatHeader(const cpputils::Data &data)
 
 inline uint32_t VersionCountingBlock::_readClientId(const cpputils::Data &data) {
   uint32_t clientId;
-  std::memcpy(&clientId, data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), sizeof(clientId));
+  std::memcpy(&clientId, data.dataOffset(CLIENTID_HEADER_OFFSET), sizeof(clientId));
   return clientId;
 }
 
 inline uint64_t VersionCountingBlock::_readVersion(const cpputils::Data &data) {
   uint64_t version;
-  std::memcpy(&version, data.dataOffset(sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t)), sizeof(version));
+  std::memcpy(&version, data.dataOffset(VERSION_HEADER_OFFSET), sizeof(version));
   return version;
 }
 
@@ -170,8 +174,8 @@ inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
     ++_version;
     uint32_t myClientId = _knownBlockVersions->myClientId();
-    std::memcpy(_dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &myClientId, sizeof(myClientId));
-    std::memcpy(_dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId)), &_version, sizeof(_version));
+    std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
+    std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
     _baseBlock->write(_dataWithHeader.data(), 0, _dataWithHeader.size());
     _knownBlockVersions->updateVersion(key(), _version);
     _dataChanged = false;
