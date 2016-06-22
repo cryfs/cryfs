@@ -51,7 +51,7 @@ private:
   bool _dataChanged;
 
   void _storeToBaseBlock();
-  static cpputils::Data _prependHeaderToData(uint64_t version, cpputils::Data data);
+  static cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data);
   static void _checkFormatHeader(const cpputils::Data &data);
   static uint64_t _readVersion(const cpputils::Data &data);
   static bool _versionIsNondecreasing(const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions);
@@ -59,7 +59,7 @@ private:
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
   static constexpr uint64_t VERSION_ZERO = 0;
-  static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(VERSION_ZERO);
+  static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
 
   std::mutex _mutex;
 
@@ -68,7 +68,7 @@ private:
 
 
 inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCountingBlock::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, KnownBlockVersions *knownBlockVersions) {
-  cpputils::Data dataWithHeader = _prependHeaderToData(VERSION_ZERO, std::move(data));
+  cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), VERSION_ZERO, std::move(data));
   auto baseBlock = baseBlockStore->tryCreate(key, dataWithHeader.copy()); // TODO Copy necessary?
   if (baseBlock == boost::none) {
     //TODO Test this code branch
@@ -79,11 +79,12 @@ inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCounti
   return cpputils::make_unique_ref<VersionCountingBlock>(std::move(*baseBlock), std::move(dataWithHeader), VERSION_ZERO, knownBlockVersions);
 }
 
-inline cpputils::Data VersionCountingBlock::_prependHeaderToData(const uint64_t version, cpputils::Data data) {
-  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(version), "Wrong header length");
+inline cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data) {
+  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId) + sizeof(version), "Wrong header length");
   cpputils::Data result(data.size() + HEADER_LENGTH);
   std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(result.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &version, sizeof(version));
+  std::memcpy(result.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &myClientId, sizeof(myClientId));
+  std::memcpy(result.dataOffset(sizeof(FORMAT_VERSION_HEADER)+sizeof(myClientId)), &version, sizeof(version));
   std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
   return result;
 }
@@ -109,7 +110,7 @@ inline void VersionCountingBlock::_checkFormatHeader(const cpputils::Data &data)
 
 inline uint64_t VersionCountingBlock::_readVersion(const cpputils::Data &data) {
   uint64_t version;
-  std::memcpy(&version, data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), sizeof(version));
+  std::memcpy(&version, data.dataOffset(sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t)), sizeof(version));
   return version;
 }
 
@@ -160,7 +161,9 @@ inline void VersionCountingBlock::resize(size_t newSize) {
 inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
     ++_version;
-    std::memcpy(_dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &_version, sizeof(_version));
+    uint32_t myClientId = _knownBlockVersions->myClientId();
+    std::memcpy(_dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), &myClientId, sizeof(myClientId));
+    std::memcpy(_dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId)), &_version, sizeof(_version));
     _baseBlock->write(_dataWithHeader.data(), 0, _dataWithHeader.size());
     _knownBlockVersions->updateVersion(key(), _version);
     _dataChanged = false;
