@@ -25,6 +25,8 @@ namespace blockstore {
 
             void updateVersion(const Key &key, uint64_t version);
 
+            uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
+
             uint32_t myClientId() const;
 
         private:

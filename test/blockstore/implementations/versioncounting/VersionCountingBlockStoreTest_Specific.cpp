@@ -12,6 +12,7 @@ using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
+using boost::none;
 
 using blockstore::testfake::FakeBlockStore;
 
@@ -80,6 +81,14 @@ public:
     baseBlock->write((char*)&clientId, VersionCountingBlock::CLIENTID_HEADER_OFFSET, sizeof(clientId));
   }
 
+  void deleteBlock(const blockstore::Key &key) {
+    blockStore->remove(blockStore->load(key).value());
+  }
+
+  void insertBaseBlock(const blockstore::Key &key, Data data) {
+    EXPECT_NE(none, baseBlockStore->tryCreate(key, std::move(data)));
+  }
+
 private:
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlockStoreTest);
 };
@@ -124,6 +133,15 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowSameVersionN
   loadBlock(key); // make the block store know about this other client's modification
   // Rollback to old client
   rollbackBaseBlock(key, oldBaseBlock);
+  EXPECT_EQ(boost::none, blockStore->load(key));
+}
+
+// Test that deleted blocks cannot be re-introduced
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowReintroducingDeletedBlocks) {
+  auto key = CreateBlockReturnKey();
+  Data oldBaseBlock = loadBaseBlock(key);
+  deleteBlock(key);
+  insertBaseBlock(key, std::move(oldBaseBlock));
   EXPECT_EQ(boost::none, blockStore->load(key));
 }
 

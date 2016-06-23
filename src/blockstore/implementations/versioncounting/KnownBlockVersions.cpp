@@ -175,5 +175,9 @@ uint32_t KnownBlockVersions::myClientId() const {
     return _myClientId;
 }
 
+uint64_t KnownBlockVersions::getBlockVersion(uint32_t clientId, const Key &key) const {
+    return _knownVersions.at({clientId, key});
+}
+
 }
 }

@@ -31,7 +31,7 @@ public:
   static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
 
   //TODO Storing key twice (in parent class and in object pointed to). Once would be enough.
-  VersionCountingBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data dataWithHeader, uint64_t version, KnownBlockVersions *knownBlockVersions);
+  VersionCountingBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data dataWithHeader, KnownBlockVersions *knownBlockVersions);
   ~VersionCountingBlock();
 
   const void *data() const override;
@@ -55,17 +55,18 @@ private:
   static void _checkFormatHeader(const cpputils::Data &data);
   static uint64_t _readVersion(const cpputils::Data &data);
   static uint32_t _readClientId(const cpputils::Data &data);
-  static bool _versionIsNondecreasing(uint32_t clientId, const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions);
+  static bool _checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions);
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-  static constexpr uint64_t VERSION_ZERO = 1; // lowest block version is '1', because that is required by class KnownBlockVersions.
 
   std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
 
 public:
+    static constexpr uint64_t VERSION_ZERO = 1; // lowest block version is '1', because that is required by class KnownBlockVersions.
+    static constexpr uint64_t VERSION_DELETED = std::numeric_limits<uint64_t>::max();
     static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
     static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
     static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
@@ -81,7 +82,7 @@ inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCounti
   }
 
   knownBlockVersions->updateVersion(key, VERSION_ZERO);
-  return cpputils::make_unique_ref<VersionCountingBlock>(std::move(*baseBlock), std::move(dataWithHeader), VERSION_ZERO, knownBlockVersions);
+  return cpputils::make_unique_ref<VersionCountingBlock>(std::move(*baseBlock), std::move(dataWithHeader), knownBlockVersions);
 }
 
 inline cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data) {
@@ -98,14 +99,26 @@ inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCounti
   cpputils::Data data(baseBlock->size());
   std::memcpy(data.data(), baseBlock->data(), data.size());
   _checkFormatHeader(data);
-  uint32_t lastClientId = _readClientId(data);
-  uint64_t version = _readVersion(data);
-  if(!_versionIsNondecreasing(lastClientId, baseBlock->key(), version, knownBlockVersions)) {
-    //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
-    cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed due to wrong version number. Was the block rolled back by an attacker?";
+  if (!_checkVersion(data, baseBlock->key(), knownBlockVersions)) {
     return boost::none;
   }
-  return cpputils::make_unique_ref<VersionCountingBlock>(std::move(baseBlock), std::move(data), version, knownBlockVersions);
+  return cpputils::make_unique_ref<VersionCountingBlock>(std::move(baseBlock), std::move(data), knownBlockVersions);
+}
+
+inline bool VersionCountingBlock::_checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions) {
+  uint32_t lastClientId = _readClientId(data);
+  uint64_t version = _readVersion(data);
+  if(!knownBlockVersions->checkAndUpdateVersion(lastClientId, key, version)) {
+    if (knownBlockVersions->getBlockVersion(lastClientId, key) == VERSION_DELETED) {
+      cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
+        " failed because it was marked as deleted. Was the block reintroduced by an attacker?";
+    } else {
+      cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
+        " failed due to decreasing version number. Was the block rolled back by an attacker?";
+    }
+    return false;
+  }
+  return true;
 }
 
 inline void VersionCountingBlock::_checkFormatHeader(const cpputils::Data &data) {
@@ -126,18 +139,17 @@ inline uint64_t VersionCountingBlock::_readVersion(const cpputils::Data &data) {
   return version;
 }
 
-inline bool VersionCountingBlock::_versionIsNondecreasing(uint32_t clientId, const Key &key, uint64_t version, KnownBlockVersions *knownBlockVersions) {
-  return knownBlockVersions->checkAndUpdateVersion(clientId, key, version);
-}
-
-inline VersionCountingBlock::VersionCountingBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data dataWithHeader, uint64_t version, KnownBlockVersions *knownBlockVersions)
+inline VersionCountingBlock::VersionCountingBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data dataWithHeader, KnownBlockVersions *knownBlockVersions)
     :Block(baseBlock->key()),
    _knownBlockVersions(knownBlockVersions),
    _baseBlock(std::move(baseBlock)),
    _dataWithHeader(std::move(dataWithHeader)),
-   _version(version),
+   _version(_readVersion(_dataWithHeader)),
    _dataChanged(false),
    _mutex() {
+  if (_version == VERSION_DELETED) {
+    throw std::runtime_error("Loaded block is marked as deleted. This shouldn't happen because in case of a version number overflow, the block isn't stored at all.");
+  }
 }
 
 inline VersionCountingBlock::~VersionCountingBlock() {
@@ -173,6 +185,11 @@ inline void VersionCountingBlock::resize(size_t newSize) {
 inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
     ++_version;
+    if (_version == VERSION_DELETED) {
+      // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
+      throw std::runtime_error("Version overflow");
+      static_assert(VERSION_DELETED == std::numeric_limits<uint64_t>::max(), "The check above assumes VERSION_DELETE to be an upper bound.");
+    }
     uint32_t myClientId = _knownBlockVersions->myClientId();
     std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
     std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
