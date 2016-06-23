@@ -7,7 +7,7 @@
 #include <cpp-utils/macros.h>
 
 #include <mutex>
-#include <map>
+#include <unordered_map>
 
 namespace blockstore {
 namespace testfake {
@@ -41,7 +41,7 @@ public:
   void updateData(const Key &key, const cpputils::Data &data);
 
 private:
-  std::map<std::string, cpputils::Data> _blocks;
+  std::unordered_map<Key, cpputils::Data> _blocks;
 
   //This vector keeps a handle of the data regions for all created FakeBlock objects.
   //This way, it is ensured that no two created FakeBlock objects will work on the
