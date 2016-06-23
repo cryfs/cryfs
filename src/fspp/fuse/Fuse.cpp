@@ -260,9 +260,13 @@ void Fuse::_add_fuse_option_if_not_exists(vector<char *> *argv, const string &ke
 }
 
 bool Fuse::_has_option(const vector<char *> &vec, const string &key) {
-  string key_with_prefix = key + "+";
-  auto found = std::find_if(vec.begin(), vec.end(), [&key_with_prefix](const char *entry) {
-      return std::strncmp(key_with_prefix.c_str(), entry, key_with_prefix.size());
+  // The fuse option can either be present as "-okey=value" or as "-o key=value", we have to check both.
+  return _has_entry_with_prefix(key + "=", vec) || _has_entry_with_prefix("-o" + key + "=", vec);
+}
+
+bool Fuse::_has_entry_with_prefix(const string &prefix, const vector<char *> &vec) {
+  auto found = std::find_if(vec.begin(), vec.end(), [&prefix](const char *entry) {
+      return 0 == std::strncmp(prefix.c_str(), entry, prefix.size());
   });
   return found != vec.end();
 }
