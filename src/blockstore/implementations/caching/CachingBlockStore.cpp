@@ -18,7 +18,7 @@ namespace blockstore {
 namespace caching {
 
 CachingBlockStore::CachingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore)
-  :_baseBlockStore(std::move(baseBlockStore)), _cache(), _numNewBlocks(0) {
+  :_baseBlockStore(std::move(baseBlockStore)), _newBlocks(), _cache() {
 }
 
 Key CachingBlockStore::createKey() {
@@ -29,7 +29,6 @@ optional<unique_ref<Block>> CachingBlockStore::tryCreate(const Key &key, Data da
   ASSERT(_cache.pop(key) == none, "Key already exists in cache");
   //TODO Shouldn't we return boost::none if the key already exists?
   //TODO Key can also already exist but not be in the cache right now.
-  ++_numNewBlocks;
   return unique_ref<Block>(make_unique_ref<CachedBlock>(make_unique_ref<NewBlock>(key, std::move(data), this), this));
 }
 
@@ -54,9 +53,6 @@ void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
   auto baseBlock = (*cached_block)->releaseBlock();
   auto baseNewBlock = dynamic_pointer_move<NewBlock>(baseBlock);
   if (baseNewBlock != none) {
-	if(!(*baseNewBlock)->alreadyExistsInBaseStore()) {
-	  --_numNewBlocks;
-	}
     (*baseNewBlock)->remove();
   } else {
     _baseBlockStore->remove(std::move(baseBlock));
@@ -64,7 +60,7 @@ void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
 }
 
 uint64_t CachingBlockStore::numBlocks() const {
-  return _baseBlockStore->numBlocks() + _numNewBlocks;
+  return _baseBlockStore->numBlocks() + _newBlocks.size();
 }
 
 uint64_t CachingBlockStore::estimateNumFreeBytes() const {
@@ -77,11 +73,7 @@ void CachingBlockStore::release(unique_ref<Block> block) {
 }
 
 optional<unique_ref<Block>> CachingBlockStore::tryCreateInBaseStore(const Key &key, Data data) {
-  auto block = _baseBlockStore->tryCreate(key, std::move(data));
-  if (block != none) {
-	--_numNewBlocks;
-  }
-  return block;
+  return _baseBlockStore->tryCreate(key, std::move(data));
 }
 
 void CachingBlockStore::removeFromBaseStore(cpputils::unique_ref<Block> block) {
@@ -94,6 +86,21 @@ void CachingBlockStore::flush() {
 
 uint64_t CachingBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
   return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
+void CachingBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+  _baseBlockStore->forEachBlock(callback);
+  for (NewBlock *newBlock : _newBlocks) {
+    callback(newBlock->key());
+  }
+}
+
+void CachingBlockStore::registerNewBlock(NewBlock *newBlock) {
+  _newBlocks.insert(newBlock);
+}
+
+void CachingBlockStore::unregisterNewBlock(NewBlock *newBlock) {
+  _newBlocks.erase(newBlock);
 }
 
 }

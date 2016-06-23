@@ -64,5 +64,9 @@ uint64_t ParallelAccessBlockStore::blockSizeFromPhysicalBlockSize(uint64_t block
   return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
 }
 
+void ParallelAccessBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+  return _baseBlockStore->forEachBlock(callback);
+}
+
 }
 }

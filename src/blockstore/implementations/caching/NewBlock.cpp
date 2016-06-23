@@ -15,6 +15,7 @@ NewBlock::NewBlock(const Key &key, Data data, CachingBlockStore *blockStore)
      _data(std::move(data)),
      _baseBlock(none),
      _dataChanged(true) {
+  _blockStore->registerNewBlock(this);
 }
 
 NewBlock::~NewBlock() {
@@ -37,6 +38,7 @@ void NewBlock::writeToBaseBlockIfChanged() {
       //TODO _data.copy() necessary?
       auto newBase = _blockStore->tryCreateInBaseStore(key(), _data.copy());
       ASSERT(newBase != boost::none, "Couldn't create base block"); //TODO What if tryCreate fails due to a duplicate key? We should ensure we don't use duplicate keys.
+      _blockStore->unregisterNewBlock(this); // block now exists in base store, we have to remove it from the list of blocks not in the base store.
       _baseBlock = std::move(*newBase);
     } else {
         (*_baseBlock)->write(_data.data(), 0, _data.size());
@@ -48,6 +50,9 @@ void NewBlock::writeToBaseBlockIfChanged() {
 void NewBlock::remove() {
   if (_baseBlock != none) {
 	_blockStore->removeFromBaseStore(std::move(*_baseBlock));
+  } else {
+    // block doesn't exists in base store, we have to remove it from the list of blocks not in the base store.
+    _blockStore->unregisterNewBlock(this);
   }
   _dataChanged = false;
 }
@@ -65,10 +70,6 @@ size_t NewBlock::size() const {
 void NewBlock::resize(size_t newSize) {
     _data = cpputils::DataUtils::resize(std::move(_data), newSize);
     _dataChanged = true;
-}
-
-bool NewBlock::alreadyExistsInBaseStore() const {
-  return _baseBlock != none;
 }
 
 }

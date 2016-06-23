@@ -21,6 +21,7 @@ public:
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
+  void forEachBlock(std::function<void (const Key &)> callback) const override;
 
 private:
   const boost::filesystem::path _rootdir;

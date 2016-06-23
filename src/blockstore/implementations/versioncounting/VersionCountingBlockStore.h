@@ -23,6 +23,7 @@ public:
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
+  void forEachBlock(std::function<void (const Key &)> callback) const override;
 
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -74,6 +75,10 @@ inline uint64_t VersionCountingBlockStore::estimateNumFreeBytes() const {
 
 inline uint64_t VersionCountingBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
   return VersionCountingBlock::blockSizeFromPhysicalBlockSize(_baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize));
+}
+
+inline void VersionCountingBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+  return _baseBlockStore->forEachBlock(callback);
 }
 
 }

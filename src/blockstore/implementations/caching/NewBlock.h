@@ -33,8 +33,6 @@ public:
 
   void remove();
 
-  bool alreadyExistsInBaseStore() const;
-
 private:
   CachingBlockStore *_blockStore;
   cpputils::Data _data;

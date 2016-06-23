@@ -61,5 +61,11 @@ uint64_t InMemoryBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) 
   return blockSize;
 }
 
+void InMemoryBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+  for (const auto &entry : _blocks) {
+    callback(Key::FromString(entry.first));
+  }
+}
+
 }
 }

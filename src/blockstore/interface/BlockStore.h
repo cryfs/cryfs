@@ -29,6 +29,8 @@ public:
   // This can be used to create blocks with a certain physical block size.
   virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0;
 
+  virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
+
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {
     while(true) {
       //TODO Copy (data.copy()) necessary?

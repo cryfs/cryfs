@@ -21,6 +21,7 @@ public:
     uint64_t numBlocks() const override;
     uint64_t estimateNumFreeBytes() const override;
     uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
+    void forEachBlock(std::function<void (const Key &)> callback) const override;
 
 private:
     cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -76,6 +77,11 @@ uint64_t CompressingBlockStore<Compressor>::numBlocks() const {
 template<class Compressor>
 uint64_t CompressingBlockStore<Compressor>::estimateNumFreeBytes() const {
     return _baseBlockStore->estimateNumFreeBytes();
+}
+
+template<class Compressor>
+void CompressingBlockStore<Compressor>::forEachBlock(std::function<void (const Key &)> callback) const {
+    return _baseBlockStore->forEachBlock(callback);
 }
 
 template<class Compressor>

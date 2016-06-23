@@ -77,9 +77,9 @@ void OnDiskBlockStore::remove(unique_ref<Block> block) {
 
 uint64_t OnDiskBlockStore::numBlocks() const {
   uint64_t count = 0;
-  for (auto entry = bf::directory_iterator(_rootdir); entry != bf::directory_iterator(); ++entry) {
-    if (bf::is_directory(entry->path())) {
-      count += std::distance(bf::directory_iterator(entry->path()), bf::directory_iterator());
+  for (auto prefixDir = bf::directory_iterator(_rootdir); prefixDir != bf::directory_iterator(); ++prefixDir) {
+    if (bf::is_directory(prefixDir->path())) {
+      count += std::distance(bf::directory_iterator(prefixDir->path()), bf::directory_iterator());
     }
   }
   return count;
@@ -93,6 +93,18 @@ uint64_t OnDiskBlockStore::estimateNumFreeBytes() const {
 
 uint64_t OnDiskBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
   return OnDiskBlock::blockSizeFromPhysicalBlockSize(blockSize);
+}
+
+void OnDiskBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+  for (auto prefixDir = bf::directory_iterator(_rootdir); prefixDir != bf::directory_iterator(); ++prefixDir) {
+    if (bf::is_directory(prefixDir->path())) {
+      string blockKeyPrefix = prefixDir->path().filename().native();
+      for (auto block = bf::directory_iterator(prefixDir->path()); block != bf::directory_iterator(); ++block) {
+        string blockKeyPostfix = block->path().filename().native();
+        callback(Key::FromString(blockKeyPrefix + blockKeyPostfix));
+      }
+    }
+  }
 }
 
 }
