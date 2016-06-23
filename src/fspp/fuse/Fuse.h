@@ -66,6 +66,7 @@ private:
   static void _removeAndWarnIfExists(std::vector<std::string> *fuseOptions, const std::string &option);
   void _run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   static bool _has_option(const std::vector<char *> &vec, const std::string &key);
+  static bool _has_entry_with_prefix(const std::string &prefix, const std::vector<char *> &vec);
   std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   void _add_fuse_option_if_not_exists(std::vector<char *> *argv, const std::string &key, const std::string &value);
 
