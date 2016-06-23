@@ -86,7 +86,7 @@ uint64_t FakeBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) cons
 
 void FakeBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
   for (const auto &entry : _blocks) {
-    callback(Key::FromString(entry.first));
+    callback(entry.first);
   }
 }
 
