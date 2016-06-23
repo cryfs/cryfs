@@ -41,6 +41,7 @@ public:
   size_t size() const override;
   void resize(size_t newSize) override;
 
+  uint64_t version() const;
   cpputils::unique_ref<Block> releaseBlock();
 
 private:
@@ -59,14 +60,13 @@ private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+  static constexpr uint64_t VERSION_ZERO = 0;
 
   std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
 
 public:
-    static constexpr uint64_t VERSION_ZERO = 0;
-    static constexpr uint64_t VERSION_DELETED = std::numeric_limits<uint64_t>::max();
     static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
     static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
     static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
@@ -186,11 +186,6 @@ inline void VersionCountingBlock::resize(size_t newSize) {
 inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
     _version = _knownBlockVersions->incrementVersion(key(), _version);
-    if (_version == VERSION_DELETED) {
-      // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
-      throw std::runtime_error("Version overflow");
-      static_assert(VERSION_DELETED == std::numeric_limits<uint64_t>::max(), "The check above assumes VERSION_DELETE to be an upper bound.");
-    }
     uint32_t myClientId = _knownBlockVersions->myClientId();
     std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
     std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
@@ -210,6 +205,10 @@ inline uint64_t VersionCountingBlock::blockSizeFromPhysicalBlockSize(uint64_t bl
     return 0;
   }
   return blockSize - HEADER_LENGTH;
+}
+
+inline uint64_t VersionCountingBlock::version() const {
+  return _version;
 }
 
 }
