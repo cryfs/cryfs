@@ -65,7 +65,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
 
 public:
-    static constexpr uint64_t VERSION_ZERO = 1; // lowest block version is '1', because that is required by class KnownBlockVersions.
+    static constexpr uint64_t VERSION_ZERO = 0;
     static constexpr uint64_t VERSION_DELETED = std::numeric_limits<uint64_t>::max();
     static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
     static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
@@ -74,14 +74,15 @@ public:
 
 
 inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCountingBlock::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, KnownBlockVersions *knownBlockVersions) {
-  cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), VERSION_ZERO, std::move(data));
+  uint64_t version = knownBlockVersions->incrementVersion(key, VERSION_ZERO);
+
+  cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), version, std::move(data));
   auto baseBlock = baseBlockStore->tryCreate(key, dataWithHeader.copy()); // TODO Copy necessary?
   if (baseBlock == boost::none) {
     //TODO Test this code branch
     return boost::none;
   }
 
-  knownBlockVersions->updateVersion(key, VERSION_ZERO);
   return cpputils::make_unique_ref<VersionCountingBlock>(std::move(*baseBlock), std::move(dataWithHeader), knownBlockVersions);
 }
 
@@ -184,7 +185,7 @@ inline void VersionCountingBlock::resize(size_t newSize) {
 
 inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
-    ++_version;
+    _version = _knownBlockVersions->incrementVersion(key(), _version);
     if (_version == VERSION_DELETED) {
       // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
       throw std::runtime_error("Version overflow");
@@ -194,7 +195,6 @@ inline void VersionCountingBlock::_storeToBaseBlock() {
     std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
     std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
     _baseBlock->write(_dataWithHeader.data(), 0, _dataWithHeader.size());
-    _knownBlockVersions->updateVersion(key(), _version);
     _dataChanged = false;
   }
 }

@@ -64,7 +64,7 @@ inline void VersionCountingBlockStore::remove(cpputils::unique_ref<Block> block)
   ASSERT(versionCountingBlock != boost::none, "Block is not an VersionCountingBlock");
   auto baseBlock = (*versionCountingBlock)->releaseBlock();
   _baseBlockStore->remove(std::move(baseBlock));
-  _knownBlockVersions.updateVersion(key, VersionCountingBlock::VERSION_DELETED);
+  _knownBlockVersions.setVersion(_knownBlockVersions.myClientId(), key, VersionCountingBlock::VERSION_DELETED);
 }
 
 inline uint64_t VersionCountingBlockStore::numBlocks() const {

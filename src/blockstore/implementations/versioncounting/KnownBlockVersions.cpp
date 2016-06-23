@@ -68,10 +68,21 @@ bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const Key &key
     return true;
 }
 
-void KnownBlockVersions::updateVersion(const Key &key, uint64_t version) {
-    if (!checkAndUpdateVersion(_myClientId, key, version)) {
-        throw std::logic_error("Tried to decrease block version");
+uint64_t KnownBlockVersions::incrementVersion(const Key &key, uint64_t lastVersion) {
+    unique_lock<mutex> lock(_mutex);
+    uint64_t &found = _knownVersions[{_myClientId, key}]; // If the entry doesn't exist, this creates it with value 0.
+    found = std::max(lastVersion + 1, found + 1);
+    _lastUpdateClientId[key] = _myClientId;
+    return found;
+}
+
+void KnownBlockVersions::setVersion(uint32_t clientId, const Key &key, uint64_t version) {
+    uint64_t &found = _knownVersions[{clientId, key}];
+    if (found > version) {
+        throw std::runtime_error("Version can only be set to higher version numbers.");
     }
+    found = version;
+    _lastUpdateClientId[key] = clientId;
 }
 
 void KnownBlockVersions::_loadStateFile() {
