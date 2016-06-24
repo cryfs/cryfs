@@ -183,6 +183,9 @@ inline void VersionCountingBlock::_storeToBaseBlock() {
     uint32_t myClientId = _knownBlockVersions->myClientId();
     std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
     std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
+    if (_baseBlock->size() != _dataWithHeader.size()) {
+      _baseBlock->resize(_dataWithHeader.size());
+    }
     _baseBlock->write(_dataWithHeader.data(), 0, _dataWithHeader.size());
     _dataChanged = false;
   }
