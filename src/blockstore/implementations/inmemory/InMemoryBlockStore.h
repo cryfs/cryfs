@@ -4,6 +4,7 @@
 
 #include "../../interface/helpers/BlockStoreWithRandomKeys.h"
 #include <cpp-utils/macros.h>
+#include "InMemoryBlock.h"
 
 #include <mutex>
 #include <unordered_map>

@@ -14,7 +14,7 @@ namespace versioncounting {
 
 class VersionCountingBlockStore final: public BlockStore {
 public:
-  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, KnownBlockVersions knownBlockVersions);
+  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath);
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
@@ -33,8 +33,8 @@ private:
 };
 
 
-inline VersionCountingBlockStore::VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, KnownBlockVersions knownBlockVersions)
- : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(std::move(knownBlockVersions)) {
+inline VersionCountingBlockStore::VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath)
+ : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath) {
 }
 
 inline Key VersionCountingBlockStore::createKey() {

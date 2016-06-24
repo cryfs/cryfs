@@ -23,7 +23,7 @@ public:
 
   TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), KnownBlockVersions(stateFile.path()));
+    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path());
   }
 };
 

@@ -60,13 +60,13 @@ private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-  static constexpr uint64_t VERSION_ZERO = 0;
 
   std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
 
 public:
+    static constexpr uint64_t VERSION_ZERO = 0;
     static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
     static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
     static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
@@ -110,14 +110,8 @@ inline bool VersionCountingBlock::_checkVersion(const cpputils::Data &data, cons
   uint32_t lastClientId = _readClientId(data);
   uint64_t version = _readVersion(data);
   if(!knownBlockVersions->checkAndUpdateVersion(lastClientId, key, version)) {
-    if (knownBlockVersions->getBlockVersion(lastClientId, key) == VERSION_DELETED) {
       cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
-        " failed because it was marked as deleted. Was the block reintroduced by an attacker?";
-    } else {
-      cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
-        " failed due to decreasing version number. Was the block rolled back by an attacker?";
-    }
-    return false;
+        " failed due to decreasing version number. Was the block rolled back or re-introduced by an attacker?";
   }
   return true;
 }
@@ -148,8 +142,8 @@ inline VersionCountingBlock::VersionCountingBlock(cpputils::unique_ref<Block> ba
    _version(_readVersion(_dataWithHeader)),
    _dataChanged(false),
    _mutex() {
-  if (_version == VERSION_DELETED) {
-    throw std::runtime_error("Loaded block is marked as deleted. This shouldn't happen because in case of a version number overflow, the block isn't stored at all.");
+  if (_version == std::numeric_limits<uint64_t>::max()) {
+    throw std::runtime_error("Version overflow when loading. This shouldn't happen because in case of a version number overflow, the block isn't stored at all.");
   }
 }
 

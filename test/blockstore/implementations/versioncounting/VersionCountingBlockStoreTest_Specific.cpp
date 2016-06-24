@@ -24,7 +24,7 @@ public:
   VersionCountingBlockStoreTest():
     stateFile(false),
     baseBlockStore(new FakeBlockStore),
-    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), KnownBlockVersions(stateFile.path()))),
+    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path())),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
   TempFile stateFile;

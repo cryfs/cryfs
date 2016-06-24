@@ -16,7 +16,7 @@ namespace blockstore {
 
         class KnownBlockVersions final {
         public:
-            KnownBlockVersions(const boost::filesystem::path &stateFilePath);
+            explicit KnownBlockVersions(const boost::filesystem::path &stateFilePath);
             KnownBlockVersions(KnownBlockVersions &&rhs);
             ~KnownBlockVersions();
 
