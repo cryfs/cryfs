@@ -3,7 +3,7 @@
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_TESTUTILS_BLOCKSTORETEST_H_
 
 #include <gtest/gtest.h>
-
+#include <cpp-utils/data/DataFixture.h>
 #include "blockstore/interface/BlockStore.h"
 
 class BlockStoreTestFixture {
@@ -23,6 +23,19 @@ public:
   );
 
   ConcreteBlockStoreTestFixture fixture;
+
+  void TestBlockIsUsable(cpputils::unique_ref<blockstore::Block> block, blockstore::BlockStore *blockStore) {
+    // Write full block space and check it was correctly written
+    cpputils::Data fixture = cpputils::DataFixture::generate(block->size());
+    block->write(fixture.data(), 0, fixture.size());
+    EXPECT_EQ(0, std::memcmp(fixture.data(), block->data(), fixture.size()));
+
+    // Store and reload block and check data is still correct
+    auto key = block->key();
+    cpputils::destruct(std::move(block));
+    block = blockStore->load(key).value();
+    EXPECT_EQ(0, std::memcmp(fixture.data(), block->data(), fixture.size()));
+  }
 };
 
 TYPED_TEST_CASE_P(BlockStoreTest);
