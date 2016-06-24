@@ -44,6 +44,10 @@ public:
   uint64_t version() const;
   cpputils::unique_ref<Block> releaseBlock();
 
+#ifndef CRYFS_NO_COMPATIBILITY
+  static void migrateFromBlockstoreWithoutVersionNumbers(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions);
+#endif
+
 private:
   KnownBlockVersions *_knownBlockVersions;
   cpputils::unique_ref<Block> _baseBlock;

@@ -25,6 +25,10 @@ public:
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
 
+#ifndef CRYFS_NO_COMPATIBILITY
+  static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const boost::filesystem::path &integrityFilePath);
+#endif
+
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   KnownBlockVersions _knownBlockVersions;

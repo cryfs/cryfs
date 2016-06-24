@@ -16,6 +16,7 @@
 #include "cachingfsblobstore/CachingFsBlobStore.h"
 #include "../config/CryCipher.h"
 #include <cpp-utils/system/homedir.h>
+#include <gitversion/VersionCompare.h>
 
 using std::string;
 
@@ -30,6 +31,8 @@ using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
 using blockstore::versioncounting::VersionCountingBlockStore;
+using blockstore::versioncounting::VersionCountingBlock;
+using gitversion::VersionCompare;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -53,20 +56,40 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
       make_unique_ref<ParallelAccessFsBlobStore>(
         make_unique_ref<CachingFsBlobStore>(
           make_unique_ref<FsBlobStore>(
-            make_unique_ref<BlobStoreOnBlocks>(
-              make_unique_ref<CachingBlockStore>(
-                make_unique_ref<VersionCountingBlockStore>(
-                  CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore)),
-                  _integrityFilePath(configFile.config()->FilesystemId())
-                )
-              )
-            , configFile.config()->BlocksizeBytes())
+            CreateBlobStore(std::move(blockStore), &configFile)
           )
         )
       )
     ),
   _rootKey(GetOrCreateRootKey(&configFile)),
   _onFsAction() {
+}
+
+unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile) {
+  auto versionCountingEncryptedBlockStore = CreateVersionCountingEncryptedBlockStore(std::move(blockStore), configFile);
+  // Create versionCountingEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
+  // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
+  return make_unique_ref<BlobStoreOnBlocks>(
+           make_unique_ref<CachingBlockStore>(
+             std::move(versionCountingEncryptedBlockStore)
+           ),
+           configFile->config()->BlocksizeBytes());
+}
+
+unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile) {
+  auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
+  auto integrityFilePath = _integrityFilePath(configFile->config()->FilesystemId());
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  if (!configFile->config()->HasVersionNumbers()) {
+    VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath);
+    configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + VersionCountingBlock::HEADER_LENGTH);
+    configFile->config()->SetHasVersionNumbers(true);
+    configFile->save();
+  }
+#endif
+
+  return make_unique_ref<VersionCountingBlockStore>(std::move(encryptedBlockStore), integrityFilePath);
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {

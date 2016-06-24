@@ -28,6 +28,9 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobKey());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetFilesystemId(_generateFilesystemID());
+#ifndef CRYFS_NO_COMPATIBILITY
+        config.SetHasVersionNumbers(true);
+#endif
         return config;
     }
 

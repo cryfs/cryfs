@@ -38,6 +38,13 @@ public:
   const FilesystemID &FilesystemId() const;
   void SetFilesystemId(const FilesystemID &value);
 
+#ifndef CRYFS_NO_COMPATIBILITY
+  // This is a trigger to recognize old file systems that didn't have version numbers.
+  // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
+  bool HasVersionNumbers() const;
+  void SetHasVersionNumbers(bool value);
+#endif
+
   static CryConfig load(const cpputils::Data &data);
   cpputils::Data save() const;
 
@@ -49,6 +56,9 @@ private:
   std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
+#ifndef CRYFS_NO_COMPATIBILITY
+  bool _hasVersionNumbers;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(CryConfig);
 };

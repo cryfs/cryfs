@@ -21,11 +21,11 @@ using cpputils::Random;
 namespace cryfs {
 
 CryConfig::CryConfig()
-: _rootBlob(""), _encKey(""), _cipher(""), _version(""), _createdWithVersion(""), _blocksizeBytes(0), _filesystemId(FilesystemID::Null()) {
+: _rootBlob(""), _encKey(""), _cipher(""), _version(""), _createdWithVersion(""), _blocksizeBytes(0), _filesystemId(FilesystemID::Null()), _hasVersionNumbers(true) {
 }
 
 CryConfig::CryConfig(CryConfig &&rhs)
-: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)), _createdWithVersion(std::move(rhs._createdWithVersion)), _blocksizeBytes(rhs._blocksizeBytes), _filesystemId(std::move(rhs._filesystemId)) {
+: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)), _createdWithVersion(std::move(rhs._createdWithVersion)), _blocksizeBytes(rhs._blocksizeBytes), _filesystemId(std::move(rhs._filesystemId)), _hasVersionNumbers(rhs._hasVersionNumbers) {
 }
 
 CryConfig CryConfig::load(const Data &data) {
@@ -41,6 +41,9 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._version = pt.get<string>("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
   cfg._createdWithVersion = pt.get<string>("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
   cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32832); // CryFS <= 0.9.2 used a 32KB block size which was this physical block size.
+#ifndef CRYFS_NO_COMPATIBILITY
+  cfg._hasVersionNumbers = pt.get<bool>("cryfs.migrations.hasVersionNumbers", false);
+#endif
 
   optional<string> filesystemIdOpt = pt.get_optional<string>("cryfs.filesystemId");
   if (filesystemIdOpt == none) {
@@ -62,6 +65,9 @@ Data CryConfig::save() const {
   pt.put<string>("cryfs.createdWithVersion", _createdWithVersion);
   pt.put<uint64_t>("cryfs.blocksizeBytes", _blocksizeBytes);
   pt.put<string>("cryfs.filesystemId", _filesystemId.ToString());
+#ifndef CRYFS_NO_COMPATIBILITY
+  pt.put("cryfs.migrations.hasVersionNumbers", _hasVersionNumbers);
+#endif
 
   stringstream stream;
   write_json(stream, pt);
@@ -123,5 +129,15 @@ const CryConfig::FilesystemID &CryConfig::FilesystemId() const {
 void CryConfig::SetFilesystemId(const FilesystemID &value) {
   _filesystemId = value;
 }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+bool CryConfig::HasVersionNumbers() const {
+  return _hasVersionNumbers;
+}
+
+void CryConfig::SetHasVersionNumbers(bool value) {
+  _hasVersionNumbers = value;
+}
+#endif
 
 }
