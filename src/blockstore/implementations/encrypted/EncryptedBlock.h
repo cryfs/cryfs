@@ -187,6 +187,9 @@ template<class Cipher>
 void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
   if (_dataChanged) {
     cpputils::Data encrypted = Cipher::encrypt((byte*)_plaintextWithHeader.data(), _plaintextWithHeader.size(), _encKey);
+    if (_baseBlock->size() != sizeof(FORMAT_VERSION_HEADER) + encrypted.size()) {
+      _baseBlock->resize(sizeof(FORMAT_VERSION_HEADER) + encrypted.size());
+    }
     _baseBlock->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
     _baseBlock->write(encrypted.data(), sizeof(FORMAT_VERSION_HEADER), encrypted.size());
     _dataChanged = false;
