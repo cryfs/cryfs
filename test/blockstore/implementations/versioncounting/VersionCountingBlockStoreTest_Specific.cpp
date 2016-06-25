@@ -106,7 +106,10 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVe
   Data oldBaseBlock = loadBaseBlock(key);
   modifyBlock(key);
   rollbackBaseBlock(key, oldBaseBlock);
-  EXPECT_EQ(boost::none, blockStore->load(key));
+  EXPECT_THROW(
+      blockStore->load(key),
+      IntegrityViolationError
+  );
 }
 
 TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_2) {
@@ -115,7 +118,10 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVe
   modifyBlock(key);
   // Decrease the version number again
   decreaseVersionNumber(key);
-  EXPECT_EQ(boost::none, blockStore->load(key));
+  EXPECT_THROW(
+          blockStore->load(key),
+          IntegrityViolationError
+  );
 }
 
 // Test that a different client doesn't need to have a higher version number (i.e. version numbers are per client).
@@ -140,7 +146,10 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowSameVersionN
   loadBlock(key); // make the block store know about this other client's modification
   // Rollback to old client
   rollbackBaseBlock(key, oldBaseBlock);
-  EXPECT_EQ(boost::none, blockStore->load(key));
+  EXPECT_THROW(
+          blockStore->load(key),
+          IntegrityViolationError
+  );
 }
 
 // Test that deleted blocks cannot be re-introduced
@@ -149,7 +158,10 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowReintroducin
   Data oldBaseBlock = loadBaseBlock(key);
   deleteBlock(key);
   insertBaseBlock(key, std::move(oldBaseBlock));
-  EXPECT_EQ(boost::none, blockStore->load(key));
+  EXPECT_THROW(
+          blockStore->load(key),
+          IntegrityViolationError
+  );
 }
 
 // This can happen if a client synchronization is delayed. Another client might have won the conflict and pushed a new version for the deleted block.

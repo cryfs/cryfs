@@ -17,6 +17,7 @@
 #include <mutex>
 #include <cpp-utils/logging/logging.h>
 #include "../../../../vendor/googletest/gtest-1.7.0/googletest/include/gtest/gtest_prod.h"
+#include "IntegrityViolationError.h"
 
 namespace blockstore {
 namespace versioncounting {
@@ -26,7 +27,7 @@ namespace versioncounting {
 class VersionCountingBlock final: public Block {
 public:
   static boost::optional<cpputils::unique_ref<VersionCountingBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, KnownBlockVersions *knownBlockVersions);
-  static boost::optional<cpputils::unique_ref<VersionCountingBlock>> TryLoad(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions);
+  static cpputils::unique_ref<VersionCountingBlock> Load(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions);
 
   static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
 
@@ -59,7 +60,7 @@ private:
   static void _checkFormatHeader(const cpputils::Data &data);
   static uint64_t _readVersion(const cpputils::Data &data);
   static uint32_t _readClientId(const cpputils::Data &data);
-  static bool _checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions);
+  static void _checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions);
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
@@ -99,25 +100,20 @@ inline cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClie
   return result;
 }
 
-inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCountingBlock::TryLoad(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions) {
+inline cpputils::unique_ref<VersionCountingBlock> VersionCountingBlock::Load(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions) {
   cpputils::Data data(baseBlock->size());
   std::memcpy(data.data(), baseBlock->data(), data.size());
   _checkFormatHeader(data);
-  if (!_checkVersion(data, baseBlock->key(), knownBlockVersions)) {
-    return boost::none;
-  }
+  _checkVersion(data, baseBlock->key(), knownBlockVersions);
   return cpputils::make_unique_ref<VersionCountingBlock>(std::move(baseBlock), std::move(data), knownBlockVersions);
 }
 
-inline bool VersionCountingBlock::_checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions) {
+inline void VersionCountingBlock::_checkVersion(const cpputils::Data &data, const blockstore::Key &key, KnownBlockVersions *knownBlockVersions) {
   uint32_t lastClientId = _readClientId(data);
   uint64_t version = _readVersion(data);
   if(!knownBlockVersions->checkAndUpdateVersion(lastClientId, key, version)) {
-      cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
-        " failed due to decreasing version number. Was the block rolled back or re-introduced by an attacker?";
-    return false;
+     throw IntegrityViolationError("The block version number is too low. Did an attacker try to roll back the block or to re-introduce a deleted block?");
   }
-  return true;
 }
 
 inline void VersionCountingBlock::_checkFormatHeader(const cpputils::Data &data) {

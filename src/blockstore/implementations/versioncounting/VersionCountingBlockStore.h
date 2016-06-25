@@ -59,7 +59,7 @@ inline boost::optional<cpputils::unique_ref<Block>> VersionCountingBlockStore::l
   if (block == boost::none) {
     return boost::none;
   }
-  return boost::optional<cpputils::unique_ref<Block>>(VersionCountingBlock::TryLoad(std::move(*block), &_knownBlockVersions));
+  return boost::optional<cpputils::unique_ref<Block>>(VersionCountingBlock::Load(std::move(*block), &_knownBlockVersions));
 }
 
 inline void VersionCountingBlockStore::remove(cpputils::unique_ref<Block> block) {
