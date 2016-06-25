@@ -115,6 +115,7 @@ inline bool VersionCountingBlock::_checkVersion(const cpputils::Data &data, cons
   if(!knownBlockVersions->checkAndUpdateVersion(lastClientId, key, version)) {
       cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << key.ToString() <<
         " failed due to decreasing version number. Was the block rolled back or re-introduced by an attacker?";
+    return false;
   }
   return true;
 }
