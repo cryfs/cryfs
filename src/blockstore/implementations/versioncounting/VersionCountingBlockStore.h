@@ -66,7 +66,7 @@ inline void VersionCountingBlockStore::remove(cpputils::unique_ref<Block> block)
   Key key = block->key();
   auto versionCountingBlock = cpputils::dynamic_pointer_move<VersionCountingBlock>(block);
   ASSERT(versionCountingBlock != boost::none, "Block is not an VersionCountingBlock");
-  _knownBlockVersions.incrementVersion(key, (*versionCountingBlock)->version());
+  _knownBlockVersions.markBlockAsDeleted(key);
   auto baseBlock = (*versionCountingBlock)->releaseBlock();
   _baseBlockStore->remove(std::move(baseBlock));
 }

@@ -25,6 +25,8 @@ namespace blockstore {
 
             uint64_t incrementVersion(const Key &key, uint64_t lastVersion);
 
+            void markBlockAsDeleted(const Key &key);
+
             uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
 
             uint32_t myClientId() const;
@@ -37,6 +39,8 @@ namespace blockstore {
             uint32_t _myClientId;
             mutable std::mutex _mutex;
             bool _valid;
+
+            static constexpr uint32_t CLIENT_ID_FOR_DELETED_BLOCK = 0;
 
             static const std::string HEADER;
 

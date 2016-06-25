@@ -41,7 +41,6 @@ public:
   size_t size() const override;
   void resize(size_t newSize) override;
 
-  uint64_t version() const;
   cpputils::unique_ref<Block> releaseBlock();
 
 #ifndef CRYFS_NO_COMPATIBILITY
@@ -206,10 +205,6 @@ inline uint64_t VersionCountingBlock::blockSizeFromPhysicalBlockSize(uint64_t bl
     return 0;
   }
   return blockSize - HEADER_LENGTH;
-}
-
-inline uint64_t VersionCountingBlock::version() const {
-  return _version;
 }
 
 }
