@@ -32,6 +32,7 @@ namespace blockstore {
             uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
 
             uint32_t myClientId() const;
+            const boost::filesystem::path &path() const;
 
         private:
             std::unordered_map<ClientIdAndBlockKey, uint64_t> _knownVersions;

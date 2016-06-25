@@ -43,7 +43,11 @@ namespace blockstore {
 
         void VersionCountingBlockStore::_checkNoPastIntegrityViolations() {
             if (_integrityViolationDetected) {
-                throw std::runtime_error("There was an integrity violation detected. Preventing any further access to the file system.");
+                throw std::runtime_error(string() +
+                                         "There was an integrity violation detected. Preventing any further access to the file system. " +
+                                         "If you want to reset the integrity data (i.e. accept changes made by a potential attacker), " +
+                                         "please unmount the file system and delete the following file before re-mounting it: " +
+                                         _knownBlockVersions.path().native());
             }
         }
 

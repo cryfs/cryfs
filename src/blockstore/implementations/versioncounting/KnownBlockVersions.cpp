@@ -205,5 +205,9 @@ bool KnownBlockVersions::blockShouldExist(const Key &key) const {
     return found->second != CLIENT_ID_FOR_DELETED_BLOCK;
 }
 
+const bf::path &KnownBlockVersions::path() const {
+    return _stateFilePath;
+}
+
 }
 }

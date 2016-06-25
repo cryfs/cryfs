@@ -335,3 +335,8 @@ TEST_F(KnownBlockVersionsTest, blockShouldExist_deletedBlock) {
     testobj.markBlockAsDeleted(key);
     EXPECT_FALSE(testobj.blockShouldExist(key));
 }
+
+TEST_F(KnownBlockVersionsTest, path) {
+    KnownBlockVersions obj(stateFile.path());
+    EXPECT_EQ(stateFile.path(), obj.path());
+}
