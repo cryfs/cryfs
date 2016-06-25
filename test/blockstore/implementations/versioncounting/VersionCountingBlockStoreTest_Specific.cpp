@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "blockstore/implementations/versioncounting/VersionCountingBlockStore.h"
+#include "blockstore/implementations/versioncounting/VersionCountingBlock.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/utils/BlockStoreUtils.h"
 #include <cpp-utils/data/DataFixture.h>

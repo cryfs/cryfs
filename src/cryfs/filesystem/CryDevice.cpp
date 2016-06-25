@@ -11,7 +11,7 @@
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore.h>
-#include <blockstore/implementations/versioncounting/VersionCountingBlockStore.h>
+#include <blockstore/implementations/versioncounting/VersionCountingBlock.h>
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"
 #include "../config/CryCipher.h"
