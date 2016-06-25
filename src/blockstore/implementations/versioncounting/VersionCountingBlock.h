@@ -114,7 +114,7 @@ inline void VersionCountingBlock::_checkVersion() {
   uint32_t lastClientId = _readClientId();
   uint64_t version = _readVersion();
   if(!_blockStore->knownBlockVersions()->checkAndUpdateVersion(lastClientId, key(), version)) {
-    _blockStore->integrityViolationDetected();
+    _blockStore->integrityViolationDetected("The block version number is too low. Did an attacker try to roll back the block or to re-introduce a deleted block?");
   }
 }
 

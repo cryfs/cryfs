@@ -24,7 +24,7 @@ public:
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
 
-  void integrityViolationDetected();
+  void integrityViolationDetected(const std::string &reason) const;
   KnownBlockVersions *knownBlockVersions();
 
 #ifndef CRYFS_NO_COMPATIBILITY
@@ -35,7 +35,7 @@ private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   KnownBlockVersions _knownBlockVersions;
   const bool _missingBlockIsIntegrityViolation;
-  bool _integrityViolationDetected;
+  mutable bool _integrityViolationDetected;
 
   void _checkNoPastIntegrityViolations();
 

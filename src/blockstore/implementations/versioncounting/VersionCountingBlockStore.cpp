@@ -7,6 +7,7 @@ using cpputils::make_unique_ref;
 using cpputils::Data;
 using boost::none;
 using boost::optional;
+using std::string;
 namespace bf = boost::filesystem;
 
 namespace blockstore {
@@ -35,7 +36,7 @@ namespace blockstore {
             auto block = _baseBlockStore->load(key);
             if (block == boost::none) {
                 if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
-                    integrityViolationDetected();
+                    integrityViolationDetected("A block that should exist wasn't found. Did an attacker delete it?");
                 }
                 return boost::none;
             }
@@ -52,9 +53,9 @@ namespace blockstore {
             }
         }
 
-        void VersionCountingBlockStore::integrityViolationDetected() {
+        void VersionCountingBlockStore::integrityViolationDetected(const string &reason) const {
             _integrityViolationDetected = true;
-            throw IntegrityViolationError("A block that should exist wasn't found. Did an attacker delete it?");
+            throw IntegrityViolationError(reason);
         }
 
         void VersionCountingBlockStore::remove(unique_ref<Block> block) {
@@ -93,7 +94,7 @@ namespace blockstore {
                 }
             });
             if (!existingBlocks.empty()) {
-                throw IntegrityViolationError("A block that should have existed wasn't found.");
+                integrityViolationDetected("A block that should have existed wasn't found.");
             }
         }
 

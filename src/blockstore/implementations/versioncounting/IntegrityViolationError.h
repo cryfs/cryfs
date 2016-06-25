@@ -10,15 +10,20 @@ namespace blockstore {
 
         class IntegrityViolationError final : public std::exception {
         public:
-            IntegrityViolationError(const std::string &reason)
-                    : _reason("Integrity violation: " + reason) {
-            }
 
             const char *what() const throw() override {
                 return _reason.c_str();
             }
 
         private:
+            // Constructor is private to make sure that only VersionCountingBlockStore can throw this exception.
+            // This is because VersionCountingBlockStore wants to know about integrity violations and
+            // block all further file system access if it happens.
+            IntegrityViolationError(const std::string &reason)
+                    : _reason("Integrity violation: " + reason) {
+            }
+            friend class VersionCountingBlockStore;
+
             std::string _reason;
         };
 
