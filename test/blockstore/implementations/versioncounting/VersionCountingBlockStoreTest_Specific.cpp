@@ -74,6 +74,13 @@ public:
     baseBlock->write((char*)&version, VersionCountingBlock::VERSION_HEADER_OFFSET, sizeof(version));
   }
 
+  void increaseVersionNumber(const blockstore::Key &key) {
+    auto baseBlock = baseBlockStore->load(key).value();
+    uint64_t version = *(uint64_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::VERSION_HEADER_OFFSET);
+    version += 1;
+    baseBlock->write((char*)&version, VersionCountingBlock::VERSION_HEADER_OFFSET, sizeof(version));
+  }
+
   void changeClientId(const blockstore::Key &key) {
     auto baseBlock = baseBlockStore->load(key).value();
     uint32_t clientId = *(uint32_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::CLIENTID_HEADER_OFFSET);
@@ -144,6 +151,20 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowReintroducin
   insertBaseBlock(key, std::move(oldBaseBlock));
   EXPECT_EQ(boost::none, blockStore->load(key));
 }
+
+// This can happen if a client synchronization is delayed. Another client might have won the conflict and pushed a new version for the deleted block.
+TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber) {
+  auto key = CreateBlockReturnKey();
+  Data oldBaseBlock = loadBaseBlock(key);
+  deleteBlock(key);
+  insertBaseBlock(key, std::move(oldBaseBlock));
+  increaseVersionNumber(key);
+  EXPECT_NE(boost::none, blockStore->load(key));
+}
+
+// TODO Test more integrity cases:
+//   - RollbackPrevention_DoesntAllowReintroducingDeletedBlocks with different client id (i.e. trying to re-introduce the newest block of a different client)
+//   - RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber with different client id
 
 TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_zerophysical) {
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(0));
