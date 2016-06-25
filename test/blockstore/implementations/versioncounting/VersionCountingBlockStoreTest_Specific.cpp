@@ -13,6 +13,8 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using boost::none;
+using std::make_unique;
+using std::unique_ptr;
 
 using blockstore::testfake::FakeBlockStore;
 
@@ -24,13 +26,25 @@ public:
   VersionCountingBlockStoreTest():
     stateFile(false),
     baseBlockStore(new FakeBlockStore),
-    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path())),
+    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), false)),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
   TempFile stateFile;
   FakeBlockStore *baseBlockStore;
   unique_ref<VersionCountingBlockStore> blockStore;
   Data data;
+
+  std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithDeletionPrevention() {
+    FakeBlockStore *baseBlockStore = new FakeBlockStore;
+    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), true);
+    return std::make_pair(baseBlockStore, std::move(blockStore));
+  }
+
+  std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithoutDeletionPrevention() {
+    FakeBlockStore *baseBlockStore = new FakeBlockStore;
+    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), false);
+    return std::make_pair(baseBlockStore, std::move(blockStore));
+  }
 
   blockstore::Key CreateBlockReturnKey() {
     return CreateBlockReturnKey(data);
@@ -174,9 +188,33 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_AllowsReintroducingDele
   EXPECT_NE(boost::none, blockStore->load(key));
 }
 
+// Check that in a multi-client scenario, missing blocks are not integrity errors, because another client might have deleted them.
+TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_AllowsDeletingBlocksWhenDeactivated) {
+  FakeBlockStore *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore> blockStore;
+  std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
+  auto key = blockStore->create(Data(0))->key();
+  baseBlockStore->remove(baseBlockStore->load(key).value());
+  EXPECT_EQ(boost::none, blockStore->load(key));
+}
+
+// Check that in a single-client scenario, missing blocks are integrity errors.
+TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBlocksWhenActivated) {
+  FakeBlockStore *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore> blockStore;
+  std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
+  auto key = blockStore->create(Data(0))->key();
+  baseBlockStore->remove(baseBlockStore->load(key).value());
+  EXPECT_THROW(
+      blockStore->load(key),
+      IntegrityViolationError
+  );
+}
+
 // TODO Test more integrity cases:
 //   - RollbackPrevention_DoesntAllowReintroducingDeletedBlocks with different client id (i.e. trying to re-introduce the newest block of a different client)
 //   - RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber with different client id
+//   - Think about more...
 
 TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_zerophysical) {
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(0));

@@ -195,5 +195,15 @@ void KnownBlockVersions::markBlockAsDeleted(const Key &key) {
     _lastUpdateClientId[key] = CLIENT_ID_FOR_DELETED_BLOCK;
 }
 
+bool KnownBlockVersions::blockShouldExist(const Key &key) const {
+    auto found = _lastUpdateClientId.find(key);
+    if (found == _lastUpdateClientId.end()) {
+        // We've never seen (i.e. loaded) this block. So we can't say it has to exist.
+        return false;
+    }
+    // We've seen the block before. If we didn't delete it, it should exist (only works for single-client scenario).
+    return found->second != CLIENT_ID_FOR_DELETED_BLOCK;
+}
+
 }
 }

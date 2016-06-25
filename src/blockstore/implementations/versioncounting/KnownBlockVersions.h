@@ -27,6 +27,8 @@ namespace blockstore {
 
             void markBlockAsDeleted(const Key &key);
 
+            bool blockShouldExist(const Key &key) const;
+
             uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
 
             uint32_t myClientId() const;

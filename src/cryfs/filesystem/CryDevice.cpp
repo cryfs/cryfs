@@ -89,7 +89,7 @@ unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(uniqu
   }
 #endif
 
-  return make_unique_ref<VersionCountingBlockStore>(std::move(encryptedBlockStore), integrityFilePath);
+  return make_unique_ref<VersionCountingBlockStore>(std::move(encryptedBlockStore), integrityFilePath, false);
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {

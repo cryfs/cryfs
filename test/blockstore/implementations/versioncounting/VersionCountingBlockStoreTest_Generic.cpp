@@ -17,14 +17,16 @@ using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using cpputils::TempFile;
 
+template<bool SINGLECLIENT>
 class VersionCountingBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
    VersionCountingBlockStoreTestFixture() :stateFile(false) {}
 
   TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path());
+    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path(), SINGLECLIENT);
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(VersionCounting, BlockStoreTest, VersionCountingBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_CASE_P(VersionCounting_multiclient, BlockStoreTest, VersionCountingBlockStoreTestFixture<false>);
+INSTANTIATE_TYPED_TEST_CASE_P(VersionCounting_singleclient, BlockStoreTest, VersionCountingBlockStoreTestFixture<true>);

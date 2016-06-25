@@ -14,7 +14,7 @@ namespace versioncounting {
 
 class VersionCountingBlockStore final: public BlockStore {
 public:
-  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath);
+  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath, bool missingBlockIsIntegrityViolation);
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
@@ -32,13 +32,14 @@ public:
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   KnownBlockVersions _knownBlockVersions;
+  const bool _missingBlockIsIntegrityViolation;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlockStore);
 };
 
 
-inline VersionCountingBlockStore::VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath)
- : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath) {
+inline VersionCountingBlockStore::VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath, bool missingBlockIsIntegrityViolation)
+ : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation) {
 }
 
 inline Key VersionCountingBlockStore::createKey() {
@@ -57,6 +58,9 @@ inline boost::optional<cpputils::unique_ref<Block>> VersionCountingBlockStore::t
 inline boost::optional<cpputils::unique_ref<Block>> VersionCountingBlockStore::load(const Key &key) {
   auto block = _baseBlockStore->load(key);
   if (block == boost::none) {
+    if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
+      throw IntegrityViolationError("A block that should exist wasn't found. Did an attacker delete it?");
+    }
     return boost::none;
   }
   return boost::optional<cpputils::unique_ref<Block>>(VersionCountingBlock::Load(std::move(*block), &_knownBlockVersions));
