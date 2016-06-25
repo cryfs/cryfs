@@ -297,3 +297,41 @@ TEST_F(KnownBlockVersionsTest, saveAndLoad_lastUpdateClientIdIsStored) {
     EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, key, 10));
     EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 101));
 }
+
+TEST_F(KnownBlockVersionsTest, markAsDeleted_doesntAllowReIntroducing_sameClientId) {
+    setVersion(&testobj, clientId, key, 5);
+    testobj.markBlockAsDeleted(key);
+    EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 5));
+}
+
+TEST_F(KnownBlockVersionsTest, markAsDeleted_doesntAllowReIntroducing_oldClientId) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key, 5);
+    testobj.markBlockAsDeleted(key);
+    EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 5));
+}
+
+TEST_F(KnownBlockVersionsTest, markAsDeleted_checkAndUpdateDoesntDestroyState) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key, 5);
+    testobj.markBlockAsDeleted(key);
+    EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 5));
+
+    // Check block is still deleted
+    EXPECT_FALSE(testobj.blockShouldExist(key));
+}
+
+TEST_F(KnownBlockVersionsTest, blockShouldExist_unknownBlock) {
+    EXPECT_FALSE(testobj.blockShouldExist(key));
+}
+
+TEST_F(KnownBlockVersionsTest, blockShouldExist_knownBlock) {
+    setVersion(&testobj, clientId, key, 5);
+    EXPECT_TRUE(testobj.blockShouldExist(key));
+}
+
+TEST_F(KnownBlockVersionsTest, blockShouldExist_deletedBlock) {
+    setVersion(&testobj, clientId, key, 5);
+    testobj.markBlockAsDeleted(key);
+    EXPECT_FALSE(testobj.blockShouldExist(key));
+}
