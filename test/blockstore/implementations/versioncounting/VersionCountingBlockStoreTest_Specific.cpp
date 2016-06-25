@@ -212,6 +212,33 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBloc
   );
 }
 
+// Check that in a multi-client scenario, missing blocks are not integrity errors, because another client might have deleted them.
+TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_AllowsDeletingBlocksWhenDeactivated) {
+  FakeBlockStore *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore> blockStore;
+  std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
+  auto key = blockStore->create(Data(0))->key();
+  baseBlockStore->remove(baseBlockStore->load(key).value());
+  int count = 0;
+  blockStore->forEachBlock([&count] (const blockstore::Key &) {
+      ++count;
+  });
+  EXPECT_EQ(0, count);
+}
+
+// Check that in a single-client scenario, missing blocks are integrity errors.
+TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_DoesntAllowDeletingBlocksWhenActivated) {
+  FakeBlockStore *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore> blockStore;
+  std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
+  auto key = blockStore->create(Data(0))->key();
+  baseBlockStore->remove(baseBlockStore->load(key).value());
+  EXPECT_THROW(
+      blockStore->forEachBlock([] (const blockstore::Key &) {}),
+      IntegrityViolationError
+  );
+}
+
 // TODO Test more integrity cases:
 //   - RollbackPrevention_DoesntAllowReintroducingDeletedBlocks with different client id (i.e. trying to re-introduce the newest block of a different client)
 //   - RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber with different client id

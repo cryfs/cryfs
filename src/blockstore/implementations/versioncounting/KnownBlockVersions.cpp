@@ -1,5 +1,6 @@
 #include <fstream>
 #include <cpp-utils/random/Random.h>
+#include <unordered_set>
 #include "KnownBlockVersions.h"
 
 namespace bf = boost::filesystem;
@@ -203,6 +204,16 @@ bool KnownBlockVersions::blockShouldExist(const Key &key) const {
     }
     // We've seen the block before. If we didn't delete it, it should exist (only works for single-client scenario).
     return found->second != CLIENT_ID_FOR_DELETED_BLOCK;
+}
+
+std::unordered_set<Key> KnownBlockVersions::existingBlocks() const {
+    std::unordered_set<Key> result;
+    for (const auto &entry : _lastUpdateClientId) {
+        if (entry.second != CLIENT_ID_FOR_DELETED_BLOCK) {
+            result.insert(entry.first);
+        }
+    }
+    return result;
 }
 
 const bf::path &KnownBlockVersions::path() const {

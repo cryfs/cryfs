@@ -1,3 +1,4 @@
+#include <unordered_set>
 #include "VersionCountingBlockStore.h"
 #include "VersionCountingBlock.h"
 
@@ -78,7 +79,22 @@ namespace blockstore {
         }
 
         void VersionCountingBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
-            return _baseBlockStore->forEachBlock(callback);
+            if (!_missingBlockIsIntegrityViolation) {
+                return _baseBlockStore->forEachBlock(callback);
+            }
+
+            std::unordered_set<blockstore::Key> existingBlocks = _knownBlockVersions.existingBlocks();
+            _baseBlockStore->forEachBlock([&existingBlocks, callback] (const Key &key) {
+                callback(key);
+
+                auto found = existingBlocks.find(key);
+                if (found != existingBlocks.end()) {
+                    existingBlocks.erase(found);
+                }
+            });
+            if (!existingBlocks.empty()) {
+                throw IntegrityViolationError("A block that should have existed wasn't found.");
+            }
         }
 
 #ifndef CRYFS_NO_COMPATIBILITY

@@ -5,7 +5,9 @@
 
 using blockstore::versioncounting::KnownBlockVersions;
 using blockstore::versioncounting::VersionCountingBlock;
+using blockstore::Key;
 using cpputils::TempFile;
+using std::unordered_set;
 
 class KnownBlockVersionsTest : public ::testing::Test {
 public:
@@ -339,4 +341,40 @@ TEST_F(KnownBlockVersionsTest, blockShouldExist_deletedBlock) {
 TEST_F(KnownBlockVersionsTest, path) {
     KnownBlockVersions obj(stateFile.path());
     EXPECT_EQ(stateFile.path(), obj.path());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_empty) {
+    EXPECT_EQ(unordered_set<Key>({}), testobj.existingBlocks());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_oneentry) {
+    setVersion(&testobj, clientId, key, 5);
+    EXPECT_EQ(unordered_set<Key>({key}), testobj.existingBlocks());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_twoentries) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key2, 5);
+    EXPECT_EQ(unordered_set<Key>({key, key2}), testobj.existingBlocks());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_twoentries_sameKey) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key, 5);
+    EXPECT_EQ(unordered_set<Key>({key}), testobj.existingBlocks());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_deletedEntry) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key2, 5);
+    testobj.markBlockAsDeleted(key2);
+    EXPECT_EQ(unordered_set<Key>({key}), testobj.existingBlocks());
+}
+
+TEST_F(KnownBlockVersionsTest, existingBlocks_deletedEntries) {
+    setVersion(&testobj, clientId, key, 5);
+    setVersion(&testobj, clientId2, key2, 5);
+    testobj.markBlockAsDeleted(key);
+    testobj.markBlockAsDeleted(key2);
+    EXPECT_EQ(unordered_set<Key>({}), testobj.existingBlocks());
 }

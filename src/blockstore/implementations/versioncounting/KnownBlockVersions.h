@@ -10,6 +10,7 @@
 #include <cpp-utils/data/Deserializer.h>
 #include <cpp-utils/data/Serializer.h>
 #include <mutex>
+#include <unordered_set>
 
 namespace blockstore {
     namespace versioncounting {
@@ -28,6 +29,7 @@ namespace blockstore {
             void markBlockAsDeleted(const Key &key);
 
             bool blockShouldExist(const Key &key) const;
+            std::unordered_set<Key> existingBlocks() const;
 
             uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
 
