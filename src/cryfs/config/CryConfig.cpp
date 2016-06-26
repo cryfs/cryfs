@@ -35,18 +35,18 @@ CryConfig CryConfig::load(const Data &data) {
   read_json(stream, pt);
 
   CryConfig cfg;
-  cfg._rootBlob = pt.get("cryfs.rootblob");
-  cfg._encKey = pt.get("cryfs.key");
-  cfg._cipher = pt.get("cryfs.cipher");
-  cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
-  cfg._createdWithVersion = pt.get("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
+  cfg._rootBlob = pt.get<string>("cryfs.rootblob");
+  cfg._encKey = pt.get<string>("cryfs.key");
+  cfg._cipher = pt.get<string>("cryfs.cipher");
+  cfg._version = pt.get<string>("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
+  cfg._createdWithVersion = pt.get<string>("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
   cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32832); // CryFS <= 0.9.2 used a 32KB block size which was this physical block size.
 
-  string filesystemIdOpt = pt.get("cryfs.filesystemId", "");
-  if (filesystemIdOpt == "") {
+  optional<string> filesystemIdOpt = pt.get_optional<string>("cryfs.filesystemId");
+  if (filesystemIdOpt == none) {
     cfg._filesystemId = Random::PseudoRandom().getFixedSize<FilesystemID::BINARY_LENGTH>();
   } else {
-    cfg._filesystemId = FilesystemID::FromString(filesystemIdOpt);
+    cfg._filesystemId = FilesystemID::FromString(*filesystemIdOpt);
   }
 
   return cfg;
@@ -55,13 +55,13 @@ CryConfig CryConfig::load(const Data &data) {
 Data CryConfig::save() const {
   ptree pt;
 
-  pt.put("cryfs.rootblob", _rootBlob);
-  pt.put("cryfs.key", _encKey);
-  pt.put("cryfs.cipher", _cipher);
-  pt.put("cryfs.version", _version);
-  pt.put("cryfs.createdWithVersion", _createdWithVersion);
+  pt.put<string>("cryfs.rootblob", _rootBlob);
+  pt.put<string>("cryfs.key", _encKey);
+  pt.put<string>("cryfs.cipher", _cipher);
+  pt.put<string>("cryfs.version", _version);
+  pt.put<string>("cryfs.createdWithVersion", _createdWithVersion);
   pt.put<uint64_t>("cryfs.blocksizeBytes", _blocksizeBytes);
-  pt.put("cryfs.filesystemId", _filesystemId.ToString());
+  pt.put<string>("cryfs.filesystemId", _filesystemId.ToString());
 
   stringstream stream;
   write_json(stream, pt);
