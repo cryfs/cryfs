@@ -35,9 +35,9 @@ CryConfig CryConfig::load(const Data &data) {
   read_json(stream, pt);
 
   CryConfig cfg;
-  cfg._rootBlob = pt.get("cryfs.rootblob", "");
-  cfg._encKey = pt.get("cryfs.key", "");
-  cfg._cipher = pt.get("cryfs.cipher", "");
+  cfg._rootBlob = pt.get("cryfs.rootblob");
+  cfg._encKey = pt.get("cryfs.key");
+  cfg._cipher = pt.get("cryfs.cipher");
   cfg._version = pt.get("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
   cfg._createdWithVersion = pt.get("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
   cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32832); // CryFS <= 0.9.2 used a 32KB block size which was this physical block size.
