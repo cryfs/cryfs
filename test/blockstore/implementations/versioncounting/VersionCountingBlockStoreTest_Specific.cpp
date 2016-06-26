@@ -27,9 +27,10 @@ public:
   VersionCountingBlockStoreTest():
     stateFile(false),
     baseBlockStore(new FakeBlockStore),
-    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), false)),
+    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, false)),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
+  static constexpr uint32_t myClientId = 0x12345678;
   TempFile stateFile;
   FakeBlockStore *baseBlockStore;
   unique_ref<VersionCountingBlockStore> blockStore;
@@ -37,13 +38,13 @@ public:
 
   std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithDeletionPrevention() {
     FakeBlockStore *baseBlockStore = new FakeBlockStore;
-    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), true);
+    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, true);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
   std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithoutDeletionPrevention() {
     FakeBlockStore *baseBlockStore = new FakeBlockStore;
-    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), false);
+    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, false);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
@@ -114,6 +115,8 @@ public:
 private:
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlockStoreTest);
 };
+
+constexpr uint32_t VersionCountingBlockStoreTest::myClientId;
 
 // Test that a decreasing version number is not allowed
 TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_1) {

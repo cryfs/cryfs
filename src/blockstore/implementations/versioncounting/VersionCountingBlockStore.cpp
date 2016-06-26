@@ -13,8 +13,8 @@ namespace bf = boost::filesystem;
 namespace blockstore {
     namespace versioncounting {
 
-        VersionCountingBlockStore::VersionCountingBlockStore(unique_ref<BlockStore> baseBlockStore, const bf::path &integrityFilePath, bool missingBlockIsIntegrityViolation)
-                : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
+        VersionCountingBlockStore::VersionCountingBlockStore(unique_ref<BlockStore> baseBlockStore, const bf::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation)
+                : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
         }
 
         Key VersionCountingBlockStore::createKey() {
@@ -99,9 +99,9 @@ namespace blockstore {
         }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-        void VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const bf::path &integrityFilePath) {
+        void VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const bf::path &integrityFilePath, uint32_t myClientId) {
             std::cout << "Migrating file system for integrity features. This can take a while..." << std::flush;
-            KnownBlockVersions knownBlockVersions(integrityFilePath);
+            KnownBlockVersions knownBlockVersions(integrityFilePath, myClientId);
             baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions] (const Key &key) {
                 auto block =  baseBlockStore->load(key);
                 ASSERT(block != none, "Couldn't load block for migration");

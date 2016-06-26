@@ -17,6 +17,7 @@ set(SOURCES
     filesystem/CryFsTest.cpp
     filesystem/CryNodeTest.cpp
     filesystem/FileSystemTest.cpp
+    filesystem/MyClientIdTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

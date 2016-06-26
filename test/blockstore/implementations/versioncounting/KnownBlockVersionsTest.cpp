@@ -11,12 +11,13 @@ using std::unordered_set;
 
 class KnownBlockVersionsTest : public ::testing::Test {
 public:
-    KnownBlockVersionsTest() :stateFile(false), testobj(stateFile.path()) {}
+    KnownBlockVersionsTest() :stateFile(false), testobj(stateFile.path(), myClientId) {}
 
     blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
     blockstore::Key key2 = blockstore::Key::FromString("C772972491BB4932A1389EE14BC7090A");
-    uint32_t clientId = 0x12345678;
-    uint32_t clientId2 = 0x23456789;
+    static constexpr uint32_t myClientId = 0x12345678;
+    static constexpr uint32_t clientId = 0x23456789;
+    static constexpr uint32_t clientId2 = 0x34567890;
 
     TempFile stateFile;
     KnownBlockVersions testobj;
@@ -259,29 +260,29 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdate_doesntAllowRollbackToOldClientWith
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_empty) {
     TempFile stateFile(false);
-    KnownBlockVersions(stateFile.path());
+    KnownBlockVersions(stateFile.path(), myClientId);
 
-    EXPECT_TRUE(KnownBlockVersions(stateFile.path()).checkAndUpdateVersion(clientId, key, 1));
+    EXPECT_TRUE(KnownBlockVersions(stateFile.path(), myClientId).checkAndUpdateVersion(clientId, key, 1));
 }
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_oneentry) {
     TempFile stateFile(false);
-    EXPECT_TRUE(KnownBlockVersions(stateFile.path()).checkAndUpdateVersion(clientId, key, 100));
+    EXPECT_TRUE(KnownBlockVersions(stateFile.path(), myClientId).checkAndUpdateVersion(clientId, key, 100));
 
-    KnownBlockVersions obj(stateFile.path());
+    KnownBlockVersions obj(stateFile.path(), myClientId);
     EXPECT_EQ(100u, obj.getBlockVersion(clientId, key));
 }
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_threeentries) {
     TempFile stateFile(false);
     {
-        KnownBlockVersions obj(stateFile.path());
+        KnownBlockVersions obj(stateFile.path(), myClientId);
         EXPECT_TRUE(obj.checkAndUpdateVersion(obj.myClientId(), key, 100));
         EXPECT_TRUE(obj.checkAndUpdateVersion(obj.myClientId(), key2, 50));
         EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 150));
     }
 
-    KnownBlockVersions obj(stateFile.path());
+    KnownBlockVersions obj(stateFile.path(), myClientId);
     EXPECT_EQ(100u, obj.getBlockVersion(obj.myClientId(), key));
     EXPECT_EQ(50u, obj.getBlockVersion(obj.myClientId(), key2));
     EXPECT_EQ(150u, obj.getBlockVersion(clientId, key));
@@ -289,12 +290,12 @@ TEST_F(KnownBlockVersionsTest, saveAndLoad_threeentries) {
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_lastUpdateClientIdIsStored) {
     {
-        KnownBlockVersions obj(stateFile.path());
+        KnownBlockVersions obj(stateFile.path(), myClientId);
         EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 100));
         EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, key, 10));
     }
 
-    KnownBlockVersions obj(stateFile.path());
+    KnownBlockVersions obj(stateFile.path(), myClientId);
     EXPECT_FALSE(obj.checkAndUpdateVersion(clientId, key, 100));
     EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, key, 10));
     EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, key, 101));
@@ -339,7 +340,7 @@ TEST_F(KnownBlockVersionsTest, blockShouldExist_deletedBlock) {
 }
 
 TEST_F(KnownBlockVersionsTest, path) {
-    KnownBlockVersions obj(stateFile.path());
+    KnownBlockVersions obj(stateFile.path(), myClientId);
     EXPECT_EQ(stateFile.path(), obj.path());
 }
 

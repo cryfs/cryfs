@@ -17,7 +17,7 @@ namespace blockstore {
 
         class KnownBlockVersions final {
         public:
-            explicit KnownBlockVersions(const boost::filesystem::path &stateFilePath);
+            KnownBlockVersions(const boost::filesystem::path &stateFilePath, uint32_t myClientId);
             KnownBlockVersions(KnownBlockVersions &&rhs);
             ~KnownBlockVersions();
 
@@ -36,6 +36,8 @@ namespace blockstore {
             uint32_t myClientId() const;
             const boost::filesystem::path &path() const;
 
+            static constexpr uint32_t CLIENT_ID_FOR_DELETED_BLOCK = 0;
+
         private:
             std::unordered_map<ClientIdAndBlockKey, uint64_t> _knownVersions;
             std::unordered_map<Key, uint32_t> _lastUpdateClientId; // The client who last updated the block
@@ -44,8 +46,6 @@ namespace blockstore {
             uint32_t _myClientId;
             mutable std::mutex _mutex;
             bool _valid;
-
-            static constexpr uint32_t CLIENT_ID_FOR_DELETED_BLOCK = 0;
 
             static const std::string HEADER;
 

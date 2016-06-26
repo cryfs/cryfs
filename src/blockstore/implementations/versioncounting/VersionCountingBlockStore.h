@@ -13,7 +13,7 @@ namespace versioncounting {
 
 class VersionCountingBlockStore final: public BlockStore {
 public:
-  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath, bool missingBlockIsIntegrityViolation);
+  VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation);
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
@@ -28,7 +28,7 @@ public:
   KnownBlockVersions *knownBlockVersions();
 
 #ifndef CRYFS_NO_COMPATIBILITY
-  static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const boost::filesystem::path &integrityFilePath);
+  static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId);
 #endif
 
 private:

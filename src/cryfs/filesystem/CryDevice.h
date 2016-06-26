@@ -47,7 +47,7 @@ private:
   blockstore::Key _rootKey;
   std::vector<std::function<void()>> _onFsAction;
 
-  static boost::filesystem::path _integrityFilePath(const CryConfig::FilesystemID &filesystemId);
+  static boost::filesystem::path _statePath(const CryConfig::FilesystemID &filesystemId);
   static void _createDirIfNotExists(const boost::filesystem::path &path);
 
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);

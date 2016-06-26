@@ -17,6 +17,7 @@
 #include "../config/CryCipher.h"
 #include <cpp-utils/system/homedir.h>
 #include <gitversion/VersionCompare.h>
+#include "MyClientId.h"
 
 using std::string;
 
@@ -78,18 +79,20 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
 
 unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile) {
   auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
-  auto integrityFilePath = _integrityFilePath(configFile->config()->FilesystemId());
+  auto statePath = _statePath(configFile->config()->FilesystemId());
+  auto integrityFilePath = statePath / "integritydata";
+  auto myClientId = MyClientId(statePath).loadOrGenerate();
 
 #ifndef CRYFS_NO_COMPATIBILITY
   if (!configFile->config()->HasVersionNumbers()) {
-    VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath);
+    VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath, myClientId);
     configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + VersionCountingBlock::HEADER_LENGTH);
     configFile->config()->SetHasVersionNumbers(true);
     configFile->save();
   }
 #endif
 
-  return make_unique_ref<VersionCountingBlockStore>(std::move(encryptedBlockStore), integrityFilePath, false);
+  return make_unique_ref<VersionCountingBlockStore>(std::move(encryptedBlockStore), integrityFilePath, myClientId, false);
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
@@ -98,14 +101,14 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
   return rootBlob->key();
 }
 
-bf::path CryDevice::_integrityFilePath(const CryConfig::FilesystemID &filesystemId) {
+bf::path CryDevice::_statePath(const CryConfig::FilesystemID &filesystemId) {
   bf::path app_dir = cpputils::system::HomeDirectory::get() / ".cryfs";
   _createDirIfNotExists(app_dir);
   bf::path filesystems_dir = app_dir / "filesystems";
   _createDirIfNotExists(filesystems_dir);
   bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
   _createDirIfNotExists(this_filesystem_dir);
-  return this_filesystem_dir / "integritydata.knownblockversions";
+  return this_filesystem_dir;
 }
 
 void CryDevice::_createDirIfNotExists(const bf::path &path) {

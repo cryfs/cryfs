@@ -24,7 +24,7 @@ public:
 
   TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path(), SINGLECLIENT);
+    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path(), 0x12345678, SINGLECLIENT);
   }
 };
 

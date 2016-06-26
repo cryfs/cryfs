@@ -22,9 +22,10 @@ namespace versioncounting {
 const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;0";
 constexpr uint32_t KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK;
 
-KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath)
-        :_knownVersions(), _lastUpdateClientId(), _stateFilePath(stateFilePath), _myClientId(0), _mutex(), _valid(true) {
+KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath, uint32_t myClientId)
+        :_knownVersions(), _lastUpdateClientId(), _stateFilePath(stateFilePath), _myClientId(myClientId), _mutex(), _valid(true) {
     unique_lock<mutex> lock(_mutex);
+    ASSERT(_myClientId != CLIENT_ID_FOR_DELETED_BLOCK, "This is not a valid client id");
     _loadStateFile();
 }
 
@@ -87,10 +88,7 @@ uint64_t KnownBlockVersions::incrementVersion(const Key &key, uint64_t lastVersi
 void KnownBlockVersions::_loadStateFile() {
     optional<Data> file = Data::LoadFromFile(_stateFilePath);
     if (file == none) {
-        // File doesn't exist means we loaded empty state. Assign a random client id.
-        do {
-            _myClientId = *reinterpret_cast<uint32_t*>(Random::PseudoRandom().getFixedSize<sizeof(uint32_t)>().data());
-        } while(_myClientId == CLIENT_ID_FOR_DELETED_BLOCK); // Safety check - CLIENT_ID_FOR_DELETED_BLOCK shouldn't be used by any valid client.
+        // File doesn't exist means we loaded empty state.
         return;
     }
 
@@ -98,7 +96,6 @@ void KnownBlockVersions::_loadStateFile() {
     if (HEADER != deserializer.readString()) {
         throw std::runtime_error("Invalid local state: Invalid integrity file header.");
     }
-    _myClientId = deserializer.readUint32();
     _deserializeKnownVersions(&deserializer);
     _deserializeLastUpdateClientIds(&deserializer);
 
@@ -108,11 +105,10 @@ void KnownBlockVersions::_loadStateFile() {
 
 void KnownBlockVersions::_saveStateFile() const {
     Serializer serializer(
-            Serializer::StringSize(HEADER) + sizeof(uint32_t) +
+            Serializer::StringSize(HEADER) +
             sizeof(uint64_t) + _knownVersions.size() * (sizeof(uint32_t) + Key::BINARY_LENGTH + sizeof(uint64_t)) +
             sizeof(uint64_t) + _lastUpdateClientId.size() * (Key::BINARY_LENGTH + sizeof(uint32_t)));
     serializer.writeString(HEADER);
-    serializer.writeUint32(_myClientId);
     _serializeKnownVersions(&serializer);
     _serializeLastUpdateClientIds(&serializer);
 
