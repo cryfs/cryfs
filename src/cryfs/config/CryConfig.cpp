@@ -67,10 +67,10 @@ Data CryConfig::save() const {
   pt.put<uint64_t>("cryfs.blocksizeBytes", _blocksizeBytes);
   pt.put<string>("cryfs.filesystemId", _filesystemId.ToString());
   if (_exclusiveClientId != none) {
-    pt.put("cryfs.exclusiveClientId", *_exclusiveClientId);
+    pt.put<uint32_t>("cryfs.exclusiveClientId", *_exclusiveClientId);
   }
 #ifndef CRYFS_NO_COMPATIBILITY
-  pt.put("cryfs.migrations.hasVersionNumbers", _hasVersionNumbers);
+  pt.put<bool>("cryfs.migrations.hasVersionNumbers", _hasVersionNumbers);
 #endif
 
   stringstream stream;
