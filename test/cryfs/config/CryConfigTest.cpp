@@ -5,6 +5,7 @@
 using namespace cryfs;
 using cpputils::Data;
 using cpputils::DataFixture;
+using boost::none;
 
 class CryConfigTest: public ::testing::Test {
 public:
@@ -164,4 +165,44 @@ TEST_F(CryConfigTest, FilesystemID_AfterSaveAndLoad) {
     cfg.SetFilesystemId(fixture);
     CryConfig loaded = SaveAndLoad(std::move(cfg));
     EXPECT_EQ(fixture, loaded.FilesystemId());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_Init) {
+    EXPECT_EQ(none, cfg.ExclusiveClientId());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_Some) {
+    cfg.SetExclusiveClientId(0x12345678u);
+    EXPECT_EQ(0x12345678u, cfg.ExclusiveClientId().value());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_None) {
+    cfg.SetExclusiveClientId(0x12345678u);
+    cfg.SetExclusiveClientId(none);
+    EXPECT_EQ(none, cfg.ExclusiveClientId());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_Some_AfterMove) {
+    cfg.SetExclusiveClientId(0x12345678u);
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ(0x12345678u, moved.ExclusiveClientId().value());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_None_AfterMove) {
+    cfg.SetExclusiveClientId(0x12345678u);
+    cfg.SetExclusiveClientId(none);
+    CryConfig moved = std::move(cfg);
+    EXPECT_EQ(none, moved.ExclusiveClientId());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_Some_AfterSaveAndLoad) {
+    cfg.SetExclusiveClientId(0x12345678u);
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ(0x12345678u, loaded.ExclusiveClientId().value());
+}
+
+TEST_F(CryConfigTest, ExclusiveClientId_None_AfterSaveAndLoad) {
+    cfg.SetExclusiveClientId(none);
+    CryConfig loaded = SaveAndLoad(std::move(cfg));
+    EXPECT_EQ(none, loaded.ExclusiveClientId());
 }

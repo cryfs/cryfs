@@ -38,6 +38,11 @@ public:
   const FilesystemID &FilesystemId() const;
   void SetFilesystemId(const FilesystemID &value);
 
+  // If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
+  // Because this only works in a single-client setting, only this one client Id is allowed to access the file system.
+  boost::optional<uint32_t> ExclusiveClientId() const;
+  void SetExclusiveClientId(boost::optional<uint32_t> value);
+
 #ifndef CRYFS_NO_COMPATIBILITY
   // This is a trigger to recognize old file systems that didn't have version numbers.
   // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
@@ -56,6 +61,7 @@ private:
   std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
+  boost::optional<uint32_t> _exclusiveClientId;
 #ifndef CRYFS_NO_COMPATIBILITY
   bool _hasVersionNumbers;
 #endif
