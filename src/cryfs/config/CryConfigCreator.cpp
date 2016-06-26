@@ -2,6 +2,8 @@
 #include "CryCipher.h"
 #include <gitversion/gitversion.h>
 #include <cpp-utils/random/Random.h>
+#include <cryfs/localstate/LocalStateDir.h>
+#include <cryfs/localstate/MyClientId.h>
 
 using cpputils::Console;
 using cpputils::unique_ref;
@@ -19,7 +21,7 @@ namespace cryfs {
         :_console(console), _configConsole(console, noninteractive), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
-    CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
+    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetVersion(gitversion::VersionString());
@@ -31,7 +33,8 @@ namespace cryfs {
 #ifndef CRYFS_NO_COMPATIBILITY
         config.SetHasVersionNumbers(true);
 #endif
-        return config;
+        uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config.FilesystemId())).loadOrGenerate();
+        return ConfigCreateResult {std::move(config), myClientId};
     }
 
     uint32_t CryConfigCreator::_generateBlocksizeBytes(const optional<uint32_t> &blocksizeBytesFromCommandLine) {

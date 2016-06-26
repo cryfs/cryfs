@@ -6,6 +6,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
+#include "../localstate/LocalStateDir.h"
+#include "../localstate/MyClientId.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -22,6 +24,8 @@ using std::vector;
 using std::string;
 using std::function;
 using std::shared_ptr;
+using std::unique_ptr;
+using std::make_unique;
 using gitversion::VersionCompare;
 using namespace cpputils::logging;
 
@@ -33,7 +37,7 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
 
-optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(const bf::path &filename) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
@@ -53,7 +57,8 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     config->save();
   }
   _checkCipher(*config->config());
-  return std::move(*config);
+  uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config->config()->FilesystemId())).loadOrGenerate();
+  return ConfigLoadResult {std::move(*config), myClientId};
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {
@@ -75,7 +80,7 @@ void CryConfigLoader::_checkCipher(const CryConfig &config) const {
   }
 }
 
-optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) {
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(const bf::path &filename) {
   if (bf::exists(filename)) {
     return _loadConfig(filename);
   } else {
@@ -83,14 +88,14 @@ optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) 
   }
 }
 
-CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
+CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(const bf::path &filename) {
   auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
   std::cout << "Creating config file (this can take some time)..." << std::flush;
-  auto result = CryConfigFile::create(filename, std::move(config), password, _scryptSettings);
+  auto result = CryConfigFile::create(filename, std::move(config.config), password, _scryptSettings);
   std::cout << "done" << std::endl;
-  return result;
+  return ConfigLoadResult {std::move(result), config.myClientId};
 }
 
 

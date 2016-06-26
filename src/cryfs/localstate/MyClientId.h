@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_FILESYSTEM_MYCLIENTID_H_
-#define MESSMER_CRYFS_FILESYSTEM_MYCLIENTID_H_
+#ifndef MESSMER_CRYFS_LOCALSTATE_MYCLIENTID_H_
+#define MESSMER_CRYFS_LOCALSTATE_MYCLIENTID_H_
 
 #include <cpp-utils/macros.h>
 #include <boost/filesystem/path.hpp>

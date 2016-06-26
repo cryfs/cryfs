@@ -191,7 +191,7 @@ namespace cryfs {
         return *configFile;
     }
 
-    CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
+    CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
             auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes());
@@ -206,7 +206,7 @@ namespace cryfs {
         }
     }
 
-    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
@@ -224,7 +224,7 @@ namespace cryfs {
         try {
             auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
             auto config = _loadOrCreateConfig(options);
-            CryDevice device(std::move(config), std::move(blockStore));
+            CryDevice device(std::move(config.configFile), std::move(blockStore), config.myClientId);
             _sanityCheckFilesystem(&device);
             fspp::FilesystemImpl fsimpl(&device);
             fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+options.baseDir().native());

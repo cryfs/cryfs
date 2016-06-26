@@ -11,6 +11,7 @@
 #include <cpp-utils/network/HttpClient.h>
 #include <cryfs/filesystem/CryDevice.h>
 #include "CallAfterTimeout.h"
+#include <cryfs/config/CryConfigLoader.h>
 
 namespace cryfs {
     class Cli final {
@@ -21,8 +22,8 @@ namespace cryfs {
     private:
         void _checkForUpdates();
         void _runFilesystem(const program_options::ProgramOptions &options);
-        CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
-        boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes);
+        CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options);
+        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();

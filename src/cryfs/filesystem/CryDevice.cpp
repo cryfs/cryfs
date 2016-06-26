@@ -17,7 +17,8 @@
 #include "../config/CryCipher.h"
 #include <cpp-utils/system/homedir.h>
 #include <gitversion/VersionCompare.h>
-#include "MyClientId.h"
+#include "cryfs/localstate/MyClientId.h"
+#include "cryfs/localstate/LocalStateDir.h"
 
 using std::string;
 
@@ -52,12 +53,12 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore)
+CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore, uint32_t myClientId)
 : _fsBlobStore(
       make_unique_ref<ParallelAccessFsBlobStore>(
         make_unique_ref<CachingFsBlobStore>(
           make_unique_ref<FsBlobStore>(
-            CreateBlobStore(std::move(blockStore), &configFile)
+            CreateBlobStore(std::move(blockStore), &configFile, myClientId)
           )
         )
       )
@@ -66,8 +67,8 @@ CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore
   _onFsAction() {
 }
 
-unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile) {
-  auto versionCountingEncryptedBlockStore = CreateVersionCountingEncryptedBlockStore(std::move(blockStore), configFile);
+unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
+  auto versionCountingEncryptedBlockStore = CreateVersionCountingEncryptedBlockStore(std::move(blockStore), configFile, myClientId);
   // Create versionCountingEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
@@ -77,11 +78,10 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
            configFile->config()->BlocksizeBytes());
 }
 
-unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile) {
+unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
   auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
-  auto statePath = _statePath(configFile->config()->FilesystemId());
+  auto statePath = LocalStateDir::forFilesystemId(configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
-  auto myClientId = MyClientId(statePath).loadOrGenerate();
 
 #ifndef CRYFS_NO_COMPATIBILITY
   if (!configFile->config()->HasVersionNumbers()) {
@@ -99,22 +99,6 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
   auto rootBlob =  _fsBlobStore->createDirBlob();
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
   return rootBlob->key();
-}
-
-bf::path CryDevice::_statePath(const CryConfig::FilesystemID &filesystemId) {
-  bf::path app_dir = cpputils::system::HomeDirectory::get() / ".cryfs";
-  _createDirIfNotExists(app_dir);
-  bf::path filesystems_dir = app_dir / "filesystems";
-  _createDirIfNotExists(filesystems_dir);
-  bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
-  _createDirIfNotExists(this_filesystem_dir);
-  return this_filesystem_dir;
-}
-
-void CryDevice::_createDirIfNotExists(const bf::path &path) {
-  if (!bf::exists(path)) {
-    bf::create_directory(path);
-  }
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {

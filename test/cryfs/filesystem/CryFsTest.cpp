@@ -40,7 +40,7 @@ public:
 
   CryConfigFile loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true).loadOrCreate(config.path()).value();
+    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true).loadOrCreate(config.path()).value().configFile;
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {
@@ -53,20 +53,20 @@ public:
 
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore());
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore());
+  CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
   auto root = dev.Load(bf::path("/"));
   dynamic_pointer_move<CryDir>(root.get()).get()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore());
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore());
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);

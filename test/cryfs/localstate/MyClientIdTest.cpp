@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../src/cryfs/filesystem/MyClientId.h"
+#include "cryfs/localstate/MyClientId.h"
 #include <cpp-utils/tempfile/TempDir.h>
 
 using cpputils::TempDir;

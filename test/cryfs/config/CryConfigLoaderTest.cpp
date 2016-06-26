@@ -44,41 +44,45 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_FALSE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path()).value();
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path()).value().configFile;
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_TRUE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path());
+        auto loadResult = loader(password, noninteractive, cipher).loadOrCreate(file.path());
+        if (loadResult == none) {
+            return none;
+        }
+        return std::move(loadResult->configFile);
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
 
     void CreateWithVersion(const string &version, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
 
     void CreateWithFilesystemID(const CryConfig::FilesystemID &filesystemId, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
     }

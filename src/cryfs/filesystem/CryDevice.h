@@ -17,7 +17,7 @@ namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore> blockStore);
+  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore> blockStore, uint32_t myClientId);
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
@@ -47,13 +47,10 @@ private:
   blockstore::Key _rootKey;
   std::vector<std::function<void()>> _onFsAction;
 
-  static boost::filesystem::path _statePath(const CryConfig::FilesystemID &filesystemId);
-  static void _createDirIfNotExists(const boost::filesystem::path &path);
-
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
   blockstore::Key CreateRootBlobAndReturnKey();
-  static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile);
-  static cpputils::unique_ref<blockstore::BlockStore> CreateVersionCountingEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile);
+  static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId);
+  static cpputils::unique_ref<blockstore::BlockStore> CreateVersionCountingEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId);
   static cpputils::unique_ref<blockstore::BlockStore> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore> baseBlockStore);
 
   struct BlobWithParent {
