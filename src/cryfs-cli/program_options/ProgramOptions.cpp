@@ -12,10 +12,11 @@ ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir
                                bool foreground, const optional<double> &unmountAfterIdleMinutes,
                                const optional<bf::path> &logFile, const optional<string> &cipher,
                                const optional<uint32_t> &blocksizeBytes,
+                               const boost::optional<bool> &missingBlockIsIntegrityViolation,
                                const vector<string> &fuseOptions)
     :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground),
      _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
-     _logFile(logFile), _fuseOptions(fuseOptions) {
+     _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _logFile(logFile), _fuseOptions(fuseOptions) {
 }
 
 const bf::path &ProgramOptions::baseDir() const {
@@ -48,6 +49,10 @@ const optional<string> &ProgramOptions::cipher() const {
 
 const optional<uint32_t> &ProgramOptions::blocksizeBytes() const {
     return _blocksizeBytes;
+}
+
+const optional<bool> &ProgramOptions::missingBlockIsIntegrityViolation() const {
+    return _missingBlockIsIntegrityViolation;
 }
 
 const vector<string> &ProgramOptions::fuseOptions() const {

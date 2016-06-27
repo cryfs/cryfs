@@ -145,6 +145,21 @@ TEST_F(ProgramOptionsParserTest, BlocksizeNotGiven) {
     EXPECT_EQ(none, options.blocksizeBytes());
 }
 
+TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationGiven_True) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--missing-block-is-integrity-violation", "true", "/home/user/mountDir"});
+    EXPECT_TRUE(options.missingBlockIsIntegrityViolation().value());
+}
+
+TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationGiven_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--missing-block-is-integrity-violation", "false", "/home/user/mountDir"});
+    EXPECT_FALSE(options.missingBlockIsIntegrityViolation().value());
+}
+
+TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.missingBlockIsIntegrityViolation());
+}
+
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "--", "-f"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());

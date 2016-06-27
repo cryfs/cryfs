@@ -18,6 +18,7 @@ namespace cryfs {
                            const boost::optional<boost::filesystem::path> &logFile,
                            const boost::optional<std::string> &cipher,
                            const boost::optional<uint32_t> &blocksizeBytes,
+                           const boost::optional<bool> &missingBlockIsIntegrityViolation,
                            const std::vector<std::string> &fuseOptions);
             ProgramOptions(ProgramOptions &&rhs) = default;
 
@@ -28,6 +29,7 @@ namespace cryfs {
             const boost::optional<std::string> &cipher() const;
             const boost::optional<uint32_t> &blocksizeBytes() const;
             const boost::optional<double> &unmountAfterIdleMinutes() const;
+            const boost::optional<bool> &missingBlockIsIntegrityViolation() const;
             const boost::optional<boost::filesystem::path> &logFile() const;
             const std::vector<std::string> &fuseOptions() const;
 
@@ -39,6 +41,7 @@ namespace cryfs {
             boost::optional<std::string> _cipher;
             boost::optional<uint32_t> _blocksizeBytes;
             boost::optional<double> _unmountAfterIdleMinutes;
+            boost::optional<bool> _missingBlockIsIntegrityViolation;
             boost::optional<boost::filesystem::path> _logFile;
             std::vector<std::string> _fuseOptions;
 
