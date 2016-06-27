@@ -271,3 +271,16 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
         EXPECT_THAT(e.what(), HasSubstr("Not migrating file system"));
     }
 }
+
+TEST_F(CryConfigLoaderTest, MyClientIdIsIndeterministic) {
+    TempFile file1(false);
+    TempFile file2(false);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path()).value().myClientId;
+    EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path()).value().myClientId);
+}
+
+TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
+    TempFile file(false);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path()).value().myClientId;
+    EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path()).value().myClientId);
+}
