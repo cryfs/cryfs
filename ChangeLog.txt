@@ -1,3 +1,8 @@
+Version 0.10.0 (unreleased)
+---------------
+New Features:
+* Integrity checks ensure you notice when someone modifies your file system.
+
 Version 0.9.5 (unreleased)
 ---------------
 Fixed Bugs:
