@@ -21,7 +21,7 @@ namespace cryfs {
         :_console(console), _configConsole(console, noninteractive), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
-    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
+    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine, const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetVersion(gitversion::VersionString());
@@ -30,10 +30,11 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobKey());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetFilesystemId(_generateFilesystemID());
+        uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config.FilesystemId())).loadOrGenerate();
+        config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
 #ifndef CRYFS_NO_COMPATIBILITY
         config.SetHasVersionNumbers(true);
 #endif
-        uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config.FilesystemId())).loadOrGenerate();
         return ConfigCreateResult {std::move(config), myClientId};
     }
 
@@ -52,6 +53,21 @@ namespace cryfs {
             return *cipherFromCommandLine;
         } else {
             return _configConsole.askCipher();
+        }
+    }
+
+    optional<uint32_t> CryConfigCreator::_generateExclusiveClientId(const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, uint32_t myClientId) {
+        if (!_generateMissingBlockIsIntegrityViolation(missingBlockIsIntegrityViolationFromCommandLine)) {
+            return none;
+        }
+        return myClientId;
+    }
+
+    bool CryConfigCreator::_generateMissingBlockIsIntegrityViolation(const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine) {
+        if (missingBlockIsIntegrityViolationFromCommandLine != none) {
+            return *missingBlockIsIntegrityViolationFromCommandLine;
+        } else {
+            return _configConsole.askMissingBlockIsIntegrityViolation();
         }
     }
 

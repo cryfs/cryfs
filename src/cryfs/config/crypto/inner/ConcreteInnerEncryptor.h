@@ -11,7 +11,7 @@ namespace cryfs {
     template<class Cipher>
     class ConcreteInnerEncryptor final: public InnerEncryptor {
     public:
-        static constexpr size_t CONFIG_SIZE = 512;  // Inner config data is grown to this size before encryption to hide its actual size
+        static constexpr size_t CONFIG_SIZE = 900;  // Inner config data is grown to this size before encryption to hide its actual size
 
         ConcreteInnerEncryptor(typename Cipher::EncryptionKey key);
 

@@ -13,7 +13,7 @@ namespace cryfs {
 
 class CryConfigLoader final {
 public:
-  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, bool noninteractive);
+  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool noninteractive);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   struct ConfigLoadResult {
@@ -28,6 +28,7 @@ private:
     ConfigLoadResult _createConfig(const boost::filesystem::path &filename);
     void _checkVersion(const CryConfig &config);
     void _checkCipher(const CryConfig &config) const;
+    void _checkMissingBlocksAreIntegrityViolations(CryConfigFile *configFile, uint32_t myClientId);
 
     std::shared_ptr<cpputils::Console> _console;
     CryConfigCreator _creator;
@@ -36,6 +37,7 @@ private:
     std::function<std::string()> _askPasswordForNewFilesystem;
     boost::optional<std::string> _cipherFromCommandLine;
     boost::optional<uint32_t> _blocksizeBytesFromCommandLine;
+    boost::optional<bool> _missingBlockIsIntegrityViolationFromCommandLine;
 
     DISALLOW_COPY_AND_ASSIGN(CryConfigLoader);
 };

@@ -39,7 +39,7 @@ public:
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
         auto askPassword = [password] { return password;};
-        return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, none, noninteractive);
+        return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, none, none, noninteractive);
     }
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
