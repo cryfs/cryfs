@@ -53,22 +53,22 @@ TEST_F(ProgramOptionsParserTest, ShowCiphers) {
     );
 }
 
-
-TEST_F(ProgramOptionsParserTest, NoSpecialOptions) {
+TEST_F(ProgramOptionsParserTest, BaseDir_Absolute) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
-    EXPECT_EQ("/home/user/mountDir", options.mountDir());
-    EXPECT_EQ(none, options.logFile());
-    EXPECT_EQ(none, options.configFile());
-    EXPECT_VECTOR_EQ({}, options.fuseOptions());
 }
 
-TEST_F(ProgramOptionsParserTest, RelativeBaseDir) {
+TEST_F(ProgramOptionsParserTest, Basedir_Relative) {
     ProgramOptions options = parse({"./myExecutable", "baseDir", "/home/user/mountDir"});
     EXPECT_EQ(bf::current_path() / "baseDir", options.baseDir());
 }
 
-TEST_F(ProgramOptionsParserTest, RelativeMountDir) {
+TEST_F(ProgramOptionsParserTest, MountDir_Absolute) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ("/home/user/mountDir", options.mountDir());
+}
+
+TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "mountDir"});
     EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
 }
@@ -83,6 +83,11 @@ TEST_F(ProgramOptionsParserTest, LogfileGiven_RelativePath) {
     EXPECT_EQ(bf::current_path() / "mylogfile", options.logFile().value());
 }
 
+TEST_F(ProgramOptionsParserTest, LogfileNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.logFile());
+}
+
 TEST_F(ProgramOptionsParserTest, ConfigfileGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--config", "/home/user/myconfigfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/myconfigfile", options.configFile().value());
@@ -93,9 +98,26 @@ TEST_F(ProgramOptionsParserTest, ConfigfileGiven_RelativePath) {
     EXPECT_EQ(bf::current_path() / "myconfigfile", options.configFile().value());
 }
 
+TEST_F(ProgramOptionsParserTest, ConfigfileNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.configFile());
+}
+
 TEST_F(ProgramOptionsParserTest, CipherGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--cipher", "aes-256-gcm", "/home/user/mountDir"});
     EXPECT_EQ("aes-256-gcm", options.cipher().value());
+}
+
+TEST_F(ProgramOptionsParserTest, CipherNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.cipher());
+}
+
+TEST_F(ProgramOptionsParserTest, InvalidCipher) {
+    EXPECT_DEATH(
+            parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"}),
+            "Invalid cipher: invalid-cipher"
+    );
 }
 
 TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven) {
@@ -108,16 +130,19 @@ TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven_Float) {
     EXPECT_EQ(0.5, options.unmountAfterIdleMinutes().value());
 }
 
+TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.unmountAfterIdleMinutes());
+}
+
 TEST_F(ProgramOptionsParserTest, BlocksizeGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--blocksize", "10240", "/home/user/mountDir"});
     EXPECT_EQ(10240u, options.blocksizeBytes().value());
 }
 
-TEST_F(ProgramOptionsParserTest, InvalidCipher) {
-    EXPECT_DEATH(
-        parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"}),
-        "Invalid cipher: invalid-cipher"
-    );
+TEST_F(ProgramOptionsParserTest, BlocksizeNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ(none, options.blocksizeBytes());
 }
 
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
@@ -125,4 +150,18 @@ TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
     EXPECT_EQ("/home/user/mountDir", options.mountDir());
     EXPECT_VECTOR_EQ({"-f"}, options.fuseOptions());
+}
+
+TEST_F(ProgramOptionsParserTest, FuseOptionGiven_Empty) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "--"});
+    EXPECT_EQ("/home/user/baseDir", options.baseDir());
+    EXPECT_EQ("/home/user/mountDir", options.mountDir());
+    EXPECT_VECTOR_EQ({}, options.fuseOptions());
+}
+
+TEST_F(ProgramOptionsParserTest, FuseOptionNotGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_EQ("/home/user/baseDir", options.baseDir());
+    EXPECT_EQ("/home/user/mountDir", options.mountDir());
+    EXPECT_VECTOR_EQ({}, options.fuseOptions());
 }
