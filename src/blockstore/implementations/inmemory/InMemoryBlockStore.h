@@ -7,10 +7,10 @@
 
 #include <mutex>
 #include <unordered_map>
+#include "InMemoryBlock.h"
 
 namespace blockstore {
 namespace inmemory {
-class InMemoryBlock;
 
 class InMemoryBlockStore final: public BlockStoreWithRandomKeys {
 public:
