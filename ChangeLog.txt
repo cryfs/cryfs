@@ -4,7 +4,7 @@ New Features:
 * Integrity checks ensure you notice when someone modifies your file system.
 * File system nodes (files, directories, symlinks) store a parent pointer to the directory that contains them. This information can be used to resolve synchronization conflicts.
 
-Version 0.9.5 (unreleased)
+Version 0.9.5
 ---------------
 Fixed Bugs:
 * Fixed a bug that prevented mounting a file system on Mac OS X.
