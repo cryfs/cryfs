@@ -1,4 +1,4 @@
-Version 0.9.5 (unreleased)
+Version 0.9.5
 ---------------
 Fixed Bugs:
 * Fixed a bug that prevented mounting a file system on Mac OS X.
