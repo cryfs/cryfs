@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cryfs/config/CryConfig.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using namespace cryfs;
 using cpputils::Data;
