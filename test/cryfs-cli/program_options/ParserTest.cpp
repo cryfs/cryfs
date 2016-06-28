@@ -1,6 +1,7 @@
 #include "testutils/ProgramOptionsTestBase.h"
 #include <cryfs-cli/program_options/Parser.h>
 #include <cryfs/config/CryCipher.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using namespace cryfs;
 using namespace cryfs::program_options;
