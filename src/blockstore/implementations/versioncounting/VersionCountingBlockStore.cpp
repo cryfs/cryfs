@@ -100,7 +100,7 @@ namespace blockstore {
 
 #ifndef CRYFS_NO_COMPATIBILITY
         void VersionCountingBlockStore::migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const bf::path &integrityFilePath, uint32_t myClientId) {
-            std::cout << "Migrating file system for integrity features. This can take a while..." << std::flush;
+            std::cout << "Migrating file system for integrity features. Please don't interrupt this process. This can take a while..." << std::flush;
             KnownBlockVersions knownBlockVersions(integrityFilePath, myClientId);
             baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions] (const Key &key) {
                 auto block =  baseBlockStore->load(key);
