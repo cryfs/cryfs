@@ -19,9 +19,9 @@ namespace cryfs {
             CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore);
             ~CachingFsBlobStore();
 
-            cpputils::unique_ref<FileBlobRef> createFileBlob();
-            cpputils::unique_ref<DirBlobRef> createDirBlob();
-            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target);
+            cpputils::unique_ref<FileBlobRef> createFileBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<DirBlobRef> createDirBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
             uint64_t virtualBlocksizeBytes() const;
@@ -50,25 +50,25 @@ namespace cryfs {
         inline CachingFsBlobStore::~CachingFsBlobStore() {
         }
 
-        inline cpputils::unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob() {
+        inline cpputils::unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob(const blockstore::Key &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
-            return cpputils::make_unique_ref<FileBlobRef>(_baseBlobStore->createFileBlob(), this);
+            return cpputils::make_unique_ref<FileBlobRef>(_baseBlobStore->createFileBlob(parent), this);
         }
 
-        inline cpputils::unique_ref<DirBlobRef> CachingFsBlobStore::createDirBlob() {
+        inline cpputils::unique_ref<DirBlobRef> CachingFsBlobStore::createDirBlob(const blockstore::Key &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
-            return cpputils::make_unique_ref<DirBlobRef>(_baseBlobStore->createDirBlob(), this);
+            return cpputils::make_unique_ref<DirBlobRef>(_baseBlobStore->createDirBlob(parent), this);
         }
 
-        inline cpputils::unique_ref<SymlinkBlobRef> CachingFsBlobStore::createSymlinkBlob(const boost::filesystem::path &target) {
+        inline cpputils::unique_ref<SymlinkBlobRef> CachingFsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
-            return cpputils::make_unique_ref<SymlinkBlobRef>(_baseBlobStore->createSymlinkBlob(target), this);
+            return cpputils::make_unique_ref<SymlinkBlobRef>(_baseBlobStore->createSymlinkBlob(target, parent), this);
         }
 
         inline void CachingFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {

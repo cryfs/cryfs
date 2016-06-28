@@ -43,7 +43,7 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
     parent()->updateModificationTimestampForChild(key());
   }
-  auto child = device()->CreateFileBlob();
+  auto child = device()->CreateFileBlob(key());
   auto now = cpputils::time::now();
   auto dirBlob = LoadBlob();
   dirBlob->AddChildFile(name, child->key(), mode, uid, gid, now, now);
@@ -57,7 +57,7 @@ void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
     parent()->updateModificationTimestampForChild(key());
   }
   auto blob = LoadBlob();
-  auto child = device()->CreateDirBlob();
+  auto child = device()->CreateDirBlob(key());
   auto now = cpputils::time::now();
   blob->AddChildDir(name, child->key(), mode, uid, gid, now, now);
 }
@@ -95,7 +95,7 @@ void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid
     parent()->updateModificationTimestampForChild(key());
   }
   auto blob = LoadBlob();
-  auto child = device()->CreateSymlinkBlob(target);
+  auto child = device()->CreateSymlinkBlob(target, key());
   auto now = cpputils::time::now();
   blob->AddChildSymlink(name, child->key(), uid, gid, now, now);
 }

@@ -21,9 +21,9 @@ namespace cryfs {
         public:
             ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore);
 
-            cpputils::unique_ref<FileBlobRef> createFileBlob();
-            cpputils::unique_ref<DirBlobRef> createDirBlob();
-            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target);
+            cpputils::unique_ref<FileBlobRef> createFileBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<DirBlobRef> createDirBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
             uint64_t virtualBlocksizeBytes() const;

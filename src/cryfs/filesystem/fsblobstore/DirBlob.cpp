@@ -45,8 +45,8 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<off_t(const blockstore::Key&)> getLstatSize) {
-  InitializeBlob(blob.get(), FsBlobView::BlobType::DIR);
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, const blockstore::Key &parent, std::function<off_t(const blockstore::Key&)> getLstatSize) {
+  InitializeBlob(blob.get(), FsBlobView::BlobType::DIR, parent);
   return make_unique_ref<DirBlob>(fsBlobStore, std::move(blob), getLstatSize);
 }
 

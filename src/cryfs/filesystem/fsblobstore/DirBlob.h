@@ -18,6 +18,7 @@ namespace cryfs {
             constexpr static off_t DIR_LSTAT_SIZE = 4096;
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob,
+                                                                    const blockstore::Key &parent,
                                                                     std::function<off_t (const blockstore::Key&)> getLstatSize);
 
             DirBlob(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::Key&)> getLstatSize);

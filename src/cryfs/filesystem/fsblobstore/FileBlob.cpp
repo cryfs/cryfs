@@ -16,8 +16,8 @@ FileBlob::FileBlob(unique_ref<Blob> blob)
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::FILE, "Loaded blob is not a file");
 }
 
-unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob) {
-  InitializeBlob(blob.get(), FsBlobView::BlobType::FILE);
+unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const blockstore::Key &parent) {
+  InitializeBlob(blob.get(), FsBlobView::BlobType::FILE, parent);
   return make_unique_ref<FileBlob>(std::move(blob));
 }
 

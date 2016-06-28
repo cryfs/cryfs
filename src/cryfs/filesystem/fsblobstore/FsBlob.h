@@ -14,6 +14,8 @@ namespace cryfs {
 
             virtual off_t lstat_size() const = 0;
             const blockstore::Key &key() const;
+            const blockstore::Key &parentPointer() const;
+            void setParentPointer(const blockstore::Key &parentKey);
 
         protected:
             FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
@@ -21,7 +23,7 @@ namespace cryfs {
             FsBlobView &baseBlob();
             const FsBlobView &baseBlob() const;
 
-            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber);
+            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::Key &parent);
 
             friend class FsBlobStore;
             virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
@@ -57,12 +59,20 @@ namespace cryfs {
             return _baseBlob;
         }
 
-        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber) {
-            FsBlobView::InitializeBlob(blob, magicNumber);
+        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::Key &parent) {
+            FsBlobView::InitializeBlob(blob, magicNumber, parent);
         }
 
         inline cpputils::unique_ref<blobstore::Blob> FsBlob::releaseBaseBlob() {
             return _baseBlob.releaseBaseBlob();
+        }
+
+        inline const blockstore::Key &FsBlob::parentPointer() const {
+            return _baseBlob.parentPointer();
+        }
+
+        inline void FsBlob::setParentPointer(const blockstore::Key &parentKey) {
+            return _baseBlob.setParentPointer(parentKey);
         }
     }
 }

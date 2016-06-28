@@ -9,7 +9,7 @@ namespace cryfs {
 
         class FileBlob final: public FsBlob {
         public:
-            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob);
+            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob, const blockstore::Key &parent);
 
             FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
 

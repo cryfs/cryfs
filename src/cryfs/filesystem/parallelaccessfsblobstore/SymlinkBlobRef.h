@@ -16,12 +16,20 @@ public:
         return _base->target();
     }
 
-    const blockstore::Key &key() const {
+    const blockstore::Key &key() const override {
         return _base->key();
     }
 
-    off_t lstat_size() const {
+    off_t lstat_size() const override {
         return _base->lstat_size();
+    }
+
+    const blockstore::Key &parentPointer() const override {
+        return _base->parentPointer();
+    }
+
+    void setParentPointer(const blockstore::Key &parentKey) override {
+        return _base->setParentPointer(parentKey);
     }
 
 private:

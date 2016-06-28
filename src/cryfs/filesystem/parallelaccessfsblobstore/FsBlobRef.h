@@ -13,6 +13,8 @@ public:
     virtual ~FsBlobRef() {}
     virtual const blockstore::Key &key() const = 0;
     virtual off_t lstat_size() const = 0;
+    virtual const blockstore::Key &parentPointer() const = 0;
+    virtual void setParentPointer(const blockstore::Key &parentKey) = 0;
 
 protected:
     FsBlobRef() {}

@@ -21,9 +21,9 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob();
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob();
-  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target);
+  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::Key &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::Key &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key);
   struct DirBlobWithParent {
       cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;

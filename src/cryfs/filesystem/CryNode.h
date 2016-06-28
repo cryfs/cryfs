@@ -23,6 +23,9 @@ public:
   void rename(const boost::filesystem::path &to) override;
   void utimens(timespec lastAccessTime, timespec lastModificationTime) override;
 
+  // used in test cases
+  bool checkParentPointer();
+
 protected:
   CryNode();
 

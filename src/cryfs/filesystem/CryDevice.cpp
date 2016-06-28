@@ -96,7 +96,7 @@ unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(uniqu
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {
-  auto rootBlob =  _fsBlobStore->createDirBlob();
+  auto rootBlob =  _fsBlobStore->createDirBlob(blockstore::Key::Null());
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
   return rootBlob->key();
 }
@@ -150,6 +150,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
     throw FuseErrnoException(EIO);
   }
   unique_ref<FsBlobRef> currentBlob = std::move(*currentBlobOpt);
+  ASSERT(currentBlob->parentPointer() == Key::Null(), "Root Blob should have a nullptr as parent");
 
   for (const bf::path &component : path.relative_path()) {
     auto currentDir = dynamic_pointer_move<DirBlobRef>(currentBlob);
@@ -168,6 +169,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
     }
     parentBlob = std::move(*currentDir);
     currentBlob = std::move(*nextBlob);
+    ASSERT(currentBlob->parentPointer() == (*parentBlob)->key(), "Blob has wrong parent pointer");
   }
 
   return BlobWithParent{std::move(currentBlob), std::move(parentBlob)};
@@ -194,16 +196,16 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
 }
 
-unique_ref<FileBlobRef> CryDevice::CreateFileBlob() {
-  return _fsBlobStore->createFileBlob();
+unique_ref<FileBlobRef> CryDevice::CreateFileBlob(const blockstore::Key &parent) {
+  return _fsBlobStore->createFileBlob(parent);
 }
 
-unique_ref<DirBlobRef> CryDevice::CreateDirBlob() {
-  return _fsBlobStore->createDirBlob();
+unique_ref<DirBlobRef> CryDevice::CreateDirBlob(const blockstore::Key &parent) {
+  return _fsBlobStore->createDirBlob(parent);
 }
 
-unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target) {
-  return _fsBlobStore->createSymlinkBlob(target);
+unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target, const blockstore::Key &parent) {
+  return _fsBlobStore->createSymlinkBlob(target, parent);
 }
 
 unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::Key &key) {

@@ -15,6 +15,14 @@ public:
     virtual const blockstore::Key &key() const = 0;
     virtual off_t lstat_size() const = 0;
 
+    const blockstore::Key &parentPointer() const {
+        return _baseBlob->parentPointer();
+    }
+
+    void setParentPointer(const blockstore::Key &parentKey) {
+        return _baseBlob->setParentPointer(parentKey);
+    }
+
     cpputils::unique_ref<fsblobstore::FsBlob> releaseBaseBlob() {
         return std::move(_baseBlob);
     }

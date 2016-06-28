@@ -17,9 +17,9 @@ namespace cryfs {
         public:
             FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore);
 
-            cpputils::unique_ref<FileBlob> createFileBlob();
-            cpputils::unique_ref<DirBlob> createDirBlob();
-            cpputils::unique_ref<SymlinkBlob> createSymlinkBlob(const boost::filesystem::path &target);
+            cpputils::unique_ref<FileBlob> createFileBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<DirBlob> createDirBlob(const blockstore::Key &parent);
+            cpputils::unique_ref<SymlinkBlob> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
             boost::optional<cpputils::unique_ref<FsBlob>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlob> blob);
             uint64_t numBlocks() const;
@@ -40,19 +40,19 @@ namespace cryfs {
                 : _baseBlobStore(std::move(baseBlobStore)) {
         }
 
-        inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob() {
+        inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob(const blockstore::Key &parent) {
             auto blob = _baseBlobStore->create();
-            return FileBlob::InitializeEmptyFile(std::move(blob));
+            return FileBlob::InitializeEmptyFile(std::move(blob), parent);
         }
 
-        inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob() {
+        inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const blockstore::Key &parent) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(this, std::move(blob), _getLstatSize());
+            return DirBlob::InitializeEmptyDir(this, std::move(blob), parent, _getLstatSize());
         }
 
-        inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target) {
+        inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent) {
             auto blob = _baseBlobStore->create();
-            return SymlinkBlob::InitializeSymlink(std::move(blob), target);
+            return SymlinkBlob::InitializeSymlink(std::move(blob), target, parent);
         }
 
         inline uint64_t FsBlobStore::numBlocks() const {

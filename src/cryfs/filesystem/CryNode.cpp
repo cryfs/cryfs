@@ -100,6 +100,7 @@ void CryNode::rename(const bf::path &to) {
                                    oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
+    LoadBlob()->setParentPointer(targetDir->key());
     _parent = cpputils::to_unique_ptr(std::move(targetDir));
   }
 }
@@ -149,7 +150,9 @@ const CryDevice *CryNode::device() const {
 }
 
 unique_ref<FsBlobRef> CryNode::LoadBlob() const {
-  return _device->LoadBlob(_key);
+  auto blob = _device->LoadBlob(_key);
+  ASSERT(_parent == none || blob->parentPointer() == (*_parent)->key(), "Blob has wrong parent pointer.");
+  return blob;
 }
 
 const blockstore::Key &CryNode::key() const {
@@ -195,6 +198,15 @@ void CryNode::chown(uid_t uid, gid_t gid) {
 	throw FuseErrnoException(EIO);
   }
   (*_parent)->chownChild(_key, uid, gid);
+}
+
+bool CryNode::checkParentPointer() {
+  auto parentPointer = LoadBlob()->parentPointer();
+  if (_parent == none) {
+    return parentPointer == Key::Null();
+  } else {
+    return parentPointer == (*_parent)->key();
+  }
 }
 
 }
