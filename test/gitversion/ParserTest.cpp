@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gitversion/parser.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using namespace gitversion;
 
