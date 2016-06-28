@@ -29,6 +29,7 @@ using fspp::fuse::FuseErrnoException;
 using blockstore::BlockStore;
 using blockstore::Key;
 using blockstore::encrypted::EncryptedBlockStore;
+using blobstore::BlobStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore;
@@ -63,7 +64,7 @@ unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::Crea
   auto blobStore = CreateBlobStore(std::move(blockStore), configFile, myClientId);
 
 #ifndef CRYFS_NO_COMPATIBILITY
-  auto fsBlobStore = FsBlobStore::migrateIfNeeded(std::move(blobStore), Key::FromString(configFile->config()->RootBlob()));
+  auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile);
 #else
   auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
 #endif
@@ -74,6 +75,16 @@ unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::Crea
     )
   );
 }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(unique_ref<BlobStore> blobStore, CryConfigFile *configFile) {
+  string rootBlobKey = configFile->config()->RootBlob();
+  if ("" == rootBlobKey) {
+    return make_unique_ref<FsBlobStore>(std::move(blobStore));
+  }
+  return FsBlobStore::migrateIfNeeded(std::move(blobStore), Key::FromString(rootBlobKey));
+}
+#endif
 
 unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
   auto versionCountingEncryptedBlockStore = CreateVersionCountingEncryptedBlockStore(std::move(blockStore), configFile, myClientId);

@@ -50,6 +50,9 @@ private:
   blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
   blockstore::Key CreateRootBlobAndReturnKey();
   static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId);
+#ifndef CRYFS_NO_COMPATIBILITY
+  static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);
+#endif
   static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId);
   static cpputils::unique_ref<blockstore::BlockStore> CreateVersionCountingEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId);
   static cpputils::unique_ref<blockstore::BlockStore> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore> baseBlockStore);
