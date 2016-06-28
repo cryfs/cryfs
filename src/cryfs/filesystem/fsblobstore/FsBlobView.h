@@ -89,14 +89,23 @@ namespace cryfs {
             return std::move(_baseBlob);
         }
 
+        static uint16_t getFormatVersionHeader(const blobstore::Blob &blob) {
+            static_assert(sizeof(uint16_t) == sizeof(FORMAT_VERSION_HEADER), "Wrong type used to read format version header");
+            uint16_t actualFormatVersion;
+            blob.read(&actualFormatVersion, 0, sizeof(FORMAT_VERSION_HEADER));
+            return actualFormatVersion;
+        }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+        static void migrate(blobstore::Blob *blob, const blockstore::Key &parentKey);
+#endif
+
     private:
         static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
         static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::Key::BINARY_LENGTH;
 
         static void _checkHeader(const blobstore::Blob &blob) {
-            static_assert(sizeof(uint16_t) == sizeof(FORMAT_VERSION_HEADER), "Wrong type used to read format version header");
-            uint16_t actualFormatVersion;
-            blob.read(&actualFormatVersion, 0, sizeof(FORMAT_VERSION_HEADER));
+            uint16_t actualFormatVersion = getFormatVersionHeader(blob);
             if (FORMAT_VERSION_HEADER != actualFormatVersion) {
                 throw std::runtime_error("This file system entity has the wrong format. Was it created with a newer version of CryFS?");
             }

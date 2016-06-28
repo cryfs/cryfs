@@ -10,6 +10,7 @@ using blobstore::BlobStore;
 using blockstore::Key;
 using boost::none;
 using std::function;
+using std::vector;
 
 namespace cryfs {
 namespace fsblobstore {
@@ -30,6 +31,39 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::Key &key
         ASSERT(false, "Unknown magic number");
     }
 }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+    unique_ref<FsBlobStore> FsBlobStore::migrateIfNeeded(unique_ref<BlobStore> blobStore, const blockstore::Key &rootKey) {
+        auto rootBlob = blobStore->load(rootKey);
+        ASSERT(rootBlob != none, "Could not load root blob");
+        uint16_t format = FsBlobView::getFormatVersionHeader(**rootBlob);
+
+        auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+        if (format == 0) {
+            // migration needed
+            std::cout << "Migrating file system for conflict resolution features. Please don't interrupt this process. This can take a while..." << std::flush;
+            fsBlobStore->_migrate(std::move(*rootBlob), blockstore::Key::Null());
+            std::cout << "done" << std::endl;
+        }
+        return fsBlobStore;
+    }
+
+    void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const blockstore::Key &parentKey) {
+        FsBlobView::migrate(node.get(), parentKey);
+        if (FsBlobView::blobType(*node) == FsBlobView::BlobType::DIR) {
+            DirBlob dir(this, std::move(node), _getLstatSize());
+            vector<fspp::Dir::Entry> children;
+            dir.AppendChildrenTo(&children);
+            for (const auto &child : children) {
+                auto childEntry = dir.GetChild(child.name);
+                ASSERT(childEntry != none, "Couldn't load child, although it was returned as a child in the lsit.");
+                auto childBlob = _baseBlobStore->load(childEntry->key());
+                ASSERT(childBlob != none, "Couldn't load child blob");
+                _migrate(std::move(*childBlob), dir.key());
+            }
+        }
+    }
+#endif
 
 }
 }

@@ -27,7 +27,15 @@ namespace cryfs {
 
             uint64_t virtualBlocksizeBytes() const;
 
+#ifndef CRYFS_NO_COMPATIBILITY
+            static cpputils::unique_ref<FsBlobStore> migrateIfNeeded(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::Key &rootKey);
+#endif
+
         private:
+
+#ifndef CRYFS_NO_COMPATIBILITY
+            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::Key &parentKey);
+#endif
 
             std::function<off_t(const blockstore::Key &)> _getLstatSize();
 

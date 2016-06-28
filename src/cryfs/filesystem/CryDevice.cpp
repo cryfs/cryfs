@@ -54,17 +54,25 @@ namespace bf = boost::filesystem;
 namespace cryfs {
 
 CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore, uint32_t myClientId)
-: _fsBlobStore(
-      make_unique_ref<ParallelAccessFsBlobStore>(
-        make_unique_ref<CachingFsBlobStore>(
-          make_unique_ref<FsBlobStore>(
-            CreateBlobStore(std::move(blockStore), &configFile, myClientId)
-          )
-        )
-      )
-    ),
+: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), &configFile, myClientId)),
   _rootKey(GetOrCreateRootKey(&configFile)),
   _onFsAction() {
+}
+
+unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
+  auto blobStore = CreateBlobStore(std::move(blockStore), configFile, myClientId);
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  auto fsBlobStore = FsBlobStore::migrateIfNeeded(std::move(blobStore), Key::FromString(configFile->config()->RootBlob()));
+#else
+  auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+#endif
+
+  return make_unique_ref<ParallelAccessFsBlobStore>(
+    make_unique_ref<CachingFsBlobStore>(
+      std::move(fsBlobStore)
+    )
+  );
 }
 
 unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
@@ -72,10 +80,10 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
   // Create versionCountingEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
-           make_unique_ref<CachingBlockStore>(
-             std::move(versionCountingEncryptedBlockStore)
-           ),
-           configFile->config()->BlocksizeBytes());
+     make_unique_ref<CachingBlockStore>(
+       std::move(versionCountingEncryptedBlockStore)
+     ),
+     configFile->config()->BlocksizeBytes());
 }
 
 unique_ref<BlockStore> CryDevice::CreateVersionCountingEncryptedBlockStore(unique_ref<BlockStore> blockStore, CryConfigFile *configFile, uint32_t myClientId) {
