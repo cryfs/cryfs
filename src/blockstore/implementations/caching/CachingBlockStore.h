@@ -38,6 +38,7 @@ private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   std::unordered_set<NewBlock*> _newBlocks; // List of all new blocks that aren't in the base store yet.
   Cache<Key, cpputils::unique_ref<Block>, 1000> _cache;
+  std::mutex _newBlocksMutex;
 
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore);
 };

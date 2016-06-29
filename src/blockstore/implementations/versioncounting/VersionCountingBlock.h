@@ -55,6 +55,7 @@ private:
   cpputils::Data _dataWithHeader;
   uint64_t _version;
   bool _dataChanged;
+  std::mutex _mutex;
 
   void _storeToBaseBlock();
   static cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data);
@@ -65,8 +66,6 @@ private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-
-  std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(VersionCountingBlock);
 

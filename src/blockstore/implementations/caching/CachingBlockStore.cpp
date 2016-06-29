@@ -13,6 +13,8 @@ using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::none;
+using std::mutex;
+using std::unique_lock;
 
 namespace blockstore {
 namespace caching {
@@ -96,10 +98,12 @@ void CachingBlockStore::forEachBlock(std::function<void (const Key &)> callback)
 }
 
 void CachingBlockStore::registerNewBlock(NewBlock *newBlock) {
+  unique_lock<mutex> lock(_newBlocksMutex);
   _newBlocks.insert(newBlock);
 }
 
 void CachingBlockStore::unregisterNewBlock(NewBlock *newBlock) {
+  unique_lock<mutex> lock(_newBlocksMutex);
   _newBlocks.erase(newBlock);
 }
 
