@@ -124,6 +124,9 @@ inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
     throw std::runtime_error("Could not open file for writing");
   }
   StoreToStream(file);
+  if (!file.good()) {
+    throw std::runtime_error("Error writing to file");
+  }
 }
 
 inline void Data::StoreToStream(std::ostream &stream) const {

@@ -15,7 +15,11 @@ boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   if (!file.good()) {
     return boost::none;
   }
-  return LoadFromStream(file);
+  auto result = LoadFromStream(file);
+  if (!file.good()) {
+    throw std::runtime_error("Error reading from file");
+  }
+  return result;
 }
 
 std::streampos Data::_getStreamSize(istream &stream) {
