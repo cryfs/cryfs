@@ -181,6 +181,15 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect) {
   tree->flush();
   // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
+  EXPECT_EQ(newNumberOfLeaves, tree->_forceComputeNumLeaves());
+}
+
+TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect_FromCache) {
+  tree->numLeaves(); // fill cache with old value
+  tree->resizeNumBytes(newSize);
+  tree->flush();
+  // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // This is what the StructureIsValid test case is for.
   EXPECT_EQ(newNumberOfLeaves, tree->numLeaves());
 }
 

@@ -38,7 +38,7 @@ namespace onblocks {
 namespace datatreestore {
 
 DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
-  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)) {
+  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _numLeavesCache(none) {
 }
 
 DataTree::~DataTree() {
@@ -138,11 +138,23 @@ unique_ref<DataNode> DataTree::releaseRootNode() {
 
 //TODO Test numLeaves(), for example also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
 uint32_t DataTree::numLeaves() const {
-  shared_lock<shared_mutex> lock(_mutex);
-  return _numLeaves(*_rootNode);
+    shared_lock<shared_mutex> lock(_mutex);
+    return _numLeaves();
 }
 
-uint32_t DataTree::_numLeaves(const DataNode &node) const {
+uint32_t DataTree::_numLeaves() const {
+  if (_numLeavesCache == none) {
+    _numLeavesCache = _computeNumLeaves(*_rootNode);
+  }
+  return *_numLeavesCache;
+}
+
+uint32_t DataTree::_forceComputeNumLeaves() const {
+  _numLeavesCache = _computeNumLeaves(*_rootNode);
+  return *_numLeavesCache;
+}
+
+uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
   const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&node);
   if (leaf != nullptr) {
     return 1;
@@ -152,7 +164,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
   uint64_t numLeavesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
   ASSERT(lastChild != none, "Couldn't load last child");
-  uint64_t numLeavesInRightChild = _numLeaves(**lastChild);
+  uint64_t numLeavesInRightChild = _computeNumLeaves(**lastChild);
 
   return numLeavesInLeftChildren + numLeavesInRightChild;
 }
@@ -168,7 +180,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   }
 
   uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
-  uint32_t numLeaves = this->_numLeaves(*_rootNode); // TODO Querying the size causes a tree traversal down to the leaves. Possible without querying the size?
+  uint32_t numLeaves = this->_numLeaves(); // TODO Querying the size could cause a tree traversal down to the leaves. Possible without querying the size? If yes, we probably don't need _numLeavesCache anymore, because its only meaning is to keep the value when a lot of parallel write()/read() syscalls happen.
   if (_rootNode->depth() < neededTreeDepth) {
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
     increaseTreeDepth(neededTreeDepth - _rootNode->depth());
@@ -177,7 +189,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   if (numLeaves <= beginIndex) {
     //TODO Test cases with numLeaves < / >= beginIndex
     // There is a gap between the current size and the begin of the traversal
-    return _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, [beginIndex, numLeaves, &func, this](DataLeafNode* node, uint32_t index) {
+    _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, [beginIndex, numLeaves, &func, this](DataLeafNode* node, uint32_t index) {
       if (index >= beginIndex) {
         func(node, index);
       } else if (index == numLeaves - 1) {
@@ -185,15 +197,19 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
         node->resize(_nodeStore->layout().maxBytesPerLeaf());
       }
     });
+    ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
+    _numLeavesCache = endIndex;
   } else if (numLeaves < endIndex) {
     // We are starting traversal in the valid region, but traverse until after it (we grow new leaves)
-    return _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, [numLeaves, &func, this] (DataLeafNode *node, uint32_t index) {
+    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, [numLeaves, &func, this] (DataLeafNode *node, uint32_t index) {
       if (index == numLeaves - 1) {
         // It is the old last leaf  - resize it to maximum
         node->resize(_nodeStore->layout().maxBytesPerLeaf());
       }
       func(node, index);
     });
+    ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
+    _numLeavesCache = endIndex;
   } else {
     //We are traversing entirely inside the valid region
     exclusiveLock.reset(); // we can allow parallel traverses, if all are entirely inside the valid region.
@@ -299,6 +315,8 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
     }
     uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1)*_nodeStore->layout().maxBytesPerLeaf();
     LastLeaf(_rootNode.get())->resize(newLastLeafSize);
+
+    _numLeavesCache = newNumLeaves;
   }
   ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }

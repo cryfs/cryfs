@@ -36,12 +36,16 @@ public:
   uint32_t numLeaves() const;
   uint64_t numStoredBytes() const;
 
+  // only used by test cases
+  uint32_t _forceComputeNumLeaves() const;
+
   void flush() const;
 
 private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
+  mutable boost::optional<uint32_t> _numLeavesCache;
 
   cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeaf();
   void removeLastDataLeaf();
@@ -62,7 +66,8 @@ private:
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
-  uint32_t _numLeaves(const datanodestore::DataNode &node) const;
+  uint32_t _numLeaves() const;
+  uint32_t _computeNumLeaves(const datanodestore::DataNode &node) const;
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
   datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
