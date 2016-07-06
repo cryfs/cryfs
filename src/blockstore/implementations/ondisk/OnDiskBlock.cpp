@@ -99,56 +99,38 @@ void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
 }
 
 void OnDiskBlock::_storeToDisk() const {
-  std::ofstream file(_filepath.c_str(), std::ios::binary | std::ios::trunc);
-  if (!file.good()) {
-    throw std::runtime_error("Could not open file for writing");
-  }
-  file.write(FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
-  if (!file.good()) {
-    throw std::runtime_error("Error writing block header");
-  }
-  _data.StoreToStream(file);
-  if (!file.good()) {
-    throw std::runtime_error("Error writing block data");
-  }
+  Data fileContent(formatVersionHeaderSize() + _data.size());
+  std::memcpy(fileContent.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
+  std::memcpy(fileContent.dataOffset(formatVersionHeaderSize()), _data.data(), _data.size());
+  fileContent.StoreToFile(_filepath);
 }
 
 optional<Data> OnDiskBlock::_loadFromDisk(const bf::path &filepath) {
-  //If it isn't a file, ifstream::good() would return false. We still need this extra check
-  //upfront, because ifstream::good() doesn't crash if we give it the path of a directory
-  //instead the path of a file.
-  if(!bf::is_regular_file(filepath)) {
+  auto fileContent = Data::LoadFromFile(filepath);
+  if (fileContent == none) {
     return none;
   }
-  ifstream file(filepath.c_str(), ios::binary);
-  if (!file.good()) {
-    return none;
-  }
-  _checkHeader(&file);
-  Data result = Data::LoadFromStream(file);
-  //TODO With newer compilers, "return result;" would be enough
-  return boost::optional<Data>(std::move(result));
+  return _checkAndRemoveHeader(std::move(*fileContent));
 }
 
-void OnDiskBlock::_checkHeader(istream *str) {
-  Data header(formatVersionHeaderSize());
-  str->read(reinterpret_cast<char*>(header.data()), formatVersionHeaderSize());
-  if (!_isAcceptedCryfsHeader(header)) {
-    if (_isOtherCryfsHeader(header)) {
+Data OnDiskBlock::_checkAndRemoveHeader(Data data) {
+  if (!_isAcceptedCryfsHeader(data)) {
+    if (_isOtherCryfsHeader(data)) {
       throw std::runtime_error("This block is not supported yet. Maybe it was created with a newer version of CryFS?");
     } else {
       throw std::runtime_error("This is not a valid block.");
     }
   }
+  Data result(data.size() - formatVersionHeaderSize());
+  std::memcpy(result.data(), data.dataOffset(formatVersionHeaderSize()), result.size());
+  return result;
 }
 
 bool OnDiskBlock::_isAcceptedCryfsHeader(const Data &data) {
-  ASSERT(data.size() == formatVersionHeaderSize(), "We extracted the wrong header size from the block.");
   return 0 == std::memcmp(data.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
 }
 
 bool OnDiskBlock::_isOtherCryfsHeader(const Data &data) {
-  ASSERT(data.size() >= FORMAT_VERSION_HEADER_PREFIX.size(), "We extracted the wrong header size from the block.");
   return 0 == std::memcmp(data.data(), FORMAT_VERSION_HEADER_PREFIX.c_str(), FORMAT_VERSION_HEADER_PREFIX.size());
 }
 

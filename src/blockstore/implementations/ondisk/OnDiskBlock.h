@@ -40,7 +40,7 @@ private:
 
   static bool _isAcceptedCryfsHeader(const cpputils::Data &data);
   static bool _isOtherCryfsHeader(const cpputils::Data &data);
-  static void _checkHeader(std::istream *str);
+  static cpputils::Data _checkAndRemoveHeader(cpputils::Data data);
   static boost::filesystem::path _getFilepath(const boost::filesystem::path &rootdir, const Key &key);
 
   const boost::filesystem::path _filepath;
