@@ -176,6 +176,14 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
   EXPECT_EQ(newSize, tree->numStoredBytes());
 }
 
+TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect) {
+  tree->resizeNumBytes(newSize);
+  tree->flush();
+  // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // This is what the StructureIsValid test case is for.
+  EXPECT_EQ(newNumberOfLeaves, tree->numLeaves());
+}
+
 TEST_P(DataTreeTest_ResizeNumBytes_P, DepthFlagsAreCorrect) {
   tree->resizeNumBytes(newSize);
   tree->flush();

@@ -168,7 +168,7 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, StructureIsValid) {
   EXPECT_IS_LEFTMAXDATA_TREE(tree->key());
 }
 
-TEST_P(DataTreeTest_ResizeByTraversing_P, NumBytesIsCorrect) {
+TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect) {
   GrowTree(tree.get(), numberOfLeavesToAdd);
   // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
