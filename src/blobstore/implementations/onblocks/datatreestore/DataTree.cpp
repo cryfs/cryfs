@@ -159,7 +159,8 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
   //TODO Can we traverse in parallel?
-  unique_lock<shared_mutex> lock(_mutex); //TODO Only lock when resizing. Otherwise parallel read/write to a blob is not possible!
+  boost::upgrade_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
+  auto exclusiveLock = std::make_unique<boost::upgrade_to_unique_lock<shared_mutex>>(lock);
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
   if (0 == endIndex) {
     // In this case the utils::ceilLog(_, endIndex) below would fail
@@ -195,6 +196,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
     });
   } else {
     //We are traversing entirely inside the valid region
+    exclusiveLock.reset(); // we can allow parallel traverses, if all are entirely inside the valid region.
     _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
   }
 }
