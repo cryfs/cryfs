@@ -11,6 +11,7 @@
 #include <cpp-utils/pointer/optional_ownership_ptr.h>
 #include <cmath>
 #include <cpp-utils/assert/assert.h>
+#include <fspp/impl/Profiler.h>
 
 using blockstore::Key;
 using blobstore::onblocks::datanodestore::DataNodeStore;
@@ -38,10 +39,17 @@ namespace onblocks {
 namespace datatreestore {
 
 DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
-  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _numLeavesCache(none) {
+  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _numLeavesCache(none), _profile(0), _profile2(0), _profile3(0), _profile4(0), _profile5(0), _profile6(0) {
 }
 
 DataTree::~DataTree() {
+  std::cout << "TraverseTree: " << static_cast<double>(_profile)/1000000000 << std::endl;
+  std::cout << "TraverseTree 2: " << static_cast<double>(_profile2)/1000000000 << std::endl;
+  std::cout << "TraverseTree 3: " << static_cast<double>(_profile3)/1000000000 << std::endl;
+  std::cout << "TraverseTree 4: " << static_cast<double>(_profile4)/1000000000 << std::endl;
+  std::cout << "TraverseTree 5: " << static_cast<double>(_profile5)/1000000000 << std::endl;
+  std::cout << "TraverseTree 6: " << static_cast<double>(_profile6)/1000000000 << std::endl;
+
 }
 
 void DataTree::removeLastDataLeaf() {
@@ -170,9 +178,12 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  fspp::Profiler p(&_profile);
   //TODO Can we traverse in parallel?
   boost::upgrade_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
   auto exclusiveLock = std::make_unique<boost::upgrade_to_unique_lock<shared_mutex>>(lock);
+  fspp::Profiler p2(&_profile2);
+  // TODO There's still a huge difference for the dd reading a big file between _profile and _profile2 (factor of 2x). Does it help to store the number of leaves in a member variable of DataTree? Alternatively, does it make sense to only upgrade the lock after calling _numLeaves? Although that probably breaks, because two threads read number of leaves, one changes it, both go into the upgraded region, and the second one has the wrong number.
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
   if (0 == endIndex) {
     // In this case the utils::ceilLog(_, endIndex) below would fail
@@ -185,7 +196,6 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
     increaseTreeDepth(neededTreeDepth - _rootNode->depth());
   }
-
   if (numLeaves <= beginIndex) {
     //TODO Test cases with numLeaves < / >= beginIndex
     // There is a gap between the current size and the begin of the traversal
@@ -218,6 +228,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
 }
 
 void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+  auto p3 = std::make_unique<fspp::Profiler>(&_profile3);
   DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
   if (leaf != nullptr) {
     ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
@@ -226,18 +237,19 @@ void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beg
     }
     return;
   }
-
+  auto p4 = std::make_unique<fspp::Profiler>(&_profile4);
   DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
   vector<unique_ref<DataNode>> children = getOrCreateChildren(inner, beginChild, endChild);
-
+  auto p5 = std::make_unique<fspp::Profiler>(&_profile5);
   for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
     uint32_t childOffset = childIndex * leavesPerChild;
     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
     auto child = std::move(children[childIndex-beginChild]);
+    p3.reset(); p4.reset(); p5.reset();
     _traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
   }
 }

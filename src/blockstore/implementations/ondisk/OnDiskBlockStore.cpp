@@ -1,6 +1,7 @@
 #include "OnDiskBlock.h"
 #include "OnDiskBlockStore.h"
 #include <sys/statvfs.h>
+#include <fspp/impl/Profiler.h>
 
 using std::string;
 using cpputils::Data;
@@ -14,8 +15,16 @@ namespace bf = boost::filesystem;
 namespace blockstore {
 namespace ondisk {
 
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile2(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile3(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile4(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile5(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile6(0);
+    std::atomic<uint64_t> OnDiskBlockStore::loadFromDiskProfile7(0);
+
 OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
- : _rootdir(rootdir) {
+ : _rootdir(rootdir), _numLoaded(0), _numCreated(0), _profile(0) {
   if (!bf::exists(rootdir)) {
     throw std::runtime_error("Base directory not found");
   }
@@ -26,6 +35,19 @@ OnDiskBlockStore::OnDiskBlockStore(const boost::filesystem::path &rootdir)
 #ifndef CRYFS_NO_COMPATIBILITY
   _migrateBlockStore();
 #endif
+}
+
+OnDiskBlockStore::~OnDiskBlockStore() {
+  std::cout << "NumLoaded: " << _numLoaded << ", NumCreated: " << _numCreated << std::endl;
+  std::cout << "Load from OnDisk: " << static_cast<double>(_profile)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk: " << static_cast<double>(loadFromDiskProfile)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk2: " << static_cast<double>(loadFromDiskProfile2)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk3: " << static_cast<double>(loadFromDiskProfile3)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk4: " << static_cast<double>(loadFromDiskProfile4)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk5: " << static_cast<double>(loadFromDiskProfile5)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk6: " << static_cast<double>(loadFromDiskProfile6)/1000000000 << std::endl;
+  std::cout << "LoadFromDisk7: " << static_cast<double>(loadFromDiskProfile7)/1000000000 << std::endl;
+
 }
 
 #ifndef CRYFS_NO_COMPATIBILITY
@@ -57,6 +79,8 @@ bool OnDiskBlockStore::_isValidBlockKey(const string &key) {
 //TODO Do I have to lock tryCreate/remove and/or load? Or does ParallelAccessBlockStore take care of that?
 
 optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
+  fspp::Profiler p(&_profile);
+  ++_numCreated;
   //TODO Easier implementation? This is only so complicated because of the cast OnDiskBlock -> Block
   auto result = std::move(OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data)));
   if (result == boost::none) {
@@ -66,6 +90,7 @@ optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data dat
 }
 
 optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
+  ++_numLoaded;
   return optional<unique_ref<Block>>(OnDiskBlock::LoadFromDisk(_rootdir, key));
 }
 

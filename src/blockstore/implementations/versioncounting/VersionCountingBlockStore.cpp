@@ -1,6 +1,7 @@
 #include <unordered_set>
 #include "VersionCountingBlockStore.h"
 #include "VersionCountingBlock.h"
+#include <fspp/impl/Profiler.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -14,7 +15,11 @@ namespace blockstore {
     namespace versioncounting {
 
         VersionCountingBlockStore::VersionCountingBlockStore(unique_ref<BlockStore> baseBlockStore, const bf::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation)
-                : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
+                : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false), _profile(0) {
+        }
+
+        VersionCountingBlockStore::~VersionCountingBlockStore() {
+            std::cout << "Load from VersionCounting: " << static_cast<double>(_profile)/1000000000 << std::endl;
         }
 
         Key VersionCountingBlockStore::createKey() {
@@ -32,6 +37,7 @@ namespace blockstore {
         }
 
         optional<unique_ref<Block>> VersionCountingBlockStore::load(const Key &key) {
+            fspp::Profiler p(&_profile);
             _checkNoPastIntegrityViolations();
             auto block = _baseBlockStore->load(key);
             if (block == boost::none) {

@@ -7,6 +7,7 @@
 #include <cpp-utils/pointer/cast.h>
 #include "EncryptedBlock.h"
 #include <iostream>
+#include <fspp/impl/Profiler.h>
 
 namespace blockstore {
 namespace encrypted {
@@ -15,6 +16,7 @@ template<class Cipher>
 class EncryptedBlockStore final: public BlockStore {
 public:
   EncryptedBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
+    ~EncryptedBlockStore();
 
   //TODO Are createKey() tests included in generic BlockStoreTest? If not, add it!
   Key createKey() override;
@@ -32,6 +34,7 @@ public:
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   typename Cipher::EncryptionKey _encKey;
+    mutable std::atomic<uint64_t> _profile;
 
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlockStore);
 };
@@ -40,7 +43,12 @@ private:
 
 template<class Cipher>
 EncryptedBlockStore<Cipher>::EncryptedBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const typename Cipher::EncryptionKey &encKey)
- : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey) {
+ : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey), _profile(0) {
+}
+
+template<class Cipher>
+EncryptedBlockStore<Cipher>::~EncryptedBlockStore() {
+  std::cout << "Load from Encrypted: " << static_cast<double>(_profile)/1000000000 << std::endl;
 }
 
 template<class Cipher>
@@ -61,6 +69,7 @@ boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::tryCre
 
 template<class Cipher>
 boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::load(const Key &key) {
+  fspp::Profiler p(&_profile);
   auto block = _baseBlockStore->load(key);
   if (block == boost::none) {
     //TODO Test this path (for all pass-through-blockstores)

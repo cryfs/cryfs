@@ -46,6 +46,12 @@ private:
   datanodestore::DataNodeStore *_nodeStore;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
   mutable boost::optional<uint32_t> _numLeavesCache;
+    mutable std::atomic<uint64_t> _profile;
+    mutable std::atomic<uint64_t> _profile2;
+    mutable std::atomic<uint64_t> _profile3;
+    mutable std::atomic<uint64_t> _profile4;
+    mutable std::atomic<uint64_t> _profile5;
+    mutable std::atomic<uint64_t> _profile6;
 
   cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeaf();
   void removeLastDataLeaf();

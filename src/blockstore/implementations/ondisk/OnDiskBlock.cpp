@@ -7,6 +7,7 @@
 #include <cpp-utils/data/DataUtils.h>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
+#include <fspp/impl/Profiler.h>
 
 using std::istream;
 using std::ostream;
@@ -75,14 +76,19 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &root
 }
 
 optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
+  fspp::Profiler p1(&OnDiskBlockStore::loadFromDiskProfile);
   auto filepath = _getFilepath(rootdir, key);
+  fspp::Profiler p2(&OnDiskBlockStore::loadFromDiskProfile2);
   bf::create_directory(filepath.parent_path());
-  if (bf::exists(filepath)) {
-    return none;
-  }
-
+  fspp::Profiler p3(&OnDiskBlockStore::loadFromDiskProfile3);
+  //if (bf::exists(filepath)) {
+  //  return none;
+  //}
+  fspp::Profiler p4(&OnDiskBlockStore::loadFromDiskProfile4);
   auto block = make_unique_ref<OnDiskBlock>(key, filepath, std::move(data));
-  block->_storeToDisk();
+  fspp::Profiler p5(&OnDiskBlockStore::loadFromDiskProfile5);
+  block->_storeToDiskNew();
+  fspp::Profiler p6(&OnDiskBlockStore::loadFromDiskProfile6);
   return std::move(block);
 }
 
@@ -104,6 +110,13 @@ void OnDiskBlock::_storeToDisk() const {
   std::memcpy(fileContent.dataOffset(formatVersionHeaderSize()), _data.data(), _data.size());
   fileContent.StoreToFile(_filepath);
 }
+
+    void OnDiskBlock::_storeToDiskNew() const {
+      Data fileContent(formatVersionHeaderSize() + _data.size());
+      std::memcpy(fileContent.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
+      std::memcpy(fileContent.dataOffset(formatVersionHeaderSize()), _data.data(), _data.size());
+      fileContent.StoreToNewFile(_filepath);
+    }
 
 optional<Data> OnDiskBlock::_loadFromDisk(const bf::path &filepath) {
   auto fileContent = Data::LoadFromFile(filepath);

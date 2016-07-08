@@ -14,6 +14,7 @@ namespace versioncounting {
 class VersionCountingBlockStore final: public BlockStore {
 public:
   VersionCountingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation);
+  ~VersionCountingBlockStore();
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
@@ -36,6 +37,7 @@ private:
   KnownBlockVersions _knownBlockVersions;
   const bool _missingBlockIsIntegrityViolation;
   mutable bool _integrityViolationDetected;
+        mutable std::atomic<uint64_t> _profile;
 
   void _checkNoPastIntegrityViolations();
 

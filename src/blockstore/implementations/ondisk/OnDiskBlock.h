@@ -49,6 +49,7 @@ private:
 
   static boost::optional<cpputils::Data> _loadFromDisk(const boost::filesystem::path &filepath);
   void _storeToDisk() const;
+    void _storeToDiskNew() const;
 
   std::mutex _mutex;
 

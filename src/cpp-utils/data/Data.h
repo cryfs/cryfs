@@ -33,6 +33,7 @@ public:
   Data &FillWithZeroes();
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
+    void StoreToNewFile(const boost::filesystem::path &filepath) const;
   static boost::optional<Data> LoadFromFile(const boost::filesystem::path &filepath);
 
   //TODO Test LoadFromStream/StoreToStream
@@ -116,17 +117,6 @@ inline size_t Data::size() const {
 inline Data &Data::FillWithZeroes() {
   std::memset(_data, 0, _size);
   return *this;
-}
-
-inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
-  std::ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
-  if (!file.good()) {
-    throw std::runtime_error("Could not open file for writing");
-  }
-  StoreToStream(file);
-  if (!file.good()) {
-    throw std::runtime_error("Error writing to file");
-  }
 }
 
 inline void Data::StoreToStream(std::ostream &stream) const {

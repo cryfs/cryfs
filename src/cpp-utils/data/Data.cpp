@@ -1,5 +1,10 @@
 #include "Data.h"
 #include <stdexcept>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <fspp/impl/Profiler.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using std::istream;
 using std::ofstream;
@@ -21,6 +26,39 @@ boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   }
   return result;
 }
+
+
+    void Data::StoreToFile(const boost::filesystem::path &filepath) const {
+      fspp::Profiler p(&blockstore::ondisk::OnDiskBlockStore::loadFromDiskProfile7);
+      int fd = ::open(filepath.native().c_str(), O_WRONLY); // TODO O_TRUNC?
+      if (-1 == fd) {
+          throw std::runtime_error("Opening file for block failed. Errno: " + std::to_string(errno));
+      }
+      ssize_t written = ::write(fd, _data, _size);
+      if (written != (ssize_t)_size) { // TODO Which way cast?
+          throw std::runtime_error("Writing to opened block failed. Errno: " + std::to_string(errno));
+      }
+      // TODO Retry if not fully written?
+      if (0 != ::close(fd)) {
+          throw std::runtime_error("Failed closing opened block. Errno: " + std::to_string(errno));
+      }
+    }
+
+    void Data::StoreToNewFile(const boost::filesystem::path &filepath) const {
+        fspp::Profiler p(&blockstore::ondisk::OnDiskBlockStore::loadFromDiskProfile7);
+        int fd = ::open(filepath.native().c_str(), O_CREAT | O_EXCL | O_WRONLY, S_IRUSR | S_IWUSR);
+        if (-1 == fd) {
+            throw std::runtime_error("Creating file for block failed. Errno: " + std::to_string(errno));
+        }
+        ssize_t written = ::write(fd, _data, _size);
+        if (written != (ssize_t)_size) { // TODO Which way cast?
+            throw std::runtime_error("Writing to created block failed. Errno: " + std::to_string(errno));
+        }
+        // TODO Retry if not fully written?
+        if (0 != ::close(fd)) {
+            throw std::runtime_error("Failed closing created block. Errno: " + std::to_string(errno));
+        }
+    }
 
 std::streampos Data::_getStreamSize(istream &stream) {
   auto current_pos = stream.tellg();
