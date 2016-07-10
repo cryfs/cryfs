@@ -62,7 +62,6 @@ private:
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
   //TODO Use underscore for private methods
-  void _traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
@@ -71,8 +70,6 @@ private:
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
   datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
-  cpputils::unique_ref<datanodestore::DataNode> _createSubtree(uint32_t leafOffset, uint32_t numLeaves, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
-  cpputils::unique_ref<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

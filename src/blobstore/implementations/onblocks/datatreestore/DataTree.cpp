@@ -11,6 +11,7 @@
 #include <cpp-utils/pointer/optional_ownership_ptr.h>
 #include <cmath>
 #include <cpp-utils/assert/assert.h>
+#include "impl/LeafTraverser.h"
 
 using blockstore::Key;
 using blobstore::onblocks::datanodestore::DataNodeStore;
@@ -172,22 +173,27 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
   //TODO Can we traverse in parallel?
-  boost::upgrade_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
-  auto exclusiveLock = std::make_unique<boost::upgrade_to_unique_lock<shared_mutex>>(lock);
+  std::unique_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
   if (0 == endIndex) {
     // In this case the utils::ceilLog(_, endIndex) below would fail
     return;
   }
 
+  //TODO Alternative: Increase depth when necessary at the end of _traverseExistingSubtree, when index goes on after last possible one.
   uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
-  uint32_t numLeaves = this->_numLeaves(); // TODO Querying the size could cause a tree traversal down to the leaves. Possible without querying the size? If yes, we probably don't need _numLeavesCache anymore, because its only meaning is to keep the value when a lot of parallel write()/read() syscalls happen.
   if (_rootNode->depth() < neededTreeDepth) {
     //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
     increaseTreeDepth(neededTreeDepth - _rootNode->depth());
   }
 
-  if (numLeaves <= beginIndex) {
+  LeafTraverser(_nodeStore).traverse(_rootNode.get(), beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
+
+  if (_numLeavesCache != none && *_numLeavesCache < endIndex) {
+    _numLeavesCache = endIndex;
+  }
+
+  /*if (numLeaves <= beginIndex) {
     //TODO Test cases with numLeaves < / >= beginIndex
     // There is a gap between the current size and the begin of the traversal
     auto _onExistingLeaf = [numLeaves, &onExistingLeaf, this](uint32_t index, DataLeafNode* node) {
@@ -224,66 +230,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::funct
     //We are traversing entirely inside the valid region
     exclusiveLock.reset(); // we can allow parallel traverses, if all are entirely inside the valid region.
     _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
-  }
-}
-
-void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
-  DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
-  if (leaf != nullptr) {
-    ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-    if (beginIndex == 0 && endIndex == 1) {
-      onExistingLeaf(leafOffset, leaf);
-    }
-    return;
-  }
-
-  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
-  uint32_t leavesPerChild = leavesPerFullChild(*inner);
-  uint32_t beginChild = beginIndex/leavesPerChild;
-  uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
-
-  for (uint32_t childIndex = beginChild; childIndex < std::min(inner->numChildren(), endChild); ++childIndex) {
-    auto child = _nodeStore->load(inner->getChild(childIndex)->key());
-    ASSERT(child != none, "Couldn't load child node");
-    uint32_t childOffset = childIndex * leavesPerChild;
-    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
-    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-    _traverseLeaves(child->get(), leafOffset + childOffset, localBeginIndex, localEndIndex, onExistingLeaf, onCreateLeaf);
-  }
-  for (uint32_t childIndex = inner->numChildren(); childIndex < endChild; ++childIndex) {
-    uint32_t childOffset = childIndex * leavesPerChild;
-    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-    auto child = _createSubtree(leafOffset, localEndIndex, onCreateLeaf);
-    inner->addChild(child.key());
-  }
-}
-
-unique_ref<DataNode> DataTree::_createSubtree(uint32_t leafOffset, uint32_t numLeaves, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
-  if (numLeaves == 1) {
-    auto data = onCreateLeaf(leafOffset);
-    ASSERT(data.size() <= _nodeStore->layout().maxBytesPerLeaf(), "Too much data for a leaf");
-    //TODO More efficient by _nodeStore->createNewLeafNode(data);
-    auto leaf = _nodeStore->createNewLeafNode();
-    leaf->resize(data.size());
-    leaf->write(data.data(), 0, data.size());
-    return leaf;
-  } else {
-    uint32_t numLeafGroups = utils::ceilDivision(numLeaves, _nodeStore->layout().maxChildrenPerInnerNode());
-    vector<unique_ref<DataNode>> children;
-    children.reserve(numLeafGroups);
-    for (uint32_t i = 0; i < numLeafGroups; ++i) {
-      children.push_back(_createSubtree())
-              ...
-    }
-  }
-}
-
-unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {
-  auto new_leaf = _nodeStore->createNewLeafNode();
-  new_leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
-  auto chain = createChainOfInnerNodes(node->depth()-1, std::move(new_leaf));
-  node->addChild(*chain);
-  return std::move(chain);
+  }*/
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {

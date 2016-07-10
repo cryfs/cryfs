@@ -111,7 +111,7 @@ public:
     uint32_t oldNumLeaves = tree->numLeaves();
     uint32_t newNumLeaves = oldNumLeaves + numLeavesToAdd;
     //TODO Test cases where beginIndex is inside of the existing leaves
-    tree->traverseLeaves(newNumLeaves-1, newNumLeaves, [] (DataLeafNode*,uint32_t){});
+    tree->traverseLeaves(newNumLeaves-1, newNumLeaves, [] (uint32_t, DataLeafNode*){}, [] (uint32_t count) -> Data { return Data(count).FillWithZeroes();});
     tree->flush();
   }
 

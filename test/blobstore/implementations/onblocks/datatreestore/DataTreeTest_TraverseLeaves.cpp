@@ -10,10 +10,13 @@ using blobstore::onblocks::datatreestore::DataTree;
 using blockstore::Key;
 
 using cpputils::unique_ref;
+using cpputils::Data;
+using std::shared_ptr;
 
 class TraversorMock {
 public:
-  MOCK_METHOD2(called, void(DataLeafNode*, uint32_t));
+  MOCK_METHOD2(calledExistingLeaf, void(DataLeafNode*, uint32_t));
+  MOCK_METHOD1(calledCreateLeaf, shared_ptr<Data>(uint32_t));
 };
 
 MATCHER_P(KeyEq, expected, "node key equals") {
@@ -43,7 +46,7 @@ public:
   }
 
   void EXPECT_TRAVERSE_LEAF(const Key &key, uint32_t leafIndex) {
-    EXPECT_CALL(traversor, called(KeyEq(key), leafIndex)).Times(1);
+    EXPECT_CALL(traversor, calledExistingLeaf(KeyEq(key), leafIndex)).Times(1);
   }
 
   void EXPECT_TRAVERSE_ALL_CHILDREN_OF(const DataInnerNode &node, uint32_t firstLeafIndex) {
@@ -53,14 +56,17 @@ public:
   }
 
   void EXPECT_DONT_TRAVERSE_ANY_LEAVES() {
-    EXPECT_CALL(traversor, called(_, _)).Times(0);
+    EXPECT_CALL(traversor, calledExistingLeaf(_, _)).Times(0);
+    EXPECT_CALL(traversor, calledCreateLeaf(_)).Times(0);
   }
 
   void TraverseLeaves(DataNode *root, uint32_t beginIndex, uint32_t endIndex) {
     root->flush();
     auto tree = treeStore.load(root->key()).value();
-    tree->traverseLeaves(beginIndex, endIndex, [this] (DataLeafNode *leaf, uint32_t nodeIndex) {
-      traversor.called(leaf, nodeIndex);
+    tree->traverseLeaves(beginIndex, endIndex, [this] (uint32_t nodeIndex, DataLeafNode *leaf) {
+      traversor.calledExistingLeaf(leaf, nodeIndex);
+    }, [this] (uint32_t nodeIndex) -> Data {
+        return traversor.calledCreateLeaf(nodeIndex)->copy();
     });
   }
 

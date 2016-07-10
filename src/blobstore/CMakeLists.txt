@@ -11,6 +11,7 @@ set(SOURCES
     implementations/onblocks/datanodestore/DataInnerNode.cpp
     implementations/onblocks/datanodestore/DataNodeStore.cpp
     implementations/onblocks/datatreestore/impl/algorithms.cpp
+    implementations/onblocks/datatreestore/impl/LeafTraverser.cpp
     implementations/onblocks/datatreestore/DataTree.cpp
     implementations/onblocks/datatreestore/DataTreeStore.cpp
     implementations/onblocks/BlobOnBlocks.cpp
