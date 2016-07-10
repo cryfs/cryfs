@@ -32,6 +32,7 @@ using cpputils::optional_ownership_ptr;
 using cpputils::WithOwnership;
 using cpputils::WithoutOwnership;
 using cpputils::unique_ref;
+using cpputils::Data;
 
 namespace blobstore {
 namespace onblocks {
@@ -169,7 +170,7 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
   return numLeavesInLeftChildren + numLeavesInRightChild;
 }
 
-void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
   //TODO Can we traverse in parallel?
   boost::upgrade_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
   auto exclusiveLock = std::make_unique<boost::upgrade_to_unique_lock<shared_mutex>>(lock);
@@ -189,40 +190,49 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
   if (numLeaves <= beginIndex) {
     //TODO Test cases with numLeaves < / >= beginIndex
     // There is a gap between the current size and the begin of the traversal
-    _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, [beginIndex, numLeaves, &func, this](DataLeafNode* node, uint32_t index) {
-      if (index >= beginIndex) {
-        func(node, index);
-      } else if (index == numLeaves - 1) {
-        // It is the old last leaf - resize it to maximum
-        node->resize(_nodeStore->layout().maxBytesPerLeaf());
-      }
-    });
+    auto _onExistingLeaf = [numLeaves, &onExistingLeaf, this](uint32_t index, DataLeafNode* node) {
+        if (index == numLeaves - 1) {
+          // It is the old last leaf - resize it to maximum
+          node->resize(_nodeStore->layout().maxBytesPerLeaf());
+        }
+        onExistingLeaf(index, node);
+    };
+    auto _onCreateLeaf = [beginIndex, &onCreateLeaf, this](uint32_t index) {
+        if (index < beginIndex) {
+          // Create empty leaves in the gap
+          return Data(_nodeStore->layout().maxBytesPerLeaf()).FillWithZeroes();
+        } else {
+          return onCreateLeaf(index);
+        }
+    };
+    _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, _onExistingLeaf, _onCreateLeaf);
     ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
     _numLeavesCache = endIndex;
   } else if (numLeaves < endIndex) {
     // We are starting traversal in the valid region, but traverse until after it (we grow new leaves)
-    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, [numLeaves, &func, this] (DataLeafNode *node, uint32_t index) {
-      if (index == numLeaves - 1) {
-        // It is the old last leaf  - resize it to maximum
-        node->resize(_nodeStore->layout().maxBytesPerLeaf());
-      }
-      func(node, index);
-    });
+    auto _onExistingLeaf = [numLeaves, &onExistingLeaf, this] (uint32_t index, DataLeafNode *node) {
+        if (index == numLeaves - 1) {
+          // It is the old last leaf  - resize it to maximum
+          node->resize(_nodeStore->layout().maxBytesPerLeaf());
+        }
+        onExistingLeaf(index, node);
+    };
+    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, _onExistingLeaf, onCreateLeaf);
     ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
     _numLeavesCache = endIndex;
   } else {
     //We are traversing entirely inside the valid region
     exclusiveLock.reset(); // we can allow parallel traverses, if all are entirely inside the valid region.
-    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, func);
+    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
   }
 }
 
-void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, function<void (DataLeafNode*, uint32_t)> func) {
+void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
   DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
   if (leaf != nullptr) {
     ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
     if (beginIndex == 0 && endIndex == 1) {
-      func(leaf, leafOffset);
+      onExistingLeaf(leafOffset, leaf);
     }
     return;
   }
@@ -231,32 +241,41 @@ void DataTree::_traverseLeaves(DataNode *root, uint32_t leafOffset, uint32_t beg
   uint32_t leavesPerChild = leavesPerFullChild(*inner);
   uint32_t beginChild = beginIndex/leavesPerChild;
   uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
-  vector<unique_ref<DataNode>> children = getOrCreateChildren(inner, beginChild, endChild);
 
-  for (uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
+  for (uint32_t childIndex = beginChild; childIndex < std::min(inner->numChildren(), endChild); ++childIndex) {
+    auto child = _nodeStore->load(inner->getChild(childIndex)->key());
+    ASSERT(child != none, "Couldn't load child node");
     uint32_t childOffset = childIndex * leavesPerChild;
     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-    auto child = std::move(children[childIndex-beginChild]);
-    _traverseLeaves(child.get(), leafOffset + childOffset, localBeginIndex, localEndIndex, func);
+    _traverseLeaves(child->get(), leafOffset + childOffset, localBeginIndex, localEndIndex, onExistingLeaf, onCreateLeaf);
+  }
+  for (uint32_t childIndex = inner->numChildren(); childIndex < endChild; ++childIndex) {
+    uint32_t childOffset = childIndex * leavesPerChild;
+    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+    auto child = _createSubtree(leafOffset, localEndIndex, onCreateLeaf);
+    inner->addChild(child.key());
   }
 }
 
-vector<unique_ref<DataNode>> DataTree::getOrCreateChildren(DataInnerNode *node, uint32_t begin, uint32_t end) {
-  vector<unique_ref<DataNode>> children;
-  children.reserve(end-begin);
-  for (uint32_t childIndex = begin; childIndex < std::min(node->numChildren(), end); ++childIndex) {
-    auto child = _nodeStore->load(node->getChild(childIndex)->key());
-    ASSERT(child != none, "Couldn't load child node");
-    children.emplace_back(std::move(*child));
+unique_ref<DataNode> DataTree::_createSubtree(uint32_t leafOffset, uint32_t numLeaves, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
+  if (numLeaves == 1) {
+    auto data = onCreateLeaf(leafOffset);
+    ASSERT(data.size() <= _nodeStore->layout().maxBytesPerLeaf(), "Too much data for a leaf");
+    //TODO More efficient by _nodeStore->createNewLeafNode(data);
+    auto leaf = _nodeStore->createNewLeafNode();
+    leaf->resize(data.size());
+    leaf->write(data.data(), 0, data.size());
+    return leaf;
+  } else {
+    uint32_t numLeafGroups = utils::ceilDivision(numLeaves, _nodeStore->layout().maxChildrenPerInnerNode());
+    vector<unique_ref<DataNode>> children;
+    children.reserve(numLeafGroups);
+    for (uint32_t i = 0; i < numLeafGroups; ++i) {
+      children.push_back(_createSubtree())
+              ...
+    }
   }
-  for (uint32_t childIndex = node->numChildren(); childIndex < end; ++childIndex) {
-    //TODO This creates each child with one chain to one leaf only, and then on the next lower level it
-    //     has to create the children for the child. Would be faster to directly create full trees if necessary.
-    children.emplace_back(addChildTo(node));
-  }
-  ASSERT(children.size() == end-begin, "Number of children in the result is wrong");
-  return children;
 }
 
 unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {

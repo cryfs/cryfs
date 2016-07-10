@@ -30,7 +30,7 @@ public:
   //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
   uint64_t maxBytesPerLeaf() const;
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   void resizeNumBytes(uint64_t newNumBytes);
 
   uint32_t numLeaves() const;
@@ -62,7 +62,7 @@ private:
   void ifRootHasOnlyOneChildReplaceRootWithItsChild();
 
   //TODO Use underscore for private methods
-  void _traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  void _traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
@@ -71,7 +71,7 @@ private:
   cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
   cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
   datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
-  std::vector<cpputils::unique_ref<datanodestore::DataNode>> getOrCreateChildren(datanodestore::DataInnerNode *node, uint32_t begin, uint32_t end);
+  cpputils::unique_ref<datanodestore::DataNode> _createSubtree(uint32_t leafOffset, uint32_t numLeaves, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   cpputils::unique_ref<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
