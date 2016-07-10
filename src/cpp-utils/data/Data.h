@@ -30,7 +30,8 @@ public:
 
   size_t size() const;
 
-  Data &FillWithZeroes();
+  Data &FillWithZeroes() &;
+  Data &&FillWithZeroes() &&;
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
   static boost::optional<Data> LoadFromFile(const boost::filesystem::path &filepath);
@@ -113,9 +114,13 @@ inline size_t Data::size() const {
   return _size;
 }
 
-inline Data &Data::FillWithZeroes() {
-  std::memset(_data, 0, _size);
-  return *this;
+inline Data &Data::FillWithZeroes() & {
+    std::memset(_data, 0, _size);
+    return *this;
+}
+
+inline Data &&Data::FillWithZeroes() && {
+    return std::move(FillWithZeroes());
 }
 
 inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {

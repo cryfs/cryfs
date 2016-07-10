@@ -52,7 +52,7 @@ public:
   Data ZEROES;
 
   OnDiskBlockCreateSizeTest():
-    block(OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(Data(GetParam()).FillWithZeroes())).value()),
+    block(OnDiskBlock::CreateOnDisk(dir.path(), key, Data(GetParam()).FillWithZeroes()).value()),
     ZEROES(block->size())
   {
     ZEROES.FillWithZeroes();

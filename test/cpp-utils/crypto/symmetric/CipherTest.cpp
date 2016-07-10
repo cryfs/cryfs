@@ -52,7 +52,7 @@ public:
   }
 
   static Data CreateZeroes(unsigned int size) {
-    return std::move(Data(size).FillWithZeroes());
+    return Data(size).FillWithZeroes();
   }
 
   static Data CreateData(unsigned int size, unsigned int seed = 0) {
