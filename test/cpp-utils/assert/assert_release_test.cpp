@@ -2,7 +2,9 @@
 #include <gmock/gmock.h>
 
 //Include the ASSERT macro for a release build
+#ifndef NDEBUG
 #define NDEBUG
+#endif
 #include "cpp-utils/assert/assert.h"
 
 using testing::MatchesRegex;
