@@ -192,45 +192,6 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::funct
   if (_numLeavesCache != none && *_numLeavesCache < endIndex) {
     _numLeavesCache = endIndex;
   }
-
-  /*if (numLeaves <= beginIndex) {
-    //TODO Test cases with numLeaves < / >= beginIndex
-    // There is a gap between the current size and the begin of the traversal
-    auto _onExistingLeaf = [numLeaves, &onExistingLeaf, this](uint32_t index, DataLeafNode* node) {
-        if (index == numLeaves - 1) {
-          // It is the old last leaf - resize it to maximum
-          node->resize(_nodeStore->layout().maxBytesPerLeaf());
-        }
-        onExistingLeaf(index, node);
-    };
-    auto _onCreateLeaf = [beginIndex, &onCreateLeaf, this](uint32_t index) {
-        if (index < beginIndex) {
-          // Create empty leaves in the gap
-          return Data(_nodeStore->layout().maxBytesPerLeaf()).FillWithZeroes();
-        } else {
-          return onCreateLeaf(index);
-        }
-    };
-    _traverseLeaves(_rootNode.get(), 0, numLeaves-1, endIndex, _onExistingLeaf, _onCreateLeaf);
-    ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
-    _numLeavesCache = endIndex;
-  } else if (numLeaves < endIndex) {
-    // We are starting traversal in the valid region, but traverse until after it (we grow new leaves)
-    auto _onExistingLeaf = [numLeaves, &onExistingLeaf, this] (uint32_t index, DataLeafNode *node) {
-        if (index == numLeaves - 1) {
-          // It is the old last leaf  - resize it to maximum
-          node->resize(_nodeStore->layout().maxBytesPerLeaf());
-        }
-        onExistingLeaf(index, node);
-    };
-    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, _onExistingLeaf, onCreateLeaf);
-    ASSERT(endIndex >= _numLeavesCache.value(), "We should be outside of the valid region, i.e. outside of the old size");
-    _numLeavesCache = endIndex;
-  } else {
-    //We are traversing entirely inside the valid region
-    exclusiveLock.reset(); // we can allow parallel traverses, if all are entirely inside the valid region.
-    _traverseLeaves(_rootNode.get(), 0, beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
-  }*/
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
