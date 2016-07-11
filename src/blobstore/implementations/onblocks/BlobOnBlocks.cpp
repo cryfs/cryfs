@@ -42,19 +42,21 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
   uint64_t maxBytesPerLeaf = _datatree->maxBytesPerLeaf();
   uint32_t firstLeaf = beginByte / maxBytesPerLeaf;
   uint32_t endLeaf = utils::ceilDivision(endByte, maxBytesPerLeaf);
-  bool writingOutside = size() < endByte; // TODO Calling size() is slow because it has to traverse the tree. Instead: recognize situation by looking at current leaf size in lambda below
-  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, writingOutside, maxBytesPerLeaf] (uint32_t leafIndex, DataLeafNode *leaf) {
+  bool blobIsGrowingFromThisTraversal = false;
+  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, maxBytesPerLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex, DataLeafNode *leaf) {
       uint64_t indexOfFirstLeafByte = leafIndex * maxBytesPerLeaf;
       ASSERT(endByte > indexOfFirstLeafByte, "Traversal went too far right");
       uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
       uint32_t dataEnd = std::min(maxBytesPerLeaf, endByte - indexOfFirstLeafByte);
-      if (leafIndex == endLeaf-1 && writingOutside) {
+      if (leafIndex == endLeaf-1 && leaf->numBytes() < dataEnd) {
         // If we are traversing an area that didn't exist before (i.e. in the area of the last leaf that wasn't used before), then the last leaf might have a wrong size. We have to fix it.
         leaf->resize(dataEnd);
+        blobIsGrowingFromThisTraversal = true;
       }
       onExistingLeaf(indexOfFirstLeafByte, leaf, dataBegin, dataEnd-dataBegin);
   };
-  auto _onCreateLeaf = [&onCreateLeaf, maxBytesPerLeaf, beginByte, endByte] (uint32_t leafIndex) -> Data {
+  auto _onCreateLeaf = [&onCreateLeaf, maxBytesPerLeaf, beginByte, endByte, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex) -> Data {
+      blobIsGrowingFromThisTraversal = true;
       uint64_t indexOfFirstLeafByte = leafIndex * maxBytesPerLeaf;
       ASSERT(endByte > indexOfFirstLeafByte, "Traversal went too far right");
       uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
@@ -71,7 +73,7 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
       return data;
   };
   _datatree->traverseLeaves(firstLeaf, endLeaf, _onExistingLeaf, _onCreateLeaf);
-  if (writingOutside) {
+  if (blobIsGrowingFromThisTraversal) {
     ASSERT(_datatree->numStoredBytes() == endByte, "Writing didn't grow by the correct number of bytes");
     _sizeCache = endByte;
   }
