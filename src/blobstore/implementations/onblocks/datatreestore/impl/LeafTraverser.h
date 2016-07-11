@@ -30,9 +30,10 @@ namespace blobstore {
             private:
                 datanodestore::DataNodeStore *_nodeStore;
 
-                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool growLastExistingLeaf, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
-                cpputils::unique_ref<datanodestore::DataNode> _createNewSubtree(uint32_t numLeaves, uint32_t leafOffset, uint8_t depth, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
-                uint32_t _maxLeavesForTreeDepth(uint8_t depth);
+                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool growLastLeaf, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+                cpputils::unique_ref<datanodestore::DataNode> _createNewSubtree(uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, uint8_t depth, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+                uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
+                std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
             };

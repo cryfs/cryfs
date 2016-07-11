@@ -262,6 +262,7 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
 }
 
 void DataTree::resizeNumBytes(uint64_t newNumBytes) {
+  //TODO Use LeafTraverser here. For growing, that should be trivial. Maybe there is even a way to make it for shrinking? Maybe a callback for inner nodes?
   //TODO Can we resize in parallel? Especially creating new blocks (i.e. encrypting them) is expensive and should be done in parallel.
   boost::upgrade_lock<shared_mutex> lock(_mutex);
   {
