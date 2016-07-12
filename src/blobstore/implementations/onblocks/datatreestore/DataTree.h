@@ -47,29 +47,21 @@ private:
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
   mutable boost::optional<uint32_t> _numLeavesCache;
 
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeaf();
-  void removeLastDataLeaf();
-
   cpputils::unique_ref<datanodestore::DataNode> releaseRootNode();
   friend class DataTreeStore;
 
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
-  cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataNode *child);
-  cpputils::unique_ref<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, cpputils::unique_ref<datanodestore::DataNode> child);
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafToFullTree();
-
-  void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
-  void ifRootHasOnlyOneChildReplaceRootWithItsChild();
+  void whileRootHasOnlyOneChildReplaceRootWithItsChild();
 
   //TODO Use underscore for private methods
+  void _traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
+                       std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
+                       std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                       std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
   uint32_t _numLeaves() const;
   uint32_t _computeNumLeaves(const datanodestore::DataNode &node) const;
-  cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
-  cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
-  datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

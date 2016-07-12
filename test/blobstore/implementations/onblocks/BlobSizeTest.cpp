@@ -136,6 +136,7 @@ public:
 };
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
+  //uint32_t LARGE_SIZE = 2*1024*1024;
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), ZEROES.data(), LARGE_SIZE));
 }

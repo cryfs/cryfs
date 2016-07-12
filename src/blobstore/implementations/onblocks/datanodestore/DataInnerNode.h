@@ -26,6 +26,7 @@ public:
   uint32_t numChildren() const;
 
   void addChild(const DataNode &child_key);
+  void reduceNumChildren(uint32_t newNumChildren);
 
   void removeLastChild();
 

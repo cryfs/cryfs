@@ -88,7 +88,8 @@ Data BlobOnBlocks::readAll() const {
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
-  ASSERT(offset <= size() && offset + count <= size(), "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
+  uint64_t _size = size();
+  ASSERT(offset <= _size && offset + count <= _size, "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
   uint64_t read = tryRead(target, offset, count);
   ASSERT(read == count, "BlobOnBlocks::read() couldn't read all requested bytes. Use BlobOnBlocks::tryRead() if this should be allowed.");
 }
