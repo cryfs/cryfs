@@ -172,22 +172,11 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
 }
 
 void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
-  //TODO Can we traverse in parallel?
-  std::unique_lock<shared_mutex> lock(_mutex);  //TODO Rethink locking here. We probably need locking when the traverse resizes the blob. Otherwise, parallel traverse should be possible. We already allow it below by freeing the upgrade_lock, but we currently only allow it if ALL traverses are entirely inside the valid region. Can we allow more parallelity?
+  //TODO Can we allow multiple runs of traverseLeaves() in parallel?
+  std::unique_lock<shared_mutex> lock(_mutex);
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
-  if (0 == endIndex) {
-    // In this case the utils::ceilLog(_, endIndex) below would fail
-    return;
-  }
 
-  //TODO Alternative: Increase depth when necessary at the end of _traverseExistingSubtree, when index goes on after last possible one.
-  uint8_t neededTreeDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
-  if (_rootNode->depth() < neededTreeDepth) {
-    //TODO Test cases that actually increase it here by 0 level / 1 level / more than 1 level
-    increaseTreeDepth(neededTreeDepth - _rootNode->depth());
-  }
-
-  LeafTraverser(_nodeStore).traverse(_rootNode.get(), beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
+  _rootNode = LeafTraverser(_nodeStore).traverseAndReturnRoot(std::move(_rootNode), beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
 
   if (_numLeavesCache != none && *_numLeavesCache < endIndex) {
     _numLeavesCache = endIndex;

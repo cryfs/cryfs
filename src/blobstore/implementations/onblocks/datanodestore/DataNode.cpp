@@ -40,7 +40,6 @@ uint8_t DataNode::depth() const {
 }
 
 unique_ref<DataInnerNode> DataNode::convertToNewInnerNode(unique_ref<DataNode> node, const DataNode &first_child) {
-  Key key = node->key();
   auto block = node->_node.releaseBlock();
   blockstore::utils::fillWithZeroes(block.get());
 

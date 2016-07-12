@@ -25,13 +25,20 @@ namespace blobstore {
             public:
                 LeafTraverser(datanodestore::DataNodeStore *nodeStore);
 
-                void traverse(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+                cpputils::unique_ref<datanodestore::DataNode> __attribute__((warn_unused_result)) traverseAndReturnRoot(
+                              cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex,
+                              std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
+                              std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
 
-                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool growLastLeaf, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
-                cpputils::unique_ref<datanodestore::DataNode> _createNewSubtree(uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, uint8_t depth, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool growLastLeaf,
+                                              std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
+                                              std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+                cpputils::unique_ref<datanodestore::DataInnerNode> _increaseTreeDepth(cpputils::unique_ref<datanodestore::DataNode> root);
+                cpputils::unique_ref<datanodestore::DataNode> _createNewSubtree(uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, uint8_t depth,
+                                                                                std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
 
