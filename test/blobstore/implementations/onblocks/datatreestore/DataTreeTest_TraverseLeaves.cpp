@@ -408,7 +408,7 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel)
   auto root = CreateFullTwoLevelWithLastLeafSize(5);
   root->flush();
   auto tree = treeStore.load(root->key()).value();
-  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t leafIndex, DataLeafNode *leaf) {
+  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, DataLeafNode *leaf) {
       EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
   }, [this] (uint32_t /*nodeIndex*/) -> Data {
       return Data(1);
