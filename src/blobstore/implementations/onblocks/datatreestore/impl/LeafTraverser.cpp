@@ -32,14 +32,15 @@ namespace blobstore {
                 //     numLeaves<beginIndex<endIndex, numLeaves<beginIndex=endIndex
 
                 uint32_t maxLeavesForDepth = _maxLeavesForTreeDepth(root->depth());
+                bool increaseTreeDepth = endIndex > maxLeavesForDepth;
 
-                _traverseExistingSubtree(root.get(), std::min(beginIndex, maxLeavesForDepth), std::min(endIndex, maxLeavesForDepth), 0, false, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                _traverseExistingSubtree(root.get(), std::min(beginIndex, maxLeavesForDepth), std::min(endIndex, maxLeavesForDepth), 0, increaseTreeDepth, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
 
                 // If the traversal goes too far right for a tree this depth, increase tree depth by one and continue traversal.
                 // This is recursive, i.e. will be repeated if the tree is still not deep enough.
                 // We don't increase to the full needed tree depth in one step, because we want the traversal to go as far as possible
                 // and only then increase the depth - this causes the tree to be in consistent shape (balanced) for longer.
-                if (endIndex > maxLeavesForDepth) {
+                if (increaseTreeDepth) {
                     // TODO Test cases that increase tree depth by 0, 1, 2, ... levels
                     auto newRoot = _increaseTreeDepth(std::move(root));
                     return traverseAndReturnRoot(std::move(newRoot), std::max(beginIndex, maxLeavesForDepth), endIndex, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);

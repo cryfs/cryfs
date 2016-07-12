@@ -389,4 +389,30 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfFourLevelTree) {
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode()+5, 2*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode() -1);
 }
 
+TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback) {
+  auto root = CreateLeaf();
+  root->flush();
+  auto tree = treeStore.load(root->key()).value();
+  tree->traverseLeaves(0, 2, [this] (uint32_t leafIndex, DataLeafNode *leaf) {
+      if (leafIndex == 0) {
+        EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
+      } else {
+        EXPECT_TRUE(false) << "only two nodes";
+      }
+  }, [this] (uint32_t /*nodeIndex*/) -> Data {
+      return Data(1);
+  });
+}
+
+TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel) {
+  auto root = CreateFullTwoLevelWithLastLeafSize(5);
+  root->flush();
+  auto tree = treeStore.load(root->key()).value();
+  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t leafIndex, DataLeafNode *leaf) {
+      EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
+  }, [this] (uint32_t /*nodeIndex*/) -> Data {
+      return Data(1);
+  });
+}
+
 //TODO Refactor the test cases that are too long
