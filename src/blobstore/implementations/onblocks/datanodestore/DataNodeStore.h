@@ -39,8 +39,6 @@ public:
 
   void remove(cpputils::unique_ref<DataNode> node);
 
-  void removeSubtree(cpputils::unique_ref<DataNode> node);
-
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;
   uint64_t numNodes() const;

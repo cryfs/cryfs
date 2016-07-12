@@ -1,5 +1,4 @@
 #include "DataTreeStore.h"
-#include "../datanodestore/DataNodeStore.h"
 #include "../datanodestore/DataLeafNode.h"
 #include "DataTree.h"
 
@@ -36,9 +35,9 @@ unique_ref<DataTree> DataTreeStore::createNewTree() {
 }
 
 void DataTreeStore::remove(unique_ref<DataTree> tree) {
-  auto root = tree->releaseRootNode();
-  cpputils::destruct(std::move(tree)); // Destruct tree
-  _nodeStore->removeSubtree(std::move(root));
+  // Remove all nodes except for the root, which will be a leaf.
+  tree->resizeNumBytes(0);
+  _nodeStore->remove(tree->releaseRootNode());
 }
 
 }
