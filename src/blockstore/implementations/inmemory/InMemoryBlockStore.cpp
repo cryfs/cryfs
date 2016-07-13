@@ -42,9 +42,7 @@ optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
   }
 }
 
-void InMemoryBlockStore::remove(unique_ref<Block> block) {
-  Key key = block->key();
-  cpputils::destruct(std::move(block));
+void InMemoryBlockStore::remove(const Key &key) {
   int numRemoved = _blocks.erase(key);
   ASSERT(1==numRemoved, "Didn't find block to remove");
 }

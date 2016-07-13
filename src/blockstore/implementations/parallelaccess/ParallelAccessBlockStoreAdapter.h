@@ -23,6 +23,10 @@ public:
 	return _baseBlockStore->remove(std::move(block));
   }
 
+  void removeFromBaseStore(const Key &key) override {
+    return _baseBlockStore->remove(key);
+  }
+
 private:
   BlockStore *_baseBlockStore;
 

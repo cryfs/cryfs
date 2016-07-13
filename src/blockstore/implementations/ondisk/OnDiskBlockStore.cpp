@@ -69,9 +69,7 @@ optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
   return optional<unique_ref<Block>>(OnDiskBlock::LoadFromDisk(_rootdir, key));
 }
 
-void OnDiskBlockStore::remove(unique_ref<Block> block) {
-  Key key = block->key();
-  cpputils::destruct(std::move(block));
+void OnDiskBlockStore::remove(const Key &key) {
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 

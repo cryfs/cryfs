@@ -105,7 +105,7 @@ public:
   }
 
   void deleteBlock(const blockstore::Key &key) {
-    blockStore->remove(blockStore->load(key).value());
+    blockStore->remove(key);
   }
 
   void insertBaseBlock(const blockstore::Key &key, Data data) {
@@ -198,7 +198,7 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_AllowsDeletingBlocksWhe
   unique_ptr<VersionCountingBlockStore> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
   auto key = blockStore->create(Data(0))->key();
-  baseBlockStore->remove(baseBlockStore->load(key).value());
+  baseBlockStore->remove(key);
   EXPECT_EQ(boost::none, blockStore->load(key));
 }
 
@@ -208,7 +208,7 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBloc
   unique_ptr<VersionCountingBlockStore> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
   auto key = blockStore->create(Data(0))->key();
-  baseBlockStore->remove(baseBlockStore->load(key).value());
+  baseBlockStore->remove(key);
   EXPECT_THROW(
       blockStore->load(key),
       IntegrityViolationError
@@ -221,7 +221,7 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_AllowsDe
   unique_ptr<VersionCountingBlockStore> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
   auto key = blockStore->create(Data(0))->key();
-  baseBlockStore->remove(baseBlockStore->load(key).value());
+  baseBlockStore->remove(key);
   int count = 0;
   blockStore->forEachBlock([&count] (const blockstore::Key &) {
       ++count;
@@ -235,7 +235,7 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_DoesntAl
   unique_ptr<VersionCountingBlockStore> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
   auto key = blockStore->create(Data(0))->key();
-  baseBlockStore->remove(baseBlockStore->load(key).value());
+  baseBlockStore->remove(key);
   EXPECT_THROW(
       blockStore->forEachBlock([] (const blockstore::Key &) {}),
       IntegrityViolationError

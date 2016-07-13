@@ -30,6 +30,12 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteDirectly) {
   EXPECT_FALSE((bool)blobStore->load(key));
 }
 
+TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteByKey) {
+  auto key = blobStore->create()->key();
+  blobStore->remove(key);
+  EXPECT_FALSE((bool)blobStore->load(key));
+}
+
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
   auto blob = blobStore->create();
   Key key = blob->key();

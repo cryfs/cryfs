@@ -45,9 +45,7 @@ optional<unique_ref<Block>> FakeBlockStore::_load(const Key &key) {
   }
 }
 
-void FakeBlockStore::remove(unique_ref<Block> block) {
-  Key key = block->key();
-  cpputils::destruct(std::move(block));
+void FakeBlockStore::remove(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   int numRemoved = _blocks.erase(key);
   ASSERT(numRemoved == 1, "Block not found");

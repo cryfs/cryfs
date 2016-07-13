@@ -23,6 +23,7 @@ public:
   boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) override;
 
   void remove(cpputils::unique_ref<Blob> blob) override;
+  void remove(const blockstore::Key &key) override;
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   //virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)

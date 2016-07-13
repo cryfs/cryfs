@@ -58,13 +58,9 @@ namespace blockstore {
             throw IntegrityViolationError(reason);
         }
 
-        void VersionCountingBlockStore::remove(unique_ref<Block> block) {
-            Key key = block->key();
-            auto versionCountingBlock = cpputils::dynamic_pointer_move<VersionCountingBlock>(block);
-            ASSERT(versionCountingBlock != boost::none, "Block is not an VersionCountingBlock");
+        void VersionCountingBlockStore::remove(const Key &key) {
             _knownBlockVersions.markBlockAsDeleted(key);
-            auto baseBlock = (*versionCountingBlock)->releaseBlock();
-            _baseBlockStore->remove(std::move(baseBlock));
+            _baseBlockStore->remove(key);
         }
 
         uint64_t VersionCountingBlockStore::numBlocks() const {

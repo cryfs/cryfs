@@ -61,6 +61,15 @@ void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
   }
 }
 
+void CachingBlockStore::remove(const Key &key) {
+  auto fromCache = _cache.pop(key);
+  if (fromCache != none) {
+    remove(make_unique_ref<CachedBlock>(std::move(*fromCache), this));
+  } else {
+    _baseBlockStore->remove(key);
+  }
+}
+
 uint64_t CachingBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks() + _newBlocks.size();
 }

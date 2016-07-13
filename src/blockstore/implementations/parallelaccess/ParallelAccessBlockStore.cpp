@@ -52,6 +52,10 @@ void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
   return _parallelAccessStore.remove(key, std::move(*block_ref));
 }
 
+void ParallelAccessBlockStore::remove(const Key &key) {
+  return _parallelAccessStore.remove(key);
+}
+
 uint64_t ParallelAccessBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
 }

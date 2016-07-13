@@ -29,6 +29,7 @@ public:
   }
   MOCK_METHOD1(do_load, Block*(const Key &));
   void remove(unique_ref<Block> block) {UNUSED(block);}
+  MOCK_METHOD1(remove, void(const Key &));
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
   MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
   MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));

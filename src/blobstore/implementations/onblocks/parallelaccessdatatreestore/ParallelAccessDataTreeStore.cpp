@@ -41,6 +41,9 @@ void ParallelAccessDataTreeStore::remove(unique_ref<DataTreeRef> tree) {
   return _parallelAccessStore.remove(key, std::move(tree));
 }
 
+void ParallelAccessDataTreeStore::remove(const Key &key) {
+  return _parallelAccessStore.remove(key);
+}
 
 
 }

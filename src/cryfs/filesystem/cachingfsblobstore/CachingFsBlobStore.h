@@ -24,6 +24,7 @@ namespace cryfs {
             cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
+            void remove(const blockstore::Key &key);
             uint64_t virtualBlocksizeBytes() const;
             uint64_t numBlocks() const;
             uint64_t estimateSpaceForNumBlocksLeft() const;
@@ -74,6 +75,15 @@ namespace cryfs {
         inline void CachingFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
             auto baseBlob = blob->releaseBaseBlob();
             return _baseBlobStore->remove(std::move(baseBlob));
+        }
+
+        inline void CachingFsBlobStore::remove(const blockstore::Key &key) {
+            auto fromCache = _cache.pop(key);
+            if (fromCache != boost::none) {
+                remove(_makeRef(std::move(*fromCache)));
+            } else {
+                _baseBlobStore->remove(key);
+            }
         }
 
         inline void CachingFsBlobStore::releaseForCache(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob) {

@@ -17,7 +17,7 @@ public:
     Key createKey() override;
     boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
     boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-    void remove(cpputils::unique_ref<Block> block) override;
+    void remove(const Key &key) override;
     uint64_t numBlocks() const override;
     uint64_t estimateNumFreeBytes() const override;
     uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
@@ -62,11 +62,8 @@ boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::
 }
 
 template<class Compressor>
-void CompressingBlockStore<Compressor>::remove(cpputils::unique_ref<Block> block) {
-    auto _block = cpputils::dynamic_pointer_move<CompressedBlock<Compressor>>(block);
-    ASSERT(_block != boost::none, "Wrong block type");
-    auto baseBlock = (*_block)->releaseBaseBlock();
-    return _baseBlockStore->remove(std::move(baseBlock));
+void CompressingBlockStore<Compressor>::remove(const Key &key) {
+    return _baseBlockStore->remove(key);
 }
 
 template<class Compressor>

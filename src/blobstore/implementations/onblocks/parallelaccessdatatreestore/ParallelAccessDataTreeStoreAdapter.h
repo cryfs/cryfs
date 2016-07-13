@@ -25,6 +25,10 @@ public:
 	  return _baseDataTreeStore->remove(std::move(dataTree));
   }
 
+  void removeFromBaseStore(const blockstore::Key &key) override {
+    return _baseDataTreeStore->remove(key);
+  }
+
 private:
   datatreestore::DataTreeStore *_baseDataTreeStore;
 

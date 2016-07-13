@@ -52,6 +52,10 @@ void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
     _dataTreeStore->remove((*_blob)->releaseTree());
 }
 
+void BlobStoreOnBlocks::remove(const Key &key) {
+    _dataTreeStore->remove(key);
+}
+
 uint64_t BlobStoreOnBlocks::virtualBlocksizeBytes() const {
     return _dataTreeStore->virtualBlocksizeBytes();
 }

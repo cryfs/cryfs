@@ -78,12 +78,19 @@ TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
   EXPECT_NE(block1->key(), block2->key());
 }
 
-TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting) {
+TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting_DeleteByBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto blockkey = blockStore->create(cpputils::Data(1024))->key();
   auto block = blockStore->load(blockkey);
   EXPECT_NE(boost::none, block);
   blockStore->remove(std::move(*block));
+  EXPECT_EQ(boost::none, blockStore->load(blockkey));
+}
+
+TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting_DeleteByKey) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto blockkey = blockStore->create(cpputils::Data(1024))->key();
+  blockStore->remove(blockkey);
   EXPECT_EQ(boost::none, blockStore->load(blockkey));
 }
 
@@ -104,10 +111,17 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingB
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
+  EXPECT_EQ(0u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByKey) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key = blockStore->create(cpputils::Data(1))->key();
+  blockStore->remove(key);
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
@@ -139,11 +153,19 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosing
   EXPECT_EQ(2u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock) {
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlock) {
   auto blockStore = this->fixture.createBlockStore();
   auto block = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
   blockStore->remove(std::move(block));
+  EXPECT_EQ(1u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock_DeleteByKey) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key = blockStore->create(cpputils::Data(1))->key();
+  blockStore->create(cpputils::Data(1));
+  blockStore->remove(key);
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
@@ -281,16 +303,19 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     AfterLoad_FlushesWhenDestructed,
     LoadNonExistingBlock,
     TwoCreatedBlocksHaveDifferentKeys,
-    BlockIsNotLoadableAfterDeleting,
+    BlockIsNotLoadableAfterDeleting_DeleteByBlock,
+    BlockIsNotLoadableAfterDeleting_DeleteByKey,
     NumBlocksIsCorrectOnEmptyBlockstore,
     NumBlocksIsCorrectAfterAddingOneBlock,
     NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock,
-    NumBlocksIsCorrectAfterRemovingTheLastBlock,
+    NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByBlock,
+    NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByKey,
     NumBlocksIsCorrectAfterAddingTwoBlocks,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks,
-    NumBlocksIsCorrectAfterRemovingABlock,
+    NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlock,
+    NumBlocksIsCorrectAfterRemovingABlock_DeleteByKey,
     WriteAndReadImmediately,
     WriteAndReadAfterLoading,
     OverwriteAndRead,

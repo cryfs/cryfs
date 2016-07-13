@@ -38,7 +38,8 @@ public:
   cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 
   void remove(cpputils::unique_ref<DataNode> node);
-  void removeSubtree(cpputils::unique_ref<DataNode> node);
+  void remove(const blockstore::Key &key);
+  void removeSubtree(const blockstore::Key &key);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;
@@ -48,6 +49,7 @@ public:
 
 private:
   cpputils::unique_ref<DataNode> load(cpputils::unique_ref<blockstore::Block> block);
+  void _removeSubtree(cpputils::unique_ref<DataInnerNode> node);
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;
   const DataNodeLayout _layout;

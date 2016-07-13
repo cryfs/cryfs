@@ -25,6 +25,7 @@ public:
   cpputils::unique_ref<DataTreeRef> createNewTree();
 
   void remove(cpputils::unique_ref<DataTreeRef> tree);
+  void remove(const blockstore::Key &key);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;

@@ -20,7 +20,7 @@ public:
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-  void remove(cpputils::unique_ref<Block> block) override;
+  void remove(const Key &key) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
@@ -70,11 +70,8 @@ boost::optional<cpputils::unique_ref<Block>> EncryptedBlockStore<Cipher>::load(c
 }
 
 template<class Cipher>
-void EncryptedBlockStore<Cipher>::remove(cpputils::unique_ref<Block> block) {
-  auto encryptedBlock = cpputils::dynamic_pointer_move<EncryptedBlock<Cipher>>(block);
-  ASSERT(encryptedBlock != boost::none, "Block is not an EncryptedBlock");
-  auto baseBlock = (*encryptedBlock)->releaseBlock();
-  return _baseBlockStore->remove(std::move(baseBlock));
+void EncryptedBlockStore<Cipher>::remove(const Key &key) {
+  return _baseBlockStore->remove(key);
 }
 
 template<class Cipher>

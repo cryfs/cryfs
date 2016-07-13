@@ -178,9 +178,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
       ASSERT(neededChildrenForRightBorderNode <= node->numChildren(), "Node has too few children");
       // All children to the right of the new right-border-node are removed including their subtree.
       while(node->numChildren() > neededChildrenForRightBorderNode) {
-        // TODO removeSubtree() should get the key, I shouldn't load the block here.
-        // TODO removeSubtree() needs perf optimization: Don't load leaves.
-        _nodeStore->removeSubtree(_nodeStore->load(node->LastChild()->key()).value());
+        _nodeStore->removeSubtree(node->LastChild()->key());
         node->removeLastChild();
       }
   };

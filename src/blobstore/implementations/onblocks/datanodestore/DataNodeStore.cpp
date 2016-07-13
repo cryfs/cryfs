@@ -12,6 +12,7 @@ using blockstore::Key;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using std::runtime_error;
 using boost::optional;
 using boost::none;
@@ -83,20 +84,42 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
 }
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
-  auto block = node->node().releaseBlock();
-  cpputils::destruct(std::move(node)); // Call destructor
-  _blockstore->remove(std::move(block));
+  Key key = node->key();
+  cpputils::destruct(std::move(node));
+  remove(key);
+}
+
+void DataNodeStore::remove(const Key &key) {
+  _blockstore->remove(key);
 }
 
 
-void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
-  //TODO Make this faster by not loading the leaves but just deleting them. Can be recognized, because of the depth of their parents.
-  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
-  if (inner != nullptr) {
-    for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-      auto child = load(inner->getChild(i)->key());
-      ASSERT(child != none, "Couldn't load child node");
-      removeSubtree(std::move(*child));
+void DataNodeStore::removeSubtree(const Key &key) {
+  auto node = load(key);
+  ASSERT(node != none, "Node for removeSubtree not found");
+
+  auto inner = dynamic_pointer_move<DataInnerNode>(*node);
+  if (inner == none) {
+    ASSERT((*node)->depth() == 0, "If it's not an inner node, it has to be a leaf.");
+    remove(std::move(*node));
+  } else {
+    _removeSubtree(std::move(*inner));
+  }
+}
+
+void DataNodeStore::_removeSubtree(cpputils::unique_ref<DataInnerNode> node) {
+  if (node->depth() == 1) {
+    for (uint32_t i = 0; i < node->numChildren(); ++i) {
+      remove(node->getChild(i)->key());
+    }
+  } else {
+    ASSERT(node->depth() > 1, "This if branch is only called when our children are inner nodes.");
+    for (uint32_t i = 0; i < node->numChildren(); ++i) {
+      auto child = load(node->getChild(i)->key());
+      ASSERT(child != none, "Child not found");
+      auto inner = dynamic_pointer_move<DataInnerNode>(*child);
+      ASSERT(inner != none, "Expected inner node as child");
+      _removeSubtree(std::move(*inner));
     }
   }
   remove(std::move(node));

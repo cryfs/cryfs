@@ -54,6 +54,7 @@ public:
   boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key);
   boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef);
   void remove(const Key &key, cpputils::unique_ref<ResourceRef> block);
+  void remove(const Key &key);
 
 private:
   class OpenResource final {
@@ -92,6 +93,9 @@ private:
 
   template<class ActualResourceRef>
   cpputils::unique_ref<ActualResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
+
+  std::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key);
+  cpputils::unique_ref<Resource> _waitForResourceToRemove(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -167,22 +171,45 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpputils::unique_ref<ResourceRef> resource) {
-  std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture;
-  {
+  auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
+
+  cpputils::destruct(std::move(resource));
+
+  //Wait for last resource user to release it
+  auto resourceToRemove = _waitForResourceToRemove(key, std::move(resourceToRemoveFuture));
+  _baseStore->removeFromBaseStore(std::move(resourceToRemove));
+}
+
+template<class Resource, class ResourceRef, class Key>
+std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
     std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
     auto insertResult = _resourcesToRemove.emplace(key, std::promise < cpputils::unique_ref < Resource >> ());
     ASSERT(true == insertResult.second, "Inserting failed");
-    resourceToRemoveFuture = insertResult.first->second.get_future();
-  }
-  cpputils::destruct(std::move(resource));
-  //Wait for last resource user to release it
-  auto resourceToRemove = resourceToRemoveFuture.get();
+    return insertResult.first->second.get_future();
+};
 
-  std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-  _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
+template<class Resource, class ResourceRef, class Key>
+cpputils::unique_ref<Resource> ParallelAccessStore<Resource, ResourceRef, Key>::_waitForResourceToRemove(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture) {
+    auto resourceToRemove = resourceToRemoveFuture.get();
 
-  _baseStore->removeFromBaseStore(std::move(resourceToRemove));
-}
+    std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+    _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
+
+    return resourceToRemove;
+};
+
+template<class Resource, class ResourceRef, class Key>
+void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
+    auto found = _openResources.find(key);
+    if (found != _openResources.end()) {
+        auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
+        //Wait for last resource user to release it
+        auto resourceToRemove = _waitForResourceToRemove(key, std::move(resourceToRemoveFuture));
+        _baseStore->removeFromBaseStore(std::move(resourceToRemove));
+    } else {
+        _baseStore->removeFromBaseStore(key);
+    }
+};
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::release(const Key &key) {

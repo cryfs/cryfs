@@ -20,7 +20,7 @@ public:
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
-  virtual void remove(cpputils::unique_ref<Block> block) = 0;
+  virtual void remove(const Key &key) = 0;
   virtual uint64_t numBlocks() const = 0;
   //TODO Test estimateNumFreeBytes in all block stores
   virtual uint64_t estimateNumFreeBytes() const = 0;
@@ -30,6 +30,12 @@ public:
   virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0;
 
   virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
+
+  virtual void remove(cpputils::unique_ref<Block> block) {
+    Key key = block->key();
+    cpputils::destruct(std::move(block));
+    remove(key);
+  }
 
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {
     while(true) {
