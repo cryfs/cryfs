@@ -77,18 +77,9 @@ void DataInnerNode::addChild(const DataNode &child) {
   LastChild()->setKey(child.key());
 }
 
-void DataInnerNode::reduceNumChildren(uint32_t newNumChildren) {
-  ASSERT(node().Size() >= newNumChildren, "New num children given to reduceNumChildren() is larger than old num children.");
-  if (node().Size() != newNumChildren) {
-    for (auto entry = ChildrenBegin() + newNumChildren; entry != ChildrenEnd(); ++entry) {
-      entry->setKey(Key::Null());
-    }
-    node().setSize(newNumChildren);
-  }
-}
-
 void DataInnerNode::removeLastChild() {
   ASSERT(node().Size() > 1, "There is no child to remove");
+  LastChild()->setKey(Key::Null());
   node().setSize(node().Size()-1);
 }
 

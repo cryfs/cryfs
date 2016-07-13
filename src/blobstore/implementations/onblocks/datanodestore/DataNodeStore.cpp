@@ -88,6 +88,20 @@ void DataNodeStore::remove(unique_ref<DataNode> node) {
   _blockstore->remove(std::move(block));
 }
 
+
+void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
+  //TODO Make this faster by not loading the leaves but just deleting them. Can be recognized, because of the depth of their parents.
+  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
+  if (inner != nullptr) {
+    for (uint32_t i = 0; i < inner->numChildren(); ++i) {
+      auto child = load(inner->getChild(i)->key());
+      ASSERT(child != none, "Couldn't load child node");
+      removeSubtree(std::move(*child));
+    }
+  }
+  remove(std::move(node));
+}
+
 uint64_t DataNodeStore::numNodes() const {
   return _blockstore->numBlocks();
 }

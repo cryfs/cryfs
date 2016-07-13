@@ -38,6 +38,7 @@ public:
   cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 
   void remove(cpputils::unique_ref<DataNode> node);
+  void removeSubtree(cpputils::unique_ref<DataNode> node);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;

@@ -168,14 +168,21 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
       // This is only called, if the new last leaf was not existing yet
       return Data(newLastLeafSize).FillWithZeroes();
   };
-  auto onBacktrackFromSubtree = [newNumLeaves, maxChildrenPerInnerNode] (DataInnerNode* node) {
+  auto onBacktrackFromSubtree = [this, newNumLeaves, maxChildrenPerInnerNode] (DataInnerNode* node) {
       // This is only called for the right border nodes of the new tree.
       // When growing size, the following is a no-op. When shrinking, we're deleting the children that aren't needed anymore.
       uint32_t maxLeavesPerChild = utils::intPow((uint64_t)maxChildrenPerInnerNode, ((uint64_t)node->depth()-1));
       uint32_t neededNodesOnChildLevel = utils::ceilDivision(newNumLeaves, maxLeavesPerChild);
       uint32_t neededSiblings = utils::ceilDivision(neededNodesOnChildLevel, maxChildrenPerInnerNode);
       uint32_t neededChildrenForRightBorderNode = neededNodesOnChildLevel - (neededSiblings-1) * maxChildrenPerInnerNode;
-      node->reduceNumChildren(neededChildrenForRightBorderNode);
+      ASSERT(neededChildrenForRightBorderNode <= node->numChildren(), "Node has too few children");
+      // All children to the right of the new right-border-node are removed including their subtree.
+      while(node->numChildren() > neededChildrenForRightBorderNode) {
+        // TODO removeSubtree() should get the key, I shouldn't load the block here.
+        // TODO removeSubtree() needs perf optimization: Don't load leaves.
+        _nodeStore->removeSubtree(_nodeStore->load(node->LastChild()->key()).value());
+        node->removeLastChild();
+      }
   };
 
   _traverseLeaves(newNumLeaves - 1, newNumLeaves, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);

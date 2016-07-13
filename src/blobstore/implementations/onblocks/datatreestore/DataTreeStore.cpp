@@ -37,6 +37,7 @@ unique_ref<DataTree> DataTreeStore::createNewTree() {
 void DataTreeStore::remove(unique_ref<DataTree> tree) {
   // Remove all nodes except for the root, which will be a leaf.
   tree->resizeNumBytes(0);
+  // Then remove the root node
   _nodeStore->remove(tree->releaseRootNode());
 }
 

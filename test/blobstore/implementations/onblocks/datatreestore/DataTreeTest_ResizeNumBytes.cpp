@@ -223,6 +223,19 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
   }
 }
 
+TEST_P(DataTreeTest_ResizeNumBytes_P, UnneededBlocksGetDeletedWhenShrinking) {
+    tree->resizeNumBytes(newSize);
+    tree->flush();
+
+    uint64_t expectedNumNodes = 1; // 1 for the root node
+    uint64_t nodesOnCurrentLevel = newNumberOfLeaves;
+    while (nodesOnCurrentLevel > 1) {
+      expectedNumNodes += nodesOnCurrentLevel;
+      nodesOnCurrentLevel = ceilDivision(nodesOnCurrentLevel, nodeStore->layout().maxChildrenPerInnerNode());
+    }
+    EXPECT_EQ(expectedNumNodes, nodeStore->numNodes());
+}
+
 //Resize to zero is not caught in the parametrized test above, in the following, we test it separately.
 
 TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
@@ -240,4 +253,11 @@ TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_KeyDoesntChange) {
   tree->resizeNumBytes(0);
   tree->flush();
   EXPECT_EQ(key, tree->key());
+}
+
+TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_UnneededBlocksGetDeletedWhenShrinking) {
+  auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
+  tree->resizeNumBytes(0);
+  tree->flush();
+  EXPECT_EQ(1u, nodeStore->numNodes());
 }
