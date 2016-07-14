@@ -96,7 +96,7 @@ namespace blobstore {
                     _traverseExistingSubtree(childNode->get(), leavesPerChild, leavesPerChild, childOffset, true,
                                              [] (uint32_t /*index*/, DataLeafNode* /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
-                                             [] (DataInnerNode* /*node*/) {});
+                                             [] (DataInnerNode* /*node*/) {ASSERT(false, "We don't actually traverse any leaves.");});
                 }
 
                 // Traverse existing children
