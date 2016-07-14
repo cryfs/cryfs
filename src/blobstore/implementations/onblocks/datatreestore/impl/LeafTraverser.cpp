@@ -62,10 +62,10 @@ namespace blobstore {
                 DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
                 if (leaf != nullptr) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
+                    if (growLastLeaf) {
+                        leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
+                    }
                     if (beginIndex == 0 && endIndex == 1) {
-                        if (growLastLeaf) {
-                            leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
-                        }
                         onExistingLeaf(leafOffset, leaf);
                     }
                     return;
@@ -78,6 +78,7 @@ namespace blobstore {
                 uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
                 ASSERT(endChild <= _nodeStore->layout().maxChildrenPerInnerNode(), "Traversal region would need increasing the tree depth. This should have happened before calling this function.");
                 uint32_t numChildren = inner->numChildren();
+                ASSERT(!growLastLeaf || endChild >= numChildren, "Can only grow last leaf if it exists");
                 bool shouldGrowLastExistingLeaf = growLastLeaf || endChild > numChildren;
 
                 // If we traverse outside of the valid region (i.e. usually would only traverse to new leaves and not to the last leaf),
@@ -89,11 +90,10 @@ namespace blobstore {
                     if (childNode == none) {
                         throw std::runtime_error("Couldn't find child node "+childKey.ToString());
                     }
-                    //TODO this causes a negative leafOffset. Better: Make leafOffset generally absolute, i.e. += beginIndex?
-                    uint32_t negativeChildOffset = (numChildren-1) * leavesPerChild;
-                    _traverseExistingSubtree(childNode->get(), leavesPerChild-1, leavesPerChild, leafOffset - negativeChildOffset, true,
-                                             [] (uint32_t /*index*/, DataLeafNode* /*leaf*/) {},
-                                             _createMaxSizeLeaf(),
+                    uint32_t childOffset = (numChildren-1) * leavesPerChild;
+                    _traverseExistingSubtree(childNode->get(), leavesPerChild, leavesPerChild, childOffset, true,
+                                             [] (uint32_t /*index*/, DataLeafNode* /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
+                                             [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (DataInnerNode* /*node*/) {});
                 }
 
