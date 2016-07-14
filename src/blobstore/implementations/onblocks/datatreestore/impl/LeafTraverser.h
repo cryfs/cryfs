@@ -34,7 +34,12 @@ namespace blobstore {
             private:
                 datanodestore::DataNodeStore *_nodeStore;
 
-                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool growLastLeaf,
+                cpputils::unique_ref<datanodestore::DataNode> _traverseAndReturnRoot(
+                        cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,
+                        std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
+                        std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                        std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
+                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf,
                                               std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
                                               std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                                               std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
@@ -44,7 +49,7 @@ namespace blobstore {
                                                                                 std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
-                cpputils::unique_ref<datanodestore::DataNode> whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
+                cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
             };
