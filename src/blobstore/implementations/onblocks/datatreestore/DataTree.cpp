@@ -46,17 +46,6 @@ DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
 DataTree::~DataTree() {
 }
 
-void DataTree::whileRootHasOnlyOneChildReplaceRootWithItsChild() {
-  DataInnerNode *rootNode = dynamic_cast<DataInnerNode*>(_rootNode.get());
-  if (rootNode != nullptr && rootNode->numChildren() == 1) {
-    auto child = _nodeStore->load(rootNode->getChild(0)->key());
-    ASSERT(child != none, "Couldn't load first child of root node");
-    _rootNode = _nodeStore->overwriteNodeWith(std::move(_rootNode), **child);
-    _nodeStore->remove(std::move(*child));
-    whileRootHasOnlyOneChildReplaceRootWithItsChild();
-  }
-}
-
 const Key &DataTree::key() const {
   return _rootNode->key();
 }
@@ -184,7 +173,6 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   };
 
   _traverseLeaves(newNumLeaves - 1, newNumLeaves, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
-  whileRootHasOnlyOneChildReplaceRootWithItsChild();
   _numLeavesCache = newNumLeaves;
   ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }

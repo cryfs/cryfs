@@ -45,7 +45,9 @@ namespace blobstore {
                     auto newRoot = _increaseTreeDepth(std::move(root));
                     return traverseAndReturnRoot(std::move(newRoot), std::max(beginIndex, maxLeavesForDepth), endIndex, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
                 } else {
-                    return std::move(root);
+                    // Once we're done growing the tree and done with the traversal, we might have to decrease tree depth,
+                    // because the callbacks could have deleted nodes (this happens for example when shrinking the tree using a traversal).
+                    return whileRootHasOnlyOneChildReplaceRootWithItsChild(std::move(root));
                 }
             }
 
@@ -190,6 +192,19 @@ namespace blobstore {
                 return [maxBytesPerLeaf] (uint32_t /*index*/) -> Data {
                    return Data(maxBytesPerLeaf).FillWithZeroes();
                 };
+            }
+
+            unique_ref<DataNode> LeafTraverser::whileRootHasOnlyOneChildReplaceRootWithItsChild(unique_ref<DataNode> root) {
+                DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
+                if (inner != nullptr && inner->numChildren() == 1) {
+                    auto child = _nodeStore->load(inner->getChild(0)->key());
+                    ASSERT(child != none, "Couldn't load first child of root node");
+                    auto newRoot = _nodeStore->overwriteNodeWith(std::move(root), **child);
+                    _nodeStore->remove(std::move(*child));
+                    return whileRootHasOnlyOneChildReplaceRootWithItsChild(std::move(newRoot));
+                } else {
+                    return root;
+                }
             }
 
         }

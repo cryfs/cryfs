@@ -50,8 +50,6 @@ private:
   cpputils::unique_ref<datanodestore::DataNode> releaseRootNode();
   friend class DataTreeStore;
 
-  void whileRootHasOnlyOneChildReplaceRootWithItsChild();
-
   //TODO Use underscore for private methods
   void _traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
                        std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,

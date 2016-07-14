@@ -44,6 +44,7 @@ namespace blobstore {
                                                                                 std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
+                cpputils::unique_ref<datanodestore::DataNode> whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
             };
