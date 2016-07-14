@@ -90,29 +90,27 @@ public:
 };
 constexpr DataNodeLayout DataTreeTest_ResizeByTraversing::LAYOUT;
 
-class DataTreeTest_ResizeByTraversing_P: public DataTreeTest_ResizeByTraversing, public WithParamInterface<tuple<function<unique_ref<DataTree>(DataTreeTest_ResizeByTraversing*, uint32_t)>, uint32_t, uint32_t>> {
+class DataTreeTest_ResizeByTraversing_P: public DataTreeTest_ResizeByTraversing, public WithParamInterface<tuple<function<unique_ref<DataTree>(DataTreeTest_ResizeByTraversing*, uint32_t)>, uint32_t, uint32_t, std::function<uint32_t (uint32_t oldNumberOfLeaves, uint32_t newNumberOfLeaves)>>> {
 public:
   DataTreeTest_ResizeByTraversing_P()
     : oldLastLeafSize(get<1>(GetParam())),
       tree(get<0>(GetParam())(this, oldLastLeafSize)),
       numberOfLeavesToAdd(get<2>(GetParam())),
       newNumberOfLeaves(tree->numLeaves()+numberOfLeavesToAdd),
+      traversalBeginIndex(get<3>(GetParam())(tree->numLeaves(), newNumberOfLeaves)),
       ZEROES(LAYOUT.maxBytesPerLeaf())
   {
     ZEROES.FillWithZeroes();
   }
 
-  void GrowTree(const Key &key, uint32_t numLeavesToAdd) {
+  void GrowTree(const Key &key) {
     auto tree = treeStore.load(key);
-    GrowTree(tree.get().get(), numLeavesToAdd);
+    GrowTree(tree.get().get());
   }
 
-  void GrowTree(DataTree *tree, uint32_t numLeavesToAdd) {
-    uint32_t oldNumLeaves = tree->numLeaves();
-    uint32_t newNumLeaves = oldNumLeaves + numLeavesToAdd;
-    //TODO Test cases where beginIndex is inside of the existing leaves
+  void GrowTree(DataTree *tree) {
     uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    tree->traverseLeaves(newNumLeaves-1, newNumLeaves, [] (uint32_t, DataLeafNode*){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
+    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, DataLeafNode*){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
     tree->flush();
   }
 
@@ -130,6 +128,7 @@ public:
   unique_ref<DataTree> tree;
   uint32_t numberOfLeavesToAdd;
   uint32_t newNumberOfLeaves;
+  uint32_t traversalBeginIndex;
   Data ZEROES;
 };
 INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeByTraversing_P,
@@ -160,32 +159,42 @@ INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeBy
       3* DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode(), //Three level tree with three children
       DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode() * DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode(), //Full three level tree
       DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode() * DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode() + 1 //Four level mindata tree
+    ),
+    //Decide the traversal begin index
+    Values(
+      [] (uint32_t /*oldNumberOfLeaves*/, uint32_t newNumberOfLeaves)     {return newNumberOfLeaves;}, // Don't traverse any leaves, just resize (begin==end)
+      [] (uint32_t /*oldNumberOfLeaves*/, uint32_t newNumberOfLeaves)     {return newNumberOfLeaves-1;}, // Traverse last leaf (begin==end-1)
+      [] (uint32_t oldNumberOfLeaves,     uint32_t newNumberOfLeaves)     {return (oldNumberOfLeaves+newNumberOfLeaves)/2;}, // Start traversal in middle of new leaves
+      [] (uint32_t oldNumberOfLeaves,     uint32_t /*newNumberOfLeaves*/) {return oldNumberOfLeaves-1;}, // Start traversal with last old leaf
+      [] (uint32_t oldNumberOfLeaves,     uint32_t /*newNumberOfLeaves*/) {return oldNumberOfLeaves;}, // Start traversal with first new leaf
+      [] (uint32_t /*oldNumberOfLeaves*/, uint32_t /*newNumberOfLeaves*/) {return 0;}, // Traverse full tree
+      [] (uint32_t /*oldNumberOfLeaves*/, uint32_t /*newNumberOfLeaves*/) {return 1;} // Traverse full tree except first leaf
     )
   )
 );
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, StructureIsValid) {
-  GrowTree(tree.get(), numberOfLeavesToAdd);
+  GrowTree(tree.get());
   EXPECT_IS_LEFTMAXDATA_TREE(tree->key());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect_FromCache) {
   tree->numLeaves(); // fill cache with old value
-  GrowTree(tree.get(), numberOfLeavesToAdd);
+  GrowTree(tree.get());
   // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
   EXPECT_EQ(newNumberOfLeaves, tree->numLeaves());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect) {
-  GrowTree(tree.get(), numberOfLeavesToAdd);
+  GrowTree(tree.get());
   // tree->_forceComputeNumLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
   EXPECT_EQ(newNumberOfLeaves, tree->_forceComputeNumLeaves());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DepthFlagsAreCorrect) {
-  GrowTree(tree.get(), numberOfLeavesToAdd);
+  GrowTree(tree.get());
   uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode()));
   CHECK_DEPTH(depth, tree->key());
 }
@@ -193,7 +202,7 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DepthFlagsAreCorrect) {
 TEST_P(DataTreeTest_ResizeByTraversing_P, KeyDoesntChange) {
   Key key = tree->key();
   tree->flush();
-  GrowTree(tree.get(), numberOfLeavesToAdd);
+  GrowTree(tree.get());
   EXPECT_EQ(key, tree->key());
 }
 
@@ -204,7 +213,7 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
   cpputils::destruct(std::move(tree));
   data.FillInto(nodeStore->load(key).get().get());
 
-  GrowTree(key, newNumberOfLeaves);
+  GrowTree(key);
 
   data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), oldNumberOfLeaves, oldLastLeafSize);
 }
