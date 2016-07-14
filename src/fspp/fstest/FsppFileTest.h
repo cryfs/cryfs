@@ -193,6 +193,21 @@ TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
     this->Test_Utimens(this->file_nested.get());
 }
 
+TYPED_TEST_P(FsppFileTest, Remove) {
+    this->CreateFile("/mytestfile");
+    EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+    this->LoadFile("/mytestfile")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestfile"));
+}
+
+TYPED_TEST_P(FsppFileTest, Remove_Nested) {
+    this->CreateDir("/mytestdir");
+    this->CreateFile("/mytestdir/myfile");
+    EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
+    this->LoadFile("/mytestdir/myfile")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
+}
+
 REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
   Open_RDONLY,
   Open_RDONLY_Nested,
@@ -219,7 +234,9 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
   Chmod,
   Chmod_Nested,
   Utimens,
-  Utimens_Nested
+  Utimens_Nested,
+  Remove,
+  Remove_Nested
 );
 
 //TODO access

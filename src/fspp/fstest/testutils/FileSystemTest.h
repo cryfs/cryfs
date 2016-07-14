@@ -69,8 +69,8 @@ public:
     return this->LoadFile(path);
   }
 
-  cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
+  cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path, const boost::filesystem::path &target = "/my/symlink/target") {
+    this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), target, 0, 0);
     return this->LoadSymlink(path);
   }
 };

@@ -246,6 +246,21 @@ TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
   );
 }
 
+TYPED_TEST_P(FsppDirTest, Remove) {
+    this->CreateDir("/mytestdir");
+    EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
+    this->LoadDir("/mytestdir")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestdir"));
+}
+
+TYPED_TEST_P(FsppDirTest, Remove_Nested) {
+    this->CreateDir("/mytestdir");
+    this->CreateDir("/mytestdir/mydir");
+    EXPECT_NE(boost::none, this->device->Load("/mytestdir/mydir"));
+    this->LoadDir("/mytestdir/mydir")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mydir"));
+}
+
 REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   Children_RootDir_Empty,
   Children_RootDir_OneFile_Directly,
@@ -270,7 +285,9 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   CreateDir_InNonemptyRoot,
   CreateDir_InEmptyNestedDir,
   CreateDir_InNonemptyNestedDir,
-  CreateDir_AlreadyExisting
+  CreateDir_AlreadyExisting,
+  Remove,
+  Remove_Nested
 );
 
 
