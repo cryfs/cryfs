@@ -9,7 +9,7 @@
 class MockBlockStore final : public blockstore::BlockStore {
 public:
     MockBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore = cpputils::make_unique_ref<blockstore::testfake::FakeBlockStore>())
-        : _baseBlockStore(std::move(baseBlockStore)) {
+        : loadedBlocks(), createdBlocks(0), _mutex(), _baseBlockStore(std::move(baseBlockStore)) {
     }
 
     blockstore::Key createKey() override {
@@ -17,6 +17,10 @@ public:
     }
 
     boost::optional<cpputils::unique_ref<blockstore::Block>> tryCreate(const blockstore::Key &key, cpputils::Data data) override {
+        {
+            std::unique_lock<std::mutex> lock(_mutex);
+            createdBlocks += 1;
+        }
         return _baseBlockStore->tryCreate(key, std::move(data));
     }
 
@@ -52,7 +56,13 @@ public:
         return _baseBlockStore->remove(std::move(block));
     }
 
+    void resetCounters() {
+        loadedBlocks = {};
+        createdBlocks = 0;
+    }
+
     std::vector<blockstore::Key> loadedBlocks;
+    uint64_t createdBlocks;
 
 private:
     std::mutex _mutex;
