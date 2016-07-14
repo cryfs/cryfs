@@ -21,7 +21,9 @@ using cpputils::dynamic_pointer_move;
 constexpr uint32_t DataTreeTest::BLOCKSIZE_BYTES;
 
 DataTreeTest::DataTreeTest()
-  :_nodeStore(make_unique_ref<DataNodeStore>(make_unique_ref<FakeBlockStore>(), BLOCKSIZE_BYTES)),
+  :_blockStore(make_unique_ref<MockBlockStore>()),
+   blockStore(_blockStore.get()),
+   _nodeStore(make_unique_ref<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
    nodeStore(_nodeStore.get()),
    treeStore(std::move(_nodeStore)) {
 }
