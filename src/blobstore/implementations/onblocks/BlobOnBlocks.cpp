@@ -7,6 +7,8 @@
 #include <cpp-utils/assert/assert.h>
 
 using std::function;
+using std::unique_lock;
+using std::mutex;
 using cpputils::unique_ref;
 using cpputils::Data;
 using blobstore::onblocks::datanodestore::DataLeafNode;
@@ -19,7 +21,7 @@ namespace onblocks {
 using parallelaccessdatatreestore::DataTreeRef;
 
 BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
-: _datatree(std::move(datatree)), _sizeCache(boost::none) {
+: _datatree(std::move(datatree)), _sizeCache(boost::none), _mutex() {
 }
 
 BlobOnBlocks::~BlobOnBlocks() {
@@ -37,7 +39,8 @@ void BlobOnBlocks::resize(uint64_t numBytes) {
   _sizeCache = numBytes;
 }
 
-void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t leafOffset, DataLeafNode *leaf, uint32_t begin, uint32_t count)> onExistingLeaf, function<Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const {
+void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t leafOffset, DataLeafNode *leaf, uint32_t begin, uint32_t count)> onExistingLeaf, function<Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const {
+  unique_lock<mutex> lock(_mutex); // TODO Multiple traverse calls in parallel?
   uint64_t endByte = beginByte + sizeBytes;
   uint64_t maxBytesPerLeaf = _datatree->maxBytesPerLeaf();
   uint32_t firstLeaf = beginByte / maxBytesPerLeaf;
@@ -113,7 +116,7 @@ void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
   auto onCreateLeaf = [] (uint64_t /*beginByte*/, uint32_t /*count*/) -> Data {
       ASSERT(false, "Reading shouldn't create new leaves.");
   };
-  traverseLeaves(offset, count, onExistingLeaf, onCreateLeaf);
+  _traverseLeaves(offset, count, onExistingLeaf, onCreateLeaf);
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
@@ -129,7 +132,7 @@ void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
       std::memcpy(result.data(), (uint8_t*)source + beginByte - offset, numBytes);
       return result;
   };
-  traverseLeaves(offset, count, onExistingLeaf, onCreateLeaf);
+  _traverseLeaves(offset, count, onExistingLeaf, onCreateLeaf);
 }
 
 void BlobOnBlocks::flush() {
