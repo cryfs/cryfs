@@ -176,7 +176,9 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
   cpputils::destruct(std::move(resource));
 
   //Wait for last resource user to release it
-  auto resourceToRemove = _waitForResourceToRemove(key, std::move(resourceToRemoveFuture));
+  auto resourceToRemove = resourceToRemoveFuture.get();
+  std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+  _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
   _baseStore->removeFromBaseStore(std::move(resourceToRemove));
 }
 
@@ -189,22 +191,14 @@ std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, Resour
 };
 
 template<class Resource, class ResourceRef, class Key>
-cpputils::unique_ref<Resource> ParallelAccessStore<Resource, ResourceRef, Key>::_waitForResourceToRemove(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture) {
-    auto resourceToRemove = resourceToRemoveFuture.get();
-
-    std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-    _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
-
-    return resourceToRemove;
-};
-
-template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
     auto found = _openResources.find(key);
     if (found != _openResources.end()) {
         auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
         //Wait for last resource user to release it
-        auto resourceToRemove = _waitForResourceToRemove(key, std::move(resourceToRemoveFuture));
+        auto resourceToRemove = resourceToRemoveFuture.get();
+        std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+        _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
         _baseStore->removeFromBaseStore(std::move(resourceToRemove));
     } else {
         _baseStore->removeFromBaseStore(key);
