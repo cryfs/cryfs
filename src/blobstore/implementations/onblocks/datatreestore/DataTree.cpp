@@ -40,14 +40,14 @@ namespace onblocks {
 namespace datatreestore {
 
 DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
-  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _numLeavesCache(none) {
+  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _key(_rootNode->key()), _numLeavesCache(none) {
 }
 
 DataTree::~DataTree() {
 }
 
 const Key &DataTree::key() const {
-  return _rootNode->key();
+  return _key;
 }
 
 void DataTree::flush() const {
@@ -58,6 +58,7 @@ void DataTree::flush() const {
 }
 
 unique_ref<DataNode> DataTree::releaseRootNode() {
+  unique_lock<shared_mutex> lock(_mutex); // Lock ensures that the root node is currently set (traversing unsets it temporarily)
   return std::move(_rootNode);
 }
 
@@ -75,6 +76,7 @@ uint32_t DataTree::_numLeaves() const {
 }
 
 uint32_t DataTree::_forceComputeNumLeaves() const {
+  unique_lock<shared_mutex> lock(_mutex); // Lock ensures that the root node is currently set (traversing unsets it temporarily)
   _numLeavesCache = _computeNumLeaves(*_rootNode);
   return *_numLeavesCache;
 }

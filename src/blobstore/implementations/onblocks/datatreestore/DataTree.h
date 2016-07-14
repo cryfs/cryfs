@@ -45,6 +45,7 @@ private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
+  blockstore::Key _key; // Key is stored in a member variable, since _rootNode is nullptr while traversing, but we still want to be able to return the key.
   mutable boost::optional<uint32_t> _numLeavesCache;
 
   cpputils::unique_ref<datanodestore::DataNode> releaseRootNode();
