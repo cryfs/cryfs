@@ -105,7 +105,8 @@ uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) co
 }
 
 void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
-  auto onExistingLeaf = [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  auto onExistingLeaf = [target, offset, count] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+      ASSERT(indexOfFirstLeafByte+leafDataOffset>=offset && indexOfFirstLeafByte-offset+leafDataOffset <= count && indexOfFirstLeafByte-offset+leafDataOffset+leafDataSize <= count, "Writing to target out of bounds");
       //TODO Simplify formula, make it easier to understand
       leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   };
@@ -116,14 +117,16 @@ void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
-  auto onExistingLeaf = [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  auto onExistingLeaf = [source, offset, count] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+      ASSERT(indexOfFirstLeafByte+leafDataOffset>=offset && indexOfFirstLeafByte-offset+leafDataOffset <= count && indexOfFirstLeafByte-offset+leafDataOffset+leafDataSize <= count, "Reading from source out of bounds");
       //TODO Simplify formula, make it easier to understand
       leaf->write((uint8_t*)source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   };
-  auto onCreateLeaf = [source, offset] (uint64_t beginByte, uint32_t count) -> Data {
-      Data result(count);
+  auto onCreateLeaf = [source, offset, count] (uint64_t beginByte, uint32_t numBytes) -> Data {
+      ASSERT(beginByte >= offset && beginByte-offset <= count && beginByte-offset+numBytes <= count, "Reading from source out of bounds");
+      Data result(numBytes);
       //TODO Simplify formula, make it easier to understand
-      std::memcpy(result.data(), (uint8_t*)source + beginByte - offset, count);
+      std::memcpy(result.data(), (uint8_t*)source + beginByte - offset, numBytes);
       return result;
   };
   traverseLeaves(offset, count, onExistingLeaf, onCreateLeaf);
