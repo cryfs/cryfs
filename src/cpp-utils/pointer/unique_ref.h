@@ -7,6 +7,7 @@
 #include "../macros.h"
 #include "gcc_4_8_compatibility.h"
 #include "cast.h"
+#include "../assert/assert.h"
 
 namespace cpputils {
 
@@ -28,24 +29,32 @@ template<typename T>
 class unique_ref final {
 public:
 
-    unique_ref(unique_ref&& from): _target(std::move(from._target)) {}
+    unique_ref(unique_ref&& from): _target(std::move(from._target)) {
+        from._target = nullptr;
+    }
     // TODO Test this upcast-allowing move constructor
-    template<typename U> unique_ref(unique_ref<U>&& from): _target(std::move(from._target)) {}
+    template<typename U> unique_ref(unique_ref<U>&& from): _target(std::move(from._target)) {
+        from._target = nullptr;
+    }
 
     unique_ref& operator=(unique_ref&& from) {
         _target = std::move(from._target);
+        from._target = nullptr;
         return *this;
     }
     // TODO Test this upcast-allowing assignment
     template<typename U> unique_ref& operator=(unique_ref<U>&& from) {
         _target = std::move(from._target);
+        from._target = nullptr;
         return *this;
     }
 
     typename std::add_lvalue_reference<T>::type operator*() const& {
+        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
         return *_target;
     }
     typename std::add_rvalue_reference<T>::type operator*() && {
+        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
         return std::move(*_target);
     }
 
@@ -54,11 +63,16 @@ public:
     }
 
     T* get() const {
+        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
         return _target.get();
     }
 
     void swap(unique_ref& rhs) {
         std::swap(_target, rhs._target);
+    }
+
+    bool isValid() const {
+        return _target.get() != nullptr;
     }
 
 private:

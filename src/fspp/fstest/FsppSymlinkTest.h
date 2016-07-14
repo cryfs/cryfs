@@ -15,25 +15,25 @@ public:
 TYPED_TEST_CASE_P(FsppSymlinkTest);
 
 TYPED_TEST_P(FsppSymlinkTest, Create_AbsolutePath) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Create_RelativePath) {
-  this->CreateSymlink("mysymlink", "../target");
+  this->CreateSymlink("/mysymlink", "../target");
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Read_AbsolutePath) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
   EXPECT_EQ("/my/symlink/target", this->LoadSymlink("/mysymlink")->target());
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Read_RelativePath) {
-  this->CreateSymlink("mysymlink", "../target");
+  this->CreateSymlink("/mysymlink", "../target");
   EXPECT_EQ("../target", this->LoadSymlink("/mysymlink")->target());
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Remove) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
   EXPECT_NE(boost::none, this->device->Load("/mysymlink"));
   this->LoadSymlink("/mysymlink")->remove();
   EXPECT_EQ(boost::none, this->device->Load("/mysymlink"));

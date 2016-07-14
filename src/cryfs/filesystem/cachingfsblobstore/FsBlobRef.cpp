@@ -5,7 +5,7 @@ namespace cryfs {
 namespace cachingfsblobstore {
 
 FsBlobRef::~FsBlobRef() {
-    if (_baseBlob.get() != nullptr) {
+    if (_baseBlob.isValid()) {
         _fsBlobStore->releaseForCache(std::move(_baseBlob));
     }
 }
