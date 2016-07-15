@@ -4,41 +4,27 @@
 
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/optional_ownership_ptr.h>
-#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include <blockstore/utils/Key.h>
 
 namespace blobstore {
     namespace onblocks {
+        namespace datanodestore {
+            class DataNodeStore;
+            class DataLeafNode;
+        }
         namespace datatreestore {
 
             class LeafHandle final {
             public:
-                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::Key &key)
-                    :_nodeStore(nodeStore), _key(key), _leaf(cpputils::null<datanodestore::DataLeafNode>()) {
-                }
-
-                LeafHandle(datanodestore::DataNodeStore *nodeStore, datanodestore::DataLeafNode *node)
-                        : _nodeStore(nodeStore), _key(node->key()), _leaf(cpputils::WithoutOwnership<datanodestore::DataLeafNode>(node)) {
-                }
-
+                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::Key &key);
+                LeafHandle(datanodestore::DataNodeStore *nodeStore, datanodestore::DataLeafNode *node);
                 LeafHandle(LeafHandle &&rhs) = default;
 
                 const blockstore::Key &key() {
                     return _key;
                 }
 
-                datanodestore::DataLeafNode *node() {
-                    if (_leaf.get() == nullptr) {
-                        auto loaded = _nodeStore->load(_key);
-                        ASSERT(loaded != boost::none, "Leaf not found");
-                        auto leaf = cpputils::dynamic_pointer_move<datanodestore::DataLeafNode>(*loaded);
-                        ASSERT(leaf != boost::none, "Loaded leaf is not leaf node");
-
-                        _leaf = cpputils::WithOwnership(std::move(*leaf));
-                    }
-
-                    return _leaf.get();
-                }
+                datanodestore::DataLeafNode *node();
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
