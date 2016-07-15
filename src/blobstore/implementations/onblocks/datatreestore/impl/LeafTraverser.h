@@ -5,6 +5,7 @@
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/data/Data.h>
+#include <blockstore/utils/Key.h>
 
 namespace blobstore {
     namespace onblocks {
@@ -50,6 +51,7 @@ namespace blobstore {
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
                 cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
+                cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::Key &key);
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
             };

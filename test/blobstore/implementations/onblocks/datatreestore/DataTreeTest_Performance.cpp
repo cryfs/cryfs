@@ -464,6 +464,6 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to0) {
     EXPECT_EQ(5u, blockStore->loadedBlocks().size()); // load new last leaf (+inner node), load second inner node to remove its subtree, then 2x load first child of root to replace root with its child.
     EXPECT_EQ(0u, blockStore->createdBlocks());
     EXPECT_EQ(3u + maxChildrenPerInnerNode, blockStore->removedBlocks().size());
-    EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // 2x rewrite root node to be a leaf
+    EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // remove children from inner node and rewrite root node to be a leaf
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
 }

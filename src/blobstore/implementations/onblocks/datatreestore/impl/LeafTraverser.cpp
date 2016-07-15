@@ -10,6 +10,7 @@ using std::vector;
 using boost::none;
 using cpputils::Data;
 using cpputils::unique_ref;
+using cpputils::dynamic_pointer_move;
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
@@ -196,13 +197,27 @@ namespace blobstore {
             unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildReplaceRootWithItsChild(unique_ref<DataNode> root) {
                 DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
                 if (inner != nullptr && inner->numChildren() == 1) {
-                    auto child = _nodeStore->load(inner->getChild(0)->key());
-                    ASSERT(child != none, "Couldn't load first child of root node");
-                    auto newRoot = _nodeStore->overwriteNodeWith(std::move(root), **child);
-                    _nodeStore->remove(std::move(*child));
-                    return _whileRootHasOnlyOneChildReplaceRootWithItsChild(std::move(newRoot));
+                    auto newRoot = _whileRootHasOnlyOneChildRemoveRootReturnChild(inner->getChild(0)->key());
+                    auto result = _nodeStore->overwriteNodeWith(std::move(root), *newRoot);
+                    _nodeStore->remove(std::move(newRoot));
+                    return result;
                 } else {
                     return root;
+                }
+            }
+
+            unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::Key &key) {
+                auto current = _nodeStore->load(key);
+                ASSERT(current != none, "Node not found");
+                auto inner = dynamic_pointer_move<DataInnerNode>(*current);
+                if (inner == none) {
+                    return std::move(*current);
+                } else if ((*inner)->numChildren() == 1) {
+                    auto result = _whileRootHasOnlyOneChildRemoveRootReturnChild((*inner)->getChild(0)->key());
+                    _nodeStore->remove(std::move(*inner));
+                    return result;
+                } else {
+                    return std::move(*inner);
                 }
             }
 
