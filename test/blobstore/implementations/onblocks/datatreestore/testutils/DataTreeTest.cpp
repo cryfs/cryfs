@@ -17,6 +17,7 @@ using std::initializer_list;
 using std::vector;
 using boost::none;
 using cpputils::dynamic_pointer_move;
+using cpputils::Data;
 
 constexpr uint32_t DataTreeTest::BLOCKSIZE_BYTES;
 
@@ -29,7 +30,7 @@ DataTreeTest::DataTreeTest()
 }
 
 unique_ref<DataLeafNode> DataTreeTest::CreateLeaf() {
-  return nodeStore->createNewLeafNode();
+  return nodeStore->createNewLeafNode(Data(nodeStore->layout().maxBytesPerLeaf()));
 }
 
 unique_ref<DataInnerNode> DataTreeTest::CreateInner(initializer_list<unique_ref<DataNode>> children) {
@@ -44,10 +45,13 @@ unique_ref<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataN
 
 unique_ref<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> children) {
   ASSERT(children.size() >= 1, "An inner node must have at least one child");
-  auto node = nodeStore->createNewInnerNode(**children.begin());
-  for(auto child = children.begin()+1; child != children.end(); ++child) {
-    node->addChild(**child);
+  vector<Key> childrenKeys;
+  childrenKeys.reserve(children.size());
+  for (const DataNode *child : children) {
+    ASSERT(child->depth() == (*children.begin())->depth(), "Children with different depth");
+    childrenKeys.push_back(child->key());
   }
+  auto node = nodeStore->createNewInnerNode((*children.begin())->depth()+1, childrenKeys);
   return node;
 }
 

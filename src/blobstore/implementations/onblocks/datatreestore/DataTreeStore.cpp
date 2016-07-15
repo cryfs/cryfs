@@ -4,6 +4,7 @@
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Data;
 using boost::optional;
 using boost::none;
 
@@ -30,7 +31,7 @@ optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::Key &key) {
 }
 
 unique_ref<DataTree> DataTreeStore::createNewTree() {
-  auto newleaf = _nodeStore->createNewLeafNode();
+  auto newleaf = _nodeStore->createNewLeafNode(Data(0));
   return make_unique_ref<DataTree>(_nodeStore.get(), std::move(newleaf));
 }
 

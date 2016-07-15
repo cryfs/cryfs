@@ -81,20 +81,29 @@ namespace blockstore {
                 return _createdBlocks;
             }
 
-            const std::vector<Key> loadedBlocks() const {
+            const std::vector<Key> &loadedBlocks() const {
                 return _loadedBlocks;
             }
 
-            const std::vector<Key> removedBlocks() const {
+            const std::vector<Key> &removedBlocks() const {
                 return _removedBlocks;
             }
 
-            const std::vector<Key> resizedBlocks() const {
+            const std::vector<Key> &resizedBlocks() const {
                 return _resizedBlocks;
             }
 
-            const std::vector<Key> writtenBlocks() const {
+            const std::vector<Key> &writtenBlocks() const {
                 return _writtenBlocks;
+            }
+
+            std::vector<Key> distinctWrittenBlocks() const {
+                std::vector<Key> result(_writtenBlocks);
+                std::sort(result.begin(), result.end(), [](const Key &lhs, const Key &rhs) {
+                    return std::memcmp(lhs.data(), rhs.data(), lhs.BINARY_LENGTH) < 0;
+                });
+                result.erase(std::unique(result.begin(), result.end() ), result.end());
+                return result;
             }
 
         private:

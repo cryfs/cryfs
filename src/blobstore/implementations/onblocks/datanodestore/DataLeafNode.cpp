@@ -5,6 +5,7 @@
 using blockstore::Block;
 using cpputils::Data;
 using blockstore::Key;
+using blockstore::BlockStore;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
@@ -24,13 +25,10 @@ DataLeafNode::DataLeafNode(DataNodeView view)
 DataLeafNode::~DataLeafNode() {
 }
 
-unique_ref<DataLeafNode> DataLeafNode::InitializeNewNode(unique_ref<Block> block) {
-  DataNodeView node(std::move(block));
-  node.setFormatVersion(DataNode::FORMAT_VERSION_HEADER);
-  node.setDepth(0);
-  node.setSize(0);
-  //fillDataWithZeroes(); not needed, because a newly created block will be zeroed out. DataLeafNodeTest.SpaceIsZeroFilledWhenGrowing ensures this.
-  return make_unique_ref<DataLeafNode>(std::move(node));
+unique_ref<DataLeafNode> DataLeafNode::CreateNewNode(BlockStore *blockStore, const DataNodeLayout &layout, Data data) {
+  ASSERT(data.size() <= layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
+  uint32_t size = data.size();
+  return make_unique_ref<DataLeafNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, std::move(data)));
 }
 
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {

@@ -3,10 +3,12 @@
 #include <cpp-utils/assert/assert.h>
 
 using blockstore::Block;
+using blockstore::BlockStore;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using blockstore::Key;
+using std::vector;
 
 namespace blobstore {
 namespace onblocks {
@@ -23,14 +25,27 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNode &first_child) {
-  DataNodeView node(std::move(block));
-  node.setFormatVersion(DataNode::FORMAT_VERSION_HEADER);
-  node.setDepth(first_child.depth() + 1);
-  node.setSize(1);
-  auto result = make_unique_ref<DataInnerNode>(std::move(node));
-  result->ChildrenBegin()->setKey(first_child.key());
-  return result;
+unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNodeLayout &layout, uint8_t depth, const vector<Key> &children) {
+  ASSERT(children.size() >= 1, "An inner node must have at least one child");
+  Data data = _serializeChildren(children);
+
+  return make_unique_ref<DataInnerNode>(DataNodeView::initialize(std::move(block), layout, DataNode::FORMAT_VERSION_HEADER, depth, children.size(), std::move(data)));
+}
+
+unique_ref<DataInnerNode> DataInnerNode::CreateNewNode(BlockStore *blockStore, const DataNodeLayout &layout, uint8_t depth, const vector<Key> &children) {
+  ASSERT(children.size() >= 1, "An inner node must have at least one child");
+  Data data = _serializeChildren(children);
+
+  return make_unique_ref<DataInnerNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, depth, children.size(), std::move(data)));
+}
+
+Data DataInnerNode::_serializeChildren(const vector<Key> &children) {
+  Data data(sizeof(ChildEntry) * children.size());
+  uint32_t i = 0;
+  for (const Key &child : children) {
+    reinterpret_cast<ChildEntry*>(data.data())[i++].setKey(child);
+  }
+  return data;
 }
 
 uint32_t DataInnerNode::numChildren() const {

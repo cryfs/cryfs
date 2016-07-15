@@ -176,7 +176,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
 
   _traverseLeaves(newNumLeaves - 1, newNumLeaves, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
   _numLeavesCache = newNumLeaves;
-  ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
+  ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(_numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }
 
 uint64_t DataTree::maxBytesPerLeaf() const {

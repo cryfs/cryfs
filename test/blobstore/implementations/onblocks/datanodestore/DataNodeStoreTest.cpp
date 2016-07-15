@@ -37,19 +37,19 @@ constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
 TEST_F(DataNodeStoreTest, CreateLeafNodeCreatesLeafNode) {
-  auto node = nodeStore->createNewLeafNode();
+  auto node = nodeStore->createNewLeafNode(Data(0));
   EXPECT_IS_PTR_TYPE(DataLeafNode, node.get());
 }
 
 TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
 
-  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto node = nodeStore->createNewInnerNode(1, {leaf->key()});
   EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
 }
 
 TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
-  Key key = nodeStore->createNewLeafNode()->key();
+  Key key = nodeStore->createNewLeafNode(Data(0))->key();
 
   auto loaded_node = nodeStore->load(key).value();
 
@@ -57,8 +57,8 @@ TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
 }
 
 TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
-  auto leaf = nodeStore->createNewLeafNode();
-  Key key = nodeStore->createNewInnerNode(*leaf)->key();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  Key key = nodeStore->createNewInnerNode(1, {leaf->key()})->key();
 
   auto loaded_node = nodeStore->load(key).value();
 
@@ -66,9 +66,9 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
 }
 
 TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
-  auto leaf = nodeStore->createNewLeafNode();
-  auto inner = nodeStore->createNewInnerNode(*leaf);
-  Key key = nodeStore->createNewInnerNode(*inner)->key();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  auto inner = nodeStore->createNewInnerNode(1, {leaf->key()});
+  Key key = nodeStore->createNewInnerNode(2, {inner->key()})->key();
 
   auto loaded_node = nodeStore->load(key).value();
 
@@ -89,19 +89,19 @@ TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
 }
 
 TEST_F(DataNodeStoreTest, CreatedInnerNodeIsInitialized) {
-  auto leaf = nodeStore->createNewLeafNode();
-  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  auto node = nodeStore->createNewInnerNode(1, {leaf->key()});
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
 }
 
 TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
 TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {
-  auto nodekey = nodeStore->createNewLeafNode()->key();
+  auto nodekey = nodeStore->createNewLeafNode(Data(0))->key();
   auto node = nodeStore->load(nodekey);
   EXPECT_NE(none, node);
   nodeStore->remove(std::move(*node));
@@ -113,38 +113,38 @@ TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingOneLeafNode) {
-  nodeStore->createNewLeafNode();
+  nodeStore->createNewLeafNode(Data(0));
   EXPECT_EQ(1u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingTheLastNode) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
   nodeStore->remove(std::move(leaf));
   EXPECT_EQ(0u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingTwoNodes) {
-  auto leaf = nodeStore->createNewLeafNode();
-  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  auto node = nodeStore->createNewInnerNode(1, {leaf->key()});
   EXPECT_EQ(2u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingANode) {
-  auto leaf = nodeStore->createNewLeafNode();
-  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  auto node = nodeStore->createNewInnerNode(1, {leaf->key()});
   nodeStore->remove(std::move(node));
   EXPECT_EQ(1u, nodeStore->numNodes());
 }
 
 TEST_F(DataNodeStoreTest, PhysicalBlockSize_Leaf) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto block = blockStore->load(leaf->key()).value();
   EXPECT_EQ(BLOCKSIZE_BYTES, block->size());
 }
 
 TEST_F(DataNodeStoreTest, PhysicalBlockSize_Inner) {
-  auto leaf = nodeStore->createNewLeafNode();
-  auto node = nodeStore->createNewInnerNode(*leaf);
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
+  auto node = nodeStore->createNewInnerNode(1, {leaf->key()});
   auto block = blockStore->load(node->key()).value();
   EXPECT_EQ(BLOCKSIZE_BYTES, block->size());
 }

@@ -57,7 +57,7 @@ namespace blobstore {
 
             unique_ref<DataInnerNode> LeafTraverser::_increaseTreeDepth(unique_ref<DataNode> root) {
                 auto copyOfOldRoot = _nodeStore->createNewNodeAsCopyFrom(*root);
-                return DataNode::convertToNewInnerNode(std::move(root), *copyOfOldRoot);
+                return DataNode::convertToNewInnerNode(std::move(root), _nodeStore->layout(), *copyOfOldRoot);
             }
 
             void LeafTraverser::_traverseExistingSubtree(DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf, function<void (uint32_t index, DataLeafNode* leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
@@ -68,7 +68,7 @@ namespace blobstore {
                 DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
                 if (leaf != nullptr) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-                    if (growLastLeaf) {
+                    if (growLastLeaf && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
                         leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
                     }
                     if (beginIndex == 0 && endIndex == 1) {
@@ -141,12 +141,7 @@ namespace blobstore {
                 if (0 == depth) {
                     ASSERT(beginIndex <= 1 && endIndex == 1, "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf).");
                     auto leafCreator = (beginIndex == 0) ? onCreateLeaf : _createMaxSizeLeaf();
-                    auto data = leafCreator(leafOffset);
-                    // TODO Performance: Directly create leaf node with data.
-                    auto node = _nodeStore->createNewLeafNode();
-                    node->resize(data.size());
-                    node->write(data.data(), 0, data.size());
-                    return node;
+                    return _nodeStore->createNewLeafNode(leafCreator(leafOffset));
                 }
 
                 uint8_t minNeededDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
@@ -155,7 +150,7 @@ namespace blobstore {
                 uint32_t beginChild = beginIndex/leavesPerChild;
                 uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
 
-                vector<unique_ref<DataNode>> children;
+                vector<blockstore::Key> children;
                 children.reserve(endChild);
                 // TODO Remove redundancy of following two for loops by using min/max for calculating the parameters of the recursive call.
                 // Create gap children (i.e. children before the traversal but after the current size)
@@ -164,7 +159,8 @@ namespace blobstore {
                     auto child = _createNewSubtree(leavesPerChild, leavesPerChild, leafOffset + childOffset, depth - 1,
                                                    [] (uint32_t /*index*/)->Data {ASSERT(false, "We're only creating gap leaves here, not traversing any.");},
                                                    [] (DataInnerNode* /*node*/) {});
-                    children.push_back(std::move(child));
+                    ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
+                    children.push_back(child->key());
                 }
                 // Create new children that are traversed
                 for(uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
@@ -172,15 +168,13 @@ namespace blobstore {
                     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, depth - 1, onCreateLeaf, onBacktrackFromSubtree);
-                    children.push_back(std::move(child));
+                    ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
+                    children.push_back(child->key());
                 }
 
                 ASSERT(children.size() > 0, "No children created");
-                //TODO Performance: Directly create inner node with all children
-                auto newNode = _nodeStore->createNewInnerNode(*children[0]);
-                for (auto childIter = children.begin()+1; childIter != children.end(); ++childIter) {
-                    newNode->addChild(**childIter);
-                }
+                auto newNode = _nodeStore->createNewInnerNode(depth, children);
+
                 // This is only a backtrack, if we actually created a leaf here.
                 if (endIndex > beginIndex) {
                     onBacktrackFromSubtree(newNode.get());

@@ -24,6 +24,7 @@ using namespace blobstore::onblocks::datanodestore;
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using std::vector;
 
 class DataInnerNodeTest: public Test {
 public:
@@ -34,8 +35,8 @@ public:
     blockStore(_blockStore.get()),
     nodeStore(make_unique_ref<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
     ZEROES(nodeStore->layout().maxBytesPerLeaf()),
-    leaf(nodeStore->createNewLeafNode()),
-    node(nodeStore->createNewInnerNode(*leaf)) {
+    leaf(nodeStore->createNewLeafNode(Data(0))),
+    node(nodeStore->createNewInnerNode(1, {leaf->key()})) {
 
     ZEROES.FillWithZeroes();
   }
@@ -46,12 +47,12 @@ public:
   }
 
   Key CreateNewInnerNodeReturnKey(const DataNode &firstChild) {
-    return nodeStore->createNewInnerNode(firstChild)->key();
+    return nodeStore->createNewInnerNode(firstChild.depth()+1, {firstChild.key()})->key();
   }
 
   unique_ref<DataInnerNode> CreateNewInnerNode() {
-    auto new_leaf = nodeStore->createNewLeafNode();
-    return nodeStore->createNewInnerNode(*new_leaf);
+    auto new_leaf = nodeStore->createNewLeafNode(Data(0));
+    return nodeStore->createNewInnerNode(1, {new_leaf->key()});
   }
 
   unique_ref<DataInnerNode> CreateAndLoadNewInnerNode(const DataNode &firstChild) {
@@ -59,23 +60,21 @@ public:
     return LoadInnerNode(key);
   }
 
-  unique_ref<DataInnerNode> CreateNewInnerNode(const DataNode &firstChild, const DataNode &secondChild) {
-    auto node = nodeStore->createNewInnerNode(firstChild);
-    node->addChild(secondChild);
-    return node;
+  unique_ref<DataInnerNode> CreateNewInnerNode(uint8_t depth, const vector<blockstore::Key> &children) {
+    return nodeStore->createNewInnerNode(depth, children);
   }
 
-  Key CreateNewInnerNodeReturnKey(const DataNode &firstChild, const DataNode &secondChild) {
-    return CreateNewInnerNode(firstChild, secondChild)->key();
+  Key CreateNewInnerNodeReturnKey(uint8_t depth, const vector<blockstore::Key> &children) {
+    return CreateNewInnerNode(depth, children)->key();
   }
 
-  unique_ref<DataInnerNode> CreateAndLoadNewInnerNode(const DataNode &firstChild, const DataNode &secondChild) {
-    auto key = CreateNewInnerNodeReturnKey(firstChild, secondChild);
+  unique_ref<DataInnerNode> CreateAndLoadNewInnerNode(uint8_t depth, const vector<blockstore::Key> &children) {
+    auto key = CreateNewInnerNodeReturnKey(depth, children);
     return LoadInnerNode(key);
   }
 
   Key AddALeafTo(DataInnerNode *node) {
-    auto leaf2 = nodeStore->createNewLeafNode();
+    auto leaf2 = nodeStore->createNewLeafNode(Data(0));
     node->addChild(*leaf2);
     return leaf2->key();
   }
@@ -84,8 +83,8 @@ public:
     auto node = CreateNewInnerNode();
     AddALeafTo(node.get());
     AddALeafTo(node.get());
-    auto child = nodeStore->createNewLeafNode();
-    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), *child);
+    auto child = nodeStore->createNewLeafNode(Data(0));
+    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), nodeStore->layout(), *child);
     return converted->key();
   }
 
@@ -95,7 +94,7 @@ public:
   }
 
   Key InitializeInnerNodeAddLeafReturnKey() {
-    auto node = DataInnerNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)), *leaf);
+    auto node = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->key()});
     AddALeafTo(node.get());
     return node->key();
   }
@@ -114,32 +113,23 @@ private:
 
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
-TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterInitialization) {
-  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  Key key = block->key();
-  auto node = DataInnerNode::InitializeNewNode(std::move(block), *leaf);
-  EXPECT_EQ(key, node->key());
-}
-
 TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
-  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  Key key = block->key();
-  DataInnerNode::InitializeNewNode(std::move(block), *leaf);
+  Key key = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->key()})->key();
 
   auto loaded = nodeStore->load(key).value();
   EXPECT_EQ(key, loaded->key());
 }
 
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
-  auto node = DataInnerNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)), *leaf);
+  auto node = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->key()});
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
 }
 
 TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
-  auto key = InitializeInnerNodeAddLeafReturnKey();
-  auto node = DataInnerNode::InitializeNewNode(blockStore->load(key).value(), *leaf);
+  auto key = DataLeafNode::CreateNewNode(blockStore, nodeStore->layout(), Data(0))->key();
+  auto node = DataInnerNode::InitializeNewNode(blockStore->load(key).value(), nodeStore->layout(), 1, {leaf->key()});
 
   EXPECT_EQ(1u, node->numChildren());
   EXPECT_EQ(leaf->key(), node->getChild(0)->key());
@@ -161,8 +151,8 @@ TEST_F(DataInnerNodeTest, AddingASecondLeaf) {
 }
 
 TEST_F(DataInnerNodeTest, AddingASecondLeafAndReload) {
-  auto leaf2 = nodeStore->createNewLeafNode();
-  auto loaded = CreateAndLoadNewInnerNode(*leaf, *leaf2);
+  auto leaf2 = nodeStore->createNewLeafNode(Data(0));
+  auto loaded = CreateAndLoadNewInnerNode(1, {leaf->key(), leaf2->key()});
 
   EXPECT_EQ(2u, loaded->numChildren());
   EXPECT_EQ(leaf->key(), loaded->getChild(0)->key());
@@ -171,7 +161,7 @@ TEST_F(DataInnerNodeTest, AddingASecondLeafAndReload) {
 
 TEST_F(DataInnerNodeTest, BuildingAThreeLevelTree) {
   auto node2 = CreateNewInnerNode();
-  auto parent = CreateNewInnerNode(*node, *node2);
+  auto parent = CreateNewInnerNode(node->depth()+1, {node->key(), node2->key()});
 
   EXPECT_EQ(2u, parent->numChildren());
   EXPECT_EQ(node->key(), parent->getChild(0)->key());
@@ -180,7 +170,7 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTree) {
 
 TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   auto node2 = CreateNewInnerNode();
-  auto parent = CreateAndLoadNewInnerNode(*node, *node2);
+  auto parent = CreateAndLoadNewInnerNode(node->depth()+1, {node->key(), node2->key()});
 
   EXPECT_EQ(2u, parent->numChildren());
   EXPECT_EQ(node->key(), parent->getChild(0)->key());
@@ -188,9 +178,9 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
 }
 
 TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
-  auto child = nodeStore->createNewLeafNode();
+  auto child = nodeStore->createNewLeafNode(Data(0));
   Key node_key = node->key();
-  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), *child);
+  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), nodeStore->layout(), *child);
 
   EXPECT_EQ(1u, converted->numChildren());
   EXPECT_EQ(child->key(), converted->getChild(0)->key());

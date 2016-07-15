@@ -16,6 +16,7 @@ using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blockstore::testfake::FakeBlockStore;
 using blockstore::Key;
+using cpputils::Data;
 using namespace blobstore::onblocks::datatreestore::algorithms;
 
 class GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest: public DataTreeTest {
@@ -55,7 +56,7 @@ public:
 };
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, Leaf) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }

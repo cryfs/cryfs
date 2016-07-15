@@ -16,6 +16,7 @@ using cpputils::dynamic_pointer_move;
 using std::runtime_error;
 using boost::optional;
 using boost::none;
+using std::vector;
 
 namespace blobstore {
 namespace onblocks {
@@ -41,17 +42,13 @@ unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
   }
 }
 
-unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
-  ASSERT(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
-  //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
-  return DataInnerNode::InitializeNewNode(std::move(block), first_child);
+unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(uint8_t depth, const vector<Key> &children) {
+  ASSERT(children.size() >= 1, "Inner node must have at least one child");
+  return DataInnerNode::CreateNewNode(_blockstore.get(), _layout, depth, children);
 }
 
-unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode() {
-  //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
-  return DataLeafNode::InitializeNewNode(std::move(block));
+unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode(Data data) {
+  return DataLeafNode::CreateNewNode(_blockstore.get(), _layout, std::move(data));
 }
 
 optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {

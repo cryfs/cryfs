@@ -65,6 +65,22 @@ public:
   }
   ~DataNodeView() {}
 
+  static DataNodeView create(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
+    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
+    auto block = blockStore->create(std::move(serialized));
+    return DataNodeView(std::move(block));
+  }
+
+  static DataNodeView initialize(cpputils::unique_ref<blockstore::Block> block, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    ASSERT(data.size() <= DataNodeLayout(block->size()).datasizeBytes(), "Data is too large for node");
+    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    ASSERT(serialized.size() == block->size(), "Block has wrong size");
+    block->write(serialized.data(), 0, serialized.size());
+    return DataNodeView(std::move(block));
+  }
+
   DataNodeView(DataNodeView &&rhs) = default;
 
   uint16_t FormatVersion() const {
@@ -134,6 +150,16 @@ private:
   template<int offset, class Type>
   const Type *GetOffset() const {
     return (Type*)(((const int8_t*)_block->data())+offset);
+  }
+
+  static cpputils::Data _serialize(const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    cpputils::Data result(layout.blocksizeBytes());
+    *((uint16_t*)result.dataOffset(layout.FORMAT_VERSION_OFFSET_BYTES)) = formatVersion;
+    *((uint8_t*)result.dataOffset(layout.DEPTH_OFFSET_BYTES)) = depth;
+    *((uint32_t*)result.dataOffset(layout.SIZE_OFFSET_BYTES)) = size;
+    std::memcpy(result.dataOffset(layout.HEADERSIZE_BYTES), data.data(), data.size());
+    std::memset(result.dataOffset(layout.HEADERSIZE_BYTES+data.size()), 0, layout.datasizeBytes()-data.size());
+    return result;
   }
 
   cpputils::unique_ref<blockstore::Block> _block;

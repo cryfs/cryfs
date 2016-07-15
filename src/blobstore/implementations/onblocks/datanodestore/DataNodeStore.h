@@ -30,8 +30,8 @@ public:
 
   boost::optional<cpputils::unique_ref<DataNode>> load(const blockstore::Key &key);
 
-  cpputils::unique_ref<DataLeafNode> createNewLeafNode();
-  cpputils::unique_ref<DataInnerNode> createNewInnerNode(const DataNode &first_child);
+  cpputils::unique_ref<DataLeafNode> createNewLeafNode(cpputils::Data data);
+  cpputils::unique_ref<DataInnerNode> createNewInnerNode(uint8_t depth, const std::vector<blockstore::Key> &children);
 
   cpputils::unique_ref<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
 

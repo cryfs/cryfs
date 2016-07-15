@@ -11,7 +11,8 @@ namespace datanodestore {
 
 class DataInnerNode final: public DataNode {
 public:
-  static cpputils::unique_ref<DataInnerNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block, const DataNode &first_child_key);
+  static cpputils::unique_ref<DataInnerNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block, const DataNodeLayout &layout, uint8_t depth, const std::vector<blockstore::Key> &children);
+  static cpputils::unique_ref<DataInnerNode> CreateNewNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint8_t depth, const std::vector<blockstore::Key> &children);
 
   DataInnerNode(DataNodeView block);
   ~DataInnerNode();
@@ -38,6 +39,8 @@ private:
   ChildEntry *ChildrenEnd();
   const ChildEntry *ChildrenBegin() const;
   const ChildEntry *ChildrenEnd() const;
+
+  static cpputils::Data _serializeChildren(const std::vector<blockstore::Key> &children);
 
   DISALLOW_COPY_AND_ASSIGN(DataInnerNode);
 };
