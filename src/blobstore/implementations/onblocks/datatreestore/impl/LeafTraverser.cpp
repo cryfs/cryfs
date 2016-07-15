@@ -24,11 +24,11 @@ namespace blobstore {
                 : _nodeStore(nodeStore) {
             }
 
-            unique_ref<DataNode> LeafTraverser::traverseAndReturnRoot(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, function<void (uint32_t index, DataLeafNode* leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
+            unique_ref<DataNode> LeafTraverser::traverseAndReturnRoot(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 return _traverseAndReturnRoot(std::move(root), beginIndex, endIndex, true, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
             }
 
-            unique_ref<DataNode> LeafTraverser::_traverseAndReturnRoot(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal, function<void (uint32_t index, DataLeafNode* leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
+            unique_ref<DataNode> LeafTraverser::_traverseAndReturnRoot(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal, function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
                 //TODO Test cases with numLeaves < / >= beginIndex, ideally test all configurations:
@@ -39,7 +39,23 @@ namespace blobstore {
                 uint32_t maxLeavesForDepth = _maxLeavesForTreeDepth(root->depth());
                 bool increaseTreeDepth = endIndex > maxLeavesForDepth;
 
-                _traverseExistingSubtree(root.get(), std::min(beginIndex, maxLeavesForDepth), std::min(endIndex, maxLeavesForDepth), 0, isLeftBorderOfTraversal, increaseTreeDepth, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                if (root->depth() == 0) {
+                    DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
+                    ASSERT(leaf != nullptr, "Depth 0 has to be leaf node");
+
+                    if (increaseTreeDepth && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
+                        leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
+                    }
+                    if (beginIndex == 0 && endIndex == 1) {
+                        onExistingLeaf(0, LeafHandle(_nodeStore, leaf));
+                    }
+                } else {
+                    DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
+                    ASSERT(inner != nullptr, "Depth != 0 has to be leaf node");
+                    _traverseExistingSubtree(inner, std::min(beginIndex, maxLeavesForDepth),
+                                             std::min(endIndex, maxLeavesForDepth), 0, isLeftBorderOfTraversal,
+                                             increaseTreeDepth, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                }
 
                 // If the traversal goes too far right for a tree this depth, increase tree depth by one and continue traversal.
                 // This is recursive, i.e. will be repeated if the tree is still not deep enough.
@@ -61,30 +77,43 @@ namespace blobstore {
                 return DataNode::convertToNewInnerNode(std::move(root), _nodeStore->layout(), *copyOfOldRoot);
             }
 
-            void LeafTraverser::_traverseExistingSubtree(DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf, function<void (uint32_t index, DataLeafNode* leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
+            void LeafTraverser::_traverseExistingSubtree(const blockstore::Key &key, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf, function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
+                if (depth == 0) {
+                    ASSERT(beginIndex <= 1 && endIndex <= 1,
+                           "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
+                    LeafHandle leafHandle(_nodeStore, key);
+                    if (growLastLeaf) {
+                        if (leafHandle.node()->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
+                            leafHandle.node()->resize(_nodeStore->layout().maxBytesPerLeaf());
+                        }
+                    }
+                    if (beginIndex == 0 && endIndex == 1) {
+                        onExistingLeaf(leafOffset, std::move(leafHandle));
+                    }
+                } else {
+                    auto node = _nodeStore->load(key);
+                    if (node == none) {
+                        throw std::runtime_error("Couldn't find child node " + key.ToString());
+                    }
+
+                    auto inner = dynamic_pointer_move<DataInnerNode>(*node);
+                    ASSERT(inner != none, "Has to be either leaf or inner node");
+                    ASSERT((*inner)->depth() == depth, "Wrong depth given");
+                    _traverseExistingSubtree(inner->get(), beginIndex, endIndex, leafOffset, isLeftBorderOfTraversal,
+                                             growLastLeaf, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                }
+            }
+
+            void LeafTraverser::_traverseExistingSubtree(DataInnerNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf, function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
                 //TODO Call callbacks for different leaves in parallel.
 
-                DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root);
-                if (leaf != nullptr) {
-                    ASSERT(beginIndex <= 1 && endIndex <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-                    if (growLastLeaf && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
-                        leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
-                    }
-                    if (beginIndex == 0 && endIndex == 1) {
-                        onExistingLeaf(leafOffset, leaf);
-                    }
-                    return;
-                }
-
-                DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root);
-
-                uint32_t leavesPerChild = _maxLeavesForTreeDepth(inner->depth()-1);
+                uint32_t leavesPerChild = _maxLeavesForTreeDepth(root->depth()-1);
                 uint32_t beginChild = beginIndex/leavesPerChild;
                 uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
                 ASSERT(endChild <= _nodeStore->layout().maxChildrenPerInnerNode(), "Traversal region would need increasing the tree depth. This should have happened before calling this function.");
-                uint32_t numChildren = inner->numChildren();
+                uint32_t numChildren = root->numChildren();
                 ASSERT(!growLastLeaf || endChild >= numChildren, "Can only grow last leaf if it exists");
                 bool shouldGrowLastExistingLeaf = growLastLeaf || endChild > numChildren;
 
@@ -92,32 +121,24 @@ namespace blobstore {
                 // we still have to descend to the last old child to fill it with leaves and grow the last old leaf.
                 if (isLeftBorderOfTraversal && beginChild >= numChildren) {
                     ASSERT(numChildren > 0, "Node doesn't have children.");
-                    auto childKey = inner->getChild(numChildren-1)->key();
-                    auto childNode = _nodeStore->load(childKey);
-                    if (childNode == none) {
-                        throw std::runtime_error("Couldn't find child node "+childKey.ToString());
-                    }
+                    auto childKey = root->getChild(numChildren-1)->key();
                     uint32_t childOffset = (numChildren-1) * leavesPerChild;
-                    _traverseExistingSubtree(childNode->get(), leavesPerChild, leavesPerChild, childOffset, true, true,
-                                             [] (uint32_t /*index*/, DataLeafNode* /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
+                    _traverseExistingSubtree(childKey, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, true,
+                                             [] (uint32_t /*index*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (DataInnerNode* /*node*/) {ASSERT(false, "We don't actually traverse any leaves.");});
                 }
 
                 // Traverse existing children
                 for (uint32_t childIndex = beginChild; childIndex < std::min(endChild, numChildren); ++childIndex) {
-                    auto childKey = inner->getChild(childIndex)->key();
-                    auto childNode = _nodeStore->load(childKey);
-                    if (childNode == none) {
-                        throw std::runtime_error("Couldn't find child node "+childKey.ToString());
-                    }
+                    auto childKey = root->getChild(childIndex)->key();
                     uint32_t childOffset = childIndex * leavesPerChild;
                     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     bool isFirstChild = (childIndex == beginChild);
                     bool isLastChild = (childIndex == numChildren - 1);
                     ASSERT(localEndIndex <= leavesPerChild, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
-                    _traverseExistingSubtree(childNode->get(), localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
+                    _traverseExistingSubtree(childKey, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
                                              shouldGrowLastExistingLeaf && isLastChild, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
                 }
 
@@ -127,13 +148,13 @@ namespace blobstore {
                     uint32_t localBeginIndex = std::min(leavesPerChild, utils::maxZeroSubtraction(beginIndex, childOffset));
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     auto leafCreator = (childIndex >= beginChild) ? onCreateLeaf : _createMaxSizeLeaf();
-                    auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, inner->depth() - 1, leafCreator, onBacktrackFromSubtree);
-                    inner->addChild(*child);
+                    auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, root->depth() - 1, leafCreator, onBacktrackFromSubtree);
+                    root->addChild(*child);
                 }
 
                 // This is only a backtrack, if we actually visited a leaf here.
                 if (endIndex > beginIndex) {
-                    onBacktrackFromSubtree(inner);
+                    onBacktrackFromSubtree(root);
                 }
             }
 

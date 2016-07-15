@@ -6,6 +6,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/data/Data.h>
 #include <blockstore/utils/Key.h>
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
 
 namespace blobstore {
     namespace onblocks {
@@ -27,21 +28,25 @@ namespace blobstore {
                 LeafTraverser(datanodestore::DataNodeStore *nodeStore);
 
                 cpputils::unique_ref<datanodestore::DataNode> traverseAndReturnRoot(
-                              cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex,
-                              std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
-                              std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
-                              std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
+                      cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex,
+                      std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
+                      std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                      std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
 
                 cpputils::unique_ref<datanodestore::DataNode> _traverseAndReturnRoot(
-                        cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,
-                        std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
-                        std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
-                        std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
-                void _traverseExistingSubtree(datanodestore::DataNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf,
-                                              std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf,
+                      cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,
+                      std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
+                      std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                      std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
+                void _traverseExistingSubtree(datanodestore::DataInnerNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf,
+                      std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
+                      std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                      std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
+                void _traverseExistingSubtree(const blockstore::Key &key, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool growLastLeaf,
+                                              std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
                                               std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                                               std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
                 cpputils::unique_ref<datanodestore::DataInnerNode> _increaseTreeDepth(cpputils::unique_ref<datanodestore::DataNode> root);

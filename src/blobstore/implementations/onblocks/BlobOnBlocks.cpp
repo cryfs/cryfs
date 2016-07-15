@@ -5,6 +5,7 @@
 #include "utils/Math.h"
 #include <cmath>
 #include <cpp-utils/assert/assert.h>
+#include "datatreestore/LeafHandle.h"
 
 using std::function;
 using std::unique_lock;
@@ -14,6 +15,7 @@ using cpputils::Data;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::Key;
+using blobstore::onblocks::datatreestore::LeafHandle;
 
 namespace blobstore {
 namespace onblocks {
@@ -46,7 +48,8 @@ void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, funct
   uint32_t firstLeaf = beginByte / maxBytesPerLeaf;
   uint32_t endLeaf = utils::ceilDivision(endByte, maxBytesPerLeaf);
   bool blobIsGrowingFromThisTraversal = false;
-  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, maxBytesPerLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex, DataLeafNode *leaf) {
+  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, maxBytesPerLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex, LeafHandle leafHandle) {
+      auto leaf = leafHandle.node();
       uint64_t indexOfFirstLeafByte = leafIndex * maxBytesPerLeaf;
       ASSERT(endByte > indexOfFirstLeafByte, "Traversal went too far right");
       ASSERT(leafIndex == endLeaf-1 || leaf->numBytes() == maxBytesPerLeaf, "All leafes but the rightmost one have to have maximal size");

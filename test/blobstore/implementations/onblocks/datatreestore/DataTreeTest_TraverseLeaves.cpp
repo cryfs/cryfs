@@ -7,6 +7,7 @@ using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datatreestore::DataTree;
+using blobstore::onblocks::datatreestore::LeafHandle;
 using blockstore::Key;
 
 using cpputils::unique_ref;
@@ -63,8 +64,8 @@ public:
   void TraverseLeaves(DataNode *root, uint32_t beginIndex, uint32_t endIndex) {
     root->flush();
     auto tree = treeStore.load(root->key()).value();
-    tree->traverseLeaves(beginIndex, endIndex, [this] (uint32_t nodeIndex, DataLeafNode *leaf) {
-      traversor.calledExistingLeaf(leaf, nodeIndex);
+    tree->traverseLeaves(beginIndex, endIndex, [this] (uint32_t nodeIndex, LeafHandle leaf) {
+      traversor.calledExistingLeaf(leaf.node(), nodeIndex);
     }, [this] (uint32_t nodeIndex) -> Data {
         return traversor.calledCreateLeaf(nodeIndex)->copy();
     });
@@ -393,9 +394,9 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback) {
   auto root = CreateLeaf();
   root->flush();
   auto tree = treeStore.load(root->key()).value();
-  tree->traverseLeaves(0, 2, [this] (uint32_t leafIndex, DataLeafNode *leaf) {
+  tree->traverseLeaves(0, 2, [this] (uint32_t leafIndex, LeafHandle leaf) {
       if (leafIndex == 0) {
-        EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
+        EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf.node()->numBytes());
       } else {
         EXPECT_TRUE(false) << "only two nodes";
       }
@@ -408,8 +409,8 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel)
   auto root = CreateFullTwoLevelWithLastLeafSize(5);
   root->flush();
   auto tree = treeStore.load(root->key()).value();
-  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, DataLeafNode *leaf) {
-      EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
+  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, LeafHandle leaf) {
+      EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf.node()->numBytes());
   }, [this] (uint32_t /*nodeIndex*/) -> Data {
       return Data(1);
   });

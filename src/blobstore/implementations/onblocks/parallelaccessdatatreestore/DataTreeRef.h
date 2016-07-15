@@ -4,6 +4,7 @@
 
 #include <parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTree.h"
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
 
 namespace blobstore {
 namespace onblocks {
@@ -21,7 +22,7 @@ public:
     return _baseTree->maxBytesPerLeaf();
   }
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datanodestore::DataLeafNode* leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datatreestore::LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
     return _baseTree->traverseLeaves(beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
   }
 

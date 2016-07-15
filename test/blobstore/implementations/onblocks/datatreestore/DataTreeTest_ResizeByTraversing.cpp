@@ -19,6 +19,7 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
+using blobstore::onblocks::datatreestore::LeafHandle;
 using blobstore::onblocks::utils::ceilDivision;
 using blockstore::Key;
 using cpputils::Data;
@@ -110,7 +111,7 @@ public:
 
   void GrowTree(DataTree *tree) {
     uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, DataLeafNode*){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
+    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, LeafHandle){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
     tree->flush();
   }
 
