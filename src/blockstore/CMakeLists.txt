@@ -32,6 +32,8 @@ set(SOURCES
   implementations/versioncounting/KnownBlockVersions.cpp
   implementations/versioncounting/ClientIdAndBlockKey.cpp
   implementations/versioncounting/IntegrityViolationError.cpp
+  implementations/mock/MockBlockStore.cpp
+  implementations/mock/MockBlock.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

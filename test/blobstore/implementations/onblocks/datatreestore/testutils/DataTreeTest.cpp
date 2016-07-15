@@ -9,7 +9,7 @@ using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datatreestore::DataTree;
-using blockstore::testfake::FakeBlockStore;
+using blockstore::mock::MockBlockStore;
 using blockstore::Key;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

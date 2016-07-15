@@ -10,7 +10,7 @@
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
 #include "blobstore/implementations/onblocks/datatreestore/DataTreeStore.h"
-#include "MockBlockStore.h"
+#include "blockstore/implementations/mock/MockBlockStore.h"
 
 class DataTreeTest: public ::testing::Test {
 public:
@@ -46,8 +46,8 @@ public:
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevelWithLastLeafSize(uint32_t size);
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinDataWithLastLeafSize(uint32_t size);
 
-  cpputils::unique_ref<MockBlockStore> _blockStore;
-  MockBlockStore *blockStore;
+  cpputils::unique_ref<blockstore::mock::MockBlockStore> _blockStore;
+  blockstore::mock::MockBlockStore *blockStore;
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
   blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;
   blobstore::onblocks::datatreestore::DataTreeStore treeStore;

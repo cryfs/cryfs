@@ -28,8 +28,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByTree)
 
     treeStore.remove(std::move(tree));
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size()); // First loading is from loading the tree, second one from removing it (i.e. loading the root)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // First loading is from loading the tree, second one from removing it (i.e. loading the root)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByKey) {
@@ -38,8 +38,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByKey) 
 
     treeStore.remove(key);
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size());
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByTree) {
@@ -49,8 +49,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByTre
 
     treeStore.remove(std::move(tree));
 
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks.size());
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByKey) {
@@ -59,8 +59,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByKey
 
     treeStore.remove(key);
 
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks.size());
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_All) {
@@ -70,8 +70,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_All) {
 
     Traverse(tree.get(), 0, maxChildrenPerInnerNode);
 
-    EXPECT_EQ(maxChildrenPerInnerNode, blockStore->loadedBlocks.size()); // Loads all leaves (not the root, because it is already loaded in the tree)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(maxChildrenPerInnerNode, blockStore->loadedBlocks().size()); // Loads all leaves (not the root, because it is already loaded in the tree)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_Some) {
@@ -81,8 +81,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_Some) {
 
     Traverse(tree.get(), 3, 5);
 
-    EXPECT_EQ(2u, blockStore->loadedBlocks.size()); // Loads both leaves (not the root, because it is already loaded in the tree)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(2u, blockStore->loadedBlocks().size()); // Loads both leaves (not the root, because it is already loaded in the tree)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_All) {
@@ -92,8 +92,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_All) {
 
     Traverse(tree.get(), 0, maxChildrenPerInnerNode * maxChildrenPerInnerNode);
 
-    EXPECT_EQ(maxChildrenPerInnerNode + maxChildrenPerInnerNode * maxChildrenPerInnerNode, blockStore->loadedBlocks.size()); // Loads inner nodes and all leaves once (not the root, because it is already loaded in the tree)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(maxChildrenPerInnerNode + maxChildrenPerInnerNode * maxChildrenPerInnerNode, blockStore->loadedBlocks().size()); // Loads inner nodes and all leaves once (not the root, because it is already loaded in the tree)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InOneInner) {
@@ -103,8 +103,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InOneInner) {
 
     Traverse(tree.get(), 3, 5);
 
-    EXPECT_EQ(3u, blockStore->loadedBlocks.size()); // Loads inner node and both leaves (not the root, because it is already loaded in the tree)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(3u, blockStore->loadedBlocks().size()); // Loads inner node and both leaves (not the root, because it is already loaded in the tree)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InTwoInner) {
@@ -114,8 +114,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InTwoInner) {
 
     Traverse(tree.get(), 3, 3 + maxChildrenPerInnerNode);
 
-    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->loadedBlocks.size()); // Loads inner node and both leaves (not the root, because it is already loaded in the tree)
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size()); // Loads inner node and both leaves (not the root, because it is already loaded in the tree)
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_WholeInner) {
@@ -125,8 +125,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_WholeInner) {
 
     Traverse(tree.get(), maxChildrenPerInnerNode, 2*maxChildrenPerInnerNode);
 
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks.size()); // Loads inner node and leaves (not the root, because it is already loaded in the tree)f
-    EXPECT_EQ(0u, blockStore->createdBlocks);
+    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size()); // Loads inner node and leaves (not the root, because it is already loaded in the tree)f
+    EXPECT_EQ(0u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingInside) {
@@ -136,8 +136,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingInside) {
 
     Traverse(tree.get(), 1, 4);
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size()); // Loads last old child (for growing it)
-    EXPECT_EQ(2u, blockStore->createdBlocks);
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old child (for growing it)
+    EXPECT_EQ(2u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_TwoLevel) {
@@ -147,8 +147,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_TwoL
 
     Traverse(tree.get(), 4, 5);
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size()); // Loads last old leaf for growing it
-    EXPECT_EQ(3u, blockStore->createdBlocks);
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
+    EXPECT_EQ(3u, blockStore->createdBlocks());
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_ThreeLevel) {
@@ -158,8 +158,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_Thre
 
     Traverse(tree.get(), 2*maxChildrenPerInnerNode+1, 2*maxChildrenPerInnerNode+2);
 
-    EXPECT_EQ(2u, blockStore->loadedBlocks.size()); // Loads last old leaf (and its inner node) for growing it
-    EXPECT_EQ(3u, blockStore->createdBlocks); // inner node and two leaves
+    EXPECT_EQ(2u, blockStore->loadedBlocks().size()); // Loads last old leaf (and its inner node) for growing it
+    EXPECT_EQ(3u, blockStore->createdBlocks()); // inner node and two leaves
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingAtBeginOfChild) {
@@ -169,8 +169,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingAtBeginOfChi
 
     Traverse(tree.get(), maxChildrenPerInnerNode, 3*maxChildrenPerInnerNode);
 
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks.size()); // Inner node and its leaves
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->createdBlocks); // Creates an inner node and its leaves
+    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size()); // Inner node and its leaves
+    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->createdBlocks()); // Creates an inner node and its leaves
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDepth) {
@@ -180,8 +180,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDe
 
     Traverse(tree.get(), 4, maxChildrenPerInnerNode+2);
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks); // 2x new inner node + leaves
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
+    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDepth) {
@@ -191,6 +191,6 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDe
 
     Traverse(tree.get(), maxChildrenPerInnerNode, maxChildrenPerInnerNode+2);
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks.size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks); // 2x new inner node + leaves
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
+    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
 }
