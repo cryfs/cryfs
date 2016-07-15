@@ -30,7 +30,6 @@ DataNodeStore::~DataNodeStore() {
 }
 
 unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
-  ASSERT(block->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
   DataNodeView node(std::move(block));
 
   if (node.Depth() == 0) {
@@ -56,6 +55,7 @@ optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
   if (block == none) {
     return none;
   } else {
+    ASSERT((*block)->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
     return load(std::move(*block));
   }
 }
@@ -70,14 +70,10 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
   ASSERT(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Target node has wrong layout. Is it from the same DataNodeStore?");
   ASSERT(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
   Key key = target->key();
-  {
-    auto targetBlock = target->node().releaseBlock();
-    cpputils::destruct(std::move(target)); // Call destructor
-    blockstore::utils::copyTo(targetBlock.get(), source.node().block());
-  }
-  auto loaded = load(key);
-  ASSERT(loaded != none, "Couldn't load the target node after overwriting it");
-  return std::move(*loaded);
+  auto targetBlock = target->node().releaseBlock();
+  cpputils::destruct(std::move(target)); // Call destructor
+  blockstore::utils::copyTo(targetBlock.get(), source.node().block());
+  return DataNodeStore::load(std::move(targetBlock));
 }
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
@@ -90,36 +86,36 @@ void DataNodeStore::remove(const Key &key) {
   _blockstore->remove(key);
 }
 
-
-void DataNodeStore::removeSubtree(const Key &key) {
-  auto node = load(key);
-  ASSERT(node != none, "Node for removeSubtree not found");
-
-  auto inner = dynamic_pointer_move<DataInnerNode>(*node);
-  if (inner == none) {
-    ASSERT((*node)->depth() == 0, "If it's not an inner node, it has to be a leaf.");
-    remove(std::move(*node));
-  } else {
-    _removeSubtree(std::move(*inner));
+void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
+  auto leaf = dynamic_pointer_move<DataLeafNode>(node);
+  if (leaf != none) {
+    remove(std::move(*leaf));
+    return;
   }
+
+  auto inner = dynamic_pointer_move<DataInnerNode>(node);
+  ASSERT(inner != none, "Is neither a leaf nor an inner node");
+  for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
+    removeSubtree((*inner)->depth()-1, (*inner)->getChild(i)->key());
+  }
+  remove(std::move(*inner));
 }
 
-void DataNodeStore::_removeSubtree(cpputils::unique_ref<DataInnerNode> node) {
-  if (node->depth() == 1) {
-    for (uint32_t i = 0; i < node->numChildren(); ++i) {
-      remove(node->getChild(i)->key());
-    }
+void DataNodeStore::removeSubtree(uint8_t depth, const Key &key) {
+  if (depth == 0) {
+    remove(key);
   } else {
-    ASSERT(node->depth() > 1, "This if branch is only called when our children are inner nodes.");
-    for (uint32_t i = 0; i < node->numChildren(); ++i) {
-      auto child = load(node->getChild(i)->key());
-      ASSERT(child != none, "Child not found");
-      auto inner = dynamic_pointer_move<DataInnerNode>(*child);
-      ASSERT(inner != none, "Expected inner node as child");
-      _removeSubtree(std::move(*inner));
+    auto node = load(key);
+    ASSERT(node != none, "Node for removeSubtree not found");
+
+    auto inner = dynamic_pointer_move<DataInnerNode>(*node);
+    ASSERT(inner != none, "Is not an inner node, but depth was not zero");
+    ASSERT((*inner)->depth() == depth, "Wrong depth given");
+    for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
+      removeSubtree(depth-1, (*inner)->getChild(i)->key());
     }
+    remove(std::move(*inner));
   }
-  remove(std::move(node));
 }
 
 uint64_t DataNodeStore::numNodes() const {

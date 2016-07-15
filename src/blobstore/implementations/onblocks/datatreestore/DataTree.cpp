@@ -153,7 +153,9 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   uint32_t maxChildrenPerInnerNode = _nodeStore->layout().maxChildrenPerInnerNode();
   auto onExistingLeaf = [newLastLeafSize] (uint32_t /*index*/, datanodestore::DataLeafNode* leaf) {
       // This is only called, if the new last leaf was already existing
-      leaf->resize(newLastLeafSize);
+      if (leaf->numBytes() != newLastLeafSize) {
+        leaf->resize(newLastLeafSize);
+      }
   };
   auto onCreateLeaf = [newLastLeafSize] (uint32_t /*index*/) -> Data {
       // This is only called, if the new last leaf was not existing yet
@@ -169,18 +171,21 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
       ASSERT(neededChildrenForRightBorderNode <= node->numChildren(), "Node has too few children");
       // All children to the right of the new right-border-node are removed including their subtree.
       while(node->numChildren() > neededChildrenForRightBorderNode) {
-        _nodeStore->removeSubtree(node->LastChild()->key());
+        _nodeStore->removeSubtree(node->depth()-1, node->LastChild()->key());
         node->removeLastChild();
       }
   };
 
   _traverseLeaves(newNumLeaves - 1, newNumLeaves, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
   _numLeavesCache = newNumLeaves;
-  ASSERT(newNumBytes == _numStoredBytes(), "We resized to the wrong number of bytes ("+std::to_string(_numStoredBytes())+" instead of "+std::to_string(newNumBytes)+")");
 }
 
 uint64_t DataTree::maxBytesPerLeaf() const {
   return _nodeStore->layout().maxBytesPerLeaf();
+}
+
+uint8_t DataTree::depth() const {
+  return _rootNode->depth();
 }
 
 }

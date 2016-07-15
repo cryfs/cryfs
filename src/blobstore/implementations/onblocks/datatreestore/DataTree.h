@@ -36,6 +36,8 @@ public:
   uint32_t numLeaves() const;
   uint64_t numStoredBytes() const;
 
+  uint8_t depth() const;
+
   // only used by test cases
   uint32_t _forceComputeNumLeaves() const;
 

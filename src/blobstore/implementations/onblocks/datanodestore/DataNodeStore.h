@@ -29,6 +29,7 @@ public:
   DataNodeLayout layout() const;
 
   boost::optional<cpputils::unique_ref<DataNode>> load(const blockstore::Key &key);
+  static cpputils::unique_ref<DataNode> load(cpputils::unique_ref<blockstore::Block> block);
 
   cpputils::unique_ref<DataLeafNode> createNewLeafNode(cpputils::Data data);
   cpputils::unique_ref<DataInnerNode> createNewInnerNode(uint8_t depth, const std::vector<blockstore::Key> &children);
@@ -39,7 +40,8 @@ public:
 
   void remove(cpputils::unique_ref<DataNode> node);
   void remove(const blockstore::Key &key);
-  void removeSubtree(const blockstore::Key &key);
+  void removeSubtree(uint8_t depth, const blockstore::Key &key);
+  void removeSubtree(cpputils::unique_ref<DataNode> node);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;
@@ -48,8 +50,6 @@ public:
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
 private:
-  cpputils::unique_ref<DataNode> load(cpputils::unique_ref<blockstore::Block> block);
-  void _removeSubtree(cpputils::unique_ref<DataInnerNode> node);
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;
   const DataNodeLayout _layout;

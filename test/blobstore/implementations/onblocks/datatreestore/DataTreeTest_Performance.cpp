@@ -19,6 +19,7 @@ public:
     }
 
     uint64_t maxChildrenPerInnerNode = nodeStore->layout().maxChildrenPerInnerNode();
+    uint64_t maxBytesPerLeaf = nodeStore->layout().maxBytesPerLeaf();
 };
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByTree) {
@@ -28,7 +29,7 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByTree)
 
     treeStore.remove(std::move(tree));
 
-    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // First loading is from loading the tree, second one from removing it (i.e. loading the root)
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
     EXPECT_EQ(0u, blockStore->createdBlocks());
     EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->removedBlocks().size());
     EXPECT_EQ(0u, blockStore->distinctWrittenBlocks().size());
@@ -55,7 +56,7 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByTre
 
     treeStore.remove(std::move(tree));
 
-    EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size());
+    EXPECT_EQ(maxChildrenPerInnerNode, blockStore->loadedBlocks().size());
     EXPECT_EQ(0u, blockStore->createdBlocks());
     EXPECT_EQ(1u + maxChildrenPerInnerNode + maxChildrenPerInnerNode*maxChildrenPerInnerNode, blockStore->removedBlocks().size());
     EXPECT_EQ(0u, blockStore->distinctWrittenBlocks().size());
@@ -223,7 +224,7 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDe
     Traverse(tree.get(), 4, maxChildrenPerInnerNode+2);
 
     EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
+    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
     EXPECT_EQ(0u, blockStore->removedBlocks().size());
     EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // Add children to existing inner node
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
@@ -237,7 +238,7 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDe
     Traverse(tree.get(), 4, maxChildrenPerInnerNode+2);
 
     EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
+    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
     EXPECT_EQ(0u, blockStore->removedBlocks().size());
     EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // Resize last leaf and add children to existing inner node
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
@@ -251,7 +252,7 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDe
     Traverse(tree.get(), maxChildrenPerInnerNode, maxChildrenPerInnerNode+2);
 
     EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
+    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
     EXPECT_EQ(0u, blockStore->removedBlocks().size());
     EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // Add children to existing inner node
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
@@ -265,8 +266,204 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDe
     Traverse(tree.get(), maxChildrenPerInnerNode, maxChildrenPerInnerNode+2);
 
     EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // Loads last old leaf for growing it
-    EXPECT_EQ(2 + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
+    EXPECT_EQ(2u + maxChildrenPerInnerNode, blockStore->createdBlocks()); // 2x new inner node + leaves
     EXPECT_EQ(0u, blockStore->removedBlocks().size());
     EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // Resize last leaf and add children to existing inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_ZeroToZero) {
+    auto key = CreateLeafWithSize(0)->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(0);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(0u, blockStore->distinctWrittenBlocks().size());
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeaf) {
+    auto key = CreateLeafWithSize(0)->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(5);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size());
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeaf) {
+    auto key = CreateLeafWithSize(5)->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(2);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size());
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeafToZero) {
+    auto key = CreateLeafWithSize(5)->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(0);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size());
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeafInLargerTree) {
+    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf(), CreateLeafWithSize(5)})})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*(maxChildrenPerInnerNode+1)+6); // Grow by one byte
+
+    EXPECT_EQ(2u, blockStore->loadedBlocks().size()); // Load inner node and leaf
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size());
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf) {
+    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*2+1); // Grow by one byte
+
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(1u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // add child to inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf_GrowLastLeaf) {
+    auto key = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*2+1); // Grow by one byte
+
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(1u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // add child to inner node and resize old last leaf
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkByOneLeaf) {
+    auto key = CreateInner({CreateLeaf(), CreateLeaf(), CreateLeaf()})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(2*maxBytesPerLeaf-1);
+
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(1u, blockStore->removedBlocks().size());
+    EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // resize new last leaf and remove leaf from inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to1) {
+    auto key = CreateLeaf()->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf+1);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(2u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // rewrite root node to be an inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_1to2) {
+    auto key = CreateFullTwoLevel()->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode+1);
+
+    EXPECT_EQ(1u, blockStore->loadedBlocks().size()); // check whether we have to grow last leaf
+    EXPECT_EQ(3u, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // rewrite root node to be an inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to2) {
+    auto key = CreateLeaf()->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode+1);
+
+    EXPECT_EQ(0u, blockStore->loadedBlocks().size());
+    EXPECT_EQ(3u + maxChildrenPerInnerNode, blockStore->createdBlocks());
+    EXPECT_EQ(0u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // rewrite root node to be an inner node
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_1to0) {
+    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf);
+
+    EXPECT_EQ(2u, blockStore->loadedBlocks().size()); // read content of first leaf and load first leaf to replace root with it
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(2u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // rewrite root node to be a leaf
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to1) {
+    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode);
+
+    EXPECT_EQ(4u, blockStore->loadedBlocks().size()); // load new last leaf (+inner node), load second inner node to remove its subtree, then load first child of root to replace root with its child.
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(3u, blockStore->removedBlocks().size());
+    EXPECT_EQ(1u, blockStore->distinctWrittenBlocks().size()); // rewrite root node to be a leaf
+    EXPECT_EQ(0u, blockStore->resizedBlocks().size());
+}
+
+TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to0) {
+    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->key();
+    auto tree = treeStore.load(key).value();
+    blockStore->resetCounters();
+
+    tree->resizeNumBytes(maxBytesPerLeaf);
+
+    EXPECT_EQ(5u, blockStore->loadedBlocks().size()); // load new last leaf (+inner node), load second inner node to remove its subtree, then 2x load first child of root to replace root with its child.
+    EXPECT_EQ(0u, blockStore->createdBlocks());
+    EXPECT_EQ(3u + maxChildrenPerInnerNode, blockStore->removedBlocks().size());
+    EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // 2x rewrite root node to be a leaf
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
 }

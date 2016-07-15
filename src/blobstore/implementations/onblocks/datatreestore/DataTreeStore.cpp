@@ -36,13 +36,13 @@ unique_ref<DataTree> DataTreeStore::createNewTree() {
 }
 
 void DataTreeStore::remove(unique_ref<DataTree> tree) {
-  auto key = tree->key();
-  cpputils::destruct(std::move(tree));
-  remove(key);
+  _nodeStore->removeSubtree(tree->releaseRootNode());
 }
 
 void DataTreeStore::remove(const blockstore::Key &key) {
-  _nodeStore->removeSubtree(key);
+  auto tree = load(key);
+  ASSERT(tree != none, "Tree to remove not found");
+  remove(std::move(*tree));
 }
 
 }
