@@ -82,6 +82,7 @@ private:
     template<typename U> friend class unique_ref;
     template<typename DST, typename SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source);
     template<typename U> friend std::unique_ptr<U> to_unique_ptr(unique_ref<U> ref);
+    template<class U> friend U* _extract_ptr(const unique_ref<U> &obj);
 
     std::unique_ptr<T> _target;
 
@@ -105,6 +106,10 @@ template<typename T> inline void destruct(unique_ref<T> ptr) {
    to_unique_ptr(std::move(ptr)).reset();
 }
 
+template<class T> T* _extract_ptr(const unique_ref<T> &obj) {
+    return obj._target.get();
+}
+
 //TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
 template<typename DST, typename SRC>
 inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) {
@@ -119,7 +124,7 @@ inline std::unique_ptr<T> to_unique_ptr(unique_ref<T> ref) {
 
 template<typename T>
 inline bool operator==(const unique_ref<T> &lhs, const unique_ref<T> &rhs) {
-    return lhs.get() == rhs.get();
+    return _extract_ptr(lhs) == _extract_ptr(rhs);
 }
 
 template<typename T>
@@ -148,14 +153,14 @@ namespace std {
     // Allow using it in std::unordered_set / std::unordered_map
     template<typename T> struct hash<cpputils::unique_ref<T>> {
         size_t operator()(const cpputils::unique_ref<T> &ref) const {
-            return (size_t)ref.get();
+            return (size_t)_extract_ptr(ref);
         }
     };
 
     // Allow using it in std::map / std::set
     template <typename T> struct less<cpputils::unique_ref<T>> {
         bool operator()(const cpputils::unique_ref<T> &lhs, const cpputils::unique_ref<T> &rhs) const {
-            return lhs.get() < rhs.get();
+            return _extract_ptr(lhs) < _extract_ptr(rhs);
         }
     };
 }
