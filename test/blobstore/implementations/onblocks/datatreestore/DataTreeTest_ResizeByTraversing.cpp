@@ -111,7 +111,7 @@ public:
 
   void GrowTree(DataTree *tree) {
     uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, bool, LeafHandle){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
+    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, bool, LeafHandle*){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
     tree->flush();
   }
 

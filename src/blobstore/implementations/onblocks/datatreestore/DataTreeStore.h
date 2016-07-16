@@ -8,6 +8,7 @@
 #include <blockstore/utils/Key.h>
 #include <boost/optional.hpp>
 #include "../datanodestore/DataNodeStore.h"
+#include <cpp-utils/threadpool/ThreadPool.h>
 
 namespace blobstore {
 namespace onblocks {
@@ -33,6 +34,9 @@ public:
 
 private:
   cpputils::unique_ref<datanodestore::DataNodeStore> _nodeStore;
+  cpputils::ThreadPool _traverseThreadPool;
+
+  static unsigned int _numThreads();
 
   DISALLOW_COPY_AND_ASSIGN(DataTreeStore);
 };

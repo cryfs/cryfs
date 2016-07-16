@@ -9,6 +9,7 @@
 //TODO Replace with C++14 once std::shared_mutex is supported
 #include <boost/thread/shared_mutex.hpp>
 #include <blockstore/utils/Key.h>
+#include <cpp-utils/threadpool/ThreadPool.h>
 #include "LeafHandle.h"
 
 namespace blobstore {
@@ -24,14 +25,14 @@ namespace datatreestore {
 //TODO It is strange that DataLeafNode is still part in the public interface of DataTree. This should be separated somehow.
 class DataTree final {
 public:
-  DataTree(datanodestore::DataNodeStore *nodeStore, cpputils::unique_ref<datanodestore::DataNode> rootNode);
+  DataTree(datanodestore::DataNodeStore *nodeStore, cpputils::ThreadPool *threadPool, cpputils::unique_ref<datanodestore::DataNode> rootNode);
   ~DataTree();
 
   const blockstore::Key &key() const;
   //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
   uint64_t maxBytesPerLeaf() const;
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle *leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   void resizeNumBytes(uint64_t newNumBytes);
 
   uint32_t numLeaves() const;
@@ -47,6 +48,7 @@ public:
 private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
+  cpputils::ThreadPool *_threadPool;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
   blockstore::Key _key; // Key is stored in a member variable, since _rootNode is nullptr while traversing, but we still want to be able to return the key.
   mutable boost::optional<uint32_t> _numLeavesCache;
@@ -56,7 +58,7 @@ private:
 
   //TODO Use underscore for private methods
   void _traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
-                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
+                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle *leaf)> onExistingLeaf,
                        std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                        std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;

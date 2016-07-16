@@ -15,8 +15,12 @@ namespace blobstore {
 namespace onblocks {
 namespace datatreestore {
 
+unsigned int DataTreeStore::_numThreads() {
+  return 2 * std::max(1u, std::thread::hardware_concurrency());
+}
+
 DataTreeStore::DataTreeStore(unique_ref<DataNodeStore> nodeStore)
-  : _nodeStore(std::move(nodeStore)) {
+  : _nodeStore(std::move(nodeStore)), _traverseThreadPool(_numThreads()) {
 }
 
 DataTreeStore::~DataTreeStore() {
@@ -27,12 +31,12 @@ optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::Key &key) {
   if (node == none) {
     return none;
   }
-  return make_unique_ref<DataTree>(_nodeStore.get(), std::move(*node));
+  return make_unique_ref<DataTree>(_nodeStore.get(), &_traverseThreadPool, std::move(*node));
 }
 
 unique_ref<DataTree> DataTreeStore::createNewTree() {
   auto newleaf = _nodeStore->createNewLeafNode(Data(0));
-  return make_unique_ref<DataTree>(_nodeStore.get(), std::move(newleaf));
+  return make_unique_ref<DataTree>(_nodeStore.get(), &_traverseThreadPool, std::move(newleaf));
 }
 
 void DataTreeStore::remove(unique_ref<DataTree> tree) {

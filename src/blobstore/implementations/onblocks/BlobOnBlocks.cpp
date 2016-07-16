@@ -42,14 +42,14 @@ void BlobOnBlocks::resize(uint64_t numBytes) {
   _sizeCache = numBytes;
 }
 
-void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t leafOffset, LeafHandle leaf, uint32_t begin, uint32_t count)> onExistingLeaf, function<Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const {
+void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t leafOffset, LeafHandle *leaf, uint32_t begin, uint32_t count)> onExistingLeaf, function<Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const {
   unique_lock<mutex> lock(_mutex); // TODO Multiple traverse calls in parallel?
   uint64_t endByte = beginByte + sizeBytes;
   uint64_t maxBytesPerLeaf = _datatree->maxBytesPerLeaf();
   uint32_t firstLeaf = beginByte / maxBytesPerLeaf;
   uint32_t endLeaf = utils::ceilDivision(endByte, maxBytesPerLeaf);
   bool blobIsGrowingFromThisTraversal = false;
-  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, maxBytesPerLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex, bool isRightBorderLeaf, LeafHandle leafHandle) {
+  auto _onExistingLeaf = [&onExistingLeaf, beginByte, endByte, endLeaf, maxBytesPerLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex, bool isRightBorderLeaf, LeafHandle *leafHandle) {
       uint64_t indexOfFirstLeafByte = leafIndex * maxBytesPerLeaf;
       ASSERT(endByte > indexOfFirstLeafByte, "Traversal went too far right");
       uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
@@ -57,13 +57,13 @@ void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, funct
       // If we are traversing exactly until the last leaf, then the last leaf wasn't resized by the traversal and might have a wrong size. We have to fix it.
       if (isRightBorderLeaf) {
         ASSERT(leafIndex == endLeaf-1, "If we traversed further right, this wouldn't be the right border leaf.");
-        auto leaf = leafHandle.node();
+        auto leaf = leafHandle->node();
         if (leaf->numBytes() < dataEnd) {
           leaf->resize(dataEnd);
           blobIsGrowingFromThisTraversal = true;
         }
       }
-      onExistingLeaf(indexOfFirstLeafByte, std::move(leafHandle), dataBegin, dataEnd-dataBegin);
+      onExistingLeaf(indexOfFirstLeafByte, leafHandle, dataBegin, dataEnd-dataBegin);
   };
   auto _onCreateLeaf = [&onCreateLeaf, maxBytesPerLeaf, beginByte, firstLeaf, endByte, endLeaf, &blobIsGrowingFromThisTraversal] (uint32_t leafIndex) -> Data {
       blobIsGrowingFromThisTraversal = true;
@@ -114,10 +114,10 @@ uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) co
 }
 
 void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
-  auto onExistingLeaf = [target, offset, count] (uint64_t indexOfFirstLeafByte, LeafHandle leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  auto onExistingLeaf = [target, offset, count] (uint64_t indexOfFirstLeafByte, LeafHandle *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
       ASSERT(indexOfFirstLeafByte+leafDataOffset>=offset && indexOfFirstLeafByte-offset+leafDataOffset <= count && indexOfFirstLeafByte-offset+leafDataOffset+leafDataSize <= count, "Writing to target out of bounds");
       //TODO Simplify formula, make it easier to understand
-      leaf.node()->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
+      leaf->node()->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   };
   auto onCreateLeaf = [] (uint64_t /*beginByte*/, uint32_t /*count*/) -> Data {
       ASSERT(false, "Reading shouldn't create new leaves.");
@@ -126,15 +126,15 @@ void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
-  auto onExistingLeaf = [source, offset, count] (uint64_t indexOfFirstLeafByte, LeafHandle leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  auto onExistingLeaf = [source, offset, count] (uint64_t indexOfFirstLeafByte, LeafHandle *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
       ASSERT(indexOfFirstLeafByte+leafDataOffset>=offset && indexOfFirstLeafByte-offset+leafDataOffset <= count && indexOfFirstLeafByte-offset+leafDataOffset+leafDataSize <= count, "Reading from source out of bounds");
-      if (leafDataOffset == 0 && leafDataSize == leaf.nodeStore()->layout().maxBytesPerLeaf()) {
+      if (leafDataOffset == 0 && leafDataSize == leaf->nodeStore()->layout().maxBytesPerLeaf()) {
         Data leafData(leafDataSize);
         std::memcpy(leafData.data(), (uint8_t*)source + indexOfFirstLeafByte - offset, leafDataSize);
-        leaf.nodeStore()->overwriteLeaf(leaf.key(), std::move(leafData));
+        leaf->nodeStore()->overwriteLeaf(leaf->key(), std::move(leafData));
       } else {
-            //TODO Simplify formula, make it easier to understand
-        leaf.node()->write((uint8_t *) source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset,
+        //TODO Simplify formula, make it easier to understand
+        leaf->node()->write((uint8_t *) source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset,
                            leafDataSize);
       }
   };

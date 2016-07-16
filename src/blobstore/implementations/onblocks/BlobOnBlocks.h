@@ -39,7 +39,7 @@ public:
 private:
 
   void _read(void *target, uint64_t offset, uint64_t count) const;
-  void _traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t leafOffset, datatreestore::LeafHandle leaf, uint32_t begin, uint32_t count)> onExistingLeaf, std::function<cpputils::Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const;
+  void _traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t leafOffset, datatreestore::LeafHandle *leaf, uint32_t begin, uint32_t count)> onExistingLeaf, std::function<cpputils::Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const;
 
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> _datatree;
   mutable boost::optional<uint64_t> _sizeCache;
