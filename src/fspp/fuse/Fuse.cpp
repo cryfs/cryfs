@@ -249,6 +249,10 @@ vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> 
   }
   _add_fuse_option_if_not_exists(&argv, "subtype", _fstype);
   _add_fuse_option_if_not_exists(&argv, "fsname", _fsname.get_value_or(_fstype));
+  argv.push_back(_create_c_string("-o"));
+  argv.push_back(_create_c_string("large_read"));
+  argv.push_back(_create_c_string("-o"));
+  argv.push_back(_create_c_string("big_writes"));
   return argv;
 }
 
