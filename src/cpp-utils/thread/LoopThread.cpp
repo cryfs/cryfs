@@ -1,5 +1,5 @@
 #include "LoopThread.h"
-#include "../logging/logging.h"
+#include "cpp-utils/logging/logging.h"
 
 using std::function;
 using boost::none;

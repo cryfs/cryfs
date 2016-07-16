@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_THREAD_LOOPTHREAD_H
 #define MESSMER_CPPUTILS_THREAD_LOOPTHREAD_H
 
-#include "ThreadSystem.h"
+#include "cpp-utils/thread/impl/ThreadSystem.h"
 #include <boost/optional.hpp>
 
 namespace cpputils {

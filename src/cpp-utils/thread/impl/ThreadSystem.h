@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_THREAD_THREADSYSTEM_H
 #define MESSMER_CPPUTILS_THREAD_THREADSYSTEM_H
 
-#include "../macros.h"
+#include "cpp-utils/macros.h"
 #include <boost/thread.hpp>
 #include <list>
 #include <functional>

@@ -16,7 +16,7 @@ set(SOURCES
         io/Console.cpp
         io/pipestream.cpp
         thread/LoopThread.cpp
-        thread/ThreadSystem.cpp
+        thread/impl/ThreadSystem.cpp
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp
