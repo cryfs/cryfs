@@ -17,6 +17,9 @@ set(SOURCES
         io/pipestream.cpp
         thread/LoopThread.cpp
         thread/impl/ThreadSystem.cpp
+        threadpool/ThreadPool.cpp
+        threadpool/impl/ThreadsafeQueue.cpp
+        threadpool/impl/WorkerThread.cpp
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp
