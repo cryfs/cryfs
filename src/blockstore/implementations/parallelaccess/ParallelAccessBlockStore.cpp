@@ -12,6 +12,7 @@ using cpputils::make_unique_ref;
 using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Data;
 using boost::optional;
 using boost::none;
 
@@ -26,7 +27,7 @@ Key ParallelAccessBlockStore::createKey() {
   return _baseBlockStore->createKey();
 }
 
-optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
+optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, Data data) {
   ASSERT(!_parallelAccessStore.isOpened(key), ("Key "+key.ToString()+"already exists").c_str());
   auto block = _baseBlockStore->tryCreate(key, std::move(data));
   if (block == none) {
@@ -44,6 +45,18 @@ optional<unique_ref<Block>> ParallelAccessBlockStore::load(const Key &key) {
   return unique_ref<Block>(std::move(*block));
 }
 
+unique_ref<Block> ParallelAccessBlockStore::overwrite(const Key &key, Data data) {
+  auto onExists = [&data] (BlockRef *block) {
+      if (block->size() != data.size()) {
+        block->resize(data.size());
+      }
+      block->write(data.data(), 0, data.size());
+  };
+  auto onAdd = [this, key, &data] {
+      return _baseBlockStore->overwrite(key, data.copy()); // TODO Without copy?
+  };
+  return _parallelAccessStore.loadOrAdd(key, onExists, onAdd);
+}
 
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();

@@ -65,6 +65,10 @@ optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data dat
   return unique_ref<Block>(std::move(*result));
 }
 
+unique_ref<Block> OnDiskBlockStore::overwrite(const Key &key, Data data) {
+  return OnDiskBlock::OverwriteOnDisk(_rootdir, key, std::move(data));
+}
+
 optional<unique_ref<Block>> OnDiskBlockStore::load(const Key &key) {
   return optional<unique_ref<Block>>(OnDiskBlock::LoadFromDisk(_rootdir, key));
 }

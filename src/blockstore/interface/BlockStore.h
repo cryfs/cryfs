@@ -20,6 +20,7 @@ public:
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
+  virtual cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) = 0;
   virtual void remove(const Key &key) = 0;
   virtual uint64_t numBlocks() const = 0;
   //TODO Test estimateNumFreeBytes in all block stores

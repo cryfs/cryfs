@@ -42,6 +42,19 @@ optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
   }
 }
 
+unique_ref<Block> InMemoryBlockStore::overwrite(const Key &key, Data data) {
+  InMemoryBlock newBlock(key, std::move(data));
+  auto insert_result = _blocks.emplace(key, newBlock);
+
+  if (!insert_result.second) {
+    // If block already exists, overwrite it.
+    insert_result.first->second = newBlock;
+  }
+
+  //Return a pointer to the stored InMemoryBlock
+  return make_unique_ref<InMemoryBlock>(insert_result.first->second);
+}
+
 void InMemoryBlockStore::remove(const Key &key) {
   int numRemoved = _blocks.erase(key);
   ASSERT(1==numRemoved, "Didn't find block to remove");

@@ -31,6 +31,21 @@ optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data)
   return _load(key);
 }
 
+unique_ref<Block> FakeBlockStore::overwrite(const Key &key, Data data) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  auto insert_result = _blocks.emplace(key, data.copy());
+
+  if (!insert_result.second) {
+    // If block already exists, overwrite it.
+    insert_result.first->second = std::move(data);
+  }
+
+  //Return a pointer to the stored FakeBlock
+  auto loaded = _load(key);
+  ASSERT(loaded != none, "Block was just created or written. Should exist.");
+  return std::move(*loaded);
+}
+
 optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   return _load(key);

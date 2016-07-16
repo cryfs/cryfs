@@ -35,12 +35,72 @@ public:
     EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_block, testData.offset, testData.count);
   }
 
-  void TestOverwriteAndRead() {
+  void TestWriteTwiceAndRead() {
     auto block = blockStore->create(cpputils::Data(testData.blocksize));
     block->write(backgroundData.data(), 0, testData.blocksize);
     block->write(foregroundData.data(), testData.offset, testData.count);
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
     EXPECT_DATA_READS_AS_OUTSIDE_OF(backgroundData, *block, testData.offset, testData.count);
+  }
+
+  void TestOverwriteSameSizeAndReadImmediately() {
+    auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
+    auto block = blockStore->overwrite(key, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteSameSizeAndReadAfterLoading() {
+    auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
+    blockStore->overwrite(key, backgroundData.copy());
+    auto block = blockStore->load(key).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteSmallerSizeAndReadImmediately() {
+    auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
+    auto block = blockStore->overwrite(key, foregroundData.copy());
+    EXPECT_EQ(testData.count, block->size());
+    EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
+  }
+
+  void TestOverwriteSmallerSizeAndReadAfterLoading() {
+    auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
+    blockStore->overwrite(key, foregroundData.copy());
+    auto block = blockStore->load(key).value();
+    EXPECT_EQ(testData.count, block->size());
+    EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
+  }
+
+  void TestOverwriteLargerSizeAndReadImmediately() {
+    auto key = blockStore->create(cpputils::Data(testData.count))->key();
+    auto block = blockStore->overwrite(key, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteLargerSizeAndReadAfterLoading() {
+    auto key = blockStore->create(cpputils::Data(testData.count))->key();
+    blockStore->overwrite(key, backgroundData.copy());
+    auto block = blockStore->load(key).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteNonexistingAndReadImmediately() {
+    auto key = blockStore->createKey();
+    auto block = blockStore->overwrite(key, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteNonexistingAndReadAfterLoading() {
+    auto key = blockStore->createKey();
+    blockStore->overwrite(key, backgroundData.copy());
+    auto block = blockStore->load(key).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
   }
 
 private:
@@ -102,6 +162,14 @@ inline std::vector<DataRange> DATA_RANGES() {
 
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadImmediately);
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadAfterLoading);
-TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteAndRead);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteTwiceAndRead);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSameSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSameSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSmallerSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSmallerSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteLargerSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteLargerSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteNonexistingAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteNonexistingAndReadAfterLoading);
 
 #endif

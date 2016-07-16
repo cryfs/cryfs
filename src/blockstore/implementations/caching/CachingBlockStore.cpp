@@ -49,6 +49,20 @@ optional<unique_ref<Block>> CachingBlockStore::load(const Key &key) {
   }
 }
 
+unique_ref<Block> CachingBlockStore::overwrite(const Key &key, cpputils::Data data) {
+  optional<unique_ref<Block>> optBlock = _cache.pop(key);
+  if (optBlock != none) {
+    if ((*optBlock)->size() != data.size()) {
+      (*optBlock)->resize(data.size());
+    }
+    (*optBlock)->write(data.data(), 0, data.size());
+    return make_unique_ref<CachedBlock>(std::move(*optBlock), this);
+  } else {
+    auto block = _baseBlockStore->overwrite(key, std::move(data));
+    return make_unique_ref<CachedBlock>(std::move(block), this);
+  }
+}
+
 void CachingBlockStore::remove(cpputils::unique_ref<Block> block) {
   auto cached_block = dynamic_pointer_move<CachedBlock>(block);
   ASSERT(cached_block != none, "Passed block is not a CachedBlock");

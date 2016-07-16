@@ -26,6 +26,11 @@ InMemoryBlock::InMemoryBlock(const InMemoryBlock &rhs)
 InMemoryBlock::~InMemoryBlock() {
 }
 
+InMemoryBlock &InMemoryBlock::operator=(const InMemoryBlock &rhs) {
+    _data = rhs._data;
+    return *this;
+}
+
 const void *InMemoryBlock::data() const {
   return _data->data();
 }

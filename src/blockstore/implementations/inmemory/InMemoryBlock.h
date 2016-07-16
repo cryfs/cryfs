@@ -14,6 +14,7 @@ public:
   InMemoryBlock(const Key &key, cpputils::Data size);
   InMemoryBlock(const InMemoryBlock &rhs);
   ~InMemoryBlock();
+  InMemoryBlock &operator=(const InMemoryBlock &rhs);
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

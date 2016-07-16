@@ -28,6 +28,7 @@ namespace versioncounting {
 class VersionCountingBlock final: public Block {
 public:
   static boost::optional<cpputils::unique_ref<VersionCountingBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, VersionCountingBlockStore *blockStore);
+  static cpputils::unique_ref<VersionCountingBlock> Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, VersionCountingBlockStore *blockStore);
   static cpputils::unique_ref<VersionCountingBlock> Load(cpputils::unique_ref<Block> baseBlock, VersionCountingBlockStore *blockStore);
 
   static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
@@ -53,7 +54,6 @@ private:
   VersionCountingBlockStore *_blockStore;
   cpputils::unique_ref<Block> _baseBlock;
   cpputils::Data _dataWithHeader;
-  uint64_t _version;
   bool _dataChanged;
   std::mutex _mutex;
 
@@ -78,7 +78,7 @@ public:
 
 
 inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCountingBlock::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, VersionCountingBlockStore *blockStore) {
-  uint64_t version = blockStore->knownBlockVersions()->incrementVersion(key, VERSION_ZERO);
+  uint64_t version = blockStore->knownBlockVersions()->incrementVersion(key);
 
   cpputils::Data dataWithHeader = _prependHeaderToData(blockStore->knownBlockVersions()->myClientId(), version, std::move(data));
   auto baseBlock = baseBlockStore->tryCreate(key, dataWithHeader.copy()); // TODO Copy necessary?
@@ -88,6 +88,14 @@ inline boost::optional<cpputils::unique_ref<VersionCountingBlock>> VersionCounti
   }
 
   return cpputils::make_unique_ref<VersionCountingBlock>(std::move(*baseBlock), std::move(dataWithHeader), blockStore);
+}
+
+inline cpputils::unique_ref<VersionCountingBlock> VersionCountingBlock::Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, VersionCountingBlockStore *blockStore) {
+  uint64_t version = blockStore->knownBlockVersions()->incrementVersion(key);
+
+  cpputils::Data dataWithHeader = _prependHeaderToData(blockStore->knownBlockVersions()->myClientId(), version, std::move(data));
+  auto baseBlock = baseBlockStore->overwrite(key, dataWithHeader.copy()); // TODO Copy necessary?
+  return cpputils::make_unique_ref<VersionCountingBlock>(std::move(baseBlock), std::move(dataWithHeader), blockStore);
 }
 
 inline cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClientId, uint64_t version, cpputils::Data data) {
@@ -140,10 +148,9 @@ inline VersionCountingBlock::VersionCountingBlock(cpputils::unique_ref<Block> ba
    _blockStore(blockStore),
    _baseBlock(std::move(baseBlock)),
    _dataWithHeader(std::move(dataWithHeader)),
-   _version(_readVersion()),
    _dataChanged(false),
    _mutex() {
-  if (_version == std::numeric_limits<uint64_t>::max()) {
+  if (_readVersion() == std::numeric_limits<uint64_t>::max()) {
     throw std::runtime_error("Version overflow when loading. This shouldn't happen because in case of a version number overflow, the block isn't stored at all.");
   }
 }
@@ -180,10 +187,10 @@ inline void VersionCountingBlock::resize(size_t newSize) {
 
 inline void VersionCountingBlock::_storeToBaseBlock() {
   if (_dataChanged) {
-    _version = _blockStore->knownBlockVersions()->incrementVersion(key(), _version);
+    uint64_t version = _blockStore->knownBlockVersions()->incrementVersion(key());
     uint32_t myClientId = _blockStore->knownBlockVersions()->myClientId();
     std::memcpy(_dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
-    std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &_version, sizeof(_version));
+    std::memcpy(_dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
     if (_baseBlock->size() != _dataWithHeader.size()) {
       _baseBlock->resize(_dataWithHeader.size());
     }

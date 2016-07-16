@@ -29,6 +29,7 @@ class EncryptedBlock final: public Block {
 public:
   BOOST_CONCEPT_ASSERT((cpputils::CipherConcept<Cipher>));
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
+  static cpputils::unique_ref<EncryptedBlock> Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey);
   static boost::optional<cpputils::unique_ref<EncryptedBlock>> TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &key);
 
   static uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize);
@@ -89,6 +90,17 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
   }
 
   return cpputils::make_unique_ref<EncryptedBlock>(std::move(*baseBlock), encKey, std::move(plaintextWithHeader));
+}
+
+template<class Cipher>
+cpputils::unique_ref<EncryptedBlock<Cipher>> EncryptedBlock<Cipher>::Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
+  //TODO Is it possible to avoid copying the whole plaintext data into plaintextWithHeader? Maybe an encrypt() object that has an .addData() function and concatenates all data for encryption? Maybe Crypto++ offers this functionality already.
+  cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, std::move(data));
+  cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
+  //TODO Avoid copying the whole encrypted block into a encryptedWithFormatHeader by creating a Data object with full size and then giving it as an encryption target to Cipher::encrypt()
+  cpputils::Data encryptedWithFormatHeader = _prependFormatHeader(std::move(encrypted));
+  auto baseBlock = baseBlockStore->overwrite(key, std::move(encryptedWithFormatHeader));
+  return cpputils::make_unique_ref<EncryptedBlock>(std::move(baseBlock), encKey, std::move(plaintextWithHeader));
 }
 
 template<class Cipher>

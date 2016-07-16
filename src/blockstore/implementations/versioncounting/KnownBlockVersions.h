@@ -24,7 +24,7 @@ namespace blockstore {
             __attribute__((warn_unused_result))
             bool checkAndUpdateVersion(uint32_t clientId, const Key &key, uint64_t version);
 
-            uint64_t incrementVersion(const Key &key, uint64_t lastVersion);
+            uint64_t incrementVersion(const Key &key);
 
             void markBlockAsDeleted(const Key &key);
 

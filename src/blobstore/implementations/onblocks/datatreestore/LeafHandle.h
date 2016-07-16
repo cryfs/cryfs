@@ -26,6 +26,10 @@ namespace blobstore {
 
                 datanodestore::DataLeafNode *node();
 
+                datanodestore::DataNodeStore *nodeStore() {
+                    return _nodeStore;
+                }
+
             private:
                 datanodestore::DataNodeStore *_nodeStore;
                 blockstore::Key _key;

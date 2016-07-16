@@ -18,6 +18,7 @@ public:
 
   Key createKey() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
+  cpputils::unique_ref<Block> overwrite(const Key &key, cpputils::Data data) override;
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
   void remove(const Key &key) override;
   void remove(cpputils::unique_ref<Block> block) override;

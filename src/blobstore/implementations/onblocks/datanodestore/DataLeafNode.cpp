@@ -31,6 +31,12 @@ unique_ref<DataLeafNode> DataLeafNode::CreateNewNode(BlockStore *blockStore, con
   return make_unique_ref<DataLeafNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, std::move(data)));
 }
 
+unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const Key &key, Data data) {
+  ASSERT(data.size() == layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
+  uint32_t size = data.size();
+  return make_unique_ref<DataLeafNode>(DataNodeView::overwrite(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, key, std::move(data)));
+}
+
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {
   ASSERT(offset <= node().Size() && offset + size <= node().Size(), "Read out of valid area"); // Also check offset, because the addition could lead to overflows
   std::memcpy(target, (uint8_t*)node().data() + offset, size);

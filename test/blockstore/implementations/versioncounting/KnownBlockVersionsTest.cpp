@@ -70,44 +70,17 @@ TEST_F(KnownBlockVersionsTest, myClientId_isConsistent) {
     EXPECT_EQ(testobj.myClientId(), testobj.myClientId());
 }
 
-TEST_F(KnownBlockVersionsTest, incrementVersion_newentry_versionzero) {
-    auto version = testobj.incrementVersion(key, VersionCountingBlock::VERSION_ZERO);
+TEST_F(KnownBlockVersionsTest, incrementVersion_newentry) {
+    auto version = testobj.incrementVersion(key);
     EXPECT_EQ(1u, version);
     EXPECT_EQ(1u, testobj.getBlockVersion(testobj.myClientId(), key));
 }
 
-TEST_F(KnownBlockVersionsTest, incrementVersion_newentry_versionnotzero) {
-    auto version = testobj.incrementVersion(key, 5);
+TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry) {
+    setVersion(&testobj, testobj.myClientId(), key, 5);
+    auto version = testobj.incrementVersion(key);
     EXPECT_EQ(6u, version);
     EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), key));
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry_sameVersion) {
-    setVersion(&testobj, testobj.myClientId(), key, 5);
-    auto version = testobj.incrementVersion(key, 5);
-    EXPECT_EQ(6u, version);
-    EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), key));
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry_lowerVersion1) {
-    setVersion(&testobj, testobj.myClientId(), key, 5);
-    auto version = testobj.incrementVersion(key, 4);
-    EXPECT_EQ(6u, version);
-    EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), key));
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry_lowerVersion2) {
-    setVersion(&testobj, testobj.myClientId(), key, 5);
-    auto version = testobj.incrementVersion(key, 3);
-    EXPECT_EQ(6u, version);
-    EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), key));
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry_higherVersion) {
-    setVersion(&testobj, testobj.myClientId(), key, 5);
-    auto version = testobj.incrementVersion(key, 6);
-    EXPECT_EQ(7u, version);
-    EXPECT_EQ(7u, testobj.getBlockVersion(testobj.myClientId(), key));
 }
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_newentry) {
@@ -179,7 +152,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientHigherVer
 }
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientLowerVersion_oldClientIsSelf) {
-    testobj.incrementVersion(key, 4);
+    setVersion(&testobj, testobj.myClientId(), key, 5);
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId2, key, 7));
     EXPECT_FALSE(testobj.checkAndUpdateVersion(testobj.myClientId(), key, 3));
     EXPECT_EQ(5u, testobj.getBlockVersion(testobj.myClientId(), key));
@@ -187,7 +160,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientLowerVers
 }
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientSameVersion_oldClientIsSelf) {
-    testobj.incrementVersion(key, 4);
+    setVersion(&testobj, testobj.myClientId(), key, 5);
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId2, key, 7));
     EXPECT_FALSE(testobj.checkAndUpdateVersion(testobj.myClientId(), key, 5)); // Don't allow rollback to old client's newest block, if it was superseded by another client
     EXPECT_EQ(5u, testobj.getBlockVersion(testobj.myClientId(), key));
@@ -195,7 +168,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientSameVersi
 }
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientHigherVersion_oldClientIsSelf) {
-    testobj.incrementVersion(key, 4);
+    setVersion(&testobj, testobj.myClientId(), key, 4);
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId2, key, 7));
     EXPECT_TRUE(testobj.checkAndUpdateVersion(testobj.myClientId(), key, 6));
     EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), key));
@@ -204,7 +177,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientHigherVer
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientLowerVersion_newClientIsSelf) {
     setVersion(&testobj, clientId, key, 5);
-    testobj.incrementVersion(key, 6);
+    setVersion(&testobj, testobj.myClientId(), key, 7);
     EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 3));
     EXPECT_EQ(5u, testobj.getBlockVersion(clientId, key));
     EXPECT_EQ(7u, testobj.getBlockVersion(testobj.myClientId(), key));
@@ -212,7 +185,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientLowerVers
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientSameVersion_newClientIsSelf) {
     setVersion(&testobj, clientId, key, 5);
-    testobj.incrementVersion(key, 6);
+    setVersion(&testobj, testobj.myClientId(), key, 7);
     EXPECT_FALSE(testobj.checkAndUpdateVersion(clientId, key, 5)); // Don't allow rollback to old client's newest block, if it was superseded by another client
     EXPECT_EQ(5u, testobj.getBlockVersion(clientId, key));
     EXPECT_EQ(7u, testobj.getBlockVersion(testobj.myClientId(), key));
@@ -220,7 +193,7 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientSameVersi
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_oldentry_oldClientHigherVersion_newClientIsSelf) {
     setVersion(&testobj, clientId, key, 5);
-    testobj.incrementVersion(key, 6);
+    setVersion(&testobj, testobj.myClientId(), key, 7);
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, key, 6));
     EXPECT_EQ(6u, testobj.getBlockVersion(clientId, key));
     EXPECT_EQ(7u, testobj.getBlockVersion(testobj.myClientId(), key));

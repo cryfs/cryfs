@@ -53,6 +53,9 @@ public:
   cpputils::unique_ref<ActualResourceRef> add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
   boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key);
   boost::optional<cpputils::unique_ref<ResourceRef>> load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef);
+  //loadOrAdd: If the resource is open, run onExists() on it. If not, run onAdd() and add the created resource. Then return the resource as if load() was called on it.
+  cpputils::unique_ref<ResourceRef> loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd);
+  cpputils::unique_ref<ResourceRef> loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef);
   void remove(const Key &key, cpputils::unique_ref<ResourceRef> block);
   void remove(const Key &key);
 
@@ -143,6 +146,28 @@ cpputils::unique_ref<ActualResourceRef> ParallelAccessStore<Resource, ResourceRe
   resourceRef->init(this, key);
   return resourceRef;
 }
+
+template<class Resource, class ResourceRef, class Key>
+cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd) {
+    return loadOrAdd(key, onExists, onAdd, [] (Resource *res) {
+        return cpputils::make_unique_ref<ResourceRef>(res);
+    });
+};
+
+template<class Resource, class ResourceRef, class Key>
+cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto found = _openResources.find(key);
+    if (found == _openResources.end()) {
+        auto resource = onAdd();
+        return _add(key, std::move(resource), createResourceRef);
+    } else {
+        auto resourceRef = createResourceRef(found->second.getReference());
+        resourceRef->init(this, key);
+        onExists(resourceRef.get());
+        return std::move(resourceRef);
+    }
+};
 
 template<class Resource, class ResourceRef, class Key>
 boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key) {

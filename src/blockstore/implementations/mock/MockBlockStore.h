@@ -41,6 +41,11 @@ namespace blockstore {
                 return boost::optional<cpputils::unique_ref<Block>>(cpputils::make_unique_ref<MockBlock>(std::move(*base), this));
             }
 
+            cpputils::unique_ref<Block> overwrite(const Key &key, cpputils::Data data) override {
+                _increaseNumWrittenBlocks(key);
+                return _baseBlockStore->overwrite(key, std::move(data));
+            }
+
             void remove(const Key &key) override {
                 _increaseNumRemovedBlocks(key);
                 return _baseBlockStore->remove(key);

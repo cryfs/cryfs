@@ -10,7 +10,7 @@ namespace blockstore {
 
 #ifndef CRYFS_NO_COMPATIBILITY
         void VersionCountingBlock::migrateFromBlockstoreWithoutVersionNumbers(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions) {
-            uint64_t version = knownBlockVersions->incrementVersion(baseBlock->key(), VERSION_ZERO);
+            uint64_t version = knownBlockVersions->incrementVersion(baseBlock->key());
 
             cpputils::Data data(baseBlock->size());
             std::memcpy(data.data(), baseBlock->data(), data.size());

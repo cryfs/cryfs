@@ -50,6 +50,10 @@ unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode(Data data) {
   return DataLeafNode::CreateNewNode(_blockstore.get(), _layout, std::move(data));
 }
 
+unique_ref<DataLeafNode> DataNodeStore::overwriteLeaf(const Key &key, Data data) {
+  return DataLeafNode::OverwriteNode(_blockstore.get(), _layout, key, std::move(data));
+}
+
 optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
   auto block = _blockstore->load(key);
   if (block == none) {

@@ -21,7 +21,7 @@ namespace blockstore {
             return _baseBlockStore->createKey();
         }
 
-        optional<unique_ref<Block>> VersionCountingBlockStore::tryCreate(const Key &key, cpputils::Data data) {
+        optional<unique_ref<Block>> VersionCountingBlockStore::tryCreate(const Key &key, Data data) {
             _checkNoPastIntegrityViolations();
             //TODO Easier implementation? This is only so complicated because of the cast VersionCountingBlock -> Block
             auto result = VersionCountingBlock::TryCreateNew(_baseBlockStore.get(), key, std::move(data), this);
@@ -29,6 +29,11 @@ namespace blockstore {
                 return boost::none;
             }
             return unique_ref<Block>(std::move(*result));
+        }
+
+        unique_ref<Block> VersionCountingBlockStore::overwrite(const Key &key, Data data) {
+            _checkNoPastIntegrityViolations();
+            return VersionCountingBlock::Overwrite(_baseBlockStore.get(), key, std::move(data), this);
         }
 
         optional<unique_ref<Block>> VersionCountingBlockStore::load(const Key &key) {

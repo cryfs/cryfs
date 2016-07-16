@@ -72,10 +72,10 @@ bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const Key &key
     return true;
 }
 
-uint64_t KnownBlockVersions::incrementVersion(const Key &key, uint64_t lastVersion) {
+uint64_t KnownBlockVersions::incrementVersion(const Key &key) {
     unique_lock<mutex> lock(_mutex);
     uint64_t &found = _knownVersions[{_myClientId, key}]; // If the entry doesn't exist, this creates it with value 0.
-    uint64_t newVersion = std::max(lastVersion + 1, found + 1);
+    uint64_t newVersion = found + 1;
     if (newVersion == std::numeric_limits<uint64_t>::max()) {
         // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
         throw std::runtime_error("Version overflow");

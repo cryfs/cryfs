@@ -24,6 +24,10 @@ public:
     return cpputils::nullcheck(std::unique_ptr<Block>(do_create(key, data)));
   }
   MOCK_METHOD2(do_create, Block*(const Key &, const Data &data));
+  unique_ref<Block> overwrite(const Key &key, Data data) {
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_overwrite(key, data))).value();
+  }
+  MOCK_METHOD2(do_overwrite, Block*(const Key &, const Data &data));
   optional<unique_ref<Block>> load(const Key &key) {
     return cpputils::nullcheck(std::unique_ptr<Block>(do_load(key)));
   }

@@ -86,6 +86,14 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &root
   return std::move(block);
 }
 
+unique_ref<OnDiskBlock> OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, const Key &key, Data data) {
+  auto filepath = _getFilepath(rootdir, key);
+  bf::create_directory(filepath.parent_path());
+  auto block = make_unique_ref<OnDiskBlock>(key, filepath, std::move(data));
+  block->_storeToDisk();
+  return std::move(block);
+}
+
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
   auto filepath = _getFilepath(rootdir, key);
   ASSERT(bf::is_regular_file(filepath), "Block not found on disk");

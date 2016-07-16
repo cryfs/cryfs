@@ -17,6 +17,7 @@ template<class Compressor>
 class CompressedBlock final: public Block {
 public:
   static boost::optional<cpputils::unique_ref<CompressedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data decompressedData);
+  static cpputils::unique_ref<CompressedBlock> Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data decompressedData);
   static cpputils::unique_ref<CompressedBlock> Decompress(cpputils::unique_ref<Block> baseBlock);
 
   CompressedBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data decompressedData);
@@ -53,6 +54,14 @@ boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlo
   }
 
   return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(*baseBlock), std::move(decompressedData));
+}
+
+template<class Compressor>
+cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Overwrite(BlockStore *baseBlockStore, const Key &key, cpputils::Data decompressedData) {
+  cpputils::Data compressed = Compressor::Compress(decompressedData);
+  auto baseBlock = baseBlockStore->overwrite(key, std::move(compressed));
+
+  return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressedData));
 }
 
 template<class Compressor>
