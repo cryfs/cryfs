@@ -6,16 +6,17 @@
 #include <functional>
 #include "cpp-utils/thread/LoopThread.h"
 #include "ThreadsafeQueue.h"
+#include <future>
 
 namespace cpputils {
 
     class WorkerThread final {
     public:
-        WorkerThread(ThreadsafeQueue<std::function<void ()>> *taskQueue);
+        WorkerThread(ThreadsafeQueue<std::packaged_task<void ()>> *taskQueue);
         WorkerThread(WorkerThread &&rhs) = default;
 
     private:
-        ThreadsafeQueue<std::function<void ()>> *_taskQueue;
+        ThreadsafeQueue<std::packaged_task<void ()>> *_taskQueue;
         LoopThread _thread;
 
         bool _loopIteration();

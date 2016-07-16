@@ -1,10 +1,10 @@
 #include "WorkerThread.h"
 
-using std::function;
+using std::packaged_task;
 
 namespace cpputils {
 
-    WorkerThread::WorkerThread(ThreadsafeQueue<function<void ()>> *taskQueue)
+    WorkerThread::WorkerThread(ThreadsafeQueue<packaged_task<void ()>> *taskQueue)
         :_taskQueue(taskQueue), _thread(std::bind(&WorkerThread::_loopIteration, this)) {
 
         _thread.start();

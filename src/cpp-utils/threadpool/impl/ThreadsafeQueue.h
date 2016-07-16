@@ -4,8 +4,7 @@
 
 #include <cpp-utils/macros.h>
 #include <queue>
-#include <mutex>
-#include <condition_variable>
+#include <boost/thread.hpp>
 
 namespace cpputils {
 
@@ -19,8 +18,8 @@ namespace cpputils {
 
     private:
         std::queue<Entry> _queue;
-        std::mutex _mutex;
-        std::condition_variable _waitForEntry;
+        boost::mutex _mutex;
+        boost::condition_variable _waitForEntry; // boost::condition_variable, because it has to be interruptible
 
         DISALLOW_COPY_AND_ASSIGN(ThreadsafeQueue);
     };
@@ -32,16 +31,16 @@ namespace cpputils {
 
     template<class Entry>
     inline void ThreadsafeQueue<Entry>::push(Entry task) {
-        std::lock_guard<std::mutex> lock(_mutex);
-        _queue.push(task);
+        boost::unique_lock<boost::mutex> lock(_mutex);
+        _queue.push(std::move(task));
         _waitForEntry.notify_one();
     }
 
     template<class Entry>
     inline Entry ThreadsafeQueue<Entry>::waitAndPop() {
-        std::unique_lock<std::mutex> lock(_mutex);
+        boost::unique_lock<boost::mutex> lock(_mutex);
         _waitForEntry.wait(lock, [this] {return !_queue.empty();});
-        auto result = _queue.front();
+        auto result = std::move(_queue.front());
         _queue.pop();
         return result;
     }
