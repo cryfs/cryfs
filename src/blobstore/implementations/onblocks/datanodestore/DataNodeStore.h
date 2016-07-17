@@ -38,7 +38,7 @@ public:
 
   cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 
-  cpputils::unique_ref<DataLeafNode> overwriteLeaf(const blockstore::Key &key, cpputils::Data data);
+  void overwriteLeaf(const blockstore::Key &key, const void *source, uint64_t offset, uint64_t size);
 
   void remove(cpputils::unique_ref<DataNode> node);
   void remove(const blockstore::Key &key);
