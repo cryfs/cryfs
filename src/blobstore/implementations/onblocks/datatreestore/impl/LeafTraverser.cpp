@@ -53,7 +53,7 @@ namespace blobstore {
                     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
                     ASSERT(inner != nullptr, "Depth != 0 has to be leaf node");
                     _traverseExistingSubtree(inner, std::min(beginIndex, maxLeavesForDepth),
-                                             std::min(endIndex, maxLeavesForDepth), 0, isLeftBorderOfTraversal, true,
+                                             std::min(endIndex, maxLeavesForDepth), 0, isLeftBorderOfTraversal, !increaseTreeDepth,
                                              increaseTreeDepth, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
                 }
 
