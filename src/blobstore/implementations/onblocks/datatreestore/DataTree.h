@@ -31,7 +31,7 @@ public:
   //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
   uint64_t maxBytesPerLeaf() const;
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   void resizeNumBytes(uint64_t newNumBytes);
 
   uint32_t numLeaves() const;
@@ -56,7 +56,7 @@ private:
 
   //TODO Use underscore for private methods
   void _traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
-                       std::function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
+                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
                        std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                        std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;

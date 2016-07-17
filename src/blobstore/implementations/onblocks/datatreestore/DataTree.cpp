@@ -96,7 +96,7 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
   return numLeavesInLeftChildren + numLeavesInRightChild;
 }
 
-void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf) {
+void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf) {
   //TODO Can we allow multiple runs of traverseLeaves() in parallel? Also in parallel with resizeNumBytes()?
   std::unique_lock<shared_mutex> lock(_mutex);
   ASSERT(beginIndex <= endIndex, "Invalid parameters");
@@ -111,7 +111,7 @@ void DataTree::traverseLeaves(uint32_t beginIndex, uint32_t endIndex, function<v
 }
 
 void DataTree::_traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
-    function<void (uint32_t index, LeafHandle leaf)> onExistingLeaf,
+    function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
     function<Data (uint32_t index)> onCreateLeaf,
     function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
   _rootNode = LeafTraverser(_nodeStore).traverseAndReturnRoot(std::move(_rootNode), beginIndex, endIndex, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
@@ -151,7 +151,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   uint32_t newNumLeaves = std::max(UINT64_C(1), utils::ceilDivision(newNumBytes, _nodeStore->layout().maxBytesPerLeaf()));
   uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1) * _nodeStore->layout().maxBytesPerLeaf();
   uint32_t maxChildrenPerInnerNode = _nodeStore->layout().maxChildrenPerInnerNode();
-  auto onExistingLeaf = [newLastLeafSize] (uint32_t /*index*/, LeafHandle leafHandle) {
+  auto onExistingLeaf = [newLastLeafSize] (uint32_t /*index*/, bool /*isRightBorderLeaf*/, LeafHandle leafHandle) {
       auto leaf = leafHandle.node();
       // This is only called, if the new last leaf was already existing
       if (leaf->numBytes() != newLastLeafSize) {

@@ -22,7 +22,7 @@ public:
     return _baseTree->maxBytesPerLeaf();
   }
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, datatreestore::LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, datatreestore::LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
     return _baseTree->traverseLeaves(beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
   }
 

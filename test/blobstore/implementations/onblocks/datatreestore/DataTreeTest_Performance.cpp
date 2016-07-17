@@ -16,7 +16,7 @@ using cpputils::make_unique_ref;
 class DataTreeTest_Performance: public DataTreeTest {
 public:
     void Traverse(DataTree *tree, uint64_t beginIndex, uint64_t endIndex) {
-        tree->traverseLeaves(beginIndex, endIndex, [] (uint32_t /*index*/, LeafHandle /*leaf*/) {}, [this] (uint32_t /*index*/) -> Data {return Data(maxChildrenPerInnerNode).FillWithZeroes();});
+        tree->traverseLeaves(beginIndex, endIndex, [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {}, [this] (uint32_t /*index*/) -> Data {return Data(maxChildrenPerInnerNode).FillWithZeroes();});
     }
 
     uint64_t maxChildrenPerInnerNode = nodeStore->layout().maxChildrenPerInnerNode();
