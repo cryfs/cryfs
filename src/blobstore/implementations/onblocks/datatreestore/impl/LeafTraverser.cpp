@@ -85,7 +85,7 @@ namespace blobstore {
                 if (depth == 0) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1,
                            "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-                    _addTask(std::packaged_task<void ()>([this, key, growLastLeaf, beginIndex, endIndex, leafOffset, onExistingLeaf] {
+                    _addTask(std::packaged_task<void ()>([this, key, growLastLeaf, beginIndex, endIndex, leafOffset, isRightBorderNode, onExistingLeaf] {
                         LeafHandle leafHandle(_nodeStore, key);
                         if (growLastLeaf) {
                             if (leafHandle.node()->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
