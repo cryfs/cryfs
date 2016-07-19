@@ -23,6 +23,7 @@ public:
     uint64_t estimateNumFreeBytes() const override;
     uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
     void forEachBlock(std::function<void (const Key &)> callback) const override;
+    bool exists(const Key &key) const override;
 
 private:
     cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -92,6 +93,11 @@ uint64_t CompressingBlockStore<Compressor>::blockSizeFromPhysicalBlockSize(uint6
     //We probably have more since we're compressing, but we don't know exactly how much.
     //The best we can do is ignore the compression step here.
     return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
+template<class Compressor>
+bool CompressingBlockStore<Compressor>::exists(const Key &key) const {
+    return _baseBlockStore->exists(key);
 }
 
 }

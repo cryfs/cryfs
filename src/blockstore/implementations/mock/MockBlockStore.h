@@ -74,6 +74,10 @@ namespace blockstore {
                 return _baseBlockStore->remove((*mockBlock)->releaseBaseBlock());
             }
 
+            bool exists(const Key &key) const override {
+                return _baseBlockStore->exists(key);
+            }
+
             void resetCounters() {
                 _loadedBlocks = {};
                 _createdBlocks = 0;

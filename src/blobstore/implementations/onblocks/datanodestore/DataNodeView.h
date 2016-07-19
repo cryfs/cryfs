@@ -68,7 +68,6 @@ public:
   static DataNodeView create(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
     cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
-    ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
     auto block = blockStore->create(std::move(serialized));
     return DataNodeView(std::move(block));
   }
@@ -85,6 +84,14 @@ public:
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
     cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
     auto block = blockStore->overwrite(key, std::move(serialized));
+    return DataNodeView(std::move(block));
+  }
+
+  static DataNodeView loadOrCreate(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, const blockstore::Key &key) {
+    cpputils::Data header(layout.HEADERSIZE_BYTES);
+    _serializeHeader(&header, layout, formatVersion, depth, size);
+    auto block = blockStore->loadOrCreate(key, layout.blocksizeBytes());
+    block->write(header.data(), 0, layout.HEADERSIZE_BYTES);
     return DataNodeView(std::move(block));
   }
 
@@ -159,11 +166,15 @@ private:
     return (Type*)(((const int8_t*)_block->data())+offset);
   }
 
+  static void _serializeHeader(cpputils::Data *result, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size) {
+    *((uint16_t*)result->dataOffset(layout.FORMAT_VERSION_OFFSET_BYTES)) = formatVersion;
+    *((uint8_t*)result->dataOffset(layout.DEPTH_OFFSET_BYTES)) = depth;
+    *((uint32_t*)result->dataOffset(layout.SIZE_OFFSET_BYTES)) = size;
+  }
+
   static cpputils::Data _serialize(const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     cpputils::Data result(layout.blocksizeBytes());
-    *((uint16_t*)result.dataOffset(layout.FORMAT_VERSION_OFFSET_BYTES)) = formatVersion;
-    *((uint8_t*)result.dataOffset(layout.DEPTH_OFFSET_BYTES)) = depth;
-    *((uint32_t*)result.dataOffset(layout.SIZE_OFFSET_BYTES)) = size;
+    _serializeHeader(&result, layout, formatVersion, depth, size);
     std::memcpy(result.dataOffset(layout.HEADERSIZE_BYTES), data.data(), data.size());
     std::memset(result.dataOffset(layout.HEADERSIZE_BYTES+data.size()), 0, layout.datasizeBytes()-data.size());
     return result;

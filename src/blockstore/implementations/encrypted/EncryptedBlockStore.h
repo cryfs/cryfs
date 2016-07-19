@@ -26,6 +26,7 @@ public:
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
+  bool exists(const Key &key) const override;
 
   //This function should only be used by test cases
   void __setKey(const typename Cipher::EncryptionKey &encKey);
@@ -102,6 +103,11 @@ uint64_t EncryptedBlockStore<Cipher>::blockSizeFromPhysicalBlockSize(uint64_t bl
 template<class Cipher>
 void EncryptedBlockStore<Cipher>::forEachBlock(std::function<void (const Key &)> callback) const {
   return _baseBlockStore->forEachBlock(callback);
+}
+
+template<class Cipher>
+bool EncryptedBlockStore<Cipher>::exists(const Key &key) const {
+  return _baseBlockStore->exists(key);
 }
 
 }

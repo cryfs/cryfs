@@ -38,6 +38,7 @@ public:
   MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
   MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));
   MOCK_CONST_METHOD1(forEachBlock, void(std::function<void (const blockstore::Key &)>));
+  MOCK_CONST_METHOD1(exists, bool(const blockstore::Key&));
 };
 
 class BlockMock: public Block {

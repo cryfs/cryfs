@@ -58,6 +58,18 @@ unique_ref<Block> ParallelAccessBlockStore::overwrite(const Key &key, Data data)
   return _parallelAccessStore.loadOrAdd(key, onExists, onAdd);
 }
 
+unique_ref<Block> ParallelAccessBlockStore::loadOrCreate(const Key &key, size_t size) {
+  auto onExists = [size] (BlockRef *block) {
+      if (block->size() != size) {
+        block->resize(size);
+      }
+  };
+  auto onAdd = [this, key, size] {
+      return _baseBlockStore->loadOrCreate(key, size);
+  };
+  return _parallelAccessStore.loadOrAdd(key, onExists, onAdd);
+}
+
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   auto block_ref = dynamic_pointer_move<BlockRef>(block);
@@ -83,6 +95,10 @@ uint64_t ParallelAccessBlockStore::blockSizeFromPhysicalBlockSize(uint64_t block
 
 void ParallelAccessBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
   return _baseBlockStore->forEachBlock(callback);
+}
+
+bool ParallelAccessBlockStore::exists(const Key &key) const {
+  return _baseBlockStore->exists(key);
 }
 
 }

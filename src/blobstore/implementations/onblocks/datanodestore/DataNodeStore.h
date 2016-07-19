@@ -29,6 +29,7 @@ public:
   DataNodeLayout layout() const;
 
   boost::optional<cpputils::unique_ref<DataNode>> load(const blockstore::Key &key);
+  cpputils::unique_ref<DataLeafNode> loadOrCreateLeaf(const blockstore::Key &key, size_t size);
   static cpputils::unique_ref<DataNode> load(cpputils::unique_ref<blockstore::Block> block);
 
   cpputils::unique_ref<DataLeafNode> createNewLeafNode(cpputils::Data data);

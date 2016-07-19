@@ -468,3 +468,5 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to0) {
     EXPECT_EQ(2u, blockStore->distinctWrittenBlocks().size()); // remove children from inner node and rewrite root node to be a leaf
     EXPECT_EQ(0u, blockStore->resizedBlocks().size());
 }
+
+// TODO Test that overwriting a large blob doesn't issue load/read commands for the leaves. To check the test case is correct, we can use an assert in DataLeafNode constructor which checks node depth and therefore reads the blob.

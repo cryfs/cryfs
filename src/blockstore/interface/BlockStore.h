@@ -17,7 +17,6 @@ public:
   virtual Key createKey() = 0;
   //Returns boost::none if key already exists
   virtual boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) = 0;
-  //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
   virtual cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) = 0;
@@ -31,6 +30,32 @@ public:
   virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0;
 
   virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
+
+  // TODO Test exists()
+  virtual bool exists(const Key &key) const = 0;
+
+  // TODO Test loadOrCreate()
+  // TODO Implement this per block store? (more efficient, without calling load())
+  // TODO ParallelAccessBlockStore should implement this and lock the key to avoid race conditions.
+  virtual cpputils::unique_ref<Block> loadOrCreate(const Key &key, size_t size) {
+    auto loaded = load(key);
+    if (loaded == boost::none) {
+      auto created = tryCreate(key, cpputils::Data(size).FillWithZeroes());
+      ASSERT(created != boost::none, "Couldn't load and also couldn't create block. One should succeed.");
+      return std::move(*created);
+    } else {
+      ASSERT((*loaded)->size() == size, "Loaded block of different size");
+      return std::move(*loaded);
+    }
+  }
+
+  //TODO Test removeIfExists
+  // TODO Implement this per block store? Probably faster.
+  virtual void removeIfExists(const Key &key) {
+    if (exists(key)) {
+      remove(key);
+    }
+  }
 
   virtual void remove(cpputils::unique_ref<Block> block) {
     Key key = block->key();

@@ -5,6 +5,8 @@
 #include <cpp-utils/macros.h>
 #include <vector>
 #include <utility>
+#include <functional>
+#include <cpp-utils/assert/assert.h>
 
 namespace blockstore {
     namespace caching {
@@ -18,6 +20,8 @@ namespace blockstore {
             //TODO Test cases
             //TODO More efficient implementation (i.e. merging intervals. Not keeping vector<pair>, but sorted vector<Entry> with alternating begin/end entries in the vector).
             IntervalSet();
+            IntervalSet(IntervalSet &&rhs) = default;
+            IntervalSet &operator=(IntervalSet &&rhs) = default;
 
             /**
              * Add a new interval
@@ -28,6 +32,8 @@ namespace blockstore {
              * Returns true, iff the given area is fully covered by intervals
              */
             bool isCovered(Entry begin, Entry end);
+
+            void forEachInterval(std::function<void (Entry begin, Entry end)> callback) const;
 
         private:
             std::vector<std::pair<Entry, Entry>> _intervals;
@@ -66,6 +72,13 @@ namespace blockstore {
             }
             ASSERT(begin < end, "If begin >= end, we should have stopped earlier.");
             return false;
+        }
+
+        template<class Entry>
+        void IntervalSet<Entry>::forEachInterval(std::function<void (Entry begin, Entry end)> callback) const {
+            for (const auto &interval : _intervals) {
+                callback(interval.first, interval.second);
+            }
         }
     }
 }
