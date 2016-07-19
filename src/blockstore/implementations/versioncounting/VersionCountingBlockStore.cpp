@@ -36,6 +36,10 @@ namespace blockstore {
             return VersionCountingBlock::Overwrite(_baseBlockStore.get(), key, std::move(data), this);
         }
 
+        bool VersionCountingBlockStore::exists(const Key &key) const {
+            return _baseBlockStore->exists(key);
+        }
+
         optional<unique_ref<Block>> VersionCountingBlockStore::load(const Key &key) {
             _checkNoPastIntegrityViolations();
             auto block = _baseBlockStore->load(key);

@@ -78,5 +78,9 @@ void InMemoryBlockStore::forEachBlock(std::function<void (const Key &)> callback
   }
 }
 
+bool InMemoryBlockStore::exists(const Key &key) const {
+  return _blocks.count(key) != 0;
+}
+
 }
 }

@@ -152,7 +152,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   uint32_t newLastLeafSize = newNumBytes - (newNumLeaves-1) * _nodeStore->layout().maxBytesPerLeaf();
   uint32_t maxChildrenPerInnerNode = _nodeStore->layout().maxChildrenPerInnerNode();
   auto onExistingLeaf = [newLastLeafSize] (uint32_t /*index*/, bool /*isRightBorderLeaf*/, LeafHandle leafHandle) {
-      auto leaf = leafHandle.node();
+      auto leaf = leafHandle.loadForReading();
       // This is only called, if the new last leaf was already existing
       if (leaf->numBytes() != newLastLeafSize) {
         leaf->resize(newLastLeafSize);

@@ -16,7 +16,7 @@ namespace blobstore {
 
             class LeafHandle final {
             public:
-                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::Key &key);
+                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::Key &key, boost::optional<size_t> size);
                 LeafHandle(datanodestore::DataNodeStore *nodeStore, datanodestore::DataLeafNode *node);
                 LeafHandle(LeafHandle &&rhs) = default;
 
@@ -24,7 +24,8 @@ namespace blobstore {
                     return _key;
                 }
 
-                datanodestore::DataLeafNode *node();
+                datanodestore::DataLeafNode *loadForReading();
+                datanodestore::DataLeafNode *loadForWriting();
 
                 datanodestore::DataNodeStore *nodeStore() {
                     return _nodeStore;
@@ -34,6 +35,9 @@ namespace blobstore {
                 datanodestore::DataNodeStore *_nodeStore;
                 blockstore::Key _key;
                 cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> _leaf;
+                boost::optional<size_t> _size; // Stores the size of the leaf if we know it (i.e. it isn't the last leaf)
+
+                cpputils::unique_ref<datanodestore::DataLeafNode> _load();
 
                 DISALLOW_COPY_AND_ASSIGN(LeafHandle);
             };

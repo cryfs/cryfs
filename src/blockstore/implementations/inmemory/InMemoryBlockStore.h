@@ -25,6 +25,7 @@ public:
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
+  bool exists(const Key &key) const override;
 
 private:
   std::unordered_map<Key, InMemoryBlock> _blocks;

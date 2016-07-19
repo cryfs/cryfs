@@ -60,6 +60,10 @@ optional<unique_ref<Block>> FakeBlockStore::_load(const Key &key) {
   }
 }
 
+bool FakeBlockStore::exists(const Key &key) const {
+  return _blocks.count(key);
+}
+
 void FakeBlockStore::remove(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   int numRemoved = _blocks.erase(key);

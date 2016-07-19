@@ -74,6 +74,11 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::LoadFromDisk(const bf::path &root
   }
 }
 
+bool OnDiskBlock::ExistsOnDisk(const bf::path &rootdir, const Key &key) {
+  auto filepath = _getFilepath(rootdir, key);
+  return bf::exists(filepath);
+}
+
 optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &rootdir, const Key &key, Data data) {
   auto filepath = _getFilepath(rootdir, key);
   bf::create_directory(filepath.parent_path());

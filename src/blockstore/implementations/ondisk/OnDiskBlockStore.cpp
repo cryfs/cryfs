@@ -77,6 +77,10 @@ void OnDiskBlockStore::remove(const Key &key) {
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 
+bool OnDiskBlockStore::exists(const Key &key) const {
+  return OnDiskBlock::ExistsOnDisk(_rootdir, key);
+}
+
 uint64_t OnDiskBlockStore::numBlocks() const {
   uint64_t count = 0;
   for (auto prefixDir = bf::directory_iterator(_rootdir); prefixDir != bf::directory_iterator(); ++prefixDir) {

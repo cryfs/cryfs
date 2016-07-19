@@ -24,6 +24,7 @@ public:
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
+  bool exists(const Key &key) const override;
 
   void integrityViolationDetected(const std::string &reason) const;
   KnownBlockVersions *knownBlockVersions();

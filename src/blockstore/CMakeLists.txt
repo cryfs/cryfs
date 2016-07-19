@@ -25,9 +25,10 @@ set(SOURCES
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp
   implementations/caching/cache/QueueMap.cpp
-  implementations/caching/CachedBlock.cpp
-  implementations/caching/NewBlock.cpp
   implementations/caching/IntervalSet.cpp
+  implementations/caching/BaseBlockWrapper.cpp
+  implementations/caching/CachingBlockStore.cpp
+  implementations/caching/CachedBlock.cpp
   implementations/versioncounting/VersionCountingBlock.cpp
   implementations/versioncounting/VersionCountingBlockStore.cpp
   implementations/versioncounting/KnownBlockVersions.cpp

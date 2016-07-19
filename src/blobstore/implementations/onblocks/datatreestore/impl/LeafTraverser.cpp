@@ -8,6 +8,7 @@
 using std::function;
 using std::vector;
 using boost::none;
+using boost::optional;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -81,10 +82,11 @@ namespace blobstore {
                 if (depth == 0) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1,
                            "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-                    LeafHandle leafHandle(_nodeStore, key);
+                    optional<size_t> leafSize = isRightBorderNode ? none : optional<size_t>(_nodeStore->layout().maxBytesPerLeaf());
+                    LeafHandle leafHandle(_nodeStore, key, leafSize);
                     if (growLastLeaf) {
-                        if (leafHandle.node()->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
-                            leafHandle.node()->resize(_nodeStore->layout().maxBytesPerLeaf());
+                        if (leafHandle.loadForReading()->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
+                            leafHandle.loadForReading()->resize(_nodeStore->layout().maxBytesPerLeaf());
                         }
                     }
                     if (beginIndex == 0 && endIndex == 1) {

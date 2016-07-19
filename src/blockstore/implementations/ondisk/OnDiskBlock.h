@@ -27,6 +27,7 @@ public:
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> LoadFromDisk(const boost::filesystem::path &rootdir, const Key &key);
   static boost::optional<cpputils::unique_ref<OnDiskBlock>> CreateOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static cpputils::unique_ref<OnDiskBlock> OverwriteOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
+  static bool ExistsOnDisk(const boost::filesystem::path &rootdir, const Key &key);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
 
   const void *data() const override;

@@ -41,6 +41,10 @@ unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
   }
 }
 
+unique_ref<DataLeafNode> DataNodeStore::loadOrCreateLeaf(const blockstore::Key &key, size_t size) {
+  return DataLeafNode::LoadOrCreateNode(_blockstore.get(), _layout, key, size);
+}
+
 unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(uint8_t depth, const vector<Key> &children) {
   ASSERT(children.size() >= 1, "Inner node must have at least one child");
   return DataInnerNode::CreateNewNode(_blockstore.get(), _layout, depth, children);

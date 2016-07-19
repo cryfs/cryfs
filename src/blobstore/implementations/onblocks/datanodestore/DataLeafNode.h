@@ -13,6 +13,7 @@ class DataLeafNode final: public DataNode {
 public:
   static cpputils::unique_ref<DataLeafNode> CreateNewNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, cpputils::Data data);
   static cpputils::unique_ref<DataLeafNode> OverwriteNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, const blockstore::Key &key, cpputils::Data data);
+  static cpputils::unique_ref<DataLeafNode> LoadOrCreateNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, const blockstore::Key &key, size_t size);
 
   DataLeafNode(DataNodeView block);
   ~DataLeafNode();
