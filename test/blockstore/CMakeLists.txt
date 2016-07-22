@@ -21,6 +21,10 @@ set(SOURCES
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
     implementations/caching/CachingBlockStoreTest_Generic.cpp
     implementations/caching/CachingBlockStoreTest_Specific.cpp
+    implementations/caching/IntervalSetTest_MinimalRequirements.cpp
+    implementations/caching/IntervalSetTest_ZeroRegions.cpp
+    implementations/caching/IntervalSetTest_OneRegion.cpp
+    implementations/caching/IntervalSetTest_TwoRegions.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
     implementations/caching/cache/testutils/CopyableMovableValueType.cpp
