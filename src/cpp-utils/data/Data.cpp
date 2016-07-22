@@ -5,17 +5,18 @@ using std::istream;
 using std::ofstream;
 using std::ifstream;
 using std::ios;
+using boost::optional;
 
 namespace bf = boost::filesystem;
 
 namespace cpputils {
 
-boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
+optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   ifstream file(filepath.c_str(), ios::binary);
   if (!file.good()) {
     return boost::none;
   }
-  boost::optional<Data> result(LoadFromStream(file));
+  optional<Data> result(LoadFromStream(file));
   if (!file.good()) {
     throw std::runtime_error("Error reading from file");
   }
