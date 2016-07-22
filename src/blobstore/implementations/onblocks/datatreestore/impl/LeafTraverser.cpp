@@ -202,7 +202,7 @@ namespace blobstore {
                 if (endIndex > beginIndex) {
                     onBacktrackFromSubtree(newNode.get());
                 }
-                return newNode;
+                return std::move(newNode);
             }
 
             uint32_t LeafTraverser::_maxLeavesForTreeDepth(uint8_t depth) const {
