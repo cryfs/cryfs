@@ -30,6 +30,8 @@ install:
 # Install dependencies
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./travis.install_boost.sh; fi
 - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew upgrade boost && brew install cryptopp osxfuse; fi
+# By default, travis only fetches the newest 50 commits. We need more in case we're further from the last version tag, so the build doesn't fail because it can't generate the version number.
+- git fetch --unshallow
 # Install run_with_fuse.sh
 - mkdir cmake
 - cd cmake
