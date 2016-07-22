@@ -34,11 +34,9 @@ install:
 - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew upgrade boost && brew install cryptopp osxfuse; fi
 # By default, travis only fetches the newest 50 commits. We need more in case we're further from the last version tag, so the build doesn't fail because it can't generate the version number.
 - git fetch --unshallow
-# Install run_with_fuse.sh
+# Setup target directory
 - mkdir cmake
 - cd cmake
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
-- chmod +x run_with_fuse.sh
 - cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
 - sudo cp -a /dev/urandom /dev/random
@@ -48,12 +46,10 @@ script:
 - ./test/gitversion/gitversion-test
 - ./test/cpp-utils/cpp-utils-test
 # TODO Also run on osx once fixed
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./run_with_fuse.sh ./test/fspp/fspp-test || exit 1; fi
+- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/fspp/fspp-test || exit 1; fi
 - ./test/parallelaccessstore/parallelaccessstore-test
 - ./test/blockstore/blockstore-test
 - ./test/blobstore/blobstore-test
 # TODO Also run on osx once fixed
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs/cryfs-test || exit 1; fi
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
-after_script:
-- rm run_with_fuse.sh
