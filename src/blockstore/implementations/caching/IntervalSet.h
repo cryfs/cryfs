@@ -17,7 +17,6 @@ namespace blockstore {
         template<class Entry>
         class IntervalSet final {
         public:
-            //TODO Test cases
             //TODO More efficient implementation (i.e. merging intervals. Not keeping vector<pair>, but sorted vector<Entry> with alternating begin/end entries in the vector).
             IntervalSet();
             IntervalSet(IntervalSet &&rhs) = default;
@@ -47,25 +46,25 @@ namespace blockstore {
 
         template<class Entry>
         void IntervalSet<Entry>::add(Entry begin, Entry end) {
-            ASSERT(end >= begin, "Invalid interval given");
+            ASSERT(begin <= end, "Invalid interval given");
             _intervals.push_back(std::make_pair(begin, end));
         }
 
         template<class Entry>
         bool IntervalSet<Entry>::isCovered(Entry begin, Entry end) {
-            ASSERT(end >= begin, "Invalid interval given");
+            ASSERT(begin <= end, "Invalid interval given");
             if (begin == end) {
                 return true;
             }
             for (const auto &interval : _intervals) {
                 if (!(begin < interval.first) && begin < interval.second) {
                     begin = interval.second;
-                    if (begin >= end) {
+                    if (end <= begin) {
                         return true;
                     }
                 } else if (interval.first < end && !(interval.second < end)) {
                     end = interval.first;
-                    if (begin >= end) {
+                    if (end <= begin) {
                         return true;
                     }
                 }
