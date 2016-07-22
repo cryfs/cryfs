@@ -15,7 +15,7 @@ boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
   if (!file.good()) {
     return boost::none;
   }
-  auto result = LoadFromStream(file);
+  boost::optional<Data> result(LoadFromStream(file));
   if (!file.good()) {
     throw std::runtime_error("Error reading from file");
   }
