@@ -165,7 +165,8 @@ namespace blobstore {
                 ASSERT(beginIndex <= endIndex, "Invalid parameters");
                 if (0 == depth) {
                     ASSERT(beginIndex <= 1 && endIndex == 1, "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf).");
-                    auto leafCreator = (beginIndex == 0) ? onCreateLeaf : _createMaxSizeLeaf();
+                    auto leafCreator = (beginIndex
+                     == 0) ? onCreateLeaf : _createMaxSizeLeaf();
                     return _nodeStore->createNewLeafNode(leafCreator(leafOffset));
                 }
 
