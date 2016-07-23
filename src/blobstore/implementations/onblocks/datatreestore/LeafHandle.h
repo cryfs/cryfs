@@ -37,8 +37,6 @@ namespace blobstore {
                 cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> _leaf;
                 boost::optional<size_t> _size; // Stores the size of the leaf if we know it (i.e. it isn't the last leaf)
 
-                cpputils::unique_ref<datanodestore::DataLeafNode> _load();
-
                 DISALLOW_COPY_AND_ASSIGN(LeafHandle);
             };
 

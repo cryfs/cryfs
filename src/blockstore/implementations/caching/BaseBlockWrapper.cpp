@@ -60,9 +60,7 @@ namespace blockstore {
                 _baseBlock = std::move(baseBlock);
             } else {
                 _baseBlock = _baseBlockStore()->loadOrCreate(notLoadedBlock.key, notLoadedBlock.data.size());
-                if (_baseBlock.right()->size() != notLoadedBlock.data.size()) {
-                    _baseBlock.right()->resize(notLoadedBlock.data.size());
-                }
+                ASSERT(_baseBlock.right()->size() == notLoadedBlock.data.size(), "LoadOrCreate should resize the block");
                 notLoadedBlock.validRegion.forEachInterval([this, &notLoadedBlock] (size_t begin, size_t end) {
                     _baseBlock.right()->write(notLoadedBlock.data.dataOffset(begin), begin, end-begin);
                 });
