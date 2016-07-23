@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <blockstore/implementations/caching/IntervalSet.h>
+#include "testutils/CallbackMock.h"
 
 using blockstore::caching::IntervalSet;
 using testing::Values;
@@ -29,7 +30,6 @@ public:
 INSTANTIATE_TEST_CASE_P(IntervalSetTest_TwoRegions, IntervalSetTest_TwoRegions, Values(
   [] (IntervalSet<int> *obj) {obj->add(2,5); obj->add(8,11);}, // adding intervals in forward order
   [] (IntervalSet<int> *obj) {obj->add(8,11); obj->add(2,5);}, // adding intervals in backward order
-  [] (IntervalSet<int> *obj) {obj->add(2,5); obj->add(50,60); obj->add(8,11);}, // adding third unrelated interval
   [] (IntervalSet<int> *obj) {obj->add(2,3); obj->add(3,4); obj->add(4,5); obj->add(8,11);}, // first region is merged
   [] (IntervalSet<int> *obj) {obj->add(2,4); obj->add(3,5); obj->add(8,11);}, // first region is merged with overlap
   [] (IntervalSet<int> *obj) {obj->add(2,5); obj->add(8,9); obj->add(9,10); obj->add(10,11);}, // second region is merged
@@ -246,6 +246,15 @@ TEST_P(IntervalSetTest_TwoRegions, forEachInterval) {
         }
     });
     EXPECT_EQ(vector<bool>({false, false, true, true, true, false, false, false, true, true, true, false, false}), marker);
+}
+
+TEST_P(IntervalSetTest_TwoRegions, IntervalsAreMerged) {
+    CallbackMock callback;
+    EXPECT_CALL(callback, call(2, 5)).Times(1);
+    EXPECT_CALL(callback, call(8, 11)).Times(1);
+    obj.forEachInterval([&callback] (int begin, int end) {
+        callback.call(begin, end);
+    });
 }
 
 TEST_P(IntervalSetTest_TwoRegions, MoveConstructor) {

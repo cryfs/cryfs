@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <blockstore/implementations/caching/IntervalSet.h>
+#include "testutils/CallbackMock.h"
 
 using blockstore::caching::IntervalSet;
 using testing::Values;
@@ -28,13 +29,15 @@ public:
 };
 INSTANTIATE_TEST_CASE_P(IntervalSetTest_OneRegion, IntervalSetTest_OneRegion, Values(
         [] (IntervalSet<int> *obj) {obj->add(2,5);}, // just one interval
+        [] (IntervalSet<int> *obj) {obj->add(3,4); obj->add(2,5);}, // nested intervals 1
+        [] (IntervalSet<int> *obj) {obj->add(2,5); obj->add(3,4);}, // nested intervals 2
+        [] (IntervalSet<int> *obj) {obj->add(2,3); obj->add(4,5); obj->add(3,4);}, // three merged intervals
         [] (IntervalSet<int> *obj) {obj->add(2,2); obj->add(2,5);}, // two intervals, touching at left border
         [] (IntervalSet<int> *obj) {obj->add(2,3); obj->add(3,5);}, // two intervals, touching at left inner
         [] (IntervalSet<int> *obj) {obj->add(2,4); obj->add(4,5);}, // two intervals, touching at right inner
         [] (IntervalSet<int> *obj) {obj->add(2,5); obj->add(5,5);}, // two intervals, touching at right border
         [] (IntervalSet<int> *obj) {obj->add(2,4); obj->add(3,5);}, // two intervals, overlapping
-        [] (IntervalSet<int> *obj) {obj->add(4,5); obj->add(2,4);}, // two intervals, adding intervals in backward order
-        [] (IntervalSet<int> *obj) {obj->add(2,3); obj->add(50,60); obj->add(3,5);} // adding third unrelated interval
+        [] (IntervalSet<int> *obj) {obj->add(4,5); obj->add(2,4);} // two intervals, adding intervals in backward order
 ));
 
 TEST_P(IntervalSetTest_OneRegion, nullregion_leftout) {
@@ -113,6 +116,14 @@ TEST_P(IntervalSetTest_OneRegion, forEachInterval) {
         }
     });
     EXPECT_EQ(vector<bool>({false, false, true, true, true, false, false}), marker);
+}
+
+TEST_P(IntervalSetTest_OneRegion, IntervalsAreMerged) {
+    CallbackMock callback;
+    EXPECT_CALL(callback, call(2, 5)).Times(1);
+    obj.forEachInterval([&callback] (int begin, int end) {
+        callback.call(begin, end);
+    });
 }
 
 TEST_P(IntervalSetTest_OneRegion, MoveConstructor) {
