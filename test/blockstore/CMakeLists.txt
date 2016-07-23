@@ -22,6 +22,7 @@ set(SOURCES
     implementations/caching/CachingBlockStoreTest_Generic.cpp
     implementations/caching/CachingBlockStoreTest_Specific.cpp
     implementations/caching/IntervalSetTest_MinimalRequirements.cpp
+    implementations/caching/IntervalSetTest_Merging.cpp
     implementations/caching/IntervalSetTest_ZeroRegions.cpp
     implementations/caching/IntervalSetTest_OneRegion.cpp
     implementations/caching/IntervalSetTest_TwoRegions.cpp
