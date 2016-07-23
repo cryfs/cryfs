@@ -53,20 +53,6 @@ namespace blobstore {
 
                 return _leaf.get();
             }
-
-            unique_ref<DataLeafNode> LeafHandle::_load() {
-                // If we know the size of the leaf, we don't have to load it. loadOrCreate() is enough and faster.
-                if (_size != none) {
-                    return _nodeStore->loadOrCreateLeaf(_key, *_size);
-                } else {
-                    auto loaded = _nodeStore->load(_key);
-                    ASSERT(loaded != none, "Node not found");
-                    auto leaf = dynamic_pointer_move<DataLeafNode>(*loaded);
-                    ASSERT(leaf != none, "Node is not a leaf node");
-                    return std::move(*leaf);
-                }
-
-            }
         }
     }
 }
