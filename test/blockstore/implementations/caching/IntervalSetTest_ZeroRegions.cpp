@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 #include <blockstore/implementations/caching/IntervalSet.h>
+#include "testutils/CallbackMock.h"
 
 using blockstore::caching::IntervalSet;
 using testing::Values;
 using testing::Test;
+using testing::_;
 using testing::WithParamInterface;
 using std::function;
 using std::vector;
@@ -58,6 +60,14 @@ TEST_P(IntervalSetTest_ZeroRegions, forEachInterval) {
         }
     });
     EXPECT_EQ(vector<bool>({false, false, false, false, false, false, false}), marker);
+}
+
+TEST_P(IntervalSetTest_ZeroRegions, IntervalsAreMerged) {
+    CallbackMock callback;
+    EXPECT_CALL(callback, call(_, _)).Times(0);
+    obj.forEachInterval([&callback] (int begin, int end) {
+        callback.call(begin, end);
+    });
 }
 
 TEST_P(IntervalSetTest_ZeroRegions, MoveConstructor) {
