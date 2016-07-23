@@ -52,7 +52,7 @@ namespace blockstore {
         void IntervalSet<Entry>::add(Entry begin, Entry end) {
             ASSERT(begin <= end, "Invalid interval given");
             if (begin < end) {
-                auto insertPos = std::find_if(_intervals.begin(), _intervals.end(), [begin] (const auto &entry) {return begin < entry.first;});
+                auto insertPos = std::find_if(_intervals.begin(), _intervals.end(), [begin] (const std::pair<Entry,Entry> &entry) {return begin < entry.first;});
                 auto newElem = _intervals.insert(insertPos, std::make_pair(begin, end));
                 auto firstPossiblyInvalidEntry = (newElem == _intervals.begin()) ? _intervals.begin() : (newElem-1);
                 _mergeRight(firstPossiblyInvalidEntry);
