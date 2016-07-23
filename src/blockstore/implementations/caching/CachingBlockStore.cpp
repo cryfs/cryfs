@@ -5,6 +5,7 @@ using boost::optional;
 using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using cpputils::Data;
 using std::function;
 
@@ -105,10 +106,10 @@ namespace blockstore{
         }
 
         void CachingBlockStore::remove(unique_ref<Block> block) {
-            //TODO Faster implementation without storing it back to the cache inbetween?
-            Key key = block->key();
-            cpputils::destruct(std::move(block)); // Store it back to the cache
-            remove(key);
+            auto cachedBlock = dynamic_pointer_move<CachedBlock>(block);
+            ASSERT(cachedBlock != none, "Given block is not a CachedBlock");
+            BaseBlockWrapper baseBlock = (*cachedBlock)->releaseBaseBlock();
+            baseBlock.remove();
         }
 
         uint64_t CachingBlockStore::numBlocks() const {

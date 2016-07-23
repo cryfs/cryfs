@@ -36,6 +36,10 @@ namespace blockstore {
             }
         }
 
+        bool BaseBlockWrapper::isValid() const {
+            return _isValid;
+        }
+
         const void *BaseBlockWrapper::data() const {
             _ensureIsFullyLoaded();
             return _baseBlock.right()->data();
