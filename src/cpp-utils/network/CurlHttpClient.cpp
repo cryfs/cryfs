@@ -3,7 +3,6 @@
 #include "CurlHttpClient.h"
 #include <sstream>
 #include <iostream>
-#include <curl/curl.h>
 #include <curl/easy.h>
 
 using boost::none;
