@@ -39,8 +39,7 @@ namespace blockstore{
         }
 
         unique_ref<Block> CachingBlockStore::overwrite(const Key &key, Data data) {
-            //TODO implement this better?
-            auto created = loadOrCreate(key, data.size()); // -- is it now with the new resize()? TODO overwrite should be able to modify size. Change implementation or requirement.
+            auto created = loadOrCreate(key, data.size());
             created->write(data.data(), 0, data.size());
             return created;
         }
