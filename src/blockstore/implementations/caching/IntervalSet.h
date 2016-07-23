@@ -49,6 +49,7 @@ namespace blockstore {
 
         template<class Entry>
         void IntervalSet<Entry>::add(Entry begin, Entry end) {
+            //TODO This adds an interval and then merges intervals with overlapping areas. Would be faster to not add it first, if we don't have to add a new one.
             ASSERT(begin <= end, "Invalid interval given");
             if (begin < end) {
                 auto insertPos = std::find_if(_intervals.begin(), _intervals.end(), [begin] (const std::pair<Entry,Entry> &entry) {return begin < entry.first;});
