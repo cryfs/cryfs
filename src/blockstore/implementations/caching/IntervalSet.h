@@ -18,7 +18,6 @@ namespace blockstore {
         template<class Entry>
         class IntervalSet final {
         public:
-            //TODO Test cases for different merges in add()
             IntervalSet();
             IntervalSet(IntervalSet &&rhs) = default;
             IntervalSet &operator=(IntervalSet &&rhs) = default;
@@ -65,14 +64,16 @@ namespace blockstore {
         void IntervalSet<Entry>::_mergeRight(typename std::vector<std::pair<Entry,Entry>>::iterator mergeBegin) {
             ASSERT(mergeBegin < _intervals.end(), "This should be called with a valid element.");
             // Find the last interval to be merged into this group
-            auto mergeLast = mergeBegin;
-            while (mergeLast != _intervals.end()-1 && (mergeLast+1)->first <= mergeLast->second) {
-                ++mergeLast;
+            auto mergeEnd = mergeBegin + 1;
+            Entry mergedIntervalEnd = mergeBegin->second;
+            while (mergeEnd != _intervals.end() && mergeEnd->first <= mergedIntervalEnd) {
+                mergedIntervalEnd = std::max(mergedIntervalEnd, mergeEnd->second);
+                ++mergeEnd;
             }
             // Merge them
-            if (mergeLast != mergeBegin) {
-                mergeBegin->second = std::max(mergeBegin->second, mergeLast->second);
-                _intervals.erase(mergeBegin + 1, mergeLast+1);
+            if (mergeEnd != mergeBegin + 1) {
+                mergeBegin->second = mergedIntervalEnd;
+                _intervals.erase(mergeBegin + 1, mergeEnd);
             }
         }
 
