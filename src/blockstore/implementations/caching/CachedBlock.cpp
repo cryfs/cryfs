@@ -13,7 +13,9 @@ CachedBlock::CachedBlock(BaseBlockWrapper baseBlock, CachingBlockStore *blockSto
 }
 
 CachedBlock::~CachedBlock() {
-  _blockStore->returnToCache(std::move(_baseBlock));
+  if (_baseBlock.isValid()) {
+    _blockStore->returnToCache(std::move(_baseBlock));
+  }
 }
 
 const void *CachedBlock::data() const {
@@ -34,6 +36,10 @@ size_t CachedBlock::size() const {
 
 void CachedBlock::resize(size_t newSize) {
   return _baseBlock.resize(newSize);
+}
+
+BaseBlockWrapper CachedBlock::releaseBaseBlock() {
+  return std::move(_baseBlock);
 }
 
 }
