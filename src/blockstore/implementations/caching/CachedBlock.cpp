@@ -38,7 +38,7 @@ void CachedBlock::resize(size_t newSize) {
   return _baseBlock.resize(newSize);
 }
 
-BaseBlockWrapper CachedBlock::releaseBaseBlockWrapper() {
+BaseBlockWrapper CachedBlock::releaseBaseBlock() {
   return std::move(_baseBlock);
 }
 

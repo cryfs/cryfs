@@ -7,6 +7,7 @@
 #include <utility>
 #include <functional>
 #include <cpp-utils/assert/assert.h>
+#include <algorithm>
 
 namespace blockstore {
     namespace caching {
@@ -17,8 +18,6 @@ namespace blockstore {
         template<class Entry>
         class IntervalSet final {
         public:
-            //TODO Test cases
-            //TODO More efficient implementation (i.e. merging intervals. Not keeping vector<pair>, but sorted vector<Entry> with alternating begin/end entries in the vector).
             IntervalSet();
             IntervalSet(IntervalSet &&rhs) = default;
             IntervalSet &operator=(IntervalSet &&rhs) = default;
@@ -38,6 +37,9 @@ namespace blockstore {
         private:
             std::vector<std::pair<Entry, Entry>> _intervals;
 
+            void _mergeRight(typename std::vector<std::pair<Entry,Entry>>::iterator pos);
+            bool _intervalsDontOverlap() const;
+
             DISALLOW_COPY_AND_ASSIGN(IntervalSet);
         };
 
@@ -47,30 +49,61 @@ namespace blockstore {
 
         template<class Entry>
         void IntervalSet<Entry>::add(Entry begin, Entry end) {
-            ASSERT(end >= begin, "Invalid interval given");
-            _intervals.push_back(std::make_pair(begin, end));
+            //TODO This adds an interval and then merges intervals with overlapping areas. Would be faster to not add it first, if we don't have to add a new one.
+            ASSERT(begin <= end, "Invalid interval given");
+            if (begin < end) {
+                auto insertPos = std::find_if(_intervals.begin(), _intervals.end(), [begin] (const std::pair<Entry,Entry> &entry) {return begin < entry.first;});
+                auto newElem = _intervals.insert(insertPos, std::make_pair(begin, end));
+                auto firstPossiblyInvalidEntry = (newElem == _intervals.begin()) ? _intervals.begin() : (newElem-1);
+                _mergeRight(firstPossiblyInvalidEntry);
+                ASSERT(_intervalsDontOverlap(), "Intervals shouldn't overlap");
+                ASSERT(isCovered(begin, end), "Added region should be covered");
+            }
+        }
+
+        template<class Entry>
+        void IntervalSet<Entry>::_mergeRight(typename std::vector<std::pair<Entry,Entry>>::iterator mergeBegin) {
+            ASSERT(mergeBegin < _intervals.end(), "This should be called with a valid element.");
+            // Find the last interval to be merged into this group
+            auto mergeEnd = mergeBegin + 1;
+            Entry mergedIntervalEnd = mergeBegin->second;
+            while (mergeEnd != _intervals.end() && mergeEnd->first <= mergedIntervalEnd) {
+                mergedIntervalEnd = std::max(mergedIntervalEnd, mergeEnd->second);
+                ++mergeEnd;
+            }
+            // Merge them
+            if (mergeEnd != mergeBegin + 1) {
+                mergeBegin->second = mergedIntervalEnd;
+                _intervals.erase(mergeBegin + 1, mergeEnd);
+            }
+        }
+
+        template<class Entry>
+        bool IntervalSet<Entry>::_intervalsDontOverlap() const {
+            for (auto iter = _intervals.begin(); iter < _intervals.end()-1 ; ++iter) {
+                if ((iter+1)->first <= iter->second) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         template<class Entry>
         bool IntervalSet<Entry>::isCovered(Entry begin, Entry end) {
-            ASSERT(end >= begin, "Invalid interval given");
+            ASSERT(begin <= end, "Invalid interval given");
             if (begin == end) {
                 return true;
             }
             for (const auto &interval : _intervals) {
-                if (!(begin < interval.first) && begin < interval.second) {
-                    begin = interval.second;
-                    if (begin >= end) {
-                        return true;
-                    }
-                } else if (interval.first < end && !(interval.second < end)) {
-                    end = interval.first;
-                    if (begin >= end) {
-                        return true;
-                    }
+                if (!(begin < interval.first) && end <= interval.second) {
+                    // Covered by the current interval
+                    return true;
+                } else if (end <= interval.first) {
+                    // We're out of the region where intervals could cover us. Break early.
+                    return false;
                 }
             }
-            ASSERT(begin < end, "If begin >= end, we should have stopped earlier.");
+            // No covering interval found
             return false;
         }
 

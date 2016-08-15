@@ -35,6 +35,7 @@ public:
   virtual bool exists(const Key &key) const = 0;
 
   // TODO Test loadOrCreate()
+  // TODO Also test using the block after loadOrCreate(), e.g. writing to it. CachingBlockStore handles these blocks quite different from blocks loaded using load().
   // TODO Implement this per block store? (more efficient, without calling load())
   // TODO ParallelAccessBlockStore should implement this and lock the key to avoid race conditions.
   virtual cpputils::unique_ref<Block> loadOrCreate(const Key &key, size_t size) {

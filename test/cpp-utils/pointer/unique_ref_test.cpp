@@ -149,7 +149,7 @@ TEST_F(UniqueRefTest, Assignment) {
   SomeClass *obj1ptr = obj1.get();
   obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
-  EXPECT_EQ(nullptr, obj1.get());
+  EXPECT_FALSE(obj1.isValid());
 }
 
 TEST_F(UniqueRefTest, MoveConstructor) {
@@ -157,7 +157,7 @@ TEST_F(UniqueRefTest, MoveConstructor) {
   SomeClass *obj1ptr = obj1.get();
   unique_ref<SomeClass> obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
-  EXPECT_EQ(nullptr, obj1.get());
+  EXPECT_FALSE(obj1.isValid());
 }
 
 TEST_F(UniqueRefTest, Swap) {
@@ -177,7 +177,7 @@ TEST_F(UniqueRefTest, SwapFromInvalid) {
   SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, obj2);
   EXPECT_EQ(obj2ptr, obj1.get());
-  EXPECT_EQ(nullptr, obj2.get());
+  EXPECT_FALSE(obj2.isValid());
 }
 
 TEST_F(UniqueRefTest, SwapWithInvalid) {
@@ -186,7 +186,7 @@ TEST_F(UniqueRefTest, SwapWithInvalid) {
   makeInvalid(std::move(obj2));
   SomeClass *obj1ptr = obj1.get();
   std::swap(obj1, obj2);
-  EXPECT_EQ(nullptr, obj1.get());
+  EXPECT_FALSE(obj1.isValid());
   EXPECT_EQ(obj1ptr, obj2.get());
 }
 
@@ -196,8 +196,8 @@ TEST_F(UniqueRefTest, SwapInvalidWithInvalid) {
   makeInvalid(std::move(obj1));
   makeInvalid(std::move(obj2));
   std::swap(obj1, obj2);
-  EXPECT_EQ(nullptr, obj1.get());
-  EXPECT_EQ(nullptr, obj2.get());
+  EXPECT_FALSE(obj1.isValid());
+  EXPECT_FALSE(obj2.isValid());
 }
 
 TEST_F(UniqueRefTest, SwapFromRValue) {
