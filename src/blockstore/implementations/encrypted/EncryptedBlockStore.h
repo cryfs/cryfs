@@ -22,6 +22,7 @@ public:
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
   cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) override;
   void remove(const Key &key) override;
+  void removeIfExists(const Key &key) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
@@ -78,6 +79,11 @@ cpputils::unique_ref<Block> EncryptedBlockStore<Cipher>::overwrite(const blockst
 template<class Cipher>
 void EncryptedBlockStore<Cipher>::remove(const Key &key) {
   return _baseBlockStore->remove(key);
+}
+
+template<class Cipher>
+void EncryptedBlockStore<Cipher>::removeIfExists(const Key &key) {
+  return _baseBlockStore->removeIfExists(key);
 }
 
 template<class Cipher>

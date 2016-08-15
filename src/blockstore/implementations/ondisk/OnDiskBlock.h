@@ -29,6 +29,7 @@ public:
   static cpputils::unique_ref<OnDiskBlock> OverwriteOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data);
   static bool ExistsOnDisk(const boost::filesystem::path &rootdir, const Key &key);
   static void RemoveFromDisk(const boost::filesystem::path &rootdir, const Key &key);
+  static bool RemoveFromDiskIfExists(const boost::filesystem::path &rootdir, const Key &key);
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

@@ -98,7 +98,7 @@ private:
   cpputils::unique_ref<ActualResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
 
   std::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key);
-  cpputils::unique_ref<Resource> _waitForResourceToRemove(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
+  void _removeOnceLastUserReleasedIt(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -201,11 +201,7 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 
   cpputils::destruct(std::move(resource));
 
-  //Wait for last resource user to release it
-  auto resourceToRemove = resourceToRemoveFuture.get();
-  std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-  _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
-  _baseStore->removeFromBaseStore(std::move(resourceToRemove));
+  _removeOnceLastUserReleasedIt(key, std::move(resourceToRemoveFuture));
 }
 
 template<class Resource, class ResourceRef, class Key>
@@ -214,22 +210,28 @@ std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, Resour
     auto insertResult = _resourcesToRemove.emplace(key, std::promise < cpputils::unique_ref < Resource >> ());
     ASSERT(true == insertResult.second, "Inserting failed");
     return insertResult.first->second.get_future();
-};
+}
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
+    //TODO Lock here?
     auto found = _openResources.find(key);
     if (found != _openResources.end()) {
         auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
-        //Wait for last resource user to release it
-        auto resourceToRemove = resourceToRemoveFuture.get();
-        std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-        _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
-        _baseStore->removeFromBaseStore(std::move(resourceToRemove));
+        _removeOnceLastUserReleasedIt(key, std::move(resourceToRemoveFuture));
     } else {
         _baseStore->removeFromBaseStore(key);
     }
-};
+}
+
+template<class Resource, class ResourceRef, class Key>
+void ParallelAccessStore<Resource, ResourceRef, Key>::_removeOnceLastUserReleasedIt(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture) {
+    //Wait for last resource user to release it
+    auto resourceToRemove = resourceToRemoveFuture.get();
+    std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+    _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
+    _baseStore->removeFromBaseStore(std::move(resourceToRemove));
+}
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::release(const Key &key) {

@@ -60,6 +60,10 @@ void InMemoryBlockStore::remove(const Key &key) {
   ASSERT(1==numRemoved, "Didn't find block to remove");
 }
 
+void InMemoryBlockStore::removeIfExists(const Key &key) {
+  _blocks.erase(key);
+}
+
 uint64_t InMemoryBlockStore::numBlocks() const {
   return _blocks.size();
 }

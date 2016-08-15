@@ -70,6 +70,11 @@ void FakeBlockStore::remove(const Key &key) {
   ASSERT(numRemoved == 1, "Block not found");
 }
 
+void FakeBlockStore::removeIfExists(const Key &key) {
+  std::unique_lock<std::mutex> lock(_mutex);
+  _blocks.erase(key);
+}
+
 unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
   auto newdata = make_shared<Data>(data.copy());
   _used_dataregions_for_blocks.push_back(newdata);

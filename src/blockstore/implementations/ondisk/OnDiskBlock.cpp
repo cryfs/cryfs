@@ -100,8 +100,16 @@ unique_ref<OnDiskBlock> OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, co
 }
 
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
+  bool removed = RemoveFromDiskIfExists(rootdir, key);
+  ASSERT(removed, "Block not found on disk");
+}
+
+bool OnDiskBlock::RemoveFromDiskIfExists(const bf::path &rootdir, const Key &key) {
   auto filepath = _getFilepath(rootdir, key);
-  ASSERT(bf::is_regular_file(filepath), "Block not found on disk");
+  if (!bf::is_regular_file(filepath)) {
+    return false;
+  }
+
   bool retval = bf::remove(filepath);
   if (!retval) {
     LOG(ERROR) << "Couldn't find block " << key.ToString() << " to remove";
@@ -109,6 +117,7 @@ void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
   if (bf::is_empty(filepath.parent_path())) {
     bf::remove(filepath.parent_path());
   }
+  return true;
 }
 
 void OnDiskBlock::_storeToDisk() const {

@@ -16,8 +16,8 @@ public:
 
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-  //TODO Can we make this faster by allowing to delete blocks by only having theiy Key? So we wouldn't have to load it first?
   void remove(const Key &key) override;
+  void removeIfExists(const Key &key) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;

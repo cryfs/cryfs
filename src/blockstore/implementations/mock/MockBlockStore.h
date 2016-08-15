@@ -74,6 +74,11 @@ namespace blockstore {
                 return _baseBlockStore->remove((*mockBlock)->releaseBaseBlock());
             }
 
+            void removeIfExists(const Key &key) override {
+                _increaseNumRemovedBlocks(key);
+                return _baseBlockStore->removeIfExists(key);
+            }
+
             bool exists(const Key &key) const override {
                 return _baseBlockStore->exists(key);
             }

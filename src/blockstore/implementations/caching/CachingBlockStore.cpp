@@ -149,6 +149,15 @@ namespace blockstore{
             return _blocksThatMightNotBeInTheBaseStore.count(key) || _baseBlockStore->exists(key);
         }
 
+        void CachingBlockStore::removeIfExists(const Key &key) {
+            auto fromCache = _cache.pop(key);
+            if (fromCache != none) {
+                fromCache->remove();
+            } else {
+                _baseBlockStore->removeIfExists(key);
+            }
+        }
+
         void CachingBlockStore::unregisterBlockThatMightNotBeInTheBaseStore(const Key &key) {
             std::unique_lock<std::mutex> lock(_blocksThatMightNotBeInTheBaseStoreMutex);
             _blocksThatMightNotBeInTheBaseStore.erase(key);

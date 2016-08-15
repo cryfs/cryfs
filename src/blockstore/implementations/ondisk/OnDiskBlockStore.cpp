@@ -77,6 +77,11 @@ void OnDiskBlockStore::remove(const Key &key) {
   OnDiskBlock::RemoveFromDisk(_rootdir, key);
 }
 
+void OnDiskBlockStore::removeIfExists(const Key &key) {
+  OnDiskBlock::RemoveFromDiskIfExists(_rootdir, key);
+}
+
+
 bool OnDiskBlockStore::exists(const Key &key) const {
   return OnDiskBlock::ExistsOnDisk(_rootdir, key);
 }

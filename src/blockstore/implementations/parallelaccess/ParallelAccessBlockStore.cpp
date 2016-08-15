@@ -81,6 +81,14 @@ void ParallelAccessBlockStore::remove(const Key &key) {
   return _parallelAccessStore.remove(key);
 }
 
+void ParallelAccessBlockStore::removeIfExists(const Key &key) {
+  //TODO More efficient implementation without calling exists()
+  //TODO Fix race condition when block is deleted between exists() and remove().
+  if (exists(key)) {
+    remove(key);
+  }
+}
+
 uint64_t ParallelAccessBlockStore::numBlocks() const {
   return _baseBlockStore->numBlocks();
 }
