@@ -144,6 +144,7 @@ namespace blockstore{
         }
 
         bool CachingBlockStore::exists(const Key &key) const {
+            std::unique_lock<std::mutex> lock(_blocksThatMightNotBeInTheBaseStoreMutex);
             return _blocksThatMightNotBeInTheBaseStore.count(key) || _baseBlockStore->exists(key);
         }
 

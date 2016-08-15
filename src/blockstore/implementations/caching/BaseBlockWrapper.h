@@ -56,7 +56,9 @@ namespace blockstore {
             CachingBlockStore *_cachingBlockStore;
             mutable cpputils::either<NotLoadedBlock, cpputils::unique_ref<Block>> _baseBlock;
             bool _isValid;
+            mutable std::mutex _mutex;
 
+            cpputils::either<NotLoadedBlock, cpputils::unique_ref<Block>> _releaseBaseBlock();
             void _ensureIsFullyLoaded() const;
             void _loadBaseBlock() const;
             BlockStore *_baseBlockStore() const;
