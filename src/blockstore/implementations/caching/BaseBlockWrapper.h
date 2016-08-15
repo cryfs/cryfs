@@ -50,6 +50,8 @@ namespace blockstore {
 
             void resize(size_t newSize);
 
+            bool isValid() const;
+
         private:
             CachingBlockStore *_cachingBlockStore;
             mutable cpputils::either<NotLoadedBlock, cpputils::unique_ref<Block>> _baseBlock;

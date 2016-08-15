@@ -5,6 +5,7 @@ using boost::optional;
 using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using cpputils::Data;
 using std::function;
 
@@ -39,8 +40,7 @@ namespace blockstore{
         }
 
         unique_ref<Block> CachingBlockStore::overwrite(const Key &key, Data data) {
-            //TODO implement this better?
-            auto created = loadOrCreate(key, data.size()); // -- is it now with the new resize()? TODO overwrite should be able to modify size. Change implementation or requirement.
+            auto created = loadOrCreate(key, data.size());
             created->write(data.data(), 0, data.size());
             return created;
         }
@@ -106,10 +106,9 @@ namespace blockstore{
         }
 
         void CachingBlockStore::remove(unique_ref<Block> block) {
-            //TODO Faster implementation without storing it back to the cache inbetween?
-            Key key = block->key();
-            cpputils::destruct(std::move(block)); // Store it back to the cache
-            remove(key);
+            auto cachedBlock = dynamic_pointer_move<CachedBlock>(block);
+            ASSERT(cachedBlock != none, "Wrong block type given");
+            (*cachedBlock)->releaseBaseBlockWrapper().remove();
         }
 
         uint64_t CachingBlockStore::numBlocks() const {
