@@ -72,6 +72,11 @@ namespace blockstore {
             _baseBlockStore->remove(key);
         }
 
+        void VersionCountingBlockStore::removeIfExists(const Key &key) {
+            _knownBlockVersions.markBlockAsDeleted(key);
+            _baseBlockStore->removeIfExists(key);
+        }
+
         uint64_t VersionCountingBlockStore::numBlocks() const {
             return _baseBlockStore->numBlocks();
         }

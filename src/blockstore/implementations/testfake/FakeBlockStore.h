@@ -35,6 +35,7 @@ public:
   cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) override;
   boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
   void remove(const Key &key) override;
+  void removeIfExists(const Key &key) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;

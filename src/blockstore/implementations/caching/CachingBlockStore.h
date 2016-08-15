@@ -23,6 +23,7 @@ namespace blockstore {
             cpputils::unique_ref<Block> loadOrCreate(const Key &key, size_t size) override;
             void remove(const Key &key) override;
             void remove(cpputils::unique_ref<Block> block) override;
+            void removeIfExists(const Key &key) override;
             uint64_t numBlocks() const override;
             uint64_t estimateNumFreeBytes() const override;
             uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
