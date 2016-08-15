@@ -11,8 +11,6 @@
 namespace blockstore {
     namespace caching {
 
-        //TODO Mutexes/Locking, here and also in used classes like BaseBlockWrapper
-
         class CachingBlockStore final : public BlockStore {
         public:
             explicit CachingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);

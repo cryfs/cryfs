@@ -5,6 +5,9 @@ using cpputils::unique_ref;
 using cpputils::Data;
 using cpputils::make_left;
 using cpputils::make_right;
+using cpputils::either;
+using std::unique_lock;
+using std::mutex;
 using boost::none;
 
 namespace blockstore {
@@ -13,21 +16,23 @@ namespace blockstore {
         BaseBlockWrapper::BaseBlockWrapper(unique_ref<Block> baseBlock, CachingBlockStore *cachingBlockStore)
             : _cachingBlockStore(cachingBlockStore),
               _baseBlock(make_right<NotLoadedBlock, unique_ref<Block>>(std::move(baseBlock))),
-              _isValid(true) {
+              _isValid(true),
+              _mutex() {
         }
 
         BaseBlockWrapper::BaseBlockWrapper(const Key &key, size_t size, CachingBlockStore *cachingBlockStore)
             : _cachingBlockStore(cachingBlockStore),
               _baseBlock(make_left<NotLoadedBlock, unique_ref<Block>>(NotLoadedBlock(key, size))),
-              _isValid(true) {
+              _isValid(true),
+              _mutex() {
         }
 
         BaseBlockWrapper::BaseBlockWrapper(BaseBlockWrapper &&rhs)
             : _cachingBlockStore(std::move(rhs._cachingBlockStore)),
-              _baseBlock(std::move(rhs._baseBlock)),
-              _isValid(true) {
-            ASSERT(rhs._isValid, "Trying to move from an invalid instance");
-            rhs._isValid = false;
+              _baseBlock(rhs._releaseBaseBlock()),
+              _isValid(true),
+              _mutex() {
+            //rhs._isValid = false; // This is already set in rhs._releaseBaseBlock()
         }
 
         BaseBlockWrapper::~BaseBlockWrapper() {
@@ -35,6 +40,13 @@ namespace blockstore {
                 flush();
             }
         }
+
+        either<NotLoadedBlock, unique_ref<Block>> BaseBlockWrapper::_releaseBaseBlock() {
+            unique_lock<mutex> lock(_mutex);
+            ASSERT(_isValid, "Trying to release base block from an invalid instance");
+            _isValid = false;
+            return std::move(_baseBlock);
+        };
 
         bool BaseBlockWrapper::isValid() const {
             return _isValid;
@@ -46,6 +58,7 @@ namespace blockstore {
         }
 
         void BaseBlockWrapper::_ensureIsFullyLoaded() const {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_left()) {
                 _loadBaseBlock();
             }
@@ -68,6 +81,7 @@ namespace blockstore {
         }
 
         void BaseBlockWrapper::write(const void *source, uint64_t offset, uint64_t size) {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_right()) {
                 _baseBlock.right()->write(source, offset, size);
             } else {
@@ -83,6 +97,7 @@ namespace blockstore {
         }
 
         size_t BaseBlockWrapper::size() const {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_right()) {
                 return _baseBlock.right()->size();
             } else {
@@ -91,6 +106,7 @@ namespace blockstore {
         }
 
         const Key &BaseBlockWrapper::key() const {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_right()) {
                 return _baseBlock.right()->key();
             } else {
@@ -99,6 +115,7 @@ namespace blockstore {
         }
 
         void BaseBlockWrapper::remove() {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_right()) {
                 _baseBlockStore()->remove(std::move(_baseBlock.right()));
             } else {
@@ -109,6 +126,7 @@ namespace blockstore {
         }
 
         void BaseBlockWrapper::resize(size_t newSize) {
+            unique_lock<mutex> lock(_mutex);
             if (_baseBlock.is_right()) {
                 _baseBlock.right()->resize(newSize);
             } else {
