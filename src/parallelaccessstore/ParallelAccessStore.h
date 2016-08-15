@@ -156,6 +156,7 @@ cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key
 
 template<class Resource, class ResourceRef, class Key>
 cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
+    //TODO This lock doesn't allow loading different blocks in parallel. Can we only lock the requested key?
     std::lock_guard<std::mutex> lock(_mutex);
     auto found = _openResources.find(key);
     if (found == _openResources.end()) {
