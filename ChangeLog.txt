@@ -1,7 +1,7 @@
 Version 0.9.6 (unreleased)
 ---------------
 Compatibility:
-* Compatible with libcurl >= 7.50.0
+* Compatible with libcurl version >= 7.50.0, and <= 7.21.6 (tested down to 7.19.0)
 
 Version 0.9.5
 ---------------
