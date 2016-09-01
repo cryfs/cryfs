@@ -37,7 +37,7 @@ Manual install (Debian)
 
 GUI
 ===
-If you want to use a GUI to mount your CryFS volumes, take a look at the [cryfs-gui project](https://mhogomchungu.github.io/cryfs-gui/). You have to install the GUI **and** also CryFS itself for it to work.
+If you want to use a GUI to mount your CryFS volumes, take a look at the [SiriKali project](https://mhogomchungu.github.io/sirikali/). You have to install the GUI **and** also CryFS itself for it to work.
 
 Building from source
 ====================
