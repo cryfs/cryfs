@@ -140,9 +140,5 @@ namespace blockstore {
             return _cachingBlockStore->baseBlockStore();
         }
 
-        bool BaseBlockWrapper::isValid() const {
-            return _isValid;
-        }
-
     }
 }
