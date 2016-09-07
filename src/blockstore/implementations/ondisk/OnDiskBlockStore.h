@@ -22,7 +22,7 @@ public:
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
-  cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) override;
+  void overwrite(const blockstore::Key &key, const void *source, uint64_t offset, uint64_t size) override;
 
 private:
   const boost::filesystem::path _rootdir;

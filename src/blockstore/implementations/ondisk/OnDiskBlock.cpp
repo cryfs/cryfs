@@ -86,12 +86,12 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &root
   return std::move(block);
 }
 
-unique_ref<OnDiskBlock> OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, const Key &key, Data data) {
+void OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, const Key &key, const void *source, uint64_t offset, uint64_t size) {
   auto filepath = _getFilepath(rootdir, key);
   bf::create_directory(filepath.parent_path());
-  auto block = make_unique_ref<OnDiskBlock>(key, filepath, std::move(data));
-  block->_storeToDisk();
-  return std::move(block);
+  Data data(size);
+  std::memcpy(data.data(), source, size);
+  data.StoreToFileAtOffset(filepath, offset);
 }
 
 void OnDiskBlock::RemoveFromDisk(const bf::path &rootdir, const Key &key) {
