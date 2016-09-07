@@ -46,7 +46,7 @@ namespace blobstore {
                     if (increaseTreeDepth && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
                         leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
                     }
-                    if (beginIndex == 0 && endIndex == 1) {
+                    if (beginIndex == 0 && endIndex >= 1) {
                         onExistingLeaf(0, LeafHandle(_nodeStore, leaf));
                     }
                 } else {
