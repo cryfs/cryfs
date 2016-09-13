@@ -9,5 +9,5 @@ setup(name='git-version',
       description='Make git version information (e.g. git tag name, git commit id, ...) available to C++ source files.',
       author='Sebastian Messmer',
       author_email='messmer@cryfs.org',
-      license='GPLv3'
+      license='LGPLv3'
 )
