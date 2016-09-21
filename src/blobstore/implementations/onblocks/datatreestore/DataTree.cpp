@@ -149,7 +149,7 @@ uint32_t DataTree::_numLeaves(const DataNode &node) const {
   }
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
-  uint64_t numLeavesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner);
+  uint64_t numLeavesInLeftChildren = (uint64_t)(inner.numChildren()-1) * leavesPerFullChild(inner);
   auto lastChild = _nodeStore->load(inner.LastChild()->key());
   ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numLeavesInRightChild = _numLeaves(**lastChild);
