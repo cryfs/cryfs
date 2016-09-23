@@ -54,7 +54,8 @@ Requirements
     - chrono
     - program_options
     - thread
-  - Crypto++ version >= 5.6.3 (including development headers)
+  - Crypto++ version == 5.6.3 (including development headers)
+    (not compatible to Crypto++ 5.6.4, but will be compatible with Crypto++ 5.6.5+)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
