@@ -29,7 +29,7 @@ install:
 - echo Using $NUMCORES cores
 # Install dependencies
 - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./travis.install_boost.sh; fi
-- if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew upgrade boost && brew install cryptopp osxfuse; fi
+- if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew upgrade boost && brew cask install osxfuse && brew install cryptopp; fi
 # Install run_with_fuse.sh
 - mkdir cmake
 - cd cmake

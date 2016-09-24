@@ -114,12 +114,14 @@ TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
     EXPECT_EQ("", config.RootBlob()); // This tells CryFS to create a new root blob
 }
 
+#if CRYPTOPP_VERSION != 564
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     AnswerNoToDefaultSettings();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("mars-448-gcm"));
     CryConfig config = creator.create(none, none);
     cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
+#endif
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     AnswerNoToDefaultSettings();
