@@ -15,6 +15,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC cryfs cpp-utils gitversion)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
 
+if(NOT CRYFS_UPDATE_CHECKS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DCRYFS_NO_UPDATE_CHECKS)
+endif(NOT CRYFS_UPDATE_CHECKS)
+
 add_executable(${PROJECT_NAME}_bin main.cpp)
 set_target_properties(${PROJECT_NAME}_bin PROPERTIES OUTPUT_NAME cryfs)
 target_link_libraries(${PROJECT_NAME}_bin PUBLIC ${PROJECT_NAME})
