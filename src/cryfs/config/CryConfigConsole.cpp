@@ -13,8 +13,8 @@ namespace cryfs {
     constexpr const char *CryConfigConsole::DEFAULT_CIPHER;
     constexpr uint32_t CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES;
 
-    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console, bool noninteractive)
-            : _console(std::move(console)), _useDefaultSettings(noninteractive ? optional<bool>(true) : none) {
+    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console)
+            : _console(std::move(console)), _useDefaultSettings(none) {
     }
 
     string CryConfigConsole::askCipher() {
@@ -43,7 +43,7 @@ namespace cryfs {
         if (warning == none) {
             return true;
         }
-        return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?");
+        return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?", true);
     }
 
     uint32_t CryConfigConsole::askBlocksizeBytes() {
@@ -70,7 +70,7 @@ namespace cryfs {
 
     bool CryConfigConsole::_checkUseDefaultSettings() {
         if (_useDefaultSettings == none) {
-            _useDefaultSettings = _console->askYesNo("Use default settings?");
+            _useDefaultSettings = _console->askYesNo("Use default settings?", true);
         }
         return *_useDefaultSettings;
     }

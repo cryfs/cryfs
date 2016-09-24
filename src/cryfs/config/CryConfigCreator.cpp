@@ -15,8 +15,8 @@ using boost::none;
 
 namespace cryfs {
 
-    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator, bool noninteractive)
-        :_console(console), _configConsole(console, noninteractive), _encryptionKeyGenerator(encryptionKeyGenerator) {
+    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator)
+        :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
     CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {

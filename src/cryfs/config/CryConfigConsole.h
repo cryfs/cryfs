@@ -9,7 +9,7 @@
 namespace cryfs {
     class CryConfigConsole final {
     public:
-        CryConfigConsole(std::shared_ptr<cpputils::Console> console, bool noninteractive);
+        CryConfigConsole(std::shared_ptr<cpputils::Console> console);
         CryConfigConsole(CryConfigConsole &&rhs) = default;
 
         std::string askCipher();

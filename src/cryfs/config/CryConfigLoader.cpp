@@ -11,7 +11,6 @@ namespace bf = boost::filesystem;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::Console;
-using cpputils::IOStreamConsole;
 using cpputils::Random;
 using cpputils::RandomGenerator;
 using cpputils::SCryptSettings;
@@ -27,8 +26,8 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, bool noninteractive)
-    : _console(console), _creator(console, keyGenerator, noninteractive), _scryptSettings(scryptSettings),
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine)
+    : _console(console), _creator(console, keyGenerator), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
@@ -58,13 +57,13 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
 
 void CryConfigLoader::_checkVersion(const CryConfig &config) {
   if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
-    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?")) {
-      throw std::runtime_error("Not trying to load file system.");
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
+      throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". Please update your CryFS version.");
     }
   }
   if (gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
-    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?")) {
-      throw std::runtime_error(string() + "Not migrating file system.");
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
+      throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". It has to be migrated.");
     }
   }
 }
