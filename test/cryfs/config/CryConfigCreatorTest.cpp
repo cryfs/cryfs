@@ -155,6 +155,7 @@ TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
     EXPECT_EQ("", config.RootBlob()); // This tells CryFS to create a new root blob
 }
 
+#if CRYPTOPP_VERSION != 564
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     AnswerNoToDefaultSettings();
     IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION();
@@ -162,6 +163,7 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     CryConfig config = creator.create(none, none, none).config;
     cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
+#endif
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     AnswerNoToDefaultSettings();

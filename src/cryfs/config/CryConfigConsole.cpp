@@ -13,8 +13,8 @@ namespace cryfs {
     constexpr const char *CryConfigConsole::DEFAULT_CIPHER;
     constexpr uint32_t CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES;
 
-    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console, bool noninteractive)
-            : _console(std::move(console)), _useDefaultSettings(noninteractive ? optional<bool>(true) : none) {
+    CryConfigConsole::CryConfigConsole(shared_ptr<Console> console)
+            : _console(std::move(console)), _useDefaultSettings(none) {
     }
 
     string CryConfigConsole::askCipher() {
@@ -43,7 +43,7 @@ namespace cryfs {
         if (warning == none) {
             return true;
         }
-        return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?");
+        return _console->askYesNo(string() + (*warning) + " Do you want to take this cipher nevertheless?", true);
     }
 
     uint32_t CryConfigConsole::askBlocksizeBytes() {
@@ -77,12 +77,12 @@ namespace cryfs {
     }
 
     bool CryConfigConsole::_askMissingBlockIsIntegrityViolation() const {
-        return _console->askYesNo("\nMost integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.\nDo you want to treat missing blocks as integrity violations?");
+        return _console->askYesNo("\nMost integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.\nDo you want to treat missing blocks as integrity violations?", false);
     }
 
     bool CryConfigConsole::_checkUseDefaultSettings() {
         if (_useDefaultSettings == none) {
-            _useDefaultSettings = _console->askYesNo("Use default settings?");
+            _useDefaultSettings = _console->askYesNo("Use default settings?", true);
         }
         return *_useDefaultSettings;
     }
