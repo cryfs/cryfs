@@ -1,5 +1,8 @@
 Version 0.9.6 (unreleased)
 ---------------
+Fixed bugs:
+* Fix potential (although very improbable) deadlock
+
 Compatibility:
 * Compatible with libcurl version >= 7.50.0, and <= 7.21.6 (tested down to 7.19.0)
 * Compatible with Crypto++ 5.6.4

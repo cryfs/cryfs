@@ -42,6 +42,7 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::lock(const LockName &lock, std::unique_lock<std::mutex> *lockToFreeWhileWaiting) {
+        ASSERT(lockToFreeWhileWaiting->owns_lock(), "Given lock must be locked");
         std::unique_lock<std::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
         if (_isLocked(lock)) {
             // Order of locking/unlocking is important and should be the same order as everywhere else to prevent deadlocks.

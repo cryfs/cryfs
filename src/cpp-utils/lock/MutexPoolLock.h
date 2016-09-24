@@ -23,9 +23,13 @@ namespace cpputils {
 
         ~MutexPoolLock() {
             if (_pool != nullptr) {
-                _pool->release(_lockName);
-                _pool = nullptr;
+                unlock();
             }
+        }
+
+        void unlock() {
+            _pool->release(_lockName);
+            _pool = nullptr;
         }
 
     private:
