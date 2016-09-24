@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 
 using ::testing::_;
+using ::testing::Invoke;
+using ::testing::Eq;
 
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
@@ -13,6 +15,7 @@ using blockstore::Key;
 using cpputils::unique_ref;
 using cpputils::Data;
 using std::shared_ptr;
+using std::make_shared;
 
 class TraversorMock {
 public:
@@ -44,6 +47,13 @@ public:
       CreateFullThreeLevel(),
       CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})
     });
+  }
+
+  void EXPECT_CREATE_LEAF(uint32_t leafIndex) {
+    uint64_t maxBytesPerLeaf = nodeStore->layout().maxBytesPerLeaf();
+    EXPECT_CALL(traversor, calledCreateLeaf(Eq(leafIndex))).Times(1).WillOnce(Invoke([maxBytesPerLeaf] (uint32_t) {
+        return make_shared<Data>(maxBytesPerLeaf);
+    }));
   }
 
   void EXPECT_TRAVERSE_LEAF(const Key &key, bool isRightBorderLeaf, uint32_t leafIndex) {
@@ -414,6 +424,16 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel)
   }, [this] (uint32_t /*nodeIndex*/) -> Data {
       return Data(1);
   });
+}
+
+TEST_F(DataTreeTest_TraverseLeaves, ResizeFromOneLeafToMultipleLeaves) {
+  auto root = CreateLeaf();
+  EXPECT_TRAVERSE_LEAF(root->key(), false, 0);
+  //EXPECT_CALL(traversor, calledExistingLeaf(_, false, 0)).Times(1);
+  for (uint32_t i = 1; i < 10; ++i) {
+    EXPECT_CREATE_LEAF(i);
+  }
+  TraverseLeaves(root.get(), 0, 10);
 }
 
 //TODO Refactor the test cases that are too long

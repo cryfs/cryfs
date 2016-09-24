@@ -111,6 +111,7 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteEntry(std::unique_lock<std::mutex> *
   // i.e. pop() and push() can be called here, except for pop() on the element in _currentlyFlushingEntries
   lock->unlock();
   value = boost::none; // Call destructor
+  lockEntryFromBeingPopped.unlock();  // unlock this one first to keep same locking oder (preventing potential deadlock)
   lock->lock();
 };
 

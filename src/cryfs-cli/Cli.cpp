@@ -22,6 +22,7 @@
 
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include "Environment.h"
 
 //TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
@@ -38,7 +39,7 @@ using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
 using cpputils::Random;
-using cpputils::IOStreamConsole;
+using cpputils::NoninteractiveConsole;
 using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
@@ -74,9 +75,14 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false) {
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, unique_ref<Console> console, shared_ptr<HttpClient> httpClient):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
+        if (_noninteractive) {
+            _console = make_shared<NoninteractiveConsole>(std::move(console));
+        } else {
+            _console = cpputils::to_unique_ptr(std::move(console));
+        }
     }
 
     void Cli::_showVersion() {
@@ -86,18 +92,19 @@ namespace cryfs {
             ". Please do not use in production!" << endl;
         } else if (!gitversion::IsStableVersion()) {
             cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-        } else {
-            //TODO This is even shown for stable version numbers like 0.8 - remove once we reach 1.0
-            cout << "WARNING! This version is not considered stable. Please backup your data frequently!" << endl;
         }
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
+#ifndef CRYFS_NO_UPDATE_CHECKS
         if (!Environment::noUpdateCheck()) {
             _checkForUpdates();
         } else {
             cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
         }
+#else
+# warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
+#endif
         cout << endl;
     }
 
@@ -211,14 +218,12 @@ namespace cryfs {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation,
-                                   _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation,
-                                   _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
         }
     }
 
@@ -295,11 +300,7 @@ namespace cryfs {
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
         if (!bf::exists(dir)) {
-            if (_noninteractive) {
-                //If we use the noninteractive frontend, don't ask whether to create the directory, but just fail.
-                throw std::runtime_error(name + " not found");
-            }
-            bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?");
+            bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?", false);
             if (create) {
                 if (!bf::create_directory(dir)) {
                     throw std::runtime_error("Error creating "+name);

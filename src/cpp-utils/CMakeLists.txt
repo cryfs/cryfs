@@ -14,6 +14,9 @@ set(SOURCES
         network/CurlHttpClient.cpp
         network/FakeHttpClient.cpp
         io/Console.cpp
+        io/DontEchoStdinToStdoutRAII.cpp
+        io/IOStreamConsole.cpp
+        io/NoninteractiveConsole.cpp
         io/pipestream.cpp
         thread/LoopThread.cpp
         thread/impl/ThreadSystem.cpp

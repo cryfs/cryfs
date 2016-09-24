@@ -51,9 +51,10 @@ namespace blobstore {
                     if (increaseTreeDepth && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
                         leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
                     }
-                    if (beginIndex == 0 && endIndex == 1) {
+                    if (beginIndex == 0 && endIndex >= 1) {
+                        bool isRightBorderLeaf = (endIndex == 1);
                         LeafHandle handle(_nodeStore, leaf);
-                        onExistingLeaf(0, true, &handle); // called synchronously, because otherwise the leaf (stored in the root unique_ref parameter) leaves scope. And if this line is executed, then the root is a leaf, so parallelism isn't needed anyhow.
+                        onExistingLeaf(0, isRightBorderLeaf, &handle); // called synchronously, because otherwise the leaf (stored in the root unique_ref parameter) leaves scope. And if this line is executed, then the root is a leaf, so parallelism isn't needed anyhow.
                     }
                 } else {
                     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());

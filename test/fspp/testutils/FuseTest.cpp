@@ -37,7 +37,7 @@ FuseTest::FuseTest(): fsimpl() {
   ON_CALL(fsimpl, rename(_,_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, readDir(_)).WillByDefault(defaultAction);
   ON_CALL(fsimpl, utimens(_,_,_)).WillByDefault(defaultAction);
-  ON_CALL(fsimpl, statfs(_,_)).WillByDefault(Invoke([](const char *path, struct statvfs *result) {
+  ON_CALL(fsimpl, statfs(_,_)).WillByDefault(Invoke([](const char */*path*/, struct statvfs *result) {
       ::statvfs("/", result); // As dummy value take the values from the root filesystem
   }));
   ON_CALL(fsimpl, chmod(_,_)).WillByDefault(defaultAction);

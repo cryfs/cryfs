@@ -244,9 +244,11 @@ INSTANTIATE_TYPED_TEST_CASE_P(Cast256_CFB, CipherTest, Cast256_CFB); //CFB mode 
 INSTANTIATE_TYPED_TEST_CASE_P(Cast256_GCM, CipherTest, Cast256_GCM);
 INSTANTIATE_TYPED_TEST_CASE_P(Cast256_GCM, AuthenticatedCipherTest, Cast256_GCM);
 
+#if CRYPTOPP_VERSION != 564
 INSTANTIATE_TYPED_TEST_CASE_P(Mars448_CFB, CipherTest, Mars448_CFB); //CFB mode is not authenticated
 INSTANTIATE_TYPED_TEST_CASE_P(Mars448_GCM, CipherTest, Mars448_GCM);
 INSTANTIATE_TYPED_TEST_CASE_P(Mars448_GCM, AuthenticatedCipherTest, Mars448_GCM);
+#endif
 INSTANTIATE_TYPED_TEST_CASE_P(Mars256_CFB, CipherTest, Mars256_CFB); //CFB mode is not authenticated
 INSTANTIATE_TYPED_TEST_CASE_P(Mars256_GCM, CipherTest, Mars256_GCM);
 INSTANTIATE_TYPED_TEST_CASE_P(Mars256_GCM, AuthenticatedCipherTest, Mars256_GCM);
@@ -275,8 +277,10 @@ TEST(CipherNameTest, TestCipherNames) {
   EXPECT_EQ("cast-256-gcm", string(Cast256_GCM::NAME));
   EXPECT_EQ("cast-256-cfb", string(Cast256_CFB::NAME));
 
+#if CRYPTOPP_VERSION != 564
   EXPECT_EQ("mars-448-gcm", string(Mars448_GCM::NAME));
   EXPECT_EQ("mars-448-cfb", string(Mars448_CFB::NAME));
+#endif
   EXPECT_EQ("mars-256-gcm", string(Mars256_GCM::NAME));
   EXPECT_EQ("mars-256-cfb", string(Mars256_CFB::NAME));
   EXPECT_EQ("mars-128-gcm", string(Mars128_GCM::NAME));

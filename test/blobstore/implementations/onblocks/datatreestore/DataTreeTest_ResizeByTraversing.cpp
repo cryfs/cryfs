@@ -12,6 +12,9 @@ using std::tuple;
 using std::get;
 using std::function;
 using std::mem_fn;
+using std::mutex;
+using std::unique_lock;
+using std::vector;
 using cpputils::dynamic_pointer_move;
 
 using blobstore::onblocks::datanodestore::DataLeafNode;
@@ -109,9 +112,9 @@ public:
     GrowTree(tree.get().get());
   }
 
-  void GrowTree(DataTree *tree) {
+  void GrowTree(DataTree *tree, std::function<void (int32_t)> traverse = [] (uint32_t){}) {
     uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [] (uint32_t, bool, LeafHandle*){}, [maxBytesPerLeaf] (uint32_t) -> Data { return Data(maxBytesPerLeaf).FillWithZeroes();});
+    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [&traverse] (uint32_t index, bool, LeafHandle*){traverse(index);}, [maxBytesPerLeaf, &traverse] (uint32_t index) -> Data { traverse(index); return Data(maxBytesPerLeaf).FillWithZeroes();});
     tree->flush();
   }
 
@@ -217,4 +220,15 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
   GrowTree(key);
 
   data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), oldNumberOfLeaves, oldLastLeafSize);
+}
+
+TEST_P(DataTreeTest_ResizeByTraversing_P, AllLeavesAreTraversed) {
+  vector<uint32_t> traversedLeaves;
+  std::mutex mutex;
+  GrowTree(tree.get(), [&traversedLeaves, &mutex] (uint32_t index) { unique_lock<std::mutex> lock(mutex); traversedLeaves.push_back(index);});
+
+  EXPECT_EQ(newNumberOfLeaves-traversalBeginIndex, traversedLeaves.size());
+  for (uint32_t i = traversalBeginIndex; i < newNumberOfLeaves; ++i) {
+    EXPECT_NE(traversedLeaves.end(), std::find(traversedLeaves.begin(), traversedLeaves.end(), i));
+  }
 }
