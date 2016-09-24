@@ -15,6 +15,7 @@ public:
   //TODO No default constructor, pass in config values instead!
   CryConfig();
   CryConfig(CryConfig &&rhs);
+  CryConfig(const CryConfig &rhs);
 
   const std::string &RootBlob() const;
   void SetRootBlob(const std::string &value);
@@ -66,7 +67,7 @@ private:
   bool _hasVersionNumbers;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(CryConfig);
+  CryConfig &operator=(const CryConfig &rhs) = delete;
 };
 
 }
