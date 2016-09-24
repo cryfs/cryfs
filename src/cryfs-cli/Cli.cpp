@@ -86,9 +86,6 @@ namespace cryfs {
             ". Please do not use in production!" << endl;
         } else if (!gitversion::IsStableVersion()) {
             cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-        } else {
-            //TODO This is even shown for stable version numbers like 0.8 - remove once we reach 1.0
-            cout << "WARNING! This version is not considered stable. Please backup your data frequently!" << endl;
         }
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
