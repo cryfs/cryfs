@@ -28,6 +28,7 @@ namespace cpputils {
         }
 
         void unlock() {
+            ASSERT(_pool != nullptr, "MutexPoolLock is not locked");
             _pool->release(_lockName);
             _pool = nullptr;
         }
