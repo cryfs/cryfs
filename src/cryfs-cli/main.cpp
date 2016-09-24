@@ -18,5 +18,6 @@ int main(int argc, const char *argv[]) {
                    make_shared<CurlHttpClient>()).main(argc, argv);
     } catch (const std::exception &e) {
         cerr << "Error: " << e.what();
+        return EXIT_FAILURE;
     }
 }
