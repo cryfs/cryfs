@@ -14,14 +14,14 @@ namespace cryfs {
         CryConfigFile(CryConfigFile &&rhs) = default;
         ~CryConfigFile();
 
-        static CryConfigFile create(const boost::filesystem::path &path, CryConfig config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
+        static CryConfigFile create(const boost::filesystem::path &path, const CryConfig &config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
         static boost::optional<CryConfigFile> load(const boost::filesystem::path &path, const std::string &password);
         void save() const;
 
         CryConfig *config();
 
     private:
-        CryConfigFile(const boost::filesystem::path &path, CryConfig config, cpputils::unique_ref<CryConfigEncryptor> encryptor);
+        CryConfigFile(const boost::filesystem::path &path, const CryConfig &config, cpputils::unique_ref<CryConfigEncryptor> encryptor);
 
         boost::filesystem::path _path;
         CryConfig _config;
