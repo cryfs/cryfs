@@ -1,7 +1,8 @@
 Version 0.9.6 (unreleased)
 ---------------
 Fixed bugs:
-* Fix potential (although very improbable) deadlock
+* Fix potential deadlock
+* Fix potential crash
 
 Improvements:
 * Allow building with -DCRYFS_UPDATE_CHECKS=off, which will create an executable with disabled update checks (the alternative to disable them in the environment also still works).
