@@ -75,13 +75,13 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, unique_ref<Console> console, shared_ptr<HttpClient> httpClient):
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
-            _console = make_shared<NoninteractiveConsole>(std::move(console));
+            _console = make_shared<NoninteractiveConsole>(console);
         } else {
-            _console = cpputils::to_unique_ptr(std::move(console));
+            _console = console;
         }
     }
 
