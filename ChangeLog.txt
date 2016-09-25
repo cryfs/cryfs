@@ -6,6 +6,7 @@ Fixed bugs:
 
 Improvements:
 * Allow building with -DCRYFS_UPDATE_CHECKS=off, which will create an executable with disabled update checks (the alternative to disable them in the environment also still works).
+* Automatically disable update checks when running in noninteractive mode.
 
 Compatibility:
 * Compatible with libcurl version >= 7.50.0, and <= 7.21.6 (tested down to 7.19.0)
