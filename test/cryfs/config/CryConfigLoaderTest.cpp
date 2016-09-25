@@ -245,7 +245,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
         Load();
         EXPECT_TRUE(false); // expect throw
     } catch (const std::runtime_error &e) {
-        EXPECT_THAT(e.what(), HasSubstr("Not trying to load file system"));
+        EXPECT_THAT(e.what(), HasSubstr("It has to be migrated."));
     }
 }
 
@@ -273,6 +273,6 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
         Load();
         EXPECT_TRUE(false); // expect throw
     } catch (const std::runtime_error &e) {
-        EXPECT_THAT(e.what(), HasSubstr("Not migrating file system"));
+        EXPECT_THAT(e.what(), HasSubstr("Please update your CryFS version."));
     }
 }
