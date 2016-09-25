@@ -97,10 +97,12 @@ namespace cryfs {
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
 #ifndef CRYFS_NO_UPDATE_CHECKS
-        if (!Environment::noUpdateCheck()) {
-            _checkForUpdates();
-        } else {
+        if (Environment::noUpdateCheck()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
+        } else if (Environment::isNoninteractive()) {
+            cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
+        } else {
+            _checkForUpdates();
         }
 #else
 # warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
