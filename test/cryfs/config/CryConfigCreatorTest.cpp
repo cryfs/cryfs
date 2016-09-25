@@ -4,6 +4,7 @@
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
 
 using namespace cryfs;
@@ -11,6 +12,7 @@ using namespace cryfs;
 using boost::optional;
 using boost::none;
 using cpputils::Console;
+using cpputils::NoninteractiveConsole;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::string;
@@ -26,9 +28,9 @@ using ::testing::UnorderedElementsAreArray;
 using ::testing::WithParamInterface;
 
 #define EXPECT_ASK_TO_USE_DEFAULT_SETTINGS()                                                                           \
-  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", true)).Times(1)
 #define EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS()                                                                  \
-  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(0)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", true)).Times(0)
 #define EXPECT_ASK_FOR_CIPHER()                                                                                        \
   EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_CIPHER()                                                                               \
@@ -48,8 +50,8 @@ class CryConfigCreatorTest: public ::testing::Test {
 public:
     CryConfigCreatorTest()
             : console(make_shared<MockConsole>()),
-              creator(console, cpputils::Random::PseudoRandom(), false),
-              noninteractiveCreator(console, cpputils::Random::PseudoRandom(), true) {
+              creator(console, cpputils::Random::PseudoRandom()),
+              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom()) {
         EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).WillRepeatedly(ChooseAnyCipher());
         EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).WillRepeatedly(Return(0));
     }
