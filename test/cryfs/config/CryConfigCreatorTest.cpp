@@ -40,11 +40,11 @@ using ::testing::WithParamInterface;
 #define EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE()                                                                            \
   EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(0)
 #define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"))).Times(1)
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false)).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                     \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"))).Times(0)
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false)).Times(0)
 #define IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block")))
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false))
 
 class CryConfigCreatorTest: public ::testing::Test {
 public:

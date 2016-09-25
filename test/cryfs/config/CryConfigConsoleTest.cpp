@@ -48,9 +48,9 @@ class CryConfigConsoleTest_Cipher: public CryConfigConsoleTest {};
   EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(false));                        \
   EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(1)
 
-#define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                                                     \
-  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1).WillOnce(Return(false));                           \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"))).Times(1)
+#define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
+  EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(false));                        \
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), _)).Times(1)
 
 TEST_F(CryConfigConsoleTest_Cipher, AsksForCipher) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
