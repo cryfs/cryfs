@@ -2,10 +2,11 @@
 
 using std::string;
 using std::vector;
+using std::shared_ptr;
 
 namespace cpputils {
 
-NoninteractiveConsole::NoninteractiveConsole(unique_ref<Console> baseConsole): _baseConsole(std::move(baseConsole)) {
+NoninteractiveConsole::NoninteractiveConsole(shared_ptr<Console> baseConsole): _baseConsole(std::move(baseConsole)) {
 }
 
 bool NoninteractiveConsole::askYesNo(const string &/*question*/, bool defaultValue) {
