@@ -11,12 +11,14 @@
 #include <cryfs/config/CryConfigLoader.h>
 #include <cpp-utils/system/homedir.h>
 #include "../testutils/TestWithFakeHomeDirectory.h"
+#include <cpp-utils/io/NoninteractiveConsole.h>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
 using ::testing::Test;
 using ::testing::Return;
 using ::testing::_;
+using std::make_shared;
 using cpputils::TempDir;
 using cpputils::TempFile;
 using cpputils::dynamic_pointer_move;
@@ -27,6 +29,7 @@ using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::Data;
 using cpputils::system::FakeHomeDirectoryRAII;
+using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
 
@@ -40,7 +43,7 @@ public:
 
   CryConfigFile loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none, true).loadOrCreate(config.path()).value().configFile;
+    return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none).loadOrCreate(config.path()).value().configFile;
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {
