@@ -1,4 +1,4 @@
-Version 0.9.6 (unreleased)
+Version 0.9.6
 ---------------
 Fixed bugs:
 * Fix potential deadlock
