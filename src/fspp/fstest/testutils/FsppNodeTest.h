@@ -42,7 +42,9 @@ public:
             EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
         });
 
-        EXPECT_NUMBYTES_READABLE(expectedSize, dynamic_cast<fspp::File*>(node));
+        fspp::File* fileNode = dynamic_cast<fspp::File*>(node);
+        ASSERT(fileNode != nullptr, "Is not a file node");
+        EXPECT_NUMBYTES_READABLE(expectedSize, fileNode);
     }
 
     void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::File *file) {
