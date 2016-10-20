@@ -1,3 +1,8 @@
+Version 0.9.7 (unreleased)
+--------------
+Compatibility:
+* Runs on FreeBSD
+
 Version 0.9.6
 ---------------
 Fixed bugs:
