@@ -17,7 +17,7 @@ namespace cpputils {
         return size * nmemb;
     }
 
-    CurlHttpClient::CurlHttpClient() {
+    CurlHttpClient::CurlHttpClient(): curlInitializer(), curl() {
         curl = curl_easy_init();
     }
 
