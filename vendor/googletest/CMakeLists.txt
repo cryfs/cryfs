@@ -4,7 +4,7 @@ if (BUILD_TESTING)
   # When test cases are build, disable "make install", because this would also install gtest libraries.
   macro(install)
   endmacro(install)
-  add_subdirectory(gtest-1.7.0)
+  add_subdirectory(gtest-1.8.0)
 
   project (googletest)
   add_library(${PROJECT_NAME} dummy.cpp)
