@@ -16,7 +16,6 @@
 #include <cpp-utils/data/DataUtils.h>
 #include <mutex>
 #include <cpp-utils/logging/logging.h>
-#include "../../../../vendor/googletest/gtest-1.7.0/googletest/include/gtest/gtest_prod.h"
 #include "IntegrityViolationError.h"
 #include "VersionCountingBlockStore.h"
 

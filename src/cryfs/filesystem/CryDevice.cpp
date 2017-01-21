@@ -120,7 +120,44 @@ Key CryDevice::CreateRootBlobAndReturnKey() {
   return rootBlob->key();
 }
 
+optional<unique_ref<fspp::File>> CryDevice::LoadFile(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto file = cpputils::dynamic_pointer_move<fspp::File>(*loaded);
+  if (file == none) {
+    throw fspp::fuse::FuseErrnoException(EISDIR); // TODO Also EISDIR if it is a symlink?
+  }
+  return std::move(*file);
+}
+
+optional<unique_ref<fspp::Dir>> CryDevice::LoadDir(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto dir = cpputils::dynamic_pointer_move<fspp::Dir>(*loaded);
+  if (dir == none) {
+    throw fspp::fuse::FuseErrnoException(ENOTDIR);
+  }
+  return std::move(*dir);
+}
+
+optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto lnk = cpputils::dynamic_pointer_move<fspp::Symlink>(*loaded);
+  if (lnk == none) {
+    throw fspp::fuse::FuseErrnoException(ENOTDIR); // TODO ENOTDIR although it is a symlink?
+  }
+  return std::move(*lnk);
+}
+
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
+  // TODO Is it faster to not let CryFile/CryDir/CryDevice inherit from CryNode and loading CryNode without having to know what it is?
   // TODO Split into smaller functions
   ASSERT(path.is_absolute(), "Non absolute path given");
 

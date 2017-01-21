@@ -13,27 +13,31 @@ public:
   FileTest(): file_root(), file_nested() {
 	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
 	file_root = cpputils::to_unique_ptr(this->LoadFile("/myfile"));
+	file_root_node = cpputils::to_unique_ptr(this->Load("/myfile"));
 
 	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
 	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
 	file_nested = cpputils::to_unique_ptr(this->LoadFile("/mydir/mynestedfile"));
+	file_nested_node = cpputils::to_unique_ptr(this->Load("/mydir/mynestedfile"));
 
 	this->LoadDir("/")->createDir("mydir2", this->MODE_PUBLIC, 0, 0);
   }
   std::unique_ptr<fspp::File> file_root;
   std::unique_ptr<fspp::File> file_nested;
+  std::unique_ptr<fspp::Node> file_root_node;
+  std::unique_ptr<fspp::Node> file_nested_node;
 
   //TODO IN_STAT still needed after moving it to FsppNodeTest?
-  void IN_STAT(fspp::File *file, std::function<void (struct stat)> callback) {
+  void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (struct stat)> callback) {
 	  struct stat st1, st2;
-	  file->stat(&st1);
+	  node->stat(&st1);
 	  callback(st1);
 	  file->open(O_RDONLY)->stat(&st2);
 	  callback(st2);
   }
 
-  void EXPECT_SIZE(uint64_t expectedSize, fspp::File *file) {
-	IN_STAT(file, [expectedSize] (struct stat st) {
+  void EXPECT_SIZE(uint64_t expectedSize, fspp::File *file, fspp::Node *node) {
+	IN_STAT(file, node, [expectedSize] (struct stat st) {
 		EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
 	});
 

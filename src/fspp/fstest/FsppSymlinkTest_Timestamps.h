@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppSymlinkTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
+class FsppSymlinkTest_Timestamps: public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
 };
 TYPED_TEST_CASE_P(FsppSymlinkTest_Timestamps);
@@ -15,7 +15,7 @@ TYPED_TEST_P(FsppSymlinkTest_Timestamps, target) {
     auto operation = [&symlink] () {
         symlink->target();
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*symlink, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mysymlink", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }
 
 REGISTER_TYPED_TEST_CASE_P(FsppSymlinkTest_Timestamps,

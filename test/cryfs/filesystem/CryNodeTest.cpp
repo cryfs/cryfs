@@ -17,11 +17,10 @@ public:
     static constexpr mode_t MODE_PUBLIC = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
 
     unique_ref<CryNode> CreateFile(const bf::path &path) {
-        auto _parentDir = device().Load(path.parent_path()).value();
-        auto parentDir = dynamic_pointer_move<CryDir>(_parentDir).value();
+        auto parentDir = device().LoadDir(path.parent_path()).value();
         parentDir->createAndOpenFile(path.filename().native(), MODE_PUBLIC, 0, 0);
-        auto createdFile = device().Load(path).value();
-        return dynamic_pointer_move<CryNode>(createdFile).value();
+        auto file = device().Load(path).value();
+        return dynamic_pointer_move<CryNode>(file).value();
     }
 
     unique_ref<CryNode> CreateDir(const bf::path &path) {

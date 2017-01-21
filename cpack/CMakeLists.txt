@@ -39,7 +39,8 @@ if(BUILDTYPE MATCHES RELEASE AND NOT BUILD_TESTING)
         set(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
         set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
         set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-        set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse")
+        # Needs gnupg2 for postinst script
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse, gnupg2")
 
         set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://www.cryfs.org")
         set(CPACK_RPM_PACKAGE_LICENSE "LGPLv3")
