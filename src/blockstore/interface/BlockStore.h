@@ -21,10 +21,7 @@ public:
   // Return nullptr if block with this key doesn't exists
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
   //TODO Remove this once we have the new overwrite(key, offset, data)
-  virtual cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) {
-    overwrite(key, data.data(), 0, data.size());
-    return load(key).value();
-  }
+  virtual cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) = 0;
   virtual void remove(const Key &key) = 0;
   virtual uint64_t numBlocks() const = 0;
   //TODO Test estimateNumFreeBytes in all block stores

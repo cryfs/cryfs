@@ -136,7 +136,7 @@ inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
 }
 
 inline void Data::StoreToFileAtOffset(const boost::filesystem::path &filepath, size_t offset) const {
-  std::ofstream file(filepath.c_str(), std::ios::binary);
+  std::ofstream file(filepath.c_str(), std::ios::in | std::ios::binary); // std::ios::in needed to disable std::ios::trunc
   file.seekp(offset);
   if (!file.good()) {
     throw std::runtime_error("Could not open file for writing");
