@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppDirTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
+class FsppDirTest_Timestamps: public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
 };
 TYPED_TEST_CASE_P(FsppDirTest_Timestamps);
@@ -15,7 +15,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile) {
     auto operation = [&dir] () {
         dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -24,7 +24,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_inRootDir) {
     auto operation = [&dir] () {
         dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) {
@@ -32,7 +32,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) 
     timespec lowerBound = now();
     dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
     timespec upperBound = now();
-    auto child = this->LoadFile("/mydir/childname");
+    auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
     this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
@@ -43,7 +43,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir) {
     auto operation = [&dir] () {
         dir->createDir("childname", S_IFDIR, 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -52,7 +52,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir_inRootDir) {
     auto operation = [&dir] () {
         dir->createDir("childname", S_IFDIR, 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
@@ -60,7 +60,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
     timespec lowerBound = now();
     dir->createDir("childname", S_IFDIR, 1000, 1000);
     timespec upperBound = now();
-    auto child = this->LoadDir("/mydir/childname");
+    auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
     this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
@@ -71,7 +71,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink) {
     auto operation = [&dir] () {
         dir->createSymlink("childname", "/target", 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -80,7 +80,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_inRootDir) {
     auto operation = [&dir] () {
         dir->createSymlink("childname", "/target", 1000, 1000);
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
@@ -88,7 +88,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
     timespec lowerBound = now();
     dir->createSymlink("childname", "/target", 1000, 1000);
     timespec upperBound = now();
-    auto child = this->LoadSymlink("/mydir/childname");
+    auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
     this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
@@ -99,7 +99,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_empty) {
     auto operation = [&dir] () {
         dir->children();
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -108,7 +108,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_empty_inRootDir) {
     auto operation = [&dir] () {
         dir->children();
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty) {
@@ -117,7 +117,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty) {
     auto operation = [&dir] () {
         dir->children();
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -127,11 +127,11 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty_inRootDir) {
     auto operation = [&dir] () {
         dir->children();
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }*/
 
 template<class ConcreteFileSystemTestFixture>
-class FsppDirTest_Timestamps_Entries: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
+class FsppDirTest_Timestamps_Entries: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
 
     void Test_deleteChild() {
@@ -140,9 +140,11 @@ public:
         auto operation = [&child]() {
             child->remove();
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp,
-                                                                       this->ExpectUpdatesModificationTimestamp,
-                                                                       this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
+            this->ExpectDoesntUpdateAccessTimestamp,
+            this->ExpectUpdatesModificationTimestamp,
+            this->ExpectUpdatesMetadataTimestamp
+        });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -152,7 +154,7 @@ public:
         auto operation = [&child] () {
             child->remove();
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     }*/
 
     void Test_renameChild() {
@@ -161,9 +163,11 @@ public:
         auto operation = [&child]() {
             child->rename("/mydir/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp,
-                                                                       this->ExpectUpdatesModificationTimestamp,
-                                                                       this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
+            this->ExpectDoesntUpdateAccessTimestamp,
+            this->ExpectUpdatesModificationTimestamp,
+            this->ExpectUpdatesMetadataTimestamp
+        });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -173,7 +177,7 @@ public:
         auto operation = [&child] () {
             child->rename("/mydir/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     }*/
 
     void Test_moveChildIn() {
@@ -183,9 +187,11 @@ public:
         auto operation = [&child]() {
             child->rename("/mydir/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp,
-                                                                       this->ExpectUpdatesModificationTimestamp,
-                                                                       this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
+            this->ExpectDoesntUpdateAccessTimestamp,
+            this->ExpectUpdatesModificationTimestamp,
+            this->ExpectUpdatesMetadataTimestamp
+        });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -196,7 +202,7 @@ public:
         auto operation = [&child] () {
             child->rename("/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     }*/
 
     void Test_moveChildOut() {
@@ -206,9 +212,11 @@ public:
         auto operation = [&child]() {
             child->rename("/targetdir/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp,
-                                                                       this->ExpectUpdatesModificationTimestamp,
-                                                                       this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
+            this->ExpectDoesntUpdateAccessTimestamp,
+            this->ExpectUpdatesModificationTimestamp,
+            this->ExpectUpdatesMetadataTimestamp
+        });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
@@ -219,7 +227,7 @@ public:
         auto operation = [&child] () {
             child->rename("/targetdir/mychild");
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*dir, operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     }*/
 };
 

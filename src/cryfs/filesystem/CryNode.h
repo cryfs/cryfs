@@ -10,7 +10,7 @@
 
 namespace cryfs {
 
-class CryNode: public virtual fspp::Node {
+class CryNode: public fspp::Node {
 public:
   virtual ~CryNode();
 

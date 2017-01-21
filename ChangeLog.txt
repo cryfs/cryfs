@@ -7,6 +7,12 @@ New Features:
 Improvements:
 * Performance improvements
 
+Version 0.9.7 (unreleased)
+--------------
+Compatibility:
+* Runs on FreeBSD
+* Works with Clang++ 3.8 (Debian experimental or newer Ubuntu systems)
+
 Version 0.9.6
 ---------------
 Fixed bugs:

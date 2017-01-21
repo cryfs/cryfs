@@ -16,28 +16,28 @@ public:
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOENT, e.getErrno());
         }
-        //Old file should still exist
+        //Old node should still exist
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
     void Test_Error_TargetParentDirIsFile() {
-        auto node = this->CreateNode("/oldname");
+        this->CreateNode("/oldname");
         this->CreateFile("/somefile");
         try {
-            node->rename("/somefile/newname");
+            this->Load("/somefile")->rename("/somefile/newname");
             EXPECT_TRUE(false); // Expect it throws an exception
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
         }
-        //Files should still exist
+        //Nodes should still exist
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/somefile"));
     }
 
     void Test_Error_RootDir() {
-        auto root = this->LoadDir("/");
+        auto rootDirNode = this->Load("/");
         try {
-            root->rename("/newname");
+            rootDirNode->rename("/newname");
             EXPECT_TRUE(false); // expect throws
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EBUSY, e.getErrno());
@@ -142,10 +142,10 @@ public:
     }
 
     void Test_Overwrite_Error_DirWithFile_InSameDir() {
-        auto file = this->CreateFile("/oldname");
+        this->CreateFile("/oldname");
         this->CreateDir("/newname");
         try {
-            file->rename("/newname");
+            this->Load("/oldname")->rename("/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EISDIR, e.getErrno());
@@ -157,10 +157,10 @@ public:
     void Test_Overwrite_Error_DirWithFile_InDifferentDir() {
         this->CreateDir("/parent1");
         this->CreateDir("/parent2");
-        auto file = this->CreateFile("/parent1/oldname");
+        this->CreateFile("/parent1/oldname");
         this->CreateDir("/parent2/newname");
         try {
-            file->rename("/parent2/newname");
+            this->Load("/parent1/oldname")->rename("/parent2/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EISDIR, e.getErrno());
@@ -170,10 +170,10 @@ public:
     }
 
     void Test_Overwrite_Error_FileWithDir_InSameDir() {
-        auto dir = this->CreateDir("/oldname");
+        this->CreateDir("/oldname");
         this->CreateFile("/newname");
         try {
-            dir->rename("/newname");
+            this->Load("/oldname")->rename("/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
@@ -185,10 +185,10 @@ public:
     void Test_Overwrite_Error_FileWithDir_InDifferentDir() {
         this->CreateDir("/parent1");
         this->CreateDir("/parent2");
-        auto dir = this->CreateDir("/parent1/oldname");
+        this->CreateDir("/parent1/oldname");
         this->CreateFile("/parent2/newname");
         try {
-            dir->rename("/parent2/newname");
+            this->Load("/parent1/oldname")->rename("/parent2/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());

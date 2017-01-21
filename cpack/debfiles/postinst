@@ -37,7 +37,7 @@ sources_list_dir () {
   root=$(get_apt_config "Dir")
   etc=$(get_apt_config "Dir::Etc")
   sourceparts=$(get_apt_config "Dir::Etc::sourceparts")
-  echo $root$etc$sourceparts
+  echo "$root/$etc/$sourceparts"
 }
 
 add_repository () {

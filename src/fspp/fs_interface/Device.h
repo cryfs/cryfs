@@ -8,6 +8,9 @@
 
 namespace fspp {
 class Node;
+class File;
+class Dir;
+class Symlink;
 
 class Device {
 public:
@@ -15,6 +18,14 @@ public:
 
 	virtual void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) = 0;
 	virtual boost::optional<cpputils::unique_ref<Node>> Load(const boost::filesystem::path &path) = 0;
+
+	//TODO Test default implementation (Device.cpp)
+	//TODO Test client implementation (fstest)
+	//TODO When it exists but is wrong node type, don't throw exception, but return this somehow (or at least throw specific exception, not just FuseErrnoException)
+	virtual boost::optional<cpputils::unique_ref<File>> LoadFile(const boost::filesystem::path &path) = 0;
+	virtual boost::optional<cpputils::unique_ref<Dir>> LoadDir(const boost::filesystem::path &path) = 0;
+	virtual boost::optional<cpputils::unique_ref<Symlink>> LoadSymlink(const boost::filesystem::path &path) = 0;
+
 };
 
 }
