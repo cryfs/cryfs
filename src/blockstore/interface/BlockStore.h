@@ -19,6 +19,7 @@ public:
   virtual boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) = 0;
   // Return nullptr if block with this key doesn't exists
   virtual boost::optional<cpputils::unique_ref<Block>> load(const Key &key) = 0;
+  //TODO Remove this once we have the new overwrite(key, offset, data)
   virtual cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) = 0;
   virtual void remove(const Key &key) = 0;
 
@@ -57,6 +58,11 @@ public:
     Key key = block->key();
     cpputils::destruct(std::move(block));
     remove(key);
+  }
+
+  virtual void overwrite(const blockstore::Key &key, const void *source, uint64_t offset, uint64_t size) {
+    auto block = load(key).value();
+    block->write(source, offset, size);
   }
 
   cpputils::unique_ref<Block> create(const cpputils::Data &data) {

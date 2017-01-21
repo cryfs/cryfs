@@ -34,6 +34,7 @@ public:
   Data &&FillWithZeroes() &&;
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
+  void StoreToFileAtOffset(const boost::filesystem::path &filepath, size_t offset) const;
   static boost::optional<Data> LoadFromFile(const boost::filesystem::path &filepath);
 
   //TODO Test LoadFromStream/StoreToStream
@@ -125,6 +126,18 @@ inline Data &&Data::FillWithZeroes() && {
 
 inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
   std::ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
+  if (!file.good()) {
+    throw std::runtime_error("Could not open file for writing");
+  }
+  StoreToStream(file);
+  if (!file.good()) {
+    throw std::runtime_error("Error writing to file");
+  }
+}
+
+inline void Data::StoreToFileAtOffset(const boost::filesystem::path &filepath, size_t offset) const {
+  std::ofstream file(filepath.c_str(), std::ios::in | std::ios::binary); // std::ios::in needed to disable std::ios::trunc
+  file.seekp(offset);
   if (!file.good()) {
     throw std::runtime_error("Could not open file for writing");
   }

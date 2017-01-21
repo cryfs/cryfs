@@ -54,8 +54,7 @@ Requirements
     - chrono
     - program_options
     - thread
-  - Crypto++ version == 5.6.3 (including development headers)
-    (not compatible to Crypto++ 5.6.4, but will be compatible with Crypto++ 5.6.5+)
+  - Crypto++ version >= 5.6.3 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
@@ -90,9 +89,9 @@ Build & Install
         $ sudo make install
 
 You can pass the following variables to the *cmake* command (using *-Dvariablename=value*):
- - -D**CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
- - -D**BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
- - -D**CRYFS_UPDATE_CHECKS**=off: Build a CryFS that doesn't check online for updates and security vulnerabilities.
+ - **-DCMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
+ - **-DBUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
+ - **-DCRYFS_UPDATE_CHECKS**=off: Build a CryFS that doesn't check online for updates and security vulnerabilities.
 
 Troubleshooting
 ---------------

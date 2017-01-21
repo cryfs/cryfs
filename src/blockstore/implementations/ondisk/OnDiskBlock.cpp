@@ -91,9 +91,31 @@ optional<unique_ref<OnDiskBlock>> OnDiskBlock::CreateOnDisk(const bf::path &root
   return std::move(block);
 }
 
-unique_ref<OnDiskBlock> OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, const Key &key, Data data) {
+void OnDiskBlock::OverwriteOnDisk(const bf::path &rootdir, const Key &key, const void *source, uint64_t offset, uint64_t size) {
   auto filepath = _getFilepath(rootdir, key);
   bf::create_directory(filepath.parent_path());
+  if (bf::exists(filepath)) {
+    Data fileContent(size);
+    std::memcpy(fileContent.data(), source, size);
+    fileContent.StoreToFileAtOffset(filepath, formatVersionHeaderSize() + offset);
+  } else {
+    // TODO This should never be called, because encryption always changes the whole block.
+    //      However, it has to be implemented because of the generic BlockStore interface.
+    //      It might cost performance to call bf::exists() above. Can we change this?
+    //      Maybe introducing two block store interfaces? BlockStores who can only write/read whole blocks
+    //      and BlockStores who can read/write subsets?
+    Data fileContent(formatVersionHeaderSize() + offset + size);
+    std::memcpy(fileContent.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
+    std::memset(fileContent.dataOffset(formatVersionHeaderSize()), 0, offset);
+    std::memcpy(fileContent.dataOffset(formatVersionHeaderSize() + offset), source, size);
+    fileContent.StoreToFile(filepath);
+  }
+}
+
+unique_ref<OnDiskBlock> OnDiskBlock::OverwriteOnDisk(const boost::filesystem::path &rootdir, const Key &key, cpputils::Data data) {
+  auto filepath = _getFilepath(rootdir, key);
+  bf::create_directory(filepath.parent_path());
+
   auto block = make_unique_ref<OnDiskBlock>(key, filepath, std::move(data));
   block->_storeToDisk();
   return std::move(block);

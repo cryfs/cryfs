@@ -24,7 +24,7 @@ public:
 
   void resize(size_t newSize) override;
 
-  BaseBlockWrapper releaseBaseBlock();
+  BaseBlockWrapper releaseBaseBlockWrapper();
 
 private:
   CachingBlockStore *_blockStore;

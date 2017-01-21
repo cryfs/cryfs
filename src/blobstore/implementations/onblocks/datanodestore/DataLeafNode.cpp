@@ -32,10 +32,9 @@ unique_ref<DataLeafNode> DataLeafNode::CreateNewNode(BlockStore *blockStore, con
   return make_unique_ref<DataLeafNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, std::move(data)));
 }
 
-unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const Key &key, Data data) {
-  ASSERT(data.size() == layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
-  uint32_t size = data.size();
-  return make_unique_ref<DataLeafNode>(DataNodeView::overwrite(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, key, std::move(data)));
+void DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const Key &key, const void *source, uint64_t offset, uint64_t size) {
+  ASSERT(offset <= layout.maxBytesPerLeaf() && offset+size <= layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
+  DataNodeView::overwrite(blockStore, layout, key, source, offset, size);
 }
 
 unique_ref<DataLeafNode> DataLeafNode::LoadOrCreateNode(BlockStore *blockStore, const DataNodeLayout &layout, const Key &key, size_t size) {

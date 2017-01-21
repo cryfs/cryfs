@@ -54,8 +54,8 @@ unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode(Data data) {
   return DataLeafNode::CreateNewNode(_blockstore.get(), _layout, std::move(data));
 }
 
-unique_ref<DataLeafNode> DataNodeStore::overwriteLeaf(const Key &key, Data data) {
-  return DataLeafNode::OverwriteNode(_blockstore.get(), _layout, key, std::move(data));
+void DataNodeStore::overwriteLeaf(const Key &key, const void *source, uint64_t offset, uint64_t size) {
+  DataLeafNode::OverwriteNode(_blockstore.get(), _layout, key, source, offset, size);
 }
 
 optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {

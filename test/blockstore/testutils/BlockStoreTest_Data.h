@@ -61,7 +61,7 @@ public:
   void TestOverwriteSmallerSizeAndReadImmediately() {
     auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
     auto block = blockStore->overwrite(key, foregroundData.copy());
-    EXPECT_EQ(testData.count, block->size());
+    EXPECT_EQ(testData.count, block->size()); // testData.count and not testData.blocksize, because the whole block is overwritten with the new one
     EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
   }
 
@@ -69,7 +69,7 @@ public:
     auto key = blockStore->create(cpputils::Data(testData.blocksize))->key();
     blockStore->overwrite(key, foregroundData.copy());
     auto block = blockStore->load(key).value();
-    EXPECT_EQ(testData.count, block->size());
+    EXPECT_EQ(testData.count, block->size()); // testData.count and not testData.blocksize, because the whole block is overwritten with the new one
     EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
   }
 

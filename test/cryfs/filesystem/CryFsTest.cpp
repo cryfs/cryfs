@@ -59,8 +59,8 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
     CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
   }
   CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
-  auto root = dev.Load(bf::path("/"));
-  dynamic_pointer_move<CryDir>(root.get()).get()->children();
+  auto rootDir = dev.LoadDir(bf::path("/"));
+  rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
