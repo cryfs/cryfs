@@ -8,7 +8,7 @@
 
 namespace cryfs {
 
-class CryDir final: public fspp::Dir, CryNode {
+class CryDir final: public fspp::Dir, public CryNode {
 public:
   CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::Key &key);
   ~CryDir();

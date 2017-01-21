@@ -17,7 +17,7 @@ public:
   }
 
   void EXPECT_CHILDREN_ARE(const boost::filesystem::path &path, const std::initializer_list<fspp::Dir::Entry> expected) {
-	EXPECT_CHILDREN_ARE(this->LoadDir(path).get(), expected);
+    EXPECT_CHILDREN_ARE(this->LoadDir(path).get(), expected);
   }
 
   void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
@@ -163,6 +163,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyRoot) {
   this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
   this->LoadFile("/myfile");
+  this->Load("/myfile"); // Test that we can also load the file node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
@@ -206,6 +207,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyRoot) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
   this->LoadDir("/mydir");
+  this->Load("/mydir"); // Test we can also load the dir node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
@@ -247,18 +249,22 @@ TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
 }
 
 TYPED_TEST_P(FsppDirTest, Remove) {
-    this->CreateDir("/mytestdir");
-    EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
-    this->LoadDir("/mytestdir")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestdir"));
+  this->CreateDir("/mytestdir");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
+  EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir"));
+  this->Load("/mytestdir")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir"));
+  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir"));
 }
 
 TYPED_TEST_P(FsppDirTest, Remove_Nested) {
-    this->CreateDir("/mytestdir");
-    this->CreateDir("/mytestdir/mydir");
-    EXPECT_NE(boost::none, this->device->Load("/mytestdir/mydir"));
-    this->LoadDir("/mytestdir/mydir")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mydir"));
+  this->CreateDir("/mytestdir");
+  this->CreateDir("/mytestdir/mydir");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/mydir"));
+  EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir/mydir"));
+  this->Load("/mytestdir/mydir")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mydir"));
+  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir/mydir"));
 }
 
 REGISTER_TYPED_TEST_CASE_P(FsppDirTest,

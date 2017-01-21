@@ -5,18 +5,50 @@
 #include "testutils/FileTest.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppOpenFileTest: public FileTest<ConcreteFileSystemTestFixture> {
+class FsppOpenFileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
+    void IN_STAT(fspp::OpenFile *openFile, std::function<void (struct stat)> callback) {
+        struct stat st;
+        openFile->stat(&st);
+        callback(st);
+    }
+
+    void EXPECT_SIZE(uint64_t expectedSize, fspp::OpenFile *openFile) {
+        IN_STAT(openFile, [expectedSize] (struct stat st) {
+            EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
+        });
+
+        EXPECT_NUMBYTES_READABLE(expectedSize, openFile);
+    }
+
+    void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::OpenFile *openFile) {
+        cpputils::Data data(expectedSize);
+        //Try to read one byte more than the expected size
+        ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
+        //and check that it only read the expected size (but also not less)
+        EXPECT_EQ(expectedSize, (uint64_t)readBytes);
+    }
 };
 
 TYPED_TEST_CASE_P(FsppOpenFileTest);
 
-TYPED_TEST_P(FsppOpenFileTest, Bla) {
-  //TODO
+TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
+    auto file = this->CreateFile("/myfile");
+    auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
+    this->EXPECT_SIZE(0, openFile.get());
+}
+
+TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
+    auto file = this->CreateFile("/myfile");
+    auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
+    this->IN_STAT(openFile.get(), [] (struct stat st) {
+        EXPECT_TRUE(S_ISREG(st.st_mode));
+    });
 }
 
 REGISTER_TYPED_TEST_CASE_P(FsppOpenFileTest,
-  Bla
+    CreatedFileIsEmpty,
+    FileIsFile
 );
 
 //TODO Test stat

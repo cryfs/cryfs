@@ -2,15 +2,15 @@
 #ifndef MESSMER_FSPP_FSINTERFACE_DIR_H_
 #define MESSMER_FSPP_FSINTERFACE_DIR_H_
 
-#include "Node.h"
 #include <cpp-utils/pointer/unique_ref.h>
 #include <string>
+#include <boost/filesystem/path.hpp>
 
 namespace fspp {
 class Device;
 class OpenFile;
 
-class Dir: public virtual Node {
+class Dir {
 public:
   virtual ~Dir() {}
 

@@ -28,7 +28,7 @@ namespace cpputils {
                                       _config.N(), _config.r(), _config.p(),
                                       static_cast<uint8_t*>(destination), size);
         if (errorcode != 0) {
-            throw std::runtime_error("Error running scrypt key derivation.");
+            throw std::runtime_error("Error running scrypt key derivation. Error code: "+std::to_string(errorcode));
         }
     }
 

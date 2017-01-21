@@ -12,6 +12,7 @@ set(SOURCES
         tempfile/TempDir.cpp
         network/HttpClient.cpp
         network/CurlHttpClient.cpp
+        network/CurlInitializerRAII.cpp
         network/FakeHttpClient.cpp
         io/Console.cpp
         io/DontEchoStdinToStdoutRAII.cpp

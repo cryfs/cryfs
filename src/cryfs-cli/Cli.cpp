@@ -25,7 +25,6 @@
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include "Environment.h"
 
-//TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
 
@@ -71,7 +70,6 @@ using gitversion::VersionCompare;
 //TODO Improve parallelity.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO Can we improve performance by setting compiler parameter -maes for scrypt?
-//TODO Running nano in a cryfs file system, editing and saving an existing file shows "file was modified since opening".
 
 namespace cryfs {
 

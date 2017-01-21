@@ -14,7 +14,7 @@ namespace cpputils{
   if (0 != result) {
     throw std::runtime_error("sysctlbyname syscall failed");
   }
-#elif __linux__
+#elif __linux__ || __FreeBSD__
             long numRAMPages = sysconf(_SC_PHYS_PAGES);
             long pageSize = sysconf(_SC_PAGESIZE);
             mem = numRAMPages * pageSize;

@@ -24,14 +24,6 @@ CryConfig::CryConfig()
 : _rootBlob(""), _encKey(""), _cipher(""), _version(""), _createdWithVersion(""), _blocksizeBytes(0), _filesystemId(FilesystemID::Null()), _exclusiveClientId(none), _hasVersionNumbers(true) {
 }
 
-CryConfig::CryConfig(CryConfig &&rhs)
-: _rootBlob(std::move(rhs._rootBlob)), _encKey(std::move(rhs._encKey)), _cipher(std::move(rhs._cipher)), _version(std::move(rhs._version)), _createdWithVersion(std::move(rhs._createdWithVersion)), _blocksizeBytes(rhs._blocksizeBytes), _filesystemId(std::move(rhs._filesystemId)), _exclusiveClientId(std::move(rhs._exclusiveClientId)), _hasVersionNumbers(rhs._hasVersionNumbers) {
-}
-
-CryConfig::CryConfig(const CryConfig &rhs)
-        : _rootBlob(rhs._rootBlob), _encKey(rhs._encKey), _cipher(rhs._cipher), _version(rhs._version), _createdWithVersion(rhs._createdWithVersion), _blocksizeBytes(rhs._blocksizeBytes), _filesystemId(rhs._filesystemId) {
-}
-
 CryConfig CryConfig::load(const Data &data) {
   stringstream stream;
   data.StoreToStream(stream);

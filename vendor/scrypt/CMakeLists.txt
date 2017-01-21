@@ -18,11 +18,6 @@ ExternalProject_Add(scrypt_original
         PREFIX ${CMAKE_BINARY_DIR}/vendor/scrypt/
         BUILD_COMMAND ${MAKE}
 )
-execute_process(
-        COMMAND /bin/sh ${CMAKE_CURRENT_LIST_DIR}/scrypt-1.2.0/scrypt/libcperciva/cpusupport/Build/cpusupport.sh
-        OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/cpusupport_config.h
-        RESULT_VARIABLE result
-)
 add_library(${PROJECT_NAME} STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/lib/crypto/crypto_scrypt.c
         ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/lib/crypto/crypto_scrypt_smix.c
@@ -44,7 +39,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_compile_options(${PROJECT_NAME} PRIVATE
         -DCONFIG_H_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/config.h\"
-        -DCPUSUPPORT_CONFIG_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/cpusupport_config.h\"
+        -DCPUSUPPORT_CONFIG_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/cpusupport-config.h\"
 )
 add_dependencies(${PROJECT_NAME} scrypt_original)
 target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0)
