@@ -38,8 +38,10 @@ TYPED_TEST_P(FsppSymlinkTest, Read_RelativePath) {
 TYPED_TEST_P(FsppSymlinkTest, Delete) {
   this->CreateSymlink("mysymlink", "/my/symlink/target");
   EXPECT_NE(boost::none, this->device->Load("/mysymlink"));
-  this->LoadSymlink("/mysymlink")->remove();
+  EXPECT_NE(boost::none, this->device->LoadSymlink("/mysymlink"));
+  this->Load("/mysymlink")->remove();
   EXPECT_EQ(boost::none, this->device->Load("/mysymlink"));
+  EXPECT_EQ(boost::none, this->device->LoadSymlink("/mysymlink"));
 }
 
 REGISTER_TYPED_TEST_CASE_P(FsppSymlinkTest,

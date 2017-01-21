@@ -9,6 +9,7 @@
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 #include "../../fs_interface/Device.h"
+#include "../../fs_interface/Node.h"
 #include "../../fs_interface/Dir.h"
 #include "../../fs_interface/File.h"
 #include "../../fs_interface/Symlink.h"
@@ -35,28 +36,28 @@ public:
 
   static constexpr mode_t MODE_PUBLIC = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
 
-  cpputils::unique_ref<fspp::Dir> LoadDir(const boost::filesystem::path &path) {
-	auto loaded = device->Load(path);
+  cpputils::unique_ref<fspp::Node> Load(const boost::filesystem::path &path) {
+    auto loaded = device->Load(path);
     EXPECT_NE(boost::none, loaded);
-	auto dir = cpputils::dynamic_pointer_move<fspp::Dir>(*loaded);
-	EXPECT_NE(boost::none, dir);
-	return std::move(*dir);
+    return std::move(*loaded);
+  }
+
+  cpputils::unique_ref<fspp::Dir> LoadDir(const boost::filesystem::path &path) {
+	auto loaded = device->LoadDir(path);
+    EXPECT_NE(boost::none, loaded);
+	return std::move(*loaded);
   }
 
   cpputils::unique_ref<fspp::File> LoadFile(const boost::filesystem::path &path) {
-	auto loaded = device->Load(path);
+	auto loaded = device->LoadFile(path);
     EXPECT_NE(boost::none, loaded);
-	auto file = cpputils::dynamic_pointer_move<fspp::File>(*loaded);
-	EXPECT_NE(boost::none, file);
-	return std::move(*file);
+    return std::move(*loaded);
   }
 
   cpputils::unique_ref<fspp::Symlink> LoadSymlink(const boost::filesystem::path &path) {
-    auto loaded = device->Load(path);
+    auto loaded = device->LoadSymlink(path);
     EXPECT_NE(boost::none, loaded);
-    auto symlink = cpputils::dynamic_pointer_move<fspp::Symlink>(*loaded);
-    EXPECT_NE(boost::none, symlink);
-    return std::move(*symlink);
+    return std::move(*loaded);
   }
 
   cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
@@ -72,6 +73,18 @@ public:
   cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path) {
     this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
     return this->LoadSymlink(path);
+  }
+
+  void EXPECT_IS_FILE(const cpputils::unique_ref<fspp::Node> &node) {
+    EXPECT_NE(nullptr, dynamic_cast<const fspp::File*>(node.get()));
+  }
+
+  void EXPECT_IS_DIR(const cpputils::unique_ref<fspp::Node> &node) {
+    EXPECT_NE(nullptr, dynamic_cast<const fspp::Dir*>(node.get()));
+  }
+
+  void EXPECT_IS_SYMLINK(const cpputils::unique_ref<fspp::Node> &node) {
+    EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
   }
 };
 
