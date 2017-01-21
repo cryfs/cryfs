@@ -12,6 +12,7 @@
 namespace cryfs {
     class InnerEncryptor {
     public:
+        virtual ~InnerEncryptor() {}
         virtual InnerConfig encrypt(const cpputils::Data &plaintext) const = 0;
         virtual boost::optional<cpputils::Data> decrypt(const InnerConfig &innerConfig) const = 0;
     };

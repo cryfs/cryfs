@@ -37,7 +37,7 @@ Manual install (Debian)
 
 GUI
 ===
-If you want to use a GUI to mount your CryFS volumes, take a look at the [cryfs-gui project](https://mhogomchungu.github.io/cryfs-gui/). You have to install the GUI **and** also CryFS itself for it to work.
+If you want to use a GUI to mount your CryFS volumes, take a look at the [SiriKali project](https://mhogomchungu.github.io/sirikali/). You have to install the GUI **and** also CryFS itself for it to work.
 
 Building from source
 ====================
@@ -54,7 +54,8 @@ Requirements
     - chrono
     - program_options
     - thread
-  - Crypto++ version >= 5.6.3 (including development headers)
+  - Crypto++ version == 5.6.3 (including development headers)
+    (not compatible to Crypto++ 5.6.4, but will be compatible with Crypto++ 5.6.5+)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
@@ -62,10 +63,10 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install git g++ cmake libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake libcurl-devel boost-devel boost-static cryptopp-devel openssl-devel fuse-devel python
+        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static cryptopp-devel openssl-devel fuse-devel python
 
         # Macintosh
         brew install cmake boost cryptopp openssl
@@ -91,6 +92,7 @@ Build & Install
 You can pass the following variables to the *cmake* command (using *-Dvariablename=value*):
  - -D**CMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
  - -D**BUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
+ - -D**CRYFS_UPDATE_CHECKS**=off: Build a CryFS that doesn't check online for updates and security vulnerabilities.
 
 Troubleshooting
 ---------------
@@ -149,3 +151,9 @@ There are additional requirements if you want to create .deb packages. They are:
         $ mkdir cmake && cd cmake
         $ cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off
         $ make package
+
+
+Disclaimer
+----------------------
+
+On the event of a password leak, you are strongly advised to create a new filesystem and copy all the data over from the previous one. Done this, all copies of the compromised filesystem and config file must be removed (e.g, from the "previous versions" feature of your cloud system) to prevent access to the key (and, as a result, your data) using the leaked password.

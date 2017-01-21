@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "cpp-utils/io/Console.h"
+#include "cpp-utils/io/IOStreamConsole.h"
 
 #include <future>
 #include <thread>
@@ -20,7 +20,7 @@ public:
     }
     std::future<bool> askYesNo(const std::string &question) {
         return std::async(std::launch::async, [this, question]() {
-            return _console.askYesNo(question);
+            return _console.askYesNo(question, true);
         });
     }
     void print(const std::string &output) {

@@ -11,7 +11,7 @@
 namespace cryfs {
     class CryConfigCreator final {
     public:
-        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator, bool noninteractive);
+        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator);
         CryConfigCreator(CryConfigCreator &&rhs) = default;
 
         struct ConfigCreateResult {

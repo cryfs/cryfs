@@ -108,8 +108,7 @@ namespace blockstore{
         void CachingBlockStore::remove(unique_ref<Block> block) {
             auto cachedBlock = dynamic_pointer_move<CachedBlock>(block);
             ASSERT(cachedBlock != none, "Given block is not a CachedBlock");
-            BaseBlockWrapper baseBlock = (*cachedBlock)->releaseBaseBlock();
-            baseBlock.remove();
+            (*cachedBlock)->releaseBaseBlockWrapper().remove();
         }
 
         uint64_t CachingBlockStore::numBlocks() const {

@@ -47,8 +47,9 @@ namespace blobstore {
                     if (increaseTreeDepth && leaf->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
                         leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
                     }
-                    if (beginIndex == 0 && endIndex == 1) {
-                        onExistingLeaf(0, true, LeafHandle(_nodeStore, leaf));
+                    if (beginIndex == 0 && endIndex >= 1) {
+                        bool isRightBorderLeaf = (endIndex == 1);
+                        onExistingLeaf(0, isRightBorderLeaf, LeafHandle(_nodeStore, leaf));
                     }
                 } else {
                     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());

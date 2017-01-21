@@ -4,6 +4,7 @@
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
 
 using namespace cryfs;
@@ -11,6 +12,7 @@ using namespace cryfs;
 using boost::optional;
 using boost::none;
 using cpputils::Console;
+using cpputils::NoninteractiveConsole;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::string;
@@ -26,9 +28,9 @@ using ::testing::UnorderedElementsAreArray;
 using ::testing::WithParamInterface;
 
 #define EXPECT_ASK_TO_USE_DEFAULT_SETTINGS()                                                                           \
-  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(1)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", true)).Times(1)
 #define EXPECT_DOES_NOT_ASK_TO_USE_DEFAULT_SETTINGS()                                                                  \
-  EXPECT_CALL(*console, askYesNo("Use default settings?")).Times(0)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", true)).Times(0)
 #define EXPECT_ASK_FOR_CIPHER()                                                                                        \
   EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_CIPHER()                                                                               \
@@ -38,18 +40,18 @@ using ::testing::WithParamInterface;
 #define EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE()                                                                            \
   EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(0)
 #define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"))).Times(1)
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false)).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                     \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"))).Times(0)
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false)).Times(0)
 #define IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block")))
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false))
 
 class CryConfigCreatorTest: public ::testing::Test {
 public:
     CryConfigCreatorTest()
             : console(make_shared<MockConsole>()),
-              creator(console, cpputils::Random::PseudoRandom(), false),
-              noninteractiveCreator(console, cpputils::Random::PseudoRandom(), true) {
+              creator(console, cpputils::Random::PseudoRandom()),
+              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom()) {
         EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).WillRepeatedly(ChooseAnyCipher());
         EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).WillRepeatedly(Return(0));
     }
@@ -155,6 +157,7 @@ TEST_F(CryConfigCreatorTest, ChoosesEmptyRootBlobId) {
     EXPECT_EQ("", config.RootBlob()); // This tells CryFS to create a new root blob
 }
 
+#if CRYPTOPP_VERSION != 564
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     AnswerNoToDefaultSettings();
     IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION();
@@ -162,6 +165,7 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     CryConfig config = creator.create(none, none, none).config;
     cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
 }
+#endif
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     AnswerNoToDefaultSettings();

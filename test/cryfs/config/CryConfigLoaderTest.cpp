@@ -5,6 +5,7 @@
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
 
@@ -13,10 +14,12 @@ using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::SCrypt;
 using cpputils::DataFixture;
+using cpputils::NoninteractiveConsole;
 using boost::optional;
 using boost::none;
 using std::string;
 using std::ostream;
+using std::make_shared;
 using ::testing::Return;
 using ::testing::_;
 using ::testing::HasSubstr;
@@ -39,7 +42,13 @@ public:
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
         auto askPassword = [password] { return password;};
-        return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, cipher, none, none, noninteractive);
+        if(noninteractive) {
+            return CryConfigLoader(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword,
+                                   askPassword, cipher, none, none);
+        } else {
+            return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword,
+                                   askPassword, cipher, none, none);
+        }
     }
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
@@ -224,7 +233,7 @@ TEST_F(CryConfigLoaderTest, FilesystemID_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"))).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(true));
 
     string version = newerVersion();
     CreateWithVersion(version);
@@ -232,7 +241,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
 }
 
 TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"))).Times(1).WillOnce(Return(false));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(false));
 
     string version = newerVersion();
     CreateWithVersion(version);
@@ -240,12 +249,12 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
         Load();
         EXPECT_TRUE(false); // expect throw
     } catch (const std::runtime_error &e) {
-        EXPECT_THAT(e.what(), HasSubstr("Not trying to load file system"));
+        EXPECT_THAT(e.what(), HasSubstr("Please update your CryFS version."));
     }
 }
 
 TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(true));
 
     string version = olderVersion();
     CreateWithVersion(version);
@@ -253,14 +262,14 @@ TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(0);
 
     CreateWithVersion(gitversion::VersionString());
     EXPECT_NE(boost::none, Load());
 }
 
 TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"))).Times(1).WillOnce(Return(false));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(false));
 
     string version = olderVersion();
     CreateWithVersion(version);
@@ -268,7 +277,7 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
         Load();
         EXPECT_TRUE(false); // expect throw
     } catch (const std::runtime_error &e) {
-        EXPECT_THAT(e.what(), HasSubstr("Not migrating file system"));
+        EXPECT_THAT(e.what(), HasSubstr("It has to be migrated."));
     }
 }
 
