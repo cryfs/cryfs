@@ -19,7 +19,7 @@ public:
 
 // Test cases only run for file nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_FileOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_File_Helper {};
+class FsppNodeTest_Stat_FileOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly);
 
@@ -39,7 +39,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {
 
 // Test cases only run for dir nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_DirOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_Dir_Helper {};
+class FsppNodeTest_Stat_DirOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_DirOnly);
 
@@ -53,7 +53,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
 
 // Test cases only run for symlink nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_SymlinkOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_Symlink_Helper {};
+class FsppNodeTest_Stat_SymlinkOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly);
 
