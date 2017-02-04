@@ -7,42 +7,42 @@ using testing::MatchesRegex;
 class LoggingLevelTest: public LoggingTest {
 public:
     void EXPECT_DEBUG_LOG_ENABLED() {
-        LOG(DEBUG) << "My log message";
+        LOG(DEBUG, "My log message");
         EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[debug\\].*My log message.*"));
     }
 
     void EXPECT_DEBUG_LOG_DISABLED() {
-        LOG(DEBUG) << "My log message";
+        LOG(DEBUG, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 
     void EXPECT_INFO_LOG_ENABLED() {
-        LOG(INFO) << "My log message";
+        LOG(INFO, "My log message");
         EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[info\\].*My log message.*"));
     }
 
     void EXPECT_INFO_LOG_DISABLED() {
-        LOG(INFO) << "My log message";
+        LOG(INFO, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 
     void EXPECT_WARNING_LOG_ENABLED() {
-        LOG(WARN) << "My log message";
+        LOG(WARN, "My log message");
         EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[warning\\].*My log message.*"));
     }
 
     void EXPECT_WARNING_LOG_DISABLED() {
-        LOG(WARN) << "My log message";
+        LOG(WARN, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 
     void EXPECT_ERROR_LOG_ENABLED() {
-        LOG(ERROR) << "My log message";
+        LOG(ERROR, "My log message");
         EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
     }
 
     void EXPECT_ERROR_LOG_DISABLED() {
-        LOG(ERROR) << "My log message";
+        LOG(ERROR, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 };

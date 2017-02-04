@@ -8,8 +8,13 @@
 // Async Logger implementation
 // Use an async_sink (queue per logger) to perform the logging in a worker thread
 
-#include "./async_log_helper.h"
+#include <spdlog/details/async_log_helper.h>
+#include <spdlog/async_logger.h>
 
+#include <string>
+#include <functional>
+#include <chrono>
+#include <memory>
 
 template<class It>
 inline spdlog::async_logger::async_logger(const std::string& logger_name,
@@ -18,9 +23,10 @@ inline spdlog::async_logger::async_logger(const std::string& logger_name,
         size_t queue_size,
         const  async_overflow_policy overflow_policy,
         const std::function<void()>& worker_warmup_cb,
-        const std::chrono::milliseconds& flush_interval_ms) :
+        const std::chrono::milliseconds& flush_interval_ms,
+        const std::function<void()>& worker_teardown_cb) :
     logger(logger_name, begin, end),
-    _async_log_helper(new details::async_log_helper(_formatter, _sinks, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms))
+    _async_log_helper(new details::async_log_helper(_formatter, _sinks, queue_size, _err_handler, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb))
 {
 }
 
@@ -29,25 +35,26 @@ inline spdlog::async_logger::async_logger(const std::string& logger_name,
         size_t queue_size,
         const  async_overflow_policy overflow_policy,
         const std::function<void()>& worker_warmup_cb,
-        const std::chrono::milliseconds& flush_interval_ms) :
-    async_logger(logger_name, sinks.begin(), sinks.end(), queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms) {}
+        const std::chrono::milliseconds& flush_interval_ms,
+        const std::function<void()>& worker_teardown_cb) :
+    async_logger(logger_name, sinks.begin(), sinks.end(), queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb) {}
 
 inline spdlog::async_logger::async_logger(const std::string& logger_name,
         sink_ptr single_sink,
         size_t queue_size,
         const  async_overflow_policy overflow_policy,
         const std::function<void()>& worker_warmup_cb,
-        const std::chrono::milliseconds& flush_interval_ms) :
+        const std::chrono::milliseconds& flush_interval_ms,
+        const std::function<void()>& worker_teardown_cb) :
     async_logger(logger_name,
 {
     single_sink
-}, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms) {}
+}, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb) {}
 
 
 inline void spdlog::async_logger::flush()
 {
-
-    _async_log_helper->flush();
+    _async_log_helper->flush(true);
 }
 
 inline void spdlog::async_logger::_set_formatter(spdlog::formatter_ptr msg_formatter)
@@ -63,7 +70,20 @@ inline void spdlog::async_logger::_set_pattern(const std::string& pattern)
 }
 
 
-inline void spdlog::async_logger::_log_msg(details::log_msg& msg)
+inline void spdlog::async_logger::_sink_it(details::log_msg& msg)
 {
-    _async_log_helper->log(msg);
+    try
+    {
+        _async_log_helper->log(msg);
+        if (_should_flush_on(msg))
+            _async_log_helper->flush(false); // do async flush
+    }
+    catch (const std::exception &ex)
+    {
+        _err_handler(ex.what());
+    }
+    catch (...)
+    {
+        _err_handler("Unknown exception");
+    }
 }
