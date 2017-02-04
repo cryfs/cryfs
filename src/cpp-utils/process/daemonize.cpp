@@ -34,13 +34,13 @@ namespace cpputils {
             // Create a new SID for the child process
             pid_t sid = setsid();
             if (sid < 0) {
-                LOG(ERROR) << "Failed to get SID for daemon process";
+                LOG(ERROR, "Failed to get SID for daemon process");
                 exit(EXIT_FAILURE);
             }
 
             // Change the current working directory to a directory that's always existin
             if ((chdir("/")) < 0) {
-                LOG(ERROR) << "Failed to change working directory for daemon process";
+                LOG(ERROR, "Failed to change working directory for daemon process");
                 exit(EXIT_FAILURE);
             }
 
