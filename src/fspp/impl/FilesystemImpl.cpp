@@ -88,7 +88,7 @@ FilesystemImpl::~FilesystemImpl() {
     << std::setw(40) << "CreateSymlink (without loading): " << static_cast<double>(_createSymlinkNanosec_withoutLoading)/1000000000 << "\n"
     << std::setw(40) << "ReadSymlink: " << static_cast<double>(_readSymlinkNanosec)/1000000000 << "\n"
     << std::setw(40) << "ReadSymlink (without loading): " << static_cast<double>(_readSymlinkNanosec_withoutLoading)/1000000000 << "\n";
-  LOG(INFO) << profilerInformation.str();
+  LOG(INFO, profilerInformation.str());
 #endif
 }
 

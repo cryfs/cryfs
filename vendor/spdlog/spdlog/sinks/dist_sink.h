@@ -5,15 +5,17 @@
 
 #pragma once
 
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <list>
+#include <spdlog/details/log_msg.h>
+#include <spdlog/details/null_mutex.h>
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/sinks/sink.h>
 
-#include "../details/log_msg.h"
-#include "../details/null_mutex.h"
-#include "./base_sink.h"
-#include "./sink.h"
+#include <algorithm>
+#include <mutex>
+#include <memory>
+#include <vector>
+
+// Distribution sink (mux). Stores a vector of sinks which get called when log is called
 
 namespace spdlog
 {
@@ -29,40 +31,37 @@ public:
     virtual ~dist_sink() = default;
 
 protected:
+    std::vector<std::shared_ptr<sink>> _sinks;
+
     void _sink_it(const details::log_msg& msg) override
     {
-        for (auto iter = _sinks.begin(); iter != _sinks.end(); iter++)
-            (*iter)->log(msg);
+        for (auto &sink : _sinks)
+        {
+            if( sink->should_log( msg.level))
+            {
+                sink->log(msg);
+            }
+        }
     }
-
-    std::vector<std::shared_ptr<sink>> _sinks;
 
 public:
     void flush() override
     {
         std::lock_guard<Mutex> lock(base_sink<Mutex>::_mutex);
-        for (auto iter = _sinks.begin(); iter != _sinks.end(); iter++)
-            (*iter)->flush();
+        for (auto &sink : _sinks)
+            sink->flush();
     }
 
     void add_sink(std::shared_ptr<sink> sink)
     {
         std::lock_guard<Mutex> lock(base_sink<Mutex>::_mutex);
-        if (sink &&
-                _sinks.end() == std::find(_sinks.begin(), _sinks.end(), sink))
-        {
-            _sinks.push_back(sink);
-        }
+        _sinks.push_back(sink);
     }
 
     void remove_sink(std::shared_ptr<sink> sink)
     {
         std::lock_guard<Mutex> lock(base_sink<Mutex>::_mutex);
-        auto pos = std::find(_sinks.begin(), _sinks.end(), sink);
-        if (pos != _sinks.end())
-        {
-            _sinks.erase(pos);
-        }
+        _sinks.erase(std::remove(_sinks.begin(), _sinks.end(), sink), _sinks.end());
     }
 };
 
