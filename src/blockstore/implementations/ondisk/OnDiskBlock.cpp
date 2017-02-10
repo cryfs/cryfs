@@ -134,7 +134,7 @@ bool OnDiskBlock::RemoveFromDiskIfExists(const bf::path &rootdir, const Key &key
 
   bool retval = bf::remove(filepath);
   if (!retval) {
-    LOG(ERROR) << "Couldn't find block " << key.ToString() << " to remove";
+    LOG(ERROR, "Couldn't find block {} to remove", key.ToString());
   }
   if (bf::is_empty(filepath.parent_path())) {
     bf::remove(filepath.parent_path());

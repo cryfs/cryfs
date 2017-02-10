@@ -24,7 +24,7 @@ namespace cpputils {
         uint32_t size;
         std::memcpy(&size, reinterpret_cast<const char*>(data.data()), sizeof(size));
         if(sizeof(size) + size >= data.size()) {
-            LOG(ERROR) << "Config file is invalid: Invalid padding.";
+            LOG(ERROR, "Config file is invalid: Invalid padding.");
             return boost::none;
         };
         Data result(size);

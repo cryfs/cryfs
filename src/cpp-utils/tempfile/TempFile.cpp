@@ -28,7 +28,7 @@ TempFile::~TempFile() {
       bf::remove(_path);
     }
   } catch (const boost::filesystem::filesystem_error &e) {
-    LOG(ERROR) << "Could not delete tempfile.";
+    LOG(ERROR, "Could not delete tempfile.");
   }
 }
 
