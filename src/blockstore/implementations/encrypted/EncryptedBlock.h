@@ -117,12 +117,12 @@ boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cip
   boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data() + sizeof(FORMAT_VERSION_HEADER), baseBlock->size() - sizeof(FORMAT_VERSION_HEADER), encKey);
   if(plaintextWithHeader == boost::none) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
-    cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed. Was the block modified by an attacker?";
+    cpputils::logging::LOG(cpputils::logging::WARN, "Decrypting block {} failed. Was the block modified by an attacker?", baseBlock->key().ToString());
     return boost::none;
   }
   if(!_keyHeaderIsCorrect(baseBlock->key(), *plaintextWithHeader)) {
     //The stored key in the block data is incorrect - an attacker might have exchanged the contents with the encrypted data from a different block
-    cpputils::logging::LOG(cpputils::logging::WARN) << "Decrypting block " << baseBlock->key().ToString() << " failed due to invalid block key. Was the block modified by an attacker?";
+    cpputils::logging::LOG(cpputils::logging::WARN, "Decrypting block {} failed due to invalid block key. Was the block modified by an attacker?", baseBlock->key().ToString());
     return boost::none;
   }
   return cpputils::make_unique_ref<EncryptedBlock<Cipher>>(std::move(baseBlock), encKey, std::move(*plaintextWithHeader));

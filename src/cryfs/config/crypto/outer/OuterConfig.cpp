@@ -38,7 +38,7 @@ namespace cryfs {
             serializer.writeTailData(encryptedInnerConfig);
             return serializer.finished();
         } catch (const exception &e) {
-            LOG(ERROR) << "Error serializing CryConfigEncryptor: " << e.what();
+            LOG(ERROR, "Error serializing CryConfigEncryptor: {}", e.what());
             throw; // This is a programming logic error. Pass through exception.
         }
     }
@@ -60,7 +60,7 @@ namespace cryfs {
             _deserializeNewFormat(&deserializer);
 #endif
         } catch (const exception &e) {
-            LOG(ERROR) << "Error deserializing outer configuration: " << e.what();
+            LOG(ERROR, "Error deserializing outer configuration: {}", e.what());
             return none; // This can be caused by invalid input data and does not have to be a programming error. Don't throw exception.
         }
     }

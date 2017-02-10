@@ -2,11 +2,13 @@
 #include "utils.h"
 #include <iostream>
 #include <boost/optional.hpp>
+#include <cryfs/config/CryConfigConsole.h>
 #include <cryfs-cli/Environment.h>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
 using namespace cryfs::program_options;
+using cryfs::CryConfigConsole;
 using std::pair;
 using std::vector;
 using std::cerr;
@@ -122,12 +124,16 @@ vector<const char*> Parser::_to_const_char_vector(const vector<string> &options)
 
 void Parser::_addAllowedOptions(po::options_description *desc) {
     po::options_description options("Allowed options");
+    string cipher_description = "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers. Default: ";
+    cipher_description += CryConfigConsole::DEFAULT_CIPHER;
+    string blocksize_description = "The block size used when storing ciphertext blocks (in bytes). Default: ";
+    blocksize_description += std::to_string(CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES);
     options.add_options()
             ("help,h", "show help message")
             ("config,c", po::value<string>(), "Configuration file")
             ("foreground,f", "Run CryFS in foreground.")
-            ("cipher", po::value<string>(), "Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers.")
-            ("blocksize", po::value<uint32_t>(), "The block size used when storing ciphertext blocks (in bytes).")
+            ("cipher", po::value<string>(), cipher_description.c_str())
+            ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
             ("missing-block-is-integrity-violation", po::value<bool>(), "Whether to treat a missing block as an integrity violation. This makes sure you notice if an attacker deleted some of your files, but only works in single-client mode. You will not be able to use the file system on other devices.")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")

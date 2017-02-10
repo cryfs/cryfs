@@ -252,9 +252,9 @@ namespace cryfs {
 #endif
             fuse.run(options.mountDir(), options.fuseOptions());
         } catch (const std::exception &e) {
-            LOG(ERROR) << "Crashed: " << e.what();
+            LOG(ERROR, "Crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR) << "Crashed";
+            LOG(ERROR, "Crashed");
         }
     }
 
