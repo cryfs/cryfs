@@ -1,4 +1,4 @@
-Version 0.9.7 (unreleased)
+Version 0.9.7
 --------------
 Compatibility:
 * Runs on FreeBSD
