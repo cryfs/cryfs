@@ -9,7 +9,6 @@ using cpputils::process::PipeReader;
 using cpputils::process::PipeWriter;
 using cpputils::Data;
 using std::unique_ptr;
-using std::make_unique;
 using std::string;
 
 class PipeReadWriteTest : public ::testing::Test {
