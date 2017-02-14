@@ -4,7 +4,7 @@ set(SOURCES
         main.cpp
 )
 
-add_library(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC cryfs cpp-utils gitversion)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
