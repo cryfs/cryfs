@@ -12,8 +12,9 @@
 
 class C_Library_Test : public ::testing::Test {
 public:
+    static constexpr uint32_t API_VERSION = 1;
     C_Library_Test() {
-        EXPECT_SUCCESS(cryfs_load_init(&context));
+        EXPECT_SUCCESS(cryfs_load_init(API_VERSION, &context));
     }
     ~C_Library_Test() {
         cryfs_load_free(context);
@@ -23,7 +24,7 @@ public:
 
     void reinit_context() {
         cryfs_load_free(context);
-        EXPECT_SUCCESS(cryfs_load_init(&context));
+        EXPECT_SUCCESS(cryfs_load_init(API_VERSION, &context));
     }
 
     void EXPECT_LOAD_SUCCESS() {

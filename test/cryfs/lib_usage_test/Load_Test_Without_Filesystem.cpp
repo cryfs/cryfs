@@ -33,6 +33,12 @@ TEST_F(Load_Test_Without_Filesystem, init_and_free) {
     // This tests that the constructor successfully initializes the context and it can be freed in the destructor.
 }
 
+TEST_F(Load_Test_Without_Filesystem, init_unsupported_api_version) {
+  cryfs_load_context *context;
+  EXPECT_EQ(cryfs_error_UNSUPPORTED_API_VERSION, cryfs_load_init(2, &context));
+  cryfs_load_free(context); // Test that people can call cryfs_load_free after an error in cryfs_load_init
+}
+
 TEST_F(Load_Test_Without_Filesystem, basedir_doesnt_exist) {
     EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, NONEXISTENT_PATH.c_str(), NONEXISTENT_PATH.size()));
 }

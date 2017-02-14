@@ -18,28 +18,29 @@ extern "C" {
 
 typedef enum {
     cryfs_success = 0,
-    cryfs_error_BASEDIR_NOT_SET = -1,
-    cryfs_error_PASSWORD_NOT_SET = -2,
-    cryfs_error_CONFIGFILE_DOESNT_EXIST = -3,
-    cryfs_error_CONFIGFILE_NOT_READABLE = -4,
-    cryfs_error_BASEDIR_DOESNT_EXIST = -5,
-    cryfs_error_BASEDIR_INACCESSIBLE = -6,
-    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -7,
-    cryfs_error_FILESYSTEM_INVALID = -8,
-    cryfs_error_DECRYPTION_FAILED = -9,
-    cryfs_error_MOUNTDIR_DOESNT_EXIST = -10,
-    cryfs_error_MOUNTDIR_NOT_SET = -11,
-    cryfs_error_MOUNTDIR_INACCESSIBLE = -12,
-    cryfs_error_INVALID_LOGFILE = -13,
-    cryfs_error_LOGFILE_NOT_WRITABLE = -14,
-    cryfs_error_UNMOUNT_FAILED = -15
+    cryfs_error_UNSUPPORTED_API_VERSION = -1,
+    cryfs_error_BASEDIR_NOT_SET = -2,
+    cryfs_error_PASSWORD_NOT_SET = -3,
+    cryfs_error_CONFIGFILE_DOESNT_EXIST = -4,
+    cryfs_error_CONFIGFILE_NOT_READABLE = -5,
+    cryfs_error_BASEDIR_DOESNT_EXIST = -6,
+    cryfs_error_BASEDIR_INACCESSIBLE = -7,
+    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -8,
+    cryfs_error_FILESYSTEM_INVALID = -9,
+    cryfs_error_DECRYPTION_FAILED = -10,
+    cryfs_error_MOUNTDIR_DOESNT_EXIST = -11,
+    cryfs_error_MOUNTDIR_NOT_SET = -12,
+    cryfs_error_MOUNTDIR_INACCESSIBLE = -13,
+    cryfs_error_INVALID_LOGFILE = -14,
+    cryfs_error_LOGFILE_NOT_WRITABLE = -15,
+    cryfs_error_UNMOUNT_FAILED = -16
 } cryfs_status;
 
 typedef struct cryfs_load_context cryfs_load_context;
 typedef struct cryfs_mount_handle cryfs_mount_handle;
 
 // Loading a file system
-CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_init(cryfs_load_context **context);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_init(uint32_t apiVersion, cryfs_load_context **context);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_basedir(cryfs_load_context *context, const char *basedir, size_t basedir_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_password(cryfs_load_context *context, const char *password, size_t password_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const char *configfile, size_t configfile_length);

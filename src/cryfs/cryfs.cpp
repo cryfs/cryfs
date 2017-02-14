@@ -6,13 +6,19 @@
 
 using std::string;
 
-cryfs_status cryfs_load_init(cryfs_load_context **context) {
+cryfs_status cryfs_load_init(uint32_t apiVersion, cryfs_load_context **context) {
+    if (1 != apiVersion) {
+        *context = nullptr;
+        return cryfs_error_UNSUPPORTED_API_VERSION;
+    }
     *context = new cryfs_load_context;
     return cryfs_success;
 }
 
 void cryfs_load_free(cryfs_load_context *context) {
-    delete context;
+    if (nullptr != context) {
+        delete context;
+    }
 }
 
 cryfs_status cryfs_load_set_basedir(cryfs_load_context *context, const char *basedir, size_t basedir_length) {
