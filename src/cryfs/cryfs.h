@@ -21,14 +21,18 @@ typedef enum {
     cryfs_error_BASEDIR_NOT_SET = -1,
     cryfs_error_PASSWORD_NOT_SET = -2,
     cryfs_error_CONFIGFILE_DOESNT_EXIST = -3,
-    cryfs_error_BASEDIR_DOESNT_EXIST = -4,
-    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -5,
-    cryfs_error_FILESYSTEM_INVALID = -6,
-    cryfs_error_DECRYPTION_FAILED = -7,
-    cryfs_error_MOUNTDIR_DOESNT_EXIST = -8,
-    cryfs_error_MOUNTDIR_NOT_SET = -9,
-    cryfs_error_INVALID_LOGFILE = -10,
-    cryfs_error_UNMOUNT_FAILED = -11
+    cryfs_error_CONFIGFILE_NOT_READABLE = -4,
+    cryfs_error_BASEDIR_DOESNT_EXIST = -5,
+    cryfs_error_BASEDIR_INACCESSIBLE = -6,
+    cryfs_error_FILESYSTEM_INCOMPATIBLE_VERSION = -7,
+    cryfs_error_FILESYSTEM_INVALID = -8,
+    cryfs_error_DECRYPTION_FAILED = -9,
+    cryfs_error_MOUNTDIR_DOESNT_EXIST = -10,
+    cryfs_error_MOUNTDIR_NOT_SET = -11,
+    cryfs_error_MOUNTDIR_INACCESSIBLE = -12,
+    cryfs_error_INVALID_LOGFILE = -13,
+    cryfs_error_LOGFILE_NOT_WRITABLE = -14,
+    cryfs_error_UNMOUNT_FAILED = -15
 } cryfs_status;
 
 typedef struct cryfs_load_context cryfs_load_context;

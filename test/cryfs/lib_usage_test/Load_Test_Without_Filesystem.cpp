@@ -41,6 +41,25 @@ TEST_F(Load_Test_Without_Filesystem, basedir_invalid) {
     EXPECT_EQ(cryfs_error_BASEDIR_DOESNT_EXIST, cryfs_load_set_basedir(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
+TEST_F(Load_Test_Without_Filesystem, basedir_is_file) {
+    EXPECT_EQ(cryfs_error_BASEDIR_INACCESSIBLE, cryfs_load_set_basedir(context, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
+}
+
+TEST_F(Load_Test_Without_Filesystem, basedir_not_readable) {
+    chmod(EXISTING_DIR.c_str(), S_IWUSR | S_IXUSR | S_IWGRP | S_IXGRP | S_IWOTH | S_IXOTH);
+    EXPECT_EQ(cryfs_error_BASEDIR_INACCESSIBLE, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+}
+
+TEST_F(Load_Test_Without_Filesystem, basedir_not_writeble) {
+    chmod(EXISTING_DIR.c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    EXPECT_EQ(cryfs_error_BASEDIR_INACCESSIBLE, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+}
+
+TEST_F(Load_Test_Without_Filesystem, basedir_not_enterable) {
+    chmod(EXISTING_DIR.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    EXPECT_EQ(cryfs_error_BASEDIR_INACCESSIBLE, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+}
+
 TEST_F(Load_Test_Without_Filesystem, basedir_valid) {
     EXPECT_EQ(cryfs_success, cryfs_load_set_basedir(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
 }
@@ -51,6 +70,15 @@ TEST_F(Load_Test_Without_Filesystem, externalconfig_doesnt_exist) {
 
 TEST_F(Load_Test_Without_Filesystem, externalconfig_invalid) {
     EXPECT_EQ(cryfs_error_CONFIGFILE_DOESNT_EXIST, cryfs_load_set_externalconfig(context, INVALID_PATH.c_str(), INVALID_PATH.size()));
+}
+
+TEST_F(Load_Test_Without_Filesystem, externalconfig_is_dir) {
+  EXPECT_EQ(cryfs_error_CONFIGFILE_NOT_READABLE, cryfs_load_set_externalconfig(context, EXISTING_DIR.c_str(), EXISTING_DIR.size()));
+}
+
+TEST_F(Load_Test_Without_Filesystem, externalconfig_not_readable) {
+  chmod(EXISTING_FILE.c_str(), S_IWUSR | S_IXUSR | S_IWGRP | S_IXGRP | S_IWOTH | S_IXOTH);
+  EXPECT_EQ(cryfs_error_CONFIGFILE_NOT_READABLE, cryfs_load_set_externalconfig(context, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
 }
 
 TEST_F(Load_Test_Without_Filesystem, externalconfig_valid) {

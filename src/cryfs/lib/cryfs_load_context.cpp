@@ -6,12 +6,15 @@
 #include "../impl/config/CryConfigLoader.h"
 #include "../impl/filesystem/CryDir.h"
 #include "cryfs_load_context.h"
+#include "utils/filesystem_checks.h"
 
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
 using cpputils::either;
 using std::string;
+using std::shared_ptr;
+using std::make_shared;
 using boost::none;
 using boost::optional;
 namespace bf = boost::filesystem;
@@ -30,10 +33,12 @@ cryfs_load_context::cryfs_load_context()
 }
 
 cryfs_status cryfs_load_context::set_basedir(const string &basedir) {
-    if (!bf::is_directory(basedir)) {
+    if (!bf::exists(basedir)) {
         return cryfs_error_BASEDIR_DOESNT_EXIST;
     }
-    //TODO Handle (and add test cases for) missing permissions
+    if (!filesystem_checks::check_dir_accessible(basedir)) {
+        return cryfs_error_BASEDIR_INACCESSIBLE;
+    }
     _basedir = basedir;
     return cryfs_success;
 }
@@ -44,10 +49,12 @@ cryfs_status cryfs_load_context::set_password(const string &password) {
 }
 
 cryfs_status cryfs_load_context::set_externalconfig(const string &configfile) {
-    if (!bf::is_regular_file(configfile)) {
+    if (!bf::exists(configfile)) {
         return cryfs_error_CONFIGFILE_DOESNT_EXIST;
     }
-    //TODO Handle (and add test cases for) missing permissions
+    if (!filesystem_checks::check_file_readable(configfile)) {
+        return cryfs_error_CONFIGFILE_NOT_READABLE;
+    }
     _configfile = configfile;
     return cryfs_success;
 }

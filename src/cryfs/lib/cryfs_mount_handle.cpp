@@ -3,6 +3,7 @@
 #include <cpp-utils/process/daemon/daemonize.h>
 #include "cryfs_mount_handle.h"
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include "utils/filesystem_checks.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -31,10 +32,12 @@ const char *cryfs_mount_handle::get_ciphername() const {
 }
 
 cryfs_status cryfs_mount_handle::set_mountdir(const string &mountdir) {
-    if (!bf::is_directory(mountdir)) {
+    if (!bf::exists(mountdir)) {
         return cryfs_error_MOUNTDIR_DOESNT_EXIST;
     }
-    //TODO Handle (and add test cases for) missing permissions
+    if (!filesystem_checks::check_dir_accessible(mountdir)) {
+        return cryfs_error_MOUNTDIR_INACCESSIBLE;
+    }
     _mountdir = mountdir;
     return cryfs_success;
 }
@@ -48,7 +51,9 @@ cryfs_status cryfs_mount_handle::set_logfile(const bf::path &logfile) {
     if (!bf::is_directory(logfile.parent_path())) {
         return cryfs_error_INVALID_LOGFILE;
     }
-    //TODO Handle (and add test cases for) missing write permissions (or create file permissions)
+    if (bf::exists(logfile) && !filesystem_checks::check_file_appendable(logfile)) {
+        return cryfs_error_LOGFILE_NOT_WRITABLE;
+    }
     _logfile = logfile;
     return cryfs_success;
 }

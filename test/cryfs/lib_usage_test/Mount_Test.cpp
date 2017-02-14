@@ -34,10 +34,12 @@ public:
     TempDir basedir;
     TempDir mountdir;
     TempFile logfile;
+    TempFile _existing_file;
     static const string PASSWORD;
     static const string NOTEXISTING_DIR;
     static const string NOTEXISTING_LOGFILE;
     static const string INVALID_PATH;
+    const string EXISTING_FILE = _existing_file.path().native();
 
     void create_filesystem(const bf::path &basedir, const string &cipher) {
         auto configfile = create_configfile(basedir / "cryfs.config", cipher);
@@ -180,6 +182,29 @@ TEST_F(Mount_Test, set_mountdir_invalid) {
     EXPECT_EQ(cryfs_error_MOUNTDIR_DOESNT_EXIST, cryfs_mount_set_mountdir(handle, INVALID_PATH.c_str(), INVALID_PATH.size()));
 }
 
+TEST_F(Mount_Test, set_mountdir_is_file) {
+    create_and_load_filesystem();
+    EXPECT_EQ(cryfs_error_MOUNTDIR_INACCESSIBLE, cryfs_mount_set_mountdir(handle, EXISTING_FILE.c_str(), EXISTING_FILE.size()));
+}
+
+TEST_F(Mount_Test, set_mountdir_not_readable) {
+    create_and_load_filesystem();
+    chmod(mountdir.path().native().c_str(), S_IWUSR | S_IXUSR | S_IWGRP | S_IXGRP | S_IWOTH | S_IXOTH);
+    EXPECT_EQ(cryfs_error_MOUNTDIR_INACCESSIBLE, cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+}
+
+TEST_F(Mount_Test, set_mountdir_not_writeble) {
+    create_and_load_filesystem();
+    chmod(mountdir.path().native().c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    EXPECT_EQ(cryfs_error_MOUNTDIR_INACCESSIBLE, cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+}
+
+TEST_F(Mount_Test, set_mountdir_not_enterable) {
+    create_and_load_filesystem();
+    chmod(mountdir.path().native().c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    EXPECT_EQ(cryfs_error_MOUNTDIR_INACCESSIBLE, cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
+}
+
 TEST_F(Mount_Test, set_mountdir_valid) {
     create_and_load_filesystem();
     EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
@@ -203,6 +228,12 @@ TEST_F(Mount_Test, set_logfile_notexisting) {
 TEST_F(Mount_Test, set_logfile_invalid) {
     create_and_load_filesystem();
     EXPECT_EQ(cryfs_error_INVALID_LOGFILE, cryfs_mount_set_logfile(handle, INVALID_PATH.c_str(), INVALID_PATH.size()));
+}
+
+TEST_F(Mount_Test, set_logfile_not_writable) {
+    create_and_load_filesystem();
+    chmod(logfile.path().native().c_str(), S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    EXPECT_EQ(cryfs_error_LOGFILE_NOT_WRITABLE, cryfs_mount_set_logfile(handle, logfile.path().native().c_str(), logfile.path().native().size()));
 }
 
 TEST_F(Mount_Test, set_logfile_valid_notexisting) {
