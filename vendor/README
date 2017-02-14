@@ -1,6 +1,4 @@
 This directory contains external projects, taken from the following locations:
 scrypt: http://www.tarsnap.com/scrypt.html
-googletest: https://github.com/google/googletest
-spdlog: https://github.com/gabime/spdlog/commit/0c7beb2e36008598cf80d0e8eb8635ac403febb9
-- with own fix: https://github.com/cryfs/spdlog/commit/7b8d507615b8075fc6c8793a0965a32a708288c4
-gitversion: https://github.com/smessmer/gitversion
+googletest: https://github.com/google/googletest/tree/release-1.8.0
+spdlog: https://github.com/gabime/spdlog/tree/v0.11.0/include/spdlog

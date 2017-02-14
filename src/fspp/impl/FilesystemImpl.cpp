@@ -7,6 +7,7 @@
 
 #include "../fuse/FuseErrnoException.h"
 #include "../fs_interface/File.h"
+#include "../fs_interface/Node.h"
 
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/pointer/unique_ref.h>
@@ -87,66 +88,35 @@ FilesystemImpl::~FilesystemImpl() {
     << std::setw(40) << "CreateSymlink (without loading): " << static_cast<double>(_createSymlinkNanosec_withoutLoading)/1000000000 << "\n"
     << std::setw(40) << "ReadSymlink: " << static_cast<double>(_readSymlinkNanosec)/1000000000 << "\n"
     << std::setw(40) << "ReadSymlink (without loading): " << static_cast<double>(_readSymlinkNanosec_withoutLoading)/1000000000 << "\n";
-  LOG(INFO) << profilerInformation.str();
+  LOG(INFO, profilerInformation.str());
 #endif
 }
 
 unique_ref<File> FilesystemImpl::LoadFile(const bf::path &path) {
   PROFILE(_loadFileNanosec);
-  auto node = _device->Load(path);
-  if (node == none) {
-    throw fuse::FuseErrnoException(EIO);
-  }
-  auto file = dynamic_pointer_move<File>(*node);
+  auto file = _device->LoadFile(path);
   if (file == none) {
-	  throw fuse::FuseErrnoException(EISDIR);
+    throw fuse::FuseErrnoException(EIO);
   }
   return std::move(*file);
 }
 
 unique_ref<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   PROFILE(_loadDirNanosec);
-  auto node = _device->Load(path);
-  if (node == none) {
-    throw fuse::FuseErrnoException(EIO);
-  }
-  auto dir = dynamic_pointer_move<Dir>(*node);
+  auto dir = _device->LoadDir(path);
   if (dir == none) {
-    throw fuse::FuseErrnoException(ENOTDIR);
+    throw fuse::FuseErrnoException(EIO);
   }
   return std::move(*dir);
 }
 
 unique_ref<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
   PROFILE(_loadSymlinkNanosec);
-  auto node = _device->Load(path);
-  if (node == none) {
-    throw fuse::FuseErrnoException(EIO);
-  }
-  auto lnk = dynamic_pointer_move<Symlink>(*node);
+  auto lnk = _device->LoadSymlink(path);
   if (lnk == none) {
-    throw fuse::FuseErrnoException(ENOTDIR);
+    throw fuse::FuseErrnoException(EIO);
   }
   return std::move(*lnk);
-}
-
-unique_ref<Node> FilesystemImpl::LoadFileOrSymlink(const bf::path &path) {
-  PROFILE(_loadFileOrSymlinkNanosec);
-  auto node = _device->Load(path);
-  if (node == none) {
-    throw fuse::FuseErrnoException(EIO);
-  }
-  auto file = dynamic_pointer_move<File>(*node);
-  if (file != none) {
-    return std::move(*file);
-  }
-
-  auto symlink = dynamic_pointer_move<Symlink>(*node);
-  if (symlink != none) {
-    return std::move(*symlink);
-  }
-
-  throw fuse::FuseErrnoException(EISDIR);
 }
 
 int FilesystemImpl::openFile(const bf::path &path, int flags) {
@@ -260,17 +230,25 @@ void FilesystemImpl::mkdir(const bf::path &path, mode_t mode, uid_t uid, gid_t g
 }
 
 void FilesystemImpl::rmdir(const bf::path &path) {
+  //TODO Don't allow removing files/symlinks with this
   PROFILE(_rmdirNanosec);
-  auto dir = LoadDir(path);
+  auto node = _device->Load(path);
+  if(node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  }
   PROFILE(_rmdirNanosec_withoutLoading);
-  dir->remove();
+  (*node)->remove();
 }
 
 void FilesystemImpl::unlink(const bf::path &path) {
+  //TODO Don't allow removing directories with this
   PROFILE(_unlinkNanosec);
-  auto node = LoadFileOrSymlink(path);
+  auto node = _device->Load(path);
+  if (node == none) {
+    throw fuse::FuseErrnoException(ENOENT);
+  }
   PROFILE(_unlinkNanosec_withoutLoading);
-  node->remove();
+  (*node)->remove();
 }
 
 void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {

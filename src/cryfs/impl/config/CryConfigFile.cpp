@@ -42,7 +42,7 @@ either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(
     }
     CryConfig config = CryConfig::load(decrypted->data);
     if (config.Cipher() != decrypted->cipherName) {
-        LOG(ERROR) << "Inner cipher algorithm used to encrypt config file doesn't match config value";
+        LOG(ERROR, "Inner cipher algorithm used to encrypt config file doesn't match config value");
         return LoadError::DecryptionFailed;
     }
     auto configFile = make_unique_ref<CryConfigFile>(CryConfigFile(path, std::move(config), std::move(*encryptor)));
@@ -54,17 +54,17 @@ either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(
     return std::move(configFile);
 }
 
-unique_ref<CryConfigFile> CryConfigFile::create(const bf::path &path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
+unique_ref<CryConfigFile> CryConfigFile::create(const bf::path &path, const CryConfig &config, const string &password, const SCryptSettings &scryptSettings) {
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = make_unique_ref<CryConfigFile>(CryConfigFile(path, std::move(config), CryConfigEncryptorFactory::deriveKey(password, scryptSettings)));
+    auto result = make_unique_ref<CryConfigFile>(path, config, CryConfigEncryptorFactory::deriveKey(password, scryptSettings));
     result->save();
     return result;
 }
 
-CryConfigFile::CryConfigFile(const bf::path &path, CryConfig config, unique_ref<CryConfigEncryptor> encryptor)
-    : _path (path), _config(std::move(config)), _encryptor(std::move(encryptor)) {
+CryConfigFile::CryConfigFile(const bf::path &path, const CryConfig &config, unique_ref<CryConfigEncryptor> encryptor)
+    : _path (path), _config(config), _encryptor(std::move(encryptor)) {
 }
 
 void CryConfigFile::save() const {

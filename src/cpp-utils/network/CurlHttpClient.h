@@ -4,6 +4,7 @@
 
 #include "HttpClient.h"
 #include "../macros.h"
+#include "CurlInitializerRAII.h"
 
 namespace cpputils {
 
@@ -16,7 +17,8 @@ namespace cpputils {
         boost::optional <std::string> get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
     private:
-        void *curl;
+        CurlInitializerRAII curlInitializer;
+        CURL *curl;
 
         static size_t write_data(void *ptr, size_t size, size_t nmemb, std::ostringstream *stream);
 

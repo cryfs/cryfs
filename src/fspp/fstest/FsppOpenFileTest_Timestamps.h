@@ -5,7 +5,7 @@
 #include "testutils/TimestampTestUtils.h"
 
 template<class ConcreteFileSystemTestFixture>
-class FsppOpenFileTest_Timestamps: public FileSystemTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils {
+class FsppOpenFileTest_Timestamps: public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
     cpputils::unique_ref<fspp::OpenFile> CreateAndOpenFile(const boost::filesystem::path &path) {
         return this->CreateFile(path)->open(O_RDWR);
@@ -14,7 +14,8 @@ public:
         auto file = this->CreateFile(path);
         file->truncate(size);
         auto openFile = file->open(O_RDWR);
-        assert(stat(*openFile).st_size == size);
+        assert(this->stat(*openFile).st_size == size);
+        assert(this->stat(*this->Load(path)).st_size == size);
         return openFile;
     }
 };

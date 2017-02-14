@@ -9,7 +9,8 @@ template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Stat: public FsppNodeTest<ConcreteFileSystemTestFixture> {
 public:
     void Test_Nlink() {
-        auto node = this->CreateNode("/mynode");
+        this->CreateNode("/mynode");
+        auto node = this->Load("/mynode");
         this->IN_STAT(node.get(), [] (struct stat st) {
             EXPECT_EQ(1u, st.st_nlink);
         });
@@ -18,44 +19,48 @@ public:
 
 // Test cases only run for file nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_FileOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_File_Helper {};
+class FsppNodeTest_Stat_FileOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, CreatedFileIsEmpty) {
-    auto file = this->CreateFile("/myfile");
-    this->EXPECT_SIZE(0, file.get());
+    this->CreateFile("/myfile");
+    auto node = this->Load("/myfile");
+    this->EXPECT_SIZE(0, node.get());
 }
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {
-    auto file = this->CreateFile("/myfile");
-    this->IN_STAT(file.get(), [] (struct stat st) {
+    this->CreateFile("/myfile");
+    auto node = this->Load("/myfile");
+    this->IN_STAT(node.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISREG(st.st_mode));
     });
 }
 
 // Test cases only run for dir nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_DirOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_Dir_Helper {};
+class FsppNodeTest_Stat_DirOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_DirOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
-    auto file = this->CreateDir("/mydir");
-    this->IN_STAT(file.get(), [] (struct stat st) {
+    this->CreateDir("/mydir");
+    auto node = this->Load("/mydir");
+    this->IN_STAT(node.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISDIR(st.st_mode));
     });
 }
 
 // Test cases only run for symlink nodes
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest_Stat_SymlinkOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTest_Symlink_Helper {};
+class FsppNodeTest_Stat_SymlinkOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
 TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_SymlinkOnly, SymlinkIsSymlink) {
-    auto file = this->CreateSymlink("/mysymlink");
-    this->IN_STAT(file.get(), [] (struct stat st) {
+    this->CreateSymlink("/mysymlink");
+    auto node = this->Load("/mysymlink");
+    this->IN_STAT(node.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISLNK(st.st_mode));
     });
 }

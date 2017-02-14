@@ -3,7 +3,6 @@
 #include "CurlHttpClient.h"
 #include <sstream>
 #include <iostream>
-#include <curl/curl.h>
 #include <curl/easy.h>
 
 using boost::none;
@@ -18,7 +17,7 @@ namespace cpputils {
         return size * nmemb;
     }
 
-    CurlHttpClient::CurlHttpClient() {
+    CurlHttpClient::CurlHttpClient(): curlInitializer(), curl() {
         curl = curl_easy_init();
     }
 
@@ -31,7 +30,7 @@ namespace cpputils {
         // example.com is redirected, so we tell libcurl to follow redirection
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1); //Prevent "longjmp causes uninitialized stack frame" bug
-        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "deflate");
+        curl_easy_setopt(curl, CURLOPT_ENCODING, "deflate");
         ostringstream out;
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlHttpClient::write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out);

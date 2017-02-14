@@ -73,8 +73,10 @@ const vector<shared_ptr<CryCipher>> CryCiphers::SUPPORTED_CIPHERS = {
         make_shared<CryCipherInstance<Serpent128_CFB>>(INTEGRITY_WARNING),
         make_shared<CryCipherInstance<Cast256_GCM>>(),
         make_shared<CryCipherInstance<Cast256_CFB>>(INTEGRITY_WARNING),
+#if CRYPTOPP_VERSION != 564
         make_shared<CryCipherInstance<Mars448_GCM>>(),
         make_shared<CryCipherInstance<Mars448_CFB>>(INTEGRITY_WARNING),
+#endif
         make_shared<CryCipherInstance<Mars256_GCM>>(),
         make_shared<CryCipherInstance<Mars256_CFB>>(INTEGRITY_WARNING),
         make_shared<CryCipherInstance<Mars128_GCM>>(),

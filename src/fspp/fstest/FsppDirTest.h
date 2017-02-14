@@ -163,6 +163,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyRoot) {
   this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
   this->LoadFile("/myfile");
+  this->Load("/myfile"); // Test that we can also load the file node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
@@ -206,6 +207,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyRoot) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
   this->LoadDir("/mydir");
+  this->Load("/mydir"); // Test we can also load the dir node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {

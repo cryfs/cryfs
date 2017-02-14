@@ -12,10 +12,12 @@
 namespace cryfs {
     class CryConfigFile final {
     public:
+        CryConfigFile(const boost::filesystem::path &path, const CryConfig &config, cpputils::unique_ref<CryConfigEncryptor> encryptor);
+
         CryConfigFile(CryConfigFile &&rhs) = default;
         ~CryConfigFile();
 
-        static cpputils::unique_ref<CryConfigFile> create(const boost::filesystem::path &path, CryConfig config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
+        static cpputils::unique_ref<CryConfigFile> create(const boost::filesystem::path &path, const CryConfig &config, const std::string &password, const cpputils::SCryptSettings &scryptSettings);
         enum class LoadError {ConfigFileNotFound, DecryptionFailed};
         static cpputils::either<LoadError, cpputils::unique_ref<CryConfigFile>> load(const boost::filesystem::path &path, const std::string &password);
         void save() const;
@@ -24,8 +26,6 @@ namespace cryfs {
         const CryConfig *config() const;
 
     private:
-        CryConfigFile(const boost::filesystem::path &path, CryConfig config, cpputils::unique_ref<CryConfigEncryptor> encryptor);
-
         boost::filesystem::path _path;
         CryConfig _config;
         cpputils::unique_ref<CryConfigEncryptor> _encryptor;

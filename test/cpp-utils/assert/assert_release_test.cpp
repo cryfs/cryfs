@@ -2,7 +2,9 @@
 #include <gmock/gmock.h>
 
 //Include the ASSERT macro for a release build
+#ifndef NDEBUG
 #define NDEBUG
+#endif
 #include "cpp-utils/assert/assert.h"
 
 using testing::MatchesRegex;
@@ -24,7 +26,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
     EXPECT_THAT(e.what(), MatchesRegex(
-        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:23: my message.*"
+        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:25: my message.*"
     ));
   }
 }

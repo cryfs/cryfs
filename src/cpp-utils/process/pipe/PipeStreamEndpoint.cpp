@@ -21,7 +21,7 @@ PipeStreamEndpoint::~PipeStreamEndpoint() {
     ASSERT(_fd.valid() == (_stream != nullptr), "Either both, _fd and _stream, should be valid or invalid");
     if (nullptr != _stream) {
         if (0 != fclose(_stream)) {
-            LOG(ERROR) << "Failed to fclose() pipe. errno: " << errno;
+            LOG(ERROR, "Failed to fclose() pipe. errno: {}", errno);
         }
         _fd.wasClosedOutside();
         _stream = nullptr;

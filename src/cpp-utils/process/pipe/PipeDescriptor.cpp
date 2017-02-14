@@ -30,7 +30,7 @@ PipeDescriptor::~PipeDescriptor() {
         _destruct();
     } catch(const std::exception &e) {
         // Destructors shouldn't throw
-        LOG(ERROR) << e.what();
+        LOG(ERROR, e.what());
     }
 }
 

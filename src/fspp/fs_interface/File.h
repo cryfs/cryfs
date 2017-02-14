@@ -2,14 +2,13 @@
 #ifndef MESSMER_FSPP_FSINTERFACE_FILE_H_
 #define MESSMER_FSPP_FSINTERFACE_FILE_H_
 
-#include "Node.h"
 #include <cpp-utils/pointer/unique_ref.h>
 
 namespace fspp {
 class Device;
 class OpenFile;
 
-class File: public virtual Node {
+class File {
 public:
   virtual ~File() {}
 

@@ -107,12 +107,12 @@ bool cryfs_load_context::_sanity_check_filesystem(CryDevice *device) {
     //Try to list contents of base directory
     auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
     if (_rootDir == none) {
-        LOG(ERROR) << "Couldn't find root blob";
+        LOG(ERROR, "Couldn't find root blob");
         return false;
     }
     auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
     if (rootDir == none) {
-        LOG(ERROR) << "Root blob isn't a directory";
+        LOG(ERROR, "Root blob isn't a directory");
         return false;
     }
     try {

@@ -58,7 +58,7 @@ namespace cpputils {
     }
 
     void sigsegv_handler(int) {
-        LOG(ERROR) << "SIGSEGV\n" << backtrace();
+        LOG(ERROR, "SIGSEGV\n{}", backtrace());
         exit(1);
     }
 

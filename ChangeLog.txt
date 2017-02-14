@@ -1,4 +1,31 @@
-Version 0.9.5 (unreleased)
+Version 0.9.8 (unreleased)
+--------------
+
+
+Version 0.9.7
+--------------
+Compatibility:
+* Runs on FreeBSD
+* Works with Clang++ 3.8 (Debian experimental or newer Ubuntu systems)
+* Works with GCC 7
+
+Version 0.9.6
+---------------
+Fixed bugs:
+* Fix potential deadlock
+* Fix potential crash
+
+Improvements:
+* Allow building with -DCRYFS_UPDATE_CHECKS=off, which will create an executable with disabled update checks (the alternative to disable them in the environment also still works).
+* Automatically disable update checks when running in noninteractive mode.
+* More detailed error reporting if key derivation fails
+
+Compatibility:
+* Compatible with libcurl version >= 7.50.0, and <= 7.21.6 (tested down to 7.19.0)
+* Compatible with Crypto++ 5.6.4
+* Compatible with compilers running under hardening-wrapper
+
+Version 0.9.5
 ---------------
 Fixed Bugs:
 * Fixed a bug that prevented mounting a file system on Mac OS X.
@@ -8,6 +35,7 @@ Fixed Bugs:
 Improvements:
 * When mounting an old file system, CryFS will ask before migrating it to the newest version.
 * Operating system tools like the mount command or /proc/self/mountinfo report correct file system type and also report the base directory.
+* Compatibility with GCC 6
 
 Version 0.9.4
 ---------------

@@ -23,7 +23,7 @@ InMemoryBlockStore::InMemoryBlockStore()
  : _blocks() {}
 
 optional<unique_ref<Block>> InMemoryBlockStore::tryCreate(const Key &key, Data data) {
-  auto insert_result = _blocks.emplace(piecewise_construct, make_tuple(key.ToString()), make_tuple(key, std::move(data)));
+  auto insert_result = _blocks.emplace(piecewise_construct, make_tuple(key), make_tuple(key, std::move(data)));
 
   if (!insert_result.second) {
     return none;
@@ -36,7 +36,7 @@ optional<unique_ref<Block>> InMemoryBlockStore::tryCreate(const Key &key, Data d
 optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
   //Return a pointer to the stored InMemoryBlock
   try {
-    return optional<unique_ref<Block>>(make_unique_ref<InMemoryBlock>(_blocks.at(key.ToString())));
+    return optional<unique_ref<Block>>(make_unique_ref<InMemoryBlock>(_blocks.at(key)));
   } catch (const std::out_of_range &e) {
     return none;
   }
@@ -45,7 +45,7 @@ optional<unique_ref<Block>> InMemoryBlockStore::load(const Key &key) {
 void InMemoryBlockStore::remove(unique_ref<Block> block) {
   Key key = block->key();
   cpputils::destruct(std::move(block));
-  int numRemoved = _blocks.erase(key.ToString());
+  int numRemoved = _blocks.erase(key);
   ASSERT(1==numRemoved, "Didn't find block to remove");
 }
 

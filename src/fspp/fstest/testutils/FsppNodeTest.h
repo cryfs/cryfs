@@ -7,10 +7,19 @@
 #include <boost/preprocessor/variadic/to_seq.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 
-class FsppNodeTestBase {
+class FsppNodeTestHelper {
 public:
-    virtual void IN_STAT(fspp::Node *node, std::function<void (struct stat)> callback) = 0;
-    virtual void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) = 0;
+  void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) {
+    struct stat st;
+    file->stat(&st);
+    callback(st);
+  }
+
+  void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) {
+    IN_STAT(node, [expectedSize] (struct stat st) {
+      EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
+    });
+  }
 };
 
 /**
@@ -22,67 +31,9 @@ public:
  * See FsppNodeTest_Rename for an example.
  */
 template<class ConcreteFileSystemTestFixture>
-class FsppNodeTest: public virtual FsppNodeTestBase, public FileSystemTest<ConcreteFileSystemTestFixture> {
+class FsppNodeTest: public virtual FsppNodeTestHelper, public virtual FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
     virtual cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) = 0;
-};
-
-class FsppNodeTest_File_Helper: public virtual FsppNodeTestBase {
-public:
-    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
-        struct stat st1, st2;
-        file->stat(&st1);
-        callback(st1);
-        dynamic_cast<fspp::File &>(*file).open(O_RDONLY)->stat(&st2);
-        callback(st2);
-    }
-
-    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
-        IN_STAT(node, [expectedSize] (struct stat st) {
-            EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
-        });
-
-        EXPECT_NUMBYTES_READABLE(expectedSize, dynamic_cast<fspp::File*>(node));
-    }
-
-    void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::File *file) {
-        auto openFile = file->open(O_RDONLY);
-        cpputils::Data data(expectedSize);
-        //Try to read one byte more than the expected size
-        ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
-        //and check that it only read the expected size (but also not less)
-        EXPECT_EQ(expectedSize, (uint64_t)readBytes);
-    }
-};
-
-class FsppNodeTest_Dir_Helper: public virtual FsppNodeTestBase {
-public:
-    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
-        struct stat st;
-        file->stat(&st);
-        callback(st);
-    }
-
-    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
-        IN_STAT(node, [expectedSize] (struct stat st) {
-            EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
-        });
-    }
-};
-
-class FsppNodeTest_Symlink_Helper: public virtual FsppNodeTestBase {
-public:
-    void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) override {
-        struct stat st;
-        file->stat(&st);
-        callback(st);
-    }
-
-    void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) override {
-        IN_STAT(node, [expectedSize] (struct stat st) {
-            EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
-        });
-    }
 };
 
 #define _REGISTER_SINGLE_NODE_TEST_CASE(r, Class, Name)                                                                 \
@@ -96,10 +47,11 @@ public:
 
 #define _REGISTER_FILE_TEST_CASE(Class, ...)                                                                            \
     template<class ConcreteFileSystemTestFixture>                                                                       \
-    class Class##_FileNode: public Class<ConcreteFileSystemTestFixture>, public FsppNodeTest_File_Helper {              \
+    class Class##_FileNode: public Class<ConcreteFileSystemTestFixture>, public virtual FsppNodeTestHelper {            \
     public:                                                                                                             \
         cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {                     \
-            return this->CreateFile(path);                                                                              \
+            this->CreateFile(path);                                                                                     \
+            return this->Load(path);                                                                                    \
         }                                                                                                               \
     };                                                                                                                  \
     TYPED_TEST_CASE_P(Class##_FileNode);                                                                                \
@@ -107,10 +59,11 @@ public:
 
 #define _REGISTER_DIR_TEST_CASE(Class, ...)                                                                             \
     template<class ConcreteFileSystemTestFixture>                                                                       \
-    class Class##_DirNode: public Class<ConcreteFileSystemTestFixture>, public FsppNodeTest_Dir_Helper {                \
+    class Class##_DirNode: public Class<ConcreteFileSystemTestFixture>, public virtual FsppNodeTestHelper {             \
     public:                                                                                                             \
         cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {                     \
-            return this->CreateDir(path);                                                                               \
+            this->CreateDir(path);                                                                                      \
+            return this->Load(path);                                                                                    \
         }                                                                                                               \
     };                                                                                                                  \
     TYPED_TEST_CASE_P(Class##_DirNode);                                                                                 \
@@ -118,10 +71,11 @@ public:
 
 #define _REGISTER_SYMLINK_TEST_CASE(Class, ...)                                                                         \
     template<class ConcreteFileSystemTestFixture>                                                                       \
-    class Class##_SymlinkNode: public Class<ConcreteFileSystemTestFixture>, public FsppNodeTest_Symlink_Helper {        \
+    class Class##_SymlinkNode: public Class<ConcreteFileSystemTestFixture>, public virtual FsppNodeTestHelper {         \
     public:                                                                                                             \
         cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) override {                     \
-            return this->CreateSymlink(path);                                                                           \
+            this->CreateSymlink(path);                                                                                  \
+            return this->Load(path);                                                                                    \
         }                                                                                                               \
     };                                                                                                                  \
     TYPED_TEST_CASE_P(Class##_SymlinkNode);                                                                             \

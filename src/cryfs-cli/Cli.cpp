@@ -22,9 +22,9 @@
 
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include "Environment.h"
 
-//TODO Fails with gpg-homedir in filesystem: gpg --homedir gpg-homedir --gen-key
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
 
@@ -38,7 +38,7 @@ using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
 using cpputils::Random;
-using cpputils::IOStreamConsole;
+using cpputils::NoninteractiveConsole;
 using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
@@ -70,13 +70,17 @@ using gitversion::VersionCompare;
 //TODO Improve parallelity.
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO Can we improve performance by setting compiler parameter -maes for scrypt?
-//TODO Running nano in a cryfs file system, editing and saving an existing file shows "file was modified since opening".
 
 namespace cryfs {
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(console), _httpClient(httpClient), _noninteractive(false), _idleUnmounter(none), _device(none) {
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false), _idleUnmounter(none), _device(none) {
         _noninteractive = Environment::isNoninteractive();
+        if (_noninteractive) {
+            _console = make_shared<NoninteractiveConsole>(console);
+        } else {
+            _console = console;
+        }
     }
 
     void Cli::_showVersion() {
@@ -86,18 +90,21 @@ namespace cryfs {
             ". Please do not use in production!" << endl;
         } else if (!gitversion::IsStableVersion()) {
             cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-        } else {
-            //TODO This is even shown for stable version numbers like 0.8 - remove once we reach 1.0
-            cout << "WARNING! This version is not considered stable. Please backup your data frequently!" << endl;
         }
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
-        if (!Environment::noUpdateCheck()) {
-            _checkForUpdates();
-        } else {
+#ifndef CRYFS_NO_UPDATE_CHECKS
+        if (Environment::noUpdateCheck()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
+        } else if (Environment::isNoninteractive()) {
+            cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
+        } else {
+            _checkForUpdates();
         }
+#else
+# warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
+#endif
         cout << endl;
     }
 
@@ -211,12 +218,12 @@ namespace cryfs {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes, _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes).loadOrCreate(configFilePath);
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes, _noninteractive).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes).loadOrCreate(configFilePath);
         }
     }
 
@@ -254,9 +261,9 @@ namespace cryfs {
                 fuse->runInBackground(options.mountDir(), options.fuseOptions());
             }
         } catch (const std::exception &e) {
-            LOG(ERROR) << "Crashed: " << e.what();
+            LOG(ERROR, "Crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR) << "Crashed";
+            LOG(ERROR, "Crashed");
         }
     }
 
@@ -302,11 +309,7 @@ namespace cryfs {
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
         if (!bf::exists(dir)) {
-            if (_noninteractive) {
-                //If we use the noninteractive frontend, don't ask whether to create the directory, but just fail.
-                throw std::runtime_error(name + " not found");
-            }
-            bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?");
+            bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?", false);
             if (create) {
                 if (!bf::create_directory(dir)) {
                     throw std::runtime_error("Error creating "+name);

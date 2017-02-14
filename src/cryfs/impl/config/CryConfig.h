@@ -15,6 +15,9 @@ public:
   //TODO No default constructor, pass in config values instead!
   CryConfig();
 
+  CryConfig(CryConfig &&rhs) = default;
+  CryConfig(const CryConfig &rhs) = default;
+
   const std::string &RootBlob() const;
   void SetRootBlob(const std::string &value);
 
@@ -48,6 +51,8 @@ private:
   std::string _createdWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
+
+  CryConfig &operator=(const CryConfig &rhs) = delete;
 };
 
 }

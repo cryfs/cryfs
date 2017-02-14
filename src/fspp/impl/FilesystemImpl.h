@@ -53,7 +53,6 @@ private:
 	cpputils::unique_ref<File> LoadFile(const boost::filesystem::path &path);
 	cpputils::unique_ref<Dir> LoadDir(const boost::filesystem::path &path);
 	cpputils::unique_ref<Symlink> LoadSymlink(const boost::filesystem::path &path);
-	cpputils::unique_ref<Node> LoadFileOrSymlink(const boost::filesystem::path &path);
 	int openFile(File *file, int flags);
 
 #ifdef FSPP_PROFILE

@@ -35,6 +35,9 @@ public:
   void onFsAction(std::function<void()> callback);
 
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
+  boost::optional<cpputils::unique_ref<fspp::File>> LoadFile(const boost::filesystem::path &path) override;
+  boost::optional<cpputils::unique_ref<fspp::Dir>> LoadDir(const boost::filesystem::path &path) override;
+  boost::optional<cpputils::unique_ref<fspp::Symlink>> LoadSymlink(const boost::filesystem::path &path) override;
 
   const CryConfig &config() const;
   void callFsActionCallbacks() const;

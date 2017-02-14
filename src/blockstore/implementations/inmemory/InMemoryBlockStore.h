@@ -6,11 +6,11 @@
 #include <cpp-utils/macros.h>
 
 #include <mutex>
-#include <map>
+#include <unordered_map>
+#include "InMemoryBlock.h"
 
 namespace blockstore {
 namespace inmemory {
-class InMemoryBlock;
 
 class InMemoryBlockStore final: public BlockStoreWithRandomKeys {
 public:
@@ -24,7 +24,7 @@ public:
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
 
 private:
-  std::map<std::string, InMemoryBlock> _blocks;
+  std::unordered_map<Key, InMemoryBlock> _blocks;
 
   DISALLOW_COPY_AND_ASSIGN(InMemoryBlockStore);
 };

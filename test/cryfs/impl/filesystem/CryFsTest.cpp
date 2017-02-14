@@ -9,12 +9,14 @@
 #include <cryfs/impl/filesystem/CryOpenFile.h>
 #include "../testutils/MockConsole.h"
 #include <cryfs/impl/config/CryConfigLoader.h>
+#include <cpp-utils/io/NoninteractiveConsole.h>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
 using ::testing::Test;
 using ::testing::Return;
 using ::testing::_;
+using std::make_shared;
 using cpputils::TempDir;
 using cpputils::TempFile;
 using cpputils::dynamic_pointer_move;
@@ -24,6 +26,7 @@ using cpputils::Console;
 using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::Data;
+using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore;
 using boost::none;
 using std::shared_ptr;
@@ -38,8 +41,7 @@ public:
 
   shared_ptr<CryConfigFile> loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    auto configFile = CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, true).loadOrCreate(config.path()).value();
-    return cpputils::to_unique_ptr(std::move(configFile));
+    return cpputils::to_unique_ptr(CryConfigLoader(mockConsole(), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none).loadOrCreate(config.path()).value());
   }
 
   unique_ref<OnDiskBlockStore> blockStore() {
@@ -55,8 +57,8 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
     CryDevice dev(loadOrCreateConfig(), blockStore());
   }
   CryDevice dev(loadOrCreateConfig(), blockStore());
-  auto root = dev.Load(bf::path("/"));
-  dynamic_pointer_move<CryDir>(root.get()).get()->children();
+  auto rootDir = dev.LoadDir(bf::path("/"));
+  rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {

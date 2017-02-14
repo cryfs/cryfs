@@ -71,7 +71,44 @@ const CryConfig &CryDevice::config() const {
   return *_configFile->config();
 }
 
+optional<unique_ref<fspp::File>> CryDevice::LoadFile(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto file = cpputils::dynamic_pointer_move<fspp::File>(*loaded);
+  if (file == none) {
+    throw fspp::fuse::FuseErrnoException(EISDIR); // TODO Also EISDIR if it is a symlink?
+  }
+  return std::move(*file);
+}
+
+optional<unique_ref<fspp::Dir>> CryDevice::LoadDir(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto dir = cpputils::dynamic_pointer_move<fspp::Dir>(*loaded);
+  if (dir == none) {
+    throw fspp::fuse::FuseErrnoException(ENOTDIR);
+  }
+  return std::move(*dir);
+}
+
+optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path) {
+  auto loaded = Load(path);
+  if (loaded == none) {
+    return none;
+  }
+  auto lnk = cpputils::dynamic_pointer_move<fspp::Symlink>(*loaded);
+  if (lnk == none) {
+    throw fspp::fuse::FuseErrnoException(ENOTDIR); // TODO ENOTDIR although it is a symlink?
+  }
+  return std::move(*lnk);
+}
+
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
+  // TODO Is it faster to not let CryFile/CryDir/CryDevice inherit from CryNode and loading CryNode without having to know what it is?
   // TODO Split into smaller functions
   ASSERT(path.is_absolute(), "Non absolute path given");
 
@@ -116,7 +153,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   optional<unique_ref<DirBlobRef>> parentBlob = none;
   optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootKey);
   if (currentBlobOpt == none) {
-    LOG(ERROR) << "Could not load root blob. Is the base directory accessible?";
+    LOG(ERROR, "Could not load root blob. Is the base directory accessible?");
     throw FuseErrnoException(EIO);
   }
   unique_ref<FsBlobRef> currentBlob = std::move(*currentBlobOpt);
@@ -179,7 +216,7 @@ unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target) 
 unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::Key &key) {
   auto blob = _fsBlobStore->load(key);
   if (blob == none) {
-    LOG(ERROR) << "Could not load blob " << key.ToString() << ". Is the base directory accessible?";
+    LOG(ERROR, "Could not load blob {}. Is the base directory accessible?", key.ToString());
     throw FuseErrnoException(EIO);
   }
   return std::move(*blob);
@@ -188,7 +225,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::Key &key) {
 void CryDevice::RemoveBlob(const blockstore::Key &key) {
   auto blob = _fsBlobStore->load(key);
   if (blob == none) {
-    LOG(ERROR) << "Could not load blob " << key.ToString() << ". Is the base directory accessible?";
+    LOG(ERROR, "Could not load blob. Is the base directory accessible?", key.ToString());
     throw FuseErrnoException(EIO);
   }
   _fsBlobStore->remove(std::move(*blob));

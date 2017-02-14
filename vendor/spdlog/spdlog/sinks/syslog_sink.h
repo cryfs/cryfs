@@ -5,15 +5,16 @@
 
 #pragma once
 
-#if defined(__linux__) || defined(__APPLE__)
+#include <spdlog/common.h>
+
+#ifdef SPDLOG_ENABLE_SYSLOG
+
+#include <spdlog/sinks/sink.h>
+#include <spdlog/details/log_msg.h>
 
 #include <array>
 #include <string>
 #include <syslog.h>
-
-#include "./sink.h"
-#include "../common.h"
-#include "../details/log_msg.h"
 
 
 namespace spdlog
@@ -35,12 +36,9 @@ public:
         _priorities[static_cast<int>(level::trace)] = LOG_DEBUG;
         _priorities[static_cast<int>(level::debug)] = LOG_DEBUG;
         _priorities[static_cast<int>(level::info)] = LOG_INFO;
-        _priorities[static_cast<int>(level::notice)] = LOG_NOTICE;
         _priorities[static_cast<int>(level::warn)] = LOG_WARNING;
         _priorities[static_cast<int>(level::err)] = LOG_ERR;
         _priorities[static_cast<int>(level::critical)] = LOG_CRIT;
-        _priorities[static_cast<int>(level::alert)] = LOG_ALERT;
-        _priorities[static_cast<int>(level::emerg)] = LOG_EMERG;
         _priorities[static_cast<int>(level::off)] = LOG_INFO;
 
         //set ident to be program name if empty
@@ -65,7 +63,7 @@ public:
 
 
 private:
-    std::array<int, 10> _priorities;
+    std::array<int, 7> _priorities;
     //must store the ident because the man says openlog might use the pointer as is and not a string copy
     const std::string _ident;
 

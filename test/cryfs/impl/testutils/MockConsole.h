@@ -9,7 +9,7 @@ class MockConsole: public cpputils::Console {
 public:
     MOCK_METHOD1(print, void(const std::string&));
     MOCK_METHOD2(ask, unsigned int(const std::string&, const std::vector<std::string>&));
-    MOCK_METHOD1(askYesNo, bool(const std::string&));
+    MOCK_METHOD2(askYesNo, bool(const std::string&, bool));
 };
 
 ACTION_P(ChooseCipher, cipherName) {
@@ -24,7 +24,7 @@ public:
     static std::shared_ptr<MockConsole> mockConsole() {
         auto console = std::make_shared<MockConsole>();
         EXPECT_CALL(*console, ask(::testing::_, ::testing::_)).WillRepeatedly(ChooseCipher("aes-256-gcm"));
-        EXPECT_CALL(*console, askYesNo(::testing::_)).WillRepeatedly(::testing::Return(true));
+        EXPECT_CALL(*console, askYesNo(::testing::_, ::testing::_)).WillRepeatedly(::testing::Return(true));
         return console;
     }
 };

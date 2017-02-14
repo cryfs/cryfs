@@ -100,8 +100,10 @@ TEST_F(CryCipherTest, CreatesCorrectEncryptedBlockStore) {
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Serpent128_CFB>("serpent-128-cfb");
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Cast256_GCM>("cast-256-gcm");
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Cast256_CFB>("cast-256-cfb");
+#if CRYPTOPP_VERSION != 564
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Mars448_GCM>("mars-448-gcm");
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Mars448_CFB>("mars-448-cfb");
+#endif
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Mars256_GCM>("mars-256-gcm");
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Mars256_CFB>("mars-256-cfb");
     EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE<Mars128_GCM>("mars-128-gcm");
@@ -121,9 +123,11 @@ TEST_F(CryCipherTest, ThereIsACipherWithIntegrityWarning) {
     EXPECT_THAT(CryCiphers::find("aes-256-cfb").warning().get(), MatchesRegex(".*integrity.*"));
 }
 
+#if CRYPTOPP_VERSION != 564
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_448) {
     EXPECT_EQ(Mars448_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("mars-448-gcm").createKey(Random::PseudoRandom()).size());
 }
+#endif
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_256) {
     EXPECT_EQ(AES256_GCM::EncryptionKey::STRING_LENGTH, CryCiphers::find("aes-256-gcm").createKey(Random::PseudoRandom()).size());
