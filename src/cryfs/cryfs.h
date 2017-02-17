@@ -80,4 +80,11 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_unmount(cryf
 }
 #endif
 
+// Remove all potential preprocessor defines so they don't clutter client applications
+#undef CRYFS_EXPORT
+#undef CRYFS_NO_EXPORT
+#undef CRYFS_DEPRECATED
+#undef CRYFS_DEPRECATED_EXPORT
+#undef CRYFS_DEPRECATED_NO_EXPORT
+
 #endif
