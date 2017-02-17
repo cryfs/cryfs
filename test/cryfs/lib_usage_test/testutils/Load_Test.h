@@ -11,13 +11,13 @@ public:
     EXPECT_SUCCESS(cryfs_load_init(api, &context));
   }
   ~Load_Test() {
-    EXPECT_SUCCESS(cryfs_load_free(context));
+    EXPECT_SUCCESS(cryfs_load_free(&context));
   }
 
   cryfs_load_context *context;
 
   void reinit_context() {
-    EXPECT_SUCCESS(cryfs_load_free(context));
+    EXPECT_SUCCESS(cryfs_load_free(&context));
     EXPECT_SUCCESS(cryfs_load_init(api, &context));
   }
 

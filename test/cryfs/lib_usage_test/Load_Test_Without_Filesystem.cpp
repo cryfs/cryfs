@@ -29,8 +29,27 @@ public:
 };
 
 TEST_F(Load_Test_Without_Filesystem, init_and_free) {
-    // Don't do anything in here.
-    // This tests that the constructor successfully initializes the context and it can be freed in the destructor.
+    cryfs_load_context *context;
+    EXPECT_SUCCESS(cryfs_load_init(api, &context));
+    EXPECT_NE(nullptr, context);
+    EXPECT_SUCCESS(cryfs_load_free(&context));
+    EXPECT_EQ(nullptr, context);
+}
+
+TEST_F(Load_Test_Without_Filesystem, free_nullptr_1) {
+    EXPECT_EQ(cryfs_error_INVALID_CONTEXT, cryfs_load_free(nullptr));
+}
+
+TEST_F(Load_Test_Without_Filesystem, free_nullptr_2) {
+    cryfs_load_context *context = nullptr;
+    EXPECT_EQ(cryfs_error_INVALID_CONTEXT, cryfs_load_free(&context));
+}
+
+TEST_F(Load_Test_Without_Filesystem, free_twice) {
+    cryfs_load_context *context;
+    EXPECT_SUCCESS(cryfs_load_init(api, &context));
+    EXPECT_SUCCESS(cryfs_load_free(&context));
+    EXPECT_EQ(cryfs_error_INVALID_CONTEXT, cryfs_load_free(&context));
 }
 
 TEST_F(Load_Test_Without_Filesystem, basedir_doesnt_exist) {

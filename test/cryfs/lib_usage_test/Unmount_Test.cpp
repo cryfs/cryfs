@@ -54,7 +54,7 @@ public:
         EXPECT_SUCCESS(cryfs_load(context, &handle));
         EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
         EXPECT_SUCCESS(cryfs_mount(handle));
-        EXPECT_SUCCESS(cryfs_load_free(context));
+        EXPECT_SUCCESS(cryfs_load_free(&context));
     }
 
     cryfs_status unmount() {

@@ -17,7 +17,7 @@ public:
         EXPECT_SUCCESS(cryfs_init(API_VERSION, &api));
     }
     ~C_Library_Test() {
-        cryfs_free(api);
+        cryfs_free(&api);
     }
 
     cryfs_api_context *api;

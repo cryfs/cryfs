@@ -48,10 +48,11 @@ cryfs_status cryfs_init(uint32_t api_version, cryfs_api_context **result) {
     });
 }
 
-void cryfs_free(cryfs_api_context *api_context) {
+void cryfs_free(cryfs_api_context **api_context) {
     return catchAllExceptionsNoReturn([&] {
-        if (nullptr != api_context) {
-            delete api_context;
+        if (nullptr != api_context && nullptr != *api_context) {
+            delete *api_context;
+            *api_context = nullptr;
         }
     });
 }
@@ -66,12 +67,16 @@ cryfs_status cryfs_load_init(cryfs_api_context *api_context, cryfs_load_context 
     });
 }
 
-cryfs_status cryfs_load_free(cryfs_load_context *context) {
+cryfs_status cryfs_load_free(cryfs_load_context **context) {
     return catchAllExceptions([&] {
-        if (nullptr == context) {
+        if (nullptr == context || nullptr == *context) {
             return cryfs_error_INVALID_CONTEXT;
         }
-        return context->free();
+        auto result = (*context)->free();
+        if (cryfs_success == result) {
+          *context = nullptr;
+        }
+        return result;
     });
 }
 
@@ -166,12 +171,16 @@ cryfs_status cryfs_create(cryfs_create_context *context, cryfs_mount_handle **ha
     });
 }
 
-cryfs_status cryfs_create_free(cryfs_create_context *context) {
+cryfs_status cryfs_create_free(cryfs_create_context **context) {
     return catchAllExceptions([&] {
-        if (nullptr == context) {
+        if (nullptr == context || nullptr == *context) {
             return cryfs_error_INVALID_CONTEXT;
         }
-        return context->free();
+        auto result = (*context)->free();
+        if (cryfs_success == result) {
+          *context = nullptr;
+        }
+        return result;
     });
 }
 

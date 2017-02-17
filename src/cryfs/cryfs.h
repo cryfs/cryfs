@@ -45,7 +45,7 @@ typedef struct cryfs_mount_handle cryfs_mount_handle;
 
 // Initialize and free the API
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_init(uint32_t api_version, cryfs_api_context **result);
-CRYFS_EXPORT void cryfs_free(cryfs_api_context *api_context);
+CRYFS_EXPORT void cryfs_free(cryfs_api_context **api_context);
 
 // Loading a file system
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_init(cryfs_api_context *api_context, cryfs_load_context **result);
@@ -53,7 +53,7 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_bas
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_password(cryfs_load_context *context, const char *password, size_t password_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const char *configfile, size_t configfile_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **result); // result can be nullptr if you don't want a mount handle
-CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_free(cryfs_load_context *context);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_free(cryfs_load_context **context);
 
 // Creating a file system
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_init(cryfs_api_context *api_context, cryfs_create_context **result);
@@ -62,7 +62,7 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_set_c
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_set_password(cryfs_create_context *context, const char *password, size_t password_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_set_externalconfig(cryfs_create_context *context, const char *configfile, size_t configfile_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create(cryfs_create_context *context, cryfs_mount_handle **result); // result can be nullptr if you don't want a mount handle
-CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_free(cryfs_create_context *context);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_create_free(cryfs_create_context **context);
 
 // Mounting a file system
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_mount_get_ciphername(cryfs_mount_handle *handle, const char **result);
