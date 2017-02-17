@@ -2,7 +2,7 @@
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include "testutils/C_Library_Test.h"
+#include "testutils/Load_Test.h"
 #include <gitversion/gitversion.h>
 
 using cryfs::CryConfig;
@@ -22,7 +22,7 @@ using std::shared_ptr;
 
 namespace bf = boost::filesystem;
 
-class Load_Test_With_Filesystem : public C_Library_Test {
+class Load_Test_With_Filesystem : public Load_Test {
 public:
     Load_Test_With_Filesystem(): basedir(), externalconfig(false) {}
 
@@ -130,6 +130,13 @@ TEST_F(Load_Test_With_Filesystem, load_withexternalconfig) {
     set_externalconfig();
     set_password();
     EXPECT_LOAD_SUCCESS();
+}
+
+TEST_F(Load_Test_With_Filesystem, load_without_getting_mounthandle) {
+    create_filesystem(basedir.path());
+    set_basedir();
+    set_password();
+    EXPECT_SUCCESS(cryfs_load(context, nullptr));
 }
 
 TEST_F(Load_Test_With_Filesystem, load_wrongpassword) {

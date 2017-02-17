@@ -1,6 +1,7 @@
 project (cryfs-lib-usage-test)
 
 set(SOURCES
+        Api_Test.cpp
         Load_Test_With_Filesystem.cpp
         Load_Test_Without_Filesystem.cpp
         Mount_Test.cpp

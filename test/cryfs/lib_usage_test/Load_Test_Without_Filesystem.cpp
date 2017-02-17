@@ -1,11 +1,11 @@
-#include "testutils/C_Library_Test.h"
+#include "testutils/Load_Test.h"
 
 using std::string;
 using cpputils::TempDir;
 using cpputils::TempFile;
 namespace bf = boost::filesystem;
 
-class Load_Test_Without_Filesystem : public C_Library_Test {
+class Load_Test_Without_Filesystem : public Load_Test {
 public:
     const string INVALID_PATH = "pathname_with_some_invalid_characters_$% ä*.\\\"[]:;|=,";
     const string NONEXISTENT_PATH = "/some/nonexistent/path";
@@ -31,12 +31,6 @@ public:
 TEST_F(Load_Test_Without_Filesystem, init_and_free) {
     // Don't do anything in here.
     // This tests that the constructor successfully initializes the context and it can be freed in the destructor.
-}
-
-TEST_F(Load_Test_Without_Filesystem, init_unsupported_api_version) {
-  cryfs_load_context *context;
-  EXPECT_EQ(cryfs_error_UNSUPPORTED_API_VERSION, cryfs_load_init(2, &context));
-  cryfs_load_free(context); // Test that people can call cryfs_load_free after an error in cryfs_load_init
 }
 
 TEST_F(Load_Test_Without_Filesystem, basedir_doesnt_exist) {

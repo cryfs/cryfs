@@ -6,6 +6,8 @@
 #include "../impl/config/CryConfigLoader.h"
 #include "../impl/filesystem/CryDir.h"
 #include "cryfs_load_context.h"
+#include "cryfs_api_context.h"
+#include "cryfs_mount_handle.h"
 #include "utils/filesystem_checks.h"
 
 using cpputils::make_unique_ref;
@@ -28,8 +30,14 @@ using blockstore::ondisk::OnDiskBlockStore;
 
 using namespace cpputils::logging;
 
-cryfs_load_context::cryfs_load_context()
-        : _basedir(boost::none), _password(boost::none), _configfile(boost::none) {
+cryfs_load_context::cryfs_load_context(cryfs_api_context *api_context)
+    : _api_context(api_context), _basedir(boost::none), _password(boost::none), _configfile(boost::none),
+      _mount_handles() {
+}
+
+cryfs_status cryfs_load_context::free() {
+    // This will call the cryfs_load_context destructor since our object is owned by api_context.
+    return _api_context->delete_load_context(this);
 }
 
 cryfs_status cryfs_load_context::set_basedir(const string &basedir) {
@@ -87,7 +95,9 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
         return cryfs_error_FILESYSTEM_INVALID;
     }
 
-    *handle = _keepHandleOwnership.create(configfile, *_basedir);
+    if (nullptr != handle) {
+        *handle = _mount_handles.create(configfile, *_basedir);
+    }
     return cryfs_success;
 }
 

@@ -38,11 +38,11 @@ void test_cryfs_load_functions() {
 }
 
 void test_cryfs_mount_functions() {
-    const char rm_command[100] = "\0";
+    char rm_command[100] = "\0";
     strcat(rm_command, "rm -rf ");
     strcat(rm_command, EXISTING_BASEDIR);
     system(rm_command);
-    const char mk_command[100] = "\0";
+    char mk_command[100] = "\0";
     strcat(mk_command, "mkdir ");
     strcat(mk_command, EXISTING_BASEDIR);
     system(mk_command);

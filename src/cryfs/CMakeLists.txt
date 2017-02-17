@@ -4,9 +4,11 @@ project(cryfs)
 
 set(SOURCES
         cryfs.cpp
+        lib/cryfs_api_context.cpp
         lib/cryfs_load_context.cpp
+        lib/cryfs_create_context.cpp
         lib/cryfs_mount_handle.cpp
-        lib/mount_handle_list.cpp
+        lib/context_list.cpp
         lib/cryfs_unmounter.cpp
         lib/utils/CallAfterTimeout.cpp
         lib/utils/filesystem_checks.cpp

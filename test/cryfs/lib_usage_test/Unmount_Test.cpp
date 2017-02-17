@@ -46,16 +46,19 @@ public:
     void create_and_mount_filesystem() {
         create_filesystem(basedir.path());
 
+        cryfs_load_context *context = nullptr;
         cryfs_mount_handle *handle = nullptr;
+        EXPECT_SUCCESS(cryfs_load_init(api, &context));
         EXPECT_SUCCESS(cryfs_load_set_basedir(context, basedir.path().native().c_str(), basedir.path().native().size()));
         EXPECT_SUCCESS(cryfs_load_set_password(context, PASSWORD.c_str(), PASSWORD.size()));
         EXPECT_SUCCESS(cryfs_load(context, &handle));
         EXPECT_SUCCESS(cryfs_mount_set_mountdir(handle, mountdir.path().native().c_str(), mountdir.path().native().size()));
         EXPECT_SUCCESS(cryfs_mount(handle));
+        EXPECT_SUCCESS(cryfs_load_free(context));
     }
 
     cryfs_status unmount() {
-        return cryfs_unmount(mountdir.path().native().c_str(), mountdir.path().native().size());
+        return cryfs_unmount(api, mountdir.path().native().c_str(), mountdir.path().native().size());
     }
 };
 const string Unmount_Test::PASSWORD = "mypassword";

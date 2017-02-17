@@ -9,11 +9,11 @@
 
 class UnmountAfterTimeout final {
 public:
-    UnmountAfterTimeout(const boost::filesystem::path &mountdir, boost::chrono::milliseconds timeout): _unmountThread(), _timeoutPassed(false) {
-      _unmountThread = boost::thread([mountdir, timeout, this]() {
+    UnmountAfterTimeout(cryfs_api_context *api, const boost::filesystem::path &mountdir, boost::chrono::milliseconds timeout): _unmountThread(), _timeoutPassed(false) {
+      _unmountThread = boost::thread([api, mountdir, timeout, this]() {
           boost::this_thread::sleep_for(timeout);
           _timeoutPassed = true;
-          if (cryfs_success != cryfs_unmount(mountdir.native().c_str(), mountdir.native().size())) {
+          if (cryfs_success != cryfs_unmount(api, mountdir.native().c_str(), mountdir.native().size())) {
               std::cerr << "Unmounting failed" << std::endl;
               exit(1); // Exit full process, because the EXPECT_ macros of gtest don't work in a non-main thread.
           }

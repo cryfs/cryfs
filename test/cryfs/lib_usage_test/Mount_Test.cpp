@@ -3,7 +3,7 @@
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include "testutils/C_Library_Test.h"
+#include "testutils/Load_Test.h"
 #include <gitversion/gitversion.h>
 #include "testutils/UnmountAfterTimeout.h"
 #include <fstream>
@@ -28,7 +28,7 @@ using testing::MatchesRegex;
 using testing::HasSubstr;
 using testing::Not;
 
-class Mount_Test : public C_Library_Test {
+class Mount_Test : public Load_Test {
 public:
     cryfs_mount_handle *handle = nullptr;
     TempDir basedir;
@@ -67,6 +67,7 @@ public:
     }
 
     void create_and_load_filesystem(const string &cipher = "aes-256-gcm") {
+        // TODO Run all these test cases twice (type parametrisation), once creating the file system and then using the load api, once using the create api.
         create_filesystem(basedir.path(), cipher);
         load_filesystem();
     }
@@ -102,7 +103,7 @@ public:
     }
 
     void unmount() {
-        EXPECT_SUCCESS(cryfs_unmount(mountdir.path().native().c_str(), mountdir.path().native().size()));
+        EXPECT_SUCCESS(cryfs_unmount(api, mountdir.path().native().c_str(), mountdir.path().native().size()));
     }
 
     void mount_filesystem() {
@@ -295,7 +296,7 @@ TEST_F(Mount_Test, mount_in_foreground) {
     set_mountdir();
     set_run_in_foreground(true);
 
-    UnmountAfterTimeout unmounter(mountdir.path(), boost::chrono::milliseconds(2000));
+    UnmountAfterTimeout unmounter(api, mountdir.path(), boost::chrono::milliseconds(2000));
     mount();
     EXPECT_TRUE(unmounter.timeoutPassed()); // Expect that we only get here once the unmount timeout passed.
 }
@@ -577,12 +578,12 @@ TEST_F(Mount_Test, mount_fusearguments) {
     createFile(mountdir.path() / "myfile");
 
     // Expect mounting to fail because mountdir is not empty
-    EXPECT_ANY_THROW(mount());
+    EXPECT_EQ(cryfs_error_UNKNOWN_ERROR, cryfs_mount(handle));
 
     add_fuse_argument("-o");
     add_fuse_argument("nonempty");
 
     // Now expect mounting to succeed
-    mount();
+    EXPECT_SUCCESS(cryfs_mount(handle));
     unmount();
 }
