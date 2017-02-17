@@ -34,7 +34,7 @@ private:
     bool _run_in_foreground;
     std::vector<std::string> _fuse_arguments;
 
-    boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idle_unmounter;
+    boost::optional<cpputils::unique_ref<cryfs::CallAfterTimeout>> _idle_unmounter;
 
     DISALLOW_COPY_AND_ASSIGN(cryfs_mount_handle);
 };

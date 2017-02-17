@@ -2,6 +2,8 @@
 
 namespace bf = boost::filesystem;
 
+namespace cryfs {
+
 cryfs_status cryfs_unmounter::unmount(const bf::path &mountdir) {
 #ifdef __APPLE__
     int ret = system(("umount " + mountdir.native()).c_str());
@@ -13,4 +15,6 @@ cryfs_status cryfs_unmounter::unmount(const bf::path &mountdir) {
     } else {
         return cryfs_success;
     }
+}
+
 }

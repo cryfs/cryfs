@@ -6,26 +6,33 @@
 #include <mutex>
 #include <cpp-utils/thread/LoopThread.h>
 
+namespace cryfs {
+
 class CallAfterTimeout final {
 public:
-    CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback);
-    void resetTimer();
+  CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback);
+
+  void resetTimer();
+
 private:
-    bool _checkTimeoutThreadIteration();
-    boost::chrono::time_point<boost::chrono::steady_clock> _targetTime();
-    bool _callCallbackIfTimeout();
+  bool _checkTimeoutThreadIteration();
 
-    std::function<void()> _callback;
-    boost::chrono::milliseconds _timeout;
-    boost::chrono::time_point<boost::chrono::steady_clock> _start;
-    cpputils::LoopThread _checkTimeoutThread;
-    std::mutex _mutex;
+  boost::chrono::time_point<boost::chrono::steady_clock> _targetTime();
 
-    DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
+  bool _callCallbackIfTimeout();
+
+  std::function<void()> _callback;
+  boost::chrono::milliseconds _timeout;
+  boost::chrono::time_point<boost::chrono::steady_clock> _start;
+  cpputils::LoopThread _checkTimeoutThread;
+  std::mutex _mutex;
+
+  DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
 };
 
 inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback)
-    :_callback(callback), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
+    : _callback(callback), _timeout(timeout), _start(),
+      _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
     resetTimer();
     _checkTimeoutThread.start();
 }
@@ -52,6 +59,8 @@ inline bool CallAfterTimeout::_callCallbackIfTimeout() {
         return false; // Stop thread
     }
     return true; // Continue thread
+}
+
 }
 
 #endif

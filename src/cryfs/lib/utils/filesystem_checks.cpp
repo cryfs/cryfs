@@ -13,6 +13,9 @@ using std::ifstream;
 using std::ofstream;
 using cpputils::TempFile;
 
+namespace cryfs {
+namespace filesystem_checks {
+
 namespace {
 
 optional<shared_ptr<TempFile>> _try_write_file(const bf::path &dir) {
@@ -45,14 +48,12 @@ bool _check_dir_readable(const bf::path &dir, shared_ptr<TempFile> tempfile) {
 
 }
 
-namespace filesystem_checks {
-
 bool check_dir_accessible(const bf::path &dir) {
   ASSERT(bf::exists(dir), "This should be checked before calling this function");
   if (!bf::is_directory(dir)) {
     return false;
   }
-  optional <shared_ptr<TempFile>> file = _try_write_file(dir);
+  optional<shared_ptr<TempFile>> file = _try_write_file(dir);
   if (none == file) {
     return false; // Couldn't write to dir
   }
@@ -77,4 +78,5 @@ bool check_file_appendable(const bf::path &file) {
   return ofstream(file.native().c_str(), std::ios_base::app).good();
 }
 
+}
 }

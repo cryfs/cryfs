@@ -15,6 +15,7 @@ using std::vector;
 using std::shared_ptr;
 using std::make_shared;
 using blockstore::ondisk::OnDiskBlockStore;
+using cryfs::CallAfterTimeout;
 namespace bf = boost::filesystem;
 
 cryfs_mount_handle::cryfs_mount_handle(shared_ptr<CryConfigFile> config, const bf::path &basedir)
@@ -35,7 +36,7 @@ cryfs_status cryfs_mount_handle::set_mountdir(const string &mountdir) {
     if (!bf::exists(mountdir)) {
         return cryfs_error_MOUNTDIR_DOESNT_EXIST;
     }
-    if (!filesystem_checks::check_dir_accessible(mountdir)) {
+    if (!cryfs::filesystem_checks::check_dir_accessible(mountdir)) {
         return cryfs_error_MOUNTDIR_INACCESSIBLE;
     }
     _mountdir = mountdir;
@@ -51,7 +52,7 @@ cryfs_status cryfs_mount_handle::set_logfile(const bf::path &logfile) {
     if (!bf::is_directory(logfile.parent_path())) {
         return cryfs_error_INVALID_LOGFILE;
     }
-    if (bf::exists(logfile) && !filesystem_checks::check_file_appendable(logfile)) {
+    if (bf::exists(logfile) && !cryfs::filesystem_checks::check_file_appendable(logfile)) {
         return cryfs_error_LOGFILE_NOT_WRITABLE;
     }
     _logfile = logfile;

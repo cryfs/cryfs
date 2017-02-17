@@ -253,6 +253,6 @@ cryfs_status cryfs_unmount(cryfs_api_context *api_context, const char *mountdir,
         if (nullptr == api_context) {
           return cryfs_error_INVALID_CONTEXT;
         }
-        return cryfs_unmounter::unmount(string(mountdir, mountdir_length));
+        return cryfs::cryfs_unmounter::unmount(string(mountdir, mountdir_length));
     });
 }
