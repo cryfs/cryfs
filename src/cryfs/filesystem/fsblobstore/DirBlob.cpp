@@ -135,11 +135,11 @@ off_t DirBlob::lstat_size() const {
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
-  statChildExceptSize(key, result);
   result->st_size = _getLstatSize(key);
+  statChildWithSizeAlreadySet(key, result);
 }
 
-void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
+void DirBlob::statChildWithSizeAlreadySet(const Key &key, struct ::stat *result) const {
   auto childOpt = GetChild(key);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
