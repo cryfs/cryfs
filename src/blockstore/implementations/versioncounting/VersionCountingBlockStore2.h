@@ -5,6 +5,7 @@
 #include "../../interface/BlockStore2.h"
 #include <cpp-utils/macros.h>
 #include "KnownBlockVersions.h"
+#include "IntegrityViolationError.h"
 
 namespace blockstore {
 namespace versioncounting {
@@ -19,42 +20,57 @@ public:
 
   boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) override {
     _checkNoPastIntegrityViolations();
-    uint64_t version = blockStore->knownBlockVersions()->incrementVersion(key);
-    cpputils::Data dataWithHeader = _prependHeaderToData(blockStore->knownBlockVersions()->myClientId(), version, data);
-    return baseBlockStore_->tryCreate(key, dataWithHeader);
+    uint64_t version = _knownBlockVersions.incrementVersion(key);
+    cpputils::Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
+    return _baseBlockStore->tryCreate(key, dataWithHeader);
   }
 
   boost::future<bool> remove(const Key &key) override {
     _checkNoPastIntegrityViolations();
     _knownBlockVersions.markBlockAsDeleted(key);
-    return baseBlockStore->remove(key);
+    return _baseBlockStore->remove(key);
   }
 
   boost::future<boost::optional<cpputils::Data>> load(const Key &key) const override {
     _checkNoPastIntegrityViolations();
-    auto loaded = baseBlockStore_->load(key);
-    loaded.then([this, key] (boost::future<boost::optional<cpputils::Data>> loaded_) {
+    return _baseBlockStore->load(key).then([this, key] (boost::future<boost::optional<cpputils::Data>> loaded_) {
       auto loaded = loaded_.get();
       if (boost::none == loaded) {
         if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
           integrityViolationDetected("A block that should exist wasn't found. Did an attacker delete it?");
         }
-        return boost::none;
+        return boost::optional<cpputils::Data>(boost::none);
       }
-      if (!_checkHeader(key, *loaded)) {
-        return boost::none;
-      }
-      return *loaded;
+      _checkHeader(key, *loaded);
+      return boost::optional<cpputils::Data>(_removeHeader(*loaded));
     });
   }
 
   boost::future<void> store(const Key &key, const cpputils::Data &data) override {
     _checkNoPastIntegrityViolations();
-    TODO Need to load first so it can see if the version number changed by another
-    THIS BUG IS ALSO IN THE NEXT BRANCH (i.e. without these changes here)
-    //...
+    //TODO There's a bug in the next branch in override(). They have to load and read the old version number too.
+    return load(key).then([this, key, data = data.copy()] (boost::future<boost::optional<cpputils::Data>> loaded_) {
+      auto loaded = loaded_.get();
+      if (boost::none == loaded) {
+        return tryCreate(key, data).then([] (boost::future<bool> success) {
+          if (!success.get()) {
+            throw std::runtime_error("Could neither store nor create the block in VersionCountingBlockStore::store");
+          }
+        });
+      }
+      // Loading the block already read the newest version number into _knownBlockVersions, now we only have to increment it
+      // TODO Check that (with a caching blockstore below) this doesn't impact performance
+      uint64_t version = _knownBlockVersions.incrementVersion(key);
+      cpputils::Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
+      return _baseBlockStore->store(key, dataWithHeader);
+    });
   }
 
+private:
+  // This header is prepended to blocks to allow future versions to have compatibility.
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+
+public:
   static constexpr uint64_t VERSION_ZERO = 0;
   static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
   static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
@@ -62,10 +78,7 @@ public:
 
 private:
 
-  // This header is prepended to blocks to allow future versions to have compatibility.
-  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-
-  cpputils::Data VersionCountingBlock::_prependHeaderToData(uint32_t myClientId, uint64_t version, const cpputils::Data &data) {
+  cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, const cpputils::Data &data) {
     static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId) + sizeof(version), "Wrong header length");
     cpputils::Data result(data.size() + HEADER_LENGTH);
     std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
@@ -75,32 +88,45 @@ private:
     return result;
   }
 
-  void _checkHeader(const Key &key, const cpputils::Data &data) {
+  void _checkHeader(const Key &key, const cpputils::Data &data) const {
     _checkFormatHeader(data);
     _checkVersionHeader(key, data);
   }
 
-  void _checkFormatHeader(const cpputils::Data &data) {
+  void _checkFormatHeader(const cpputils::Data &data) const {
     if (*reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data()) != FORMAT_VERSION_HEADER) {
       throw std::runtime_error("The versioned block has the wrong format. Was it created with a newer version of CryFS?");
     }
   }
 
-  void _checkVersionHeader(const Key &key, const cpputils::Data &data) {
-    uint32_t clientId;
-    std::memcpy(&clientId, _dataWithHeader.dataOffset(CLIENTID_HEADER_OFFSET), sizeof(clientId));
+  void _checkVersionHeader(const Key &key, const cpputils::Data &data) const {
+    uint32_t clientId = _readClientId(data);
+    uint64_t version = _readVersion(data);
 
-    uint64_t version;
-    std::memcpy(&version, _dataWithHeader.dataOffset(VERSION_HEADER_OFFSET), sizeof(version));
-
-    if(!_knownBlockVersions.checkAndUpdateVersion(lastClientId, key, version)) {
+    if(!_knownBlockVersions.checkAndUpdateVersion(clientId, key, version)) {
       integrityViolationDetected("The block version number is too low. Did an attacker try to roll back the block or to re-introduce a deleted block?");
     }
   }
 
-  void _checkNoPastIntegrityViolations() {
+  static uint32_t _readClientId(const cpputils::Data &data) {
+    uint32_t clientId;
+    std::memcpy(&clientId, data.dataOffset(CLIENTID_HEADER_OFFSET), sizeof(clientId));
+    return clientId;
+  }
+
+  static uint64_t _readVersion(const cpputils::Data &data) {
+    uint64_t version;
+    std::memcpy(&version, data.dataOffset(VERSION_HEADER_OFFSET), sizeof(version));
+    return version;
+  }
+
+  cpputils::Data _removeHeader(const cpputils::Data &data) const {
+    return data.copyAndRemovePrefix(HEADER_LENGTH);
+  }
+
+  void _checkNoPastIntegrityViolations() const {
     if (_integrityViolationDetected) {
-      throw std::runtime_error(string() +
+      throw std::runtime_error(std::string() +
                                "There was an integrity violation detected. Preventing any further access to the file system. " +
                                "If you want to reset the integrity data (i.e. accept changes made by a potential attacker), " +
                                "please unmount the file system and delete the following file before re-mounting it: " +
@@ -108,13 +134,13 @@ private:
     }
   }
 
-  void integrityViolationDetected(const string &reason) const {
+  void integrityViolationDetected(const std::string &reason) const {
     _integrityViolationDetected = true;
     throw IntegrityViolationError(reason);
   }
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
-  KnownBlockVersions _knownBlockVersions;
+  mutable KnownBlockVersions _knownBlockVersions;
   const bool _missingBlockIsIntegrityViolation;
   mutable bool _integrityViolationDetected;
 

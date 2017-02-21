@@ -1,6 +1,8 @@
 #include "blockstore/implementations/ondisk/OnDiskBlock.h"
 #include "blockstore/implementations/ondisk/OnDiskBlockStore.h"
+#include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
+#include "../../testutils/BlockStore2Test.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include <gtest/gtest.h>
 
@@ -10,6 +12,8 @@
 using blockstore::BlockStore;
 using blockstore::BlockStoreWithRandomKeys;
 using blockstore::ondisk::OnDiskBlockStore;
+using blockstore::BlockStore2;
+using blockstore::ondisk::OnDiskBlockStore2;
 
 using cpputils::TempDir;
 using cpputils::unique_ref;
@@ -40,3 +44,16 @@ private:
 };
 
 INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreWithRandomKeysTest, OnDiskBlockStoreWithRandomKeysTestFixture);
+
+class OnDiskBlockStore2TestFixture: public BlockStore2TestFixture {
+public:
+  OnDiskBlockStore2TestFixture(): tempdir() {}
+
+  unique_ref<BlockStore2> createBlockStore() override {
+    return make_unique_ref<OnDiskBlockStore2>(tempdir.path());
+  }
+private:
+  TempDir tempdir;
+};
+
+INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStore2Test, OnDiskBlockStore2TestFixture);

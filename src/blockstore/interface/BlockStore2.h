@@ -10,6 +10,8 @@
 #include <boost/thread/future.hpp>
 #include <cpp-utils/random/Random.h>
 
+// TODO warn_unused_result for all boost::future interfaces
+
 namespace blockstore {
 
 class BlockStore2 {

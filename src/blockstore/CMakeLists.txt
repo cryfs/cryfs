@@ -9,6 +9,7 @@ set(SOURCES
   implementations/testfake/FakeBlock.cpp
   implementations/inmemory/InMemoryBlock.cpp
   implementations/inmemory/InMemoryBlockStore.cpp
+  implementations/inmemory/InMemoryBlockStore2.cpp
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp

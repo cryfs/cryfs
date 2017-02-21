@@ -21,7 +21,7 @@ public:
   }
 
   boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) override {
-    cpputils::Data encrypted = _encrypt(data);
+    cpputils::Data encrypted = _encrypt(key, data);
     return _baseBlockStore->tryCreate(key, encrypted);
   }
 
@@ -31,34 +31,43 @@ public:
 
   boost::future<boost::optional<cpputils::Data>> load(const Key &key) const override {
     auto loaded = _baseBlockStore->load(key);
-    return loaded.then([this] (boost::future<boost::optional<cpputils::Data>> data_) {
+    return loaded.then([this, key] (boost::future<boost::optional<cpputils::Data>> data_) {
       auto data = data_.get();
       if (boost::none == data) {
         return boost::optional<cpputils::Data>(boost::none);
       }
-      return _tryDecrypt(data);
+      return _tryDecrypt(key, *data);
     });
   }
 
   boost::future<void> store(const Key &key, const cpputils::Data &data) override {
-    cpputils::Data encrypted = _encrypt(data);
+    cpputils::Data encrypted = _encrypt(key, data);
     return _baseBlockStore->store(key, encrypted);
   }
 
 private:
 
-  cpputils::Data _encrypt(const Key &key, const cpputils::Data &data) {
+  // This header is prepended to blocks to allow future versions to have compatibility.
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+
+  cpputils::Data _encrypt(const Key &key, const cpputils::Data &data) const {
     cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, data);
-    return Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), _encKey);
+    cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), _encKey);
+    return _prependFormatHeaderToData(encrypted);
   }
 
-  boost::optional<cpputils::Data> _tryDecrypt(const Key &key, const cpputils::Data &data) {
-    boost::optional<cpputils::Data> decrypted = Cipher::decrypt((byte*)data.data(), data.size(), _encKey);
-    if (boost::none != decrypted && !_keyHeaderIsCorrect(key, *decrypted)) {
+  boost::optional<cpputils::Data> _tryDecrypt(const Key &key, const cpputils::Data &data) const {
+    auto ciphertext = _checkAndRemoveFormatHeader(data);
+    boost::optional<cpputils::Data> decrypted = Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), _encKey);
+    if (boost::none == decrypted) {
       // TODO Warning
       return boost::none;
     }
-    return decrypted;
+    if (!_keyHeaderIsCorrect(key, *decrypted)) {
+      // TODO Warning
+      return boost::none;
+    }
+    return _removeKeyHeader(*decrypted);
   }
 
   static cpputils::Data _prependKeyHeaderToData(const Key &key, const cpputils::Data &data) {
@@ -70,6 +79,24 @@ private:
 
   static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data) {
     return 0 == std::memcmp(key.data(), data.data(), Key::BINARY_LENGTH);
+  }
+
+  static cpputils::Data _prependFormatHeaderToData(const cpputils::Data &data) {
+    cpputils::Data dataWithHeader(sizeof(FORMAT_VERSION_HEADER) + data.size());
+    std::memcpy(dataWithHeader.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
+    std::memcpy(dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.data(), data.size());
+    return dataWithHeader;
+  }
+
+  static cpputils::Data _removeKeyHeader(const cpputils::Data &data) {
+    return data.copyAndRemovePrefix(Key::BINARY_LENGTH);
+  }
+
+  static cpputils::Data _checkAndRemoveFormatHeader(const cpputils::Data &data) {
+    if (*reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data()) != FORMAT_VERSION_HEADER) {
+      throw std::runtime_error("The encrypted block has the wrong format. Was it created with a newer version of CryFS?");
+    }
+    return data.copyAndRemovePrefix(sizeof(FORMAT_VERSION_HEADER));
   }
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
