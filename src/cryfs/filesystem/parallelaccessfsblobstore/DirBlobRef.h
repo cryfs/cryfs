@@ -52,8 +52,8 @@ public:
         return _base->statChild(key, result);
     }
 
-    void statChildExceptSize(const blockstore::Key &key, struct ::stat *result) const {
-        return _base->statChildExceptSize(key, result);
+    void statChildWithSizeAlreadySet(const blockstore::Key &key, struct ::stat *result) const {
+        return _base->statChildWithSizeAlreadySet(key, result);
     }
 
     void updateAccessTimestampForChild(const blockstore::Key &key) {

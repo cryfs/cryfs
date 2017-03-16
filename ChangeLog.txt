@@ -1,3 +1,8 @@
+Version 0.9.8 (unreleased)
+--------------
+Fixed bugs:
+* `du` shows correct file system size
+
 Version 0.9.7
 --------------
 Compatibility:
