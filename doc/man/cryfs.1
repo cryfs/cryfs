@@ -1,0 +1,84 @@
+.\" cryfs(1) man page
+.
+.TH cryfs 1
+.
+.
+.
+.SH NAME
+cryfs \- cryptographic filesystem for the cloud
+.
+.
+.
+.SH SYNOPSIS
+.\" mount/create syntax
+.B cryfs
+[ \fB\-f\fR ]
+[ \fB\-c\fR \fIconfig-file\fR ]
+[ \fIcryfs-options\fR ]
+.I basedir mountpoint
+[ \fB\-\-\fR \fIfuse-options\fR ]
+.br
+.\" show-ciphers syntax
+.B cryfs
+\-\-show-ciphers
+.
+.
+.
+.SH DESCRIPTION
+.
+.B CryFS
+encrypts your files, so you can safely store them anywhere (either locally or
+in the cloud).
+.PP
+.
+The goal of \fBCryFS\fR is not only to keep file contents, but also
+file sizes, metadata and directory structure confidential.
+\fBCryFS\fR uses
+.B encrypted same-size blocks
+to store both the files themselves and the block's relations to another.
+These blocks are stored as individual files in the base directory,
+which can then be synchronized with cloud services such as Dropbox.
+.PP
+.
+The blocks are encrypted using a random key, which is stored in a
+.B configuration file
+encrypted by the user's passphrase.
+By default, it will be stored together with the data in the base directory,
+but you can choose a different location if you do not want to upload it or
+want to use an empty passphrase.
+.
+.
+.
+.SH "CREATING AND MOUNTING ENCRYPTED DIRECTORIES"
+.
+.I TODO:
+.
+.
+.
+.SH "CHANGING PASSWORDS"
+.
+.I TODO:
+.
+.
+.
+.SH OPTIONS
+.
+.I TODO:
+.
+.
+.
+.SH "SEE ALSO"
+.
+For more information about the design of CryFS, visit
+.B https://www.cryfs.org
+.PP
+Visit the development repository at
+.B https://github.com/cryfs/cryfs
+for the source code and the full list of contributors to CryFS.
+.
+.
+.
+.SH AUTHORS
+.
+CryFS was created by Sebastian Messmer and contributors.
+This man page was written by Maximilian Wende.
