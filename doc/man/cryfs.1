@@ -12,15 +12,14 @@ cryfs \- cryptographic filesystem for the cloud
 .SH SYNOPSIS
 .\" mount/create syntax
 .B cryfs
-[ \fB\-f\fR ]
-[ \fB\-c\fR \fIconfig-file\fR ]
-[ \fIcryfs-options\fR ]
+[\fB\-f\fR]
+[\fB\-c\fR \fIfile\fR]
+[\fIoptions\fR]
 .I basedir mountpoint
-[ \fB\-\-\fR \fIfuse-options\fR ]
+[\fB\-\-\fR \fIfuse-options\fR]
 .br
 .\" show-ciphers syntax
-.B cryfs
-\-\-show-ciphers
+.B cryfs \-\-show-ciphers
 .
 .
 .
@@ -31,9 +30,9 @@ encrypts your files, so you can safely store them anywhere (either locally or
 in the cloud).
 .PP
 .
-The goal of \fBCryFS\fR is not only to keep file contents, but also
+The goal of CryFS is not only to keep file contents, but also
 file sizes, metadata and directory structure confidential.
-\fBCryFS\fR uses
+CryFS uses
 .B encrypted same-size blocks
 to store both the files themselves and the block's relations to another.
 These blocks are stored as individual files in the base directory,
@@ -49,15 +48,61 @@ want to use an empty passphrase.
 .
 .
 .
-.SH "CREATING AND MOUNTING ENCRYPTED DIRECTORIES"
+.SH USING CRYFS
 .
-.I TODO:
+.SS Selecting base and mount directories
+.
+While you can access your files through your
+.B mount directory,
+CryFS actually places them in your
+.B base directory
+after encrypting.
+CryFS will encrypt and decrypt your files 'on the fly' as they are accessed,
+so files will never be stored on the disk in unencrypted form.
+.PP
+.
+You can choose any empty directory as your base, but your mount directory
+should be outside of any cloud storage, as your cloud may try to sync your
+(temporarily mounted) unencrypted files as well.
+.
+.SS Setup and usage of your encrypted directory
+.
+Creating and mounting your encrypted storage use the same command-line syntax:
+.br
+     \& \" Indent this line by 5+1 columns
+.B cryfs
+.I basedir mountpoint
+.PP
+.
+If CryFS detects an encrypted storage in the given base directory, you will
+be asked for the passphrase to unlock and mount it. Otherwise, CryFS will
+help you with creating one, just follow the on-screen instructions.
+.PP
+.
+After you are done working with your encrypted files, unmount your storage
+with the command
+.br
+     \& \" Indent this line by 5+1 columns
+.B fusermount -u
+.I mountpoint
 .
 .
+.SS Changing your passphrase
 .
-.SH "CHANGING PASSWORDS"
+As the encryption key to your CryFS storage is stored in your configuration
+file, it would be possible to re-encrypt it using a different passphrase
+(however, this feature has not been implemented yet).
+.PP
 .
-.I TODO:
+This does not change the actual encryption key of your storage, so someone
+with access to the old passphrase and configuration file (for example through
+the file history of your cloud or your file system) will be able to access
+files created both before AND after the password change.
+.PP
+.
+For this reason, the recommended way to change your passphrase is to create a
+new CryFS storage with your new passphrase and move your files from the old to
+the new one.
 .
 .
 .
@@ -67,8 +112,11 @@ want to use an empty passphrase.
 .
 .
 .
-.SH "SEE ALSO"
+.SH SEE ALSO
 .
+.BR mount.fuse (1),
+.BR fusermount (1)
+.PP
 For more information about the design of CryFS, visit
 .B https://www.cryfs.org
 .PP
