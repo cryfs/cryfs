@@ -1,0 +1,216 @@
+.\" cryfs(1) man page
+.
+.TH cryfs 1
+.
+.
+.
+.SH NAME
+cryfs \- cryptographic filesystem for the cloud
+.
+.
+.
+.SH SYNOPSIS
+.\" mount/create syntax
+.B cryfs
+[\fB\-c\fR \fIfile\fR]
+[\fB\-f\fR]
+[\fIoptions\fR]
+.I basedir mountpoint
+[\fB\-\-\fR \fIfuse-options\fR]
+.br
+.\" show-ciphers syntax
+.B cryfs \-\-help\fR|\fB\-\-show-ciphers
+.
+.
+.
+.SH DESCRIPTION
+.
+.B CryFS
+encrypts your files, so you can safely store them anywhere.
+.PP
+.
+The goal of CryFS is not only to keep file contents, but also
+file sizes, metadata and directory structure confidential.
+CryFS uses
+.B encrypted same-size blocks
+to store both the files themselves and the block's relations to another.
+These blocks are stored as individual files in the base directory,
+which can then be synchronized with cloud services such as Dropbox.
+.PP
+.
+The blocks are encrypted using a random key, which is stored in a
+.B configuration file
+encrypted by the user's passphrase.
+By default, it will be stored together with the data in the base directory,
+but you can choose a different location if you do not want it in your cloud
+or when using an empty passphrase.
+.
+.
+.
+.SH USING CRYFS
+.
+.SS Selecting base and mount directories
+.
+While you can access your files through your
+.B mount directory,
+CryFS actually places them in your
+.B base directory
+after encrypting.
+CryFS will encrypt and decrypt your files 'on the fly' as they are accessed,
+so files will never be stored on the disk in unencrypted form.
+.PP
+.
+You can choose any empty directory as your base, but your mount directory
+should be outside of any cloud storage, as your cloud may try to sync your
+(temporarily mounted) unencrypted files as well.
+.
+.SS Setup and usage of your encrypted directory
+.
+.TP
+Creating and mounting your encrypted storage use the same command-line syntax:
+.B cryfs
+.I basedir mountpoint
+.PP
+.
+If CryFS detects an encrypted storage in the given base directory, you will
+be asked for the passphrase to unlock and mount it. Otherwise, CryFS will
+help you with creating one, just follow the on-screen instructions.
+.PP
+.
+.TP
+After you are done working with your encrypted files, unmount your storage \
+with the command
+.B fusermount -u
+.I mountpoint
+.
+.
+.SS Changing your passphrase
+.
+As the encryption key to your CryFS storage is stored in your configuration
+file, it would be possible to re-encrypt it using a different passphrase
+(although this feature has not been implemented yet).
+.PP
+.
+However, this does not change the actual encryption key of your storage, so
+someone with access to the old passphrase and configuration file (for example
+through the file history of your cloud or your file system) could still access
+your files, even those created after the password change.
+.PP
+.
+For this reason, the recommended way to change your passphrase is to create a
+new CryFS storage with the new passphrase and move your files from the old to
+the new one.
+.
+.
+.
+.SH OPTIONS
+.
+.SS Getting help
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.
+Show a help message containing short descriptions for all options.
+.
+.
+.TP
+\fB\-\-show\-ciphers\fR
+.
+Show a list of all supported encryption ciphers.
+.
+.
+.SS Encryption parameters
+.
+.TP
+\fB\-\-blocksize\fR \fIarg\fR
+.
+Set the block size to \fIarg\fR bytes. Defaults to
+.BR 32768 .
+.br
+ \" Intentional space
+.br
+Higher block may help reducing the file count in your base directory
+(especially when storing large files), but will also waste more space when
+storing smaller files.
+.
+.
+.TP
+\fB\-\-cipher\fR \fIarg\fR
+.
+Use \fIarg\fR as the cipher for the encryption. Defaults to
+.BR aes-256-gcm .
+.
+.
+.TP
+\fB\-c\fR \fIfile\fR, \fB\-\-config\fR \fIfile\fR
+.
+Use \fIfile\fR as configuration file for this CryFS storage instead of
+\fIbasedir\fR/cryfs.config
+.
+.
+.SS General options
+.
+.TP
+\fB\-f\fR, \fB\-\-foreground\fI
+.
+Run CryFS in the foreground. Stop using CTRL-C.
+.
+.
+.TP
+\fB\-\-logfile\fR \fIfile\fR
+.
+Write status information to \fIfile\fR. If no logfile is given, CryFS will
+write them to syslog in background mode, or to stdout in foreground mode.
+.
+.
+.TP
+\fB\-\-unmount\-idle\fR \fIarg\fR
+.
+Unmount automatically after \fIarg\fR minutes of inactivity.
+.
+.
+.
+.SH ENVIRONMENT
+.
+.TP
+\fBCRYFS_FRONTEND\fR=noninteractive
+.
+With this option set, CryFS will only ask for the encryption passphrase once.
+Instead of asking the user for parameters not specified on the command line,
+it will just use the default values. CryFS will also not ask you to confirm
+your passphrase when creating a new CryFS storage.
+.br
+ \" Intentional space
+.br
+Set this environment variable when automating CryFS using external tools or
+shell scripts.
+.
+.
+.TP
+\fBCRYFS_NO_UPDATE_CHECK\fR=true
+.
+By default, CryFS connects to the internet to check for known security
+vulnerabilities and new versions. This option disables this.
+.
+.
+.
+.SH SEE ALSO
+.
+.BR mount.fuse (1),
+.BR fusermount (1)
+.PP
+.
+For more information about the design of CryFS, visit
+.B https://www.cryfs.org
+.PP
+.
+Visit the development repository at
+.B https://github.com/cryfs/cryfs
+for the source code and the full list of contributors to CryFS.
+.
+.
+.
+.SH AUTHORS
+.
+CryFS was created by Sebastian Messmer and contributors.
+This man page was written by Maximilian Wende.
