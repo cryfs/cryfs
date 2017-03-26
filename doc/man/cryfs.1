@@ -43,7 +43,7 @@ The blocks are encrypted using a random key, which is stored in a
 encrypted by the user's passphrase.
 By default, it will be stored together with the data in the base directory,
 but you can choose a different location if you do not want it in your cloud
-or when using an empty passphrase.
+or when using a weak passphrase.
 .
 .
 .
@@ -129,7 +129,7 @@ Set the block size to \fIarg\fR bytes. Defaults to
 .br
  \" Intentional space
 .br
-Higher block may help reducing the file count in your base directory
+A higher block size may help reducing the file count in your base directory
 (especially when storing large files), but will also waste more space when
 storing smaller files.
 .
