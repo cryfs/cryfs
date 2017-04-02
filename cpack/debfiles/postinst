@@ -23,9 +23,19 @@ get_repo_url () {
     echo $DEBIAN_REPO_URL
   elif [[ "$DISTRIBUTION" == "Ubuntu" ]]; then
     echo $UBUNTU_REPO_URL
+  elif [[ "$DISTRIBUTION" == "LinuxMint" ]]; then
+    echo $DEBIAN_REPO_URL
   else
     echo Not adding package source because $DISTRIBUTION is not supported. Please keep CryFS manually up to date. 1>&2
     exit 0
+  fi
+}
+
+get_distro_version () {
+  if [[ "$DISTRIBUTION" == "LinuxMint" ]] && [[ "$DISTRIBUTION_VERSION" == "betsy" ]]; then
+    echo "jessie"
+  else
+    echo $DISTRIBUTION_VERSION
   fi
 }
 
@@ -43,7 +53,8 @@ sources_list_dir () {
 add_repository () {
   dir=$(sources_list_dir)
   repo_url=$(get_repo_url)
-  echo "deb $repo_url $DISTRIBUTION_VERSION main" > $dir/cryfs.list
+  distro=$(get_distro_version)
+  echo "deb $repo_url $distro main" > $dir/cryfs.list
 }
 
 install_key () {
