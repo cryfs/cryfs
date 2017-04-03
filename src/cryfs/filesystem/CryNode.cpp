@@ -37,7 +37,7 @@ CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, opt
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
 
   if (parent != none) {
-    _parent = cpputils::to_unique_ptr(std::move(*parent));
+    _parent = std::move(*parent);
   }
   _grandparent = std::move(grandparent);
 }
@@ -101,7 +101,7 @@ void CryNode::rename(const bf::path &to) {
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
     LoadBlob()->setParentPointer(targetDir->key());
-    _parent = cpputils::to_unique_ptr(std::move(targetDir));
+    _parent = std::move(targetDir);
   }
 }
 

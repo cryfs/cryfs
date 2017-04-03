@@ -8,9 +8,7 @@
 
 using namespace cpputils;
 
-//TODO Test unique_ref destructor
-//TODO Test cpputils::destruct()
-
+namespace {
 class SomeClass0Parameters {};
 class SomeClass1Parameter {
 public:
@@ -24,6 +22,18 @@ public:
   int param2;
 };
 using SomeClass = SomeClass0Parameters;
+struct SomeBaseClass {
+  SomeBaseClass(int v_): v(v_) {}
+  int v;
+};
+struct SomeChildClass : SomeBaseClass {
+  SomeChildClass(int v): SomeBaseClass(v) {}
+};
+}
+
+static_assert(std::is_same<SomeClass, unique_ref<SomeClass>::element_type>::value, "unique_ref<T>::element_type is wrong");
+static_assert(std::is_same<int, unique_ref<int, SomeClass1Parameter>::element_type>::value, "unique_ref<T,D>::element_type is wrong");
+static_assert(std::is_same<SomeClass1Parameter, unique_ref<int, SomeClass1Parameter>::deleter_type>::value, "unique_ref<T,D>::deleter_type is wrong");
 
 TEST(MakeUniqueRefTest, Primitive) {
   unique_ref<int> var = make_unique_ref<int>(3);
@@ -52,6 +62,21 @@ TEST(MakeUniqueRefTest, TypeIsAutoDeductible) {
   auto var2 = make_unique_ref<SomeClass0Parameters>();
   auto var3 = make_unique_ref<SomeClass1Parameter>(2);
   auto var4 = make_unique_ref<SomeClass2Parameters>(2, 3);
+}
+
+TEST(MakeUniqueRefTest, CanAssignToUniquePtr) {
+  std::unique_ptr<int> var = make_unique_ref<int>(2);
+  EXPECT_EQ(2, *var);
+}
+
+TEST(MakeUniqueRefTest, CanAssignToSharedPtr) {
+  std::shared_ptr<int> var = make_unique_ref<int>(2);
+  EXPECT_EQ(2, *var);
+ }
+
+ TEST(MakeUniqueRefTest, CanAssignToBaseClassPtr) {
+  unique_ref<SomeBaseClass> var = make_unique_ref<SomeChildClass>(3);
+  EXPECT_EQ(3, var->v);
 }
 
 TEST(NullcheckTest, PrimitiveNullptr) {
@@ -404,6 +429,7 @@ TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
   EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
 }
 
+namespace {
 class OnlyMoveable {
 public:
   OnlyMoveable(int value_): value(value_)  {}
@@ -413,10 +439,143 @@ public:
   }
   int value;
 private:
-  DISALLOW_COPY_AND_ASSIGN(OnlyMoveable);
+  OnlyMoveable(const OnlyMoveable& rhs) = delete;
+  OnlyMoveable& operator=(const OnlyMoveable& rhs) = delete;
 };
+}
 
 TEST_F(UniqueRefTest, AllowsDerefOnRvalue) {
   OnlyMoveable val = *make_unique_ref<OnlyMoveable>(5);
   EXPECT_EQ(OnlyMoveable(5), val);
+}
+
+TEST_F(UniqueRefTest, AllowsConversionToNewUniquePtr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  std::unique_ptr<int> v = std::move(var1);
+  EXPECT_FALSE(var1.isValid());
+  EXPECT_EQ(3, *v);
+}
+
+TEST_F(UniqueRefTest, AllowsConversionToExistingUniquePtr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  std::unique_ptr<int> v;
+  v = std::move(var1);
+  EXPECT_FALSE(var1.isValid());
+  EXPECT_EQ(3, *v);
+}
+
+TEST_F(UniqueRefTest, AllowsConversionToNewSharedPtr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  std::shared_ptr<int> v = std::move(var1);
+  EXPECT_FALSE(var1.isValid());
+  EXPECT_EQ(3, *v);
+}
+
+TEST_F(UniqueRefTest, AllowsConversionToExistingSharedPtr) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  std::shared_ptr<int> v;
+  v = std::move(var1);
+  EXPECT_FALSE(var1.isValid());
+  EXPECT_EQ(3, *v);
+}
+
+namespace {
+class DestructableMock final {
+public:
+  DestructableMock(bool* wasDestructed): wasDestructed_(wasDestructed) {}
+
+  ~DestructableMock() {
+    *wasDestructed_ = true;
+  }
+
+private:
+  bool* wasDestructed_;
+};
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenDestructed_thenCallsDefaultDeleter) {
+  bool wasDestructed = false;
+  {
+    auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveConstructed_thenDoesntCallDefaultDeleter) {
+  bool wasDestructed = false;
+  auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
+  auto obj2 = std::move(obj);
+  EXPECT_FALSE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveAssigned_thenDoesntCallDefaultDeleter) {
+  bool dummy = false;
+  bool wasDestructed = false;
+  auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
+  auto obj2 = make_unique_ref<DestructableMock>(&dummy);
+  obj2 = std::move(obj);
+  EXPECT_FALSE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenDestructCalled_thenCallsDefaultDeleter) {
+  bool wasDestructed = false;
+  auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
+  destruct(std::move(obj));
+  EXPECT_TRUE(wasDestructed);
+  EXPECT_FALSE(obj.isValid());
+}
+
+namespace {
+struct SetToTrueDeleter final {
+  void operator()(bool* ptr) {
+    *ptr = true;
+  }
+};
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenDestructed_thenCallsCustomDeleter) {
+  bool wasDestructed = false;
+  {
+    auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenMoveConstructed_thenDoesntCallCustomDeleter) {
+  bool wasDestructed = false;
+  auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+  auto obj2 = std::move(obj);
+  EXPECT_FALSE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenMoveAssigned_thenDoesntCallCustomDeleter) {
+  bool dummy = false;
+  bool wasDestructed = false;
+  auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+  auto obj2 = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&dummy)).value();
+  obj2 = std::move(obj);
+  EXPECT_FALSE(wasDestructed);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenDestructCalled_thenCallsCustomDeleter) {
+  bool wasDestructed = false;
+  auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+  destruct(std::move(obj));
+  EXPECT_TRUE(wasDestructed);
+  EXPECT_FALSE(obj.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveConstructedToBaseClass_thenWorksAsExpected) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveAssignedToBaseClass_thenWorksAsExpected) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> base = make_unique_ref<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_EQ(3, base->v);
 }
