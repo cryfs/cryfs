@@ -28,6 +28,7 @@ namespace cpputils {
 template<class T, class D = std::default_delete<T>>
 class unique_ref final {
 public:
+    // TODO Add assert != nullptr to all calls (also move constructors, ...) and test performance impact (maybe disable assertions in prod?)
     using element_type = typename std::unique_ptr<T, D>::element_type;
     using deleter_type = typename std::unique_ptr<T, D>::deleter_type;
     using pointer = typename std::unique_ptr<T, D>::pointer;
@@ -167,7 +168,7 @@ namespace std {
     // Allow using it in std::unordered_set / std::unordered_map
     template<class T, class D> struct hash<cpputils::unique_ref<T, D>> {
         size_t operator()(const cpputils::unique_ref<T, D> &ref) const noexcept {
-            return (size_t)_extract_ptr(ref);
+            return std::hash<typename cpputils::unique_ref<T,D>::pointer>()(_extract_ptr(ref));
         }
     };
 

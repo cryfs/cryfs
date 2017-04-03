@@ -428,7 +428,7 @@ TEST_F(UniqueRefTest, NullptrIsLess2) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var2));
-  EXPECT_TRUE(std::less<unique_ref<int>>()(var2, var1));
+  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
 }
 
 TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
