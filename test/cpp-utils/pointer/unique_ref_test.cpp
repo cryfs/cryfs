@@ -79,6 +79,16 @@ TEST(MakeUniqueRefTest, CanAssignToSharedPtr) {
   EXPECT_EQ(3, var->v);
 }
 
+TEST(MakeUniqueRefTest, CanAssignToBaseClassUniquePtr) {
+  std::unique_ptr<SomeBaseClass> var = make_unique_ref<SomeChildClass>(3);
+  EXPECT_EQ(3, var->v);
+}
+
+TEST(MakeUniqueRefTest, CanAssignToBaseClassSharedPtr) {
+  std::shared_ptr<SomeBaseClass> var = make_unique_ref<SomeChildClass>(3);
+  EXPECT_EQ(3, var->v);
+}
+
 TEST(NullcheckTest, PrimitiveNullptr) {
   boost::optional<unique_ref<int>> var = nullcheck(std::unique_ptr<int>(nullptr));
   EXPECT_FALSE((bool)var);
@@ -577,5 +587,21 @@ TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveAssignedToBaseClass_the
   unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
   unique_ref<SomeBaseClass> base = make_unique_ref<SomeBaseClass>(10);
   base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenCastedToBaseClassUniquePtr_thenWorksAsExpected) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::unique_ptr<SomeBaseClass> base = std::make_unique<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_FALSE(child.isValid());
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenCastedToBaseClassSharedPtr_thenWorksAsExpected) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::shared_ptr<SomeBaseClass> base = std::make_unique<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_FALSE(child.isValid());
   EXPECT_EQ(3, base->v);
 }

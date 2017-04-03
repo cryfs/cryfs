@@ -45,7 +45,7 @@ public:
         from._target = nullptr;
         return *this;
     }
-    
+
     template<class U> unique_ref& operator=(unique_ref<U>&& from) noexcept {
         _target = std::move(from._target);
         from._target = nullptr;
@@ -70,12 +70,14 @@ public:
         return _target.get();
     }
 
-    operator std::unique_ptr<element_type>() && noexcept {
-        return std::move(_target);
+    template<class T2>
+    operator std::unique_ptr<T2>() && noexcept {
+      return std::move(_target);
     }
 
-    operator std::shared_ptr<element_type>() && noexcept {
-        return std::move(_target);
+    template<class T2>
+    operator std::shared_ptr<T2>() && noexcept {
+      return std::move(_target);
     }
 
     void swap(unique_ref& rhs) noexcept {
