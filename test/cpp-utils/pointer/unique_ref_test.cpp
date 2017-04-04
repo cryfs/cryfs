@@ -544,7 +544,7 @@ struct SetToTrueDeleter final {
 };
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenDestructed_thenCallsCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenDestructed_thenCallsCustomDeleter) {
   bool wasDestructed = false;
   {
     auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
@@ -553,14 +553,14 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenDestructed_thenCallsCu
   EXPECT_TRUE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenMoveConstructed_thenDoesntCallCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveConstructed_thenDoesntCallCustomDeleter) {
   bool wasDestructed = false;
   auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
   auto obj2 = std::move(obj);
   EXPECT_FALSE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenMoveAssigned_thenDoesntCallCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveAssigned_thenDoesntCallCustomDeleter) {
   bool dummy = false;
   bool wasDestructed = false;
   auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
@@ -569,12 +569,81 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenMoveAssigned_thenDoesn
   EXPECT_FALSE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleter_whenDestructCalled_thenCallsCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenDestructCalled_thenCallsCustomDeleter) {
   bool wasDestructed = false;
   auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
   destruct(std::move(obj));
   EXPECT_TRUE(wasDestructed);
   EXPECT_FALSE(obj.isValid());
+}
+
+namespace {
+struct SetToDeleter final {
+  SetToDeleter(int value): value_(value) {}
+  int value_;
+
+  void operator()(int* ptr) {
+    *ptr = value_;
+  }
+};
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructed_thenCallsCustomDeleterInstance) {
+  int value = 0;
+  {
+    auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+    EXPECT_EQ(0, value);
+  }
+  EXPECT_EQ(4, value);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveConstructed_thenDoesntCallCustomDeleterInstance) {
+  int value = 0;
+  auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+  auto obj2 = std::move(obj);
+  EXPECT_EQ(0, value);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigned_thenDoesntCallCustomDeleterInstance) {
+  int dummy = 0;
+  int value = 0;
+  auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+  auto obj2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
+  obj2 = std::move(obj);
+  EXPECT_EQ(0, value);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructCalled_thenCallsCustomDeleterInstance) {
+  int value = 0;
+  auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+  destruct(std::move(obj));
+  EXPECT_EQ(4, value);
+  EXPECT_FALSE(obj.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniquePtrWithCustomDeleterInstance_whenMovedToUniqueRef_thenHasSameDeleterInstance) {
+  int dummy = 0;
+  SetToDeleter deleter(4);
+  auto ptr = std::unique_ptr<int, SetToDeleter>(&dummy, deleter);
+  auto ref = nullcheck(std::move(ptr)).value();
+  EXPECT_EQ(4, ref.get_deleter().value_);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveConstructing_thenHasSameDeleterInstance) {
+  int dummy = 0;
+  SetToDeleter deleter(4);
+  auto ref = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, deleter)).value();
+  unique_ref<int, SetToDeleter> ref2 = std::move(ref);
+  EXPECT_EQ(4, ref2.get_deleter().value_);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigning_thenHasSameDeleterInstance) {
+  int dummy = 0;
+  SetToDeleter deleter(4);
+  auto ref = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, deleter)).value();
+  auto ref2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
+  ref2 = std::move(ref);
+  EXPECT_EQ(4, ref2.get_deleter().value_);
 }
 
 TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveConstructedToBaseClass_thenWorksAsExpected) {
