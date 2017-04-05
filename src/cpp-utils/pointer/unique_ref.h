@@ -168,7 +168,7 @@ namespace std {
     // Allow using it in std::unordered_set / std::unordered_map
     template<class T, class D> struct hash<cpputils::unique_ref<T, D>> {
         size_t operator()(const cpputils::unique_ref<T, D> &ref) const noexcept {
-            return std::hash<typename cpputils::unique_ref<T,D>::pointer>()(_extract_ptr(ref));
+            return std::hash<typename cpputils::unique_ref<T, D>::pointer>()(_extract_ptr(ref));
         }
     };
 

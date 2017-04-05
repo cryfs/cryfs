@@ -89,58 +89,58 @@ TEST(MakeUniqueRefTest, CanAssignToBaseClassSharedPtr) {
   EXPECT_EQ(3, var->v);
 }
 
-TEST(NullcheckTest, PrimitiveNullptr) {
+TEST(NullcheckTest, givenUniquePtrToInt_withNullptr_whenNullcheckCalled_thenReturnsNone) {
   boost::optional<unique_ref<int>> var = nullcheck(std::unique_ptr<int>(nullptr));
   EXPECT_FALSE((bool)var);
 }
 
-TEST(NullcheckTest, ObjectNullptr) {
+TEST(NullcheckTest, givenUniquePtrToObject_withNullptr_whenNullcheckCalled_thenReturnsNone) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::unique_ptr<SomeClass0Parameters>(nullptr));
   EXPECT_FALSE((bool)var);
 }
 
-TEST(NullcheckTest, Primitive) {
+TEST(NullcheckTest, givenUniquePtrToInt_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<int>> var = nullcheck(std::make_unique<int>(3));
   EXPECT_TRUE((bool)var);
   EXPECT_EQ(3, **var);
 }
 
-TEST(NullcheckTest, ClassWith0Parameters) {
+TEST(NullcheckTest, givenUniquePtrToObject_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass0Parameters>());
   EXPECT_TRUE((bool)var);
   //Check that the type is correct
   EXPECT_EQ(var->get(), dynamic_cast<SomeClass0Parameters*>(var->get()));
 }
 
-TEST(NullcheckTest, ClassWith1Parameter) {
+TEST(NullcheckTest, givenUniquePtrToObjectWith1Parameter_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass1Parameter>> var = nullcheck(std::make_unique<SomeClass1Parameter>(5));
   EXPECT_TRUE((bool)var);
   EXPECT_EQ(5, (*var)->param);
 }
 
-TEST(NullcheckTest, ClassWith2Parameters) {
+TEST(NullcheckTest, givenUniquePtrToObjectWith2Parameters_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass2Parameters>> var = nullcheck(std::make_unique<SomeClass2Parameters>(7,2));
   EXPECT_TRUE((bool)var);
   EXPECT_EQ(7, (*var)->param1);
   EXPECT_EQ(2, (*var)->param2);
 }
 
-TEST(NullcheckTest, OptionIsResolvable_Primitive) {
+TEST(NullcheckTest, givenUniquePtrToInt_withNonNullptr_whenNullcheckCalled_thenCanExtractUniqueRef) {
   boost::optional<unique_ref<int>> var = nullcheck(std::make_unique<int>(3));
   unique_ref<int> resolved = std::move(var).value();
 }
 
-TEST(NullcheckTest, OptionIsResolvable_Object) {
+TEST(NullcheckTest, givenUniquePtrToObject_withNonNullptr_whenNullcheckCalled_thenCanExtractUniqueRef) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass>());
   unique_ref<SomeClass0Parameters> resolved = std::move(var).value();
 }
 
-TEST(NullcheckTest, OptionIsAutoResolvable_Primitive) {
+TEST(NullcheckTest, givenUniquePtrToInt_whenCallingNullcheck_thenTypesCanBeAutoDeduced) {
   auto var = nullcheck(std::make_unique<int>(3));
   auto resolved = std::move(var).value();
 }
 
-TEST(NullcheckTest, OptionIsAutoResolvable_Object) {
+TEST(NullcheckTest, givenUniquePtrToObject_whenCallingNullcheck_thenTypesCanBeAutoDeduced) {
   auto var = nullcheck(std::make_unique<SomeClass>());
   auto resolved = std::move(var).value();
 }
@@ -153,46 +153,191 @@ public:
   }
 };
 
-TEST_F(UniqueRefTest, Get_Primitive) {
+TEST_F(UniqueRefTest, givenUniqueRefToInt_whenCallingGet_thenReturnsValue) {
   unique_ref<int> obj = make_unique_ref<int>(3);
   EXPECT_EQ(3, *obj.get());
 }
 
-TEST_F(UniqueRefTest, Get_Object) {
+TEST_F(UniqueRefTest, givenUniqueRefToObject_whenCallingGet_thenReturnsObject) {
   unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(5);
   EXPECT_EQ(5, obj.get()->param);
 }
 
-TEST_F(UniqueRefTest, Deref_Primitive) {
+TEST_F(UniqueRefTest, givenUniqueRefToInt_whenDereferencing_thenReturnsValue) {
   unique_ref<int> obj = make_unique_ref<int>(3);
   EXPECT_EQ(3, *obj);
 }
 
-TEST_F(UniqueRefTest, Deref_Object) {
+TEST_F(UniqueRefTest, givenUniqueRefToObject_whenDereferencing_thenReturnsObject) {
   unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(5);
   EXPECT_EQ(5, (*obj).param);
 }
 
-TEST_F(UniqueRefTest, DerefArrow) {
+TEST_F(UniqueRefTest, givenUniqueRefToObject_whenArrowDereferencing_thenReturnsObject) {
   unique_ref<SomeClass1Parameter> obj = make_unique_ref<SomeClass1Parameter>(3);
   EXPECT_EQ(3, obj->param);
 }
 
-TEST_F(UniqueRefTest, Assignment) {
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigning_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
   SomeClass *obj1ptr = obj1.get();
   obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigning_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
+  obj2 = std::move(obj1);
   EXPECT_FALSE(obj1.isValid());
 }
 
-TEST_F(UniqueRefTest, MoveConstructor) {
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClass_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> base = make_unique_ref<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClass_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> obj2 = make_unique_ref<SomeBaseClass>(10);
+  obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToUniquePtr_thenPointsToSameObject) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::unique_ptr<SomeClass> obj2 = std::make_unique<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToUniquePtr_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::unique_ptr<SomeClass> obj2 = std::make_unique<SomeClass>();
+  obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassUniquePtr_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::unique_ptr<SomeBaseClass> base = std::make_unique<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassUniquePtr_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
+  std::unique_ptr<SomeBaseClass> obj2 = std::make_unique<SomeBaseClass>(10);
+  obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToSharedPtr_thenPointsToSameObject) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::shared_ptr<SomeClass> obj2 = std::make_shared<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToSharedPtr_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::shared_ptr<SomeClass> obj2 = std::make_shared<SomeClass>();
+  obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassSharedPtr_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::shared_ptr<SomeBaseClass> base = std::make_shared<SomeBaseClass>(10);
+  base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassSharedPtr_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
+  std::shared_ptr<SomeBaseClass> obj2 = std::make_shared<SomeBaseClass>(10);
+  obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   SomeClass *obj1ptr = obj1.get();
   unique_ref<SomeClass> obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  unique_ref<SomeClass> obj2 = std::move(obj1);
   EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  unique_ref<SomeBaseClass> base = std::move(child);
+  EXPECT_FALSE(child.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenPointsToSameObject) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  std::unique_ptr<SomeClass> obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::unique_ptr<SomeClass> obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::unique_ptr<SomeBaseClass> base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::unique_ptr<SomeBaseClass> base = std::move(child);
+  EXPECT_FALSE(child.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenPointsToSameObject) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  SomeClass *obj1ptr = obj1.get();
+  std::shared_ptr<SomeClass> obj2 = std::move(obj1);
+  EXPECT_EQ(obj1ptr, obj2.get());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenOldInstanceInvalid) {
+  unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
+  std::shared_ptr<SomeClass> obj2 = std::move(obj1);
+  EXPECT_FALSE(obj1.isValid());
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_thenPointsToSameObject) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::shared_ptr<SomeBaseClass> base = std::move(child);
+  EXPECT_EQ(3, base->v);
+}
+
+TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_thenOldInstanceInvalid) {
+  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
+  std::shared_ptr<SomeBaseClass> base = std::move(child);
+  EXPECT_FALSE(child.isValid());
 }
 
 TEST_F(UniqueRefTest, Swap) {
@@ -212,6 +357,7 @@ TEST_F(UniqueRefTest, SwapFromInvalid) {
   SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, obj2);
   EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_TRUE(obj1.isValid());
   EXPECT_FALSE(obj2.isValid());
 }
 
@@ -222,6 +368,7 @@ TEST_F(UniqueRefTest, SwapWithInvalid) {
   SomeClass *obj1ptr = obj1.get();
   std::swap(obj1, obj2);
   EXPECT_FALSE(obj1.isValid());
+  EXPECT_TRUE(obj2.isValid());
   EXPECT_EQ(obj1ptr, obj2.get());
 }
 
@@ -459,36 +606,6 @@ TEST_F(UniqueRefTest, AllowsDerefOnRvalue) {
   EXPECT_EQ(OnlyMoveable(5), val);
 }
 
-TEST_F(UniqueRefTest, AllowsConversionToNewUniquePtr) {
-  unique_ref<int> var1 = make_unique_ref<int>(3);
-  std::unique_ptr<int> v = std::move(var1);
-  EXPECT_FALSE(var1.isValid());
-  EXPECT_EQ(3, *v);
-}
-
-TEST_F(UniqueRefTest, AllowsConversionToExistingUniquePtr) {
-  unique_ref<int> var1 = make_unique_ref<int>(3);
-  std::unique_ptr<int> v;
-  v = std::move(var1);
-  EXPECT_FALSE(var1.isValid());
-  EXPECT_EQ(3, *v);
-}
-
-TEST_F(UniqueRefTest, AllowsConversionToNewSharedPtr) {
-  unique_ref<int> var1 = make_unique_ref<int>(3);
-  std::shared_ptr<int> v = std::move(var1);
-  EXPECT_FALSE(var1.isValid());
-  EXPECT_EQ(3, *v);
-}
-
-TEST_F(UniqueRefTest, AllowsConversionToExistingSharedPtr) {
-  unique_ref<int> var1 = make_unique_ref<int>(3);
-  std::shared_ptr<int> v;
-  v = std::move(var1);
-  EXPECT_FALSE(var1.isValid());
-  EXPECT_EQ(3, *v);
-}
-
 namespace {
 class DestructableMock final {
 public:
@@ -644,33 +761,4 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigning_
   auto ref2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
   ref2 = std::move(ref);
   EXPECT_EQ(4, ref2.get_deleter().value_);
-}
-
-TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveConstructedToBaseClass_thenWorksAsExpected) {
-  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
-  unique_ref<SomeBaseClass> base = std::move(child);
-  EXPECT_EQ(3, base->v);
-}
-
-TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenMoveAssignedToBaseClass_thenWorksAsExpected) {
-  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
-  unique_ref<SomeBaseClass> base = make_unique_ref<SomeBaseClass>(10);
-  base = std::move(child);
-  EXPECT_EQ(3, base->v);
-}
-
-TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenCastedToBaseClassUniquePtr_thenWorksAsExpected) {
-  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
-  std::unique_ptr<SomeBaseClass> base = std::make_unique<SomeBaseClass>(10);
-  base = std::move(child);
-  EXPECT_FALSE(child.isValid());
-  EXPECT_EQ(3, base->v);
-}
-
-TEST_F(UniqueRefTest, givenUniqueRefToChildClass_whenCastedToBaseClassSharedPtr_thenWorksAsExpected) {
-  unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
-  std::shared_ptr<SomeBaseClass> base = std::make_unique<SomeBaseClass>(10);
-  base = std::move(child);
-  EXPECT_FALSE(child.isValid());
-  EXPECT_EQ(3, base->v);
 }
