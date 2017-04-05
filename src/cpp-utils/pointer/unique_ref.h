@@ -98,7 +98,7 @@ public:
     }
 
 private:
-    unique_ref(std::unique_ptr<T, D> target) noexcept: _target(std::move(target)) {}
+    explicit unique_ref(std::unique_ptr<T, D> target) noexcept: _target(std::move(target)) {}
     template<class U, class... Args> friend unique_ref<U> make_unique_ref(Args&&... args);
     template<class T2, class D2> friend boost::optional<unique_ref<T2, D2>> nullcheck(std::unique_ptr<T2, D2> ptr) noexcept;
     template<class T2, class D2> friend class unique_ref;
