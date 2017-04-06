@@ -629,20 +629,26 @@ TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenDestructed_thenCallsD
   EXPECT_TRUE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveConstructed_thenDoesntCallDefaultDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveConstructed_thenCallsDefaultDeleterAfterSecondDestructed) {
   bool wasDestructed = false;
   auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
-  auto obj2 = std::move(obj);
-  EXPECT_FALSE(wasDestructed);
+  {
+    unique_ref<DestructableMock> obj2 = std::move(obj);
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveAssigned_thenDoesntCallDefaultDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenMoveAssigned_thenCallDefaultDeleterAfterSecondDestructed) {
   bool dummy = false;
   bool wasDestructed = false;
-  auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
-  auto obj2 = make_unique_ref<DestructableMock>(&dummy);
-  obj2 = std::move(obj);
-  EXPECT_FALSE(wasDestructed);
+  unique_ref<DestructableMock> obj = make_unique_ref<DestructableMock>(&wasDestructed);
+  {
+    unique_ref<DestructableMock> obj2 = make_unique_ref<DestructableMock>(&dummy);
+    obj2 = std::move(obj);
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
 }
 
 TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenDestructCalled_thenCallsDefaultDeleter) {
@@ -670,20 +676,26 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenDe
   EXPECT_TRUE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveConstructed_thenDoesntCallCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveConstructed_thenCallsCustomDeleterAfterSecondDestructed) {
   bool wasDestructed = false;
-  auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
-  auto obj2 = std::move(obj);
-  EXPECT_FALSE(wasDestructed);
+  unique_ref<bool, SetToTrueDeleter> obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+  {
+    unique_ref<bool, SetToTrueDeleter> obj2 = std::move(obj);
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveAssigned_thenDoesntCallCustomDeleter) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenMoveAssigned_thenCallsCustomDeleterAfterSecondDestructed) {
   bool dummy = false;
   bool wasDestructed = false;
-  auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
-  auto obj2 = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&dummy)).value();
-  obj2 = std::move(obj);
-  EXPECT_FALSE(wasDestructed);
+  unique_ref<bool, SetToTrueDeleter> obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
+  {
+    unique_ref<bool, SetToTrueDeleter> obj2 = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&dummy)).value();
+    obj2 = std::move(obj);
+    EXPECT_FALSE(wasDestructed);
+  }
+  EXPECT_TRUE(wasDestructed);
 }
 
 TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenDestructCalled_thenCallsCustomDeleter) {
@@ -714,20 +726,26 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructed_the
   EXPECT_EQ(4, value);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveConstructed_thenDoesntCallCustomDeleterInstance) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveConstructed_thenCallsCustomDeleterInstanceAfterSecondDestructed) {
   int value = 0;
-  auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
-  auto obj2 = std::move(obj);
-  EXPECT_EQ(0, value);
+  unique_ref<int, SetToDeleter> obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+  {
+    unique_ref<int, SetToDeleter> obj2 = std::move(obj);
+    EXPECT_EQ(0, value);
+  }
+  EXPECT_EQ(4, value);
 }
 
-TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigned_thenDoesntCallCustomDeleterInstance) {
+TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigned_thenCallsCustomDeleterInstanceAfterSecondDestructed) {
   int dummy = 0;
   int value = 0;
-  auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
-  auto obj2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
-  obj2 = std::move(obj);
-  EXPECT_EQ(0, value);
+  unique_ref<int, SetToDeleter> obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
+  {
+    unique_ref<int, SetToDeleter> obj2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
+    obj2 = std::move(obj);
+    EXPECT_EQ(0, value);
+  }
+  EXPECT_EQ(4, value);
 }
 
 TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructCalled_thenCallsCustomDeleterInstance) {
@@ -738,7 +756,7 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructCalled
   EXPECT_FALSE(obj.isValid());
 }
 
-TEST_F(UniqueRefTest, givenUniquePtrWithCustomDeleterInstance_whenMovedToUniqueRef_thenHasSameDeleterInstance) {
+TEST_F(UniqueRefTest, givenUniquePtrWithCustomDeleterInstance_whenMovedToUniquePtr_thenHasSameDeleterInstance) {
   int dummy = 0;
   SetToDeleter deleter(4);
   auto ptr = std::unique_ptr<int, SetToDeleter>(&dummy, deleter);
@@ -761,4 +779,15 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenMoveAssigning_
   auto ref2 = nullcheck(std::unique_ptr<int, SetToDeleter>(&dummy, SetToDeleter(0))).value();
   ref2 = std::move(ref);
   EXPECT_EQ(4, ref2.get_deleter().value_);
+}
+
+TEST_F(UniqueRefTest, AllowsMoveConstructingToUniqueRefOfConst) {
+  unique_ref<int> a = make_unique_ref<int>(3);
+  unique_ref<const int> b = std::move(a);
+}
+
+TEST_F(UniqueRefTest, AllowsMoveAssigningToUniqueRefOfConst) {
+  unique_ref<int> a = make_unique_ref<int>(3);
+  unique_ref<const int> b = make_unique_ref<int>(10);
+  b = std::move(a);
 }
