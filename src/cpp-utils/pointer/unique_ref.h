@@ -28,37 +28,42 @@ namespace cpputils {
 template<class T, class D = std::default_delete<T>>
 class unique_ref final {
 public:
-    // TODO Add assert != nullptr to all calls (also move constructors, ...) and test performance impact (maybe disable assertions in prod?)
     using element_type = typename std::unique_ptr<T, D>::element_type;
     using deleter_type = typename std::unique_ptr<T, D>::deleter_type;
     using pointer = typename std::unique_ptr<T, D>::pointer;
 
-    unique_ref(unique_ref&& from) noexcept: _target(std::move(from._target)) {
+    unique_ref(unique_ref&& from) noexcept
+    : _target(std::move(from._target)) {
         from._target = nullptr;
+        _invariant();
     }
 
-    template<class U> unique_ref(unique_ref<U>&& from) noexcept: _target(std::move(from._target)) {
+    template<class U> unique_ref(unique_ref<U>&& from) noexcept
+    : _target(std::move(from._target)) {
         from._target = nullptr;
+        _invariant();
     }
 
     unique_ref& operator=(unique_ref&& from) noexcept {
         _target = std::move(from._target);
         from._target = nullptr;
+        _invariant();
         return *this;
     }
 
     template<class U> unique_ref& operator=(unique_ref<U>&& from) noexcept {
         _target = std::move(from._target);
         from._target = nullptr;
+        _invariant();
         return *this;
     }
 
     typename std::add_lvalue_reference<element_type>::type operator*() const& noexcept {
-        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
+        _invariant();
         return *_target;
     }
     typename std::add_rvalue_reference<element_type>::type operator*() && noexcept {
-        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
+        _invariant();
         return std::move(*_target);
     }
 
@@ -67,18 +72,20 @@ public:
     }
 
     pointer get() const noexcept {
-        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
+        _invariant();
         return _target.get();
     }
 
     template<class T2>
     operator std::unique_ptr<T2>() && noexcept {
-      return std::move(_target);
+        _invariant();
+        return std::move(_target);
     }
 
     template<class T2>
     operator std::shared_ptr<T2>() && noexcept {
-      return std::move(_target);
+        _invariant();
+        return std::move(_target);
     }
 
     void swap(unique_ref& rhs) noexcept {
@@ -90,20 +97,29 @@ public:
     }
 
     deleter_type& get_deleter() noexcept {
-      return _target.get_deleter();
+        return _target.get_deleter();
     }
 
     const deleter_type& get_deleter() const noexcept {
-      return _target.get_deleter();
+        return _target.get_deleter();
     }
 
 private:
-    explicit unique_ref(std::unique_ptr<T, D> target) noexcept: _target(std::move(target)) {}
+    explicit unique_ref(std::unique_ptr<T, D> target) noexcept
+    : _target(std::move(target)) {}
+
+    void _invariant() const {
+        // TODO Test performance impact of this
+        ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
+    }
+
     template<class U, class... Args> friend unique_ref<U> make_unique_ref(Args&&... args);
     template<class T2, class D2> friend boost::optional<unique_ref<T2, D2>> nullcheck(std::unique_ptr<T2, D2> ptr) noexcept;
     template<class T2, class D2> friend class unique_ref;
     template<class DST, class SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) noexcept;
-    template<class T2, class D2> friend const typename unique_ref<T2, D2>::pointer _extract_ptr(const unique_ref<T2, D2> &obj) noexcept;
+    template<class T2, class D2> friend bool operator==(const unique_ref<T2, D2>& lhs, const unique_ref<T2, D2>& rhs) noexcept;
+    friend struct std::hash<unique_ref<T, D>>;
+    friend struct std::less<unique_ref<T, D>>;
 
     std::unique_ptr<T, D> _target;
 
@@ -127,10 +143,6 @@ template<class T, class D> inline void destruct(unique_ref<T, D> /*ptr*/) {
     // ptr will be moved in to this function and destructed on return
 }
 
-template<class T, class D> const typename unique_ref<T, D>::pointer _extract_ptr(const unique_ref<T, D> &obj) noexcept {
-    return obj._target.get();
-}
-
 //TODO Also allow passing a rvalue reference, otherwise dynamic_pointer_move(func()) won't work
 template<class DST, class SRC>
 inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) noexcept {
@@ -139,7 +151,7 @@ inline boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &so
 
 template<class T, class D>
 inline bool operator==(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs) noexcept {
-    return _extract_ptr(lhs) == _extract_ptr(rhs);
+    return lhs._target == rhs._target;
 }
 
 template<class T, class D>
@@ -168,14 +180,14 @@ namespace std {
     // Allow using it in std::unordered_set / std::unordered_map
     template<class T, class D> struct hash<cpputils::unique_ref<T, D>> {
         size_t operator()(const cpputils::unique_ref<T, D> &ref) const noexcept {
-            return std::hash<typename cpputils::unique_ref<T, D>::pointer>()(_extract_ptr(ref));
+            return std::hash<unique_ptr<T, D>>()(ref._target);
         }
     };
 
     // Allow using it in std::map / std::set
     template <class T, class D> struct less<cpputils::unique_ref<T, D>> {
         bool operator()(const cpputils::unique_ref<T, D> &lhs, const cpputils::unique_ref<T, D> &rhs) const noexcept {
-            return _extract_ptr(lhs) < _extract_ptr(rhs);
+            return lhs._target < rhs._target;
         }
     };
 }
