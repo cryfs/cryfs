@@ -85,7 +85,7 @@ public:
         std::swap(_target, rhs._target);
     }
 
-    bool isValid() const noexcept {
+    bool is_valid() const noexcept {
         return _target.get() != nullptr;
     }
 
