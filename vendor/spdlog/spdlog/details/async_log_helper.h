@@ -67,7 +67,7 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
         {}
 
         async_msg(async_msg_type m_type) :msg_type(m_type)
-        {};
+        {}
 
         async_msg& operator=(async_msg&& other) SPDLOG_NOEXCEPT
         {
@@ -82,7 +82,7 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
 
         // never copy or assign. should only be moved..
         async_msg(const async_msg&) = delete;
-        async_msg& operator=(async_msg& other) = delete;
+        async_msg& operator=(const async_msg& other) = delete;
 
         // construct from log_msg
         async_msg(const details::log_msg& m) :
@@ -229,8 +229,6 @@ inline spdlog::details::async_log_helper::~async_log_helper()
 inline void spdlog::details::async_log_helper::log(const details::log_msg& msg)
 {
     push_msg(async_msg(msg));
-
-
 }
 
 inline void spdlog::details::async_log_helper::push_msg(details::async_log_helper::async_msg&& new_msg)
@@ -246,7 +244,6 @@ inline void spdlog::details::async_log_helper::push_msg(details::async_log_helpe
         }
         while (!_q.enqueue(std::move(new_msg)));
     }
-
 }
 
 // optionally wait for the queue be empty and request flush from the sinks
@@ -281,9 +278,7 @@ inline void spdlog::details::async_log_helper::worker_loop()
 // return true if this thread should still be active (while no terminate msg was received)
 inline bool spdlog::details::async_log_helper::process_next_msg(log_clock::time_point& last_pop, log_clock::time_point& last_flush)
 {
-
     async_msg incoming_async_msg;
-
 
     if (_q.dequeue(incoming_async_msg))
     {
@@ -359,8 +354,7 @@ inline void spdlog::details::async_log_helper::sleep_or_yield(const spdlog::log_
 
     // yield upto 150 micros
     if (time_since_op <= microseconds(100))
-        return yield();
-
+        return std::this_thread::yield();
 
     // sleep for 20 ms upto 200 ms
     if (time_since_op <= milliseconds(200))
@@ -378,13 +372,7 @@ inline void spdlog::details::async_log_helper::wait_empty_q()
     {
         sleep_or_yield(details::os::now(), last_op);
     }
-
 }
-
-
-
-
-
 
 
 

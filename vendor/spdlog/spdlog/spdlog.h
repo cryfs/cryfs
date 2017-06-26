@@ -2,11 +2,12 @@
 // Copyright(c) 2015 Gabi Melman.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
-
 // spdlog main header file.
 // see example.cpp for usage example
 
 #pragma once
+
+#define SPDLOG_VERSION "0.12.0"
 
 #include <spdlog/tweakme.h>
 #include <spdlog/common.h>
@@ -88,10 +89,17 @@ std::shared_ptr<logger> daily_logger_st(const std::string& logger_name, const fi
 //
 // Create and register stdout/stderr loggers
 //
-std::shared_ptr<logger> stdout_logger_mt(const std::string& logger_name, bool color = false);
-std::shared_ptr<logger> stdout_logger_st(const std::string& logger_name, bool color = false);
-std::shared_ptr<logger> stderr_logger_mt(const std::string& logger_name, bool color = false);
-std::shared_ptr<logger> stderr_logger_st(const std::string& logger_name, bool color = false);
+std::shared_ptr<logger> stdout_logger_mt(const std::string& logger_name);
+std::shared_ptr<logger> stdout_logger_st(const std::string& logger_name);
+std::shared_ptr<logger> stderr_logger_mt(const std::string& logger_name);
+std::shared_ptr<logger> stderr_logger_st(const std::string& logger_name);
+//
+// Create and register colored stdout/stderr loggers
+//
+std::shared_ptr<logger> stdout_color_mt(const std::string& logger_name);
+std::shared_ptr<logger> stdout_color_st(const std::string& logger_name);
+std::shared_ptr<logger> stderr_color_mt(const std::string& logger_name);
+std::shared_ptr<logger> stderr_color_st(const std::string& logger_name);
 
 
 //
