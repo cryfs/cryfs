@@ -53,6 +53,41 @@ public:
     return _baseBlockStore->store(key, dataWithHeader);
   }
 
+  uint64_t numBlocks() const override {
+    return _baseBlockStore->numBlocks();
+  }
+
+  uint64_t estimateNumFreeBytes() const override {
+    return _baseBlockStore->estimateNumFreeBytes();
+  }
+
+  uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override {
+    uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+    if (baseBlockSize <= HEADER_LENGTH) {
+      return 0;
+    }
+    return baseBlockSize - HEADER_LENGTH;
+  }
+
+  void forEachBlock(std::function<void (const Key &)> callback) const override {
+    if (!_missingBlockIsIntegrityViolation) {
+      return _baseBlockStore->forEachBlock(std::move(callback));
+    }
+
+    std::unordered_set<blockstore::Key> existingBlocks = _knownBlockVersions.existingBlocks();
+    _baseBlockStore->forEachBlock([&existingBlocks, callback] (const Key &key) {
+      callback(key);
+
+      auto found = existingBlocks.find(key);
+      if (found != existingBlocks.end()) {
+        existingBlocks.erase(found);
+      }
+    });
+    if (!existingBlocks.empty()) {
+      integrityViolationDetected("A block that should have existed wasn't found.");
+    }
+  }
+
 private:
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;

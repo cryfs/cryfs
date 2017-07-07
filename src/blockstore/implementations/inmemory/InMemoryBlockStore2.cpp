@@ -62,5 +62,23 @@ future<void> InMemoryBlockStore2::store(const Key &key, const Data &data) {
   return make_ready_future();
 }
 
+uint64_t InMemoryBlockStore2::numBlocks() const {
+  return _blocks.size();
+}
+
+uint64_t InMemoryBlockStore2::estimateNumFreeBytes() const {
+  return cpputils::system::get_total_memory();
+}
+
+uint64_t InMemoryBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+  return blockSize;
+}
+
+void InMemoryBlockStore2::forEachBlock(std::function<void (const Key &)> callback) const {
+  for (const auto &entry : _blocks) {
+    callback(entry.first);
+  }
+}
+
 }
 }

@@ -28,7 +28,7 @@ public:
 
   // Returns, how much space a block has if we allow it to take the given physical block size (i.e. after removing headers, checksums, whatever else).
   // This can be used to create blocks with a certain physical block size.
-  virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0;
+  virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0; // TODO Test
 
   virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
 

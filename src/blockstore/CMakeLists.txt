@@ -30,6 +30,8 @@ set(SOURCES
   implementations/caching/cache/QueueMap.cpp
   implementations/caching/CachedBlock.cpp
   implementations/caching/NewBlock.cpp
+  implementations/low2highlevel/LowToHighLevelBlock.cpp
+  implementations/low2highlevel/LowToHighLevelBlockStore.cpp
   implementations/versioncounting/VersionCountingBlock.cpp
   implementations/versioncounting/VersionCountingBlockStore.cpp
   implementations/versioncounting/VersionCountingBlockStore2.cpp

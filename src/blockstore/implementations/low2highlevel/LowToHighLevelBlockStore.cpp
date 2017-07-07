@@ -1,0 +1,69 @@
+#include <unordered_set>
+#include "LowToHighLevelBlockStore.h"
+#include "LowToHighLevelBlock.h"
+
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using cpputils::Data;
+using boost::none;
+using boost::optional;
+using std::string;
+namespace bf = boost::filesystem;
+
+namespace blockstore {
+namespace lowtohighlevel {
+
+LowToHighLevelBlockStore::LowToHighLevelBlockStore(unique_ref<BlockStore2> baseBlockStore)
+    : _baseBlockStore(std::move(baseBlockStore)) {
+}
+
+Key LowToHighLevelBlockStore::createKey() {
+    // TODO Is this the right way?
+    return cpputils::Random::PseudoRandom().getFixedSize<Key::BINARY_LENGTH>();
+}
+
+optional<unique_ref<Block>> LowToHighLevelBlockStore::tryCreate(const Key &key, Data data) {
+    //TODO Easier implementation? This is only so complicated because of the cast LowToHighLevelBlock -> Block
+    auto result = LowToHighLevelBlock::TryCreateNew(_baseBlockStore.get(), key, std::move(data));
+    if (result == boost::none) {
+        return boost::none;
+    }
+    return unique_ref<Block>(std::move(*result));
+}
+
+unique_ref<Block> LowToHighLevelBlockStore::overwrite(const Key &key, Data data) {
+    return unique_ref<Block>(
+        LowToHighLevelBlock::Overwrite(_baseBlockStore.get(), key, std::move(data))
+    );
+}
+
+optional<unique_ref<Block>> LowToHighLevelBlockStore::load(const Key &key) {
+    auto result = optional<unique_ref<Block>>(LowToHighLevelBlock::Load(_baseBlockStore.get(), key));
+    if (result == boost::none) {
+      return boost::none;
+    }
+    return unique_ref<Block>(std::move(*result));
+}
+
+void LowToHighLevelBlockStore::remove(const Key &key) {
+    _baseBlockStore->remove(key);
+}
+
+uint64_t LowToHighLevelBlockStore::numBlocks() const {
+    return _baseBlockStore->numBlocks();
+}
+
+uint64_t LowToHighLevelBlockStore::estimateNumFreeBytes() const {
+    return _baseBlockStore->estimateNumFreeBytes();
+}
+
+uint64_t LowToHighLevelBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
+    return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
+void LowToHighLevelBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+    _baseBlockStore->forEachBlock(std::move(callback));
+}
+
+}
+}

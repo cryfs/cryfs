@@ -18,14 +18,19 @@ class BlockStore2 {
 public:
   virtual ~BlockStore2() {}
 
+  __attribute__((warn_unused_result))
   virtual boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) = 0;
+  __attribute__((warn_unused_result))
   virtual boost::future<bool> remove(const Key &key) = 0;
 
+  __attribute__((warn_unused_result))
   virtual boost::future<boost::optional<cpputils::Data>> load(const Key &key) const = 0;
 
   // Store the block with the given key. If it doesn't exist, it is created.
+  __attribute__((warn_unused_result))
   virtual boost::future<void> store(const Key &key, const cpputils::Data &data) = 0;
 
+  __attribute__((warn_unused_result))
   boost::future<Key> create(cpputils::Data data) {
     Key key = cpputils::Random::PseudoRandom().getFixedSize<Key::BINARY_LENGTH>();
     boost::future<bool> successFuture = tryCreate(key, data);
@@ -37,6 +42,12 @@ public:
       }
     });
   }
+
+  virtual uint64_t numBlocks() const = 0;
+  //TODO Test estimateNumFreeBytes
+  virtual uint64_t estimateNumFreeBytes() const = 0;
+  virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0; // TODO Test
+  virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
 };
 
 }

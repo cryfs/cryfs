@@ -45,10 +45,32 @@ public:
     return _baseBlockStore->store(key, encrypted);
   }
 
+  uint64_t numBlocks() const override {
+    return _baseBlockStore->numBlocks();
+  }
+
+  uint64_t estimateNumFreeBytes() const override {
+    return _baseBlockStore->estimateNumFreeBytes();
+  }
+
+  uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override {
+    uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+    if (baseBlockSize <= Cipher::ciphertextSize(HEADER_LENGTH) + sizeof(FORMAT_VERSION_HEADER)) {
+      return 0;
+    }
+    return Cipher::plaintextSize(baseBlockSize - sizeof(FORMAT_VERSION_HEADER)) - HEADER_LENGTH;
+  }
+
+  void forEachBlock(std::function<void (const Key &)> callback) const override {
+    return _baseBlockStore->forEachBlock(std::move(callback));
+  }
+
 private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+
+  static constexpr unsigned int HEADER_LENGTH = Key::BINARY_LENGTH;
 
   cpputils::Data _encrypt(const Key &key, const cpputils::Data &data) const {
     cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, data);

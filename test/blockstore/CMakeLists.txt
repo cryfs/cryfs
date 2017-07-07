@@ -38,6 +38,7 @@ set(SOURCES
     implementations/versioncounting/KnownBlockVersionsTest.cpp
     implementations/versioncounting/VersionCountingBlockStoreTest_Generic.cpp
     implementations/versioncounting/VersionCountingBlockStoreTest_Specific.cpp
+    implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

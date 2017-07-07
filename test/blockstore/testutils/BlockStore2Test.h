@@ -33,6 +33,24 @@ public:
 
   ConcreteBlockStoreTestFixture fixture;
   cpputils::unique_ref<blockstore::BlockStore2> blockStore;
+
+  template<class Entry>
+  void EXPECT_UNORDERED_EQ(const std::vector<Entry> &expected, std::vector<Entry> actual) {
+    EXPECT_EQ(expected.size(), actual.size());
+    for (const Entry &expectedEntry : expected) {
+      removeOne(&actual, expectedEntry);
+    }
+  }
+
+  template<class Entry>
+  void removeOne(std::vector<Entry> *entries, const Entry &toRemove) {
+    auto found = std::find(entries->begin(), entries->end(), toRemove);
+    if (found != entries->end()) {
+      entries->erase(found);
+      return;
+    }
+    EXPECT_TRUE(false);
+  }
 };
 
 TYPED_TEST_CASE_P(BlockStore2Test);
@@ -265,6 +283,91 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadingNonExistingBloc
   EXPECT_EQ(boost::none, this->blockStore->load(key).get());
 }
 
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectOnEmptyBlockstore) {
+  auto blockStore = this->fixture.createBlockStore();
+  EXPECT_EQ(0u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterAddingOneBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->create(cpputils::Data(1)).wait();
+  EXPECT_EQ(1u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::Key key = blockStore->create(cpputils::Data(1)).get();
+  blockStore->remove(key).wait();
+  EXPECT_EQ(0u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterAddingTwoBlocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->create(cpputils::Data(1)).wait();
+  blockStore->create(cpputils::Data(0)).wait();
+  EXPECT_EQ(2u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingABlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::Key key = blockStore->create(cpputils::Data(1)).get();
+  blockStore->create(cpputils::Data(1)).wait();
+  blockStore->remove(key).wait();
+  EXPECT_EQ(1u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_zeroblocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({}, mockForEachBlockCallback.called_with);
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_oneblock) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key = blockStore->create(cpputils::Data(1)).get();
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({key}, mockForEachBlockCallback.called_with);
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_twoblocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key1 = blockStore->create(cpputils::Data(1)).get();
+  auto key2 = blockStore->create(cpputils::Data(1)).get();
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({key1, key2}, mockForEachBlockCallback.called_with);
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_threeblocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key1 = blockStore->create(cpputils::Data(1)).get();
+  auto key2 = blockStore->create(cpputils::Data(1)).get();
+  auto key3 = blockStore->create(cpputils::Data(1)).get();
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({key1, key2, key3}, mockForEachBlockCallback.called_with);
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_oneblock) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key1 = blockStore->create(cpputils::Data(1)).get();
+  blockStore->remove(key1).wait();
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({}, mockForEachBlockCallback.called_with);
+}
+
+TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_twoblocks) {
+  auto blockStore = this->fixture.createBlockStore();
+  auto key1 = blockStore->create(cpputils::Data(1)).get();
+  auto key2 = blockStore->create(cpputils::Data(1)).get();
+  blockStore->remove(key1);
+  MockForEachBlockCallback mockForEachBlockCallback;
+  blockStore->forEachBlock(mockForEachBlockCallback.callback());
+  this->EXPECT_UNORDERED_EQ({key2}, mockForEachBlockCallback.called_with);
+}
 
 REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
@@ -300,7 +403,18 @@ REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   givenEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads,
   givenNonEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads,
   givenEmptyBlockStore_whenLoadingNonExistingBlock_thenFails,
-  givenNonEmptyBlockStore_whenLoadingNonExistingBlock_thenFails
+  givenNonEmptyBlockStore_whenLoadingNonExistingBlock_thenFails,
+  NumBlocksIsCorrectOnEmptyBlockstore,
+  NumBlocksIsCorrectAfterAddingOneBlock,
+  NumBlocksIsCorrectAfterRemovingTheLastBlock,
+  NumBlocksIsCorrectAfterAddingTwoBlocks,
+  NumBlocksIsCorrectAfterRemovingABlock,
+  ForEachBlock_zeroblocks,
+  ForEachBlock_oneblock,
+  ForEachBlock_twoblocks,
+  ForEachBlock_threeblocks,
+  ForEachBlock_doesntListRemovedBlocks_oneblock,
+  ForEachBlock_doesntListRemovedBlocks_twoblocks
 );
 
 

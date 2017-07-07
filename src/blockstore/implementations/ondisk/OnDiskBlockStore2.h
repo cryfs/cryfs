@@ -8,6 +8,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include "OnDiskBlockStore.h"
 #include <cpp-utils/logging/logging.h>
+#include <sys/statvfs.h>
 
 namespace blockstore {
 namespace ondisk {
@@ -59,6 +60,41 @@ public:
     boost::filesystem::create_directory(filepath.parent_path()); // TODO Instead create all of them once at fs creation time?
     fileContent.StoreToFile(filepath);
     return boost::make_ready_future();
+  }
+
+  uint64_t numBlocks() const override {
+    uint64_t count = 0;
+    for (auto prefixDir = boost::filesystem::directory_iterator(_rootDir); prefixDir != boost::filesystem::directory_iterator(); ++prefixDir) {
+      if (boost::filesystem::is_directory(prefixDir->path())) {
+        count += std::distance(boost::filesystem::directory_iterator(prefixDir->path()), boost::filesystem::directory_iterator());
+      }
+    }
+    return count;
+  }
+
+  uint64_t estimateNumFreeBytes() const override {
+    struct statvfs stat;
+    ::statvfs(_rootDir.c_str(), &stat);
+    return stat.f_bsize*stat.f_bavail;
+  }
+
+  uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override {
+    if(blockSize <= formatVersionHeaderSize()) {
+      return 0;
+    }
+    return blockSize - formatVersionHeaderSize();
+  }
+
+  void forEachBlock(std::function<void (const Key &)> callback) const override {
+    for (auto prefixDir = boost::filesystem::directory_iterator(_rootDir); prefixDir != boost::filesystem::directory_iterator(); ++prefixDir) {
+      if (boost::filesystem::is_directory(prefixDir->path())) {
+        std::string blockKeyPrefix = prefixDir->path().filename().native();
+        for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
+          std::string blockKeyPostfix = block->path().filename().native();
+          callback(Key::FromString(blockKeyPrefix + blockKeyPostfix));
+        }
+      }
+    }
   }
 
 private:
