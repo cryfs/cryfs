@@ -1,11 +1,11 @@
 /*
- Formatting library for C++
+Formatting library for C++
 
- Copyright (c) 2012 - 2016, Victor Zverovich
- All rights reserved.
+Copyright (c) 2012 - 2016, Victor Zverovich
+All rights reserved.
 
- For the license information refer to format.h.
- */
+For the license information refer to format.h.
+*/
 
 #ifndef FMT_PRINTF_H_
 #define FMT_PRINTF_H_
@@ -13,7 +13,7 @@
 #include <algorithm>  // std::fill_n
 #include <limits>     // std::numeric_limits
 
-#include "fmt/ostream.h"
+#include "ostream.h"
 
 namespace fmt
 {
@@ -52,7 +52,7 @@ struct IntChecker<true>
     }
 };
 
-class PrecisionHandler : public ArgVisitor<PrecisionHandler, int>
+class PrecisionHandler: public ArgVisitor<PrecisionHandler, int>
 {
 public:
     void report_unhandled_arg()
@@ -70,7 +70,7 @@ public:
 };
 
 // IsZeroInt::visit(arg) returns true iff arg is a zero integer.
-class IsZeroInt : public ArgVisitor<IsZeroInt, bool>
+class IsZeroInt: public ArgVisitor<IsZeroInt, bool>
 {
 public:
     template <typename T>
@@ -83,13 +83,19 @@ public:
 template <typename T, typename U>
 struct is_same
 {
-    enum { value = 0 };
+    enum
+    {
+        value = 0
+    };
 };
 
 template <typename T>
 struct is_same<T, T>
 {
-    enum { value = 1 };
+    enum
+    {
+        value = 1
+    };
 };
 
 // An argument visitor that converts an integer argument to T for printf,
@@ -97,7 +103,7 @@ struct is_same<T, T>
 // corresponding signed or unsigned type depending on the type specifier:
 // 'd' and 'i' - signed, other - unsigned)
 template <typename T = void>
-class ArgConverter : public ArgVisitor<ArgConverter<T>, void>
+class ArgConverter: public ArgVisitor<ArgConverter<T>, void>
 {
 private:
     internal::Arg &arg_;
@@ -107,7 +113,8 @@ private:
 
 public:
     ArgConverter(internal::Arg &arg, wchar_t type)
-        : arg_(arg), type_(type) {}
+        : arg_(arg), type_(type)
+    {}
 
     void visit_bool(bool value)
     {
@@ -158,7 +165,7 @@ public:
 };
 
 // Converts an integer argument to char for printf.
-class CharConverter : public ArgVisitor<CharConverter, void>
+class CharConverter: public ArgVisitor<CharConverter, void>
 {
 private:
     internal::Arg &arg_;
@@ -166,7 +173,8 @@ private:
     FMT_DISALLOW_COPY_AND_ASSIGN(CharConverter);
 
 public:
-    explicit CharConverter(internal::Arg &arg) : arg_(arg) {}
+    explicit CharConverter(internal::Arg &arg): arg_(arg)
+    {}
 
     template <typename T>
     void visit_any_int(T value)
@@ -178,7 +186,7 @@ public:
 
 // Checks if an argument is a valid printf width specifier and sets
 // left alignment if it is negative.
-class WidthHandler : public ArgVisitor<WidthHandler, unsigned>
+class WidthHandler: public ArgVisitor<WidthHandler, unsigned>
 {
 private:
     FormatSpec &spec_;
@@ -186,7 +194,8 @@ private:
     FMT_DISALLOW_COPY_AND_ASSIGN(WidthHandler);
 
 public:
-    explicit WidthHandler(FormatSpec &spec) : spec_(spec) {}
+    explicit WidthHandler(FormatSpec &spec): spec_(spec)
+    {}
 
     void report_unhandled_arg()
     {
@@ -212,24 +221,24 @@ public:
 }  // namespace internal
 
 /**
-  \rst
-  A ``printf`` argument formatter based on the `curiously recurring template
-  pattern <http://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`_.
+\rst
+A ``printf`` argument formatter based on the `curiously recurring template
+pattern <http://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`_.
 
-  To use `~fmt::BasicPrintfArgFormatter` define a subclass that implements some
-  or all of the visit methods with the same signatures as the methods in
-  `~fmt::ArgVisitor`, for example, `~fmt::ArgVisitor::visit_int()`.
-  Pass the subclass as the *Impl* template parameter. When a formatting
-  function processes an argument, it will dispatch to a visit method
-  specific to the argument type. For example, if the argument type is
-  ``double`` then the `~fmt::ArgVisitor::visit_double()` method of a subclass
-  will be called. If the subclass doesn't contain a method with this signature,
-  then a corresponding method of `~fmt::BasicPrintfArgFormatter` or its
-  superclass will be called.
-  \endrst
- */
+To use `~fmt::BasicPrintfArgFormatter` define a subclass that implements some
+or all of the visit methods with the same signatures as the methods in
+`~fmt::ArgVisitor`, for example, `~fmt::ArgVisitor::visit_int()`.
+Pass the subclass as the *Impl* template parameter. When a formatting
+function processes an argument, it will dispatch to a visit method
+specific to the argument type. For example, if the argument type is
+``double`` then the `~fmt::ArgVisitor::visit_double()` method of a subclass
+will be called. If the subclass doesn't contain a method with this signature,
+then a corresponding method of `~fmt::BasicPrintfArgFormatter` or its
+superclass will be called.
+\endrst
+*/
 template <typename Impl, typename Char>
-class BasicPrintfArgFormatter : public internal::ArgFormatterBase<Impl, Char>
+class BasicPrintfArgFormatter: public internal::ArgFormatterBase<Impl, Char>
 {
 private:
     void write_null_pointer()
@@ -242,14 +251,15 @@ private:
 
 public:
     /**
-      \rst
-      Constructs an argument formatter object.
-      *writer* is a reference to the output writer and *spec* contains format
-      specifier information for standard argument types.
-      \endrst
-     */
-    BasicPrintfArgFormatter(BasicWriter<Char> &writer, FormatSpec &spec)
-        : internal::ArgFormatterBase<Impl, Char>(writer, spec) {}
+    \rst
+    Constructs an argument formatter object.
+    *writer* is a reference to the output writer and *spec* contains format
+    specifier information for standard argument types.
+    \endrst
+    */
+    BasicPrintfArgFormatter(BasicWriter<Char> &w, FormatSpec &s)
+        : internal::ArgFormatterBase<Impl, Char>(w, s)
+    {}
 
     /** Formats an argument of type ``bool``. */
     void visit_bool(bool value)
@@ -315,7 +325,7 @@ public:
     void visit_custom(internal::Arg::CustomValue c)
     {
         BasicFormatter<Char> formatter(ArgList(), this->writer());
-        const Char format_str[] = {'}', 0};
+        const Char format_str[] = { '}', 0 };
         const Char *format = format_str;
         c.format(&formatter, c.value, &format);
     }
@@ -329,12 +339,13 @@ class PrintfArgFormatter
 public:
     /** Constructs an argument formatter object. */
     PrintfArgFormatter(BasicWriter<Char> &w, FormatSpec &s)
-        : BasicPrintfArgFormatter<PrintfArgFormatter<Char>, Char>(w, s) {}
+        : BasicPrintfArgFormatter<PrintfArgFormatter<Char>, Char>(w, s)
+    {}
 };
 
 /** This template formats data and writes the output to a writer. */
 template <typename Char, typename ArgFormatter = PrintfArgFormatter<Char> >
-class PrintfFormatter : private internal::FormatterBase
+class PrintfFormatter: private internal::FormatterBase
 {
 private:
     BasicWriter<Char> &writer_;
@@ -352,14 +363,15 @@ private:
 
 public:
     /**
-     \rst
-     Constructs a ``PrintfFormatter`` object. References to the arguments and
-     the writer are stored in the formatter object so make sure they have
-     appropriate lifetimes.
-     \endrst
-     */
-    explicit PrintfFormatter(const ArgList &args, BasicWriter<Char> &w)
-        : FormatterBase(args), writer_(w) {}
+    \rst
+    Constructs a ``PrintfFormatter`` object. References to the arguments and
+    the writer are stored in the formatter object so make sure they have
+    appropriate lifetimes.
+    \endrst
+    */
+    explicit PrintfFormatter(const ArgList &al, BasicWriter<Char> &w)
+        : FormatterBase(al), writer_(w)
+    {}
 
     /** Formats stored arguments and writes the output to the writer. */
     FMT_API void format(BasicCStringRef<Char> format_str);
@@ -399,7 +411,7 @@ internal::Arg PrintfFormatter<Char, AF>::get_arg(const Char *s,
         unsigned arg_index)
 {
     (void)s;
-    const char *error = 0;
+    const char *error = FMT_NULL;
     internal::Arg arg = arg_index == std::numeric_limits<unsigned>::max() ?
                         next_arg(error) : FormatterBase::get_arg(arg_index - 1, error);
     if (error)
@@ -569,13 +581,13 @@ void printf(BasicWriter<Char> &w, BasicCStringRef<Char> format, ArgList args)
 }
 
 /**
-  \rst
-  Formats arguments and returns the result as a string.
+\rst
+Formats arguments and returns the result as a string.
 
-  **Example**::
+**Example**::
 
-    std::string message = fmt::sprintf("The answer is %d", 42);
-  \endrst
+std::string message = fmt::sprintf("The answer is %d", 42);
+\endrst
 */
 inline std::string sprintf(CStringRef format, ArgList args)
 {
@@ -594,26 +606,26 @@ inline std::wstring sprintf(WCStringRef format, ArgList args)
 FMT_VARIADIC_W(std::wstring, sprintf, WCStringRef)
 
 /**
-  \rst
-  Prints formatted data to the file *f*.
+\rst
+Prints formatted data to the file *f*.
 
-  **Example**::
+**Example**::
 
-    fmt::fprintf(stderr, "Don't %s!", "panic");
-  \endrst
- */
+fmt::fprintf(stderr, "Don't %s!", "panic");
+\endrst
+*/
 FMT_API int fprintf(std::FILE *f, CStringRef format, ArgList args);
 FMT_VARIADIC(int, fprintf, std::FILE *, CStringRef)
 
 /**
-  \rst
-  Prints formatted data to ``stdout``.
+\rst
+Prints formatted data to ``stdout``.
 
-  **Example**::
+**Example**::
 
-    fmt::printf("Elapsed time: %.2f seconds", 1.23);
-  \endrst
- */
+fmt::printf("Elapsed time: %.2f seconds", 1.23);
+\endrst
+*/
 inline int printf(CStringRef format, ArgList args)
 {
     return fprintf(stdout, format, args);
@@ -621,14 +633,14 @@ inline int printf(CStringRef format, ArgList args)
 FMT_VARIADIC(int, printf, CStringRef)
 
 /**
-  \rst
-  Prints formatted data to the stream *os*.
+\rst
+Prints formatted data to the stream *os*.
 
-  **Example**::
+**Example**::
 
-    fprintf(cerr, "Don't %s!", "panic");
-  \endrst
- */
+fprintf(cerr, "Don't %s!", "panic");
+\endrst
+*/
 inline int fprintf(std::ostream &os, CStringRef format_str, ArgList args)
 {
     MemoryWriter w;
@@ -638,5 +650,9 @@ inline int fprintf(std::ostream &os, CStringRef format_str, ArgList args)
 }
 FMT_VARIADIC(int, fprintf, std::ostream &, CStringRef)
 }  // namespace fmt
+
+#ifdef FMT_HEADER_ONLY
+# include "printf.cc"
+#endif
 
 #endif  // FMT_PRINTF_H_

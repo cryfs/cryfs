@@ -35,8 +35,8 @@ void CryOpenFile::flush() {
 
 void CryOpenFile::stat(struct ::stat *result) const {
   _device->callFsActionCallbacks();
-  _parent->statChildExceptSize(_fileBlob->key(), result);
   result->st_size = _fileBlob->size();
+  _parent->statChildWithSizeAlreadySet(_fileBlob->key(), result);
 }
 
 void CryOpenFile::truncate(off_t size) const {

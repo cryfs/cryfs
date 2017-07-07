@@ -24,5 +24,6 @@ endif(NOT CRYFS_UPDATE_CHECKS)
 
 add_subdirectory(vendor)
 add_subdirectory(src)
+add_subdirectory(doc)
 add_subdirectory(test)
 add_subdirectory(cpack)

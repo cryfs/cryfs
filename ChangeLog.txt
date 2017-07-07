@@ -7,7 +7,12 @@ New Features:
 Improvements:
 * Performance improvements
 
-Version 0.9.7 (unreleased)
+Version 0.9.8 (unreleased)
+--------------
+Fixed bugs:
+* `du` shows correct file system size
+
+Version 0.9.7
 --------------
 Compatibility:
 * Runs on FreeBSD

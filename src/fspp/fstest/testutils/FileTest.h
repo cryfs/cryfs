@@ -12,13 +12,13 @@ class FileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
   FileTest(): file_root(), file_nested() {
 	this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-	file_root = cpputils::to_unique_ptr(this->LoadFile("/myfile"));
-	file_root_node = cpputils::to_unique_ptr(this->Load("/myfile"));
+	file_root = this->LoadFile("/myfile");
+	file_root_node = this->Load("/myfile");
 
 	this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
 	this->LoadDir("/mydir")->createAndOpenFile("mynestedfile", this->MODE_PUBLIC, 0, 0);
-	file_nested = cpputils::to_unique_ptr(this->LoadFile("/mydir/mynestedfile"));
-	file_nested_node = cpputils::to_unique_ptr(this->Load("/mydir/mynestedfile"));
+	file_nested = this->LoadFile("/mydir/mynestedfile");
+	file_nested_node = this->Load("/mydir/mynestedfile");
 
 	this->LoadDir("/")->createDir("mydir2", this->MODE_PUBLIC, 0, 0);
   }
