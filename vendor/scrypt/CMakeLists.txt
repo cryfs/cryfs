@@ -13,33 +13,33 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 ExternalProject_Add(scrypt_original
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt
-        CONFIGURE_COMMAND /usr/bin/env CC=${CMAKE_C_COMPILER} CFLAGS=${SCRYPT_CFLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/configure --prefix=${CMAKE_BINARY_DIR}/vendor/scrypt/
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt
+        CONFIGURE_COMMAND /usr/bin/env CC=${CMAKE_C_COMPILER} CFLAGS=${SCRYPT_CFLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/configure --prefix=${CMAKE_BINARY_DIR}/vendor/scrypt/
         PREFIX ${CMAKE_BINARY_DIR}/vendor/scrypt/
         BUILD_COMMAND ${MAKE}
 )
 add_library(${PROJECT_NAME} STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/lib/crypto/crypto_scrypt.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/lib/crypto/crypto_scrypt_smix.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/util/warnp.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/util/insecure_memzero.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/alg/sha256.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/cpusupport/cpusupport_x86_aesni.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/cpusupport/cpusupport_x86_sse2.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/lib/crypto/crypto_scrypt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/lib/crypto/crypto_scrypt_smix.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/util/warnp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/util/insecure_memzero.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/alg/sha256.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/cpusupport/cpusupport_x86_aesni.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/cpusupport/cpusupport_x86_sse2.c
 )
 target_link_libraries(${PROJECT_NAME}
         ${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/libscrypt_sse2.a
         ${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/libcperciva_aesni.a
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/cpusupport
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/alg
-        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0/scrypt/libcperciva/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/cpusupport
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/alg
+        ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1/scrypt/libcperciva/util
 )
 target_compile_options(${PROJECT_NAME} PRIVATE
         -DCONFIG_H_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/config.h\"
         -DCPUSUPPORT_CONFIG_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/cpusupport-config.h\"
 )
 add_dependencies(${PROJECT_NAME} scrypt_original)
-target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.0)
+target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1)
