@@ -123,6 +123,13 @@ TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenRemovingNonexistingBlock_
   EXPECT_EQ(false, result);
 }
 
+TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails) {
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  blockstore::Key differentKey = blockstore::Key::FromString("290AC2C7097274A389EE14B91B72B493");
+  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(1024)).get());
+  EXPECT_EQ(false, this->blockStore->remove(differentKey).get());
+}
+
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
   auto key = this->blockStore->create(cpputils::Data(0)).get();
   auto loaded = this->blockStore->load(key).get().value();
@@ -147,6 +154,38 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCreatingAndLoadingNonE
   this->blockStore->create(cpputils::Data(512));
   cpputils::Data data = cpputils::DataFixture::generate(1024);
   auto key = this->blockStore->create(data.copy()).get();
+  auto loaded = this->blockStore->load(key).get().value();
+  EXPECT_EQ(loaded, data);
+}
+
+TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(0)).get());
+  auto loaded = this->blockStore->load(key).get().value();
+  EXPECT_EQ(0u, loaded.size());
+}
+
+TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  this->blockStore->create(cpputils::Data(512));
+  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(0)).get());
+  auto loaded = this->blockStore->load(key).get().value();
+  EXPECT_EQ(0u, loaded.size());
+}
+
+TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  ASSERT_TRUE(this->blockStore->tryCreate(key, data.copy()).get());
+  auto loaded = this->blockStore->load(key).get().value();
+  EXPECT_EQ(loaded, data);
+}
+
+TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
+  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  this->blockStore->create(cpputils::Data(512));
+  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  ASSERT_TRUE(this->blockStore->tryCreate(key, data.copy()).get());
   auto loaded = this->blockStore->load(key).get().value();
   EXPECT_EQ(loaded, data);
 }
@@ -243,10 +282,15 @@ REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   givenOtherwiseEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds,
   givenNonEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds,
   givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
+  givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
   givenEmptyBlockStore_whenCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads,
   givenNonEmptyBlockStore_whenCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads,
   givenEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads,
   givenNonEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads,
+  givenEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads,
+  givenNonEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads,
+  givenEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads,
+  givenNonEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads,
   givenEmptyBlockStore_whenStoringAndLoadingNonExistingEmptyBlock_thenCorrectBlockLoads,
   givenNonEmptyBlockStore_whenStoringAndLoadingNonExistingEmptyBlock_thenCorrectBlockLoads,
   givenEmptyBlockStore_whenStoringAndLoadingNonExistingNonEmptyBlock_thenCorrectBlockLoads,
