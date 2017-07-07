@@ -57,6 +57,7 @@ future<void> InMemoryBlockStore2::store(const Key &key, const Data &data) {
       }
     });
   }
+  // TODO Would have better performance: found->second.overwriteWith(data)
   found->second = data.copy();
   return make_ready_future();
 }
