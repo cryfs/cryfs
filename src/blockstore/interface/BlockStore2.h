@@ -22,6 +22,8 @@ public:
   virtual boost::future<bool> remove(const Key &key) = 0;
 
   virtual boost::future<boost::optional<cpputils::Data>> load(const Key &key) const = 0;
+
+  // Store the block with the given key. If it doesn't exist, it is created.
   virtual boost::future<void> store(const Key &key, const cpputils::Data &data) = 0;
 
   boost::future<Key> create(cpputils::Data data) {

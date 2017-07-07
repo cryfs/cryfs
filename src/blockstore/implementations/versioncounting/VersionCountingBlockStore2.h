@@ -48,22 +48,9 @@ public:
 
   boost::future<void> store(const Key &key, const cpputils::Data &data) override {
     _checkNoPastIntegrityViolations();
-    //TODO There's a bug in the next branch in override(). They have to load and read the old version number too.
-    return load(key).then([this, key, data = data.copy()] (boost::future<boost::optional<cpputils::Data>> loaded_) {
-      auto loaded = loaded_.get();
-      if (boost::none == loaded) {
-        return tryCreate(key, data).then([] (boost::future<bool> success) {
-          if (!success.get()) {
-            throw std::runtime_error("Could neither store nor create the block in VersionCountingBlockStore::store");
-          }
-        });
-      }
-      // Loading the block already read the newest version number into _knownBlockVersions, now we only have to increment it
-      // TODO Check that (with a caching blockstore below) this doesn't impact performance
-      uint64_t version = _knownBlockVersions.incrementVersion(key);
-      cpputils::Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
-      return _baseBlockStore->store(key, dataWithHeader);
-    });
+    uint64_t version = _knownBlockVersions.incrementVersion(key);
+    cpputils::Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
+    return _baseBlockStore->store(key, dataWithHeader);
   }
 
 private:
