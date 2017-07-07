@@ -32,6 +32,7 @@ set(SOURCES
   implementations/caching/NewBlock.cpp
   implementations/versioncounting/VersionCountingBlock.cpp
   implementations/versioncounting/VersionCountingBlockStore.cpp
+  implementations/versioncounting/VersionCountingBlockStore2.cpp
   implementations/versioncounting/KnownBlockVersions.cpp
   implementations/versioncounting/ClientIdAndBlockKey.cpp
   implementations/versioncounting/IntegrityViolationError.cpp
