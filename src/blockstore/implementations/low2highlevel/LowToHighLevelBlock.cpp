@@ -1,32 +1,41 @@
 #include "LowToHighLevelBlock.h"
 
+using boost::optional;
+using boost::none;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using cpputils::Data;
+namespace DataUtils = cpputils::DataUtils;
+using std::unique_lock;
+using std::mutex;
+
 namespace blockstore {
 namespace lowtohighlevel {
 
-boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const Key &key, cpputils::Data data) {
+optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const Key &key, Data data) {
   // TODO .get() is blocking
   bool success = baseBlockStore->tryCreate(key, data.copy()).get(); // TODO Copy necessary?
   if (!success) {
-    return boost::none;
+    return none;
   }
 
-  return cpputils::make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
+  return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
 }
 
-cpputils::unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const Key &key, cpputils::Data data) {
+unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const Key &key, Data data) {
   auto baseBlock = baseBlockStore->store(key, data); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
-  return cpputils::make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
+  return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
 }
 
-boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::Load(BlockStore2 *baseBlockStore, const Key &key) {
-  boost::optional<cpputils::Data> loadedData = baseBlockStore->load(key).get(); // TODO .get() is blocking
-  if (loadedData == boost::none) {
-    return boost::none;
+optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::Load(BlockStore2 *baseBlockStore, const Key &key) {
+  optional<Data> loadedData = baseBlockStore->load(key).get(); // TODO .get() is blocking
+  if (loadedData == none) {
+    return none;
   }
-  return cpputils::make_unique_ref<LowToHighLevelBlock>(key, std::move(*loadedData), baseBlockStore);
+  return make_unique_ref<LowToHighLevelBlock>(key, std::move(*loadedData), baseBlockStore);
 }
 
-LowToHighLevelBlock::LowToHighLevelBlock(const Key& key, cpputils::Data data, BlockStore2 *baseBlockStore)
+LowToHighLevelBlock::LowToHighLevelBlock(const Key& key, Data data, BlockStore2 *baseBlockStore)
     :Block(key),
      _baseBlockStore(baseBlockStore),
      _data(std::move(data)),
@@ -35,7 +44,7 @@ LowToHighLevelBlock::LowToHighLevelBlock(const Key& key, cpputils::Data data, Bl
 }
 
 LowToHighLevelBlock::~LowToHighLevelBlock() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  unique_lock<mutex> lock(_mutex);
   _storeToBaseBlock();
 }
 
@@ -50,7 +59,7 @@ void LowToHighLevelBlock::write(const void *source, uint64_t offset, uint64_t co
 }
 
 void LowToHighLevelBlock::flush() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  unique_lock<mutex> lock(_mutex);
   _storeToBaseBlock();
 }
 
@@ -59,7 +68,7 @@ size_t LowToHighLevelBlock::size() const {
 }
 
 void LowToHighLevelBlock::resize(size_t newSize) {
-  _data = cpputils::DataUtils::resize(std::move(_data), newSize);
+  _data = DataUtils::resize(std::move(_data), newSize);
   _dataChanged = true;
 }
 
