@@ -25,8 +25,8 @@ Key LowToHighLevelBlockStore::createKey() {
 optional<unique_ref<Block>> LowToHighLevelBlockStore::tryCreate(const Key &key, Data data) {
     //TODO Easier implementation? This is only so complicated because of the cast LowToHighLevelBlock -> Block
     auto result = LowToHighLevelBlock::TryCreateNew(_baseBlockStore.get(), key, std::move(data));
-    if (result == boost::none) {
-        return boost::none;
+    if (result == none) {
+        return none;
     }
     return unique_ref<Block>(std::move(*result));
 }
@@ -39,8 +39,8 @@ unique_ref<Block> LowToHighLevelBlockStore::overwrite(const Key &key, Data data)
 
 optional<unique_ref<Block>> LowToHighLevelBlockStore::load(const Key &key) {
     auto result = optional<unique_ref<Block>>(LowToHighLevelBlock::Load(_baseBlockStore.get(), key));
-    if (result == boost::none) {
-      return boost::none;
+    if (result == none) {
+      return none;
     }
     return unique_ref<Block>(std::move(*result));
 }
