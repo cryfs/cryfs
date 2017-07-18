@@ -1,7 +1,7 @@
 #include "CryCipher.h"
 
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <blockstore/implementations/encrypted/EncryptedBlockStore.h>
+#include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include "crypto/inner/ConcreteInnerEncryptor.h"
 
 using std::vector;
@@ -9,12 +9,12 @@ using std::string;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::FixedSizeData;
-using blockstore::BlockStore;
+using blockstore::BlockStore2;
 using std::shared_ptr;
 using std::make_shared;
 using boost::optional;
 using boost::none;
-using blockstore::encrypted::EncryptedBlockStore;
+using blockstore::encrypted::EncryptedBlockStore2;
 
 using namespace cryfs;
 using namespace cpputils;
@@ -39,8 +39,8 @@ public:
         return _warning;
     }
 
-    unique_ref<BlockStore> createEncryptedBlockstore(unique_ref<BlockStore> baseBlockStore, const string &encKey) const override {
-        return make_unique_ref<EncryptedBlockStore<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(encKey));
+    unique_ref<BlockStore2> createEncryptedBlockstore(unique_ref<BlockStore2> baseBlockStore, const string &encKey) const override {
+        return make_unique_ref<EncryptedBlockStore2<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(encKey));
     }
 
     string createKey(cpputils::RandomGenerator &randomGenerator) const override {

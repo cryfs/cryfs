@@ -2,7 +2,7 @@
 #include <cpp-utils/tempfile/TempDir.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/pointer/cast.h>
-#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cryfs/filesystem/CryDevice.h>
 #include <cryfs/filesystem/CryDir.h>
 #include <cryfs/filesystem/CryFile.h>
@@ -30,7 +30,7 @@ using cpputils::SCrypt;
 using cpputils::Data;
 using cpputils::system::FakeHomeDirectoryRAII;
 using cpputils::NoninteractiveConsole;
-using blockstore::ondisk::OnDiskBlockStore;
+using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;
 
 namespace bf = boost::filesystem;
@@ -46,8 +46,8 @@ public:
     return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none).loadOrCreate(config.path()).value().configFile;
   }
 
-  unique_ref<OnDiskBlockStore> blockStore() {
-    return make_unique_ref<OnDiskBlockStore>(rootdir.path());
+  unique_ref<OnDiskBlockStore2> blockStore() {
+    return make_unique_ref<OnDiskBlockStore2>(rootdir.path());
   }
 
   TempDir rootdir;

@@ -28,10 +28,6 @@ public:
   void integrityViolationDetected(const std::string &reason) const;
   KnownBlockVersions *knownBlockVersions();
 
-#ifndef CRYFS_NO_COMPATIBILITY
-  static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId);
-#endif
-
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
   KnownBlockVersions _knownBlockVersions;

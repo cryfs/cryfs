@@ -45,10 +45,6 @@ public:
 
   cpputils::unique_ref<Block> releaseBlock();
 
-#ifndef CRYFS_NO_COMPATIBILITY
-  static void migrateFromBlockstoreWithoutVersionNumbers(cpputils::unique_ref<Block> baseBlock, KnownBlockVersions *knownBlockVersions);
-#endif
-
 private:
   VersionCountingBlockStore *_blockStore;
   cpputils::unique_ref<Block> _baseBlock;

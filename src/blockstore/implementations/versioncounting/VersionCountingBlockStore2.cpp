@@ -1,4 +1,6 @@
+#include <blockstore/interface/BlockStore2.h>
 #include "VersionCountingBlockStore2.h"
+#include "KnownBlockVersions.h"
 
 using cpputils::Data;
 using cpputils::unique_ref;
@@ -6,6 +8,7 @@ using std::string;
 using boost::optional;
 using boost::none;
 using boost::future;
+using namespace cpputils::logging;
 
 namespace blockstore {
 namespace versioncounting {
@@ -144,6 +147,30 @@ void VersionCountingBlockStore2::forEachBlock(std::function<void (const Key &)> 
     integrityViolationDetected("A block that should have existed wasn't found.");
   }
 }
+
+#ifndef CRYFS_NO_COMPATIBILITY
+void VersionCountingBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(BlockStore2 *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId) {
+  std::cout << "Migrating file system for integrity features. Please don't interrupt this process. This can take a while..." << std::flush;
+  KnownBlockVersions knownBlockVersions(integrityFilePath, myClientId);
+  baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions] (const Key &key) {
+    migrateBlockFromBlockstoreWithoutVersionNumbers(baseBlockStore, key, &knownBlockVersions);
+  });
+  std::cout << "done" << std::endl;
+}
+
+void VersionCountingBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(blockstore::BlockStore2* baseBlockStore, const blockstore::Key& key, KnownBlockVersions *knownBlockVersions) {
+  uint64_t version = knownBlockVersions->incrementVersion(key);
+
+  auto data_ = baseBlockStore->load(key).get(); // TODO this is blocking
+  if (data_ == boost::none) {
+    LOG(WARN, "Block not found, but was returned from forEachBlock before");
+    return;
+  }
+  cpputils::Data data = std::move(*data_);
+  cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), version, std::move(data));
+  baseBlockStore->store(key, std::move(dataWithHeader)).wait(); // TODO This is blocking
+}
+#endif
 
 }
 }

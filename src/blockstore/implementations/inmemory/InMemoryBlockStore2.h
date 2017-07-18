@@ -23,7 +23,10 @@ public:
   void forEachBlock(std::function<void (const Key &)> callback) const override;
 
 private:
+  std::vector<Key> _allBlockKeys() const;
+
   std::unordered_map<Key, cpputils::Data> _blocks;
+  mutable std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(InMemoryBlockStore2);
 };

@@ -1,6 +1,6 @@
 #include "Cli.h"
 
-#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore.h>
 #include <blockstore/implementations/inmemory/InMemoryBlock.h>
 #include <cmath>
@@ -32,7 +32,7 @@ using namespace cryfs;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 
-using blockstore::ondisk::OnDiskBlockStore;
+using blockstore::ondisk::OnDiskBlockStore2;
 using blockstore::inmemory::InMemoryBlockStore;
 using program_options::ProgramOptions;
 
@@ -229,7 +229,7 @@ namespace cryfs {
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
         try {
-            auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
+            auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options);
             CryDevice device(std::move(config.configFile), std::move(blockStore), config.myClientId);
             _sanityCheckFilesystem(&device);

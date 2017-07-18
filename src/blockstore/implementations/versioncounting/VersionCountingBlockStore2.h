@@ -35,9 +35,14 @@ public:
   static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
   static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
 
+#ifndef CRYFS_NO_COMPATIBILITY
+  static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore2 *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId);
+  static void migrateBlockFromBlockstoreWithoutVersionNumbers(BlockStore2* baseBlockStore, const blockstore::Key& key, KnownBlockVersions *knownBlockVersions);
+#endif
+
 private:
 
-  cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, const cpputils::Data &data);
+  static cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, const cpputils::Data &data);
   void _checkHeader(const Key &key, const cpputils::Data &data) const;
   void _checkFormatHeader(const cpputils::Data &data) const;
   void _checkVersionHeader(const Key &key, const cpputils::Data &data) const;
