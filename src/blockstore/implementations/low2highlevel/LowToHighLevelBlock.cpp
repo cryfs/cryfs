@@ -23,7 +23,8 @@ optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(Bloc
 }
 
 unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const Key &key, Data data) {
-  auto baseBlock = baseBlockStore->store(key, data); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
+  // TODO This is blocking
+  baseBlockStore->store(key, data).wait(); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
   return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
 }
 
@@ -74,7 +75,7 @@ void LowToHighLevelBlock::resize(size_t newSize) {
 
 void LowToHighLevelBlock::_storeToBaseBlock() {
   if (_dataChanged) {
-    _baseBlockStore->store(key(), _data);
+    _baseBlockStore->store(key(), _data).wait(); // TODO This is blocking
     _dataChanged = false;
   }
 }
