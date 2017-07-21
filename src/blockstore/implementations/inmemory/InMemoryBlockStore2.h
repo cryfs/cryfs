@@ -13,10 +13,10 @@ class InMemoryBlockStore2 final: public BlockStore2 {
 public:
   InMemoryBlockStore2();
 
-  boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) override;
-  boost::future<bool> remove(const Key &key) override;
-  boost::future<boost::optional<cpputils::Data>> load(const Key &key) const override;
-  boost::future<void> store(const Key &key, const cpputils::Data &data) override;
+  bool tryCreate(const Key &key, const cpputils::Data &data) override;
+  bool remove(const Key &key) override;
+  boost::optional<cpputils::Data> load(const Key &key) const override;
+  void store(const Key &key, const cpputils::Data &data) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
@@ -24,6 +24,7 @@ public:
 
 private:
   std::vector<Key> _allBlockKeys() const;
+  bool _tryCreate(const Key &key, const cpputils::Data &data);
 
   std::unordered_map<Key, cpputils::Data> _blocks;
   mutable std::mutex _mutex;

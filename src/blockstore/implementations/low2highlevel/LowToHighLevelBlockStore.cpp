@@ -46,7 +46,10 @@ optional<unique_ref<Block>> LowToHighLevelBlockStore::load(const Key &key) {
 }
 
 void LowToHighLevelBlockStore::remove(const Key &key) {
-    _baseBlockStore->remove(key);
+    bool success = _baseBlockStore->remove(key);
+    if (!success) {
+        throw std::runtime_error("Couldn't delete block with id " + key.ToString());
+    }
 }
 
 uint64_t LowToHighLevelBlockStore::numBlocks() const {

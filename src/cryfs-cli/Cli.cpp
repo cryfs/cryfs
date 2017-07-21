@@ -1,8 +1,6 @@
 #include "Cli.h"
 
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
-#include <blockstore/implementations/inmemory/InMemoryBlockStore.h>
-#include <blockstore/implementations/inmemory/InMemoryBlock.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -33,7 +31,6 @@ namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 
 using blockstore::ondisk::OnDiskBlockStore2;
-using blockstore::inmemory::InMemoryBlockStore;
 using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;

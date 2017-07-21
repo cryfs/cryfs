@@ -12,7 +12,6 @@
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
-#include <blockstore/implementations/versioncounting/VersionCountingBlock.h>
 #include <blockstore/implementations/versioncounting/VersionCountingBlockStore2.h>
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"

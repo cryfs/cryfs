@@ -13,8 +13,7 @@ namespace blockstore {
 namespace lowtohighlevel {
 
 optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const Key &key, Data data) {
-  // TODO .get() is blocking
-  bool success = baseBlockStore->tryCreate(key, data.copy()).get(); // TODO Copy necessary?
+  bool success = baseBlockStore->tryCreate(key, data);
   if (!success) {
     return none;
   }
@@ -23,13 +22,12 @@ optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(Bloc
 }
 
 unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const Key &key, Data data) {
-  // TODO This is blocking
-  baseBlockStore->store(key, data).wait(); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
+  baseBlockStore->store(key, data); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
   return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
 }
 
 optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::Load(BlockStore2 *baseBlockStore, const Key &key) {
-  optional<Data> loadedData = baseBlockStore->load(key).get(); // TODO .get() is blocking
+  optional<Data> loadedData = baseBlockStore->load(key);
   if (loadedData == none) {
     return none;
   }
@@ -75,7 +73,7 @@ void LowToHighLevelBlock::resize(size_t newSize) {
 
 void LowToHighLevelBlock::_storeToBaseBlock() {
   if (_dataChanged) {
-    _baseBlockStore->store(key(), _data).wait(); // TODO This is blocking
+    _baseBlockStore->store(key(), _data);
     _dataChanged = false;
   }
 }

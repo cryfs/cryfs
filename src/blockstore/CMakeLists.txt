@@ -7,8 +7,6 @@ set(SOURCES
   interface/helpers/BlockStoreWithRandomKeys.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
-  implementations/inmemory/InMemoryBlock.cpp
-  implementations/inmemory/InMemoryBlockStore.cpp
   implementations/inmemory/InMemoryBlockStore2.cpp
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
@@ -17,12 +15,8 @@ set(SOURCES
   implementations/compressing/CompressedBlock.cpp
   implementations/compressing/compressors/RunLengthEncoding.cpp
   implementations/compressing/compressors/Gzip.cpp
-  implementations/encrypted/EncryptedBlockStore.cpp
   implementations/encrypted/EncryptedBlockStore2.cpp
-  implementations/encrypted/EncryptedBlock.cpp
-  implementations/ondisk/OnDiskBlockStore.cpp
   implementations/ondisk/OnDiskBlockStore2.cpp
-  implementations/ondisk/OnDiskBlock.cpp
   implementations/caching/CachingBlockStore.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
@@ -32,8 +26,6 @@ set(SOURCES
   implementations/caching/NewBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
-  implementations/versioncounting/VersionCountingBlock.cpp
-  implementations/versioncounting/VersionCountingBlockStore.cpp
   implementations/versioncounting/VersionCountingBlockStore2.cpp
   implementations/versioncounting/KnownBlockVersions.cpp
   implementations/versioncounting/ClientIdAndBlockKey.cpp

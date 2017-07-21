@@ -1,6 +1,5 @@
-#include "blockstore/implementations/versioncounting/VersionCountingBlockStore.h"
 #include "blockstore/implementations/versioncounting/VersionCountingBlockStore2.h"
-#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
@@ -11,10 +10,9 @@ using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::BlockStore2;
-using blockstore::versioncounting::VersionCountingBlockStore;
 using blockstore::versioncounting::VersionCountingBlockStore2;
 using blockstore::versioncounting::KnownBlockVersions;
-using blockstore::testfake::FakeBlockStore;
+using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blockstore::inmemory::InMemoryBlockStore2;
 
 using cpputils::Data;
@@ -30,9 +28,13 @@ public:
 
   TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<VersionCountingBlockStore>(make_unique_ref<FakeBlockStore>(), stateFile.path(), 0x12345678, MissingBlockIsIntegrityViolation);
+    return make_unique_ref<LowToHighLevelBlockStore>(
+        make_unique_ref<VersionCountingBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, MissingBlockIsIntegrityViolation)
+    );
   }
 };
+
+// TODO Why is here no VersionCountingBlockStoreWithRandomKeysTest?
 
 INSTANTIATE_TYPED_TEST_CASE_P(VersionCounting_multiclient, BlockStoreTest, VersionCountingBlockStoreTestFixture<false>);
 INSTANTIATE_TYPED_TEST_CASE_P(VersionCounting_singleclient, BlockStoreTest, VersionCountingBlockStoreTestFixture<true>);

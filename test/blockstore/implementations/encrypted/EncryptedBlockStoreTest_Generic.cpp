@@ -1,6 +1,6 @@
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/crypto/symmetric/Cipher.h>
-#include "blockstore/implementations/encrypted/EncryptedBlockStore.h"
+#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
@@ -14,9 +14,8 @@ using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::BlockStore2;
-using blockstore::encrypted::EncryptedBlockStore;
 using blockstore::encrypted::EncryptedBlockStore2;
-using blockstore::testfake::FakeBlockStore;
+using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blockstore::inmemory::InMemoryBlockStore2;
 using cpputils::AES256_GCM;
 using cpputils::AES256_CFB;
@@ -31,7 +30,9 @@ template<class Cipher>
 class EncryptedBlockStoreTestFixture: public BlockStoreTestFixture {
 public:
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<EncryptedBlockStore<Cipher>>(make_unique_ref<FakeBlockStore>(), createKeyFixture());
+    return make_unique_ref<LowToHighLevelBlockStore>(
+        make_unique_ref<EncryptedBlockStore2<Cipher>>(make_unique_ref<InMemoryBlockStore2>(), createKeyFixture())
+    );
   }
 
 private:

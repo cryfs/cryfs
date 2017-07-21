@@ -1,7 +1,7 @@
 #include "OnDiskBlockStore2.h"
+#include <boost/filesystem.hpp>
 
 using std::string;
-using boost::future;
 using boost::optional;
 using boost::none;
 using cpputils::Data;
@@ -45,48 +45,47 @@ unsigned int OnDiskBlockStore2::formatVersionHeaderSize() {
 OnDiskBlockStore2::OnDiskBlockStore2(const boost::filesystem::path& path)
     : _rootDir(path) {}
 
-future<bool> OnDiskBlockStore2::tryCreate(const Key &key, const Data &data) {
+bool OnDiskBlockStore2::tryCreate(const Key &key, const Data &data) {
   auto filepath = _getFilepath(key);
   if (boost::filesystem::exists(filepath)) {
-    return boost::make_ready_future(false);
+    return false;
   }
 
-  store(key, data).wait();
-  return boost::make_ready_future(true);
+  store(key, data);
+  return true;
 }
 
-future<bool> OnDiskBlockStore2::remove(const Key &key) {
+bool OnDiskBlockStore2::remove(const Key &key) {
   auto filepath = _getFilepath(key);
   if (!boost::filesystem::is_regular_file(filepath)) { // TODO Is this branch necessary?
-    return boost::make_ready_future(false);
+    return false;
   }
   bool retval = boost::filesystem::remove(filepath);
   if (!retval) {
     cpputils::logging::LOG(cpputils::logging::ERROR, "Couldn't find block {} to remove", key.ToString());
-    return boost::make_ready_future(false);
+    return false;
   }
   if (boost::filesystem::is_empty(filepath.parent_path())) {
     boost::filesystem::remove(filepath.parent_path());
   }
-  return boost::make_ready_future(true);
+  return true;
 }
 
-future<optional<Data>> OnDiskBlockStore2::load(const Key &key) const {
+optional<Data> OnDiskBlockStore2::load(const Key &key) const {
   auto fileContent = Data::LoadFromFile(_getFilepath(key));
   if (fileContent == none) {
-    return boost::make_ready_future(optional<Data>(none));
+    return boost::none;
   }
-  return boost::make_ready_future(optional<Data>(_checkAndRemoveHeader(std::move(*fileContent))));
+  return _checkAndRemoveHeader(std::move(*fileContent));
 }
 
-future<void> OnDiskBlockStore2::store(const Key &key, const Data &data) {
+void OnDiskBlockStore2::store(const Key &key, const Data &data) {
   Data fileContent(formatVersionHeaderSize() + data.size());
   std::memcpy(fileContent.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
   std::memcpy(fileContent.dataOffset(formatVersionHeaderSize()), data.data(), data.size());
   auto filepath = _getFilepath(key);
   boost::filesystem::create_directory(filepath.parent_path()); // TODO Instead create all of them once at fs creation time?
   fileContent.StoreToFile(filepath);
-  return boost::make_ready_future();
 }
 
 uint64_t OnDiskBlockStore2::numBlocks() const {

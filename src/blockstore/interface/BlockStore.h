@@ -16,6 +16,7 @@ public:
 
   virtual Key createKey() = 0;
   //Returns boost::none if key already exists
+  // TODO Can we make data passed in by ref?
   virtual boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) = 0;
   //TODO Use boost::optional (if key doesn't exist)
   // Return nullptr if block with this key doesn't exists

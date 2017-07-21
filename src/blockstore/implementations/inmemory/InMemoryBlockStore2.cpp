@@ -16,8 +16,6 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::optional;
 using boost::none;
-using boost::future;
-using boost::make_ready_future;
 
 namespace blockstore {
 namespace inmemory {
@@ -25,46 +23,49 @@ namespace inmemory {
 InMemoryBlockStore2::InMemoryBlockStore2()
  : _blocks() {}
 
-future<bool> InMemoryBlockStore2::tryCreate(const Key &key, const Data &data) {
+bool InMemoryBlockStore2::tryCreate(const Key &key, const Data &data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto result = _blocks.insert(make_pair(key, data.copy()));
-  return make_ready_future(result.second); // Return if insertion was successful (i.e. key didn't exist yet)
+  return _tryCreate(key, data);
 }
 
-future<bool> InMemoryBlockStore2::remove(const Key &key) {
+bool InMemoryBlockStore2::_tryCreate(const Key &key, const Data &data) {
+  auto result = _blocks.insert(make_pair(key, data.copy()));
+  return result.second; // Return if insertion was successful (i.e. key didn't exist yet)
+}
+
+bool InMemoryBlockStore2::remove(const Key &key) {
   std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(key);
   if (found == _blocks.end()) {
     // Key not found
-    return make_ready_future(false);
+    return false;
   }
 
   _blocks.erase(found);
-  return make_ready_future(true);
+  return true;
 }
 
-future<optional<Data>> InMemoryBlockStore2::load(const Key &key) const {
+optional<Data> InMemoryBlockStore2::load(const Key &key) const {
   std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(key);
   if (found == _blocks.end()) {
-    return make_ready_future(optional<Data>(none));
+    return boost::none;
   }
-  return make_ready_future(optional<Data>(found->second.copy()));
+  return found->second.copy();
 }
 
-future<void> InMemoryBlockStore2::store(const Key &key, const Data &data) {
+void InMemoryBlockStore2::store(const Key &key, const Data &data) {
   std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(key);
   if (found == _blocks.end()) {
-    return tryCreate(key, data).then([] (future<bool> success) {
-      if (!success.get()) {
-        throw std::runtime_error("Could neither save nor create the block in InMemoryBlockStore::store()");
-      }
-    });
+    bool success = _tryCreate(key, data);
+    if (!success) {
+      throw std::runtime_error("Could neither save nor create the block in InMemoryBlockStore::store()");
+    }
+  } else {
+    // TODO Would have better performance: found->second.overwriteWith(data)
+    found->second = data.copy();
   }
-  // TODO Would have better performance: found->second.overwriteWith(data)
-  found->second = data.copy();
-  return make_ready_future();
 }
 
 uint64_t InMemoryBlockStore2::numBlocks() const {

@@ -6,7 +6,6 @@
 #include <boost/filesystem/path.hpp>
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/unique_ref.h>
-#include "OnDiskBlockStore.h"
 #include <cpp-utils/logging/logging.h>
 #include <sys/statvfs.h>
 
@@ -17,10 +16,10 @@ class OnDiskBlockStore2 final: public BlockStore2 {
 public:
   explicit OnDiskBlockStore2(const boost::filesystem::path& path);
 
-  boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) override;
-  boost::future<bool> remove(const Key &key) override;
-  boost::future<boost::optional<cpputils::Data>> load(const Key &key) const override;
-  boost::future<void> store(const Key &key, const cpputils::Data &data) override;
+  bool tryCreate(const Key &key, const cpputils::Data &data) override;
+  bool remove(const Key &key) override;
+  boost::optional<cpputils::Data> load(const Key &key) const override;
+  void store(const Key &key, const cpputils::Data &data) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;

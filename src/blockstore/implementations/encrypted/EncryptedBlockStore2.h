@@ -18,14 +18,17 @@ public:
 
   EncryptedBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 
-  boost::future<bool> tryCreate(const Key &key, const cpputils::Data &data) override;
-  boost::future<bool> remove(const Key &key) override;
-  boost::future<boost::optional<cpputils::Data>> load(const Key &key) const override;
-  boost::future<void> store(const Key &key, const cpputils::Data &data) override;
+  bool tryCreate(const Key &key, const cpputils::Data &data) override;
+  bool remove(const Key &key) override;
+  boost::optional<cpputils::Data> load(const Key &key) const override;
+  void store(const Key &key, const cpputils::Data &data) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
+
+  //This function should only be used by test cases
+  void __setKey(const typename Cipher::EncryptionKey &encKey);
 
 private:
 
@@ -54,30 +57,28 @@ inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<B
 }
 
 template<class Cipher>
-inline boost::future<bool> EncryptedBlockStore2<Cipher>::tryCreate(const Key &key, const cpputils::Data &data) {
+inline bool EncryptedBlockStore2<Cipher>::tryCreate(const Key &key, const cpputils::Data &data) {
   cpputils::Data encrypted = _encrypt(key, data);
   return _baseBlockStore->tryCreate(key, encrypted);
 }
 
 template<class Cipher>
-inline boost::future<bool> EncryptedBlockStore2<Cipher>::remove(const Key &key) {
+inline bool EncryptedBlockStore2<Cipher>::remove(const Key &key) {
   return _baseBlockStore->remove(key);
 }
 
 template<class Cipher>
-inline boost::future<boost::optional<cpputils::Data>> EncryptedBlockStore2<Cipher>::load(const Key &key) const {
+inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::load(const Key &key) const {
   auto loaded = _baseBlockStore->load(key);
-  return loaded.then([this, key] (boost::future<boost::optional<cpputils::Data>> data_) {
-    auto data = data_.get();
-    if (boost::none == data) {
-      return boost::optional<cpputils::Data>(boost::none);
-    }
-    return _tryDecrypt(key, *data);
-  });
+
+  if (boost::none == loaded) {
+    return boost::optional<cpputils::Data>(boost::none);
+  }
+  return _tryDecrypt(key, *loaded);
 }
 
 template<class Cipher>
-inline boost::future<void> EncryptedBlockStore2<Cipher>::store(const Key &key, const cpputils::Data &data) {
+inline void EncryptedBlockStore2<Cipher>::store(const Key &key, const cpputils::Data &data) {
   cpputils::Data encrypted = _encrypt(key, data);
   return _baseBlockStore->store(key, encrypted);
 }
@@ -160,6 +161,11 @@ inline cpputils::Data EncryptedBlockStore2<Cipher>::_checkAndRemoveFormatHeader(
     throw std::runtime_error("The encrypted block has the wrong format. Was it created with a newer version of CryFS?");
   }
   return data.copyAndRemovePrefix(sizeof(FORMAT_VERSION_HEADER));
+}
+
+template<class Cipher>
+void EncryptedBlockStore2<Cipher>::__setKey(const typename Cipher::EncryptionKey &encKey) {
+  _encKey = encKey;
 }
 
 }

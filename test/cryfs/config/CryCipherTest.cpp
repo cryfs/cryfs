@@ -53,7 +53,7 @@ public:
         unique_ref<InMemoryBlockStore2> _baseStore = make_unique_ref<InMemoryBlockStore2>();
         InMemoryBlockStore2 *baseStore = _baseStore.get();
         unique_ref<BlockStore2> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
-        bool created = encryptedStore->tryCreate(key, std::move(data)).get();
+        bool created = encryptedStore->tryCreate(key, std::move(data));
         EXPECT_TRUE(created);
         return _loadBlock(baseStore, key);
     }
@@ -61,14 +61,14 @@ public:
     template<class Cipher>
     Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::Key &key, Data data) {
         unique_ref<InMemoryBlockStore2> baseStore = make_unique_ref<InMemoryBlockStore2>();
-        bool created = baseStore->tryCreate(key, std::move(data)).get();
+        bool created = baseStore->tryCreate(key, std::move(data));
         EXPECT_TRUE(created);
         EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
         return _loadBlock(&encryptedStore, key);
     }
 
     Data _loadBlock(BlockStore2 *store, const blockstore::Key &key) {
-        return store->load(key).get().value();
+        return store->load(key).value();
     }
 };
 
@@ -117,7 +117,7 @@ TEST_F(CryCipherTest, ThereIsACipherWithoutWarning) {
 }
 
 TEST_F(CryCipherTest, ThereIsACipherWithIntegrityWarning) {
-    EXPECT_THAT(CryCiphers::find("aes-256-cfb").warning().get(), MatchesRegex(".*integrity.*"));
+    EXPECT_THAT(CryCiphers::find("aes-256-cfb").warning().value(), MatchesRegex(".*integrity.*"));
 }
 
 #if CRYPTOPP_VERSION != 564

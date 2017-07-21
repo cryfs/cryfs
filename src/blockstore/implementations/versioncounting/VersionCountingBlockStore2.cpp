@@ -7,7 +7,6 @@ using cpputils::unique_ref;
 using std::string;
 using boost::optional;
 using boost::none;
-using boost::future;
 using namespace cpputils::logging;
 
 namespace blockstore {
@@ -78,35 +77,33 @@ VersionCountingBlockStore2::VersionCountingBlockStore2(unique_ref<BlockStore2> b
 : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
 }
 
-future<bool> VersionCountingBlockStore2::tryCreate(const Key &key, const Data &data) {
+bool VersionCountingBlockStore2::tryCreate(const Key &key, const Data &data) {
   _checkNoPastIntegrityViolations();
   uint64_t version = _knownBlockVersions.incrementVersion(key);
   Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
   return _baseBlockStore->tryCreate(key, dataWithHeader);
 }
 
-future<bool> VersionCountingBlockStore2::remove(const Key &key) {
+bool VersionCountingBlockStore2::remove(const Key &key) {
   _checkNoPastIntegrityViolations();
   _knownBlockVersions.markBlockAsDeleted(key);
   return _baseBlockStore->remove(key);
 }
 
-future<optional<Data>> VersionCountingBlockStore2::load(const Key &key) const {
+optional<Data> VersionCountingBlockStore2::load(const Key &key) const {
   _checkNoPastIntegrityViolations();
-  return _baseBlockStore->load(key).then([this, key] (future<optional<Data>> loaded_) {
-    auto loaded = loaded_.get();
-    if (none == loaded) {
-      if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
-        integrityViolationDetected("A block that should exist wasn't found. Did an attacker delete it?");
-      }
-      return optional<Data>(none);
+  auto loaded = _baseBlockStore->load(key);
+  if (none == loaded) {
+    if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
+      integrityViolationDetected("A block that should exist wasn't found. Did an attacker delete it?");
     }
-    _checkHeader(key, *loaded);
-    return optional<Data>(_removeHeader(*loaded));
-  });
+    return optional<Data>(none);
+  }
+  _checkHeader(key, *loaded);
+  return optional<Data>(_removeHeader(*loaded));
 }
 
-future<void> VersionCountingBlockStore2::store(const Key &key, const Data &data) {
+void VersionCountingBlockStore2::store(const Key &key, const Data &data) {
   _checkNoPastIntegrityViolations();
   uint64_t version = _knownBlockVersions.incrementVersion(key);
   Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
@@ -161,14 +158,14 @@ void VersionCountingBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(Bloc
 void VersionCountingBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(blockstore::BlockStore2* baseBlockStore, const blockstore::Key& key, KnownBlockVersions *knownBlockVersions) {
   uint64_t version = knownBlockVersions->incrementVersion(key);
 
-  auto data_ = baseBlockStore->load(key).get(); // TODO this is blocking
+  auto data_ = baseBlockStore->load(key);
   if (data_ == boost::none) {
     LOG(WARN, "Block not found, but was returned from forEachBlock before");
     return;
   }
   cpputils::Data data = std::move(*data_);
   cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), version, std::move(data));
-  baseBlockStore->store(key, std::move(dataWithHeader)).wait(); // TODO This is blocking
+  baseBlockStore->store(key, std::move(dataWithHeader));
 }
 #endif
 

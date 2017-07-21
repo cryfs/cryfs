@@ -22,7 +22,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(TestFake, BlockStoreTest, FakeBlockStoreTestFixtur
 
 class FakeBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
-  unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
+  unique_ref<BlockStore> createBlockStore() override {
     return make_unique_ref<FakeBlockStore>();
   }
 };
