@@ -47,7 +47,7 @@ namespace cpputils {
           return ciphertextBlockSize - 5;
         }
 
-        static Data encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
+        static Data encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
           Data result(ciphertextSize(plaintextSize));
 
           //Add a random IV
@@ -55,16 +55,16 @@ namespace cpputils {
           std::memcpy(result.data(), &iv, 1);
 
           //Use caesar chiffre on plaintext
-          _caesar((byte *) result.data() + 1, plaintext, plaintextSize, encKey.value + iv);
+          _caesar((CryptoPP::byte *) result.data() + 1, plaintext, plaintextSize, encKey.value + iv);
 
           //Add parity information
-          int32_t parity = _parity((byte *) result.data(), plaintextSize + 1);
-          std::memcpy((byte *) result.data() + plaintextSize + 1, &parity, 4);
+          int32_t parity = _parity((CryptoPP::byte *) result.data(), plaintextSize + 1);
+          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + 1, &parity, 4);
 
           return result;
         }
 
-        static boost::optional <Data> decrypt(const byte *ciphertext, unsigned int ciphertextSize,
+        static boost::optional <Data> decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize,
                                               const EncryptionKey &encKey) {
           //We need at least 5 bytes (iv + parity)
           if (ciphertextSize < 5) {
@@ -81,14 +81,14 @@ namespace cpputils {
           //Decrypt caesar chiffre from ciphertext
           int32_t iv = *(int32_t *) ciphertext;
           Data result(plaintextSize(ciphertextSize));
-          _caesar((byte *) result.data(), ciphertext + 1, plaintextSize(ciphertextSize), -(encKey.value + iv));
+          _caesar((CryptoPP::byte *) result.data(), ciphertext + 1, plaintextSize(ciphertextSize), -(encKey.value + iv));
           return std::move(result);
         }
 
         static constexpr const char *NAME = "FakeAuthenticatedCipher";
 
     private:
-        static int32_t _parity(const byte *data, unsigned int size) {
+        static int32_t _parity(const CryptoPP::byte *data, unsigned int size) {
           int32_t parity = 34343435; // some init value
           const int32_t *intData = reinterpret_cast<const int32_t *>(data);
           unsigned int intSize = size / sizeof(int32_t);
@@ -102,7 +102,7 @@ namespace cpputils {
           return parity;
         }
 
-        static void _caesar(byte *dst, const byte *src, unsigned int size, uint8_t key) {
+        static void _caesar(CryptoPP::byte *dst, const CryptoPP::byte *src, unsigned int size, uint8_t key) {
           for (unsigned int i = 0; i < size; ++i) {
             dst[i] = src[i] + key;
           }

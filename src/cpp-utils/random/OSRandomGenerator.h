@@ -20,7 +20,7 @@ namespace cpputils {
     inline OSRandomGenerator::OSRandomGenerator() {}
 
     inline void OSRandomGenerator::_get(void *target, size_t bytes) {
-        CryptoPP::OS_GenerateRandomBlock(true, (byte*)target, bytes);
+        CryptoPP::OS_GenerateRandomBlock(true, (CryptoPP::byte*)target, bytes);
     }
 }
 

@@ -57,7 +57,7 @@ boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlo
 
 template<class Compressor>
 cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Decompress(cpputils::unique_ref<Block> baseBlock) {
-  cpputils::Data decompressed = Compressor::Decompress((byte*)baseBlock->data(), baseBlock->size());
+  cpputils::Data decompressed = Compressor::Decompress((CryptoPP::byte*)baseBlock->data(), baseBlock->size());
   return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressed));
 }
 

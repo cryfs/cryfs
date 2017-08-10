@@ -26,7 +26,7 @@ namespace cpputils {
 
     Data RandomGeneratorThread::_generateRandomData(size_t size) {
         Data newRandom(size);
-        _randomGenerator.GenerateBlock(static_cast<byte*>(newRandom.data()), size);
+        _randomGenerator.GenerateBlock(static_cast<CryptoPP::byte*>(newRandom.data()), size);
         return newRandom;
     }
 

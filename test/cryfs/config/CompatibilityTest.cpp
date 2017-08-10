@@ -38,7 +38,7 @@ private:
         Data result(hex.size()/2);
         CryptoPP::StringSource(hex, true,
              new CryptoPP::HexDecoder(
-                   new CryptoPP::ArraySink((byte*)result.data(), result.size())
+                   new CryptoPP::ArraySink((CryptoPP::byte*)result.data(), result.size())
              )
         );
         return result;

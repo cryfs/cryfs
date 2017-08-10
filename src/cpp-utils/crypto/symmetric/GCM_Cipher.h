@@ -27,8 +27,8 @@ public:
         return ciphertextBlockSize - IV_SIZE - TAG_SIZE;
     }
 
-    static Data encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey);
-    static boost::optional<Data> decrypt(const byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey);
+    static Data encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey);
+    static boost::optional<Data> decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey);
 
 private:
     static constexpr unsigned int IV_SIZE = BlockCipher::BLOCKSIZE;
@@ -36,7 +36,7 @@ private:
 };
 
 template<typename BlockCipher, unsigned int KeySize>
-Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
+Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
     FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Encryption encryption;
     encryption.SetKeyWithIV(encKey.data(), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
@@ -45,7 +45,7 @@ Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const byte *plaintext, unsigned i
     std::memcpy(ciphertext.data(), iv.data(), IV_SIZE);
     CryptoPP::ArraySource(plaintext, plaintextSize, true,
       new CryptoPP::AuthenticatedEncryptionFilter(encryption,
-        new CryptoPP::ArraySink((byte*)ciphertext.data() + IV_SIZE, ciphertext.size() - IV_SIZE),
+        new CryptoPP::ArraySink((CryptoPP::byte*)ciphertext.data() + IV_SIZE, ciphertext.size() - IV_SIZE),
         false, TAG_SIZE
       )
     );
@@ -53,21 +53,21 @@ Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const byte *plaintext, unsigned i
 }
 
 template<typename BlockCipher, unsigned int KeySize>
-boost::optional<Data> GCM_Cipher<BlockCipher, KeySize>::decrypt(const byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
+boost::optional<Data> GCM_Cipher<BlockCipher, KeySize>::decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
     if (ciphertextSize < IV_SIZE + TAG_SIZE) {
       return boost::none;
     }
 
-    const byte *ciphertextIV = ciphertext;
-    const byte *ciphertextData = ciphertext + IV_SIZE;
+    const CryptoPP::byte *ciphertextIV = ciphertext;
+    const CryptoPP::byte *ciphertextData = ciphertext + IV_SIZE;
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Decryption decryption;
-    decryption.SetKeyWithIV((byte*)encKey.data(), encKey.BINARY_LENGTH, ciphertextIV, IV_SIZE);
+    decryption.SetKeyWithIV((CryptoPP::byte*)encKey.data(), encKey.BINARY_LENGTH, ciphertextIV, IV_SIZE);
     Data plaintext(plaintextSize(ciphertextSize));
 
     try {
-        CryptoPP::ArraySource((byte*)ciphertextData, ciphertextSize - IV_SIZE, true,
+        CryptoPP::ArraySource((CryptoPP::byte*)ciphertextData, ciphertextSize - IV_SIZE, true,
         new CryptoPP::AuthenticatedDecryptionFilter(decryption,
-          new CryptoPP::ArraySink((byte*)plaintext.data(), plaintext.size()),
+          new CryptoPP::ArraySink((CryptoPP::byte*)plaintext.data(), plaintext.size()),
           CryptoPP::AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE
         )
       );
