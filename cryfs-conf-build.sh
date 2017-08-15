@@ -1,4 +1,11 @@
 #!/bin/bash -ex
+#
+# This file has two purposes:
+#  - simplify/automate configuration and build of CryFS for specific
+#    environment (e.g., all the dependent libraries are in /opt/local);
+#  - serve as a run-script for "git bisect" to help finding the
+#    offending commit.
+#
 
 rm -rf build
 mkdir -p build
@@ -12,7 +19,7 @@ CMAKEFLAGS="${CMAKEFLAGS} -DBoost_USE_STATIC_LIBS=off -DCRYPTOPP_LIB_PATH=/opt/l
 
 cmake .. ${CMAKEFLAGS} -DCMAKE_C_FLAGS="-I/opt/local/include"
 make -j 4
-make check
+#make check
 cd ..
 exit 0
 
