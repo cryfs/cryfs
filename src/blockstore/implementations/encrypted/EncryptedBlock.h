@@ -2,6 +2,8 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 
+#include "cpp-utils/crypto/cryptopp_byte.h"
+
 #include "../../interface/Block.h"
 #include <cpp-utils/data/Data.h>
 #include "../../interface/BlockStore.h"
