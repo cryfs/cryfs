@@ -2,6 +2,7 @@ Version 0.9.8 (unreleased)
 --------------
 Compatibility:
 * Works with Crypto++ 6.0
+
 Fixed bugs:
 * `du` shows correct file system size
 
