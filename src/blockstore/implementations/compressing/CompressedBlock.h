@@ -2,6 +2,8 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSEDBLOCK_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSEDBLOCK_H_
 
+#include "cpp-utils/crypto/cryptopp_byte.h"
+
 #include "../../interface/Block.h"
 #include "../../interface/BlockStore.h"
 #include <cpp-utils/data/DataUtils.h>
@@ -57,7 +59,7 @@ boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlo
 
 template<class Compressor>
 cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Decompress(cpputils::unique_ref<Block> baseBlock) {
-  cpputils::Data decompressed = Compressor::Decompress((byte*)baseBlock->data(), baseBlock->size());
+  cpputils::Data decompressed = Compressor::Decompress((CryptoPP::byte*)baseBlock->data(), baseBlock->size());
   return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressed));
 }
 

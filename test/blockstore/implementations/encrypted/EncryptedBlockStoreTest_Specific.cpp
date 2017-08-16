@@ -1,3 +1,4 @@
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <gtest/gtest.h>
 #include "../../../cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include "blockstore/implementations/encrypted/EncryptedBlockStore.h"
@@ -45,7 +46,7 @@ public:
 
   void ModifyBaseBlock(const blockstore::Key &key) {
     auto block = baseBlockStore->load(key).value();
-    uint8_t middle_byte = ((byte*)block->data())[10];
+    uint8_t middle_byte = ((CryptoPP::byte*)block->data())[10];
     uint8_t new_middle_byte = middle_byte + 1;
     block->write(&new_middle_byte, 10, 1);
   }

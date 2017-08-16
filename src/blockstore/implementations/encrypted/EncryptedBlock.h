@@ -2,6 +2,8 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCK_H_
 
+#include "cpp-utils/crypto/cryptopp_byte.h"
+
 #include "../../interface/Block.h"
 #include <cpp-utils/data/Data.h>
 #include "../../interface/BlockStore.h"
@@ -79,7 +81,7 @@ template<class Cipher>
 boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data data, const typename Cipher::EncryptionKey &encKey) {
   //TODO Is it possible to avoid copying the whole plaintext data into plaintextWithHeader? Maybe an encrypt() object that has an .addData() function and concatenates all data for encryption? Maybe Crypto++ offers this functionality already.
   cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, std::move(data));
-  cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
+  cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), encKey);
   //TODO Avoid copying the whole encrypted block into a encryptedWithFormatHeader by creating a Data object with full size and then giving it as an encryption target to Cipher::encrypt()
   cpputils::Data encryptedWithFormatHeader = _prependFormatHeader(std::move(encrypted));
   auto baseBlock = baseBlockStore->tryCreate(key, std::move(encryptedWithFormatHeader));
@@ -102,7 +104,7 @@ cpputils::Data EncryptedBlock<Cipher>::_prependFormatHeader(const cpputils::Data
 template<class Cipher>
 boost::optional<cpputils::unique_ref<EncryptedBlock<Cipher>>> EncryptedBlock<Cipher>::TryDecrypt(cpputils::unique_ref<Block> baseBlock, const typename Cipher::EncryptionKey &encKey) {
   _checkFormatHeader(baseBlock->data());
-  boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((byte*)baseBlock->data() + sizeof(FORMAT_VERSION_HEADER), baseBlock->size() - sizeof(FORMAT_VERSION_HEADER), encKey);
+  boost::optional<cpputils::Data> plaintextWithHeader = Cipher::decrypt((CryptoPP::byte*)baseBlock->data() + sizeof(FORMAT_VERSION_HEADER), baseBlock->size() - sizeof(FORMAT_VERSION_HEADER), encKey);
   if(plaintextWithHeader == boost::none) {
     //Decryption failed (e.g. an authenticated cipher detected modifications to the ciphertext)
     cpputils::logging::LOG(cpputils::logging::WARN, "Decrypting block {} failed. Was the block modified by an attacker?", baseBlock->key().ToString());
@@ -186,7 +188,7 @@ void EncryptedBlock<Cipher>::resize(size_t newSize) {
 template<class Cipher>
 void EncryptedBlock<Cipher>::_encryptToBaseBlock() {
   if (_dataChanged) {
-    cpputils::Data encrypted = Cipher::encrypt((byte*)_plaintextWithHeader.data(), _plaintextWithHeader.size(), _encKey);
+    cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)_plaintextWithHeader.data(), _plaintextWithHeader.size(), _encKey);
     if (_baseBlock->size() != sizeof(FORMAT_VERSION_HEADER) + encrypted.size()) {
       _baseBlock->resize(sizeof(FORMAT_VERSION_HEADER) + encrypted.size());
     }
