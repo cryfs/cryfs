@@ -1,3 +1,4 @@
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGeneratorThread.h"
 
 namespace cpputils {
@@ -26,7 +27,7 @@ namespace cpputils {
 
     Data RandomGeneratorThread::_generateRandomData(size_t size) {
         Data newRandom(size);
-        _randomGenerator.GenerateBlock(static_cast<byte*>(newRandom.data()), size);
+        _randomGenerator.GenerateBlock(static_cast<CryptoPP::byte*>(newRandom.data()), size);
         return newRandom;
     }
 
