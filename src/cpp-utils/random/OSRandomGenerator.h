@@ -2,6 +2,7 @@
 #ifndef MESSMER_CPPUTILS_RANDOM_OSRANDOMGENERATOR_H
 #define MESSMER_CPPUTILS_RANDOM_OSRANDOMGENERATOR_H
 
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGenerator.h"
 #include <cryptopp/osrng.h>
 
@@ -20,7 +21,7 @@ namespace cpputils {
     inline OSRandomGenerator::OSRandomGenerator() {}
 
     inline void OSRandomGenerator::_get(void *target, size_t bytes) {
-        CryptoPP::OS_GenerateRandomBlock(true, (byte*)target, bytes);
+        CryptoPP::OS_GenerateRandomBlock(true, (CryptoPP::byte*)target, bytes);
     }
 }
 
