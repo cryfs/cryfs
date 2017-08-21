@@ -32,7 +32,7 @@ private:
 
     const cpputils::Data& read() const;
     void write(cpputils::Data data);
-    bool remove() &&; // only on rvalue because the destructor should be called after calling remove(). It shouldn't be put back into the cache.
+    void markNotDirty() &&; // only on rvalue because the destructor should be called after calling markNotDirty(). It shouldn't be put back into the cache.
   private:
     const CachingBlockStore2* _blockStore;
     Key _key;

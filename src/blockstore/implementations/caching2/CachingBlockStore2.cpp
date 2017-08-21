@@ -39,9 +39,8 @@ const Data& CachingBlockStore2::CachedBlock::read() const {
   return _data;
 }
 
-bool CachingBlockStore2::CachedBlock::remove() && {
+void CachingBlockStore2::CachedBlock::markNotDirty() && {
   _dirty = false; // Prevent writing it back into the base store
-  return _blockStore->_baseBlockStore->remove(_key);
 }
 
 void CachingBlockStore2::CachedBlock::write(Data data) {
@@ -72,7 +71,18 @@ bool CachingBlockStore2::remove(const Key &key) {
   // TODO Don't write-through but cache remove operations
   auto popped = _cache.pop(key);
   if (popped != boost::none) {
-    std::move(**popped).remove();
+    // Remove from base store if it exists in the base store
+    {
+      unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
+      if (_cachedBlocksNotInBaseStore.count(key) == 0) {
+          const bool existedInBaseStore = _baseBlockStore->remove(key);
+          if (!existedInBaseStore) {
+              throw std::runtime_error("Tried to remove block. Block existed in cache and stated it exists in base store, but wasn't found there.");
+          }
+      }
+    }
+    // Don't write back the cached block when it is destructed
+    std::move(**popped).markNotDirty();
     return true;
   } else {
     return _baseBlockStore->remove(key);
