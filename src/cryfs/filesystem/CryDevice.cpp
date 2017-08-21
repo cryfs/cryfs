@@ -1,4 +1,4 @@
-#include <blockstore/implementations/caching/CachingBlockStore.h>
+#include <blockstore/implementations/caching2/CachingBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
@@ -36,7 +36,7 @@ using blobstore::BlobStore;
 using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
-using blockstore::caching::CachingBlockStore;
+using blockstore::caching::CachingBlockStore2;
 using blockstore::versioncounting::VersionCountingBlockStore2;
 using gitversion::VersionCompare;
 using cpputils::unique_ref;
@@ -94,8 +94,8 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
   // Create versionCountingEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
-     make_unique_ref<CachingBlockStore>(
-         make_unique_ref<LowToHighLevelBlockStore>(
+     make_unique_ref<LowToHighLevelBlockStore>(
+         make_unique_ref<CachingBlockStore2>(
              std::move(versionCountingEncryptedBlockStore)
          )
      ),
