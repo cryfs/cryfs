@@ -1,15 +1,15 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include "../impl/config/CryConfigFile.h"
+#include <cryfs/config/CryConfigFile.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
-#include <cryfs/impl/filesystem/fsblobstore/FsBlobStore.h>
-#include <cryfs/impl/filesystem/fsblobstore/DirBlob.h>
-#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/filesystem/fsblobstore/FsBlobStore.h>
+#include <cryfs/filesystem/fsblobstore/DirBlob.h>
+#include <cryfs/filesystem/CryDevice.h>
 
 using namespace boost;
 using namespace boost::filesystem;
@@ -39,7 +39,7 @@ void printNode(unique_ref<DataNode> node) {
 set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.EncryptionKey());
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(encryptedBlockStore), CryDevice::BLOCKSIZE_BYTES);
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(encryptedBlockStore), config.BlocksizeBytes());
     std::set<Key> unaccountedBlocks;
     uint32_t numBlocks = nodeStore->numNodes();
     uint32_t i = 0;
@@ -77,7 +77,7 @@ set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
 set<Key> _getBlocksReferencedByDirEntries(const CryConfig &config) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.EncryptionKey());
-    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(encryptedBlockStore), CryDevice::BLOCKSIZE_BYTES));
+    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(encryptedBlockStore), config.BlocksizeBytes()));
     set<Key> blocksReferencedByDirEntries;
     uint32_t numBlocks = fsBlobStore->numBlocks();
     uint32_t i = 0;
@@ -94,7 +94,7 @@ set<Key> _getBlocksReferencedByDirEntries(const CryConfig &config) {
                         vector<fspp::Dir::Entry> children;
                         (*dir)->AppendChildrenTo(&children);
                         for (const auto &child : children) {
-                            blocksReferencedByDirEntries.insert((*dir)->GetChild(child.name)->key);
+                            blocksReferencedByDirEntries.insert((*dir)->GetChild(child.name)->key());
                         }
                     }
                 }
@@ -122,7 +122,7 @@ int main() {
 
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config->config()->EncryptionKey());
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(encryptedBlockStore), CryDevice::BLOCKSIZE_BYTES);
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(encryptedBlockStore), config->config()->BlocksizeBytes());
 
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;

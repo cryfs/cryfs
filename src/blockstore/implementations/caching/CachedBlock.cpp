@@ -13,7 +13,7 @@ CachedBlock::CachedBlock(unique_ref<Block> baseBlock, CachingBlockStore *blockSt
 }
 
 CachedBlock::~CachedBlock() {
-  if (_baseBlock.isValid()) {
+  if (_baseBlock.is_valid()) {
     _blockStore->release(std::move(_baseBlock));
   }
 }

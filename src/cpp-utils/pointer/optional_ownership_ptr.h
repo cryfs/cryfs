@@ -26,12 +26,12 @@ using optional_ownership_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 template<typename T>
 optional_ownership_ptr<T> WithOwnership(std::unique_ptr<T> obj) {
   auto deleter = obj.get_deleter();
-  return optional_ownership_ptr<T>(obj.release(), [deleter](T* obj){deleter(obj);});
+  return optional_ownership_ptr<T>(obj.release(), deleter);
 }
 
 template <typename T>
 optional_ownership_ptr<T> WithOwnership(unique_ref<T> obj) {
-  return WithOwnership(to_unique_ptr(std::move(obj)));
+  return WithOwnership(static_cast<std::unique_ptr<T>>(std::move(obj)));
 }
 
 template<typename T>
