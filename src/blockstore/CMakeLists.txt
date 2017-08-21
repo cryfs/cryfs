@@ -17,14 +17,11 @@ set(SOURCES
   implementations/compressing/compressors/Gzip.cpp
   implementations/encrypted/EncryptedBlockStore2.cpp
   implementations/ondisk/OnDiskBlockStore2.cpp
-  implementations/caching/CachingBlockStore.cpp
-  implementations/caching2/CachingBlockStore2.cpp
+  implementations/caching/CachingBlockStore2.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp
   implementations/caching/cache/QueueMap.cpp
-  implementations/caching/CachedBlock.cpp
-  implementations/caching/NewBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
   implementations/versioncounting/VersionCountingBlockStore2.cpp

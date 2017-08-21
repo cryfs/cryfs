@@ -153,5 +153,9 @@ void CachingBlockStore2::forEachBlock(std::function<void (const Key &)> callback
   _baseBlockStore->forEachBlock(std::move(callback));
 }
 
+void CachingBlockStore2::flush() {
+    _cache.flush();
+}
+
 }
 }

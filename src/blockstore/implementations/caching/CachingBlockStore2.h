@@ -23,6 +23,8 @@ public:
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
   void forEachBlock(std::function<void (const Key &)> callback) const override;
 
+  void flush();
+
 private:
   // TODO Is a cache implementation with onEvict callback instead of destructor simpler?
   class CachedBlock final {

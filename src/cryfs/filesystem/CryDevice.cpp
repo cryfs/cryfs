@@ -1,4 +1,4 @@
-#include <blockstore/implementations/caching2/CachingBlockStore2.h>
+#include <blockstore/implementations/caching/CachingBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"

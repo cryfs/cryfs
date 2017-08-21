@@ -1,5 +1,5 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
-#include "blockstore/implementations/caching2/CachingBlockStore2.h"
+#include "blockstore/implementations/caching/CachingBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
