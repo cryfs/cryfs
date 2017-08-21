@@ -54,11 +54,11 @@ CachingBlockStore2::CachingBlockStore2(cpputils::unique_ref<BlockStore2> baseBlo
 }
 
 bool CachingBlockStore2::tryCreate(const Key &key, const Data &data) {
-  //TODO Check if block exists in base store
+  //TODO Check if block exists in base store? Performance hit? It's very unlikely it exists.
   auto popped = _cache.pop(key);
   if (popped != boost::none) {
     // entry already exists in cache
-    _cache.push(key, std::move(*popped));
+    _cache.push(key, std::move(*popped)); // push the just popped element back to the cache
     return false;
   } else {
     _cache.push(key, make_unique_ref<CachingBlockStore2::CachedBlock>(this, key, data.copy(), true));
@@ -72,7 +72,8 @@ bool CachingBlockStore2::remove(const Key &key) {
   // TODO Don't write-through but cache remove operations
   auto popped = _cache.pop(key);
   if (popped != boost::none) {
-    return std::move(**popped).remove();
+    std::move(**popped).remove();
+    return true;
   } else {
     return _baseBlockStore->remove(key);
   }
@@ -107,8 +108,10 @@ void CachingBlockStore2::store(const Key &key, const Data &data) {
   if (popped != boost::none) {
     (*popped)->write(data.copy());
   } else {
-    popped = make_unique_ref<CachingBlockStore2::CachedBlock>(this, key, data.copy(), true);
-    // TODO If block doesn't exist in base store, we have to add it to _cachedBlocksNotInBaseStore
+    popped = make_unique_ref<CachingBlockStore2::CachedBlock>(this, key, data.copy(), false);
+    // TODO Instead of storing it to the base store, we could just keep it dirty in the cache
+    //      and (if it doesn't exist in base store yet) add it to _cachedBlocksNotInBaseStore
+    _baseBlockStore->store(key, data);
   }
   _cache.push(key, std::move(*popped));
 }

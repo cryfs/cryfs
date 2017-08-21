@@ -288,7 +288,7 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectOnEmptyBlockstore) {
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterAddingOneBlock) {
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingOneBlock) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(cpputils::Data(1));
   EXPECT_EQ(1u, blockStore->numBlocks());
@@ -301,7 +301,7 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterAddingTwoBlocks) {
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingTwoBlocks) {
   auto blockStore = this->fixture.createBlockStore();
   blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(0));
@@ -313,6 +313,20 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingABlock) {
   blockstore::Key key = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
   EXPECT_TRUE(blockStore->remove(key));
+  EXPECT_EQ(1u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringANewBlock) {
+  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto blockStore = this->fixture.createBlockStore();
+  blockStore->store(key, cpputils::Data(1));
+  EXPECT_EQ(1u, blockStore->numBlocks());
+}
+
+TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringAnExistingBlock) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::Key key = blockStore->create(cpputils::Data(1));
+  blockStore->store(key, cpputils::Data(1));
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
@@ -405,10 +419,12 @@ REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   givenEmptyBlockStore_whenLoadingNonExistingBlock_thenFails,
   givenNonEmptyBlockStore_whenLoadingNonExistingBlock_thenFails,
   NumBlocksIsCorrectOnEmptyBlockstore,
-  NumBlocksIsCorrectAfterAddingOneBlock,
+  NumBlocksIsCorrectAfterCreatingOneBlock,
   NumBlocksIsCorrectAfterRemovingTheLastBlock,
-  NumBlocksIsCorrectAfterAddingTwoBlocks,
+  NumBlocksIsCorrectAfterCreatingTwoBlocks,
   NumBlocksIsCorrectAfterRemovingABlock,
+  NumBlocksIsCorrectAfterStoringANewBlock,
+  NumBlocksIsCorrectAfterStoringAnExistingBlock,
   ForEachBlock_zeroblocks,
   ForEachBlock_oneblock,
   ForEachBlock_twoblocks,
