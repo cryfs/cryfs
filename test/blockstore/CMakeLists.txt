@@ -19,6 +19,8 @@ set(SOURCES
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockCreateTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockFlushTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
+    implementations/caching2/CachingBlockStore2Test_Generic.cpp
+        implementations/caching2/CachingBlockStore2Test_Specific.cpp
     implementations/caching/CachingBlockStoreTest_Generic.cpp
     implementations/caching/CachingBlockStoreTest_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp

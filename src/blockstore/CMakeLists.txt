@@ -18,6 +18,7 @@ set(SOURCES
   implementations/encrypted/EncryptedBlockStore2.cpp
   implementations/ondisk/OnDiskBlockStore2.cpp
   implementations/caching/CachingBlockStore.cpp
+  implementations/caching2/CachingBlockStore2.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp
