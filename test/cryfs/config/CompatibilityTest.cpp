@@ -1,3 +1,4 @@
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <gtest/gtest.h>
 #include <vector>
 #include <boost/filesystem.hpp>
@@ -38,7 +39,7 @@ private:
         Data result(hex.size()/2);
         CryptoPP::StringSource(hex, true,
              new CryptoPP::HexDecoder(
-                   new CryptoPP::ArraySink((byte*)result.data(), result.size())
+                   new CryptoPP::ArraySink((CryptoPP::byte*)result.data(), result.size())
              )
         );
         return result;
