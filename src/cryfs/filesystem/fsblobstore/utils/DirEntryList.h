@@ -6,6 +6,7 @@
 #include "DirEntry.h"
 #include <vector>
 #include <string>
+#include "TimestampUpdateBehavior.h"
 
 //TODO Address elements by name instead of by key when accessing them. Who knows whether there is two hard links for the same blob.
 
@@ -39,7 +40,7 @@ namespace cryfs {
             void setMode(const blockstore::Key &key, mode_t mode);
             bool setUidGid(const blockstore::Key &key, uid_t uid, gid_t gid);
             void setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime);
-            void updateAccessTimestampForChild(const blockstore::Key &key);
+            void updateAccessTimestampForChild(const blockstore::Key &key, TimestampUpdateBehavior timestampUpdateBehavior);
             void updateModificationTimestampForChild(const blockstore::Key &key);
 
         private:

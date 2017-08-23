@@ -10,6 +10,7 @@
 #include "CryFile.h"
 #include "CryOpenFile.h"
 #include <cpp-utils/system/time.h>
+#include "fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -73,7 +74,7 @@ unique_ref<vector<fspp::Dir::Entry>> CryDir::children() {
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateAccessTimestampForChild(key());
+    parent()->updateAccessTimestampForChild(key(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   }
   auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));

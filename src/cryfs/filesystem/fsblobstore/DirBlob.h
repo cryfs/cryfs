@@ -60,7 +60,7 @@ namespace cryfs {
 
             void statChildWithSizeAlreadySet(const blockstore::Key &key, struct ::stat *result) const;
 
-            void updateAccessTimestampForChild(const blockstore::Key &key);
+            void updateAccessTimestampForChild(const blockstore::Key &key, TimestampUpdateBehavior timestampUpdateBehavior);
 
             void updateModificationTimestampForChild(const blockstore::Key &key);
 

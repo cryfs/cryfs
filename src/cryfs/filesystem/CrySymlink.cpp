@@ -4,6 +4,7 @@
 #include "CryDevice.h"
 #include "CrySymlink.h"
 #include "parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -46,7 +47,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->updateAccessTimestampForChild(key());
+  parent()->updateAccessTimestampForChild(key(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   auto blob = LoadBlob();
   return blob->target();
 }
