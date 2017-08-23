@@ -7,6 +7,7 @@ New Features:
 
 Improvements:
 * Performance improvements
+* Use relatime instead of strictatime (further performance improvement)
 * Pass fuse options directly to cryfs (i.e. 'cryfs basedir mountdir -o allow_other' instead of 'cryfs basedir mountdir -- -o allow_other')
 
 Version 0.9.8 (unreleased)
