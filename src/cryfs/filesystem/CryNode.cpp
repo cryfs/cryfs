@@ -9,6 +9,7 @@
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/clock_gettime.h>
 #include <cpp-utils/system/stat.h>
+#include <cpp-utils/logging/logging.h>
 
 namespace bf = boost::filesystem;
 
@@ -21,6 +22,7 @@ using boost::none;
 using std::shared_ptr;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using namespace cpputils::logging;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -121,6 +123,7 @@ void CryNode::_updateTargetDirModificationTimestamp(const DirBlobRef &targetDir,
 }
 
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
+//  LOG(WARN, "---utimens called---");
   device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.

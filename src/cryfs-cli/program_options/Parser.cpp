@@ -16,6 +16,7 @@ using std::endl;
 using std::string;
 using boost::optional;
 using boost::none;
+using namespace cpputils::logging;
 
 Parser::Parser(int argc, const char *argv[])
         :_options(_argsToVector(argc, argv)) {
@@ -30,8 +31,15 @@ vector<string> Parser::_argsToVector(int argc, const char *argv[]) {
 }
 
 ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
-    pair<vector<string>, vector<string>> options = splitAtDoubleDash(_options);
-    po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
+    vector<string> cryfsOptions;
+    vector<string> fuseOptions;
+    std::tie(cryfsOptions, fuseOptions) = splitAtDoubleDash(_options);
+
+    if (fuseOptions.size() != 0) {
+        LOG(WARN, "Passing fuse mount options after a double dash '--' is deprecated. Please pass them directly (e.g. 'cryfs basedir mountdir -o allow_other'");
+    }
+
+    po::variables_map vm = _parseOptionsOrShowHelp(cryfsOptions, supportedCiphers);
 
     if (!vm.count("base-dir")) {
         std::cerr << "Please specify a base directory.\n";
@@ -49,7 +57,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     }
     bool foreground = vm.count("foreground");
     if (foreground) {
-        options.second.push_back(const_cast<char*>("-f"));
+        fuseOptions.push_back(const_cast<char*>("-f"));
     }
     optional<double> unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
@@ -72,8 +80,15 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("missing-block-is-integrity-violation")) {
         missingBlockIsIntegrityViolation = vm["missing-block-is-integrity-violation"].as<bool>();
     }
+    if (vm.count("fuse-option")) {
+        auto options = vm["fuse-option"].as<vector<string>>();
+        for (const auto& option: options) {
+            fuseOptions.push_back("-o");
+            fuseOptions.push_back(option);
+        }
+    }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, missingBlockIsIntegrityViolation, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, missingBlockIsIntegrityViolation, fuseOptions);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -132,6 +147,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("help,h", "show help message")
             ("config,c", po::value<string>(), "Configuration file")
             ("foreground,f", "Run CryFS in foreground.")
+            ("fuse-option,o", po::value<vector<string>>(), "Add a fuse mount option. Example: atime or noatime.")
             ("cipher", po::value<string>(), cipher_description.c_str())
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
             ("missing-block-is-integrity-violation", po::value<bool>(), "Whether to treat a missing block as an integrity violation. This makes sure you notice if an attacker deleted some of your files, but only works in single-client mode. You will not be able to use the file system on other devices.")

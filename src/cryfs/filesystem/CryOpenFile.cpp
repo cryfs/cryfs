@@ -47,7 +47,7 @@ void CryOpenFile::truncate(off_t size) const {
 
 size_t CryOpenFile::read(void *buf, size_t count, off_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->key());
+  //_parent->updateAccessTimestampForChild(_fileBlob->key());
   return _fileBlob->read(buf, offset, count);
 }
 

@@ -2,10 +2,12 @@ Version 0.10.0 (unreleased)
 ---------------
 New Features:
 * Integrity checks ensure you notice when someone modifies your file system.
-* File system nodes (files, directories, symlinks) store a parent pointer to the directory that contains them. This information can be used to resolve synchronization conflicts.
+* File system nodes (files, directories, symlinks) store a parent pointer to the directory that contains them. This information can be used in later versions to resolve some synchronization conflicts.
+* Allow mounting using system mount tool and /etc/fstab (e.g. mount -t fuse.cryfs basedir mountdir)
 
 Improvements:
 * Performance improvements
+* Pass fuse options directly to cryfs (i.e. 'cryfs basedir mountdir -o allow_other' instead of 'cryfs basedir mountdir -- -o allow_other')
 
 Version 0.9.8 (unreleased)
 --------------

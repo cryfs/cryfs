@@ -181,3 +181,23 @@ TEST_F(ProgramOptionsParserTest, FuseOptionNotGiven) {
     EXPECT_EQ("/home/user/mountDir", options.mountDir());
     EXPECT_VECTOR_EQ({}, options.fuseOptions());
 }
+
+TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_AfterPositionalOptions) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "-o", "my_opt"});
+    EXPECT_VECTOR_EQ({"-o", "my_opt"}, options.fuseOptions());
+}
+
+TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_BeforePositionalOptions) {
+    ProgramOptions options = parse({"./myExecutable", "-o", "my_opt", "/home/user/baseDir", "/home/user/mountDir"});
+    EXPECT_VECTOR_EQ({"-o", "my_opt"}, options.fuseOptions());
+}
+
+TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_BeforeAndAfterPositionalOptions) {
+    ProgramOptions options = parse({"./myExecutable", "-o", "first", "-o", "second", "/home/user/baseDir", "-o", "third", "-o", "fourth", "/home/user/mountDir", "-o", "fifth", "-o", "sixth"});
+    EXPECT_VECTOR_EQ({"-o", "first", "-o", "second", "-o", "third", "-o", "fourth", "-o", "fifth", "-o", "sixth"}, options.fuseOptions());
+}
+
+TEST_F(ProgramOptionsParserTest, DirectAndIndirectFuseOptionsGiven) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir", "-o", "my_opt", "--", "-o", "other_opt"});
+    EXPECT_VECTOR_EQ({"-o", "other_opt", "-o", "my_opt"}, options.fuseOptions());
+}
