@@ -12,6 +12,12 @@ using namespace cpputils::logging;
 namespace blockstore {
 namespace versioncounting {
 
+constexpr uint16_t VersionCountingBlockStore2::FORMAT_VERSION_HEADER;
+constexpr uint64_t VersionCountingBlockStore2::VERSION_ZERO;
+constexpr unsigned int VersionCountingBlockStore2::CLIENTID_HEADER_OFFSET;
+constexpr unsigned int VersionCountingBlockStore2::VERSION_HEADER_OFFSET;
+constexpr unsigned int VersionCountingBlockStore2::HEADER_LENGTH;
+
 Data VersionCountingBlockStore2::_prependHeaderToData(uint32_t myClientId, uint64_t version, const Data &data) {
   static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId) + sizeof(version), "Wrong header length");
   Data result(data.size() + HEADER_LENGTH);

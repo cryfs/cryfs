@@ -52,6 +52,12 @@ private:
 };
 
 template<class Cipher>
+constexpr uint16_t EncryptedBlockStore2<Cipher>::FORMAT_VERSION_HEADER;
+
+template<class Cipher>
+constexpr unsigned int EncryptedBlockStore2<Cipher>::HEADER_LENGTH;
+
+template<class Cipher>
 inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const typename Cipher::EncryptionKey &encKey)
 : _baseBlockStore(std::move(baseBlockStore)), _encKey(encKey) {
 }
