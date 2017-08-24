@@ -160,8 +160,9 @@ void DirBlob::statChildWithSizeAlreadySet(const Key &key, struct ::stat *result)
 
 void DirBlob::updateAccessTimestampForChild(const Key &key, TimestampUpdateBehavior timestampUpdateBehavior) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _entries.updateAccessTimestampForChild(key, timestampUpdateBehavior);
-  _changed = true;
+  if (_entries.updateAccessTimestampForChild(key, timestampUpdateBehavior)) {
+    _changed = true;
+  }
 }
 
 void DirBlob::updateModificationTimestampForChild(const Key &key) {
