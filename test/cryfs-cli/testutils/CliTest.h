@@ -64,8 +64,12 @@ public:
         std::thread unmountThread([&mountDir] {
             int returncode = -1;
             while (returncode != 0) {
+#ifdef __APPLE__
+                returncode = cpputils::Subprocess::callAndGetReturnCode(std::string("umount ") + mountDir.c_str() + " 2>/dev/null");
+#else
                 returncode = cpputils::Subprocess::callAndGetReturnCode(std::string("fusermount -u ") + mountDir.c_str() + " 2>/dev/null");
-                std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
+#endif
+                //std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
             }
         });
         testing::internal::CaptureStdout();
