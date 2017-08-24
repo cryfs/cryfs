@@ -1,5 +1,8 @@
 #include "FuseWriteTest.h"
 
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+
 void FuseWriteTest::WriteFile(const char *filename, const void *buf, size_t count, off_t offset) {
   auto retval = WriteFileReturnError(filename, buf, count, offset);
   EXPECT_EQ(0, retval.error);
@@ -9,18 +12,18 @@ void FuseWriteTest::WriteFile(const char *filename, const void *buf, size_t coun
 FuseWriteTest::WriteError FuseWriteTest::WriteFileReturnError(const char *filename, const void *buf, size_t count, off_t offset) {
   auto fs = TestFS();
 
-  int fd = OpenFile(fs.get(), filename);
+  auto fd = OpenFile(fs.get(), filename);
 
   WriteError result;
   errno = 0;
-  result.written_bytes = ::pwrite(fd, buf, count, offset);
+  result.written_bytes = ::pwrite(fd->fd(), buf, count, offset);
   result.error = errno;
   return result;
 }
 
-int FuseWriteTest::OpenFile(const TempTestFS *fs, const char *filename) {
+unique_ref<OpenFileHandle> FuseWriteTest::OpenFile(const TempTestFS *fs, const char *filename) {
   auto realpath = fs->mountDir() / filename;
-  int fd = ::open(realpath.c_str(), O_WRONLY);
-  EXPECT_GE(fd, 0) << "Error opening file";
+  auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_WRONLY);
+  EXPECT_GE(fd->fd(), 0) << "Error opening file";
   return fd;
 }

@@ -100,7 +100,7 @@ set(SOURCES
     fs_interface/DirTest.cpp
     fs_interface/DeviceTest.cpp
     fs_interface/OpenFileTest.cpp
-)
+        testutils/OpenFileHandle.cpp testutils/OpenFileHandle.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} googletest fspp)

@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_TEST_FUSE_READ_TESTUTILS_FUSEREADTEST_H_
 
 #include "../../../testutils/FuseTest.h"
+#include "../../../testutils/OpenFileHandle.h"
 
 class FuseReadTest: public FuseTest {
 public:
@@ -29,7 +30,7 @@ public:
   }
 
 private:
-  int OpenFile(const TempTestFS *fs, const char *filename);
+  cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);
 };
 
 #endif

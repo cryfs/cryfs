@@ -1,5 +1,8 @@
 #include "FuseFTruncateTest.h"
 
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+
 void FuseFTruncateTest::FTruncateFile(const char *filename, off_t size) {
   int error = FTruncateFileReturnError(filename, size);
   EXPECT_EQ(0, error);
@@ -8,8 +11,8 @@ void FuseFTruncateTest::FTruncateFile(const char *filename, off_t size) {
 int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, off_t size) {
   auto fs = TestFS();
 
-  int fd = OpenFile(fs.get(), filename);
-  int retval = ::ftruncate(fd, size);
+  auto fd = OpenFile(fs.get(), filename);
+  int retval = ::ftruncate(fd->fd(), size);
   if (0 == retval) {
     return 0;
   } else {
@@ -17,9 +20,9 @@ int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, off_t size
   }
 }
 
-int FuseFTruncateTest::OpenFile(const TempTestFS *fs, const char *filename) {
+unique_ref<OpenFileHandle> FuseFTruncateTest::OpenFile(const TempTestFS *fs, const char *filename) {
   auto realpath = fs->mountDir() / filename;
-  int fd = ::open(realpath.c_str(), O_RDWR);
-  EXPECT_GE(fd, 0) << "Error opening file";
+  auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_RDWR);
+  EXPECT_GE(fd->fd(), 0) << "Error opening file";
   return fd;
 }

@@ -24,9 +24,10 @@ TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   auto fs = TestFS();
-  int fd = OpenFile(fs.get(), FILENAME);
+  auto fd = OpenFile(fs.get(), FILENAME);
 
-  int close_result = ::close(fd);
+  int close_result = ::close(fd->fd());
   EXPECT_EQ(GetParam(), errno);
   EXPECT_EQ(-1, close_result);
+  fd->release(); // don't close it again
 }

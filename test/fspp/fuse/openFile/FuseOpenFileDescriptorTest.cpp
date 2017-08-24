@@ -5,21 +5,23 @@ using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Return;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
 class FuseOpenFileDescriptorTest: public FuseOpenTest, public WithParamInterface<int> {
 public:
   void OpenAndReadFile(const char *filename) {
     auto fs = TestFS();
 
-    int fd = OpenFile(fs.get(), filename);
-    ReadFile(fd);
+    auto fd = OpenFile(fs.get(), filename);
+    ReadFile(fd->fd());
   }
 
 private:
-  int OpenFile(const TempTestFS *fs, const char *filename) {
+  unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename) {
     auto realpath = fs->mountDir() / filename;
-    int fd = ::open(realpath.c_str(), O_RDONLY);
-    EXPECT_GE(fd, 0) << "Opening file failed";
+    auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_RDONLY);
+    EXPECT_GE(fd->fd(), 0) << "Opening file failed";
     return fd;
   }
   void ReadFile(int fd) {

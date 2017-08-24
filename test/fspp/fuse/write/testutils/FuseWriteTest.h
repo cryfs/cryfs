@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_TEST_FUSE_WRITE_TESTUTILS_FUSEWRITETEST_H_
 
 #include "../../../testutils/FuseTest.h"
+#include "../../../testutils/OpenFileHandle.h"
 
 class FuseWriteTest: public FuseTest {
 public:
@@ -17,7 +18,7 @@ public:
   WriteError WriteFileReturnError(const char *filename, const void *buf, size_t count, off_t offset);
 
 private:
-  int OpenFile(const TempTestFS *fs, const char *filename);
+  cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);
 };
 
 #endif
