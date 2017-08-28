@@ -10,6 +10,7 @@
 #include "CryFile.h"
 #include "CryOpenFile.h"
 #include <cpp-utils/system/time.h>
+#include "fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -47,7 +48,7 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
   auto now = cpputils::time::now();
   auto dirBlob = LoadBlob();
   dirBlob->AddChildFile(name, child->key(), mode, uid, gid, now, now);
-  return make_unique_ref<CryOpenFile>(device(), cpputils::to_unique_ptr(std::move(dirBlob)), std::move(child));
+  return make_unique_ref<CryOpenFile>(device(), std::move(dirBlob), std::move(child));
 }
 
 void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
@@ -73,7 +74,7 @@ unique_ref<vector<fspp::Dir::Entry>> CryDir::children() {
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateAccessTimestampForChild(key());
+    parent()->updateAccessTimestampForChild(key(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   }
   auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));

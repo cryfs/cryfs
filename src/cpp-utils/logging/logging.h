@@ -4,14 +4,15 @@
 
 #include "Logger.h"
 #include <stdexcept>
+#include <spdlog/fmt/ostr.h>
 
 namespace cpputils {
     namespace logging {
 
-        extern struct ERROR_TYPE {} ERROR;
-        extern struct WARN_TYPE {} WARN;
-        extern struct INFO_TYPE {} INFO;
-        extern struct DEBUG_TYPE {} DEBUG;
+        constexpr struct ERROR_TYPE {} ERROR {};
+        constexpr struct WARN_TYPE {} WARN {};
+        constexpr struct INFO_TYPE {} INFO {};
+        constexpr struct DEBUG_TYPE {} DEBUG {};
 
         inline void setLogger(std::shared_ptr<spdlog::logger> newLogger) {
             logger().setLogger(newLogger);
@@ -37,20 +38,28 @@ namespace cpputils {
             logger().setLevel(spdlog::level::debug);
         }
 
-        inline spdlog::details::line_logger LOG(ERROR_TYPE) {
-            return logger()->error();
+        template<class LogType> inline void LOG(LogType logType, const std::string &msg) {
+          LOG(logType, msg.c_str());
         }
 
-        inline spdlog::details::line_logger LOG(WARN_TYPE) {
-            return logger()->warn();
+        template <typename... Args>
+        inline void LOG(ERROR_TYPE, const char* fmt, const Args&... args) {
+            logger()->error(fmt, args...);
         }
 
-        inline spdlog::details::line_logger LOG(INFO_TYPE) {
-            return logger()->info();
+        template <typename... Args>
+        inline void LOG(WARN_TYPE, const char* fmt, const Args&... args) {
+            logger()->warn(fmt, args...);
         }
 
-        inline spdlog::details::line_logger LOG(DEBUG_TYPE) {
-            return logger()->debug();
+        template <typename... Args>
+        inline void LOG(INFO_TYPE, const char* fmt, const Args&... args) {
+            logger()->info(fmt, args...);
+        }
+
+        template <typename... Args>
+        inline void LOG(DEBUG_TYPE, const char* fmt, const Args&... args) {
+            logger()->debug(fmt, args...);
         }
     }
 }

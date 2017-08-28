@@ -4,10 +4,11 @@
 //
 
 #pragma once
-#include <mutex>
-#include "./base_sink.h"
-#include "../details/null_mutex.h"
 
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/details/null_mutex.h>
+
+#include <mutex>
 
 namespace spdlog
 {
@@ -26,7 +27,7 @@ protected:
 
 };
 typedef null_sink<details::null_mutex> null_sink_st;
-typedef null_sink<std::mutex> null_sink_mt;
+typedef null_sink<details::null_mutex> null_sink_mt;
 
 }
 }

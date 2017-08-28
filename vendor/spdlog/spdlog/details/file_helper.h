@@ -10,13 +10,14 @@
 // Can be set to auto flush on every line
 // Throw spdlog_ex exception on errors
 
+#include <spdlog/details/os.h>
+#include <spdlog/details/log_msg.h>
+
+#include <chrono>
+#include <cstdio>
 #include <string>
 #include <thread>
-#include <chrono>
-#include "os.h"
-#include "log_msg.h"
-
-
+#include <cerrno>
 
 namespace spdlog
 {
@@ -25,13 +26,13 @@ namespace details
 
 class file_helper
 {
+
 public:
     const int open_tries = 5;
     const int open_interval = 10;
 
-    explicit file_helper(bool force_flush) :
-        _fd(nullptr),
-        _force_flush(force_flush)
+    explicit file_helper() :
+        _fd(nullptr)
     {}
 
     file_helper(const file_helper&) = delete;
@@ -43,11 +44,11 @@ public:
     }
 
 
-    void open(const std::string& fname, bool truncate = false)
+    void open(const filename_t& fname, bool truncate = false)
     {
 
         close();
-        const char* mode = truncate ? "wb" : "ab";
+        auto *mode = truncate ? SPDLOG_FILENAME_T("wb") : SPDLOG_FILENAME_T("ab");
         _filename = fname;
         for (int tries = 0; tries < open_tries; ++tries)
         {
@@ -57,7 +58,7 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(open_interval));
         }
 
-        throw spdlog_ex("Failed opening file " + fname + " for writing");
+        throw spdlog_ex("Failed opening file " + os::filename_to_str(_filename) + " for writing", errno);
     }
 
     void reopen(bool truncate)
@@ -88,55 +89,30 @@ public:
         size_t msg_size = msg.formatted.size();
         auto data = msg.formatted.data();
         if (std::fwrite(data, 1, msg_size, _fd) != msg_size)
-            throw spdlog_ex("Failed writing to file " + _filename);
-
-        if (_force_flush)
-            std::fflush(_fd);
-
+            throw spdlog_ex("Failed writing to file " + os::filename_to_str(_filename), errno);
     }
 
-    long size()
+    size_t size()
     {
         if (!_fd)
-            throw spdlog_ex("Cannot use size() on closed file " + _filename);
-
-        auto pos = ftell(_fd);
-        if (fseek(_fd, 0, SEEK_END) != 0)
-            throw spdlog_ex("fseek failed on file " + _filename);
-
-        auto file_size = ftell(_fd);
-
-        if(fseek(_fd, pos, SEEK_SET) !=0)
-            throw spdlog_ex("fseek failed on file " + _filename);
-
-        if (file_size == -1)
-            throw spdlog_ex("ftell failed on file " + _filename);
-
-
-        return file_size;
-
-
+            throw spdlog_ex("Cannot use size() on closed file " + os::filename_to_str(_filename));
+        return os::filesize(_fd);
     }
 
-    const std::string& filename() const
+    const filename_t& filename() const
     {
         return _filename;
     }
 
-    static bool file_exists(const std::string& name)
+    static bool file_exists(const filename_t& name)
     {
 
         return os::file_exists(name);
     }
 
-
-
 private:
     FILE* _fd;
-    std::string _filename;
-    bool _force_flush;
-
-
+    filename_t _filename;
 };
 }
 }

@@ -1,6 +1,7 @@
-#include "blockstore/implementations/ondisk/OnDiskBlock.h"
-#include "blockstore/implementations/ondisk/OnDiskBlockStore.h"
+#include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
+#include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
+#include "../../testutils/BlockStore2Test.h"
 #include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include <gtest/gtest.h>
 
@@ -8,8 +9,9 @@
 
 
 using blockstore::BlockStore;
-using blockstore::BlockStoreWithRandomKeys;
-using blockstore::ondisk::OnDiskBlockStore;
+using blockstore::ondisk::OnDiskBlockStore2;
+using blockstore::BlockStore2;
+using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 
 using cpputils::TempDir;
 using cpputils::unique_ref;
@@ -20,7 +22,9 @@ public:
   OnDiskBlockStoreTestFixture(): tempdir() {}
 
   unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<OnDiskBlockStore>(tempdir.path());
+    return make_unique_ref<LowToHighLevelBlockStore>(
+      make_unique_ref<OnDiskBlockStore2>(tempdir.path())
+    );
   }
 private:
   TempDir tempdir;
@@ -28,15 +32,31 @@ private:
 
 INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixture);
 
+// TODO Add BlockStoreWithRandomKeysTest to BlockStoreTest and BlockStore2Test
 class OnDiskBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
 public:
   OnDiskBlockStoreWithRandomKeysTestFixture(): tempdir() {}
-  
-  unique_ref<BlockStoreWithRandomKeys> createBlockStore() override {
-    return make_unique_ref<OnDiskBlockStore>(tempdir.path());
+
+  unique_ref<BlockStore> createBlockStore() override {
+    return make_unique_ref<LowToHighLevelBlockStore>(
+        make_unique_ref<OnDiskBlockStore2>(tempdir.path())
+    );
   }
 private:
   TempDir tempdir;
 };
 
 INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreWithRandomKeysTest, OnDiskBlockStoreWithRandomKeysTestFixture);
+
+class OnDiskBlockStore2TestFixture: public BlockStore2TestFixture {
+public:
+  OnDiskBlockStore2TestFixture(): tempdir() {}
+
+  unique_ref<BlockStore2> createBlockStore() override {
+    return make_unique_ref<OnDiskBlockStore2>(tempdir.path());
+  }
+private:
+  TempDir tempdir;
+};
+
+INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStore2Test, OnDiskBlockStore2TestFixture);

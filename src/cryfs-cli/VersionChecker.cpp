@@ -65,7 +65,7 @@ namespace cryfs {
             read_json(input, pt);
             return pt;
         } catch (const json_parser_error &e) {
-            LOG(WARN) << "Error parsing version information json object";
+            LOG(WARN, "Error parsing version information json object");
             return none;
         }
     }

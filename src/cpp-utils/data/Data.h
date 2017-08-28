@@ -8,6 +8,7 @@
 #include "../macros.h"
 #include <memory>
 #include <fstream>
+#include "../assert/assert.h"
 
 namespace cpputils {
 
@@ -20,6 +21,9 @@ public:
   Data &operator=(Data &&rhs); // move assignment
 
   Data copy() const;
+
+  //TODO Test copyAndRemovePrefix
+  Data copyAndRemovePrefix(size_t prefixSize) const;
 
   void *data();
   const void *data() const;
@@ -92,6 +96,13 @@ inline Data::~Data() {
 inline Data Data::copy() const {
   Data copy(_size);
   std::memcpy(copy._data, _data, _size);
+  return copy;
+}
+
+inline Data Data::copyAndRemovePrefix(size_t prefixSize) const {
+  ASSERT(prefixSize <= _size, "Can't remove more than there is");
+  Data copy(_size - prefixSize);
+  std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
   return copy;
 }
 

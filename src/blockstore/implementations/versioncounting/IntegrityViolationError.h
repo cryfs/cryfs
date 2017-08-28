@@ -23,6 +23,7 @@ namespace blockstore {
                     : _reason("Integrity violation: " + reason) {
             }
             friend class VersionCountingBlockStore;
+            friend class VersionCountingBlockStore2;
 
             std::string _reason;
         };

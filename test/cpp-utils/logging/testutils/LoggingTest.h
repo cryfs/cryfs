@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "cpp-utils/logging/logging.h"
+#include <spdlog/sinks/ostream_sink.h>
 
 class MockLogger final {
 public:

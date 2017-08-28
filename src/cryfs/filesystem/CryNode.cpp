@@ -9,6 +9,7 @@
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/clock_gettime.h>
 #include <cpp-utils/system/stat.h>
+#include <cpp-utils/logging/logging.h>
 
 namespace bf = boost::filesystem;
 
@@ -21,6 +22,7 @@ using boost::none;
 using std::shared_ptr;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using namespace cpputils::logging;
 
 //TODO Get rid of this in favor of an exception hierarchy
 using fspp::fuse::CHECK_RETVAL;
@@ -37,7 +39,7 @@ CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, opt
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
 
   if (parent != none) {
-    _parent = cpputils::to_unique_ptr(std::move(*parent));
+    _parent = std::move(*parent);
   }
   _grandparent = std::move(grandparent);
 }
@@ -101,7 +103,7 @@ void CryNode::rename(const bf::path &to) {
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
     LoadBlob()->setParentPointer(targetDir->key());
-    _parent = cpputils::to_unique_ptr(std::move(targetDir));
+    _parent = std::move(targetDir);
   }
 }
 
@@ -121,6 +123,7 @@ void CryNode::_updateTargetDirModificationTimestamp(const DirBlobRef &targetDir,
 }
 
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
+//  LOG(WARN, "---utimens called---");
   device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
@@ -163,10 +166,10 @@ void CryNode::stat(struct ::stat *result) const {
   device()->callFsActionCallbacks();
   if(_parent == none) {
     //We are the root directory.
-	//TODO What should we do?
+	  //TODO What should we do?
     result->st_uid = getuid();
     result->st_gid = getgid();
-	result->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
+	  result->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
     result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
     result->st_nlink = 1;

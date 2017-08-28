@@ -1,4 +1,4 @@
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <fspp/fstest/FsTest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
@@ -17,7 +17,7 @@ using ::testing::Return;
 using ::testing::_;
 using boost::none;
 using std::make_shared;
-using blockstore::testfake::FakeBlockStore;
+using blockstore::inmemory::InMemoryBlockStore2;
 
 using namespace cryfs;
 
@@ -28,7 +28,7 @@ public:
   : configFile(false) {}
 
   unique_ref<Device> createDevice() override {
-    auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
+    auto blockStore = cpputils::make_unique_ref<InMemoryBlockStore2>();
     auto askPassword = [] {return "mypassword";};
     auto config = CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none)
             .loadOrCreate(configFile.path()).value();

@@ -1,10 +1,11 @@
-#include "blockstore/implementations/ondisk/OnDiskBlock.h"
 #include <cpp-utils/data/DataFixture.h>
 #include <gtest/gtest.h>
 
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/tempfile/TempDir.h>
 
+// TODO This should be ported to BlockStore2
+/*
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -115,3 +116,4 @@ TEST_P(OnDiskBlockFlushTest, AfterLoad_FlushesWhenDestructed) {
   }
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
+*/

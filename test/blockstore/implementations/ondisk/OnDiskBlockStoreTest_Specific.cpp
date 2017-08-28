@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "blockstore/implementations/ondisk/OnDiskBlockStore.h"
+#include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include <cpp-utils/tempfile/TempDir.h>
 
 using ::testing::Test;
@@ -18,10 +18,10 @@ public:
     blockStore(baseDir.path()) {
   }
   TempDir baseDir;
-  OnDiskBlockStore blockStore;
+  OnDiskBlockStore2 blockStore;
 
   blockstore::Key CreateBlockReturnKey(const Data &initData) {
-    return blockStore.create(initData)->key();
+    return blockStore.create(initData.copy());
   }
 
   uint64_t getPhysicalBlockSize(const Key &key) {
@@ -61,7 +61,7 @@ TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_positive) {
 TEST_F(OnDiskBlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocksWithSameKeyPrefix) {
   const Key key1 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A13");
   const Key key2 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A14");
-  EXPECT_NE(boost::none, blockStore.tryCreate(key1, cpputils::Data(0)));
-  EXPECT_NE(boost::none, blockStore.tryCreate(key2, cpputils::Data(0)));
+  EXPECT_TRUE(blockStore.tryCreate(key1, cpputils::Data(0)));
+  EXPECT_TRUE(blockStore.tryCreate(key2, cpputils::Data(0)));
   EXPECT_EQ(2u, blockStore.numBlocks());
 }

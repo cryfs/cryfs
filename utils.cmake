@@ -57,11 +57,13 @@ function(target_add_boost TARGET)
         message(STATUS "Boost will be dynamically linked")
         set(Boost_USE_STATIC_LIBS OFF)
     endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
-    find_package(Boost 1.56.0
+    set(BOOST_THREAD_VERSION 4)
+    find_package(Boost 1.58.0
             REQUIRED
             COMPONENTS ${ARGN})
     target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_libraries(${TARGET} PUBLIC ${Boost_LIBRARIES})
+    target_compile_definitions(${TARGET} PUBLIC BOOST_THREAD_VERSION=4)
     if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
       # Also link to rt, because boost thread needs that.
       target_link_libraries(${TARGET} PUBLIC rt)

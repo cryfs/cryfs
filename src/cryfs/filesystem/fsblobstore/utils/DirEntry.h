@@ -5,8 +5,7 @@
 #include <blockstore/utils/Key.h>
 #include <fspp/fs_interface/Dir.h>
 #include <cpp-utils/system/time.h>
-
-// TODO Implement (and test) atime, noatime, strictatime, relatime mount options
+#include <sys/stat.h>
 
 namespace cryfs {
     namespace fsblobstore {

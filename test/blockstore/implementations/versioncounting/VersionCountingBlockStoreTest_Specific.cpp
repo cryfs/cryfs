@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include "blockstore/implementations/versioncounting/VersionCountingBlockStore.h"
-#include "blockstore/implementations/versioncounting/VersionCountingBlock.h"
-#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "blockstore/implementations/versioncounting/VersionCountingBlockStore2.h"
+#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "blockstore/utils/BlockStoreUtils.h"
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempFile.h>
@@ -17,7 +16,7 @@ using boost::none;
 using std::make_unique;
 using std::unique_ptr;
 
-using blockstore::testfake::FakeBlockStore;
+using blockstore::inmemory::InMemoryBlockStore2;
 
 using namespace blockstore::versioncounting;
 
@@ -26,25 +25,25 @@ public:
   static constexpr unsigned int BLOCKSIZE = 1024;
   VersionCountingBlockStoreTest():
     stateFile(false),
-    baseBlockStore(new FakeBlockStore),
-    blockStore(make_unique_ref<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, false)),
+    baseBlockStore(new InMemoryBlockStore2),
+    blockStore(make_unique_ref<VersionCountingBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false)),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
   static constexpr uint32_t myClientId = 0x12345678;
   TempFile stateFile;
-  FakeBlockStore *baseBlockStore;
-  unique_ref<VersionCountingBlockStore> blockStore;
+  InMemoryBlockStore2 *baseBlockStore;
+  unique_ref<VersionCountingBlockStore2> blockStore;
   Data data;
 
-  std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithDeletionPrevention() {
-    FakeBlockStore *baseBlockStore = new FakeBlockStore;
-    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, true);
+  std::pair<InMemoryBlockStore2 *, unique_ptr<VersionCountingBlockStore2>> makeBlockStoreWithDeletionPrevention() {
+    InMemoryBlockStore2 *baseBlockStore = new InMemoryBlockStore2;
+    auto blockStore = make_unique<VersionCountingBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, true);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
-  std::pair<FakeBlockStore *, unique_ptr<VersionCountingBlockStore>> makeBlockStoreWithoutDeletionPrevention() {
-    FakeBlockStore *baseBlockStore = new FakeBlockStore;
-    auto blockStore = make_unique<VersionCountingBlockStore>(std::move(cpputils::nullcheck(std::unique_ptr<FakeBlockStore>(baseBlockStore)).value()), stateFile.path(), myClientId, false);
+  std::pair<InMemoryBlockStore2 *, unique_ptr<VersionCountingBlockStore2>> makeBlockStoreWithoutDeletionPrevention() {
+    InMemoryBlockStore2 *baseBlockStore = new InMemoryBlockStore2;
+    auto blockStore = make_unique<VersionCountingBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
@@ -53,55 +52,48 @@ public:
   }
 
   blockstore::Key CreateBlockReturnKey(const Data &initData) {
-    return blockStore->create(initData)->key();
+    return blockStore->create(initData.copy());
   }
 
   Data loadBaseBlock(const blockstore::Key &key) {
-    auto block = baseBlockStore->load(key).value();
-    Data result(block->size());
-    std::memcpy(result.data(), block->data(), data.size());
-    return result;
+    return baseBlockStore->load(key).value();
   }
 
   Data loadBlock(const blockstore::Key &key) {
-    auto block = blockStore->load(key).value();
-    Data result(block->size());
-    std::memcpy(result.data(), block->data(), data.size());
-    return result;
+    return blockStore->load(key).value();
   }
 
   void modifyBlock(const blockstore::Key &key) {
     auto block = blockStore->load(key).value();
-    uint64_t data = 5;
-    block->write(&data, 0, sizeof(data));
+    byte* first_byte = (byte*)block.data();
+    *first_byte = *first_byte + 1;
+    blockStore->store(key, block);
   }
 
   void rollbackBaseBlock(const blockstore::Key &key, const Data &data) {
-    auto block = baseBlockStore->load(key).value();
-    block->resize(data.size());
-    block->write(data.data(), 0, data.size());
+    baseBlockStore->store(key, data);
   }
 
   void decreaseVersionNumber(const blockstore::Key &key) {
     auto baseBlock = baseBlockStore->load(key).value();
-    uint64_t version = *(uint64_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::VERSION_HEADER_OFFSET);
-    ASSERT(version > 1, "Can't decrease the lowest allowed version number");
-    version -= 1;
-    baseBlock->write((char*)&version, VersionCountingBlock::VERSION_HEADER_OFFSET, sizeof(version));
+    uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+VersionCountingBlockStore2::VERSION_HEADER_OFFSET);
+    ASSERT(*version > 1, "Can't decrease the lowest allowed version number");
+    *version -= 1;
+    baseBlockStore->store(key, baseBlock);
   }
 
   void increaseVersionNumber(const blockstore::Key &key) {
     auto baseBlock = baseBlockStore->load(key).value();
-    uint64_t version = *(uint64_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::VERSION_HEADER_OFFSET);
-    version += 1;
-    baseBlock->write((char*)&version, VersionCountingBlock::VERSION_HEADER_OFFSET, sizeof(version));
+    uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+VersionCountingBlockStore2::VERSION_HEADER_OFFSET);
+    *version += 1;
+    baseBlockStore->store(key, baseBlock);
   }
 
   void changeClientId(const blockstore::Key &key) {
     auto baseBlock = baseBlockStore->load(key).value();
-    uint32_t clientId = *(uint32_t*)((uint8_t*)baseBlock->data()+VersionCountingBlock::CLIENTID_HEADER_OFFSET);
-    clientId += 1;
-    baseBlock->write((char*)&clientId, VersionCountingBlock::CLIENTID_HEADER_OFFSET, sizeof(clientId));
+    uint32_t* clientId = (uint32_t*)((uint8_t*)baseBlock.data()+VersionCountingBlockStore2::CLIENTID_HEADER_OFFSET);
+    *clientId += 1;
+    baseBlockStore->store(key, baseBlock);
   }
 
   void deleteBlock(const blockstore::Key &key) {
@@ -109,7 +101,7 @@ public:
   }
 
   void insertBaseBlock(const blockstore::Key &key, Data data) {
-    EXPECT_NE(none, baseBlockStore->tryCreate(key, std::move(data)));
+    EXPECT_TRUE(baseBlockStore->tryCreate(key, std::move(data)));
   }
 
 private:
@@ -194,20 +186,20 @@ TEST_F(VersionCountingBlockStoreTest, RollbackPrevention_AllowsReintroducingDele
 
 // Check that in a multi-client scenario, missing blocks are not integrity errors, because another client might have deleted them.
 TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_AllowsDeletingBlocksWhenDeactivated) {
-  FakeBlockStore *baseBlockStore;
-  unique_ptr<VersionCountingBlockStore> blockStore;
+  InMemoryBlockStore2 *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
-  auto key = blockStore->create(Data(0))->key();
+  auto key = blockStore->create(Data(0));
   baseBlockStore->remove(key);
   EXPECT_EQ(boost::none, blockStore->load(key));
 }
 
 // Check that in a single-client scenario, missing blocks are integrity errors.
 TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBlocksWhenActivated) {
-  FakeBlockStore *baseBlockStore;
-  unique_ptr<VersionCountingBlockStore> blockStore;
+  InMemoryBlockStore2 *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
-  auto key = blockStore->create(Data(0))->key();
+  auto key = blockStore->create(Data(0));
   baseBlockStore->remove(key);
   EXPECT_THROW(
       blockStore->load(key),
@@ -217,10 +209,10 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBloc
 
 // Check that in a multi-client scenario, missing blocks are not integrity errors, because another client might have deleted them.
 TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_AllowsDeletingBlocksWhenDeactivated) {
-  FakeBlockStore *baseBlockStore;
-  unique_ptr<VersionCountingBlockStore> blockStore;
+  InMemoryBlockStore2 *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
-  auto key = blockStore->create(Data(0))->key();
+  auto key = blockStore->create(Data(0));
   baseBlockStore->remove(key);
   int count = 0;
   blockStore->forEachBlock([&count] (const blockstore::Key &) {
@@ -231,10 +223,10 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_AllowsDe
 
 // Check that in a single-client scenario, missing blocks are integrity errors.
 TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_DoesntAllowDeletingBlocksWhenActivated) {
-  FakeBlockStore *baseBlockStore;
-  unique_ptr<VersionCountingBlockStore> blockStore;
+  InMemoryBlockStore2 *baseBlockStore;
+  unique_ptr<VersionCountingBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
-  auto key = blockStore->create(Data(0))->key();
+  auto key = blockStore->create(Data(0));
   baseBlockStore->remove(key);
   EXPECT_THROW(
       blockStore->forEachBlock([] (const blockstore::Key &) {}),
@@ -254,13 +246,13 @@ TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_zerophysical) {
 TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_zerovirtual) {
   auto key = CreateBlockReturnKey(Data(0));
   auto base = baseBlockStore->load(key).value();
-  EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(base->size()));
+  EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }
 
 TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
   // This tests that a potential if/else in blockSizeFromPhysicalBlockSize that catches negative values has the
   // correct boundary set. We test the highest value that is negative and the smallest value that is positive.
-  auto physicalSizeForVirtualSizeZero = baseBlockStore->load(CreateBlockReturnKey(Data(0))).value()->size();
+  auto physicalSizeForVirtualSizeZero = baseBlockStore->load(CreateBlockReturnKey(Data(0))).value().size();
   if (physicalSizeForVirtualSizeZero > 0) {
     EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(physicalSizeForVirtualSizeZero - 1));
   }
@@ -271,5 +263,5 @@ TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
 TEST_F(VersionCountingBlockStoreTest, PhysicalBlockSize_positive) {
   auto key = CreateBlockReturnKey(Data(10*1024));
   auto base = baseBlockStore->load(key).value();
-  EXPECT_EQ(10*1024u, blockStore->blockSizeFromPhysicalBlockSize(base->size()));
+  EXPECT_EQ(10*1024u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }

@@ -19,8 +19,8 @@ set(SOURCES
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockCreateTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockFlushTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
-    implementations/caching/CachingBlockStoreTest_Generic.cpp
-    implementations/caching/CachingBlockStoreTest_Specific.cpp
+    implementations/caching/CachingBlockStore2Test_Generic.cpp
+    implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
     implementations/caching/cache/testutils/CopyableMovableValueType.cpp
@@ -38,6 +38,7 @@ set(SOURCES
     implementations/versioncounting/KnownBlockVersionsTest.cpp
     implementations/versioncounting/VersionCountingBlockStoreTest_Generic.cpp
     implementations/versioncounting/VersionCountingBlockStoreTest_Specific.cpp
+    implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

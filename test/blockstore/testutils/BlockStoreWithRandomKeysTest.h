@@ -9,7 +9,7 @@
 class BlockStoreWithRandomKeysTestFixture {
 public:
   virtual ~BlockStoreWithRandomKeysTestFixture() {}
-  virtual cpputils::unique_ref<blockstore::BlockStoreWithRandomKeys> createBlockStore() = 0;
+  virtual cpputils::unique_ref<blockstore::BlockStore> createBlockStore() = 0;
 };
 
 template<class ConcreteBlockStoreWithRandomKeysTestFixture>

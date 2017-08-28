@@ -135,11 +135,11 @@ off_t DirBlob::lstat_size() const {
 }
 
 void DirBlob::statChild(const Key &key, struct ::stat *result) const {
-  statChildExceptSize(key, result);
   result->st_size = _getLstatSize(key);
+  statChildWithSizeAlreadySet(key, result);
 }
 
-void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
+void DirBlob::statChildWithSizeAlreadySet(const Key &key, struct ::stat *result) const {
   auto childOpt = GetChild(key);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
@@ -158,10 +158,11 @@ void DirBlob::statChildExceptSize(const Key &key, struct ::stat *result) const {
   result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
 }
 
-void DirBlob::updateAccessTimestampForChild(const Key &key) {
+void DirBlob::updateAccessTimestampForChild(const Key &key, TimestampUpdateBehavior timestampUpdateBehavior) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _entries.updateAccessTimestampForChild(key);
-  _changed = true;
+  if (_entries.updateAccessTimestampForChild(key, timestampUpdateBehavior)) {
+    _changed = true;
+  }
 }
 
 void DirBlob::updateModificationTimestampForChild(const Key &key) {
