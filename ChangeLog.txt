@@ -10,6 +10,9 @@ Improvements:
 * Use relatime instead of strictatime (further performance improvement)
 * Pass fuse options directly to cryfs (i.e. 'cryfs basedir mountdir -o allow_other' instead of 'cryfs basedir mountdir -- -o allow_other')
 
+Fixed bugs:
+* `du` shows correct file system size on Mac OS X.
+
 Version 0.9.8 (unreleased)
 --------------
 Compatibility:
