@@ -100,8 +100,11 @@ uint64_t OnDiskBlockStore2::numBlocks() const {
 
 uint64_t OnDiskBlockStore2::estimateNumFreeBytes() const {
   struct statvfs stat;
-  ::statvfs(_rootDir.c_str(), &stat);
-  return stat.f_bsize*stat.f_bavail;
+  int result = ::statvfs(_rootDir.c_str(), &stat);
+  if (0 != result) {
+    throw std::runtime_error("Error calling statvfs()");
+  }
+  return stat.f_frsize*stat.f_bavail;
 }
 
 uint64_t OnDiskBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {

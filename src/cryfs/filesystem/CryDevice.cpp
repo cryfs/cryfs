@@ -255,6 +255,7 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   fsstat->f_ffree = numFreeBlocks;
   fsstat->f_namemax = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
   //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
+  fsstat->f_frsize = fsstat->f_bsize; // even though this is supposed to be ignored, osxfuse needs it.
 }
 
 unique_ref<FileBlobRef> CryDevice::CreateFileBlob(const blockstore::Key &parent) {
