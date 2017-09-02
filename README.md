@@ -133,12 +133,12 @@ On most systems, CMake should find the libraries automatically. However, that do
         cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
 
 
-Creating .deb packages
-----------------------
+Creating .deb and .rpm packages
+-------------------------------
 
-There are additional requirements if you want to create .deb packages. They are:
+There are additional requirements if you want to create packages. They are:
  - CMake version >= 3.3
- - (optional) rpmbuild
+ - rpmbuild for creating .rpm package
 
  1. Clone repository
 
