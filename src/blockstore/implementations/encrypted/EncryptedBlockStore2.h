@@ -3,11 +3,14 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCKSTORE2_H_
 
 #include "../../interface/BlockStore2.h"
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <cpp-utils/macros.h>
 #include <cpp-utils/crypto/symmetric/Cipher.h>
 
 namespace blockstore {
 namespace encrypted {
+
+using CryptoPP::byte;
 
 //TODO Format version headers
 
