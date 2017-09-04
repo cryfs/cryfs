@@ -17,7 +17,7 @@ public:
     cryfs::CryConfigFile configFile() {
         cryfs::CryConfig config;
         config.SetCipher("aes-256-gcm");
-        config.SetEncryptionKey(cpputils::AES256_GCM::CreateKey(cpputils::Random::PseudoRandom()).ToString());
+        config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom()).ToString());
         config.SetBlocksizeBytes(10240);
         return cryfs::CryConfigFile::create(_configFile.path(), std::move(config), "mypassword", cpputils::SCrypt::TestSettings);
     }

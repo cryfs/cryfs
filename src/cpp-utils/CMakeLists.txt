@@ -6,6 +6,7 @@ set(SOURCES
         crypto/kdf/SCryptParameters.cpp
         crypto/kdf/PasswordBasedKDF.cpp
         crypto/RandomPadding.cpp
+        crypto/symmetric/EncryptionKey.cpp
         process/daemonize.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp
@@ -37,6 +38,7 @@ set(SOURCES
         assert/AssertFailed.cpp
         system/get_total_memory.cpp
         system/homedir.cpp
+        system/memory.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

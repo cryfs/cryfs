@@ -44,7 +44,7 @@ public:
     }
 
     string createKey(cpputils::RandomGenerator &randomGenerator) const override {
-        return Cipher::CreateKey(randomGenerator).ToString();
+        return Cipher::EncryptionKey::CreateKey(randomGenerator).ToString();
     }
 
     unique_ref<InnerEncryptor> createInnerConfigEncryptor(const FixedSizeData<CryCiphers::MAX_KEY_SIZE> &key) const override {

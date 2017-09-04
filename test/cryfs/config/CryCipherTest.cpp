@@ -37,7 +37,7 @@ public:
     void EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE(const string &cipherName) {
         const auto &actualCipher = CryCiphers::find(cipherName);
         Data dataFixture = DataFixture::generate(1024);
-        string encKey = ExpectedCipher::CreateKey(Random::PseudoRandom()).ToString();
+        string encKey = ExpectedCipher::EncryptionKey::CreateKey(Random::PseudoRandom()).ToString();
         _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
     }
 

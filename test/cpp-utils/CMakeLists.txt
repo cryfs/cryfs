@@ -46,6 +46,7 @@ set(SOURCES
     assert/backtrace_include_test.cpp
     assert/assert_include_test.cpp
     assert/assert_debug_test.cpp
+    system/MemoryTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

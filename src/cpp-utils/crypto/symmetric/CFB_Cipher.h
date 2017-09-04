@@ -9,17 +9,14 @@
 #include <boost/optional.hpp>
 #include <cryptopp/modes.h>
 #include "Cipher.h"
+#include "EncryptionKey.h"
 
 namespace cpputils {
 
 template<typename BlockCipher, unsigned int KeySize>
 class CFB_Cipher {
 public:
-  using EncryptionKey = FixedSizeData<KeySize>;
-
-  static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {
-    return randomGenerator.getFixedSize<EncryptionKey::BINARY_LENGTH>();
-  }
+  using EncryptionKey = cpputils::EncryptionKey<KeySize>;
 
   static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
     return plaintextBlockSize + IV_SIZE;
@@ -39,7 +36,7 @@ private:
 template<typename BlockCipher, unsigned int KeySize>
 Data CFB_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
   FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
-  auto encryption = typename CryptoPP::CFB_Mode<BlockCipher>::Encryption(encKey.data(), encKey.BINARY_LENGTH, iv.data());
+  auto encryption = typename CryptoPP::CFB_Mode<BlockCipher>::Encryption((CryptoPP::byte*)encKey.data(), encKey.BINARY_LENGTH, iv.data());
   Data ciphertext(ciphertextSize(plaintextSize));
   std::memcpy(ciphertext.data(), iv.data(), IV_SIZE);
   encryption.ProcessData((CryptoPP::byte*)ciphertext.data() + IV_SIZE, plaintext, plaintextSize);

@@ -8,17 +8,14 @@
 #include "../../random/Random.h"
 #include <cryptopp/gcm.h>
 #include "Cipher.h"
+#include "EncryptionKey.h"
 
 namespace cpputils {
 
 template<typename BlockCipher, unsigned int KeySize>
 class GCM_Cipher {
 public:
-    using EncryptionKey = FixedSizeData<KeySize>;
-
-    static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {
-        return randomGenerator.getFixedSize<EncryptionKey::BINARY_LENGTH>();
-    }
+    using EncryptionKey = cpputils::EncryptionKey<KeySize>;
 
     static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
         return plaintextBlockSize + IV_SIZE + TAG_SIZE;
@@ -40,7 +37,7 @@ template<typename BlockCipher, unsigned int KeySize>
 Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
     FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Encryption encryption;
-    encryption.SetKeyWithIV(encKey.data(), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
+    encryption.SetKeyWithIV((CryptoPP::byte*)encKey.data(), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
     Data ciphertext(ciphertextSize(plaintextSize));
 
     std::memcpy(ciphertext.data(), iv.data(), IV_SIZE);

@@ -17,6 +17,11 @@ namespace cpputils {
 
         static constexpr unsigned int BINARY_LENGTH = 1;
 
+        static FakeKey CreateKey(RandomGenerator &randomGenerator) {
+            auto data = randomGenerator.getFixedSize<1>();
+            return FakeKey{*((uint8_t *) data.data())};
+        }
+
         uint8_t value;
     };
 
@@ -26,11 +31,6 @@ namespace cpputils {
         BOOST_CONCEPT_ASSERT((CipherConcept<FakeAuthenticatedCipher>));
 
         using EncryptionKey = FakeKey;
-
-        static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {
-          auto data = randomGenerator.getFixedSize<1>();
-          return FakeKey{*((uint8_t *) data.data())};
-        }
 
         static EncryptionKey Key1() {
           return FakeKey{5};
