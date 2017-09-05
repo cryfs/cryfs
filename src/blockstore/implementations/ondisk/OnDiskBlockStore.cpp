@@ -58,7 +58,7 @@ bool OnDiskBlockStore::_isValidBlockKey(const string &key) {
 
 optional<unique_ref<Block>> OnDiskBlockStore::tryCreate(const Key &key, Data data) {
   //TODO Easier implementation? This is only so complicated because of the cast OnDiskBlock -> Block
-  auto result = std::move(OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data)));
+  auto result = OnDiskBlock::CreateOnDisk(_rootdir, key, std::move(data));
   if (result == boost::none) {
     return boost::none;
   }

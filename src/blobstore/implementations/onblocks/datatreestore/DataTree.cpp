@@ -246,7 +246,7 @@ unique_ref<DataNode> DataTree::addChildTo(DataInnerNode *node) {
   new_leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
   auto chain = createChainOfInnerNodes(node->depth()-1, std::move(new_leaf));
   node->addChild(*chain);
-  return std::move(chain);
+  return chain;
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
