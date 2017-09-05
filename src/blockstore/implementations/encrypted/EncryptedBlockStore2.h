@@ -3,6 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_ENCRYPTED_ENCRYPTEDBLOCKSTORE2_H_
 
 #include "../../interface/BlockStore2.h"
+#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <cpp-utils/macros.h>
 #include <cpp-utils/crypto/symmetric/Cipher.h>
 
@@ -116,14 +117,14 @@ inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const Key &key, const cpputils::Data &data) const {
   cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, data);
-  cpputils::Data encrypted = Cipher::encrypt((byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), _encKey);
+  cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), _encKey);
   return _prependFormatHeaderToData(encrypted);
 }
 
 template<class Cipher>
 inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt(const Key &key, const cpputils::Data &data) const {
   auto ciphertext = _checkAndRemoveFormatHeader(data);
-  boost::optional<cpputils::Data> decrypted = Cipher::decrypt((byte*)ciphertext.data(), ciphertext.size(), _encKey);
+  boost::optional<cpputils::Data> decrypted = Cipher::decrypt((CryptoPP::byte*)ciphertext.data(), ciphertext.size(), _encKey);
   if (boost::none == decrypted) {
     // TODO Warning
     return boost::none;
