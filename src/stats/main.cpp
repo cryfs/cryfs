@@ -58,7 +58,7 @@ set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     i = 0;
     cout << "\nRemove blocks that have a parent" << endl;
     //Remove root block from unaccountedBlocks
-    unaccountedBlocks.erase(Key::FrComString(config.RootBlob()));
+    unaccountedBlocks.erase(Key::FromString(config.RootBlob()));
     //Remove all blocks that have a parent node from unaccountedBlocks
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;

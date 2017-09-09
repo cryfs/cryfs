@@ -69,6 +69,9 @@ private:
     std::shared_ptr<EncryptionKeyData> _key;
 };
 
+template<size_t KeySize> constexpr size_t EncryptionKey<KeySize>::BINARY_LENGTH;
+template<size_t KeySize> constexpr size_t EncryptionKey<KeySize>::STRING_LENGTH;
+
 template<size_t KeySize>
 inline EncryptionKey<KeySize>::EncryptionKeyData::EncryptionKeyData(const FixedSizeData<KeySize>& keyData)
 : key(keyData)
