@@ -13,7 +13,7 @@ template<size_t SIZE>
 class FixedSizeData final {
 public:
   //Non-virtual destructor because we want objects to be small
-  ~FixedSizeData() {}
+  ~FixedSizeData() = default;
 
   static constexpr size_t BINARY_LENGTH = SIZE;
   static constexpr size_t STRING_LENGTH = 2 * BINARY_LENGTH; // Hex encoding
