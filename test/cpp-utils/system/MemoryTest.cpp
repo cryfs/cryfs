@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/system/memory.h>
 #include <memory>
+#include <cpp-utils/pointer/gcc_4_8_compatibility.h>
 
 using cpputils::DontSwapMemoryRAII;
 
