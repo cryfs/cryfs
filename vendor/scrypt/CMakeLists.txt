@@ -40,6 +40,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_compile_options(${PROJECT_NAME} PRIVATE
         -DCONFIG_H_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/config.h\"
         -DCPUSUPPORT_CONFIG_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/src/scrypt_original-build/cpusupport-config.h\"
+        -std=gnu99
 )
 add_dependencies(${PROJECT_NAME} scrypt_original)
 target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/scrypt-1.2.1)
