@@ -1,0 +1,84 @@
+version: 2.0
+
+references:
+  container_config: &container_config
+    machine: true
+  container_setup: &container_setup
+    run:
+      name: Setup Environment
+      command: |
+        DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        uname -a
+        cmake --version
+        g++ --version
+        # TODO Use /dev/urandom when /dev/random is accessed to use less entropy
+        # cp -a /dev/urandom /dev/random
+  upgrade_boost: &upgrade_boost
+    run:
+      name: Upgrade Boost
+      command: |
+        set -e
+        whoami
+        pwd
+        # Detect number of CPU cores
+        export NUMCORES=`nproc`
+        echo Using $NUMCORES cores
+        # Install boost
+        wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
+        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "1ce9871c3a2519682538a5f1331938b948123432d99aea0ce026958cbebd25d84019a3a28c452724b9693df98a8d1264bb2d93d2fee508453f8b42836e67481e" ]; then
+          echo Correct sha512sum
+        else
+          echo Wrong sha512sum
+          sha512sum boost.tar.bz2
+          exit 1
+        fi
+        echo Extracting...
+        tar -xf boost.tar.bz2
+        cd boost_1_56_0
+        ./bootstrap.sh --with-libraries=filesystem,thread,chrono,program_options
+        sudo ./b2 link=static cxxflags=-fPIC -d0 -j$NUMCORES install
+        cd ..
+        sudo rm -rf boost.tar.bz2 boost_1_56_0
+
+jobs:
+  build:
+    <<: *container_config
+    steps:
+      - <<: *container_setup
+      - <<: *upgrade_boost
+      - checkout
+      - run:
+          name: Build
+          command: |
+            export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
+            # Circle CI gives us 36 cores (2x9 +HT), but doesn't give us enough memory for building 36 jobs in parallel, which causes the build to fail. Restrict number of cores used.
+            #export NUMCORES=7
+            echo Using $NUMCORES cores
+            mkdir cmake
+            cd cmake
+            cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+            make -j$NUMCORES
+      - run:
+          name: Test
+          command: |
+            cd cmake
+            ./test/gitversion/gitversion-test
+            ./test/cpp-utils/cpp-utils-test
+            ../.circleci/run_with_fuse.sh ./test/fspp/fspp-test
+            ./test/parallelaccessstore/parallelaccessstore-test
+            ./test/blockstore/blockstore-test
+            ./test/blobstore/blobstore-test
+            ./test/cryfs/cryfs-test
+            ./test/cryfs-cli/cryfs-cli-test
+
+workflows:
+  version: 2
+
+  build_test:
+    jobs:
+      - build:
+          # Also enable this job for tags
+          filters:
+            tags:
+              only: /.*/
