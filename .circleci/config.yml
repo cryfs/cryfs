@@ -12,8 +12,8 @@ references:
         uname -a
         cmake --version
         g++ --version
-        # TODO Use /dev/urandom when /dev/random is accessed to use less entropy
-        # cp -a /dev/urandom /dev/random
+        # Use /dev/urandom when /dev/random is accessed to use less entropy
+        sudo cp -a /dev/urandom /dev/random
   upgrade_boost: &upgrade_boost
     run:
       name: Upgrade Boost
@@ -65,7 +65,7 @@ jobs:
             cd cmake
             ./test/gitversion/gitversion-test
             ./test/cpp-utils/cpp-utils-test
-            ../.circleci/run_with_fuse.sh ./test/fspp/fspp-test
+            ./test/fspp/fspp-test
             ./test/parallelaccessstore/parallelaccessstore-test
             ./test/blockstore/blockstore-test
             ./test/blobstore/blobstore-test
