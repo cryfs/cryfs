@@ -7,13 +7,44 @@ references:
     run:
       name: Setup Environment
       command: |
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        sudo touch /etc/apt/sources.list.d/clang.list
+        sudo chmod o+w /etc/apt/sources.list.d/clang.list
+        cat > /etc/apt/sources.list.d/clang.list << EOF
+        #deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty main
+        #deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.7 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.7 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
+        EOF
+        sudo chmod o-w /etc/apt/sources.list.d/clang.list
+
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
-        uname -a
-        cmake --version
-        g++ --version
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
+
+        if [ "${BUILD_TOOLSET}" = "clang" ]; then
+          # They aren't set automatically unfortunately
+          sudo ln -s /usr/bin/$CC /usr/bin/clang
+          sudo ln -s /usr/bin/$CXX /usr/bin/clang++
+
+          # Need a c++14 compliant STL for clang
+          sudo apt-get install g++-5
+          sudo apt-get remove g++-4.8 gcc-4.8
+        fi
+
+        echo
+        echo System Info:
+        cat /etc/issue
+        uname -a
+        cmake --version
+        $CC --version
+        $CXX --version
   upgrade_boost: &upgrade_boost
     run:
       name: Upgrade Boost
@@ -36,49 +67,68 @@ references:
         echo Extracting...
         tar -xf boost.tar.bz2
         cd boost_1_56_0
-        ./bootstrap.sh --with-libraries=filesystem,thread,chrono,program_options
-        sudo ./b2 link=static cxxflags=-fPIC -d0 -j$NUMCORES install
+        ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
+        sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
         cd ..
         sudo rm -rf boost.tar.bz2 boost_1_56_0
-
-jobs:
-  build:
+  build: &build
+    run:
+      name: Build
+      command: |
+        export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
+        echo Using $NUMCORES cores
+        mkdir cmake
+        cd cmake
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+        make -j$NUMCORES
+  test: &test
+    run:
+      name: Test
+      command: |
+        cd cmake
+        ./test/gitversion/gitversion-test
+        ./test/cpp-utils/cpp-utils-test
+        ./test/fspp/fspp-test
+        ./test/parallelaccessstore/parallelaccessstore-test
+        ./test/blockstore/blockstore-test
+        ./test/blobstore/blobstore-test
+        ./test/cryfs/cryfs-test
+        ./test/cryfs-cli/cryfs-cli-test
+  job_definition: &job_definition
     <<: *container_config
     steps:
-      - <<: *container_setup
-      - <<: *upgrade_boost
-      - checkout
-      - run:
-          name: Build
-          command: |
-            export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
-            # Circle CI gives us 36 cores (2x9 +HT), but doesn't give us enough memory for building 36 jobs in parallel, which causes the build to fail. Restrict number of cores used.
-            #export NUMCORES=7
-            echo Using $NUMCORES cores
-            mkdir cmake
-            cd cmake
-            cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
-            make -j$NUMCORES
-      - run:
-          name: Test
-          command: |
-            cd cmake
-            ./test/gitversion/gitversion-test
-            ./test/cpp-utils/cpp-utils-test
-            ./test/fspp/fspp-test
-            ./test/parallelaccessstore/parallelaccessstore-test
-            ./test/blockstore/blockstore-test
-            ./test/blobstore/blobstore-test
-            ./test/cryfs/cryfs-test
-            ./test/cryfs-cli/cryfs-cli-test
+    - <<: *container_setup
+    - <<: *upgrade_boost
+    - checkout
+    - <<: *build
+    - <<: *test
+  enable_for_tags: &enable_for_tags
+    filters:
+      tags:
+        only: /.*/
+
+jobs:
+  build_and_test_gcc:
+    <<: *job_definition
+    environment:
+      CC: gcc-4.8
+      CXX: g++-4.8
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-4.8"
+  build_and_test_clang:
+    <<: *job_definition
+    environment:
+      CC: clang-3.7
+      CXX: clang++-3.7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-3.7
 
 workflows:
   version: 2
 
-  build_test:
+  build_and_test:
     jobs:
-      - build:
-          # Also enable this job for tags
-          filters:
-            tags:
-              only: /.*/
+    - build_and_test_gcc:
+        <<: *enable_for_tags
+    - build_and_test_clang:
+        <<: *enable_for_tags
