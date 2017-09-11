@@ -1,4 +1,7 @@
-# CryFS [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
+# CryFS [![CircleCI](https://circleci.com/gh/cryfs/cryfs/tree/next.svg?style=svg)](https://circleci.com/gh/cryfs/cryfs/tree/next)
+
+**TODO:** Update CI link to correct branch when merging next->develop or develop->master
+
 CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.
 See [https://www.cryfs.org](https://www.cryfs.org).
 
