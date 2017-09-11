@@ -4,6 +4,7 @@
 #include "blockstore/utils/BlockStoreUtils.h"
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include "../../testutils/gtest_printers.h"
 
 using ::testing::Test;
 

@@ -86,6 +86,17 @@ public:
   void EXPECT_IS_SYMLINK(const cpputils::unique_ref<fspp::Node> &node) {
     EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
   }
+
+  void setModificationTimestampLaterThanAccessTimestamp(const boost::filesystem::path& path) {
+    auto node = device->Load(path).value();
+    struct stat st;
+    node->stat(&st);
+    st.st_mtim.tv_nsec = st.st_mtim.tv_nsec + 1;
+    node->utimens(
+            st.st_atim,
+            st.st_mtim
+    );
+  }
 };
 
 

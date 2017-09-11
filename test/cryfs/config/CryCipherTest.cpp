@@ -78,7 +78,10 @@ TEST_F(CryCipherTest, FindsCorrectCipher) {
     "twofish-256-gcm", "twofish-256-cfb", "twofish-256-gcm", "twofish-256-cfb",
     "serpent-256-gcm", "serpent-256-cfb", "serpent-256-gcm", "serpent-256-cfb",
     "cast-256-gcm", "cast-256-cfb",
-    "mars-448-gcm", "mars-448-cfb", "mars-256-gcm", "mars-256-cfb", "mars-256-gcm", "mars-256-cfb"
+#if CRYPTOPP_VERSION != 564
+    "mars-448-gcm", "mars-448-cfb",
+#endif
+    "mars-256-gcm", "mars-256-cfb", "mars-256-gcm", "mars-256-cfb"
   });
 }
 

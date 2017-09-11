@@ -4,6 +4,7 @@
 #include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "blockstore/utils/BlockStoreUtils.h"
+#include "../../testutils/gtest_printers.h"
 #include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
