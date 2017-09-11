@@ -7,6 +7,7 @@
 #include <boost/static_assert.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cpp-utils/system/stat.h>
 
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Node.h"
