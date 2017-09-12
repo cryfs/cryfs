@@ -17,7 +17,8 @@ references:
         - v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   container_setup_post: &container_setup_post
     save_cache:
-      key: v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+      # Add _aptcache_contents to cache key so that it is re-uploaded each time the cache changes.
+      key: v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
       paths:
       - /tmp/aptcache
   container_setup: &container_setup
@@ -74,6 +75,7 @@ references:
 
         sudo mkdir -p /tmp/aptcache
         sudo cp -R /var/cache/apt/archives/* /tmp/aptcache/
+        ls /tmp/aptcache > /tmp/_aptcache_contents
 
         echo
         echo System Info:
