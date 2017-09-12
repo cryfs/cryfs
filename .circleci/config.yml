@@ -1,0 +1,272 @@
+version: 2.0
+
+references:
+  container_config: &container_config
+    machine: true
+  cache_init: &cache_init
+    run:
+      name: Initialize Cache
+      command: |
+        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}" > /tmp/_build_env_vars
+        echo Build env vars used for cache keys:
+        cat /tmp/_build_env_vars
+  container_setup_pre: &container_setup_pre
+    restore_cache:
+      keys:
+        # Find the most recent cache from any branch
+        - v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+  container_setup_post: &container_setup_post
+    save_cache:
+      # Add _aptcache_contents to cache key so that it is re-uploaded each time the cache changes.
+      key: v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
+      paths:
+      - /tmp/aptcache
+  container_setup: &container_setup
+    run:
+      name: Setup Environment
+      command: |
+        if [ -d "/tmp/aptcache" ]; then
+          echo Using packages from apt cache
+          sudo cp -R /tmp/aptcache/* /var/cache/apt/archives/
+        else
+          echo No apt cache found
+        fi
+
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        sudo touch /etc/apt/sources.list.d/clang.list
+        sudo chmod o+w /etc/apt/sources.list.d/clang.list
+        cat > /etc/apt/sources.list.d/clang.list << EOF
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.7 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.7 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.8 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.8 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
+        EOF
+        sudo chmod o-w /etc/apt/sources.list.d/clang.list
+
+        DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        # Use /dev/urandom when /dev/random is accessed to use less entropy
+        sudo cp -a /dev/urandom /dev/random
+
+        if [ "${BUILD_TOOLSET}" = "clang" ]; then
+          # They aren't set automatically unfortunately
+          sudo ln -s /usr/bin/$CC /usr/bin/clang
+          sudo ln -s /usr/bin/$CXX /usr/bin/clang++
+
+          # Need a c++14 compliant STL for clang
+          sudo apt-get install g++-5
+          sudo apt-get remove g++-4.8 gcc-4.8
+        fi
+
+        # Setup ccache
+        sudo ln -s /usr/bin/ccache /usr/local/bin/$CC
+        sudo ln -s /usr/bin/ccache /usr/local/bin/$CXX
+        sudo mkdir /ccache_data
+        sudo chown circleci:circleci /ccache_data
+        echo 'export CCACHE_COMPILERCHECK=content' >> $BASH_ENV
+        echo 'export CCACHE_COMPRESS=1' >> $BASH_ENV
+        echo 'export CCACHE_DIR=/ccache_data' >> $BASH_ENV
+        echo 'export CCACHE_SLOPPINESS=include_file_mtime' >> $BASH_ENV
+
+        sudo mkdir -p /tmp/aptcache
+        sudo cp -R /var/cache/apt/archives/* /tmp/aptcache/
+        ls /tmp/aptcache > /tmp/_aptcache_contents
+
+        echo
+        echo System Info:
+        cat /etc/issue
+        uname -a
+        cmake --version
+        /usr/local/bin/$CC --version
+        /usr/local/bin/$CXX --version
+  upgrade_boost_pre: &upgrade_boost_pre
+    restore_cache:
+      keys:
+        # Find the most recent cache from any branch
+        - v2_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+  upgrade_boost_post: &upgrade_boost_post
+    save_cache:
+      key: v2_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+      paths:
+      - /tmp/boost_1_56_0
+  upgrade_boost: &upgrade_boost
+    run:
+      name: Upgrade Boost
+      command: |
+        # Detect number of CPU cores
+        export NUMCORES=`nproc`
+        echo Using $NUMCORES cores
+        # Download and prepare boost (only if not already present from cache)
+        if [ ! -d "/tmp/boost_1_56_0" ]; then
+          echo "Didn't find boost in cache. Downloading and building."
+          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
+          if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "1ce9871c3a2519682538a5f1331938b948123432d99aea0ce026958cbebd25d84019a3a28c452724b9693df98a8d1264bb2d93d2fee508453f8b42836e67481e" ]; then
+            echo Correct sha512sum
+          else
+            echo Wrong sha512sum
+            sha512sum boost.tar.bz2
+            exit 1
+          fi
+          echo Extracting...
+          tar -xf /tmp/boost.tar.bz2 -C /tmp
+          rm -rf boost.tar.bz2
+          cd /tmp/boost_1_56_0
+          ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
+          cd ..
+        else
+          echo Found boost in cache. Use cache and build.
+        fi
+        # Compile and install boost (if cached, this should be fast)
+        cd /tmp/boost_1_56_0
+        sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
+  build_pre: &build_pre
+    restore_cache:
+      keys:
+        # Find most recent cache from any revision on the same branch (cache keys are prefix matched)
+        # CIRCLE_PR_NUMBER is only set if this is a pull request.
+        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}
+        # Fallback to less specific caches if the one above wasn't found
+        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}
+        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+  build_post: &build_post
+    save_cache:
+      key: v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}_{{ .Revision }}
+      paths:
+      - /ccache_data
+  build: &build
+    run:
+      name: Build
+      command: |
+        export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
+        echo Using $NUMCORES cores
+        # Use ccache
+        export CXX=/usr/local/bin/$CXX
+        export CC=/usr/local/bin/$CC
+        ccache --max-size=512M
+        ccache --show-stats
+
+        # Build
+        mkdir cmake
+        cd cmake
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+        make -j$NUMCORES
+
+        ccache --show-stats
+  test: &test
+    run:
+      name: Test
+      command: |
+        cd cmake
+        ./test/gitversion/gitversion-test
+        ./test/cpp-utils/cpp-utils-test
+        ./test/fspp/fspp-test
+        ./test/parallelaccessstore/parallelaccessstore-test
+        ./test/blockstore/blockstore-test
+        ./test/blobstore/blobstore-test
+        ./test/cryfs/cryfs-test
+        ./test/cryfs-cli/cryfs-cli-test
+  job_definition: &job_definition
+    <<: *container_config
+    steps:
+    - <<: *cache_init
+    - <<: *container_setup_pre
+    - <<: *container_setup
+    - <<: *container_setup_post
+    - <<: *upgrade_boost_pre
+    - <<: *upgrade_boost
+    - <<: *upgrade_boost_post
+    - checkout
+    - <<: *build_pre
+    - <<: *build
+    - <<: *build_post
+    - <<: *test
+  enable_for_tags: &enable_for_tags
+    filters:
+      tags:
+        only: /.*/
+
+jobs:
+  gcc_4_8:
+    <<: *job_definition
+    environment:
+      CC: gcc-4.8
+      CXX: g++-4.8
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-4.8"
+  gcc_5:
+    <<: *job_definition
+    environment:
+      CC: gcc-5
+      CXX: g++-5
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-5"
+  gcc_6:
+    <<: *job_definition
+    environment:
+      CC: gcc-6
+      CXX: g++-6
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-6"
+  gcc_7:
+    <<: *job_definition
+    environment:
+      CC: gcc-7
+      CXX: g++-7
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-7"
+  clang_3_7:
+    <<: *job_definition
+    environment:
+      CC: clang-3.7
+      CXX: clang++-3.7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-3.7
+  clang_3_8:
+    <<: *job_definition
+    environment:
+      CC: clang-3.8
+      CXX: clang++-3.8
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-3.8
+  clang_4_0:
+    <<: *job_definition
+    environment:
+      CC: clang-4.0
+      CXX: clang++-4.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-4.0
+  clang_5_0:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+
+workflows:
+  version: 2
+
+  build_and_test:
+    jobs:
+    - gcc_4_8:
+        <<: *enable_for_tags
+    - gcc_5:
+        <<: *enable_for_tags
+    - gcc_6:
+        <<: *enable_for_tags
+    - gcc_7:
+        <<: *enable_for_tags
+    - clang_3_7:
+        <<: *enable_for_tags
+    - clang_3_8:
+        <<: *enable_for_tags
+    - clang_4_0:
+        <<: *enable_for_tags
+    - clang_5_0:
+        <<: *enable_for_tags
+
