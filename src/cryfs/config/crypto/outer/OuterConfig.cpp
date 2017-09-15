@@ -57,7 +57,7 @@ namespace cryfs {
             }
 #else
             _checkHeader(&deserializer);
-            _deserializeNewFormat(&deserializer);
+            return _deserializeNewFormat(&deserializer);
 #endif
         } catch (const exception &e) {
             LOG(ERROR, "Error deserializing outer configuration: {}", e.what());
@@ -65,6 +65,7 @@ namespace cryfs {
         }
     }
 
+#ifndef CRYFS_NO_COMPATIBILITY
     OuterConfig OuterConfig::_deserializeOldFormat(Deserializer *deserializer) {
         auto kdfParameters = SCryptParameters::deserializeOldFormat(deserializer);
         auto kdfParametersSerialized = kdfParameters.serialize();
@@ -72,6 +73,7 @@ namespace cryfs {
         deserializer->finished();
         return OuterConfig {std::move(kdfParametersSerialized), std::move(encryptedInnerConfig), true};
     }
+#endif
 
     OuterConfig OuterConfig::_deserializeNewFormat(Deserializer *deserializer) {
         auto kdfParameters = deserializer->readData();

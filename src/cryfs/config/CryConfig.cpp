@@ -21,7 +21,18 @@ using cpputils::Random;
 namespace cryfs {
 
 CryConfig::CryConfig()
-: _rootBlob(""), _encKey(""), _cipher(""), _version(""), _createdWithVersion(""), _blocksizeBytes(0), _filesystemId(FilesystemID::Null()), _exclusiveClientId(none), _hasVersionNumbers(true) {
+: _rootBlob("")
+, _encKey("")
+, _cipher("")
+, _version("")
+, _createdWithVersion("")
+, _blocksizeBytes(0)
+, _filesystemId(FilesystemID::Null())
+, _exclusiveClientId(none)
+#ifndef CRYFS_NO_COMPATIBILITY
+, _hasVersionNumbers(true)
+#endif
+{
 }
 
 CryConfig CryConfig::load(const Data &data) {
