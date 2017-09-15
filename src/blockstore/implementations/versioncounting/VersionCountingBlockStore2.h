@@ -26,14 +26,18 @@ public:
   void forEachBlock(std::function<void (const Key &)> callback) const override;
 
 private:
-  // This header is prepended to blocks to allow future versions to have compatibility.
-  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
+  // This format version is prepended to blocks to allow future versions to have compatibility.
+#ifndef CRYFS_NO_COMPATIBILITY
+  static constexpr uint16_t FORMAT_VERSION_HEADER_OLD = 0;
+#endif
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
 
 public:
   static constexpr uint64_t VERSION_ZERO = 0;
-  static constexpr unsigned int CLIENTID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
-  static constexpr unsigned int VERSION_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t);
-  static constexpr unsigned int HEADER_LENGTH = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint32_t) + sizeof(VERSION_ZERO);
+  static constexpr unsigned int ID_HEADER_OFFSET = sizeof(FORMAT_VERSION_HEADER);
+  static constexpr unsigned int CLIENTID_HEADER_OFFSET = ID_HEADER_OFFSET + Key::BINARY_LENGTH;
+  static constexpr unsigned int VERSION_HEADER_OFFSET = CLIENTID_HEADER_OFFSET + sizeof(uint32_t);
+  static constexpr unsigned int HEADER_LENGTH = VERSION_HEADER_OFFSET + sizeof(VERSION_ZERO);
 
 #ifndef CRYFS_NO_COMPATIBILITY
   static void migrateFromBlockstoreWithoutVersionNumbers(BlockStore2 *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId);
@@ -42,13 +46,19 @@ public:
 
 private:
 
-  static cpputils::Data _prependHeaderToData(uint32_t myClientId, uint64_t version, const cpputils::Data &data);
+  static cpputils::Data _prependHeaderToData(const Key& key, uint32_t myClientId, uint64_t version, const cpputils::Data &data);
   void _checkHeader(const Key &key, const cpputils::Data &data) const;
   void _checkFormatHeader(const cpputils::Data &data) const;
+  void _checkIdHeader(const Key &expectedKey, const cpputils::Data &data) const;
   void _checkVersionHeader(const Key &key, const cpputils::Data &data) const;
+  static uint16_t _readFormatHeader(const cpputils::Data &data);
   static uint32_t _readClientId(const cpputils::Data &data);
+  static Key _readBlockId(const cpputils::Data &data);
   static uint64_t _readVersion(const cpputils::Data &data);
-  cpputils::Data _removeHeader(const cpputils::Data &data) const;
+#ifndef CRYFS_NO_COMPATIBILITY
+  static cpputils::Data _migrateBlock(const Key &key, const cpputils::Data &data);
+#endif
+  static cpputils::Data _removeHeader(const cpputils::Data &data);
   void _checkNoPastIntegrityViolations() const;
   void integrityViolationDetected(const std::string &reason) const;
 

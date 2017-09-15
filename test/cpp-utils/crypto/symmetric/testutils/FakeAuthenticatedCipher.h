@@ -25,7 +25,7 @@ namespace cpputils {
         uint8_t value;
     };
 
-    // This is a fake cipher that uses an indeterministic caesar chiffre and a 4-byte parity for a simple authentication mechanism
+    // This is a fake cipher that uses an indeterministic caesar chiffre and a 4-byte checksum for a simple authentication mechanism
     class FakeAuthenticatedCipher {
     public:
         BOOST_CONCEPT_ASSERT((CipherConcept<FakeAuthenticatedCipher>));
@@ -58,22 +58,22 @@ namespace cpputils {
           //Use caesar chiffre on plaintext
           _caesar((CryptoPP::byte *) result.data() + 1, plaintext, plaintextSize, encKey.value + iv);
 
-          //Add parity information
-          int32_t parity = _parity((CryptoPP::byte *) result.data(), plaintextSize + 1);
-          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + 1, &parity, 4);
+          //Add checksum information
+          int32_t checksum = _checksum((CryptoPP::byte *) result.data(), encKey, plaintextSize + 1);
+          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + 1, &checksum, 4);
 
           return result;
         }
 
         static boost::optional <Data> decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize,
                                               const EncryptionKey &encKey) {
-          //We need at least 5 bytes (iv + parity)
+          //We need at least 5 bytes (iv + checksum)
           if (ciphertextSize < 5) {
             return boost::none;
           }
 
-          //Check parity
-          int32_t expectedParity = _parity(ciphertext, plaintextSize(ciphertextSize) + 1);
+          //Check checksum
+          int32_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + 1);
           int32_t actualParity = *(int32_t * )(ciphertext + plaintextSize(ciphertextSize) + 1);
           if (expectedParity != actualParity) {
             return boost::none;
@@ -89,18 +89,18 @@ namespace cpputils {
         static constexpr const char *NAME = "FakeAuthenticatedCipher";
 
     private:
-        static int32_t _parity(const CryptoPP::byte *data, unsigned int size) {
-          int32_t parity = 34343435; // some init value
+        static int32_t _checksum(const CryptoPP::byte *data, FakeKey encKey, unsigned int size) {
+          int32_t checksum = 34343435 * encKey.value; // some init value
           const int32_t *intData = reinterpret_cast<const int32_t *>(data);
           unsigned int intSize = size / sizeof(int32_t);
           for (unsigned int i = 0; i < intSize; ++i) {
-            parity = ((int64_t)parity) + intData[i];
+            checksum = ((int64_t)checksum) + intData[i];
           }
           unsigned int remainingBytes = size - 4 * intSize;
           for (unsigned int i = 0; i < remainingBytes; ++i) {
-            parity = ((int64_t)parity) + (data[4 * intSize + i] << (24 - 8 * i));
+            checksum = ((int64_t)checksum) + (data[4 * intSize + i] << (24 - 8 * i));
           }
-          return parity;
+          return checksum;
         }
 
         static void _caesar(CryptoPP::byte *dst, const CryptoPP::byte *src, unsigned int size, uint8_t key) {

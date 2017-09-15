@@ -34,17 +34,21 @@ public:
 private:
 
   // This header is prepended to blocks to allow future versions to have compatibility.
-  static constexpr uint16_t FORMAT_VERSION_HEADER = 0;
-  static constexpr unsigned int HEADER_LENGTH = Key::BINARY_LENGTH;
+#ifndef CRYFS_NO_COMPATIBILITY
+  static constexpr uint16_t FORMAT_VERSION_HEADER_OLD = 0;
+#endif
+  static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
 
-  cpputils::Data _encrypt(const Key &key, const cpputils::Data &data) const;
+  cpputils::Data _encrypt(const cpputils::Data &data) const;
   boost::optional<cpputils::Data> _tryDecrypt(const Key &key, const cpputils::Data &data) const;
 
-  static cpputils::Data _prependKeyHeaderToData(const Key &key, const cpputils::Data &data);
-  static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data);
   static cpputils::Data _prependFormatHeaderToData(const cpputils::Data &data);
-  static cpputils::Data _removeKeyHeader(const cpputils::Data &data);
-  static cpputils::Data _checkAndRemoveFormatHeader(const cpputils::Data &data);
+#ifndef CRYFS_NO_COMPATIBILITY
+  static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data);
+  static cpputils::Data _migrateBlock(const cpputils::Data &data);
+#endif
+  static void _checkFormatHeader(const cpputils::Data &data);
+  static uint16_t _readFormatHeader(const cpputils::Data &data);
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
   typename Cipher::EncryptionKey _encKey;
@@ -52,11 +56,13 @@ private:
   DISALLOW_COPY_AND_ASSIGN(EncryptedBlockStore2);
 };
 
+#ifndef CRYFS_NO_COMPATIBILITY
 template<class Cipher>
-constexpr uint16_t EncryptedBlockStore2<Cipher>::FORMAT_VERSION_HEADER;
+constexpr uint16_t EncryptedBlockStore2<Cipher>::FORMAT_VERSION_HEADER_OLD;
+#endif
 
 template<class Cipher>
-constexpr unsigned int EncryptedBlockStore2<Cipher>::HEADER_LENGTH;
+constexpr uint16_t EncryptedBlockStore2<Cipher>::FORMAT_VERSION_HEADER;
 
 template<class Cipher>
 inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const typename Cipher::EncryptionKey &encKey)
@@ -65,7 +71,7 @@ inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<B
 
 template<class Cipher>
 inline bool EncryptedBlockStore2<Cipher>::tryCreate(const Key &key, const cpputils::Data &data) {
-  cpputils::Data encrypted = _encrypt(key, data);
+  cpputils::Data encrypted = _encrypt(data);
   return _baseBlockStore->tryCreate(key, encrypted);
 }
 
@@ -86,7 +92,7 @@ inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::load(const 
 
 template<class Cipher>
 inline void EncryptedBlockStore2<Cipher>::store(const Key &key, const cpputils::Data &data) {
-  cpputils::Data encrypted = _encrypt(key, data);
+  cpputils::Data encrypted = _encrypt(data);
   return _baseBlockStore->store(key, encrypted);
 }
 
@@ -103,10 +109,10 @@ inline uint64_t EncryptedBlockStore2<Cipher>::estimateNumFreeBytes() const {
 template<class Cipher>
 inline uint64_t EncryptedBlockStore2<Cipher>::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
   uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
-  if (baseBlockSize <= Cipher::ciphertextSize(HEADER_LENGTH) + sizeof(FORMAT_VERSION_HEADER)) {
+  if (baseBlockSize <= Cipher::ciphertextSize(0) + sizeof(FORMAT_VERSION_HEADER)) {
     return 0;
   }
-  return Cipher::plaintextSize(baseBlockSize - sizeof(FORMAT_VERSION_HEADER)) - HEADER_LENGTH;
+  return Cipher::plaintextSize(baseBlockSize - sizeof(FORMAT_VERSION_HEADER));
 }
 
 template<class Cipher>
@@ -115,39 +121,45 @@ inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const
 }
 
 template<class Cipher>
-inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const Key &key, const cpputils::Data &data) const {
-  cpputils::Data plaintextWithHeader = _prependKeyHeaderToData(key, data);
-  cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)plaintextWithHeader.data(), plaintextWithHeader.size(), _encKey);
+inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const cpputils::Data &data) const {
+  cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)data.data(), data.size(), _encKey);
   return _prependFormatHeaderToData(encrypted);
 }
 
 template<class Cipher>
 inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt(const Key &key, const cpputils::Data &data) const {
-  auto ciphertext = _checkAndRemoveFormatHeader(data);
-  boost::optional<cpputils::Data> decrypted = Cipher::decrypt((CryptoPP::byte*)ciphertext.data(), ciphertext.size(), _encKey);
-  if (boost::none == decrypted) {
-    // TODO Warning
+  _checkFormatHeader(data);
+  boost::optional<cpputils::Data> decrypted = Cipher::decrypt((CryptoPP::byte*)data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER), _encKey);
+  if (decrypted == boost::none) {
+    // TODO Log warning
     return boost::none;
   }
-  if (!_keyHeaderIsCorrect(key, *decrypted)) {
-    // TODO Warning
-    return boost::none;
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  if (FORMAT_VERSION_HEADER_OLD == _readFormatHeader(data)) {
+    if (!_keyHeaderIsCorrect(key, *decrypted)) {
+      return boost::none;
+    }
+    *decrypted = _migrateBlock(*decrypted);
+    // no need to write migrated back to block store because
+    // this migration happens in line with a migration in VersionCountingBlockStore2
+    // which then writes it back
   }
-  return _removeKeyHeader(*decrypted);
+#endif
+  return decrypted;
 }
 
+#ifndef CRYFS_NO_COMPATIBILITY
 template<class Cipher>
-inline cpputils::Data EncryptedBlockStore2<Cipher>::_prependKeyHeaderToData(const Key &key, const cpputils::Data &data) {
-  cpputils::Data result(data.size() + Key::BINARY_LENGTH);
-  std::memcpy(result.data(), key.data(), Key::BINARY_LENGTH);
-  std::memcpy((uint8_t*)result.data() + Key::BINARY_LENGTH, data.data(), data.size());
-  return result;
+inline cpputils::Data EncryptedBlockStore2<Cipher>::_migrateBlock(const cpputils::Data &data) {
+  return data.copyAndRemovePrefix(Key::BINARY_LENGTH);
 }
 
 template<class Cipher>
 inline bool EncryptedBlockStore2<Cipher>::_keyHeaderIsCorrect(const Key &key, const cpputils::Data &data) {
   return 0 == std::memcmp(key.data(), data.data(), Key::BINARY_LENGTH);
 }
+#endif
 
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_prependFormatHeaderToData(const cpputils::Data &data) {
@@ -158,16 +170,21 @@ inline cpputils::Data EncryptedBlockStore2<Cipher>::_prependFormatHeaderToData(c
 }
 
 template<class Cipher>
-inline cpputils::Data EncryptedBlockStore2<Cipher>::_removeKeyHeader(const cpputils::Data &data) {
-  return data.copyAndRemovePrefix(Key::BINARY_LENGTH);
+inline void EncryptedBlockStore2<Cipher>::_checkFormatHeader(const cpputils::Data &data) {
+  const uint16_t formatVersionHeader = _readFormatHeader(data);
+#ifndef CRYFS_NO_COMPATIBILITY
+  const bool formatVersionHeaderValid = formatVersionHeader == FORMAT_VERSION_HEADER || formatVersionHeader == FORMAT_VERSION_HEADER_OLD;
+#else
+  const bool formatVersionHeaderValid = formatVersionHeader == FORMAT_VERSION_HEADER;
+#endif
+  if (!formatVersionHeaderValid) {
+    throw std::runtime_error("The encrypted block has the wrong format. Was it created with a newer version of CryFS?");
+  }
 }
 
 template<class Cipher>
-inline cpputils::Data EncryptedBlockStore2<Cipher>::_checkAndRemoveFormatHeader(const cpputils::Data &data) {
-  if (*reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data()) != FORMAT_VERSION_HEADER) {
-    throw std::runtime_error("The encrypted block has the wrong format. Was it created with a newer version of CryFS?");
-  }
-  return data.copyAndRemovePrefix(sizeof(FORMAT_VERSION_HEADER));
+uint16_t EncryptedBlockStore2<Cipher>::_readFormatHeader(const cpputils::Data &data) {
+  return *reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data());
 }
 
 template<class Cipher>

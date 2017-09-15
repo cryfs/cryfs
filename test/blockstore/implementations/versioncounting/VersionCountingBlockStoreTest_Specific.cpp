@@ -235,6 +235,16 @@ TEST_F(VersionCountingBlockStoreTest, DeletionPrevention_InForEachBlock_DoesntAl
   );
 }
 
+TEST_F(VersionCountingBlockStoreTest, LoadingWithDifferentBlockIdFails) {
+  auto key = CreateBlockReturnKey();
+  blockstore::Key key2 = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  baseBlockStore->store(key2, baseBlockStore->load(key).value());
+  EXPECT_THROW(
+      blockStore->load(key2),
+      IntegrityViolationError
+  );
+}
+
 // TODO Test more integrity cases:
 //   - RollbackPrevention_DoesntAllowReintroducingDeletedBlocks with different client id (i.e. trying to re-introduce the newest block of a different client)
 //   - RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber with different client id

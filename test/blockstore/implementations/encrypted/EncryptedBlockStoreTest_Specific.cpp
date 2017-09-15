@@ -105,20 +105,6 @@ TEST_F(EncryptedBlockStoreTest, LoadingModifiedBlockFails_WriteSeparately) {
   EXPECT_EQ(boost::none, loaded);
 }
 
-TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentBlockIdFails_WriteOnCreate) {
-  auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
-  auto key2 = CopyBaseBlock(key);
-  auto loaded = blockStore->load(key2);
-  EXPECT_EQ(boost::none, loaded);
-}
-
-TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentBlockIdFails_WriteSeparately) {
-  auto key = CreateBlockWriteFixtureToItAndReturnKey();
-  auto key2 = CopyBaseBlock(key);
-  auto loaded = blockStore->load(key2);
-  EXPECT_EQ(boost::none, loaded);
-}
-
 TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_zerophysical) {
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(0));
 }

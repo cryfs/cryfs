@@ -12,16 +12,21 @@ using namespace cpputils::logging;
 namespace blockstore {
 namespace versioncounting {
 
+#ifndef CRYFS_NO_COMPATIBILITY
+constexpr uint16_t VersionCountingBlockStore2::FORMAT_VERSION_HEADER_OLD;
+#endif
 constexpr uint16_t VersionCountingBlockStore2::FORMAT_VERSION_HEADER;
 constexpr uint64_t VersionCountingBlockStore2::VERSION_ZERO;
+constexpr unsigned int VersionCountingBlockStore2::ID_HEADER_OFFSET;
 constexpr unsigned int VersionCountingBlockStore2::CLIENTID_HEADER_OFFSET;
 constexpr unsigned int VersionCountingBlockStore2::VERSION_HEADER_OFFSET;
 constexpr unsigned int VersionCountingBlockStore2::HEADER_LENGTH;
 
-Data VersionCountingBlockStore2::_prependHeaderToData(uint32_t myClientId, uint64_t version, const Data &data) {
-  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + sizeof(myClientId) + sizeof(version), "Wrong header length");
+Data VersionCountingBlockStore2::_prependHeaderToData(const Key& key, uint32_t myClientId, uint64_t version, const Data &data) {
+  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + sizeof(myClientId) + sizeof(version), "Wrong header length");
   Data result(data.size() + HEADER_LENGTH);
   std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
+  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), key.data(), Key::BINARY_LENGTH);
   std::memcpy(result.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
   std::memcpy(result.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
   std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
@@ -30,11 +35,12 @@ Data VersionCountingBlockStore2::_prependHeaderToData(uint32_t myClientId, uint6
 
 void VersionCountingBlockStore2::_checkHeader(const Key &key, const Data &data) const {
   _checkFormatHeader(data);
+  _checkIdHeader(key, data);
   _checkVersionHeader(key, data);
 }
 
 void VersionCountingBlockStore2::_checkFormatHeader(const Data &data) const {
-  if (*reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data()) != FORMAT_VERSION_HEADER) {
+  if (FORMAT_VERSION_HEADER != _readFormatHeader(data)) {
     throw std::runtime_error("The versioned block has the wrong format. Was it created with a newer version of CryFS?");
   }
 }
@@ -48,10 +54,25 @@ void VersionCountingBlockStore2::_checkVersionHeader(const Key &key, const Data 
   }
 }
 
+void VersionCountingBlockStore2::_checkIdHeader(const Key &expectedKey, const Data &data) const {
+  Key actualKey = _readBlockId(data);
+  if (expectedKey != actualKey) {
+    integrityViolationDetected("The block key is wrong. Did an attacker try to rename some blocks?");
+  }
+}
+
+uint16_t VersionCountingBlockStore2::_readFormatHeader(const Data &data) {
+  return *reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data());
+}
+
 uint32_t VersionCountingBlockStore2::_readClientId(const Data &data) {
   uint32_t clientId;
   std::memcpy(&clientId, data.dataOffset(CLIENTID_HEADER_OFFSET), sizeof(clientId));
   return clientId;
+}
+
+Key VersionCountingBlockStore2::_readBlockId(const Data &data) {
+  return Key::FromBinary(data.dataOffset(ID_HEADER_OFFSET));
 }
 
 uint64_t VersionCountingBlockStore2::_readVersion(const Data &data) {
@@ -60,7 +81,7 @@ uint64_t VersionCountingBlockStore2::_readVersion(const Data &data) {
   return version;
 }
 
-Data VersionCountingBlockStore2::_removeHeader(const Data &data) const {
+Data VersionCountingBlockStore2::_removeHeader(const Data &data) {
   return data.copyAndRemovePrefix(HEADER_LENGTH);
 }
 
@@ -86,7 +107,7 @@ VersionCountingBlockStore2::VersionCountingBlockStore2(unique_ref<BlockStore2> b
 bool VersionCountingBlockStore2::tryCreate(const Key &key, const Data &data) {
   _checkNoPastIntegrityViolations();
   uint64_t version = _knownBlockVersions.incrementVersion(key);
-  Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
+  Data dataWithHeader = _prependHeaderToData(key, _knownBlockVersions.myClientId(), version, data);
   return _baseBlockStore->tryCreate(key, dataWithHeader);
 }
 
@@ -105,14 +126,34 @@ optional<Data> VersionCountingBlockStore2::load(const Key &key) const {
     }
     return optional<Data>(none);
   }
+#ifndef CRYFS_NO_COMPATIBILITY
+  if (FORMAT_VERSION_HEADER_OLD == _readFormatHeader(*loaded)) {
+    Data migrated = _migrateBlock(key, *loaded);
+    _checkHeader(key, migrated);
+    Data content = _removeHeader(migrated);
+    const_cast<VersionCountingBlockStore2*>(this)->store(key, content);
+    return optional<Data>(_removeHeader(migrated));
+  }
+#endif
   _checkHeader(key, *loaded);
   return optional<Data>(_removeHeader(*loaded));
 }
 
+#ifndef CRYFS_NO_COMPATIBILITY
+Data VersionCountingBlockStore2::_migrateBlock(const Key &key, const Data &data) {
+  Data migrated(data.size() + Key::BINARY_LENGTH);
+  std::memcpy(migrated.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
+  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), key.data(), Key::BINARY_LENGTH);
+  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET + Key::BINARY_LENGTH), data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER));
+  ASSERT(migrated.size() == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + (data.size() - sizeof(FORMAT_VERSION_HEADER)), "Wrong offset computation");
+  return migrated;
+}
+#endif
+
 void VersionCountingBlockStore2::store(const Key &key, const Data &data) {
   _checkNoPastIntegrityViolations();
   uint64_t version = _knownBlockVersions.incrementVersion(key);
-  Data dataWithHeader = _prependHeaderToData(_knownBlockVersions.myClientId(), version, data);
+  Data dataWithHeader = _prependHeaderToData(key, _knownBlockVersions.myClientId(), version, data);
   return _baseBlockStore->store(key, dataWithHeader);
 }
 
@@ -170,7 +211,7 @@ void VersionCountingBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers
     return;
   }
   cpputils::Data data = std::move(*data_);
-  cpputils::Data dataWithHeader = _prependHeaderToData(knownBlockVersions->myClientId(), version, std::move(data));
+  cpputils::Data dataWithHeader = _prependHeaderToData(key, knownBlockVersions->myClientId(), version, std::move(data));
   baseBlockStore->store(key, std::move(dataWithHeader));
 }
 #endif
