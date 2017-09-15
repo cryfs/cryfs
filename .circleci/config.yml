@@ -285,3 +285,5 @@ workflows:
         <<: *enable_for_tags
     - clang_5_0:
         <<: *enable_for_tags
+    - no_compatibility:
+        <<: *enable_for_tags
