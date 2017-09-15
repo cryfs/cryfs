@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_VERSIONCOUNTINGBLOCKSTORE2_H_
-#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_VERSIONCOUNTINGBLOCKSTORE2_H_
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_INTEGRITYBLOCKSTORE2_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_INTEGRITYBLOCKSTORE2_H_
 
 #include "../../interface/BlockStore2.h"
 #include <cpp-utils/macros.h>
@@ -8,13 +8,15 @@
 #include "IntegrityViolationError.h"
 
 namespace blockstore {
-namespace versioncounting {
+namespace integrity {
 
 //TODO Format version headers
 
-class VersionCountingBlockStore2 final: public BlockStore2 {
+// This blockstore implements integrity measures.
+// It depends on being used on top of an encrypted block store that protects integrity of the block contents (i.e. uses an authenticated cipher).
+class IntegrityBlockStore2 final: public BlockStore2 {
 public:
-  VersionCountingBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation);
+  IntegrityBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation);
 
   bool tryCreate(const Key &key, const cpputils::Data &data) override;
   bool remove(const Key &key) override;
@@ -67,7 +69,7 @@ private:
   const bool _missingBlockIsIntegrityViolation;
   mutable bool _integrityViolationDetected;
 
-  DISALLOW_COPY_AND_ASSIGN(VersionCountingBlockStore2);
+  DISALLOW_COPY_AND_ASSIGN(IntegrityBlockStore2);
 };
 
 }

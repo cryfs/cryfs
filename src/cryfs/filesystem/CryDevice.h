@@ -58,7 +58,7 @@ private:
   static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);
 #endif
   static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId);
-  static cpputils::unique_ref<blockstore::BlockStore2> CreateVersionCountingEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId);
+  static cpputils::unique_ref<blockstore::BlockStore2> CreateIntegrityEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId);
   static cpputils::unique_ref<blockstore::BlockStore2> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore2> baseBlockStore);
 
   struct BlobWithParent {

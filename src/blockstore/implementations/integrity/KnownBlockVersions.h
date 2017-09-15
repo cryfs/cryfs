@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_KNOWNBLOCKVERSIONS_H_
-#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_KNOWNBLOCKVERSIONS_H_
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_KNOWNBLOCKVERSIONS_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_KNOWNBLOCKVERSIONS_H_
 
 #include <cpp-utils/macros.h>
 #include <blockstore/utils/Key.h>
@@ -13,7 +13,7 @@
 #include <unordered_set>
 
 namespace blockstore {
-    namespace versioncounting {
+    namespace integrity {
 
         class KnownBlockVersions final {
         public:

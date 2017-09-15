@@ -142,7 +142,7 @@ inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt
     }
     *decrypted = _migrateBlock(*decrypted);
     // no need to write migrated back to block store because
-    // this migration happens in line with a migration in VersionCountingBlockStore2
+    // this migration happens in line with a migration in IntegrityBlockStore2
     // which then writes it back
   }
 #endif

@@ -24,10 +24,10 @@ set(SOURCES
   implementations/caching/cache/QueueMap.cpp
   implementations/low2highlevel/LowToHighLevelBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
-  implementations/versioncounting/VersionCountingBlockStore2.cpp
-  implementations/versioncounting/KnownBlockVersions.cpp
-  implementations/versioncounting/ClientIdAndBlockKey.cpp
-  implementations/versioncounting/IntegrityViolationError.cpp
+  implementations/integrity/IntegrityBlockStore2.cpp
+  implementations/integrity/KnownBlockVersions.cpp
+  implementations/integrity/ClientIdAndBlockKey.cpp
+  implementations/integrity/IntegrityViolationError.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
 )

@@ -17,7 +17,7 @@ using cpputils::Serializer;
 using cpputils::Deserializer;
 
 namespace blockstore {
-namespace versioncounting {
+namespace integrity {
 
 const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;0";
 constexpr uint32_t KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK;

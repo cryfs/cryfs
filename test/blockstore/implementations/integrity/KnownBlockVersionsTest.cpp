@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <blockstore/implementations/versioncounting/KnownBlockVersions.h>
+#include <blockstore/implementations/integrity/KnownBlockVersions.h>
 #include <cpp-utils/tempfile/TempFile.h>
 
-using blockstore::versioncounting::KnownBlockVersions;
+using blockstore::integrity::KnownBlockVersions;
 using blockstore::Key;
 using cpputils::TempFile;
 using std::unordered_set;

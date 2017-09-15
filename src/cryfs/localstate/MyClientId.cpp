@@ -1,14 +1,14 @@
 #include "MyClientId.h"
 #include <fstream>
 #include <cpp-utils/random/Random.h>
-#include <blockstore/implementations/versioncounting/KnownBlockVersions.h>
+#include <blockstore/implementations/integrity/KnownBlockVersions.h>
 
 using boost::optional;
 using boost::none;
 using std::ifstream;
 using std::ofstream;
 using cpputils::Random;
-using blockstore::versioncounting::KnownBlockVersions;
+using blockstore::integrity::KnownBlockVersions;
 namespace bf = boost::filesystem;
 
 namespace cryfs {

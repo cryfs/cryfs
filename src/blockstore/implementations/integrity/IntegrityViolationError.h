@@ -1,12 +1,12 @@
 #pragma once
-#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_INTEGRITYVIOLATIONERROR_H_
-#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_VERSIONCOUNTING_INTEGRITYVIOLATIONERROR_H_
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_INTEGRITYVIOLATIONERROR_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_INTEGRITYVIOLATIONERROR_H_
 
 #include <cpp-utils/macros.h>
 #include <string>
 
 namespace blockstore {
-    namespace versioncounting {
+    namespace integrity {
 
         class IntegrityViolationError final : public std::exception {
         public:
@@ -16,14 +16,13 @@ namespace blockstore {
             }
 
         private:
-            // Constructor is private to make sure that only VersionCountingBlockStore can throw this exception.
-            // This is because VersionCountingBlockStore wants to know about integrity violations and
+            // Constructor is private to make sure that only IntegrityBlockStore can throw this exception.
+            // This is because IntegrityBlockStore wants to know about integrity violations and
             // block all further file system access if it happens.
             IntegrityViolationError(const std::string &reason)
                     : _reason("Integrity violation: " + reason) {
             }
-            friend class VersionCountingBlockStore;
-            friend class VersionCountingBlockStore2;
+            friend class IntegrityBlockStore2;
 
             std::string _reason;
         };
