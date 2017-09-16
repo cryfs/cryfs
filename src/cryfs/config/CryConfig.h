@@ -44,6 +44,8 @@ public:
   boost::optional<uint32_t> ExclusiveClientId() const;
   void SetExclusiveClientId(boost::optional<uint32_t> value);
 
+  bool missingBlockIsIntegrityViolation() const;
+
 #ifndef CRYFS_NO_COMPATIBILITY
   // This is a trigger to recognize old file systems that didn't have version numbers.
   // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.

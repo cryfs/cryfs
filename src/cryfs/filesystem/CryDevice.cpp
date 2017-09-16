@@ -57,14 +57,14 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore2> blockStore, uint32_t myClientId, bool noIntegrityChecks)
-: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), &configFile, myClientId, noIntegrityChecks)),
+CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore2> blockStore, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation)
+: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), &configFile, myClientId, noIntegrityChecks, missingBlockIsIntegrityViolation)),
   _rootKey(GetOrCreateRootKey(&configFile)),
   _onFsAction() {
 }
 
-unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks) {
-  auto blobStore = CreateBlobStore(std::move(blockStore), configFile, myClientId, noIntegrityChecks);
+unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation) {
+  auto blobStore = CreateBlobStore(std::move(blockStore), configFile, myClientId, noIntegrityChecks, missingBlockIsIntegrityViolation);
 
 #ifndef CRYFS_NO_COMPATIBILITY
   auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile);
@@ -89,8 +89,8 @@ unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(uniqu
 }
 #endif
 
-unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks) {
-  auto integrityEncryptedBlockStore = CreateIntegrityEncryptedBlockStore(std::move(blockStore), configFile, myClientId, noIntegrityChecks);
+unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation) {
+  auto integrityEncryptedBlockStore = CreateIntegrityEncryptedBlockStore(std::move(blockStore), configFile, myClientId, noIntegrityChecks, missingBlockIsIntegrityViolation);
   // Create integrityEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
@@ -102,7 +102,7 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
      configFile->config()->BlocksizeBytes());
 }
 
-unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks) {
+unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation) {
   auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
   auto statePath = LocalStateDir::forFilesystemId(configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
@@ -115,8 +115,8 @@ unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref
     configFile->save();
   }
 #endif
-    
-  return make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, myClientId, noIntegrityChecks, false);
+
+  return make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, myClientId, noIntegrityChecks, missingBlockIsIntegrityViolation);
 }
 
 Key CryDevice::CreateRootBlobAndReturnKey() {

@@ -11,7 +11,7 @@ class CryTestBase : public TestWithFakeHomeDirectory {
 public:
     CryTestBase(): _configFile(false), _device(nullptr) {
         auto fakeBlockStore = cpputils::make_unique_ref<blockstore::inmemory::InMemoryBlockStore2>();
-        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), 0x12345678);
+        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), 0x12345678, false, false);
     }
 
     cryfs::CryConfigFile configFile() {

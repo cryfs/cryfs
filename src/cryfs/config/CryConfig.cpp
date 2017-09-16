@@ -149,6 +149,10 @@ void CryConfig::SetExclusiveClientId(optional<uint32_t> value) {
   _exclusiveClientId = value;
 }
 
+bool CryConfig::missingBlockIsIntegrityViolation() const {
+    return _exclusiveClientId != boost::none;
+}
+
 #ifndef CRYFS_NO_COMPATIBILITY
 bool CryConfig::HasVersionNumbers() const {
   return _hasVersionNumbers;

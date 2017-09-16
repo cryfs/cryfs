@@ -56,20 +56,20 @@ public:
 
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
+  CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);

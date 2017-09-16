@@ -27,7 +27,7 @@ public:
   IntegrityBlockStoreTest():
     stateFile(false),
     baseBlockStore(new InMemoryBlockStore2),
-    blockStore(make_unique_ref<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false)),
+    blockStore(make_unique_ref<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false, false)),
     data(DataFixture::generate(BLOCKSIZE)) {
   }
   static constexpr uint32_t myClientId = 0x12345678;
@@ -38,13 +38,13 @@ public:
 
   std::pair<InMemoryBlockStore2 *, unique_ptr<IntegrityBlockStore2>> makeBlockStoreWithDeletionPrevention() {
     InMemoryBlockStore2 *baseBlockStore = new InMemoryBlockStore2;
-    auto blockStore = make_unique<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, true);
+    auto blockStore = make_unique<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false, true);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
   std::pair<InMemoryBlockStore2 *, unique_ptr<IntegrityBlockStore2>> makeBlockStoreWithoutDeletionPrevention() {
     InMemoryBlockStore2 *baseBlockStore = new InMemoryBlockStore2;
-    auto blockStore = make_unique<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false);
+    auto blockStore = make_unique<IntegrityBlockStore2>(std::move(cpputils::nullcheck(std::unique_ptr<InMemoryBlockStore2>(baseBlockStore)).value()), stateFile.path(), myClientId, false, false);
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
