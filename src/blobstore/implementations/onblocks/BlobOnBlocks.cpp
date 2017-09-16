@@ -108,7 +108,7 @@ void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
 
 uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) const {
   //TODO Quite inefficient to call size() here, because that has to traverse the tree
-  uint64_t realCount = std::max(UINT64_C(0), std::min(count, size()-offset));
+  uint64_t realCount = std::max(INT64_C(0), std::min(static_cast<int64_t>(count), static_cast<int64_t>(size())-static_cast<int64_t>(offset)));
   _read(target, offset, realCount);
   return realCount;
 }

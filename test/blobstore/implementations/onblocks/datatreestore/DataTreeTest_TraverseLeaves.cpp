@@ -410,7 +410,7 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback) {
       } else {
         EXPECT_TRUE(false) << "only two nodes";
       }
-  }, [this] (uint32_t /*nodeIndex*/) -> Data {
+  }, [] (uint32_t /*nodeIndex*/) -> Data {
       return Data(1);
   });
 }
@@ -421,7 +421,7 @@ TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel)
   auto tree = treeStore.load(root->key()).value();
   tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, bool /*isRightBorderNode*/, LeafHandle leaf) {
       EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf.node()->numBytes());
-  }, [this] (uint32_t /*nodeIndex*/) -> Data {
+  }, [] (uint32_t /*nodeIndex*/) -> Data {
       return Data(1);
   });
 }

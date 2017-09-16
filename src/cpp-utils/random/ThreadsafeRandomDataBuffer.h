@@ -54,7 +54,7 @@ namespace cpputils {
 
     inline size_t ThreadsafeRandomDataBuffer::_get(void *target, size_t numBytes) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        _dataAddedCv.wait(lock, [this, numBytes] {
+        _dataAddedCv.wait(lock, [this] {
            return _buffer.size() > 0;
         });
         size_t gettableBytes = std::min(_buffer.size(), numBytes);

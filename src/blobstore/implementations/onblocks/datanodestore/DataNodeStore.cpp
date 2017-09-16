@@ -73,7 +73,6 @@ unique_ref<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &sour
 unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> target, const DataNode &source) {
   ASSERT(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Target node has wrong layout. Is it from the same DataNodeStore?");
   ASSERT(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
-  Key key = target->key();
   auto targetBlock = target->node().releaseBlock();
   cpputils::destruct(std::move(target)); // Call destructor
   blockstore::utils::copyTo(targetBlock.get(), source.node().block());

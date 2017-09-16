@@ -143,6 +143,7 @@ TEST_P(FixedSizeDataTestWithParam, Drop_One) {
 TEST_P(FixedSizeDataTestWithParam, Take_Nothing) {
   FixedSizeData<SIZE> source(GetParam());
   FixedSizeData<0> taken = source.take<0>();
+  (void)taken; // silence unused variable warning
 }
 
 TEST_P(FixedSizeDataTestWithParam, Drop_Nothing) {
@@ -160,12 +161,14 @@ TEST_P(FixedSizeDataTestWithParam, Take_All) {
 TEST_P(FixedSizeDataTestWithParam, Drop_All) {
   FixedSizeData<SIZE> source(GetParam());
   FixedSizeData<0> taken = source.drop<SIZE>();
+  (void)taken; // silence unused variable warning
 }
 
 TEST_F(FixedSizeDataTest, CopyConstructorDoesntChangeSource) {
   FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
   FixedSizeData<SIZE> data2(data1);
   EXPECT_EQ(DATA1_AS_STRING, data1.ToString());
+  (void)data2; // silence unused variable warning
 }
 
 TEST_P(FixedSizeDataTestWithParam, IsEqualAfterAssignment1) {

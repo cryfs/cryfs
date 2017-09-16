@@ -9,7 +9,7 @@ class FsppDeviceTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixtu
 public:
   void Test_Load_While_Loaded() {
     auto node = this->CreateNode("/mynode");
-    auto operation = [this, &node] () {
+    auto operation = [this] () {
         this->device->Load("/mynode");
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mynode", operation, {this->ExpectDoesntUpdateAnyTimestamps});
