@@ -27,7 +27,7 @@ public:
   virtual void store(const Key &key, const cpputils::Data &data) = 0;
 
   Key create(const cpputils::Data& data) {
-    Key key = cpputils::Random::PseudoRandom().getFixedSize<Key::BINARY_LENGTH>();
+    Key key = Key::Random();
     bool success = tryCreate(key, data);
     if (success) {
       return key;

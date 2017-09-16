@@ -174,7 +174,7 @@ vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::functi
     if (_entries.size() == 0) {
         return _entries.end();
     }
-    double startpos_percent = static_cast<double>(*static_cast<const unsigned char*>(hint.data())) / std::numeric_limits<unsigned char>::max();
+    double startpos_percent = static_cast<double>(*static_cast<const unsigned char*>(hint.data().data())) / std::numeric_limits<unsigned char>::max();
     auto iter = _entries.begin() + static_cast<int>(startpos_percent * (_entries.size()-1));
     ASSERT(iter >= _entries.begin() && iter < _entries.end(), "Startpos out of range");
     while(iter != _entries.begin() && pred(*iter)) {

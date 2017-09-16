@@ -136,7 +136,7 @@ void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer) const {
 
 pair<ClientIdAndBlockKey, uint64_t> KnownBlockVersions::_deserializeKnownVersionsEntry(Deserializer *deserializer) {
     uint32_t clientId = deserializer->readUint32();
-    Key blockKey = deserializer->readFixedSizeData<Key::BINARY_LENGTH>();
+    Key blockKey(deserializer->readFixedSizeData<Key::BINARY_LENGTH>());
     uint64_t version = deserializer->readUint64();
 
     return {{clientId, blockKey}, version};
@@ -144,7 +144,7 @@ pair<ClientIdAndBlockKey, uint64_t> KnownBlockVersions::_deserializeKnownVersion
 
 void KnownBlockVersions::_serializeKnownVersionsEntry(Serializer *serializer, const pair<ClientIdAndBlockKey, uint64_t> &entry) {
     serializer->writeUint32(entry.first.clientId);
-    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.blockKey);
+    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.blockKey.data());
     serializer->writeUint64(entry.second);
 }
 
@@ -168,14 +168,14 @@ void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer) c
 }
 
 pair<Key, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIdEntry(Deserializer *deserializer) {
-    Key blockKey = deserializer->readFixedSizeData<Key::BINARY_LENGTH>();
+    Key blockKey(deserializer->readFixedSizeData<Key::BINARY_LENGTH>());
     uint32_t clientId = deserializer->readUint32();
 
     return {blockKey, clientId};
 };
 
 void KnownBlockVersions::_serializeLastUpdateClientIdEntry(Serializer *serializer, const pair<Key, uint32_t> &entry) {
-    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first);
+    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.data());
     serializer->writeUint32(entry.second);
 }
 

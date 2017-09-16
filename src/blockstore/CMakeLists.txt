@@ -2,6 +2,7 @@ project (blockstore)
 
 set(SOURCES
   utils/Key.cpp
+  utils/IdWrapper.cpp
   utils/BlockStoreUtils.cpp
   utils/FileDoesntExistException.cpp
   interface/helpers/BlockStoreWithRandomKeys.cpp

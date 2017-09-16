@@ -16,7 +16,7 @@ namespace cryfs {
         blob->resize(blob->size() + blockstore::Key::BINARY_LENGTH);
         blob->write(data.dataOffset(OLD_HEADER_SIZE), HEADER_SIZE, data.size() - OLD_HEADER_SIZE);
         // Write parent pointer
-        blob->write(parentKey.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+        blob->write(parentKey.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
         // Update format version number
         blob->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
     }

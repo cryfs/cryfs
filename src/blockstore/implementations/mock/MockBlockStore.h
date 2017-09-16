@@ -105,7 +105,7 @@ namespace blockstore {
             std::vector<Key> distinctWrittenBlocks() const {
                 std::vector<Key> result(_writtenBlocks);
                 std::sort(result.begin(), result.end(), [](const Key &lhs, const Key &rhs) {
-                    return std::memcmp(lhs.data(), rhs.data(), lhs.BINARY_LENGTH) < 0;
+                    return std::memcmp(lhs.data().data(), rhs.data().data(), lhs.BINARY_LENGTH) < 0;
                 });
                 result.erase(std::unique(result.begin(), result.end() ), result.end());
                 return result;

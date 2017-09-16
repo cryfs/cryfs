@@ -26,7 +26,7 @@ Data IntegrityBlockStore2::_prependHeaderToData(const Key& key, uint32_t myClien
   static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + sizeof(myClientId) + sizeof(version), "Wrong header length");
   Data result(data.size() + HEADER_LENGTH);
   std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), key.data(), Key::BINARY_LENGTH);
+  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), key.data().data(), Key::BINARY_LENGTH);
   std::memcpy(result.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
   std::memcpy(result.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
   std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
@@ -147,7 +147,7 @@ optional<Data> IntegrityBlockStore2::load(const Key &key) const {
 Data IntegrityBlockStore2::_migrateBlock(const Key &key, const Data &data) {
   Data migrated(data.size() + Key::BINARY_LENGTH);
   std::memcpy(migrated.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), key.data(), Key::BINARY_LENGTH);
+  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), key.data().data(), Key::BINARY_LENGTH);
   std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET + Key::BINARY_LENGTH), data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER));
   ASSERT(migrated.size() == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + (data.size() - sizeof(FORMAT_VERSION_HEADER)), "Wrong offset computation");
   return migrated;

@@ -19,7 +19,7 @@ LowToHighLevelBlockStore::LowToHighLevelBlockStore(unique_ref<BlockStore2> baseB
 
 Key LowToHighLevelBlockStore::createKey() {
     // TODO Is this the right way?
-    return cpputils::Random::PseudoRandom().getFixedSize<Key::BINARY_LENGTH>();
+    return Key::Random();
 }
 
 optional<unique_ref<Block>> LowToHighLevelBlockStore::tryCreate(const Key &key, Data data) {

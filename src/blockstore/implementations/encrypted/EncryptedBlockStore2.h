@@ -157,7 +157,7 @@ inline cpputils::Data EncryptedBlockStore2<Cipher>::_migrateBlock(const cpputils
 
 template<class Cipher>
 inline bool EncryptedBlockStore2<Cipher>::_keyHeaderIsCorrect(const Key &key, const cpputils::Data &data) {
-  return 0 == std::memcmp(key.data(), data.data(), Key::BINARY_LENGTH);
+  return key == Key::FromBinary(data.data());
 }
 #endif
 

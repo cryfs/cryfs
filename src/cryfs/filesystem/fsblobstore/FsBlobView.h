@@ -27,7 +27,7 @@ namespace cryfs {
             baseBlob->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
             uint8_t blobTypeInt = static_cast<uint8_t>(blobType);
             baseBlob->write(&blobTypeInt, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
-            baseBlob->write(parent.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+            baseBlob->write(parent.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
             static_assert(HEADER_SIZE == sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::Key::BINARY_LENGTH, "If this fails, the header is not initialized correctly in this function.");
         }
 
@@ -118,11 +118,13 @@ namespace cryfs {
         }
 
         void _loadParentPointer() {
-            _baseBlob->read(_parentPointer.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+            auto idData = cpputils::FixedSizeData<blockstore::Key::BINARY_LENGTH>::Null();
+            _baseBlob->read(idData.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+            _parentPointer = blockstore::Key(idData);
         }
 
         void _storeParentPointer() {
-            _baseBlob->write(_parentPointer.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+            _baseBlob->write(_parentPointer.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
         }
 
 

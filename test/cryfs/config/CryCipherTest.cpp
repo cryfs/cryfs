@@ -43,7 +43,7 @@ public:
 
     template<class ExpectedCipher>
     void _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
-        blockstore::Key key = cpputils::Random::PseudoRandom().getFixedSize<blockstore::Key::BINARY_LENGTH>();
+        blockstore::Key key = blockstore::Key::Random();
         Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, key, dataFixture.copy());
         Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, key, std::move(encrypted));
         EXPECT_EQ(dataFixture, decrypted);
