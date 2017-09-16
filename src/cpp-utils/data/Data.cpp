@@ -39,7 +39,7 @@ std::streampos Data::_getStreamSize(istream &stream) {
 Data Data::LoadFromStream(istream &stream, size_t size) {
   Data result(size);
   stream.read(static_cast<char*>(result.data()), result.size());
-  return std::move(result);
+  return result;
 }
 
 }
