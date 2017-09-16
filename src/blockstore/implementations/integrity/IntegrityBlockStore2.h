@@ -16,7 +16,7 @@ namespace integrity {
 // It depends on being used on top of an encrypted block store that protects integrity of the block contents (i.e. uses an authenticated cipher).
 class IntegrityBlockStore2 final: public BlockStore2 {
 public:
-  IntegrityBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation);
+  IntegrityBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
 
   bool tryCreate(const Key &key, const cpputils::Data &data) override;
   bool remove(const Key &key) override;
@@ -66,6 +66,7 @@ private:
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
   mutable KnownBlockVersions _knownBlockVersions;
+  const bool _noIntegrityChecks;
   const bool _missingBlockIsIntegrityViolation;
   mutable bool _integrityViolationDetected;
 

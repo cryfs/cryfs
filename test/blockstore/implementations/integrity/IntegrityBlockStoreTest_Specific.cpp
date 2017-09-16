@@ -249,6 +249,7 @@ TEST_F(IntegrityBlockStoreTest, LoadingWithDifferentBlockIdFails) {
 //   - RollbackPrevention_DoesntAllowReintroducingDeletedBlocks with different client id (i.e. trying to re-introduce the newest block of a different client)
 //   - RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber with different client id
 //   - Think about more...
+// TODO Test that disabling integrity checks allows all these cases
 
 TEST_F(IntegrityBlockStoreTest, PhysicalBlockSize_zerophysical) {
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(0));

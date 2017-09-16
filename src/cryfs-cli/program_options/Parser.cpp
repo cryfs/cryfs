@@ -76,6 +76,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("blocksize")) {
         blocksizeBytes = vm["blocksize"].as<uint32_t>();
     }
+    bool noIntegrityChecks = vm.count("no-integrity-checks");
     optional<bool> missingBlockIsIntegrityViolation = none;
     if (vm.count("missing-block-is-integrity-violation")) {
         missingBlockIsIntegrityViolation = vm["missing-block-is-integrity-violation"].as<bool>();
@@ -91,7 +92,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         }
     }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, missingBlockIsIntegrityViolation, fuseOptions);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, noIntegrityChecks, missingBlockIsIntegrityViolation, fuseOptions);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -153,6 +154,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("fuse-option,o", po::value<vector<string>>(), "Add a fuse mount option. Example: atime or noatime.")
             ("cipher", po::value<string>(), cipher_description.c_str())
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
+            ("no-integrity-checks", "Disable integrity checks. Integrity checks ensure that your file system was not manipulated or rolled back to an earlier version. Disabling them is needed if you want to load an old snapshot of your file system.")
             ("missing-block-is-integrity-violation", po::value<bool>(), "Whether to treat a missing block as an integrity violation. This makes sure you notice if an attacker deleted some of your files, but only works in single-client mode. You will not be able to use the file system on other devices.")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")

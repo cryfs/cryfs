@@ -96,12 +96,16 @@ void IntegrityBlockStore2::_checkNoPastIntegrityViolations() const {
 }
 
 void IntegrityBlockStore2::integrityViolationDetected(const string &reason) const {
+  if (_noIntegrityChecks) {
+    LOG(WARN, "Integrity violation (but integrity checks are disabled): {}", reason);
+    return;
+  }
   _integrityViolationDetected = true;
   throw IntegrityViolationError(reason);
 }
 
-IntegrityBlockStore2::IntegrityBlockStore2(unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool missingBlockIsIntegrityViolation)
-: _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
+IntegrityBlockStore2::IntegrityBlockStore2(unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation)
+: _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _noIntegrityChecks(noIntegrityChecks), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
 }
 
 bool IntegrityBlockStore2::tryCreate(const Key &key, const Data &data) {
