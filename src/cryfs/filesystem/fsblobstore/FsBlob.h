@@ -13,9 +13,9 @@ namespace cryfs {
             virtual ~FsBlob();
 
             virtual off_t lstat_size() const = 0;
-            const blockstore::Key &key() const;
-            const blockstore::Key &parentPointer() const;
-            void setParentPointer(const blockstore::Key &parentKey);
+            const blockstore::BlockId &blockId() const;
+            const blockstore::BlockId &parentPointer() const;
+            void setParentPointer(const blockstore::BlockId &parentId);
 
         protected:
             FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
@@ -23,7 +23,7 @@ namespace cryfs {
             FsBlobView &baseBlob();
             const FsBlobView &baseBlob() const;
 
-            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::Key &parent);
+            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::BlockId &parent);
 
             friend class FsBlobStore;
             virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
@@ -47,8 +47,8 @@ namespace cryfs {
         inline FsBlob::~FsBlob() {
         }
 
-        inline const blockstore::Key &FsBlob::key() const {
-            return _baseBlob.key();
+        inline const blockstore::BlockId &FsBlob::blockId() const {
+            return _baseBlob.blockId();
         }
 
         inline const FsBlobView &FsBlob::baseBlob() const {
@@ -59,7 +59,7 @@ namespace cryfs {
             return _baseBlob;
         }
 
-        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::Key &parent) {
+        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::BlockId &parent) {
             FsBlobView::InitializeBlob(blob, magicNumber, parent);
         }
 
@@ -67,12 +67,12 @@ namespace cryfs {
             return _baseBlob.releaseBaseBlob();
         }
 
-        inline const blockstore::Key &FsBlob::parentPointer() const {
+        inline const blockstore::BlockId &FsBlob::parentPointer() const {
             return _baseBlob.parentPointer();
         }
 
-        inline void FsBlob::setParentPointer(const blockstore::Key &parentKey) {
-            return _baseBlob.setParentPointer(parentKey);
+        inline void FsBlob::setParentPointer(const blockstore::BlockId &parentId) {
+            return _baseBlob.setParentPointer(parentId);
         }
     }
 }

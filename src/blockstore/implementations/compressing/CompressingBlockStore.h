@@ -14,15 +14,15 @@ public:
     CompressingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
     ~CompressingBlockStore();
 
-    Key createKey() override;
-    boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-    boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-    cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) override;
-    void remove(const Key &key) override;
+    BlockId createBlockId() override;
+    boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;
+    boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override;
+    cpputils::unique_ref<Block> overwrite(const blockstore::BlockId &blockId, cpputils::Data data) override;
+    void remove(const BlockId &blockId) override;
     uint64_t numBlocks() const override;
     uint64_t estimateNumFreeBytes() const override;
     uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
-    void forEachBlock(std::function<void (const Key &)> callback) const override;
+    void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
 private:
     cpputils::unique_ref<BlockStore> _baseBlockStore;
@@ -40,13 +40,13 @@ CompressingBlockStore<Compressor>::~CompressingBlockStore() {
 }
 
 template<class Compressor>
-Key CompressingBlockStore<Compressor>::createKey() {
-    return _baseBlockStore->createKey();
+BlockId CompressingBlockStore<Compressor>::createBlockId() {
+    return _baseBlockStore->createBlockId();
 }
 
 template<class Compressor>
-boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::tryCreate(const Key &key, cpputils::Data data) {
-    auto result = CompressedBlock<Compressor>::TryCreateNew(_baseBlockStore.get(), key, std::move(data));
+boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::tryCreate(const BlockId &blockId, cpputils::Data data) {
+    auto result = CompressedBlock<Compressor>::TryCreateNew(_baseBlockStore.get(), blockId, std::move(data));
     if (result == boost::none) {
         return boost::none;
     }
@@ -54,13 +54,13 @@ boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::
 }
 
 template<class Compressor>
-cpputils::unique_ref<Block> CompressingBlockStore<Compressor>::overwrite(const blockstore::Key &key, cpputils::Data data) {
-    return CompressedBlock<Compressor>::Overwrite(_baseBlockStore.get(), key, std::move(data));
+cpputils::unique_ref<Block> CompressingBlockStore<Compressor>::overwrite(const blockstore::BlockId &blockId, cpputils::Data data) {
+    return CompressedBlock<Compressor>::Overwrite(_baseBlockStore.get(), blockId, std::move(data));
 }
 
 template<class Compressor>
-boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::load(const Key &key) {
-    auto loaded = _baseBlockStore->load(key);
+boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::load(const BlockId &blockId) {
+    auto loaded = _baseBlockStore->load(blockId);
     if (loaded == boost::none) {
         return boost::none;
     }
@@ -68,8 +68,8 @@ boost::optional<cpputils::unique_ref<Block>> CompressingBlockStore<Compressor>::
 }
 
 template<class Compressor>
-void CompressingBlockStore<Compressor>::remove(const Key &key) {
-    return _baseBlockStore->remove(key);
+void CompressingBlockStore<Compressor>::remove(const BlockId &blockId) {
+    return _baseBlockStore->remove(blockId);
 }
 
 template<class Compressor>
@@ -83,7 +83,7 @@ uint64_t CompressingBlockStore<Compressor>::estimateNumFreeBytes() const {
 }
 
 template<class Compressor>
-void CompressingBlockStore<Compressor>::forEachBlock(std::function<void (const Key &)> callback) const {
+void CompressingBlockStore<Compressor>::forEachBlock(std::function<void (const BlockId &)> callback) const {
     return _baseBlockStore->forEachBlock(callback);
 }
 

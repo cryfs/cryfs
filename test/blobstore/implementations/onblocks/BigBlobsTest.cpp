@@ -65,11 +65,11 @@ TEST_F(BigBlobsTest, Resize) {
     blob->flush();
 
     //Destruct >4GB blob
-    auto key = blob->key();
+    auto blockId = blob->blockId();
     cpputils::destruct(std::move(blob));
 
     //Load >4GB blob
-    blob = blobStore->load(key).value();
+    blob = blobStore->load(blockId).value();
 
     //Remove >4GB blob
     blobStore->remove(std::move(blob));

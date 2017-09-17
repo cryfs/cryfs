@@ -8,7 +8,7 @@
 
 using blockstore::BlockStore;
 using blockstore::Block;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -41,7 +41,7 @@ unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
   }
 }
 
-unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(uint8_t depth, const vector<Key> &children) {
+unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(uint8_t depth, const vector<BlockId> &children) {
   ASSERT(children.size() >= 1, "Inner node must have at least one child");
   return DataInnerNode::CreateNewNode(_blockstore.get(), _layout, depth, children);
 }
@@ -50,12 +50,12 @@ unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode(Data data) {
   return DataLeafNode::CreateNewNode(_blockstore.get(), _layout, std::move(data));
 }
 
-unique_ref<DataLeafNode> DataNodeStore::overwriteLeaf(const Key &key, Data data) {
-  return DataLeafNode::OverwriteNode(_blockstore.get(), _layout, key, std::move(data));
+unique_ref<DataLeafNode> DataNodeStore::overwriteLeaf(const BlockId &blockId, Data data) {
+  return DataLeafNode::OverwriteNode(_blockstore.get(), _layout, blockId, std::move(data));
 }
 
-optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
-  auto block = _blockstore->load(key);
+optional<unique_ref<DataNode>> DataNodeStore::load(const BlockId &blockId) {
+  auto block = _blockstore->load(blockId);
   if (block == none) {
     return none;
   } else {
@@ -80,13 +80,13 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
 }
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
-  Key key = node->key();
+  BlockId blockId = node->blockId();
   cpputils::destruct(std::move(node));
-  remove(key);
+  remove(blockId);
 }
 
-void DataNodeStore::remove(const Key &key) {
-  _blockstore->remove(key);
+void DataNodeStore::remove(const BlockId &blockId) {
+  _blockstore->remove(blockId);
 }
 
 void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
@@ -99,23 +99,23 @@ void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
   auto inner = dynamic_pointer_move<DataInnerNode>(node);
   ASSERT(inner != none, "Is neither a leaf nor an inner node");
   for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
-    removeSubtree((*inner)->depth()-1, (*inner)->getChild(i)->key());
+    removeSubtree((*inner)->depth()-1, (*inner)->getChild(i)->blockId());
   }
   remove(std::move(*inner));
 }
 
-void DataNodeStore::removeSubtree(uint8_t depth, const Key &key) {
+void DataNodeStore::removeSubtree(uint8_t depth, const BlockId &blockId) {
   if (depth == 0) {
-    remove(key);
+    remove(blockId);
   } else {
-    auto node = load(key);
+    auto node = load(blockId);
     ASSERT(node != none, "Node for removeSubtree not found");
 
     auto inner = dynamic_pointer_move<DataInnerNode>(*node);
     ASSERT(inner != none, "Is not an inner node, but depth was not zero");
     ASSERT((*inner)->depth() == depth, "Wrong depth given");
     for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
-      removeSubtree(depth-1, (*inner)->getChild(i)->key());
+      removeSubtree(depth-1, (*inner)->getChild(i)->blockId());
     }
     remove(std::move(*inner));
   }

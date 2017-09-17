@@ -8,7 +8,7 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::datatreestore::LeafHandle;
-using blockstore::Key;
+using blockstore::BlockId;
 using blockstore::testfake::FakeBlockStore;
 using cpputils::Data;
 using cpputils::make_unique_ref;
@@ -24,8 +24,8 @@ public:
 };
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByTree) {
-    auto key = CreateFullTwoLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullTwoLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     treeStore.remove(std::move(tree));
@@ -38,10 +38,10 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByTree)
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByKey) {
-    auto key = CreateFullTwoLevel()->key();
+    auto blockId = CreateFullTwoLevel()->blockId();
     blockStore->resetCounters();
 
-    treeStore.remove(key);
+    treeStore.remove(blockId);
 
     EXPECT_EQ(1u, blockStore->loadedBlocks().size());
     EXPECT_EQ(0u, blockStore->createdBlocks());
@@ -51,8 +51,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Twolevel_DeleteByKey) 
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByTree) {
-    auto key = CreateFullThreeLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullThreeLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     treeStore.remove(std::move(tree));
@@ -65,10 +65,10 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByTre
 }
 
 TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByKey) {
-    auto key = CreateFullThreeLevel()->key();
+    auto blockId = CreateFullThreeLevel()->blockId();
     blockStore->resetCounters();
 
-    treeStore.remove(key);
+    treeStore.remove(blockId);
 
     EXPECT_EQ(1u + maxChildrenPerInnerNode, blockStore->loadedBlocks().size());
     EXPECT_EQ(0u, blockStore->createdBlocks());
@@ -78,8 +78,8 @@ TEST_F(DataTreeTest_Performance, DeletingDoesntLoadLeaves_Threelevel_DeleteByKey
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_All) {
-    auto key = CreateFullTwoLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullTwoLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 0, maxChildrenPerInnerNode);
@@ -92,8 +92,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_All) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_Some) {
-    auto key = CreateFullTwoLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullTwoLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 3, 5);
@@ -106,8 +106,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Twolevel_Some) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_All) {
-    auto key = CreateFullThreeLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullThreeLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 0, maxChildrenPerInnerNode * maxChildrenPerInnerNode);
@@ -120,8 +120,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_All) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InOneInner) {
-    auto key = CreateFullThreeLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullThreeLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 3, 5);
@@ -134,8 +134,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InOneInner) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InTwoInner) {
-    auto key = CreateFullThreeLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullThreeLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 3, 3 + maxChildrenPerInnerNode);
@@ -148,8 +148,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_InTwoInner) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_WholeInner) {
-    auto key = CreateFullThreeLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullThreeLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), maxChildrenPerInnerNode, 2*maxChildrenPerInnerNode);
@@ -162,8 +162,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_Threelevel_WholeInner) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingInside) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 1, 4);
@@ -176,8 +176,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingInside) {
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_TwoLevel) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 4, 5);
@@ -190,8 +190,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_TwoL
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_ThreeLevel) {
-    auto key = CreateInner({CreateFullTwoLevel(), CreateFullTwoLevel()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateFullTwoLevel(), CreateFullTwoLevel()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 2*maxChildrenPerInnerNode+1, 2*maxChildrenPerInnerNode+2);
@@ -204,8 +204,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingOutside_Thre
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingAtBeginOfChild) {
-    auto key = CreateInner({CreateFullTwoLevel(), CreateFullTwoLevel()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateFullTwoLevel(), CreateFullTwoLevel()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), maxChildrenPerInnerNode, 3*maxChildrenPerInnerNode);
@@ -218,8 +218,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTree_StartingAtBeginOfChi
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDepth) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 4, maxChildrenPerInnerNode+2);
@@ -232,8 +232,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDe
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDepth_ResizeLastLeaf) {
-    auto key = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), 4, maxChildrenPerInnerNode+2);
@@ -246,8 +246,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInOldDe
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDepth) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), maxChildrenPerInnerNode, maxChildrenPerInnerNode+2);
@@ -260,8 +260,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDe
 }
 
 TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDepth_ResizeLastLeaf) {
-    auto key = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     Traverse(tree.get(), maxChildrenPerInnerNode, maxChildrenPerInnerNode+2);
@@ -274,8 +274,8 @@ TEST_F(DataTreeTest_Performance, TraverseLeaves_GrowingTreeDepth_StartingInNewDe
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_ZeroToZero) {
-    auto key = CreateLeafWithSize(0)->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeafWithSize(0)->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(0);
@@ -288,8 +288,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_ZeroToZero) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeaf) {
-    auto key = CreateLeafWithSize(0)->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeafWithSize(0)->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(5);
@@ -302,8 +302,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeaf) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeaf) {
-    auto key = CreateLeafWithSize(5)->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeafWithSize(5)->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(2);
@@ -316,8 +316,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeaf) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeafToZero) {
-    auto key = CreateLeafWithSize(5)->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeafWithSize(5)->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(0);
@@ -330,8 +330,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkOneLeafToZero) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeafInLargerTree) {
-    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf(), CreateLeafWithSize(5)})})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf(), CreateLeafWithSize(5)})})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*(maxChildrenPerInnerNode+1)+6); // Grow by one byte
@@ -344,8 +344,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowOneLeafInLargerTree) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*2+1); // Grow by one byte
@@ -358,8 +358,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf_GrowLastLeaf) {
-    auto key = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeafWithSize(5)})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*2+1); // Grow by one byte
@@ -372,8 +372,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_GrowByOneLeaf_GrowLastLeaf) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkByOneLeaf) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(2*maxBytesPerLeaf-1);
@@ -386,8 +386,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_ShrinkByOneLeaf) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to1) {
-    auto key = CreateLeaf()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeaf()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf+1);
@@ -400,8 +400,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to1) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_1to2) {
-    auto key = CreateFullTwoLevel()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateFullTwoLevel()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode+1);
@@ -414,8 +414,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_1to2) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to2) {
-    auto key = CreateLeaf()->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateLeaf()->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode+1);
@@ -428,8 +428,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_IncreaseTreeDepth_0to2) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_1to0) {
-    auto key = CreateInner({CreateLeaf(), CreateLeaf()})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateLeaf(), CreateLeaf()})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf);
@@ -442,8 +442,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_1to0) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to1) {
-    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf*maxChildrenPerInnerNode);
@@ -456,8 +456,8 @@ TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to1) {
 }
 
 TEST_F(DataTreeTest_Performance, ResizeNumBytes_DecreaseTreeDepth_2to0) {
-    auto key = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->key();
-    auto tree = treeStore.load(key).value();
+    auto blockId = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})})->blockId();
+    auto tree = treeStore.load(blockId).value();
     blockStore->resetCounters();
 
     tree->resizeNumBytes(maxBytesPerLeaf);

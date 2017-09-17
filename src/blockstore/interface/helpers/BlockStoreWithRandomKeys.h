@@ -8,14 +8,14 @@
 
 namespace blockstore {
 
-// This is an implementation helpers for BlockStores that use random block keys.
+// This is an implementation helpers for BlockStores that use random block ids.
 // You should never give this static type to the client. The client should always
 // work with the BlockStore interface instead.
 // TODO Delete this class
 class BlockStoreWithRandomKeys: public BlockStore {
 public:
-  Key createKey() final {
-    return Key::Random();
+  BlockId createBlockId() final {
+    return BlockId::Random();
   }
 };
 

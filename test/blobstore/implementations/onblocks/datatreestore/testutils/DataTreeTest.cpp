@@ -10,7 +10,7 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datatreestore::DataTree;
 using blockstore::mock::MockBlockStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::initializer_list;
@@ -45,19 +45,19 @@ unique_ref<DataInnerNode> DataTreeTest::CreateInner(initializer_list<const DataN
 
 unique_ref<DataInnerNode> DataTreeTest::CreateInner(vector<const DataNode*> children) {
   ASSERT(children.size() >= 1, "An inner node must have at least one child");
-  vector<Key> childrenKeys;
+  vector<BlockId> childrenKeys;
   childrenKeys.reserve(children.size());
   for (const DataNode *child : children) {
     ASSERT(child->depth() == (*children.begin())->depth(), "Children with different depth");
-    childrenKeys.push_back(child->key());
+    childrenKeys.push_back(child->blockId());
   }
   auto node = nodeStore->createNewInnerNode((*children.begin())->depth()+1, childrenKeys);
   return node;
 }
 
 unique_ref<DataTree> DataTreeTest::CreateLeafOnlyTree() {
-  auto key = CreateLeaf()->key();
-  return treeStore.load(key).value();
+  auto blockId = CreateLeaf()->blockId();
+  return treeStore.load(blockId).value();
 }
 
 void DataTreeTest::FillNode(DataInnerNode *node) {
@@ -98,15 +98,15 @@ unique_ref<DataInnerNode> DataTreeTest::CreateFullThreeLevel() {
   return root;
 }
 
-unique_ref<DataInnerNode> DataTreeTest::LoadInnerNode(const Key &key) {
-  auto node = nodeStore->load(key).value();
+unique_ref<DataInnerNode> DataTreeTest::LoadInnerNode(const BlockId &blockId) {
+  auto node = nodeStore->load(blockId).value();
   auto casted = dynamic_pointer_move<DataInnerNode>(node);
   EXPECT_NE(none, casted) << "Is not an inner node";
   return std::move(*casted);
 }
 
-unique_ref<DataLeafNode> DataTreeTest::LoadLeafNode(const Key &key) {
-  auto node = nodeStore->load(key).value();
+unique_ref<DataLeafNode> DataTreeTest::LoadLeafNode(const BlockId &blockId) {
+  auto node = nodeStore->load(blockId).value();
   auto casted =  dynamic_pointer_move<DataLeafNode>(node);
   EXPECT_NE(none, casted) << "Is not a leaf node";
   return std::move(*casted);
@@ -117,8 +117,8 @@ unique_ref<DataInnerNode> DataTreeTest::CreateTwoLeaf() {
 }
 
 unique_ref<DataTree> DataTreeTest::CreateTwoLeafTree() {
-  auto key = CreateTwoLeaf()->key();
-  return treeStore.load(key).value();
+  auto blockId = CreateTwoLeaf()->blockId();
+  return treeStore.load(blockId).value();
 }
 
 unique_ref<DataLeafNode> DataTreeTest::CreateLeafWithSize(uint32_t size) {
@@ -137,9 +137,9 @@ unique_ref<DataInnerNode> DataTreeTest::CreateTwoLeafWithSecondLeafSize(uint32_t
 unique_ref<DataInnerNode> DataTreeTest::CreateFullTwoLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullTwoLevel();
   for (uint32_t i = 0; i < root->numChildren()-1; ++i) {
-    LoadLeafNode(root->getChild(i)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
+    LoadLeafNode(root->getChild(i)->blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
   }
-  LoadLeafNode(root->LastChild()->key())->resize(size);
+  LoadLeafNode(root->LastChild()->blockId())->resize(size);
   return root;
 }
 
@@ -176,12 +176,12 @@ unique_ref<DataInnerNode> DataTreeTest::CreateThreeLevelWithThreeChildrenAndLast
 unique_ref<DataInnerNode> DataTreeTest::CreateFullThreeLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullThreeLevel();
   for (uint32_t i = 0; i < root->numChildren(); ++i) {
-    auto node = LoadInnerNode(root->getChild(i)->key());
+    auto node = LoadInnerNode(root->getChild(i)->blockId());
     for (uint32_t j = 0; j < node->numChildren(); ++j) {
-      LoadLeafNode(node->getChild(j)->key())->resize(nodeStore->layout().maxBytesPerLeaf());
+      LoadLeafNode(node->getChild(j)->blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
     }
   }
-  LoadLeafNode(LoadInnerNode(root->LastChild()->key())->LastChild()->key())->resize(size);
+  LoadLeafNode(LoadInnerNode(root->LastChild()->blockId())->LastChild()->blockId())->resize(size);
   return root;
 }
 
@@ -192,50 +192,50 @@ unique_ref<DataInnerNode> DataTreeTest::CreateFourLevelMinDataWithLastLeafSize(u
   });
 }
 
-void DataTreeTest::EXPECT_IS_LEAF_NODE(const Key &key) {
-  auto node = LoadLeafNode(key);
+void DataTreeTest::EXPECT_IS_LEAF_NODE(const BlockId &blockId) {
+  auto node = LoadLeafNode(blockId);
   EXPECT_NE(nullptr, node.get());
 }
 
-void DataTreeTest::EXPECT_IS_INNER_NODE(const Key &key) {
-  auto node = LoadInnerNode(key);
+void DataTreeTest::EXPECT_IS_INNER_NODE(const BlockId &blockId) {
+  auto node = LoadInnerNode(blockId);
   EXPECT_NE(nullptr, node.get());
 }
 
-void DataTreeTest::EXPECT_IS_TWONODE_CHAIN(const Key &key) {
-  auto node = LoadInnerNode(key);
+void DataTreeTest::EXPECT_IS_TWONODE_CHAIN(const BlockId &blockId) {
+  auto node = LoadInnerNode(blockId);
   EXPECT_EQ(1u, node->numChildren());
-  EXPECT_IS_LEAF_NODE(node->getChild(0)->key());
+  EXPECT_IS_LEAF_NODE(node->getChild(0)->blockId());
 }
 
-void DataTreeTest::EXPECT_IS_FULL_TWOLEVEL_TREE(const Key &key) {
-  auto node = LoadInnerNode(key);
+void DataTreeTest::EXPECT_IS_FULL_TWOLEVEL_TREE(const BlockId &blockId) {
+  auto node = LoadInnerNode(blockId);
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
   for (unsigned int i = 0; i < node->numChildren(); ++i) {
-    EXPECT_IS_LEAF_NODE(node->getChild(i)->key());
+    EXPECT_IS_LEAF_NODE(node->getChild(i)->blockId());
   }
 }
 
-void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const Key &key) {
-  auto root = LoadInnerNode(key);
+void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const BlockId &blockId) {
+  auto root = LoadInnerNode(blockId);
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), root->numChildren());
   for (unsigned int i = 0; i < root->numChildren(); ++i) {
-    auto node = LoadInnerNode(root->getChild(i)->key());
+    auto node = LoadInnerNode(root->getChild(i)->blockId());
     EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
     for (unsigned int j = 0; j < node->numChildren(); ++j) {
-      EXPECT_IS_LEAF_NODE(node->getChild(j)->key());
+      EXPECT_IS_LEAF_NODE(node->getChild(j)->blockId());
     }
   }
 }
 
-void DataTreeTest::CHECK_DEPTH(int depth, const Key &key) {
+void DataTreeTest::CHECK_DEPTH(int depth, const BlockId &blockId) {
   if (depth == 0) {
-    EXPECT_IS_LEAF_NODE(key);
+    EXPECT_IS_LEAF_NODE(blockId);
   } else {
-    auto node = LoadInnerNode(key);
+    auto node = LoadInnerNode(blockId);
     EXPECT_EQ(depth, node->depth());
     for (uint32_t i = 0; i < node->numChildren(); ++i) {
-      CHECK_DEPTH(depth-1, node->getChild(i)->key());
+      CHECK_DEPTH(depth-1, node->getChild(i)->blockId());
     }
   }
 }

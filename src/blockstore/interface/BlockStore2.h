@@ -16,21 +16,21 @@ public:
   virtual ~BlockStore2() {}
 
   __attribute__((warn_unused_result))
-  virtual bool tryCreate(const Key &key, const cpputils::Data &data) = 0;
+  virtual bool tryCreate(const BlockId &blockId, const cpputils::Data &data) = 0;
   __attribute__((warn_unused_result))
-  virtual bool remove(const Key &key) = 0;
+  virtual bool remove(const BlockId &blockId) = 0;
 
   __attribute__((warn_unused_result))
-  virtual boost::optional<cpputils::Data> load(const Key &key) const = 0;
+  virtual boost::optional<cpputils::Data> load(const BlockId &blockId) const = 0;
 
-  // Store the block with the given key. If it doesn't exist, it is created.
-  virtual void store(const Key &key, const cpputils::Data &data) = 0;
+  // Store the block with the given blockId. If it doesn't exist, it is created.
+  virtual void store(const BlockId &blockId, const cpputils::Data &data) = 0;
 
-  Key create(const cpputils::Data& data) {
-    Key key = Key::Random();
-    bool success = tryCreate(key, data);
+  BlockId create(const cpputils::Data& data) {
+    BlockId blockId = BlockId::Random();
+    bool success = tryCreate(blockId, data);
     if (success) {
-      return key;
+      return blockId;
     } else {
       return create(data);
     }
@@ -40,7 +40,7 @@ public:
   //TODO Test estimateNumFreeBytes
   virtual uint64_t estimateNumFreeBytes() const = 0;
   virtual uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const = 0; // TODO Test
-  virtual void forEachBlock(std::function<void (const Key &)> callback) const = 0;
+  virtual void forEachBlock(std::function<void (const BlockId &)> callback) const = 0;
 };
 
 }

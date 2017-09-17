@@ -43,32 +43,32 @@ public:
 
     template<class ExpectedCipher>
     void _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
-        blockstore::Key key = blockstore::Key::Random();
-        Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, key, dataFixture.copy());
-        Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, key, std::move(encrypted));
+        blockstore::BlockId blockId = blockstore::BlockId::Random();
+        Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, blockId, dataFixture.copy());
+        Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, blockId, std::move(encrypted));
         EXPECT_EQ(dataFixture, decrypted);
     }
 
-    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const std::string &encKey, const blockstore::Key &key, Data data) {
+    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
         unique_ref<InMemoryBlockStore2> _baseStore = make_unique_ref<InMemoryBlockStore2>();
         InMemoryBlockStore2 *baseStore = _baseStore.get();
         unique_ref<BlockStore2> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
-        bool created = encryptedStore->tryCreate(key, std::move(data));
+        bool created = encryptedStore->tryCreate(blockId, std::move(data));
         EXPECT_TRUE(created);
-        return _loadBlock(baseStore, key);
+        return _loadBlock(baseStore, blockId);
     }
 
     template<class Cipher>
-    Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::Key &key, Data data) {
+    Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
         unique_ref<InMemoryBlockStore2> baseStore = make_unique_ref<InMemoryBlockStore2>();
-        bool created = baseStore->tryCreate(key, std::move(data));
+        bool created = baseStore->tryCreate(blockId, std::move(data));
         EXPECT_TRUE(created);
         EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
-        return _loadBlock(&encryptedStore, key);
+        return _loadBlock(&encryptedStore, blockId);
     }
 
-    Data _loadBlock(BlockStore2 *store, const blockstore::Key &key) {
-        return store->load(key).value();
+    Data _loadBlock(BlockStore2 *store, const blockstore::BlockId &blockId) {
+        return store->load(blockId).value();
     }
 };
 

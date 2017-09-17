@@ -22,21 +22,21 @@ constexpr unsigned int IntegrityBlockStore2::CLIENTID_HEADER_OFFSET;
 constexpr unsigned int IntegrityBlockStore2::VERSION_HEADER_OFFSET;
 constexpr unsigned int IntegrityBlockStore2::HEADER_LENGTH;
 
-Data IntegrityBlockStore2::_prependHeaderToData(const Key& key, uint32_t myClientId, uint64_t version, const Data &data) {
-  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + sizeof(myClientId) + sizeof(version), "Wrong header length");
+Data IntegrityBlockStore2::_prependHeaderToData(const BlockId& blockId, uint32_t myClientId, uint64_t version, const Data &data) {
+  static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + BlockId::BINARY_LENGTH + sizeof(myClientId) + sizeof(version), "Wrong header length");
   Data result(data.size() + HEADER_LENGTH);
   std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), key.data().data(), Key::BINARY_LENGTH);
+  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), blockId.data().data(), BlockId::BINARY_LENGTH);
   std::memcpy(result.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
   std::memcpy(result.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
   std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
   return result;
 }
 
-void IntegrityBlockStore2::_checkHeader(const Key &key, const Data &data) const {
+void IntegrityBlockStore2::_checkHeader(const BlockId &blockId, const Data &data) const {
   _checkFormatHeader(data);
-  _checkIdHeader(key, data);
-  _checkVersionHeader(key, data);
+  _checkIdHeader(blockId, data);
+  _checkVersionHeader(blockId, data);
 }
 
 void IntegrityBlockStore2::_checkFormatHeader(const Data &data) const {
@@ -45,19 +45,19 @@ void IntegrityBlockStore2::_checkFormatHeader(const Data &data) const {
   }
 }
 
-void IntegrityBlockStore2::_checkVersionHeader(const Key &key, const Data &data) const {
+void IntegrityBlockStore2::_checkVersionHeader(const BlockId &blockId, const Data &data) const {
   uint32_t clientId = _readClientId(data);
   uint64_t version = _readVersion(data);
 
-  if(!_knownBlockVersions.checkAndUpdateVersion(clientId, key, version)) {
+  if(!_knownBlockVersions.checkAndUpdateVersion(clientId, blockId, version)) {
     integrityViolationDetected("The block version number is too low. Did an attacker try to roll back the block or to re-introduce a deleted block?");
   }
 }
 
-void IntegrityBlockStore2::_checkIdHeader(const Key &expectedKey, const Data &data) const {
-  Key actualKey = _readBlockId(data);
-  if (expectedKey != actualKey) {
-    integrityViolationDetected("The block key is wrong. Did an attacker try to rename some blocks?");
+void IntegrityBlockStore2::_checkIdHeader(const BlockId &expectedBlockId, const Data &data) const {
+  BlockId actualBlockId = _readBlockId(data);
+  if (expectedBlockId != actualBlockId) {
+    integrityViolationDetected("The block id is wrong. Did an attacker try to rename some blocks?");
   }
 }
 
@@ -71,8 +71,8 @@ uint32_t IntegrityBlockStore2::_readClientId(const Data &data) {
   return clientId;
 }
 
-Key IntegrityBlockStore2::_readBlockId(const Data &data) {
-  return Key::FromBinary(data.dataOffset(ID_HEADER_OFFSET));
+BlockId IntegrityBlockStore2::_readBlockId(const Data &data) {
+  return BlockId::FromBinary(data.dataOffset(ID_HEADER_OFFSET));
 }
 
 uint64_t IntegrityBlockStore2::_readVersion(const Data &data) {
@@ -108,57 +108,57 @@ IntegrityBlockStore2::IntegrityBlockStore2(unique_ref<BlockStore2> baseBlockStor
 : _baseBlockStore(std::move(baseBlockStore)), _knownBlockVersions(integrityFilePath, myClientId), _noIntegrityChecks(noIntegrityChecks), _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _integrityViolationDetected(false) {
 }
 
-bool IntegrityBlockStore2::tryCreate(const Key &key, const Data &data) {
+bool IntegrityBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
   _checkNoPastIntegrityViolations();
-  uint64_t version = _knownBlockVersions.incrementVersion(key);
-  Data dataWithHeader = _prependHeaderToData(key, _knownBlockVersions.myClientId(), version, data);
-  return _baseBlockStore->tryCreate(key, dataWithHeader);
+  uint64_t version = _knownBlockVersions.incrementVersion(blockId);
+  Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
+  return _baseBlockStore->tryCreate(blockId, dataWithHeader);
 }
 
-bool IntegrityBlockStore2::remove(const Key &key) {
+bool IntegrityBlockStore2::remove(const BlockId &blockId) {
   _checkNoPastIntegrityViolations();
-  _knownBlockVersions.markBlockAsDeleted(key);
-  return _baseBlockStore->remove(key);
+  _knownBlockVersions.markBlockAsDeleted(blockId);
+  return _baseBlockStore->remove(blockId);
 }
 
-optional<Data> IntegrityBlockStore2::load(const Key &key) const {
+optional<Data> IntegrityBlockStore2::load(const BlockId &blockId) const {
   _checkNoPastIntegrityViolations();
-  auto loaded = _baseBlockStore->load(key);
+  auto loaded = _baseBlockStore->load(blockId);
   if (none == loaded) {
-    if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(key)) {
+    if (_missingBlockIsIntegrityViolation && _knownBlockVersions.blockShouldExist(blockId)) {
       integrityViolationDetected("A block that should exist wasn't found. Did an attacker delete it?");
     }
     return optional<Data>(none);
   }
 #ifndef CRYFS_NO_COMPATIBILITY
   if (FORMAT_VERSION_HEADER_OLD == _readFormatHeader(*loaded)) {
-    Data migrated = _migrateBlock(key, *loaded);
-    _checkHeader(key, migrated);
+    Data migrated = _migrateBlock(blockId, *loaded);
+    _checkHeader(blockId, migrated);
     Data content = _removeHeader(migrated);
-    const_cast<IntegrityBlockStore2*>(this)->store(key, content);
+    const_cast<IntegrityBlockStore2*>(this)->store(blockId, content);
     return optional<Data>(_removeHeader(migrated));
   }
 #endif
-  _checkHeader(key, *loaded);
+  _checkHeader(blockId, *loaded);
   return optional<Data>(_removeHeader(*loaded));
 }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-Data IntegrityBlockStore2::_migrateBlock(const Key &key, const Data &data) {
-  Data migrated(data.size() + Key::BINARY_LENGTH);
+Data IntegrityBlockStore2::_migrateBlock(const BlockId &blockId, const Data &data) {
+  Data migrated(data.size() + BlockId::BINARY_LENGTH);
   std::memcpy(migrated.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), key.data().data(), Key::BINARY_LENGTH);
-  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET + Key::BINARY_LENGTH), data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER));
-  ASSERT(migrated.size() == sizeof(FORMAT_VERSION_HEADER) + Key::BINARY_LENGTH + (data.size() - sizeof(FORMAT_VERSION_HEADER)), "Wrong offset computation");
+  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), blockId.data().data(), BlockId::BINARY_LENGTH);
+  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET + BlockId::BINARY_LENGTH), data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER));
+  ASSERT(migrated.size() == sizeof(FORMAT_VERSION_HEADER) + BlockId::BINARY_LENGTH + (data.size() - sizeof(FORMAT_VERSION_HEADER)), "Wrong offset computation");
   return migrated;
 }
 #endif
 
-void IntegrityBlockStore2::store(const Key &key, const Data &data) {
+void IntegrityBlockStore2::store(const BlockId &blockId, const Data &data) {
   _checkNoPastIntegrityViolations();
-  uint64_t version = _knownBlockVersions.incrementVersion(key);
-  Data dataWithHeader = _prependHeaderToData(key, _knownBlockVersions.myClientId(), version, data);
-  return _baseBlockStore->store(key, dataWithHeader);
+  uint64_t version = _knownBlockVersions.incrementVersion(blockId);
+  Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
+  return _baseBlockStore->store(blockId, dataWithHeader);
 }
 
 uint64_t IntegrityBlockStore2::numBlocks() const {
@@ -177,16 +177,16 @@ uint64_t IntegrityBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize
   return baseBlockSize - HEADER_LENGTH;
 }
 
-void IntegrityBlockStore2::forEachBlock(std::function<void (const Key &)> callback) const {
+void IntegrityBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
   if (!_missingBlockIsIntegrityViolation) {
     return _baseBlockStore->forEachBlock(std::move(callback));
   }
 
-  std::unordered_set<blockstore::Key> existingBlocks = _knownBlockVersions.existingBlocks();
-  _baseBlockStore->forEachBlock([&existingBlocks, callback] (const Key &key) {
-    callback(key);
+  std::unordered_set<blockstore::BlockId> existingBlocks = _knownBlockVersions.existingBlocks();
+  _baseBlockStore->forEachBlock([&existingBlocks, callback] (const BlockId &blockId) {
+    callback(blockId);
 
-    auto found = existingBlocks.find(key);
+    auto found = existingBlocks.find(blockId);
     if (found != existingBlocks.end()) {
       existingBlocks.erase(found);
     }
@@ -200,23 +200,23 @@ void IntegrityBlockStore2::forEachBlock(std::function<void (const Key &)> callba
 void IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(BlockStore2 *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId) {
   std::cout << "Migrating file system for integrity features. Please don't interrupt this process. This can take a while..." << std::flush;
   KnownBlockVersions knownBlockVersions(integrityFilePath, myClientId);
-  baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions] (const Key &key) {
-    migrateBlockFromBlockstoreWithoutVersionNumbers(baseBlockStore, key, &knownBlockVersions);
+  baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions] (const BlockId &blockId) {
+    migrateBlockFromBlockstoreWithoutVersionNumbers(baseBlockStore, blockId, &knownBlockVersions);
   });
   std::cout << "done" << std::endl;
 }
 
-void IntegrityBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(blockstore::BlockStore2* baseBlockStore, const blockstore::Key& key, KnownBlockVersions *knownBlockVersions) {
-  uint64_t version = knownBlockVersions->incrementVersion(key);
+void IntegrityBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(blockstore::BlockStore2* baseBlockStore, const blockstore::BlockId& blockId, KnownBlockVersions *knownBlockVersions) {
+  uint64_t version = knownBlockVersions->incrementVersion(blockId);
 
-  auto data_ = baseBlockStore->load(key);
+  auto data_ = baseBlockStore->load(blockId);
   if (data_ == boost::none) {
     LOG(WARN, "Block not found, but was returned from forEachBlock before");
     return;
   }
   cpputils::Data data = std::move(*data_);
-  cpputils::Data dataWithHeader = _prependHeaderToData(key, knownBlockVersions->myClientId(), version, std::move(data));
-  baseBlockStore->store(key, std::move(dataWithHeader));
+  cpputils::Data dataWithHeader = _prependHeaderToData(blockId, knownBlockVersions->myClientId(), version, std::move(data));
+  baseBlockStore->store(blockId, std::move(dataWithHeader));
 }
 #endif
 

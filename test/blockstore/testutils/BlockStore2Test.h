@@ -56,231 +56,231 @@ public:
 TYPED_TEST_CASE_P(BlockStore2Test);
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
-  EXPECT_FALSE(this->blockStore->tryCreate(key, cpputils::Data(1024)));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  EXPECT_FALSE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(1024)));
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds) {
   this->blockStore->create(cpputils::Data(512));
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(1024)));
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadExistingBlock_thenSucceeds) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
-  EXPECT_NE(boost::none, this->blockStore->load(key));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  EXPECT_NE(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails) {
   this->blockStore->create(cpputils::Data(512));
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringExistingBlock_thenSucceeds) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
-  this->blockStore->store(key, cpputils::Data(1024));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  this->blockStore->store(blockId, cpputils::Data(1024));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringNonexistingBlock_thenSucceeds) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  this->blockStore->store(key, cpputils::Data(1024));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  this->blockStore->store(blockId, cpputils::Data(1024));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringNonexistingBlock_thenSucceeds) {
   this->blockStore->create(cpputils::Data(512));
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  this->blockStore->store(key, cpputils::Data(1024));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  this->blockStore->store(blockId, cpputils::Data(1024));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingTwoBlocks_thenTheyGetDifferentKeys) {
-  blockstore::Key key1 = this->blockStore->create(cpputils::Data(1024));
-  blockstore::Key key2 = this->blockStore->create(cpputils::Data(1024));
-  EXPECT_NE(key1, key2);
+  blockstore::BlockId blockId1 = this->blockStore->create(cpputils::Data(1024));
+  blockstore::BlockId blockId2 = this->blockStore->create(cpputils::Data(1024));
+  EXPECT_NE(blockId1, blockId2);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenOtherwiseEmptyBlockStore_whenRemovingBlock_thenBlockIsNotLoadableAnymore) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
-  EXPECT_NE(boost::none, this->blockStore->load(key));
-  EXPECT_TRUE(this->blockStore->remove(key));
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  EXPECT_NE(boost::none, this->blockStore->load(blockId));
+  EXPECT_TRUE(this->blockStore->remove(blockId));
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingBlock_thenBlockIsNotLoadableAnymore) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   this->blockStore->create(cpputils::Data(512));
-  EXPECT_NE(boost::none, this->blockStore->load(key));
-  EXPECT_TRUE(this->blockStore->remove(key));
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  EXPECT_NE(boost::none, this->blockStore->load(blockId));
+  EXPECT_TRUE(this->blockStore->remove(blockId));
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenOtherwiseEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
-  EXPECT_TRUE(this->blockStore->remove(key));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  EXPECT_TRUE(this->blockStore->remove(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds) {
-  blockstore::Key key = this->blockStore->create(cpputils::Data(1024));
+  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   this->blockStore->create(cpputils::Data(512));
-  EXPECT_EQ(true, this->blockStore->remove(key));
+  EXPECT_EQ(true, this->blockStore->remove(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto result = this->blockStore->remove(key);
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto result = this->blockStore->remove(blockId);
   EXPECT_EQ(false, result);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
-  blockstore::Key differentKey = blockstore::Key::FromString("290AC2C7097274A389EE14B91B72B493");
-  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(1024)));
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  blockstore::BlockId differentKey = blockstore::BlockId::FromString("290AC2C7097274A389EE14B91B72B493");
+  ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
   EXPECT_EQ(false, this->blockStore->remove(differentKey));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
-  auto key = this->blockStore->create(cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  auto key = this->blockStore->create(cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  auto key = this->blockStore->create(data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  auto key = this->blockStore->create(data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
-  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(0)));
-  auto loaded = this->blockStore->load(key).value();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(0)));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   this->blockStore->create(cpputils::Data(512));
-  ASSERT_TRUE(this->blockStore->tryCreate(key, cpputils::Data(0)));
-  auto loaded = this->blockStore->load(key).value();
+  ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(0)));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  ASSERT_TRUE(this->blockStore->tryCreate(key, data.copy()));
-  auto loaded = this->blockStore->load(key).value();
+  ASSERT_TRUE(this->blockStore->tryCreate(blockId, data.copy()));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772973");
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   this->blockStore->create(cpputils::Data(512));
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  ASSERT_TRUE(this->blockStore->tryCreate(key, data.copy()));
-  auto loaded = this->blockStore->load(key).value();
+  ASSERT_TRUE(this->blockStore->tryCreate(blockId, data.copy()));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingNonExistingEmptyBlock_thenCorrectBlockLoads) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  this->blockStore->store(key, cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  this->blockStore->store(blockId, cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingNonExistingEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  this->blockStore->store(key, cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  this->blockStore->store(blockId, cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingNonExistingNonEmptyBlock_thenCorrectBlockLoads) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  this->blockStore->store(key, data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  this->blockStore->store(blockId, data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingNonExistingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  this->blockStore->store(key, data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  this->blockStore->store(blockId, data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingExistingEmptyBlock_thenCorrectBlockLoads) {
-  auto key = this->blockStore->create(cpputils::Data(512));
-  this->blockStore->store(key, cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(cpputils::Data(512));
+  this->blockStore->store(blockId, cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingExistingEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  auto key = this->blockStore->create(cpputils::Data(512));
-  this->blockStore->store(key, cpputils::Data(0));
-  auto loaded = this->blockStore->load(key).value();
+  auto blockId = this->blockStore->create(cpputils::Data(512));
+  this->blockStore->store(blockId, cpputils::Data(0));
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads) {
-  auto key = this->blockStore->create(cpputils::Data(512));
+  auto blockId = this->blockStore->create(cpputils::Data(512));
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  this->blockStore->store(key, data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  this->blockStore->store(blockId, data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  auto key = this->blockStore->create(cpputils::Data(512));
+  auto blockId = this->blockStore->create(cpputils::Data(512));
   cpputils::Data data = cpputils::DataFixture::generate(1024);
-  this->blockStore->store(key, data.copy());
-  auto loaded = this->blockStore->load(key).value();
+  this->blockStore->store(blockId, data.copy());
+  auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenLoadingNonExistingBlock_thenFails) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadingNonExistingBlock_thenFails) {
   this->blockStore->create(cpputils::Data(512));
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  EXPECT_EQ(boost::none, this->blockStore->load(key));
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectOnEmptyBlockstore) {
@@ -296,8 +296,8 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingOneBlock) {
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::Key key = blockStore->create(cpputils::Data(1));
-  EXPECT_TRUE(blockStore->remove(key));
+  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
+  EXPECT_TRUE(blockStore->remove(blockId));
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
@@ -310,23 +310,23 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingTwoBlocks) {
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingABlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::Key key = blockStore->create(cpputils::Data(1));
+  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
-  EXPECT_TRUE(blockStore->remove(key));
+  EXPECT_TRUE(blockStore->remove(blockId));
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringANewBlock) {
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   auto blockStore = this->fixture.createBlockStore();
-  blockStore->store(key, cpputils::Data(1));
+  blockStore->store(blockId, cpputils::Data(1));
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringAnExistingBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::Key key = blockStore->create(cpputils::Data(1));
-  blockStore->store(key, cpputils::Data(1));
+  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
+  blockStore->store(blockId, cpputils::Data(1));
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
@@ -339,35 +339,35 @@ TYPED_TEST_P(BlockStore2Test, ForEachBlock_zeroblocks) {
 
 TYPED_TEST_P(BlockStore2Test, ForEachBlock_oneblock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key = blockStore->create(cpputils::Data(1));
+  auto blockId = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({key}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({blockId}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStore2Test, ForEachBlock_twoblocks) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key1 = blockStore->create(cpputils::Data(1));
-  auto key2 = blockStore->create(cpputils::Data(1));
+  auto blockId1 = blockStore->create(cpputils::Data(1));
+  auto blockId2 = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({key1, key2}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({blockId1, blockId2}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStore2Test, ForEachBlock_threeblocks) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key1 = blockStore->create(cpputils::Data(1));
-  auto key2 = blockStore->create(cpputils::Data(1));
-  auto key3 = blockStore->create(cpputils::Data(1));
+  auto blockId1 = blockStore->create(cpputils::Data(1));
+  auto blockId2 = blockStore->create(cpputils::Data(1));
+  auto blockId3 = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({key1, key2, key3}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({blockId1, blockId2, blockId3}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_oneblock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key1 = blockStore->create(cpputils::Data(1));
-  EXPECT_TRUE(blockStore->remove(key1));
+  auto blockId1 = blockStore->create(cpputils::Data(1));
+  EXPECT_TRUE(blockStore->remove(blockId1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
   this->EXPECT_UNORDERED_EQ({}, mockForEachBlockCallback.called_with);
@@ -375,12 +375,12 @@ TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_oneblock) {
 
 TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_twoblocks) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key1 = blockStore->create(cpputils::Data(1));
-  auto key2 = blockStore->create(cpputils::Data(1));
-  EXPECT_TRUE(blockStore->remove(key1));
+  auto blockId1 = blockStore->create(cpputils::Data(1));
+  auto blockId2 = blockStore->create(cpputils::Data(1));
+  EXPECT_TRUE(blockStore->remove(blockId1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({key2}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({blockId2}, mockForEachBlockCallback.called_with);
 }
 
 REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,

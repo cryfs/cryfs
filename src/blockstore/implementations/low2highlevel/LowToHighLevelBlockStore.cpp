@@ -17,38 +17,38 @@ LowToHighLevelBlockStore::LowToHighLevelBlockStore(unique_ref<BlockStore2> baseB
     : _baseBlockStore(std::move(baseBlockStore)) {
 }
 
-Key LowToHighLevelBlockStore::createKey() {
+BlockId LowToHighLevelBlockStore::createBlockId() {
     // TODO Is this the right way?
-    return Key::Random();
+    return BlockId::Random();
 }
 
-optional<unique_ref<Block>> LowToHighLevelBlockStore::tryCreate(const Key &key, Data data) {
+optional<unique_ref<Block>> LowToHighLevelBlockStore::tryCreate(const BlockId &blockId, Data data) {
     //TODO Easier implementation? This is only so complicated because of the cast LowToHighLevelBlock -> Block
-    auto result = LowToHighLevelBlock::TryCreateNew(_baseBlockStore.get(), key, std::move(data));
+    auto result = LowToHighLevelBlock::TryCreateNew(_baseBlockStore.get(), blockId, std::move(data));
     if (result == none) {
         return none;
     }
     return unique_ref<Block>(std::move(*result));
 }
 
-unique_ref<Block> LowToHighLevelBlockStore::overwrite(const Key &key, Data data) {
+unique_ref<Block> LowToHighLevelBlockStore::overwrite(const BlockId &blockId, Data data) {
     return unique_ref<Block>(
-        LowToHighLevelBlock::Overwrite(_baseBlockStore.get(), key, std::move(data))
+        LowToHighLevelBlock::Overwrite(_baseBlockStore.get(), blockId, std::move(data))
     );
 }
 
-optional<unique_ref<Block>> LowToHighLevelBlockStore::load(const Key &key) {
-    auto result = optional<unique_ref<Block>>(LowToHighLevelBlock::Load(_baseBlockStore.get(), key));
+optional<unique_ref<Block>> LowToHighLevelBlockStore::load(const BlockId &blockId) {
+    auto result = optional<unique_ref<Block>>(LowToHighLevelBlock::Load(_baseBlockStore.get(), blockId));
     if (result == none) {
       return none;
     }
     return unique_ref<Block>(std::move(*result));
 }
 
-void LowToHighLevelBlockStore::remove(const Key &key) {
-    bool success = _baseBlockStore->remove(key);
+void LowToHighLevelBlockStore::remove(const BlockId &blockId) {
+    bool success = _baseBlockStore->remove(blockId);
     if (!success) {
-        throw std::runtime_error("Couldn't delete block with id " + key.ToString());
+        throw std::runtime_error("Couldn't delete block with id " + blockId.ToString());
     }
 }
 
@@ -64,7 +64,7 @@ uint64_t LowToHighLevelBlockStore::blockSizeFromPhysicalBlockSize(uint64_t block
     return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
 }
 
-void LowToHighLevelBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+void LowToHighLevelBlockStore::forEachBlock(std::function<void (const BlockId &)> callback) const {
     _baseBlockStore->forEachBlock(std::move(callback));
 }
 

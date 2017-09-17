@@ -27,18 +27,18 @@ TEST_F(CachingBlockStore2Test, PhysicalBlockSize_zerophysical) {
 }
 
 TEST_F(CachingBlockStore2Test, PhysicalBlockSize_zerovirtual) {
-  auto key = blockStore.create(Data(0));
+  auto blockId = blockStore.create(Data(0));
   blockStore.flush();
-  auto base = baseBlockStore->load(key).value();
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(0u, blockStore.blockSizeFromPhysicalBlockSize(base.size()));
 }
 
 TEST_F(CachingBlockStore2Test, PhysicalBlockSize_negativeboundaries) {
   // This tests that a potential if/else in blockSizeFromPhysicalBlockSize that catches negative values has the
   // correct boundary set. We test the highest value that is negative and the smallest value that is positive.
-  auto key = blockStore.create(Data(0));
+  auto blockId = blockStore.create(Data(0));
   blockStore.flush();
-  auto physicalSizeForVirtualSizeZero = baseBlockStore->load(key).value().size();
+  auto physicalSizeForVirtualSizeZero = baseBlockStore->load(blockId).value().size();
   if (physicalSizeForVirtualSizeZero > 0) {
     EXPECT_EQ(0u, blockStore.blockSizeFromPhysicalBlockSize(physicalSizeForVirtualSizeZero - 1));
   }
@@ -47,9 +47,9 @@ TEST_F(CachingBlockStore2Test, PhysicalBlockSize_negativeboundaries) {
 }
 
 TEST_F(CachingBlockStore2Test, PhysicalBlockSize_positive) {
-  auto key = blockStore.create(Data(10*1024u));
+  auto blockId = blockStore.create(Data(10*1024u));
   blockStore.flush();
-  auto base = baseBlockStore->load(key).value();
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(10*1024u, blockStore.blockSizeFromPhysicalBlockSize(base.size()));
 }
 

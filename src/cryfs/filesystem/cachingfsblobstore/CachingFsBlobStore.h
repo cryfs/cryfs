@@ -19,12 +19,12 @@ namespace cryfs {
             CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore);
             ~CachingFsBlobStore();
 
-            cpputils::unique_ref<FileBlobRef> createFileBlob(const blockstore::Key &parent);
-            cpputils::unique_ref<DirBlobRef> createDirBlob(const blockstore::Key &parent);
-            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
-            boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::Key &key);
+            cpputils::unique_ref<FileBlobRef> createFileBlob(const blockstore::BlockId &parent);
+            cpputils::unique_ref<DirBlobRef> createDirBlob(const blockstore::BlockId &parent);
+            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+            boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::BlockId &blockId);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
-            void remove(const blockstore::Key &key);
+            void remove(const blockstore::BlockId &blockId);
             uint64_t virtualBlocksizeBytes() const;
             uint64_t numBlocks() const;
             uint64_t estimateSpaceForNumBlocksLeft() const;
@@ -38,7 +38,7 @@ namespace cryfs {
 
             //TODO Move Cache to some common location, not in blockstore
             //TODO Use other cache config (i.e. smaller max number of entries) here than in blockstore
-            blockstore::caching::Cache<blockstore::Key, cpputils::unique_ref<fsblobstore::FsBlob>, 50> _cache;
+            blockstore::caching::Cache<blockstore::BlockId, cpputils::unique_ref<fsblobstore::FsBlob>, 50> _cache;
 
             DISALLOW_COPY_AND_ASSIGN(CachingFsBlobStore);
         };
@@ -51,21 +51,21 @@ namespace cryfs {
         inline CachingFsBlobStore::~CachingFsBlobStore() {
         }
 
-        inline cpputils::unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob(const blockstore::Key &parent) {
+        inline cpputils::unique_ref<FileBlobRef> CachingFsBlobStore::createFileBlob(const blockstore::BlockId &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
             return cpputils::make_unique_ref<FileBlobRef>(_baseBlobStore->createFileBlob(parent), this);
         }
 
-        inline cpputils::unique_ref<DirBlobRef> CachingFsBlobStore::createDirBlob(const blockstore::Key &parent) {
+        inline cpputils::unique_ref<DirBlobRef> CachingFsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
             return cpputils::make_unique_ref<DirBlobRef>(_baseBlobStore->createDirBlob(parent), this);
         }
 
-        inline cpputils::unique_ref<SymlinkBlobRef> CachingFsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent) {
+        inline cpputils::unique_ref<SymlinkBlobRef> CachingFsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent) {
             // This already creates the file blob in the underlying blobstore.
             // We could also cache this operation, but that is more complicated (blockstore::CachingBlockStore does it)
             // and probably not worth it here.
@@ -77,18 +77,18 @@ namespace cryfs {
             return _baseBlobStore->remove(std::move(baseBlob));
         }
 
-        inline void CachingFsBlobStore::remove(const blockstore::Key &key) {
-            auto fromCache = _cache.pop(key);
+        inline void CachingFsBlobStore::remove(const blockstore::BlockId &blockId) {
+            auto fromCache = _cache.pop(blockId);
             if (fromCache != boost::none) {
                 remove(_makeRef(std::move(*fromCache)));
             } else {
-                _baseBlobStore->remove(key);
+                _baseBlobStore->remove(blockId);
             }
         }
 
         inline void CachingFsBlobStore::releaseForCache(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob) {
-            blockstore::Key key = baseBlob->key();
-            _cache.push(key, std::move(baseBlob));
+            blockstore::BlockId blockId = baseBlob->blockId();
+            _cache.push(blockId, std::move(baseBlob));
         }
 
         inline uint64_t CachingFsBlobStore::virtualBlocksizeBytes() const {

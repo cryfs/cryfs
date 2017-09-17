@@ -2,7 +2,7 @@
 
 using std::vector;
 using std::string;
-using blockstore::Key;
+using blockstore::BlockId;
 
 namespace cryfs {
     namespace fsblobstore {
@@ -23,7 +23,7 @@ namespace cryfs {
             offset += _serializeTimeValue(dest + offset, _lastModificationTime);
             offset += _serializeTimeValue(dest + offset, _lastMetadataChangeTime);
             offset += _serializeString(dest + offset, _name);
-            offset += _serializeKey(dest + offset, _key);
+            offset += _serializeBlockId(dest + offset, _blockId);
             ASSERT(offset == serializedSize(), "Didn't write correct number of elements");
         }
 
@@ -36,9 +36,9 @@ namespace cryfs {
             timespec lastModificationTime = _deserializeTimeValue(&pos);
             timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
             string name = _deserializeString(&pos);
-            Key key = _deserializeKey(&pos);
+            BlockId blockId = _deserializeBlockId(&pos);
 
-            result->emplace_back(type, name, key, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
+            result->emplace_back(type, name, blockId, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
         }
 
@@ -99,20 +99,20 @@ namespace cryfs {
             return value;
         }
 
-        unsigned int DirEntry::_serializeKey(uint8_t *dest, const Key &key) {
-            key.ToBinary(dest);
-            return key.BINARY_LENGTH;
+        unsigned int DirEntry::_serializeBlockId(uint8_t *dest, const BlockId &blockId) {
+            blockId.ToBinary(dest);
+            return blockId.BINARY_LENGTH;
         }
 
-        Key DirEntry::_deserializeKey(const char **pos) {
-            Key key = Key::FromBinary(*pos);
-            *pos += Key::BINARY_LENGTH;
-            return key;
+        BlockId DirEntry::_deserializeBlockId(const char **pos) {
+            BlockId blockId = BlockId::FromBinary(*pos);
+            *pos += BlockId::BINARY_LENGTH;
+            return blockId;
         }
 
         size_t DirEntry::serializedSize() const {
             return 1 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + 3*_serializedTimeValueSize() + (
-                    _name.size() + 1) + _key.BINARY_LENGTH;
+                    _name.size() + 1) + _blockId.BINARY_LENGTH;
         }
     }
 }

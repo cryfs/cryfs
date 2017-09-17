@@ -47,22 +47,22 @@ KnownBlockVersions::~KnownBlockVersions() {
     }
 }
 
-bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const Key &key, uint64_t version) {
+bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const BlockId &blockId, uint64_t version) {
     unique_lock<mutex> lock(_mutex);
     ASSERT(clientId != CLIENT_ID_FOR_DELETED_BLOCK, "This is not a valid client id");
 
     ASSERT(version > 0, "Version has to be >0"); // Otherwise we wouldn't handle notexisting entries correctly.
     ASSERT(_valid, "Object not valid due to a std::move");
 
-    uint64_t &found = _knownVersions[{clientId, key}]; // If the entry doesn't exist, this creates it with value 0.
+    uint64_t &found = _knownVersions[{clientId, blockId}]; // If the entry doesn't exist, this creates it with value 0.
     if (found > version) {
         // This client already published a newer block version. Rollbacks are not allowed.
         return false;
     }
 
-    uint32_t &lastUpdateClientId = _lastUpdateClientId[key]; // If entry doesn't exist, this creates it with value 0. However, in this case, found == 0 (and version > 0), which means found != version.
+    uint32_t &lastUpdateClientId = _lastUpdateClientId[blockId]; // If entry doesn't exist, this creates it with value 0. However, in this case, found == 0 (and version > 0), which means found != version.
     if (found == version && lastUpdateClientId != clientId) {
-        // This is a roll back to the "newest" block of client [clientId], which was since then superseded by a version from client _lastUpdateClientId[key].
+        // This is a roll back to the "newest" block of client [clientId], which was since then superseded by a version from client _lastUpdateClientId[blockId].
         // This is not allowed.
         return false;
     }
@@ -72,16 +72,16 @@ bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const Key &key
     return true;
 }
 
-uint64_t KnownBlockVersions::incrementVersion(const Key &key) {
+uint64_t KnownBlockVersions::incrementVersion(const BlockId &blockId) {
     unique_lock<mutex> lock(_mutex);
-    uint64_t &found = _knownVersions[{_myClientId, key}]; // If the entry doesn't exist, this creates it with value 0.
+    uint64_t &found = _knownVersions[{_myClientId, blockId}]; // If the entry doesn't exist, this creates it with value 0.
     uint64_t newVersion = found + 1;
     if (newVersion == std::numeric_limits<uint64_t>::max()) {
         // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
         throw std::runtime_error("Version overflow");
     }
     found = newVersion;
-    _lastUpdateClientId[key] = _myClientId;
+    _lastUpdateClientId[blockId] = _myClientId;
     return found;
 }
 
@@ -106,8 +106,8 @@ void KnownBlockVersions::_loadStateFile() {
 void KnownBlockVersions::_saveStateFile() const {
     Serializer serializer(
             Serializer::StringSize(HEADER) +
-            sizeof(uint64_t) + _knownVersions.size() * (sizeof(uint32_t) + Key::BINARY_LENGTH + sizeof(uint64_t)) +
-            sizeof(uint64_t) + _lastUpdateClientId.size() * (Key::BINARY_LENGTH + sizeof(uint32_t)));
+            sizeof(uint64_t) + _knownVersions.size() * (sizeof(uint32_t) + BlockId::BINARY_LENGTH + sizeof(uint64_t)) +
+            sizeof(uint64_t) + _lastUpdateClientId.size() * (BlockId::BINARY_LENGTH + sizeof(uint32_t)));
     serializer.writeString(HEADER);
     _serializeKnownVersions(&serializer);
     _serializeLastUpdateClientIds(&serializer);
@@ -134,17 +134,17 @@ void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer) const {
     }
 }
 
-pair<ClientIdAndBlockKey, uint64_t> KnownBlockVersions::_deserializeKnownVersionsEntry(Deserializer *deserializer) {
+pair<ClientIdAndBlockId, uint64_t> KnownBlockVersions::_deserializeKnownVersionsEntry(Deserializer *deserializer) {
     uint32_t clientId = deserializer->readUint32();
-    Key blockKey(deserializer->readFixedSizeData<Key::BINARY_LENGTH>());
+    BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
     uint64_t version = deserializer->readUint64();
 
-    return {{clientId, blockKey}, version};
+    return {{clientId, blockId}, version};
 };
 
-void KnownBlockVersions::_serializeKnownVersionsEntry(Serializer *serializer, const pair<ClientIdAndBlockKey, uint64_t> &entry) {
+void KnownBlockVersions::_serializeKnownVersionsEntry(Serializer *serializer, const pair<ClientIdAndBlockId, uint64_t> &entry) {
     serializer->writeUint32(entry.first.clientId);
-    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.blockKey.data());
+    serializer->writeFixedSizeData<BlockId::BINARY_LENGTH>(entry.first.blockId.data());
     serializer->writeUint64(entry.second);
 }
 
@@ -167,15 +167,15 @@ void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer) c
     }
 }
 
-pair<Key, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIdEntry(Deserializer *deserializer) {
-    Key blockKey(deserializer->readFixedSizeData<Key::BINARY_LENGTH>());
+pair<BlockId, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIdEntry(Deserializer *deserializer) {
+    BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
     uint32_t clientId = deserializer->readUint32();
 
-    return {blockKey, clientId};
+    return {blockId, clientId};
 };
 
-void KnownBlockVersions::_serializeLastUpdateClientIdEntry(Serializer *serializer, const pair<Key, uint32_t> &entry) {
-    serializer->writeFixedSizeData<Key::BINARY_LENGTH>(entry.first.data());
+void KnownBlockVersions::_serializeLastUpdateClientIdEntry(Serializer *serializer, const pair<BlockId, uint32_t> &entry) {
+    serializer->writeFixedSizeData<BlockId::BINARY_LENGTH>(entry.first.data());
     serializer->writeUint32(entry.second);
 }
 
@@ -183,17 +183,17 @@ uint32_t KnownBlockVersions::myClientId() const {
     return _myClientId;
 }
 
-uint64_t KnownBlockVersions::getBlockVersion(uint32_t clientId, const Key &key) const {
+uint64_t KnownBlockVersions::getBlockVersion(uint32_t clientId, const BlockId &blockId) const {
     unique_lock<mutex> lock(_mutex);
-    return _knownVersions.at({clientId, key});
+    return _knownVersions.at({clientId, blockId});
 }
 
-void KnownBlockVersions::markBlockAsDeleted(const Key &key) {
-    _lastUpdateClientId[key] = CLIENT_ID_FOR_DELETED_BLOCK;
+void KnownBlockVersions::markBlockAsDeleted(const BlockId &blockId) {
+    _lastUpdateClientId[blockId] = CLIENT_ID_FOR_DELETED_BLOCK;
 }
 
-bool KnownBlockVersions::blockShouldExist(const Key &key) const {
-    auto found = _lastUpdateClientId.find(key);
+bool KnownBlockVersions::blockShouldExist(const BlockId &blockId) const {
+    auto found = _lastUpdateClientId.find(blockId);
     if (found == _lastUpdateClientId.end()) {
         // We've never seen (i.e. loaded) this block. So we can't say it has to exist.
         return false;
@@ -202,8 +202,8 @@ bool KnownBlockVersions::blockShouldExist(const Key &key) const {
     return found->second != CLIENT_ID_FOR_DELETED_BLOCK;
 }
 
-std::unordered_set<Key> KnownBlockVersions::existingBlocks() const {
-    std::unordered_set<Key> result;
+std::unordered_set<BlockId> KnownBlockVersions::existingBlocks() const {
+    std::unordered_set<BlockId> result;
     for (const auto &entry : _lastUpdateClientId) {
         if (entry.second != CLIENT_ID_FOR_DELETED_BLOCK) {
             result.insert(entry.first);

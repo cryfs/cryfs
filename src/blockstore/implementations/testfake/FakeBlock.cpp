@@ -16,8 +16,8 @@ using cpputils::Data;
 namespace blockstore {
 namespace testfake {
 
-FakeBlock::FakeBlock(FakeBlockStore *store, const Key &key, shared_ptr<Data> data, bool dirty)
- : Block(key), _store(store), _data(data), _dataChanged(dirty) {
+FakeBlock::FakeBlock(FakeBlockStore *store, const BlockId &blockId, shared_ptr<Data> data, bool dirty)
+ : Block(blockId), _store(store), _data(data), _dataChanged(dirty) {
 }
 
 FakeBlock::~FakeBlock() {
@@ -45,7 +45,7 @@ void FakeBlock::resize(size_t newSize) {
 
 void FakeBlock::flush() {
   if(_dataChanged) {
-    _store->updateData(key(), *_data);
+    _store->updateData(blockId(), *_data);
     _dataChanged = false;
   }
 }

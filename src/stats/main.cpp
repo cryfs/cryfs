@@ -25,7 +25,7 @@ using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
 
 void printNode(unique_ref<DataNode> node) {
-    std::cout << "Key: " << node->key().ToString() << ", Depth: " << node->depth() << " ";
+    std::cout << "BlockId: " << node->blockId().ToString() << ", Depth: " << node->depth() << " ";
     auto innerNode = dynamic_pointer_move<DataInnerNode>(node);
     if (innerNode != none) {
         std::cout << "Type: inner\n";
@@ -38,12 +38,12 @@ void printNode(unique_ref<DataNode> node) {
     }
 }
 
-set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
+set<BlockId> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.EncryptionKey());
     auto highLevelBlockStore = make_unique_ref<LowToHighLevelBlockStore>(std::move(encryptedBlockStore));
     auto nodeStore = make_unique_ref<DataNodeStore>(std::move(highLevelBlockStore), config.BlocksizeBytes());
-    std::set<Key> unaccountedBlocks;
+    std::set<BlockId> unaccountedBlocks;
     uint32_t numBlocks = nodeStore->numNodes();
     uint32_t i = 0;
     cout << "There are " << nodeStore->numNodes() << " blocks." << std::endl;
@@ -51,24 +51,24 @@ set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto key = Key::FromString(file->path().filename().c_str());
-            unaccountedBlocks.insert(key);
+            auto blockId = BlockId::FromString(file->path().filename().c_str());
+            unaccountedBlocks.insert(blockId);
         }
     }
     i = 0;
     cout << "\nRemove blocks that have a parent" << endl;
     //Remove root block from unaccountedBlocks
-    unaccountedBlocks.erase(Key::FromString(config.RootBlob()));
+    unaccountedBlocks.erase(BlockId::FromString(config.RootBlob()));
     //Remove all blocks that have a parent node from unaccountedBlocks
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto key = Key::FromString(file->path().filename().c_str());
-            auto node = nodeStore->load(key);
+            auto blockId = BlockId::FromString(file->path().filename().c_str());
+            auto node = nodeStore->load(blockId);
             auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
             if (innerNode != none) {
                 for (uint32_t childIndex = 0; childIndex < (*innerNode)->numChildren(); ++childIndex) {
-                    auto child = (*innerNode)->getChild(childIndex)->key();
+                    auto child = (*innerNode)->getChild(childIndex)->blockId();
                     unaccountedBlocks.erase(child);
                 }
             }
@@ -77,28 +77,28 @@ set<Key> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     return unaccountedBlocks;
 }
 
-set<Key> _getBlocksReferencedByDirEntries(const CryConfig &config) {
+set<BlockId> _getBlocksReferencedByDirEntries(const CryConfig &config) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.EncryptionKey());
     auto highLevelBlockStore = make_unique_ref<LowToHighLevelBlockStore>(std::move(encryptedBlockStore));
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(highLevelBlockStore), config.BlocksizeBytes()));
-    set<Key> blocksReferencedByDirEntries;
+    set<BlockId> blocksReferencedByDirEntries;
     uint32_t numBlocks = fsBlobStore->numBlocks();
     uint32_t i = 0;
     cout << "\nRemove blocks referenced by dir entries" << endl;
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto key = Key::FromString(file->path().filename().c_str());
+            auto blockId = BlockId::FromString(file->path().filename().c_str());
             try {
-                auto blob = fsBlobStore->load(key);
+                auto blob = fsBlobStore->load(blockId);
                 if (blob != none) {
                     auto dir = dynamic_pointer_move<DirBlob>(*blob);
                     if (dir != none) {
                         vector<fspp::Dir::Entry> children;
                         (*dir)->AppendChildrenTo(&children);
                         for (const auto &child : children) {
-                            blocksReferencedByDirEntries.insert((*dir)->GetChild(child.name)->key());
+                            blocksReferencedByDirEntries.insert((*dir)->GetChild(child.name)->blockId());
                         }
                     }
                 }
@@ -115,11 +115,11 @@ int main() {
     getline(cin, password);
     cout << "Loading config" << endl;
     auto config = CryConfigFile::load("/home/heinzi/basedir/cryfs.config", password);
-    set<Key> unaccountedBlocks = _getBlockstoreUnaccountedBlocks(*config->config());
+    set<BlockId> unaccountedBlocks = _getBlockstoreUnaccountedBlocks(*config->config());
     //Remove all blocks that are referenced by a directory entry from unaccountedBlocks
-    set<Key> blocksReferencedByDirEntries = _getBlocksReferencedByDirEntries(*config->config());
-    for (const auto &key : blocksReferencedByDirEntries) {
-        unaccountedBlocks.erase(key);
+    set<BlockId> blocksReferencedByDirEntries = _getBlocksReferencedByDirEntries(*config->config());
+    for (const auto &blockId : blocksReferencedByDirEntries) {
+        unaccountedBlocks.erase(blockId);
     }
 
     cout << "\nCalculate statistics" << endl;
@@ -133,9 +133,9 @@ int main() {
     uint32_t numLeaves = 0;
     uint32_t numInner = 0;
     cout << "\nUnaccounted blocks: " << unaccountedBlocks.size() << endl;
-    for (const auto &key : unaccountedBlocks) {
+    for (const auto &blockId : unaccountedBlocks) {
         std::cout << "\r" << (numLeaves+numInner) << "/" << numUnaccountedBlocks << flush;
-        auto node = nodeStore->load(key);
+        auto node = nodeStore->load(blockId);
         auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
         if (innerNode != none) {
             ++numInner;

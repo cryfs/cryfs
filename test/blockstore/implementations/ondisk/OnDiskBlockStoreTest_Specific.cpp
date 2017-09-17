@@ -7,7 +7,7 @@ using ::testing::Test;
 using cpputils::TempDir;
 using cpputils::Data;
 using std::ifstream;
-using blockstore::Key;
+using blockstore::BlockId;
 
 using namespace blockstore::ondisk;
 
@@ -20,12 +20,12 @@ public:
   TempDir baseDir;
   OnDiskBlockStore2 blockStore;
 
-  blockstore::Key CreateBlockReturnKey(const Data &initData) {
+  blockstore::BlockId CreateBlockReturnKey(const Data &initData) {
     return blockStore.create(initData.copy());
   }
 
-  uint64_t getPhysicalBlockSize(const Key &key) {
-    ifstream stream((baseDir.path() / key.ToString().substr(0,3) / key.ToString().substr(3)).c_str());
+  uint64_t getPhysicalBlockSize(const BlockId &blockId) {
+    ifstream stream((baseDir.path() / blockId.ToString().substr(0,3) / blockId.ToString().substr(3)).c_str());
     stream.seekg(0, stream.end);
     return stream.tellg();
   }
@@ -36,8 +36,8 @@ TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_zerophysical) {
 }
 
 TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_zerovirtual) {
-  auto key = CreateBlockReturnKey(Data(0));
-  auto baseSize = getPhysicalBlockSize(key);
+  auto blockId = CreateBlockReturnKey(Data(0));
+  auto baseSize = getPhysicalBlockSize(blockId);
   EXPECT_EQ(0u, blockStore.blockSizeFromPhysicalBlockSize(baseSize));
 }
 
@@ -53,14 +53,14 @@ TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
 }
 
 TEST_F(OnDiskBlockStoreTest, PhysicalBlockSize_positive) {
-  auto key = CreateBlockReturnKey(Data(10*1024));
-  auto baseSize = getPhysicalBlockSize(key);
+  auto blockId = CreateBlockReturnKey(Data(10*1024));
+  auto baseSize = getPhysicalBlockSize(blockId);
   EXPECT_EQ(10*1024u, blockStore.blockSizeFromPhysicalBlockSize(baseSize));
 }
 
 TEST_F(OnDiskBlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocksWithSameKeyPrefix) {
-  const Key key1 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A13");
-  const Key key2 = Key::FromString("4CE72ECDD20877A12ADBF4E3927C0A14");
+  const BlockId key1 = BlockId::FromString("4CE72ECDD20877A12ADBF4E3927C0A13");
+  const BlockId key2 = BlockId::FromString("4CE72ECDD20877A12ADBF4E3927C0A14");
   EXPECT_TRUE(blockStore.tryCreate(key1, cpputils::Data(0)));
   EXPECT_TRUE(blockStore.tryCreate(key2, cpputils::Data(0)));
   EXPECT_EQ(2u, blockStore.numBlocks());

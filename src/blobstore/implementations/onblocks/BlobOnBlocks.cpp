@@ -15,7 +15,7 @@ using cpputils::unique_ref;
 using cpputils::Data;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
-using blockstore::Key;
+using blockstore::BlockId;
 using blobstore::onblocks::datatreestore::LeafHandle;
 
 namespace blobstore {
@@ -131,7 +131,7 @@ void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
       if (leafDataOffset == 0 && leafDataSize == leaf.nodeStore()->layout().maxBytesPerLeaf()) {
         Data leafData(leafDataSize);
         std::memcpy(leafData.data(), (uint8_t*)source + indexOfFirstLeafByte - offset, leafDataSize);
-        leaf.nodeStore()->overwriteLeaf(leaf.key(), std::move(leafData));
+        leaf.nodeStore()->overwriteLeaf(leaf.blockId(), std::move(leafData));
       } else {
             //TODO Simplify formula, make it easier to understand
         leaf.node()->write((uint8_t *) source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset,
@@ -152,8 +152,8 @@ void BlobOnBlocks::flush() {
   _datatree->flush();
 }
 
-const Key &BlobOnBlocks::key() const {
-  return _datatree->key();
+const BlockId &BlobOnBlocks::blockId() const {
+  return _datatree->blockId();
 }
 
 unique_ref<DataTreeRef> BlobOnBlocks::releaseTree() {

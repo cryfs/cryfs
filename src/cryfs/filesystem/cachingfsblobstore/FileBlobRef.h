@@ -36,8 +36,8 @@ public:
         return _base->flush();
     }
 
-    const blockstore::Key &key() const {
-        return _base->key();
+    const blockstore::BlockId &blockId() const {
+        return _base->blockId();
     }
 
     off_t lstat_size() const {

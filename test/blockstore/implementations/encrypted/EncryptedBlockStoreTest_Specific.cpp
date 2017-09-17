@@ -31,29 +31,29 @@ public:
   unique_ref<EncryptedBlockStore2<FakeAuthenticatedCipher>> blockStore;
   Data data;
 
-  blockstore::Key CreateBlockDirectlyWithFixtureAndReturnKey() {
+  blockstore::BlockId CreateBlockDirectlyWithFixtureAndReturnKey() {
     return CreateBlockReturnKey(data);
   }
 
-  blockstore::Key CreateBlockReturnKey(const Data &initData) {
+  blockstore::BlockId CreateBlockReturnKey(const Data &initData) {
     return blockStore->create(initData.copy());
   }
 
-  blockstore::Key CreateBlockWriteFixtureToItAndReturnKey() {
-    auto key = blockStore->create(Data(data.size()));
-    blockStore->store(key, data);
-    return key;
+  blockstore::BlockId CreateBlockWriteFixtureToItAndReturnKey() {
+    auto blockId = blockStore->create(Data(data.size()));
+    blockStore->store(blockId, data);
+    return blockId;
   }
 
-  void ModifyBaseBlock(const blockstore::Key &key) {
-    auto block = baseBlockStore->load(key).value();
+  void ModifyBaseBlock(const blockstore::BlockId &blockId) {
+    auto block = baseBlockStore->load(blockId).value();
     byte* middle_byte = ((CryptoPP::byte*)block.data()) + 10;
     *middle_byte = *middle_byte + 1;
-    baseBlockStore->store(key, block);
+    baseBlockStore->store(blockId, block);
   }
 
-  blockstore::Key CopyBaseBlock(const blockstore::Key &key) {
-    auto source = baseBlockStore->load(key).value();
+  blockstore::BlockId CopyBaseBlock(const blockstore::BlockId &blockId) {
+    auto source = baseBlockStore->load(blockId).value();
     return baseBlockStore->create(std::move(source));
   }
 
@@ -62,46 +62,46 @@ private:
 };
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteOnCreate) {
-  auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
-  auto loaded = blockStore->load(key);
+  auto blockId = CreateBlockDirectlyWithFixtureAndReturnKey();
+  auto loaded = blockStore->load(blockId);
   EXPECT_NE(boost::none, loaded);
   EXPECT_EQ(data.size(), loaded->size());
   EXPECT_EQ(0, std::memcmp(data.data(), loaded->data(), data.size()));
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteSeparately) {
-  auto key = CreateBlockWriteFixtureToItAndReturnKey();
-  auto loaded = blockStore->load(key);
+  auto blockId = CreateBlockWriteFixtureToItAndReturnKey();
+  auto loaded = blockStore->load(blockId);
   EXPECT_NE(boost::none, loaded);
   EXPECT_EQ(data.size(), loaded->size());
   EXPECT_EQ(0, std::memcmp(data.data(), loaded->data(), data.size()));
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteOnCreate) {
-  auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
+  auto blockId = CreateBlockDirectlyWithFixtureAndReturnKey();
   blockStore->__setKey(FakeAuthenticatedCipher::Key2());
-  auto loaded = blockStore->load(key);
+  auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteSeparately) {
-  auto key = CreateBlockWriteFixtureToItAndReturnKey();
+  auto blockId = CreateBlockWriteFixtureToItAndReturnKey();
   blockStore->__setKey(FakeAuthenticatedCipher::Key2());
-  auto loaded = blockStore->load(key);
+  auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingModifiedBlockFails_WriteOnCreate) {
-  auto key = CreateBlockDirectlyWithFixtureAndReturnKey();
-  ModifyBaseBlock(key);
-  auto loaded = blockStore->load(key);
+  auto blockId = CreateBlockDirectlyWithFixtureAndReturnKey();
+  ModifyBaseBlock(blockId);
+  auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingModifiedBlockFails_WriteSeparately) {
-  auto key = CreateBlockWriteFixtureToItAndReturnKey();
-  ModifyBaseBlock(key);
-  auto loaded = blockStore->load(key);
+  auto blockId = CreateBlockWriteFixtureToItAndReturnKey();
+  ModifyBaseBlock(blockId);
+  auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }
 
@@ -110,8 +110,8 @@ TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_zerophysical) {
 }
 
 TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_zerovirtual) {
-  auto key = CreateBlockReturnKey(Data(0));
-  auto base = baseBlockStore->load(key).value();
+  auto blockId = CreateBlockReturnKey(Data(0));
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }
 
@@ -127,7 +127,7 @@ TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
 }
 
 TEST_F(EncryptedBlockStoreTest, PhysicalBlockSize_positive) {
-  auto key = CreateBlockReturnKey(Data(10*1024));
-  auto base = baseBlockStore->load(key).value();
+  auto blockId = CreateBlockReturnKey(Data(10*1024));
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(10*1024u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }

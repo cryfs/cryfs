@@ -5,7 +5,7 @@
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/data/Data.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
 
 namespace blobstore {
@@ -45,7 +45,7 @@ namespace blobstore {
                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
                       std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                       std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
-                void _traverseExistingSubtree(const blockstore::Key &key, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf,
+                void _traverseExistingSubtree(const blockstore::BlockId &blockId, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf,
                                               std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
                                               std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                                               std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
@@ -56,7 +56,7 @@ namespace blobstore {
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
                 cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
-                cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::Key &key);
+                cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::BlockId &blockId);
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
             };

@@ -22,8 +22,8 @@ DataTreeStore::DataTreeStore(unique_ref<DataNodeStore> nodeStore)
 DataTreeStore::~DataTreeStore() {
 }
 
-optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::Key &key) {
-  auto node = _nodeStore->load(key);
+optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::BlockId &blockId) {
+  auto node = _nodeStore->load(blockId);
   if (node == none) {
     return none;
   }
@@ -39,8 +39,8 @@ void DataTreeStore::remove(unique_ref<DataTree> tree) {
   _nodeStore->removeSubtree(tree->releaseRootNode());
 }
 
-void DataTreeStore::remove(const blockstore::Key &key) {
-  auto tree = load(key);
+void DataTreeStore::remove(const blockstore::BlockId &blockId) {
+  auto tree = load(blockId);
   ASSERT(tree != none, "Tree to remove not found");
   remove(std::move(*tree));
 }

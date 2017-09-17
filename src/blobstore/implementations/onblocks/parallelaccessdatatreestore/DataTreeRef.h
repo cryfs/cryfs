@@ -10,12 +10,12 @@ namespace blobstore {
 namespace onblocks {
 namespace parallelaccessdatatreestore {
 
-class DataTreeRef final: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key>::ResourceRefBase {
+class DataTreeRef final: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::BlockId>::ResourceRefBase {
 public:
   DataTreeRef(datatreestore::DataTree *baseTree): _baseTree(baseTree) {}
 
-  const blockstore::Key &key() const {
-    return _baseTree->key();
+  const blockstore::BlockId &blockId() const {
+    return _baseTree->blockId();
   }
 
   uint64_t maxBytesPerLeaf() const {

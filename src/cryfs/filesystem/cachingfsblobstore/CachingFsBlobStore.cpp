@@ -6,7 +6,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
 using blobstore::BlobStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using boost::optional;
 using boost::none;
 using std::function;
@@ -19,12 +19,12 @@ using cryfs::fsblobstore::SymlinkBlob;
 namespace cryfs {
 namespace cachingfsblobstore {
 
-    optional<unique_ref<FsBlobRef>> CachingFsBlobStore::load(const Key &key) {
-        auto fromCache = _cache.pop(key);
+    optional<unique_ref<FsBlobRef>> CachingFsBlobStore::load(const BlockId &blockId) {
+        auto fromCache = _cache.pop(blockId);
         if (fromCache != none) {
             return _makeRef(std::move(*fromCache));
         }
-        auto fromBaseStore = _baseBlobStore->load(key);
+        auto fromBaseStore = _baseBlobStore->load(blockId);
         if (fromBaseStore != none) {
             return _makeRef(std::move(*fromBaseStore));
         }

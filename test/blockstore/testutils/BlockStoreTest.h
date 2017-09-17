@@ -10,13 +10,13 @@
 
 class MockForEachBlockCallback final {
 public:
-    std::function<void (const blockstore::Key &)> callback() {
-      return [this] (const blockstore::Key &key) {
-          called_with.push_back(key);
+    std::function<void (const blockstore::BlockId &)> callback() {
+      return [this] (const blockstore::BlockId &blockId) {
+          called_with.push_back(blockId);
       };
     }
 
-    std::vector<blockstore::Key> called_with;
+    std::vector<blockstore::BlockId> called_with;
 };
 
 class BlockStoreTestFixture {
@@ -44,9 +44,9 @@ public:
     EXPECT_EQ(0, std::memcmp(fixture.data(), block->data(), fixture.size()));
 
     // Store and reload block and check data is still correct
-    auto key = block->key();
+    auto blockId = block->blockId();
     cpputils::destruct(std::move(block));
-    block = blockStore->load(key).value();
+    block = blockStore->load(blockId).value();
     EXPECT_EQ(0, std::memcmp(fixture.data(), block->data(), fixture.size()));
   }
 
@@ -71,27 +71,27 @@ public:
 
 TYPED_TEST_CASE_P(BlockStoreTest);
 
-TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentKeys) {
+TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentBlockIds) {
   auto blockStore = this->fixture.createBlockStore();
   auto block1 = blockStore->create(cpputils::Data(1024));
   auto block2 = blockStore->create(cpputils::Data(1024));
-  EXPECT_NE(block1->key(), block2->key());
+  EXPECT_NE(block1->blockId(), block2->blockId());
 }
 
 TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting_DeleteByBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  auto blockkey = blockStore->create(cpputils::Data(1024))->key();
-  auto block = blockStore->load(blockkey);
+  auto blockId = blockStore->create(cpputils::Data(1024))->blockId();
+  auto block = blockStore->load(blockId);
   EXPECT_NE(boost::none, block);
   blockStore->remove(std::move(*block));
-  EXPECT_EQ(boost::none, blockStore->load(blockkey));
+  EXPECT_EQ(boost::none, blockStore->load(blockId));
 }
 
-TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting_DeleteByKey) {
+TYPED_TEST_P(BlockStoreTest, BlockIsNotLoadableAfterDeleting_DeleteByBlockId) {
   auto blockStore = this->fixture.createBlockStore();
-  auto blockkey = blockStore->create(cpputils::Data(1024))->key();
-  blockStore->remove(blockkey);
-  EXPECT_EQ(boost::none, blockStore->load(blockkey));
+  auto blockId = blockStore->create(cpputils::Data(1024))->blockId();
+  blockStore->remove(blockId);
+  EXPECT_EQ(boost::none, blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectOnEmptyBlockstore) {
@@ -118,10 +118,10 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteB
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByKey) {
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByBlockId) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key = blockStore->create(cpputils::Data(1))->key();
-  blockStore->remove(key);
+  auto blockId = blockStore->create(cpputils::Data(1))->blockId();
+  blockStore->remove(blockId);
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
 
@@ -161,11 +161,11 @@ TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlock
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
-TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock_DeleteByKey) {
+TYPED_TEST_P(BlockStoreTest, NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlockId) {
   auto blockStore = this->fixture.createBlockStore();
-  auto key = blockStore->create(cpputils::Data(1))->key();
+  auto blockId = blockStore->create(cpputils::Data(1))->blockId();
   blockStore->create(cpputils::Data(1));
-  blockStore->remove(key);
+  blockStore->remove(blockId);
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
 
@@ -189,7 +189,7 @@ TYPED_TEST_P(BlockStoreTest, ForEachBlock_oneblock) {
   auto block = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({block->key()}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({block->blockId()}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStoreTest, ForEachBlock_twoblocks) {
@@ -198,7 +198,7 @@ TYPED_TEST_P(BlockStoreTest, ForEachBlock_twoblocks) {
   auto block2 = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({block1->key(), block2->key()}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({block1->blockId(), block2->blockId()}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStoreTest, ForEachBlock_threeblocks) {
@@ -208,7 +208,7 @@ TYPED_TEST_P(BlockStoreTest, ForEachBlock_threeblocks) {
   auto block3 = blockStore->create(cpputils::Data(1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({block1->key(), block2->key(), block3->key()}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({block1->blockId(), block2->blockId(), block3->blockId()}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStoreTest, ForEachBlock_doesntListRemovedBlocks_oneblock) {
@@ -227,7 +227,7 @@ TYPED_TEST_P(BlockStoreTest, ForEachBlock_doesntListRemovedBlocks_twoblocks) {
   blockStore->remove(std::move(block1));
   MockForEachBlockCallback mockForEachBlockCallback;
   blockStore->forEachBlock(mockForEachBlockCallback.callback());
-  this->EXPECT_UNORDERED_EQ({block2->key()}, mockForEachBlockCallback.called_with);
+  this->EXPECT_UNORDERED_EQ({block2->blockId()}, mockForEachBlockCallback.called_with);
 }
 
 TYPED_TEST_P(BlockStoreTest, Resize_Larger_FromZero) {
@@ -302,20 +302,20 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     AfterCreate_FlushesWhenDestructed,
     AfterLoad_FlushesWhenDestructed,
     LoadNonExistingBlock,
-    TwoCreatedBlocksHaveDifferentKeys,
+    TwoCreatedBlocksHaveDifferentBlockIds,
     BlockIsNotLoadableAfterDeleting_DeleteByBlock,
-    BlockIsNotLoadableAfterDeleting_DeleteByKey,
+    BlockIsNotLoadableAfterDeleting_DeleteByBlockId,
     NumBlocksIsCorrectOnEmptyBlockstore,
     NumBlocksIsCorrectAfterAddingOneBlock,
     NumBlocksIsCorrectAfterAddingOneBlock_AfterClosingBlock,
     NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByBlock,
-    NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByKey,
+    NumBlocksIsCorrectAfterRemovingTheLastBlock_DeleteByBlockId,
     NumBlocksIsCorrectAfterAddingTwoBlocks,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingFirstBlock,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingSecondBlock,
     NumBlocksIsCorrectAfterAddingTwoBlocks_AfterClosingBothBlocks,
     NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlock,
-    NumBlocksIsCorrectAfterRemovingABlock_DeleteByKey,
+    NumBlocksIsCorrectAfterRemovingABlock_DeleteByBlockId,
     WriteAndReadImmediately,
     WriteAndReadAfterLoading,
     WriteTwiceAndRead,

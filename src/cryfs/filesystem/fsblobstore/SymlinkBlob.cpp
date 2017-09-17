@@ -1,6 +1,6 @@
 #include "SymlinkBlob.h"
 
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <cassert>
 
 using std::string;
@@ -18,7 +18,7 @@ SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::SYMLINK, "Loaded blob is not a symlink");
 }
 
-unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const blockstore::Key &parent) {
+unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const blockstore::BlockId &parent) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::SYMLINK, parent);
   FsBlobView symlinkBlobView(std::move(blob));
   string targetStr = target.native();

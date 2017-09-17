@@ -17,18 +17,18 @@ namespace cryfs {
             SYMLINK = 0x02
         };
 
-        FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)), _parentPointer(blockstore::Key::Null()) {
+        FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)), _parentPointer(blockstore::BlockId::Null()) {
             _checkHeader(*_baseBlob);
             _loadParentPointer();
         }
 
-        static void InitializeBlob(blobstore::Blob *baseBlob, BlobType blobType, const blockstore::Key &parent) {
+        static void InitializeBlob(blobstore::Blob *baseBlob, BlobType blobType, const blockstore::BlockId &parent) {
             baseBlob->resize(sizeof(FORMAT_VERSION_HEADER) + 1);
             baseBlob->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
             uint8_t blobTypeInt = static_cast<uint8_t>(blobType);
             baseBlob->write(&blobTypeInt, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
-            baseBlob->write(parent.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
-            static_assert(HEADER_SIZE == sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::Key::BINARY_LENGTH, "If this fails, the header is not initialized correctly in this function.");
+            baseBlob->write(parent.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
+            static_assert(HEADER_SIZE == sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::BlockId::BINARY_LENGTH, "If this fails, the header is not initialized correctly in this function.");
         }
 
         static BlobType blobType(const blobstore::Blob &blob) {
@@ -40,17 +40,17 @@ namespace cryfs {
             return _blobType(*_baseBlob);
         }
 
-        const blockstore::Key &parentPointer() const {
+        const blockstore::BlockId &parentPointer() const {
             return _parentPointer;
         }
 
-        void setParentPointer(const blockstore::Key &parentKey) {
-            _parentPointer = parentKey;
+        void setParentPointer(const blockstore::BlockId &parentId) {
+            _parentPointer = parentId;
             _storeParentPointer();
         }
 
-        const blockstore::Key &key() const override {
-            return _baseBlob->key();
+        const blockstore::BlockId &blockId() const override {
+            return _baseBlob->blockId();
         }
 
         uint64_t size() const override {
@@ -97,12 +97,12 @@ namespace cryfs {
         }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-        static void migrate(blobstore::Blob *blob, const blockstore::Key &parentKey);
+        static void migrate(blobstore::Blob *blob, const blockstore::BlockId &parentId);
 #endif
 
     private:
         static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
-        static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::Key::BINARY_LENGTH;
+        static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::BlockId::BINARY_LENGTH;
 
         static void _checkHeader(const blobstore::Blob &blob) {
             uint16_t actualFormatVersion = getFormatVersionHeader(blob);
@@ -118,18 +118,18 @@ namespace cryfs {
         }
 
         void _loadParentPointer() {
-            auto idData = cpputils::FixedSizeData<blockstore::Key::BINARY_LENGTH>::Null();
-            _baseBlob->read(idData.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
-            _parentPointer = blockstore::Key(idData);
+            auto idData = cpputils::FixedSizeData<blockstore::BlockId::BINARY_LENGTH>::Null();
+            _baseBlob->read(idData.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
+            _parentPointer = blockstore::BlockId(idData);
         }
 
         void _storeParentPointer() {
-            _baseBlob->write(_parentPointer.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::Key::BINARY_LENGTH);
+            _baseBlob->write(_parentPointer.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
         }
 
 
         cpputils::unique_ref<blobstore::Blob> _baseBlob;
-        blockstore::Key _parentPointer;
+        blockstore::BlockId _parentPointer;
 
         DISALLOW_COPY_AND_ASSIGN(FsBlobView);
     };

@@ -19,21 +19,21 @@ namespace testfake {
 FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks(), _mutex() {}
 
-optional<unique_ref<Block>> FakeBlockStore::tryCreate(const Key &key, Data data) {
+optional<unique_ref<Block>> FakeBlockStore::tryCreate(const BlockId &blockId, Data data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto insert_result = _blocks.emplace(key, std::move(data));
+  auto insert_result = _blocks.emplace(blockId, std::move(data));
 
   if (!insert_result.second) {
     return none;
   }
 
   //Return a copy of the stored data
-  return _load(key);
+  return _load(blockId);
 }
 
-unique_ref<Block> FakeBlockStore::overwrite(const Key &key, Data data) {
+unique_ref<Block> FakeBlockStore::overwrite(const BlockId &blockId, Data data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto insert_result = _blocks.emplace(key, data.copy());
+  auto insert_result = _blocks.emplace(blockId, data.copy());
 
   if (!insert_result.second) {
     // If block already exists, overwrite it.
@@ -41,42 +41,42 @@ unique_ref<Block> FakeBlockStore::overwrite(const Key &key, Data data) {
   }
 
   //Return a pointer to the stored FakeBlock
-  auto loaded = _load(key);
+  auto loaded = _load(blockId);
   ASSERT(loaded != none, "Block was just created or written. Should exist.");
   return std::move(*loaded);
 }
 
-optional<unique_ref<Block>> FakeBlockStore::load(const Key &key) {
+optional<unique_ref<Block>> FakeBlockStore::load(const BlockId &blockId) {
   std::unique_lock<std::mutex> lock(_mutex);
-  return _load(key);
+  return _load(blockId);
 }
 
-optional<unique_ref<Block>> FakeBlockStore::_load(const Key &key) {
+optional<unique_ref<Block>> FakeBlockStore::_load(const BlockId &blockId) {
   //Return a copy of the stored data
   try {
-    return makeFakeBlockFromData(key, _blocks.at(key), false);
+    return makeFakeBlockFromData(blockId, _blocks.at(blockId), false);
   } catch (const std::out_of_range &e) {
     return none;
   }
 }
 
-void FakeBlockStore::remove(const Key &key) {
+void FakeBlockStore::remove(const BlockId &blockId) {
   std::unique_lock<std::mutex> lock(_mutex);
-  int numRemoved = _blocks.erase(key);
+  int numRemoved = _blocks.erase(blockId);
   ASSERT(numRemoved == 1, "Block not found");
 }
 
-unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const Key &key, const Data &data, bool dirty) {
+unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const BlockId &blockId, const Data &data, bool dirty) {
   auto newdata = make_shared<Data>(data.copy());
   _used_dataregions_for_blocks.push_back(newdata);
-  return make_unique_ref<FakeBlock>(this, key, newdata, dirty);
+  return make_unique_ref<FakeBlock>(this, blockId, newdata, dirty);
 }
 
-void FakeBlockStore::updateData(const Key &key, const Data &data) {
+void FakeBlockStore::updateData(const BlockId &blockId, const Data &data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto found = _blocks.find(key);
+  auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
-    auto insertResult = _blocks.emplace(key, data.copy());
+    auto insertResult = _blocks.emplace(blockId, data.copy());
     ASSERT(true == insertResult.second, "Inserting didn't work");
     found = insertResult.first;
   }
@@ -97,7 +97,7 @@ uint64_t FakeBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) cons
   return blockSize;
 }
 
-void FakeBlockStore::forEachBlock(std::function<void (const Key &)> callback) const {
+void FakeBlockStore::forEachBlock(std::function<void (const BlockId &)> callback) const {
   for (const auto &entry : _blocks) {
     callback(entry.first);
   }

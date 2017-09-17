@@ -3,7 +3,7 @@
 #include <cpp-utils/data/DataFixture.h>
 
 using namespace blobstore;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::unique_ref;
@@ -64,17 +64,17 @@ TEST_F(BlobSizeTest, ResizingToItself_Large) {
 }
 
 TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
-  Key key = blob->key();
+  BlockId blockId = blob->blockId();
   reset(std::move(blob));
-  auto loaded = loadBlob(key);
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(0u, loaded->size());
 }
 
 TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
   blob->resize(LARGE_SIZE);
-  Key key = blob->key();
+  BlockId blockId = blob->blockId();
   reset(std::move(blob));
-  auto loaded = loadBlob(key);
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -113,7 +113,7 @@ TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
 
 TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->key());
+  auto loaded = loadBlob(blob->blockId());
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -143,7 +143,7 @@ TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowingAndLoading) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->key());
+  auto loaded = loadBlob(blob->blockId());
   EXPECT_EQ(0, std::memcmp(readBlob(*loaded).data(), ZEROES.data(), LARGE_SIZE)); 
 }
 

@@ -13,7 +13,7 @@
 #include <cpp-utils/assert/assert.h>
 #include "impl/LeafTraverser.h"
 
-using blockstore::Key;
+using blockstore::BlockId;
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
@@ -40,14 +40,14 @@ namespace onblocks {
 namespace datatreestore {
 
 DataTree::DataTree(DataNodeStore *nodeStore, unique_ref<DataNode> rootNode)
-  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _key(_rootNode->key()), _numLeavesCache(none) {
+  : _mutex(), _nodeStore(nodeStore), _rootNode(std::move(rootNode)), _blockId(_rootNode->blockId()), _numLeavesCache(none) {
 }
 
 DataTree::~DataTree() {
 }
 
-const Key &DataTree::key() const {
-  return _key;
+const BlockId &DataTree::blockId() const {
+  return _blockId;
 }
 
 void DataTree::flush() const {
@@ -89,7 +89,7 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
   uint64_t numLeavesInLeftChildren = (uint64_t)(inner.numChildren()-1) * leavesPerFullChild(inner);
-  auto lastChild = _nodeStore->load(inner.LastChild()->key());
+  auto lastChild = _nodeStore->load(inner.LastChild()->blockId());
   ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numLeavesInRightChild = _computeNumLeaves(**lastChild);
 
@@ -138,7 +138,7 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
   uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
-  auto lastChild = _nodeStore->load(inner.LastChild()->key());
+  auto lastChild = _nodeStore->load(inner.LastChild()->blockId());
   ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numBytesInRightChild = _numStoredBytes(**lastChild);
 
@@ -172,7 +172,7 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
       ASSERT(neededChildrenForRightBorderNode <= node->numChildren(), "Node has too few children");
       // All children to the right of the new right-border-node are removed including their subtree.
       while(node->numChildren() > neededChildrenForRightBorderNode) {
-        _nodeStore->removeSubtree(node->depth()-1, node->LastChild()->key());
+        _nodeStore->removeSubtree(node->depth()-1, node->LastChild()->blockId());
         node->removeLastChild();
       }
   };

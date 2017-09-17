@@ -2,7 +2,7 @@
 #ifndef MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_UTILS_DIRENTRY_H
 #define MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_UTILS_DIRENTRY_H
 
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <fspp/fs_interface/Dir.h>
 #include <cpp-utils/system/time.h>
 #include <sys/stat.h>
@@ -12,7 +12,7 @@ namespace cryfs {
 
         class DirEntry final {
         public:
-            DirEntry(fspp::Dir::EntryType type, const std::string &name, const blockstore::Key &key, mode_t mode,
+            DirEntry(fspp::Dir::EntryType type, const std::string &name, const blockstore::BlockId &blockId, mode_t mode,
                   uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                   timespec lastMetadataChangeTime);
 
@@ -26,7 +26,7 @@ namespace cryfs {
             const std::string &name() const;
             void setName(const std::string &value);
 
-            const blockstore::Key &key() const;
+            const blockstore::BlockId &blockId() const;
 
             mode_t mode() const;
             void setMode(mode_t value);
@@ -51,18 +51,18 @@ namespace cryfs {
             static unsigned int _serializeUint8(uint8_t *dest, uint8_t value);
             static unsigned int _serializeUint32(uint8_t *dest, uint32_t value);
             static unsigned int _serializeString(uint8_t *dest, const std::string &value);
-            static unsigned int _serializeKey(uint8_t *dest, const blockstore::Key &value);
+            static unsigned int _serializeBlockId(uint8_t *dest, const blockstore::BlockId &value);
             static timespec _deserializeTimeValue(const char **pos);
             static uint8_t _deserializeUint8(const char **pos);
             static uint32_t _deserializeUint32(const char **pos);
             static std::string _deserializeString(const char **pos);
-            static blockstore::Key _deserializeKey(const char **pos);
+            static blockstore::BlockId _deserializeBlockId(const char **pos);
 
             void _updateLastMetadataChangeTime();
 
             fspp::Dir::EntryType _type;
             std::string _name;
-            blockstore::Key _key;
+            blockstore::BlockId _blockId;
             mode_t _mode;
             uid_t _uid;
             gid_t _gid;
@@ -71,10 +71,10 @@ namespace cryfs {
             timespec _lastMetadataChangeTime;
         };
 
-        inline DirEntry::DirEntry(fspp::Dir::EntryType type, const std::string &name, const blockstore::Key &key, mode_t mode,
+        inline DirEntry::DirEntry(fspp::Dir::EntryType type, const std::string &name, const blockstore::BlockId &blockId, mode_t mode,
             uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
             timespec lastMetadataChangeTime)
-                : _type(type), _name(name), _key(key), _mode(mode), _uid(uid), _gid(gid), _lastAccessTime(lastAccessTime),
+                : _type(type), _name(name), _blockId(blockId), _mode(mode), _uid(uid), _gid(gid), _lastAccessTime(lastAccessTime),
                 _lastModificationTime(lastModificationTime), _lastMetadataChangeTime(lastMetadataChangeTime) {
             switch (_type) {
                 case fspp::Dir::EntryType::FILE:
@@ -100,8 +100,8 @@ namespace cryfs {
             return _name;
         }
 
-        inline const blockstore::Key &DirEntry::key() const {
-            return _key;
+        inline const blockstore::BlockId &DirEntry::blockId() const {
+            return _blockId;
         }
 
         inline mode_t DirEntry::mode() const {

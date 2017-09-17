@@ -19,36 +19,36 @@ namespace blockstore {
                     : _mutex(), _baseBlockStore(std::move(baseBlockStore)), _loadedBlocks(), _createdBlocks(0), _writtenBlocks(), _resizedBlocks(), _removedBlocks() {
             }
 
-            Key createKey() override {
-                return _baseBlockStore->createKey();
+            BlockId createBlockId() override {
+                return _baseBlockStore->createBlockId();
             }
 
-            boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override {
+            boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override {
                 _increaseNumCreatedBlocks();
-                auto base = _baseBlockStore->tryCreate(key, std::move(data));
+                auto base = _baseBlockStore->tryCreate(blockId, std::move(data));
                 if (base == boost::none) {
                     return boost::none;
                 }
                 return boost::optional<cpputils::unique_ref<Block>>(cpputils::make_unique_ref<MockBlock>(std::move(*base), this));
             }
 
-            boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override {
-                _increaseNumLoadedBlocks(key);
-                auto base = _baseBlockStore->load(key);
+            boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override {
+                _increaseNumLoadedBlocks(blockId);
+                auto base = _baseBlockStore->load(blockId);
                 if (base == boost::none) {
                     return boost::none;
                 }
                 return boost::optional<cpputils::unique_ref<Block>>(cpputils::make_unique_ref<MockBlock>(std::move(*base), this));
             }
 
-            cpputils::unique_ref<Block> overwrite(const Key &key, cpputils::Data data) override {
-                _increaseNumWrittenBlocks(key);
-                return _baseBlockStore->overwrite(key, std::move(data));
+            cpputils::unique_ref<Block> overwrite(const BlockId &blockId, cpputils::Data data) override {
+                _increaseNumWrittenBlocks(blockId);
+                return _baseBlockStore->overwrite(blockId, std::move(data));
             }
 
-            void remove(const Key &key) override {
-                _increaseNumRemovedBlocks(key);
-                return _baseBlockStore->remove(key);
+            void remove(const BlockId &blockId) override {
+                _increaseNumRemovedBlocks(blockId);
+                return _baseBlockStore->remove(blockId);
             }
 
             uint64_t numBlocks() const override {
@@ -63,12 +63,12 @@ namespace blockstore {
                 return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
             }
 
-            void forEachBlock(std::function<void(const Key &)> callback) const override {
+            void forEachBlock(std::function<void(const BlockId &)> callback) const override {
                 return _baseBlockStore->forEachBlock(callback);
             }
 
             void remove(cpputils::unique_ref<Block> block) override {
-                _increaseNumRemovedBlocks(block->key());
+                _increaseNumRemovedBlocks(block->blockId());
                 auto mockBlock = cpputils::dynamic_pointer_move<MockBlock>(block);
                 ASSERT(mockBlock != boost::none, "Wrong block type");
                 return _baseBlockStore->remove((*mockBlock)->releaseBaseBlock());
@@ -86,25 +86,25 @@ namespace blockstore {
                 return _createdBlocks;
             }
 
-            const std::vector<Key> &loadedBlocks() const {
+            const std::vector<BlockId> &loadedBlocks() const {
                 return _loadedBlocks;
             }
 
-            const std::vector<Key> &removedBlocks() const {
+            const std::vector<BlockId> &removedBlocks() const {
                 return _removedBlocks;
             }
 
-            const std::vector<Key> &resizedBlocks() const {
+            const std::vector<BlockId> &resizedBlocks() const {
                 return _resizedBlocks;
             }
 
-            const std::vector<Key> &writtenBlocks() const {
+            const std::vector<BlockId> &writtenBlocks() const {
                 return _writtenBlocks;
             }
 
-            std::vector<Key> distinctWrittenBlocks() const {
-                std::vector<Key> result(_writtenBlocks);
-                std::sort(result.begin(), result.end(), [](const Key &lhs, const Key &rhs) {
+            std::vector<BlockId> distinctWrittenBlocks() const {
+                std::vector<BlockId> result(_writtenBlocks);
+                std::sort(result.begin(), result.end(), [](const BlockId &lhs, const BlockId &rhs) {
                     return std::memcmp(lhs.data().data(), rhs.data().data(), lhs.BINARY_LENGTH) < 0;
                 });
                 result.erase(std::unique(result.begin(), result.end() ), result.end());
@@ -117,24 +117,24 @@ namespace blockstore {
                 _createdBlocks += 1;
             }
 
-            void _increaseNumLoadedBlocks(const Key &key) {
+            void _increaseNumLoadedBlocks(const BlockId &blockId) {
                 std::unique_lock<std::mutex> lock(_mutex);
-                _loadedBlocks.push_back(key);
+                _loadedBlocks.push_back(blockId);
             }
 
-            void _increaseNumRemovedBlocks(const Key &key) {
+            void _increaseNumRemovedBlocks(const BlockId &blockId) {
                 std::unique_lock<std::mutex> lock(_mutex);
-                _removedBlocks.push_back(key);
+                _removedBlocks.push_back(blockId);
             }
 
-            void _increaseNumResizedBlocks(const Key &key) {
+            void _increaseNumResizedBlocks(const BlockId &blockId) {
                 std::unique_lock<std::mutex> lock(_mutex);
-                _resizedBlocks.push_back(key);
+                _resizedBlocks.push_back(blockId);
             }
 
-            void _increaseNumWrittenBlocks(const Key &key) {
+            void _increaseNumWrittenBlocks(const BlockId &blockId) {
                 std::unique_lock<std::mutex> lock(_mutex);
-                _writtenBlocks.push_back(key);
+                _writtenBlocks.push_back(blockId);
             }
 
             friend class MockBlock;
@@ -142,11 +142,11 @@ namespace blockstore {
             std::mutex _mutex;
             cpputils::unique_ref<BlockStore> _baseBlockStore;
 
-            std::vector<Key> _loadedBlocks;
+            std::vector<BlockId> _loadedBlocks;
             uint64_t _createdBlocks;
-            std::vector<Key> _writtenBlocks;
-            std::vector<Key> _resizedBlocks;
-            std::vector<Key> _removedBlocks;
+            std::vector<BlockId> _writtenBlocks;
+            std::vector<BlockId> _resizedBlocks;
+            std::vector<BlockId> _removedBlocks;
 
             DISALLOW_COPY_AND_ASSIGN(MockBlockStore);
         };

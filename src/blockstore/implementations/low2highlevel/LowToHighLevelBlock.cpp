@@ -12,30 +12,30 @@ using std::mutex;
 namespace blockstore {
 namespace lowtohighlevel {
 
-optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const Key &key, Data data) {
-  bool success = baseBlockStore->tryCreate(key, data);
+optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const BlockId &blockId, Data data) {
+  bool success = baseBlockStore->tryCreate(blockId, data);
   if (!success) {
     return none;
   }
 
-  return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
+  return make_unique_ref<LowToHighLevelBlock>(blockId, std::move(data), baseBlockStore);
 }
 
-unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const Key &key, Data data) {
-  baseBlockStore->store(key, data); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
-  return make_unique_ref<LowToHighLevelBlock>(key, std::move(data), baseBlockStore);
+unique_ref<LowToHighLevelBlock> LowToHighLevelBlock::Overwrite(BlockStore2 *baseBlockStore, const BlockId &blockId, Data data) {
+  baseBlockStore->store(blockId, data); // TODO Does it make sense to not store here, but only write back in the destructor of LowToHighLevelBlock? Also: What about tryCreate?
+  return make_unique_ref<LowToHighLevelBlock>(blockId, std::move(data), baseBlockStore);
 }
 
-optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::Load(BlockStore2 *baseBlockStore, const Key &key) {
-  optional<Data> loadedData = baseBlockStore->load(key);
+optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::Load(BlockStore2 *baseBlockStore, const BlockId &blockId) {
+  optional<Data> loadedData = baseBlockStore->load(blockId);
   if (loadedData == none) {
     return none;
   }
-  return make_unique_ref<LowToHighLevelBlock>(key, std::move(*loadedData), baseBlockStore);
+  return make_unique_ref<LowToHighLevelBlock>(blockId, std::move(*loadedData), baseBlockStore);
 }
 
-LowToHighLevelBlock::LowToHighLevelBlock(const Key& key, Data data, BlockStore2 *baseBlockStore)
-    :Block(key),
+LowToHighLevelBlock::LowToHighLevelBlock(const BlockId &blockId, Data data, BlockStore2 *baseBlockStore)
+    :Block(blockId),
      _baseBlockStore(baseBlockStore),
      _data(std::move(data)),
      _dataChanged(false),
@@ -73,7 +73,7 @@ void LowToHighLevelBlock::resize(size_t newSize) {
 
 void LowToHighLevelBlock::_storeToBaseBlock() {
   if (_dataChanged) {
-    _baseBlockStore->store(key(), _data);
+    _baseBlockStore->store(blockId(), _data);
     _dataChanged = false;
   }
 }

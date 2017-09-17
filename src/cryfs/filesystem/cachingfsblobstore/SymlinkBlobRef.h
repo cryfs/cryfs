@@ -20,8 +20,8 @@ public:
         return _base->target();
     }
 
-    const blockstore::Key &key() const {
-        return _base->key();
+    const blockstore::BlockId &blockId() const {
+        return _base->blockId();
     }
 
     off_t lstat_size() const {

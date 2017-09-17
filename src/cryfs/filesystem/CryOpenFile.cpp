@@ -36,24 +36,24 @@ void CryOpenFile::flush() {
 void CryOpenFile::stat(struct ::stat *result) const {
   _device->callFsActionCallbacks();
   result->st_size = _fileBlob->size();
-  _parent->statChildWithSizeAlreadySet(_fileBlob->key(), result);
+  _parent->statChildWithSizeAlreadySet(_fileBlob->blockId(), result);
 }
 
 void CryOpenFile::truncate(off_t size) const {
   _device->callFsActionCallbacks();
   _fileBlob->resize(size);
-  _parent->updateModificationTimestampForChild(_fileBlob->key());
+  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
 }
 
 size_t CryOpenFile::read(void *buf, size_t count, off_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->key(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   return _fileBlob->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
   _device->callFsActionCallbacks();
-  _parent->updateModificationTimestampForChild(_fileBlob->key());
+  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
   _fileBlob->write(buf, offset, count);
 }
 

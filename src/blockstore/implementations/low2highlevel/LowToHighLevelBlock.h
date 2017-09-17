@@ -23,11 +23,11 @@ namespace lowtohighlevel {
 
 class LowToHighLevelBlock final: public Block {
 public:
-  static boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> TryCreateNew(BlockStore2 *baseBlockStore, const Key &key, cpputils::Data data);
-  static cpputils::unique_ref<LowToHighLevelBlock> Overwrite(BlockStore2 *baseBlockStore, const Key &key, cpputils::Data data);
-  static boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> Load(BlockStore2 *baseBlockStore, const Key &key);
+  static boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> TryCreateNew(BlockStore2 *baseBlockStore, const BlockId &blockId, cpputils::Data data);
+  static cpputils::unique_ref<LowToHighLevelBlock> Overwrite(BlockStore2 *baseBlockStore, const BlockId &blockId, cpputils::Data data);
+  static boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> Load(BlockStore2 *baseBlockStore, const BlockId &blockId);
 
-  LowToHighLevelBlock(const Key& key, cpputils::Data data, BlockStore2 *baseBlockStore);
+  LowToHighLevelBlock(const BlockId &blockId, cpputils::Data data, BlockStore2 *baseBlockStore);
   ~LowToHighLevelBlock();
 
   const void *data() const override;

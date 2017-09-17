@@ -27,7 +27,7 @@ namespace cryfs {
         config.SetVersion(gitversion::VersionString());
         config.SetCreatedWithVersion(gitversion::VersionString());
         config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
-        config.SetRootBlob(_generateRootBlobKey());
+        config.SetRootBlob(_generateRootBlobId());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetFilesystemId(_generateFilesystemID());
         uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config.FilesystemId())).loadOrGenerate();
@@ -78,7 +78,7 @@ namespace cryfs {
         return key;
     }
 
-    string CryConfigCreator::_generateRootBlobKey() {
+    string CryConfigCreator::_generateRootBlobId() {
         //An empty root blob entry will tell CryDevice to create a new root blob
         return "";
     }

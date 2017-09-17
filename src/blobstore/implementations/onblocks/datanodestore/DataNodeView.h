@@ -81,10 +81,10 @@ public:
     return DataNodeView(std::move(block));
   }
 
-  static DataNodeView overwrite(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, const blockstore::Key &key, cpputils::Data data) {
+  static DataNodeView overwrite(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, const blockstore::BlockId &blockId, cpputils::Data data) {
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
     cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
-    auto block = blockStore->overwrite(key, std::move(serialized));
+    auto block = blockStore->overwrite(blockId, std::move(serialized));
     return DataNodeView(std::move(block));
   }
 
@@ -145,8 +145,8 @@ public:
     return *_block;
   }
 
-  const blockstore::Key &key() const {
-    return _block->key();
+  const blockstore::BlockId &blockId() const {
+    return _block->blockId();
   }
 
   void flush() const {

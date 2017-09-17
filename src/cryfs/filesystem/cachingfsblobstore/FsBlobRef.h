@@ -12,15 +12,15 @@ class CachingFsBlobStore;
 class FsBlobRef {
 public:
     virtual ~FsBlobRef();
-    virtual const blockstore::Key &key() const = 0;
+    virtual const blockstore::BlockId &blockId() const = 0;
     virtual off_t lstat_size() const = 0;
 
-    const blockstore::Key &parentPointer() const {
+    const blockstore::BlockId &parentPointer() const {
         return _baseBlob->parentPointer();
     }
 
-    void setParentPointer(const blockstore::Key &parentKey) {
-        return _baseBlob->setParentPointer(parentKey);
+    void setParentPointer(const blockstore::BlockId &parentBlobId) {
+        return _baseBlob->setParentPointer(parentBlobId);
     }
 
     cpputils::unique_ref<fsblobstore::FsBlob> releaseBaseBlob() {

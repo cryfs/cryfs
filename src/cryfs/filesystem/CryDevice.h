@@ -22,16 +22,16 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::Key &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::Key &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::Key &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::Key &key);
+  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::BlockId &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::BlockId &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::BlockId &blockId);
   struct DirBlobWithParent {
       cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
       boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
   };
   DirBlobWithParent LoadDirBlobWithParent(const boost::filesystem::path &path);
-  void RemoveBlob(const blockstore::Key &key);
+  void RemoveBlob(const blockstore::BlockId &blockId);
 
   void onFsAction(std::function<void()> callback);
 
@@ -48,11 +48,11 @@ private:
 
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
-  blockstore::Key _rootKey;
+  blockstore::BlockId _rootBlobId;
   std::vector<std::function<void()>> _onFsAction;
 
-  blockstore::Key GetOrCreateRootKey(CryConfigFile *config);
-  blockstore::Key CreateRootBlobAndReturnKey();
+  blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);
+  blockstore::BlockId CreateRootBlobAndReturnId();
   static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
 #ifndef CRYFS_NO_COMPATIBILITY
   static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);

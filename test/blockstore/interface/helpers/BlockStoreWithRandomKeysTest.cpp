@@ -20,45 +20,45 @@ using namespace blockstore;
 
 class BlockStoreWithRandomKeysMock: public BlockStoreWithRandomKeys {
 public:
-  optional<unique_ref<Block>> tryCreate(const Key &key, Data data) {
-    return cpputils::nullcheck(std::unique_ptr<Block>(do_create(key, data)));
+  optional<unique_ref<Block>> tryCreate(const BlockId &blockId, Data data) {
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_create(blockId, data)));
   }
-  MOCK_METHOD2(do_create, Block*(const Key &, const Data &data));
-  unique_ref<Block> overwrite(const Key &key, Data data) {
-    return cpputils::nullcheck(std::unique_ptr<Block>(do_overwrite(key, data))).value();
+  MOCK_METHOD2(do_create, Block*(const BlockId &, const Data &data));
+  unique_ref<Block> overwrite(const BlockId &blockId, Data data) {
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_overwrite(blockId, data))).value();
   }
-  MOCK_METHOD2(do_overwrite, Block*(const Key &, const Data &data));
-  optional<unique_ref<Block>> load(const Key &key) {
-    return cpputils::nullcheck(std::unique_ptr<Block>(do_load(key)));
+  MOCK_METHOD2(do_overwrite, Block*(const BlockId &, const Data &data));
+  optional<unique_ref<Block>> load(const BlockId &blockId) {
+    return cpputils::nullcheck(std::unique_ptr<Block>(do_load(blockId)));
   }
-  MOCK_METHOD1(do_load, Block*(const Key &));
+  MOCK_METHOD1(do_load, Block*(const BlockId &));
   void remove(unique_ref<Block> block) {UNUSED(block);}
-  MOCK_METHOD1(remove, void(const Key &));
+  MOCK_METHOD1(remove, void(const BlockId &));
   MOCK_CONST_METHOD0(numBlocks, uint64_t());
   MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
   MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));
-  MOCK_CONST_METHOD1(forEachBlock, void(std::function<void (const blockstore::Key &)>));
+  MOCK_CONST_METHOD1(forEachBlock, void(std::function<void (const blockstore::BlockId &)>));
 };
 
 class BlockMock: public Block {
 public:
-  BlockMock(): Block(Key::Random()) {}
+  BlockMock(): Block(BlockId::Random()) {}
   MOCK_CONST_METHOD0(data, const void*());
   MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
   MOCK_METHOD0(flush, void());
   MOCK_CONST_METHOD0(size, size_t());
   MOCK_METHOD1(resize, void(size_t));
-  MOCK_CONST_METHOD0(key, const Key&());
+  MOCK_CONST_METHOD0(blockId, const BlockId&());
 };
 
 class BlockStoreWithRandomKeysTest: public Test {
 public:
   BlockStoreWithRandomKeysTest() :blockStoreMock(), blockStore(blockStoreMock),
-                                  key(Key::FromString("1491BB4932A389EE14BC7090AC772972")) {}
+                                  blockId(BlockId::FromString("1491BB4932A389EE14BC7090AC772972")) {}
 
   BlockStoreWithRandomKeysMock blockStoreMock;
   BlockStore &blockStore;
-  const blockstore::Key key;
+  const blockstore::BlockId blockId;
 
   Data createDataWithSize(size_t size) {
 	Data fixture(DataFixture::generate(size));
@@ -87,8 +87,8 @@ TEST_F(BlockStoreWithRandomKeysTest, DataIsPassedThrough1024) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
-  EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const Key &key, const Data &) {
-    EXPECT_EQ(Key::STRING_LENGTH, key.ToString().size());
+  EXPECT_CALL(blockStoreMock, do_create(_, _)).WillOnce(Invoke([](const BlockId &blockId, const Data &) {
+    EXPECT_EQ(BlockId::STRING_LENGTH, blockId.ToString().size());
     return new BlockMock;
   }));
 
@@ -96,14 +96,14 @@ TEST_F(BlockStoreWithRandomKeysTest, KeyHasCorrectSize) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
-  Key first_key = key;
+  BlockId first_blockId = blockId;
   EXPECT_CALL(blockStoreMock, do_create(_, _))
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        first_key = key;
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        first_blockId = blockId;
         return new BlockMock;
       }))
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        EXPECT_NE(first_key, key);
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        EXPECT_NE(first_blockId, blockId);
         return new BlockMock;
       }));
 
@@ -113,16 +113,16 @@ TEST_F(BlockStoreWithRandomKeysTest, TwoBlocksGetDifferentKeys) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExists) {
-  Key first_key = key;
+  BlockId first_blockId = blockId;
   Data data = createDataWithSize(1024);
   EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data))))
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        first_key = key;
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        first_blockId = blockId;
         return nullptr;
       }))
 	  //TODO Check that this test case fails when the second do_create call gets different data
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        EXPECT_NE(first_key, key);
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        EXPECT_NE(first_blockId, blockId);
         return new BlockMock;
       }));
 
@@ -130,20 +130,20 @@ TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExists) {
 }
 
 TEST_F(BlockStoreWithRandomKeysTest, WillTryADifferentKeyIfKeyAlreadyExistsTwoTimes) {
-  Key first_key = key;
+  BlockId first_blockId = blockId;
   Data data = createDataWithSize(1024);
   EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data))))
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        first_key = key;
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        first_blockId = blockId;
         return nullptr;
       }))
 	  //TODO Check that this test case fails when the second/third do_create calls get different data
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        first_key = key;
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        first_blockId = blockId;
         return nullptr;
       }))
-      .WillOnce(Invoke([&first_key](const Key &key, const Data &) {
-        EXPECT_NE(first_key, key);
+      .WillOnce(Invoke([&first_blockId](const BlockId &blockId, const Data &) {
+        EXPECT_NE(first_blockId, blockId);
         return new BlockMock;
       }));
 

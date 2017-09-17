@@ -78,11 +78,11 @@ namespace blobstore {
                 return DataNode::convertToNewInnerNode(std::move(root), _nodeStore->layout(), *copyOfOldRoot);
             }
 
-            void LeafTraverser::_traverseExistingSubtree(const blockstore::Key &key, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
+            void LeafTraverser::_traverseExistingSubtree(const blockstore::BlockId &blockId, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 if (depth == 0) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1,
                            "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1.");
-                    LeafHandle leafHandle(_nodeStore, key);
+                    LeafHandle leafHandle(_nodeStore, blockId);
                     if (growLastLeaf) {
                         if (leafHandle.node()->numBytes() != _nodeStore->layout().maxBytesPerLeaf()) {
                             leafHandle.node()->resize(_nodeStore->layout().maxBytesPerLeaf());
@@ -92,9 +92,9 @@ namespace blobstore {
                         onExistingLeaf(leafOffset, isRightBorderNode, std::move(leafHandle));
                     }
                 } else {
-                    auto node = _nodeStore->load(key);
+                    auto node = _nodeStore->load(blockId);
                     if (node == none) {
-                        throw std::runtime_error("Couldn't find child node " + key.ToString());
+                        throw std::runtime_error("Couldn't find child node " + blockId.ToString());
                     }
 
                     auto inner = dynamic_pointer_move<DataInnerNode>(*node);
@@ -122,9 +122,9 @@ namespace blobstore {
                 // we still have to descend to the last old child to fill it with leaves and grow the last old leaf.
                 if (isLeftBorderOfTraversal && beginChild >= numChildren) {
                     ASSERT(numChildren > 0, "Node doesn't have children.");
-                    auto childKey = root->getChild(numChildren-1)->key();
+                    auto childBlockId = root->getChild(numChildren-1)->blockId();
                     uint32_t childOffset = (numChildren-1) * leavesPerChild;
-                    _traverseExistingSubtree(childKey, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
+                    _traverseExistingSubtree(childBlockId, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
                                              [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (DataInnerNode* /*node*/) {ASSERT(false, "We don't actually traverse any leaves.");});
@@ -132,7 +132,7 @@ namespace blobstore {
 
                 // Traverse existing children
                 for (uint32_t childIndex = beginChild; childIndex < std::min(endChild, numChildren); ++childIndex) {
-                    auto childKey = root->getChild(childIndex)->key();
+                    auto childBlockId = root->getChild(childIndex)->blockId();
                     uint32_t childOffset = childIndex * leavesPerChild;
                     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
@@ -140,7 +140,7 @@ namespace blobstore {
                     bool isLastExistingChild = (childIndex == numChildren - 1);
                     bool isLastChild = isLastExistingChild && (numChildren == endChild);
                     ASSERT(localEndIndex <= leavesPerChild, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
-                    _traverseExistingSubtree(childKey, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
+                    _traverseExistingSubtree(childBlockId, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
                                              isRightBorderNode && isLastChild, shouldGrowLastExistingLeaf && isLastExistingChild, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
                 }
 
@@ -175,7 +175,7 @@ namespace blobstore {
                 uint32_t beginChild = beginIndex/leavesPerChild;
                 uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
 
-                vector<blockstore::Key> children;
+                vector<blockstore::BlockId> children;
                 children.reserve(endChild);
                 // TODO Remove redundancy of following two for loops by using min/max for calculating the parameters of the recursive call.
                 // Create gap children (i.e. children before the traversal but after the current size)
@@ -185,7 +185,7 @@ namespace blobstore {
                                                    [] (uint32_t /*index*/)->Data {ASSERT(false, "We're only creating gap leaves here, not traversing any.");},
                                                    [] (DataInnerNode* /*node*/) {});
                     ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
-                    children.push_back(child->key());
+                    children.push_back(child->blockId());
                 }
                 // Create new children that are traversed
                 for(uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
@@ -194,7 +194,7 @@ namespace blobstore {
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, depth - 1, onCreateLeaf, onBacktrackFromSubtree);
                     ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
-                    children.push_back(child->key());
+                    children.push_back(child->blockId());
                 }
 
                 ASSERT(children.size() > 0, "No children created");
@@ -221,7 +221,7 @@ namespace blobstore {
             unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildReplaceRootWithItsChild(unique_ref<DataNode> root) {
                 DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
                 if (inner != nullptr && inner->numChildren() == 1) {
-                    auto newRoot = _whileRootHasOnlyOneChildRemoveRootReturnChild(inner->getChild(0)->key());
+                    auto newRoot = _whileRootHasOnlyOneChildRemoveRootReturnChild(inner->getChild(0)->blockId());
                     auto result = _nodeStore->overwriteNodeWith(std::move(root), *newRoot);
                     _nodeStore->remove(std::move(newRoot));
                     return result;
@@ -230,14 +230,14 @@ namespace blobstore {
                 }
             }
 
-            unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::Key &key) {
-                auto current = _nodeStore->load(key);
+            unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::BlockId &blockId) {
+                auto current = _nodeStore->load(blockId);
                 ASSERT(current != none, "Node not found");
                 auto inner = dynamic_pointer_move<DataInnerNode>(*current);
                 if (inner == none) {
                     return std::move(*current);
                 } else if ((*inner)->numChildren() == 1) {
-                    auto result = _whileRootHasOnlyOneChildRemoveRootReturnChild((*inner)->getChild(0)->key());
+                    auto result = _whileRootHasOnlyOneChildRemoveRootReturnChild((*inner)->getChild(0)->blockId());
                     _nodeStore->remove(std::move(*inner));
                     return result;
                 } else {

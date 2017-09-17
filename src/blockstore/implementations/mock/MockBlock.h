@@ -13,7 +13,7 @@ namespace blockstore {
         class MockBlock final : public blockstore::Block {
         public:
             MockBlock(cpputils::unique_ref<blockstore::Block> baseBlock, MockBlockStore *blockStore)
-                    :Block(baseBlock->key()), _baseBlock(std::move(baseBlock)), _blockStore(blockStore) {
+                    :Block(baseBlock->blockId()), _baseBlock(std::move(baseBlock)), _blockStore(blockStore) {
             }
 
             const void *data() const override {

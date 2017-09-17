@@ -4,7 +4,7 @@
 
 using blockstore::Block;
 using cpputils::Data;
-using blockstore::Key;
+using blockstore::BlockId;
 using blockstore::BlockStore;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -31,10 +31,10 @@ unique_ref<DataLeafNode> DataLeafNode::CreateNewNode(BlockStore *blockStore, con
   return make_unique_ref<DataLeafNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, std::move(data)));
 }
 
-unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const Key &key, Data data) {
+unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const BlockId &blockId, Data data) {
   ASSERT(data.size() == layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
   uint32_t size = data.size();
-  return make_unique_ref<DataLeafNode>(DataNodeView::overwrite(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, key, std::move(data)));
+  return make_unique_ref<DataLeafNode>(DataNodeView::overwrite(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, blockId, std::move(data)));
 }
 
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {

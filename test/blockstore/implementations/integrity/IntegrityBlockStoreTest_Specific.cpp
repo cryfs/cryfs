@@ -48,61 +48,61 @@ public:
     return std::make_pair(baseBlockStore, std::move(blockStore));
   }
 
-  blockstore::Key CreateBlockReturnKey() {
+  blockstore::BlockId CreateBlockReturnKey() {
     return CreateBlockReturnKey(data);
   }
 
-  blockstore::Key CreateBlockReturnKey(const Data &initData) {
+  blockstore::BlockId CreateBlockReturnKey(const Data &initData) {
     return blockStore->create(initData.copy());
   }
 
-  Data loadBaseBlock(const blockstore::Key &key) {
-    return baseBlockStore->load(key).value();
+  Data loadBaseBlock(const blockstore::BlockId &blockId) {
+    return baseBlockStore->load(blockId).value();
   }
 
-  Data loadBlock(const blockstore::Key &key) {
-    return blockStore->load(key).value();
+  Data loadBlock(const blockstore::BlockId &blockId) {
+    return blockStore->load(blockId).value();
   }
 
-  void modifyBlock(const blockstore::Key &key) {
-    auto block = blockStore->load(key).value();
+  void modifyBlock(const blockstore::BlockId &blockId) {
+    auto block = blockStore->load(blockId).value();
     byte* first_byte = (byte*)block.data();
     *first_byte = *first_byte + 1;
-    blockStore->store(key, block);
+    blockStore->store(blockId, block);
   }
 
-  void rollbackBaseBlock(const blockstore::Key &key, const Data &data) {
-    baseBlockStore->store(key, data);
+  void rollbackBaseBlock(const blockstore::BlockId &blockId, const Data &data) {
+    baseBlockStore->store(blockId, data);
   }
 
-  void decreaseVersionNumber(const blockstore::Key &key) {
-    auto baseBlock = baseBlockStore->load(key).value();
+  void decreaseVersionNumber(const blockstore::BlockId &blockId) {
+    auto baseBlock = baseBlockStore->load(blockId).value();
     uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::VERSION_HEADER_OFFSET);
     ASSERT(*version > 1, "Can't decrease the lowest allowed version number");
     *version -= 1;
-    baseBlockStore->store(key, baseBlock);
+    baseBlockStore->store(blockId, baseBlock);
   }
 
-  void increaseVersionNumber(const blockstore::Key &key) {
-    auto baseBlock = baseBlockStore->load(key).value();
+  void increaseVersionNumber(const blockstore::BlockId &blockId) {
+    auto baseBlock = baseBlockStore->load(blockId).value();
     uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::VERSION_HEADER_OFFSET);
     *version += 1;
-    baseBlockStore->store(key, baseBlock);
+    baseBlockStore->store(blockId, baseBlock);
   }
 
-  void changeClientId(const blockstore::Key &key) {
-    auto baseBlock = baseBlockStore->load(key).value();
+  void changeClientId(const blockstore::BlockId &blockId) {
+    auto baseBlock = baseBlockStore->load(blockId).value();
     uint32_t* clientId = (uint32_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::CLIENTID_HEADER_OFFSET);
     *clientId += 1;
-    baseBlockStore->store(key, baseBlock);
+    baseBlockStore->store(blockId, baseBlock);
   }
 
-  void deleteBlock(const blockstore::Key &key) {
-    blockStore->remove(key);
+  void deleteBlock(const blockstore::BlockId &blockId) {
+    blockStore->remove(blockId);
   }
 
-  void insertBaseBlock(const blockstore::Key &key, Data data) {
-    EXPECT_TRUE(baseBlockStore->tryCreate(key, std::move(data)));
+  void insertBaseBlock(const blockstore::BlockId &blockId, Data data) {
+    EXPECT_TRUE(baseBlockStore->tryCreate(blockId, std::move(data)));
   }
 
 private:
@@ -113,76 +113,76 @@ constexpr uint32_t IntegrityBlockStoreTest::myClientId;
 
 // Test that a decreasing version number is not allowed
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_1) {
-  auto key = CreateBlockReturnKey();
-  Data oldBaseBlock = loadBaseBlock(key);
-  modifyBlock(key);
-  rollbackBaseBlock(key, oldBaseBlock);
+  auto blockId = CreateBlockReturnKey();
+  Data oldBaseBlock = loadBaseBlock(blockId);
+  modifyBlock(blockId);
+  rollbackBaseBlock(blockId, oldBaseBlock);
   EXPECT_THROW(
-      blockStore->load(key),
+      blockStore->load(blockId),
       IntegrityViolationError
   );
 }
 
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_2) {
-  auto key = CreateBlockReturnKey();
+  auto blockId = CreateBlockReturnKey();
   // Increase the version number
-  modifyBlock(key);
+  modifyBlock(blockId);
   // Decrease the version number again
-  decreaseVersionNumber(key);
+  decreaseVersionNumber(blockId);
   EXPECT_THROW(
-          blockStore->load(key),
+          blockStore->load(blockId),
           IntegrityViolationError
   );
 }
 
 // Test that a different client doesn't need to have a higher version number (i.e. version numbers are per client).
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_DoesAllowDecreasingVersionNumberForDifferentClient) {
-  auto key = CreateBlockReturnKey();
+  auto blockId = CreateBlockReturnKey();
   // Increase the version number
-  modifyBlock(key);
+  modifyBlock(blockId);
   // Fake a modification by a different client with lower version numbers
-  changeClientId(key);
-  decreaseVersionNumber(key);
-  EXPECT_NE(boost::none, blockStore->load(key));
+  changeClientId(blockId);
+  decreaseVersionNumber(blockId);
+  EXPECT_NE(boost::none, blockStore->load(blockId));
 }
 
 // Test that it doesn't allow a rollback to the "newest" block of a client, when this block was superseded by a version of a different client
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_DoesntAllowSameVersionNumberForOldClient) {
-  auto key = CreateBlockReturnKey();
+  auto blockId = CreateBlockReturnKey();
   // Increase the version number
-  modifyBlock(key);
-  Data oldBaseBlock = loadBaseBlock(key);
+  modifyBlock(blockId);
+  Data oldBaseBlock = loadBaseBlock(blockId);
   // Fake a modification by a different client with lower version numbers
-  changeClientId(key);
-  loadBlock(key); // make the block store know about this other client's modification
+  changeClientId(blockId);
+  loadBlock(blockId); // make the block store know about this other client's modification
   // Rollback to old client
-  rollbackBaseBlock(key, oldBaseBlock);
+  rollbackBaseBlock(blockId, oldBaseBlock);
   EXPECT_THROW(
-          blockStore->load(key),
+          blockStore->load(blockId),
           IntegrityViolationError
   );
 }
 
 // Test that deleted blocks cannot be re-introduced
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_DoesntAllowReintroducingDeletedBlocks) {
-  auto key = CreateBlockReturnKey();
-  Data oldBaseBlock = loadBaseBlock(key);
-  deleteBlock(key);
-  insertBaseBlock(key, std::move(oldBaseBlock));
+  auto blockId = CreateBlockReturnKey();
+  Data oldBaseBlock = loadBaseBlock(blockId);
+  deleteBlock(blockId);
+  insertBaseBlock(blockId, std::move(oldBaseBlock));
   EXPECT_THROW(
-          blockStore->load(key),
+          blockStore->load(blockId),
           IntegrityViolationError
   );
 }
 
 // This can happen if a client synchronization is delayed. Another client might have won the conflict and pushed a new version for the deleted block.
 TEST_F(IntegrityBlockStoreTest, RollbackPrevention_AllowsReintroducingDeletedBlocksWithNewVersionNumber) {
-  auto key = CreateBlockReturnKey();
-  Data oldBaseBlock = loadBaseBlock(key);
-  deleteBlock(key);
-  insertBaseBlock(key, std::move(oldBaseBlock));
-  increaseVersionNumber(key);
-  EXPECT_NE(boost::none, blockStore->load(key));
+  auto blockId = CreateBlockReturnKey();
+  Data oldBaseBlock = loadBaseBlock(blockId);
+  deleteBlock(blockId);
+  insertBaseBlock(blockId, std::move(oldBaseBlock));
+  increaseVersionNumber(blockId);
+  EXPECT_NE(boost::none, blockStore->load(blockId));
 }
 
 // Check that in a multi-client scenario, missing blocks are not integrity errors, because another client might have deleted them.
@@ -190,9 +190,9 @@ TEST_F(IntegrityBlockStoreTest, DeletionPrevention_AllowsDeletingBlocksWhenDeact
   InMemoryBlockStore2 *baseBlockStore;
   unique_ptr<IntegrityBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
-  auto key = blockStore->create(Data(0));
-  baseBlockStore->remove(key);
-  EXPECT_EQ(boost::none, blockStore->load(key));
+  auto blockId = blockStore->create(Data(0));
+  baseBlockStore->remove(blockId);
+  EXPECT_EQ(boost::none, blockStore->load(blockId));
 }
 
 // Check that in a single-client scenario, missing blocks are integrity errors.
@@ -200,10 +200,10 @@ TEST_F(IntegrityBlockStoreTest, DeletionPrevention_DoesntAllowDeletingBlocksWhen
   InMemoryBlockStore2 *baseBlockStore;
   unique_ptr<IntegrityBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
-  auto key = blockStore->create(Data(0));
-  baseBlockStore->remove(key);
+  auto blockId = blockStore->create(Data(0));
+  baseBlockStore->remove(blockId);
   EXPECT_THROW(
-      blockStore->load(key),
+      blockStore->load(blockId),
       IntegrityViolationError
   );
 }
@@ -213,10 +213,10 @@ TEST_F(IntegrityBlockStoreTest, DeletionPrevention_InForEachBlock_AllowsDeleting
   InMemoryBlockStore2 *baseBlockStore;
   unique_ptr<IntegrityBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithoutDeletionPrevention();
-  auto key = blockStore->create(Data(0));
-  baseBlockStore->remove(key);
+  auto blockId = blockStore->create(Data(0));
+  baseBlockStore->remove(blockId);
   int count = 0;
-  blockStore->forEachBlock([&count] (const blockstore::Key &) {
+  blockStore->forEachBlock([&count] (const blockstore::BlockId &) {
       ++count;
   });
   EXPECT_EQ(0, count);
@@ -227,18 +227,18 @@ TEST_F(IntegrityBlockStoreTest, DeletionPrevention_InForEachBlock_DoesntAllowDel
   InMemoryBlockStore2 *baseBlockStore;
   unique_ptr<IntegrityBlockStore2> blockStore;
   std::tie(baseBlockStore, blockStore) = makeBlockStoreWithDeletionPrevention();
-  auto key = blockStore->create(Data(0));
-  baseBlockStore->remove(key);
+  auto blockId = blockStore->create(Data(0));
+  baseBlockStore->remove(blockId);
   EXPECT_THROW(
-      blockStore->forEachBlock([] (const blockstore::Key &) {}),
+      blockStore->forEachBlock([] (const blockstore::BlockId &) {}),
       IntegrityViolationError
   );
 }
 
 TEST_F(IntegrityBlockStoreTest, LoadingWithDifferentBlockIdFails) {
-  auto key = CreateBlockReturnKey();
-  blockstore::Key key2 = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
-  baseBlockStore->store(key2, baseBlockStore->load(key).value());
+  auto blockId = CreateBlockReturnKey();
+  blockstore::BlockId key2 = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  baseBlockStore->store(key2, baseBlockStore->load(blockId).value());
   EXPECT_THROW(
       blockStore->load(key2),
       IntegrityViolationError
@@ -256,8 +256,8 @@ TEST_F(IntegrityBlockStoreTest, PhysicalBlockSize_zerophysical) {
 }
 
 TEST_F(IntegrityBlockStoreTest, PhysicalBlockSize_zerovirtual) {
-  auto key = CreateBlockReturnKey(Data(0));
-  auto base = baseBlockStore->load(key).value();
+  auto blockId = CreateBlockReturnKey(Data(0));
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(0u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }
 
@@ -273,7 +273,7 @@ TEST_F(IntegrityBlockStoreTest, PhysicalBlockSize_negativeboundaries) {
 }
 
 TEST_F(IntegrityBlockStoreTest, PhysicalBlockSize_positive) {
-  auto key = CreateBlockReturnKey(Data(10*1024));
-  auto base = baseBlockStore->load(key).value();
+  auto blockId = CreateBlockReturnKey(Data(10*1024));
+  auto base = baseBlockStore->load(blockId).value();
   EXPECT_EQ(10*1024u, blockStore->blockSizeFromPhysicalBlockSize(base.size()));
 }

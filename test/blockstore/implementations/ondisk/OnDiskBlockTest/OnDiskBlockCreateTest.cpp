@@ -24,26 +24,26 @@ public:
   OnDiskBlockCreateTest()
   // Don't create the temp file yet (therefore pass false to the TempFile constructor)
   : dir(),
-    key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
-    file(dir.path() / key.ToString().substr(0,3) / key.ToString().substr(3), false) {
+    key(BlockId::FromString("1491BB4932A389EE14BC7090AC772972")),
+    file(dir.path() / blockId.ToString().substr(0,3) / blockId.ToString().substr(3), false) {
   }
   TempDir dir;
-  Key key;
+  BlockId key;
   TempFile file;
 };
 
 TEST_F(OnDiskBlockCreateTest, CreatingBlockCreatesFile) {
   EXPECT_FALSE(bf::exists(file.path()));
 
-  auto block = OnDiskBlock::CreateOnDisk(dir.path(), key, Data(0));
+  auto block = OnDiskBlock::CreateOnDisk(dir.path(), blockId, Data(0));
 
   EXPECT_TRUE(bf::exists(file.path()));
   EXPECT_TRUE(bf::is_regular_file(file.path()));
 }
 
 TEST_F(OnDiskBlockCreateTest, CreatingExistingBlockReturnsNull) {
-  auto block1 = OnDiskBlock::CreateOnDisk(dir.path(), key, Data(0));
-  auto block2 = OnDiskBlock::CreateOnDisk(dir.path(), key, Data(0));
+  auto block1 = OnDiskBlock::CreateOnDisk(dir.path(), blockId, Data(0));
+  auto block2 = OnDiskBlock::CreateOnDisk(dir.path(), blockId, Data(0));
   EXPECT_TRUE((bool)block1);
   EXPECT_FALSE((bool)block2);
 }
@@ -54,7 +54,7 @@ public:
   Data ZEROES;
 
   OnDiskBlockCreateSizeTest():
-    block(OnDiskBlock::CreateOnDisk(dir.path(), key, Data(GetParam()).FillWithZeroes()).value()),
+    block(OnDiskBlock::CreateOnDisk(dir.path(), blockId, Data(GetParam()).FillWithZeroes()).value()),
     ZEROES(block->size())
   {
     ZEROES.FillWithZeroes();

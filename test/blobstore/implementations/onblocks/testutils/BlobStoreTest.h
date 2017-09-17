@@ -14,8 +14,8 @@ public:
 
   cpputils::unique_ref<blobstore::BlobStore> blobStore;
 
-  cpputils::unique_ref<blobstore::Blob> loadBlob(const blockstore::Key &key) {
-    auto loaded = blobStore->load(key);
+  cpputils::unique_ref<blobstore::Blob> loadBlob(const blockstore::BlockId &blockId) {
+    auto loaded = blobStore->load(blockId);
     EXPECT_TRUE((bool)loaded);
     return std::move(*loaded);
   }

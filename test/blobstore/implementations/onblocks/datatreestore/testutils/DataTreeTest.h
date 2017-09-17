@@ -34,8 +34,8 @@ public:
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinData();
 
-  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
-  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::BlockId &blockId);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::BlockId &blockId);
 
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeafWithSize(uint32_t size);
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeafWithSecondLeafSize(uint32_t size);
@@ -52,13 +52,13 @@ public:
   blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;
   blobstore::onblocks::datatreestore::DataTreeStore treeStore;
 
-  void EXPECT_IS_LEAF_NODE(const blockstore::Key &key);
-  void EXPECT_IS_INNER_NODE(const blockstore::Key &key);
-  void EXPECT_IS_TWONODE_CHAIN(const blockstore::Key &key);
-  void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::Key &key);
-  void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::Key &key);
+  void EXPECT_IS_LEAF_NODE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_INNER_NODE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_TWONODE_CHAIN(const blockstore::BlockId &blockId);
+  void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::BlockId &blockId);
 
-  void CHECK_DEPTH(int depth, const blockstore::Key &key);
+  void CHECK_DEPTH(int depth, const blockstore::BlockId &blockId);
 
 private:
   DISALLOW_COPY_AND_ASSIGN(DataTreeTest);

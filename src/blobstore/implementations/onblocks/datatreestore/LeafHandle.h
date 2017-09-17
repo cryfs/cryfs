@@ -4,7 +4,7 @@
 
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/optional_ownership_ptr.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 
 namespace blobstore {
     namespace onblocks {
@@ -16,12 +16,12 @@ namespace blobstore {
 
             class LeafHandle final {
             public:
-                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::Key &key);
+                LeafHandle(datanodestore::DataNodeStore *nodeStore, const blockstore::BlockId &blockId);
                 LeafHandle(datanodestore::DataNodeStore *nodeStore, datanodestore::DataLeafNode *node);
                 LeafHandle(LeafHandle &&rhs) = default;
 
-                const blockstore::Key &key() {
-                    return _key;
+                const blockstore::BlockId &blockId() {
+                    return _blockId;
                 }
 
                 datanodestore::DataLeafNode *node();
@@ -32,7 +32,7 @@ namespace blobstore {
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
-                blockstore::Key _key;
+                blockstore::BlockId _blockId;
                 cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> _leaf;
 
                 DISALLOW_COPY_AND_ASSIGN(LeafHandle);

@@ -1,7 +1,7 @@
 project (blockstore)
 
 set(SOURCES
-  utils/Key.cpp
+  utils/BlockId.cpp
   utils/IdWrapper.cpp
   utils/BlockStoreUtils.cpp
   utils/FileDoesntExistException.cpp
@@ -27,7 +27,7 @@ set(SOURCES
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
   implementations/integrity/IntegrityBlockStore2.cpp
   implementations/integrity/KnownBlockVersions.cpp
-  implementations/integrity/ClientIdAndBlockKey.cpp
+        implementations/integrity/ClientIdAndBlockId.cpp
   implementations/integrity/IntegrityViolationError.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp

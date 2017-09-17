@@ -12,9 +12,9 @@ namespace ondisk {
 const string OnDiskBlockStore2::FORMAT_VERSION_HEADER_PREFIX = "cryfs;block;";
 const string OnDiskBlockStore2::FORMAT_VERSION_HEADER = OnDiskBlockStore2::FORMAT_VERSION_HEADER_PREFIX + "0";
 
-boost::filesystem::path OnDiskBlockStore2::_getFilepath(const Key &key) const {
-  std::string keyStr = key.ToString();
-  return _rootDir / keyStr.substr(0,3) / keyStr.substr(3);
+boost::filesystem::path OnDiskBlockStore2::_getFilepath(const BlockId &blockId) const {
+  std::string blockIdStr = blockId.ToString();
+  return _rootDir / blockIdStr.substr(0,3) / blockIdStr.substr(3);
 }
 
 Data OnDiskBlockStore2::_checkAndRemoveHeader(const Data &data) {
@@ -45,24 +45,24 @@ unsigned int OnDiskBlockStore2::formatVersionHeaderSize() {
 OnDiskBlockStore2::OnDiskBlockStore2(const boost::filesystem::path& path)
     : _rootDir(path) {}
 
-bool OnDiskBlockStore2::tryCreate(const Key &key, const Data &data) {
-  auto filepath = _getFilepath(key);
+bool OnDiskBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
+  auto filepath = _getFilepath(blockId);
   if (boost::filesystem::exists(filepath)) {
     return false;
   }
 
-  store(key, data);
+  store(blockId, data);
   return true;
 }
 
-bool OnDiskBlockStore2::remove(const Key &key) {
-  auto filepath = _getFilepath(key);
+bool OnDiskBlockStore2::remove(const BlockId &blockId) {
+  auto filepath = _getFilepath(blockId);
   if (!boost::filesystem::is_regular_file(filepath)) { // TODO Is this branch necessary?
     return false;
   }
   bool retval = boost::filesystem::remove(filepath);
   if (!retval) {
-    cpputils::logging::LOG(cpputils::logging::ERROR, "Couldn't find block {} to remove", key.ToString());
+    cpputils::logging::LOG(cpputils::logging::ERROR, "Couldn't find block {} to remove", blockId.ToString());
     return false;
   }
   if (boost::filesystem::is_empty(filepath.parent_path())) {
@@ -71,19 +71,19 @@ bool OnDiskBlockStore2::remove(const Key &key) {
   return true;
 }
 
-optional<Data> OnDiskBlockStore2::load(const Key &key) const {
-  auto fileContent = Data::LoadFromFile(_getFilepath(key));
+optional<Data> OnDiskBlockStore2::load(const BlockId &blockId) const {
+  auto fileContent = Data::LoadFromFile(_getFilepath(blockId));
   if (fileContent == none) {
     return boost::none;
   }
   return _checkAndRemoveHeader(std::move(*fileContent));
 }
 
-void OnDiskBlockStore2::store(const Key &key, const Data &data) {
+void OnDiskBlockStore2::store(const BlockId &blockId, const Data &data) {
   Data fileContent(formatVersionHeaderSize() + data.size());
   std::memcpy(fileContent.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
   std::memcpy(fileContent.dataOffset(formatVersionHeaderSize()), data.data(), data.size());
-  auto filepath = _getFilepath(key);
+  auto filepath = _getFilepath(blockId);
   boost::filesystem::create_directory(filepath.parent_path()); // TODO Instead create all of them once at fs creation time?
   fileContent.StoreToFile(filepath);
 }
@@ -114,13 +114,13 @@ uint64_t OnDiskBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) c
   return blockSize - formatVersionHeaderSize();
 }
 
-void OnDiskBlockStore2::forEachBlock(std::function<void (const Key &)> callback) const {
+void OnDiskBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
   for (auto prefixDir = boost::filesystem::directory_iterator(_rootDir); prefixDir != boost::filesystem::directory_iterator(); ++prefixDir) {
     if (boost::filesystem::is_directory(prefixDir->path())) {
-      std::string blockKeyPrefix = prefixDir->path().filename().native();
+      std::string blockIdPrefix = prefixDir->path().filename().native();
       for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
-        std::string blockKeyPostfix = block->path().filename().native();
-        callback(Key::FromString(blockKeyPrefix + blockKeyPostfix));
+        std::string blockIdPostfix = block->path().filename().native();
+        callback(BlockId::FromString(blockIdPrefix + blockIdPostfix));
       }
     }
   }

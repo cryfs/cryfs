@@ -23,21 +23,21 @@ namespace inmemory {
 InMemoryBlockStore2::InMemoryBlockStore2()
  : _blocks() {}
 
-bool InMemoryBlockStore2::tryCreate(const Key &key, const Data &data) {
+bool InMemoryBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  return _tryCreate(key, data);
+  return _tryCreate(blockId, data);
 }
 
-bool InMemoryBlockStore2::_tryCreate(const Key &key, const Data &data) {
-  auto result = _blocks.insert(make_pair(key, data.copy()));
-  return result.second; // Return if insertion was successful (i.e. key didn't exist yet)
+bool InMemoryBlockStore2::_tryCreate(const BlockId &blockId, const Data &data) {
+  auto result = _blocks.insert(make_pair(blockId, data.copy()));
+  return result.second; // Return if insertion was successful (i.e. blockId didn't exist yet)
 }
 
-bool InMemoryBlockStore2::remove(const Key &key) {
+bool InMemoryBlockStore2::remove(const BlockId &blockId) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto found = _blocks.find(key);
+  auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
-    // Key not found
+    // BlockId not found
     return false;
   }
 
@@ -45,20 +45,20 @@ bool InMemoryBlockStore2::remove(const Key &key) {
   return true;
 }
 
-optional<Data> InMemoryBlockStore2::load(const Key &key) const {
+optional<Data> InMemoryBlockStore2::load(const BlockId &blockId) const {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto found = _blocks.find(key);
+  auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
     return boost::none;
   }
   return found->second.copy();
 }
 
-void InMemoryBlockStore2::store(const Key &key, const Data &data) {
+void InMemoryBlockStore2::store(const BlockId &blockId, const Data &data) {
   std::unique_lock<std::mutex> lock(_mutex);
-  auto found = _blocks.find(key);
+  auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
-    bool success = _tryCreate(key, data);
+    bool success = _tryCreate(blockId, data);
     if (!success) {
       throw std::runtime_error("Could neither save nor create the block in InMemoryBlockStore::store()");
     }
@@ -81,9 +81,9 @@ uint64_t InMemoryBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize)
   return blockSize;
 }
 
-vector<Key> InMemoryBlockStore2::_allBlockKeys() const {
+vector<BlockId> InMemoryBlockStore2::_allBlockIds() const {
   std::unique_lock<std::mutex> lock(_mutex);
-  vector<Key> result;
+  vector<BlockId> result;
   result.reserve(_blocks.size());
   for (const auto &entry : _blocks) {
     result.push_back(entry.first);
@@ -91,10 +91,10 @@ vector<Key> InMemoryBlockStore2::_allBlockKeys() const {
   return result;
 }
 
-void InMemoryBlockStore2::forEachBlock(std::function<void (const Key &)> callback) const {
-  auto keys = _allBlockKeys();
-  for (const auto &key : keys) {
-    callback(key);
+void InMemoryBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
+  auto blockIds = _allBlockIds();
+  for (const auto &blockId : blockIds) {
+    callback(blockId);
   }
 }
 

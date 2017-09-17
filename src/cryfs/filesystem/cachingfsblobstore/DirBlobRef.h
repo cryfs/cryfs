@@ -23,16 +23,16 @@ public:
         return _base->GetChild(name);
     }
 
-    boost::optional<const Entry&> GetChild(const blockstore::Key &key) const {
-        return _base->GetChild(key);
+    boost::optional<const Entry&> GetChild(const blockstore::BlockId &blockId) const {
+        return _base->GetChild(blockId);
     }
 
     size_t NumChildren() const {
         return _base->NumChildren();
     }
 
-    void RemoveChild(const blockstore::Key &key) {
-        return _base->RemoveChild(key);
+    void RemoveChild(const blockstore::BlockId &blockId) {
+        return _base->RemoveChild(blockId);
     }
 
     void RemoveChild(const std::string &name) {
@@ -43,69 +43,69 @@ public:
         return _base->flush();
     }
 
-    void AddOrOverwriteChild(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType type,
+    void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
                   mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
-                  std::function<void (const blockstore::Key &key)> onOverwritten) {
-        return _base->AddOrOverwriteChild(name, blobKey, type, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
+                  std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
+        return _base->AddOrOverwriteChild(name, blobId, type, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
     }
 
-    void RenameChild(const blockstore::Key &key, const std::string &newName, std::function<void (const blockstore::Key &key)> onOverwritten) {
-        return _base->RenameChild(key, newName, onOverwritten);
+    void RenameChild(const blockstore::BlockId &blockId, const std::string &newName, std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
+        return _base->RenameChild(blockId, newName, onOverwritten);
     }
 
-    void statChild(const blockstore::Key &key, struct ::stat *result) const {
-        return _base->statChild(key, result);
+    void statChild(const blockstore::BlockId &blockId, struct ::stat *result) const {
+        return _base->statChild(blockId, result);
     }
 
-    void statChildWithSizeAlreadySet(const blockstore::Key &key, struct ::stat *result) const {
-        return _base->statChildWithSizeAlreadySet(key, result);
+    void statChildWithSizeAlreadySet(const blockstore::BlockId &blockId, struct ::stat *result) const {
+        return _base->statChildWithSizeAlreadySet(blockId, result);
     }
 
-    void updateAccessTimestampForChild(const blockstore::Key &key, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior) {
-        return _base->updateAccessTimestampForChild(key, timestampUpdateBehavior);
+    void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior) {
+        return _base->updateAccessTimestampForChild(blockId, timestampUpdateBehavior);
     }
 
-    void updateModificationTimestampForChild(const blockstore::Key &key) {
-        return _base->updateModificationTimestampForChild(key);
+    void updateModificationTimestampForChild(const blockstore::BlockId &blockId) {
+        return _base->updateModificationTimestampForChild(blockId);
     }
 
-    void chmodChild(const blockstore::Key &key, mode_t mode) {
-        return _base->chmodChild(key, mode);
+    void chmodChild(const blockstore::BlockId &blockId, mode_t mode) {
+        return _base->chmodChild(blockId, mode);
     }
 
-    void chownChild(const blockstore::Key &key, uid_t uid, gid_t gid) {
-        return _base->chownChild(key, uid, gid);
+    void chownChild(const blockstore::BlockId &blockId, uid_t uid, gid_t gid) {
+        return _base->chownChild(blockId, uid, gid);
     }
 
-    void utimensChild(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->utimensChild(key, lastAccessTime, lastModificationTime);
+    void utimensChild(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->utimensChild(blockId, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildDir(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildDir(name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime);
+    void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildDir(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildFile(const std::string &name, const blockstore::Key &blobKey, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildFile(name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime);
+    void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildFile(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildSymlink(const std::string &name, const blockstore::Key &blobKey, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildSymlink(name, blobKey, uid, gid, lastAccessTime, lastModificationTime);
+    void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+        return _base->AddChildSymlink(name, blobId, uid, gid, lastAccessTime, lastModificationTime);
     }
 
     void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const {
         return _base->AppendChildrenTo(result);
     }
 
-    const blockstore::Key &key() const {
-        return _base->key();
+    const blockstore::BlockId &blockId() const {
+        return _base->blockId();
     }
 
     off_t lstat_size() const {
         return _base->lstat_size();
     }
 
-    void setLstatSizeGetter(std::function<off_t(const blockstore::Key&)> getLstatSize) {
+    void setLstatSizeGetter(std::function<off_t(const blockstore::BlockId&)> getLstatSize) {
         return _base->setLstatSizeGetter(getLstatSize);
     }
 

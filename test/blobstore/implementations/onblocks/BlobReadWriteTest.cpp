@@ -9,7 +9,7 @@ using ::testing::Values;
 
 using namespace blobstore;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::DataFixture;
 
@@ -45,14 +45,14 @@ constexpr DataNodeLayout BlobReadWriteTest::LAYOUT;
 TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_SmallSize) {
 	blob->resize(5);
 	blob->write(randomData.data(), 0, 5);
-	auto loaded = loadBlob(blob->key());
+	auto loaded = loadBlob(blob->blockId());
 	EXPECT_DATA_READS_AS(randomData, *loaded, 0, 5);
 }
 
 TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
 	blob->resize(LARGE_SIZE);
 	blob->write(randomData.data(), 0, LARGE_SIZE);
-	auto loaded = loadBlob(blob->key());
+	auto loaded = loadBlob(blob->blockId());
 	EXPECT_DATA_READS_AS(randomData, *loaded, 0, LARGE_SIZE);
 }
 
@@ -133,7 +133,7 @@ TEST_P(BlobReadWriteDataTest, WriteAndReadImmediately) {
 TEST_P(BlobReadWriteDataTest, WriteAndReadAfterLoading) {
   blob->resize(GetParam().blobsize);
   blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
-  auto loaded = loadBlob(blob->key());
+  auto loaded = loadBlob(blob->blockId());
 
   EXPECT_DATA_READS_AS(this->foregroundData, *loaded, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded, GetParam().offset, GetParam().count);

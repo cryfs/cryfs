@@ -15,7 +15,7 @@ namespace bf = boost::filesystem;
 using std::string;
 using std::vector;
 
-using blockstore::Key;
+using blockstore::BlockId;
 using boost::none;
 using boost::optional;
 using cpputils::unique_ref;
@@ -26,8 +26,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const Key &key)
-: CryNode(device, std::move(parent), std::move(grandparent), key) {
+CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
 }
 
 CrySymlink::~CrySymlink() {
@@ -47,7 +47,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->updateAccessTimestampForChild(key(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+  parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   auto blob = LoadBlob();
   return blob->target();
 }
@@ -56,7 +56,7 @@ void CrySymlink::remove() {
   device()->callFsActionCallbacks();
   if (grandparent() != none) {
     //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->key());
+    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
   }
   removeNode();
 }

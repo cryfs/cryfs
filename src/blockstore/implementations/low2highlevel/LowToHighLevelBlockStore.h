@@ -20,15 +20,15 @@ class LowToHighLevelBlockStore final: public BlockStore {
 public:
   LowToHighLevelBlockStore(cpputils::unique_ref<BlockStore2> baseBlockStore);
 
-  Key createKey() override;
-  boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  cpputils::unique_ref<Block> overwrite(const blockstore::Key &key, cpputils::Data data) override;
-  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-  void remove(const Key &key) override;
+  BlockId createBlockId() override;
+  boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;
+  cpputils::unique_ref<Block> overwrite(const blockstore::BlockId &blockId, cpputils::Data data) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override;
+  void remove(const BlockId &blockId) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
-  void forEachBlock(std::function<void (const Key &)> callback) const override;
+  void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
 private:
   cpputils::unique_ref<BlockStore2> _baseBlockStore;

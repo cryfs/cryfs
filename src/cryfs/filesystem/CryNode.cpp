@@ -13,7 +13,7 @@
 
 namespace bf = boost::filesystem;
 
-using blockstore::Key;
+using blockstore::BlockId;
 using blobstore::Blob;
 using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
@@ -30,11 +30,11 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const Key &key)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
 : _device(device),
   _parent(none),
   _grandparent(none),
-  _key(key) {
+  _blockId(blockId) {
 
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
 
@@ -85,24 +85,24 @@ void CryNode::rename(const bf::path &to) {
   auto targetDir = std::move(targetDirWithParent.blob);
   auto targetDirParent = std::move(targetDirWithParent.parent);
 
-  auto old = (*_parent)->GetChild(_key);
+  auto old = (*_parent)->GetChild(_blockId);
   if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
   fsblobstore::DirEntry oldEntry = *old; // Copying this (instead of only keeping the reference) is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
-  auto onOverwritten = [this] (const blockstore::Key &key) {
-      device()->RemoveBlob(key);
+  auto onOverwritten = [this] (const blockstore::BlockId &blockId) {
+      device()->RemoveBlob(blockId);
   };
   _updateParentModificationTimestamp();
-  if (targetDir->key() == (*_parent)->key()) {
-    targetDir->RenameChild(oldEntry.key(), to.filename().native(), onOverwritten);
+  if (targetDir->blockId() == (*_parent)->blockId()) {
+    targetDir->RenameChild(oldEntry.blockId(), to.filename().native(), onOverwritten);
   } else {
     _updateTargetDirModificationTimestamp(*targetDir, std::move(targetDirParent));
-    targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.key(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
+    targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
                                    oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
-    LoadBlob()->setParentPointer(targetDir->key());
+    LoadBlob()->setParentPointer(targetDir->blockId());
     _parent = std::move(targetDir);
   }
 }
@@ -111,14 +111,14 @@ void CryNode::_updateParentModificationTimestamp() {
   if (_grandparent != none) {
     // TODO Handle timestamps of the root directory (_grandparent == none) correctly.
     ASSERT(_parent != none, "Grandparent is set, so also parent has to be set");
-    (*_grandparent)->updateModificationTimestampForChild((*_parent)->key());
+    (*_grandparent)->updateModificationTimestampForChild((*_parent)->blockId());
   }
 }
 
 void CryNode::_updateTargetDirModificationTimestamp(const DirBlobRef &targetDir, optional<unique_ref<DirBlobRef>> targetDirParent) {
   if (targetDirParent != none) {
     // TODO Handle timestamps of the root directory (targetDirParent == none) correctly.
-    (*targetDirParent)->updateModificationTimestampForChild(targetDir.key());
+    (*targetDirParent)->updateModificationTimestampForChild(targetDir.blockId());
   }
 }
 
@@ -130,7 +130,7 @@ void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
-  (*_parent)->utimensChild(_key, lastAccessTime, lastModificationTime);
+  (*_parent)->utimensChild(_blockId, lastAccessTime, lastModificationTime);
 }
 
 void CryNode::removeNode() {
@@ -140,8 +140,8 @@ void CryNode::removeNode() {
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
-  (*_parent)->RemoveChild(_key);
-  _device->RemoveBlob(_key);
+  (*_parent)->RemoveChild(_blockId);
+  _device->RemoveBlob(_blockId);
 }
 
 CryDevice *CryNode::device() {
@@ -153,13 +153,13 @@ const CryDevice *CryNode::device() const {
 }
 
 unique_ref<FsBlobRef> CryNode::LoadBlob() const {
-  auto blob = _device->LoadBlob(_key);
-  ASSERT(_parent == none || blob->parentPointer() == (*_parent)->key(), "Blob has wrong parent pointer.");
+  auto blob = _device->LoadBlob(_blockId);
+  ASSERT(_parent == none || blob->parentPointer() == (*_parent)->blockId(), "Blob has wrong parent pointer.");
   return blob;
 }
 
-const blockstore::Key &CryNode::key() const {
-  return _key;
+const blockstore::BlockId &CryNode::blockId() const {
+  return _blockId;
 }
 
 void CryNode::stat(struct ::stat *result) const {
@@ -179,7 +179,7 @@ void CryNode::stat(struct ::stat *result) const {
     result->st_mtim = now;
     result->st_ctim = now;
   } else {
-    (*_parent)->statChild(_key, result);
+    (*_parent)->statChild(_blockId, result);
   }
 }
 
@@ -190,7 +190,7 @@ void CryNode::chmod(mode_t mode) {
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
-  (*_parent)->chmodChild(_key, mode);
+  (*_parent)->chmodChild(_blockId, mode);
 }
 
 void CryNode::chown(uid_t uid, gid_t gid) {
@@ -200,15 +200,15 @@ void CryNode::chown(uid_t uid, gid_t gid) {
 	//TODO What should we do?
 	throw FuseErrnoException(EIO);
   }
-  (*_parent)->chownChild(_key, uid, gid);
+  (*_parent)->chownChild(_blockId, uid, gid);
 }
 
 bool CryNode::checkParentPointer() {
   auto parentPointer = LoadBlob()->parentPointer();
   if (_parent == none) {
-    return parentPointer == Key::Null();
+    return parentPointer == BlockId::Null();
   } else {
-    return parentPointer == (*_parent)->key();
+    return parentPointer == (*_parent)->blockId();
   }
 }
 

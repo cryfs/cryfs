@@ -15,7 +15,7 @@ class DataNode {
 public:
   virtual ~DataNode();
 
-  const blockstore::Key &key() const;
+  const blockstore::BlockId &blockId() const;
 
   uint8_t depth() const;
 

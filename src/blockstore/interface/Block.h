@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_INTERFACE_BLOCK_H_
 #define MESSMER_BLOCKSTORE_INTERFACE_BLOCK_H_
 
-#include "../utils/Key.h"
+#include "blockstore/utils/BlockId.h"
 #include <cstring>
 
 namespace blockstore {
@@ -24,15 +24,15 @@ public:
   //TODO Test resize()
   virtual void resize(size_t newSize) = 0;
 
-  const Key &key() const {
-    return _key;
+  const BlockId &blockId() const {
+    return _blockId;
   }
 
 protected:
-  Block(const Key &key) : _key(key) {}
+  Block(const BlockId &blockId) : _blockId(blockId) {}
 
 private:
-  const Key _key;
+  const BlockId _blockId;
 };
 
 }

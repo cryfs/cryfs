@@ -3,10 +3,10 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_INTEGRITY_KNOWNBLOCKVERSIONS_H_
 
 #include <cpp-utils/macros.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
-#include "ClientIdAndBlockKey.h"
+#include "ClientIdAndBlockId.h"
 #include <cpp-utils/data/Deserializer.h>
 #include <cpp-utils/data/Serializer.h>
 #include <mutex>
@@ -22,16 +22,16 @@ namespace blockstore {
             ~KnownBlockVersions();
 
             __attribute__((warn_unused_result))
-            bool checkAndUpdateVersion(uint32_t clientId, const Key &key, uint64_t version);
+            bool checkAndUpdateVersion(uint32_t clientId, const BlockId &blockId, uint64_t version);
 
-            uint64_t incrementVersion(const Key &key);
+            uint64_t incrementVersion(const BlockId &blockId);
 
-            void markBlockAsDeleted(const Key &key);
+            void markBlockAsDeleted(const BlockId &blockId);
 
-            bool blockShouldExist(const Key &key) const;
-            std::unordered_set<Key> existingBlocks() const;
+            bool blockShouldExist(const BlockId &blockId) const;
+            std::unordered_set<BlockId> existingBlocks() const;
 
-            uint64_t getBlockVersion(uint32_t clientId, const Key &key) const;
+            uint64_t getBlockVersion(uint32_t clientId, const BlockId &blockId) const;
 
             uint32_t myClientId() const;
             const boost::filesystem::path &path() const;
@@ -39,8 +39,8 @@ namespace blockstore {
             static constexpr uint32_t CLIENT_ID_FOR_DELETED_BLOCK = 0;
 
         private:
-            std::unordered_map<ClientIdAndBlockKey, uint64_t> _knownVersions;
-            std::unordered_map<Key, uint32_t> _lastUpdateClientId; // The client who last updated the block
+            std::unordered_map<ClientIdAndBlockId, uint64_t> _knownVersions;
+            std::unordered_map<BlockId, uint32_t> _lastUpdateClientId; // The client who last updated the block
 
             boost::filesystem::path _stateFilePath;
             uint32_t _myClientId;
@@ -55,14 +55,14 @@ namespace blockstore {
             void _deserializeKnownVersions(cpputils::Deserializer *deserializer);
             void _serializeKnownVersions(cpputils::Serializer *serializer) const;
 
-            static std::pair<ClientIdAndBlockKey, uint64_t> _deserializeKnownVersionsEntry(cpputils::Deserializer *deserializer);
-            static void _serializeKnownVersionsEntry(cpputils::Serializer *serializer, const std::pair<ClientIdAndBlockKey, uint64_t> &entry);
+            static std::pair<ClientIdAndBlockId, uint64_t> _deserializeKnownVersionsEntry(cpputils::Deserializer *deserializer);
+            static void _serializeKnownVersionsEntry(cpputils::Serializer *serializer, const std::pair<ClientIdAndBlockId, uint64_t> &entry);
 
             void _deserializeLastUpdateClientIds(cpputils::Deserializer *deserializer);
             void _serializeLastUpdateClientIds(cpputils::Serializer *serializer) const;
 
-            static std::pair<Key, uint32_t> _deserializeLastUpdateClientIdEntry(cpputils::Deserializer *deserializer);
-            static void _serializeLastUpdateClientIdEntry(cpputils::Serializer *serializer, const std::pair<Key, uint32_t> &entry);
+            static std::pair<BlockId, uint32_t> _deserializeLastUpdateClientIdEntry(cpputils::Deserializer *deserializer);
+            static void _serializeLastUpdateClientIdEntry(cpputils::Serializer *serializer, const std::pair<BlockId, uint32_t> &entry);
 
             DISALLOW_COPY_AND_ASSIGN(KnownBlockVersions);
         };

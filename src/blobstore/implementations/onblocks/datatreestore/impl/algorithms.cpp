@@ -1,6 +1,6 @@
 #include "algorithms.h"
 #include <cpp-utils/pointer/cast.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 
 #include "../../datanodestore/DataInnerNode.h"
 #include "../../datanodestore/DataNodeStore.h"
@@ -13,7 +13,7 @@ using cpputils::unique_ref;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using boost::optional;
 using boost::none;
 
@@ -23,8 +23,8 @@ namespace datatreestore {
 namespace algorithms {
 
 optional<unique_ref<DataInnerNode>> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
-  Key key = node.LastChild()->key();
-  auto lastChild = nodeStore->load(key);
+  BlockId blockId = node.LastChild()->blockId();
+  auto lastChild = nodeStore->load(blockId);
   ASSERT(lastChild != none, "Couldn't load last child");
   return dynamic_pointer_move<DataInnerNode>(*lastChild);
 }

@@ -21,7 +21,7 @@ using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::datatreestore::LeafHandle;
 using blobstore::onblocks::utils::ceilDivision;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using boost::none;
 
@@ -32,9 +32,9 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
-    Key key = root->key();
+    BlockId blockId = root->blockId();
     cpputils::destruct(std::move(root));
-    return treeStore.load(key).value();
+    return treeStore.load(blockId).value();
   }
 
   unique_ref<DataTree> CreateLeafTreeWithSize(uint32_t size) {
@@ -65,23 +65,23 @@ public:
     return CreateTree(CreateFourLevelMinDataWithLastLeafSize(size));
   }
 
-  void EXPECT_IS_LEFTMAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  void EXPECT_IS_LEFTMAXDATA_TREE(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
+        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->blockId());
       }
-      EXPECT_IS_LEFTMAXDATA_TREE(inner->LastChild()->key());
+      EXPECT_IS_LEFTMAXDATA_TREE(inner->LastChild()->blockId());
     }
   }
 
-  void EXPECT_IS_MAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  void EXPECT_IS_MAXDATA_TREE(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
+        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->blockId());
       }
     } else {
       DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
@@ -104,8 +104,8 @@ public:
     ZEROES.FillWithZeroes();
   }
 
-  void GrowTree(const Key &key) {
-    auto tree = treeStore.load(key);
+  void GrowTree(const BlockId &blockId) {
+    auto tree = treeStore.load(blockId);
     GrowTree(tree.get().get());
   }
 
@@ -115,14 +115,14 @@ public:
     tree->flush();
   }
 
-  unique_ref<DataLeafNode> LastLeaf(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  unique_ref<DataLeafNode> LastLeaf(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     auto leaf = dynamic_pointer_move<DataLeafNode>(root);
     if (leaf != none) {
       return std::move(*leaf);
     }
     auto inner = dynamic_pointer_move<DataInnerNode>(root).value();
-    return LastLeaf(inner->LastChild()->key());
+    return LastLeaf(inner->LastChild()->blockId());
   }
 
   uint32_t oldLastLeafSize;
@@ -176,7 +176,7 @@ INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeBy
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, StructureIsValid) {
   GrowTree(tree.get());
-  EXPECT_IS_LEFTMAXDATA_TREE(tree->key());
+  EXPECT_IS_LEFTMAXDATA_TREE(tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect_FromCache) {
@@ -197,26 +197,26 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect) {
 TEST_P(DataTreeTest_ResizeByTraversing_P, DepthFlagsAreCorrect) {
   GrowTree(tree.get());
   uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode()));
-  CHECK_DEPTH(depth, tree->key());
+  CHECK_DEPTH(depth, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, KeyDoesntChange) {
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   tree->flush();
   GrowTree(tree.get());
-  EXPECT_EQ(key, tree->key());
+  EXPECT_EQ(blockId, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
   uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), (uint64_t)nodeStore->layout().maxBytesPerLeaf()));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
-  data.FillInto(nodeStore->load(key).get().get());
+  data.FillInto(nodeStore->load(blockId).get().get());
 
-  GrowTree(key);
+  GrowTree(blockId);
 
-  data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), oldNumberOfLeaves, oldLastLeafSize);
+  data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), oldNumberOfLeaves, oldLastLeafSize);
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, AllLeavesAreTraversed) {

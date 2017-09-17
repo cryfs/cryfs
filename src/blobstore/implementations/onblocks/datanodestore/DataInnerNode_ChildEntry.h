@@ -10,15 +10,15 @@ namespace datanodestore{
 
 struct DataInnerNode_ChildEntry final {
 public:
-  blockstore::Key key() const {
-    return blockstore::Key::FromBinary(_keydata);
+  blockstore::BlockId blockId() const {
+    return blockstore::BlockId::FromBinary(_blockIdData);
   }
 private:
-  void setKey(const blockstore::Key &key) {
-    key.ToBinary(_keydata);
+  void setBlockId(const blockstore::BlockId &blockId) {
+    blockId.ToBinary(_blockIdData);
   }
   friend class DataInnerNode;
-  uint8_t _keydata[blockstore::Key::BINARY_LENGTH];
+  uint8_t _blockIdData[blockstore::BlockId::BINARY_LENGTH];
 
   DISALLOW_COPY_AND_ASSIGN(DataInnerNode_ChildEntry);
 };

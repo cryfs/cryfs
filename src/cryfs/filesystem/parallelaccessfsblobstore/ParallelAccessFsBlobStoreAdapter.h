@@ -9,22 +9,22 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::Key> {
+class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::BlockId> {
 public:
   explicit ParallelAccessFsBlobStoreAdapter(cachingfsblobstore::CachingFsBlobStore *baseBlobStore)
     :_baseBlobStore(std::move(baseBlobStore)) {
   }
 
-  boost::optional<cpputils::unique_ref<cachingfsblobstore::FsBlobRef>> loadFromBaseStore(const blockstore::Key &key) override {
-	return _baseBlobStore->load(key);
+  boost::optional<cpputils::unique_ref<cachingfsblobstore::FsBlobRef>> loadFromBaseStore(const blockstore::BlockId &blockId) override {
+	return _baseBlobStore->load(blockId);
   }
 
   void removeFromBaseStore(cpputils::unique_ref<cachingfsblobstore::FsBlobRef> block) override {
 	return _baseBlobStore->remove(std::move(block));
   }
 
-  void removeFromBaseStore(const blockstore::Key &key) override {
-	return _baseBlobStore->remove(key);
+  void removeFromBaseStore(const blockstore::BlockId &blockId) override {
+	return _baseBlobStore->remove(blockId);
   }
 
 private:

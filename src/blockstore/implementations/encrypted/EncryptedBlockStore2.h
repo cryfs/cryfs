@@ -19,14 +19,14 @@ public:
 
   EncryptedBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const typename Cipher::EncryptionKey &encKey);
 
-  bool tryCreate(const Key &key, const cpputils::Data &data) override;
-  bool remove(const Key &key) override;
-  boost::optional<cpputils::Data> load(const Key &key) const override;
-  void store(const Key &key, const cpputils::Data &data) override;
+  bool tryCreate(const BlockId &blockId, const cpputils::Data &data) override;
+  bool remove(const BlockId &blockId) override;
+  boost::optional<cpputils::Data> load(const BlockId &blockId) const override;
+  void store(const BlockId &blockId, const cpputils::Data &data) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
-  void forEachBlock(std::function<void (const Key &)> callback) const override;
+  void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
   //This function should only be used by test cases
   void __setKey(const typename Cipher::EncryptionKey &encKey);
@@ -40,11 +40,11 @@ private:
   static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
 
   cpputils::Data _encrypt(const cpputils::Data &data) const;
-  boost::optional<cpputils::Data> _tryDecrypt(const Key &key, const cpputils::Data &data) const;
+  boost::optional<cpputils::Data> _tryDecrypt(const BlockId &blockId, const cpputils::Data &data) const;
 
   static cpputils::Data _prependFormatHeaderToData(const cpputils::Data &data);
 #ifndef CRYFS_NO_COMPATIBILITY
-  static bool _keyHeaderIsCorrect(const Key &key, const cpputils::Data &data);
+  static bool _blockIdHeaderIsCorrect(const BlockId &blockId, const cpputils::Data &data);
   static cpputils::Data _migrateBlock(const cpputils::Data &data);
 #endif
   static void _checkFormatHeader(const cpputils::Data &data);
@@ -70,30 +70,30 @@ inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<B
 }
 
 template<class Cipher>
-inline bool EncryptedBlockStore2<Cipher>::tryCreate(const Key &key, const cpputils::Data &data) {
+inline bool EncryptedBlockStore2<Cipher>::tryCreate(const BlockId &blockId, const cpputils::Data &data) {
   cpputils::Data encrypted = _encrypt(data);
-  return _baseBlockStore->tryCreate(key, encrypted);
+  return _baseBlockStore->tryCreate(blockId, encrypted);
 }
 
 template<class Cipher>
-inline bool EncryptedBlockStore2<Cipher>::remove(const Key &key) {
-  return _baseBlockStore->remove(key);
+inline bool EncryptedBlockStore2<Cipher>::remove(const BlockId &blockId) {
+  return _baseBlockStore->remove(blockId);
 }
 
 template<class Cipher>
-inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::load(const Key &key) const {
-  auto loaded = _baseBlockStore->load(key);
+inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::load(const BlockId &blockId) const {
+  auto loaded = _baseBlockStore->load(blockId);
 
   if (boost::none == loaded) {
     return boost::optional<cpputils::Data>(boost::none);
   }
-  return _tryDecrypt(key, *loaded);
+  return _tryDecrypt(blockId, *loaded);
 }
 
 template<class Cipher>
-inline void EncryptedBlockStore2<Cipher>::store(const Key &key, const cpputils::Data &data) {
+inline void EncryptedBlockStore2<Cipher>::store(const BlockId &blockId, const cpputils::Data &data) {
   cpputils::Data encrypted = _encrypt(data);
-  return _baseBlockStore->store(key, encrypted);
+  return _baseBlockStore->store(blockId, encrypted);
 }
 
 template<class Cipher>
@@ -116,7 +116,7 @@ inline uint64_t EncryptedBlockStore2<Cipher>::blockSizeFromPhysicalBlockSize(uin
 }
 
 template<class Cipher>
-inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const Key &)> callback) const {
+inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const BlockId &)> callback) const {
   return _baseBlockStore->forEachBlock(std::move(callback));
 }
 
@@ -127,7 +127,7 @@ inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const cpputils::Dat
 }
 
 template<class Cipher>
-inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt(const Key &key, const cpputils::Data &data) const {
+inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt(const BlockId &blockId, const cpputils::Data &data) const {
   _checkFormatHeader(data);
   boost::optional<cpputils::Data> decrypted = Cipher::decrypt((CryptoPP::byte*)data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER), _encKey);
   if (decrypted == boost::none) {
@@ -137,7 +137,7 @@ inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt
 
 #ifndef CRYFS_NO_COMPATIBILITY
   if (FORMAT_VERSION_HEADER_OLD == _readFormatHeader(data)) {
-    if (!_keyHeaderIsCorrect(key, *decrypted)) {
+    if (!_blockIdHeaderIsCorrect(blockId, *decrypted)) {
       return boost::none;
     }
     *decrypted = _migrateBlock(*decrypted);
@@ -152,12 +152,12 @@ inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt
 #ifndef CRYFS_NO_COMPATIBILITY
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_migrateBlock(const cpputils::Data &data) {
-  return data.copyAndRemovePrefix(Key::BINARY_LENGTH);
+  return data.copyAndRemovePrefix(BlockId::BINARY_LENGTH);
 }
 
 template<class Cipher>
-inline bool EncryptedBlockStore2<Cipher>::_keyHeaderIsCorrect(const Key &key, const cpputils::Data &data) {
-  return key == Key::FromBinary(data.data());
+inline bool EncryptedBlockStore2<Cipher>::_blockIdHeaderIsCorrect(const BlockId &blockId, const cpputils::Data &data) {
+  return blockId == BlockId::FromBinary(data.data());
 }
 #endif
 

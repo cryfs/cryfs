@@ -8,7 +8,7 @@
 #include <string>
 #include "TimestampUpdateBehavior.h"
 
-//TODO Address elements by name instead of by key when accessing them. Who knows whether there is two hard links for the same blob.
+//TODO Address elements by name instead of by blockId when accessing them. Who knows whether there is two hard links for the same blob.
 
 namespace cryfs {
     namespace fsblobstore {
@@ -22,40 +22,40 @@ namespace cryfs {
             cpputils::Data serialize() const;
             void deserializeFrom(const void *data, uint64_t size);
 
-            void add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+            void add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
-            void addOrOverwrite(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+            void addOrOverwrite(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
-                     std::function<void (const blockstore::Key &key)> onOverwritten);
-            void rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten);
+                     std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
+            void rename(const blockstore::BlockId &blockId, const std::string &name, std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
             boost::optional<const DirEntry&> get(const std::string &name) const;
-            boost::optional<const DirEntry&> get(const blockstore::Key &key) const;
+            boost::optional<const DirEntry&> get(const blockstore::BlockId &blockId) const;
             void remove(const std::string &name);
-            void remove(const blockstore::Key &key);
+            void remove(const blockstore::BlockId &blockId);
 
             size_t size() const;
             const_iterator begin() const;
             const_iterator end() const;
 
-            void setMode(const blockstore::Key &key, mode_t mode);
-            bool setUidGid(const blockstore::Key &key, uid_t uid, gid_t gid);
-            void setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime);
-            bool updateAccessTimestampForChild(const blockstore::Key &key, TimestampUpdateBehavior timestampUpdateBehavior);
-            void updateModificationTimestampForChild(const blockstore::Key &key);
+            void setMode(const blockstore::BlockId &blockId, mode_t mode);
+            bool setUidGid(const blockstore::BlockId &blockId, uid_t uid, gid_t gid);
+            void setAccessTimes(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
+            bool updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior);
+            void updateModificationTimestampForChild(const blockstore::BlockId &blockId);
 
         private:
             uint64_t _serializedSize() const;
             bool _hasChild(const std::string &name) const;
             std::vector<DirEntry>::iterator _findByName(const std::string &name);
             std::vector<DirEntry>::const_iterator _findByName(const std::string &name) const;
-            std::vector<DirEntry>::iterator _findByKey(const blockstore::Key &key);
-            std::vector<DirEntry>::const_iterator _findByKey(const blockstore::Key &key) const;
-            std::vector<DirEntry>::iterator _findUpperBound(const blockstore::Key &key);
-            std::vector<DirEntry>::iterator _findLowerBound(const blockstore::Key &key);
-            std::vector<DirEntry>::iterator _findFirst(const blockstore::Key &hint, std::function<bool (const DirEntry&)> pred);
-            void _add(const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+            std::vector<DirEntry>::iterator _findById(const blockstore::BlockId &blockId);
+            std::vector<DirEntry>::const_iterator _findById(const blockstore::BlockId &blockId) const;
+            std::vector<DirEntry>::iterator _findUpperBound(const blockstore::BlockId &blockId);
+            std::vector<DirEntry>::iterator _findLowerBound(const blockstore::BlockId &blockId);
+            std::vector<DirEntry>::iterator _findFirst(const blockstore::BlockId &hint, std::function<bool (const DirEntry&)> pred);
+            void _add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
-            void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::Key &blobKey, fspp::Dir::EntryType entryType,
+            void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
                       mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             static void _checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType);
 
