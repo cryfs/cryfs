@@ -33,11 +33,17 @@ public:
 private:
 
   IdData id_;
-  friend class std::hash<IdWrapper>;
-  friend class std::less<IdWrapper>;
+  friend struct std::hash<IdWrapper>;
+  friend struct std::less<IdWrapper>;
   template<class Tag2> friend bool operator==(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
   template<class Tag2> friend bool operator!=(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
 };
+
+template<class Tag>
+constexpr size_t IdWrapper<Tag>::BINARY_LENGTH;
+
+template<class Tag>
+constexpr size_t IdWrapper<Tag>::STRING_LENGTH;
 
 template<class Tag>
 inline IdWrapper<Tag>::IdWrapper(const IdData& id): id_(id) {}
