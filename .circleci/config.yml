@@ -153,7 +153,7 @@ references:
         # Build
         mkdir cmake
         cd cmake
-        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
         make -j$NUMCORES
 
         ccache --show-stats
@@ -191,7 +191,7 @@ references:
         only: /.*/
 
 jobs:
-  gcc_4_8:
+  gcc_4_8_debug:
     <<: *job_definition
     environment:
       CC: gcc-4.8
@@ -199,7 +199,17 @@ jobs:
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-4.8"
       CXXFLAGS: ""
-  gcc_5:
+      BUILD_TYPE: "Debug"
+  gcc_4_8_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-4.8
+      CXX: g++-4.8
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-4.8"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  gcc_5_debug:
     <<: *job_definition
     environment:
       CC: gcc-5
@@ -207,7 +217,17 @@ jobs:
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-5"
       CXXFLAGS: ""
-  gcc_6:
+      BUILD_TYPE: "Debug"
+  gcc_5_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-5
+      CXX: g++-5
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-5"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  gcc_6_debug:
     <<: *job_definition
     environment:
       CC: gcc-6
@@ -215,7 +235,17 @@ jobs:
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-6"
       CXXFLAGS: ""
-  gcc_7:
+      BUILD_TYPE: "Debug"
+  gcc_6_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-6
+      CXX: g++-6
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-6"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  gcc_7_debug:
     <<: *job_definition
     environment:
       CC: gcc-7
@@ -223,7 +253,17 @@ jobs:
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-7"
       CXXFLAGS: ""
-  clang_3_7:
+      BUILD_TYPE: "Debug"
+  gcc_7_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-7
+      CXX: g++-7
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-7"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_3_7_debug:
     <<: *job_definition
     environment:
       CC: clang-3.7
@@ -231,7 +271,17 @@ jobs:
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-3.7
       CXXFLAGS: ""
-  clang_3_8:
+      BUILD_TYPE: "Debug"
+  clang_3_7_release:
+    <<: *job_definition
+    environment:
+      CC: clang-3.7
+      CXX: clang++-3.7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-3.7
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_3_8_debug:
     <<: *job_definition
     environment:
       CC: clang-3.8
@@ -239,7 +289,17 @@ jobs:
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-3.8
       CXXFLAGS: ""
-  clang_4_0:
+      BUILD_TYPE: "Debug"
+  clang_3_8_release:
+    <<: *job_definition
+    environment:
+      CC: clang-3.8
+      CXX: clang++-3.8
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-3.8
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_4_0_debug:
     <<: *job_definition
     environment:
       CC: clang-4.0
@@ -247,7 +307,17 @@ jobs:
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-4.0
       CXXFLAGS: ""
-  clang_5_0:
+      BUILD_TYPE: "Debug"
+  clang_4_0_release:
+    <<: *job_definition
+    environment:
+      CC: clang-4.0
+      CXX: clang++-4.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-4.0
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_5_0_debug:
     <<: *job_definition
     environment:
       CC: clang-5.0
@@ -255,6 +325,16 @@ jobs:
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  clang_5_0_release:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
   no_compatibility:
     <<: *job_definition
     environment:
@@ -263,27 +343,45 @@ jobs:
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
+      BUILD_TYPE: "Debug"
 
 workflows:
   version: 2
 
   build_and_test:
     jobs:
-    - gcc_4_8:
+    - gcc_4_8_debug:
         <<: *enable_for_tags
-    - gcc_5:
+    - gcc_4_8_release:
         <<: *enable_for_tags
-    - gcc_6:
+    - gcc_5_debug:
         <<: *enable_for_tags
-    - gcc_7:
+    - gcc_5_release:
         <<: *enable_for_tags
-    - clang_3_7:
+    - gcc_6_debug:
         <<: *enable_for_tags
-    - clang_3_8:
+    - gcc_6_release:
         <<: *enable_for_tags
-    - clang_4_0:
+    - gcc_7_debug:
         <<: *enable_for_tags
-    - clang_5_0:
+    - gcc_7_release:
+        <<: *enable_for_tags
+    - clang_3_7_debug:
+        <<: *enable_for_tags
+    - clang_3_7_release:
+        <<: *enable_for_tags
+    - clang_3_8_debug:
+        <<: *enable_for_tags
+    - clang_3_8_release:
+        <<: *enable_for_tags
+    - clang_4_0_debug:
+        <<: *enable_for_tags
+    - clang_4_0_release:
+        <<: *enable_for_tags
+    - clang_5_0_debug:
+        <<: *enable_for_tags
+    - clang_5_0_release:
         <<: *enable_for_tags
     - no_compatibility:
         <<: *enable_for_tags
+
