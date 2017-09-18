@@ -5,7 +5,7 @@ compiler:
 - gcc
 - clang
 os:
-- linux
+#- linux
 - osx
 addons:
   apt:
