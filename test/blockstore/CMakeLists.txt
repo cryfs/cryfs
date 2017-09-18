@@ -2,8 +2,8 @@ project (blockstore-test)
 
 set(SOURCES
     utils/BlockStoreUtilsTest.cpp
-    interface/helpers/BlockStoreWithRandomKeysTest.cpp
     interface/BlockStoreTest.cpp
+    interface/BlockStore2Test.cpp
     interface/BlockTest.cpp
     implementations/testfake/TestFakeBlockStoreTest.cpp
     implementations/mock/MockBlockStoreTest.cpp

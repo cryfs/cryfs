@@ -28,7 +28,9 @@ BlockId ParallelAccessBlockStore::createBlockId() {
 }
 
 optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const BlockId &blockId, Data data) {
-  ASSERT(!_parallelAccessStore.isOpened(blockId), ("BlockId "+blockId.ToString()+"already exists").c_str());
+  if (_parallelAccessStore.isOpened(blockId)) {
+    return none; // block already exists
+  }
   auto block = _baseBlockStore->tryCreate(blockId, std::move(data));
   if (block == none) {
 	//TODO Test this code branch

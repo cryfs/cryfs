@@ -2,7 +2,6 @@
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
-#include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include <gtest/gtest.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
@@ -25,17 +24,6 @@ public:
 };
 
 INSTANTIATE_TYPED_TEST_CASE_P(InMemory, BlockStoreTest, InMemoryBlockStoreTestFixture);
-
-class InMemoryBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
-public:
-  unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<LowToHighLevelBlockStore>(
-        make_unique_ref<InMemoryBlockStore2>()
-    );
-  }
-};
-
-INSTANTIATE_TYPED_TEST_CASE_P(InMemory, BlockStoreWithRandomKeysTest, InMemoryBlockStoreWithRandomKeysTestFixture);
 
 class InMemoryBlockStore2TestFixture: public BlockStore2TestFixture {
 public:

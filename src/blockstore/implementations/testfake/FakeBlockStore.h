@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_TESTFAKE_FAKEBLOCKSTORE_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_TESTFAKE_FAKEBLOCKSTORE_H_
 
-#include "../../interface/helpers/BlockStoreWithRandomKeys.h"
+#include "../../interface/BlockStore.h"
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/macros.h>
 
@@ -27,10 +27,11 @@ class FakeBlock;
  * the data (instead of a direct pointer as InMemoryBlockStore does) and flushing will copy the data back to the
  * background. This way, tests are more likely to fail if they use the blockstore wrongly.
  */
-class FakeBlockStore final: public BlockStoreWithRandomKeys {
+class FakeBlockStore final: public BlockStore {
 public:
   FakeBlockStore();
 
+  BlockId createBlockId() override;
   boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;
   cpputils::unique_ref<Block> overwrite(const blockstore::BlockId &blockId, cpputils::Data data) override;
   boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override;

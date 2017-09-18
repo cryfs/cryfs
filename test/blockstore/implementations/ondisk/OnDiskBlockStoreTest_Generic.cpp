@@ -2,7 +2,6 @@
 #include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
-#include "../../testutils/BlockStoreWithRandomKeysTest.h"
 #include <gtest/gtest.h>
 
 #include <cpp-utils/tempfile/TempDir.h>
@@ -31,22 +30,6 @@ private:
 };
 
 INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixture);
-
-// TODO Add BlockStoreWithRandomKeysTest to BlockStoreTest and BlockStore2Test
-class OnDiskBlockStoreWithRandomKeysTestFixture: public BlockStoreWithRandomKeysTestFixture {
-public:
-  OnDiskBlockStoreWithRandomKeysTestFixture(): tempdir() {}
-
-  unique_ref<BlockStore> createBlockStore() override {
-    return make_unique_ref<LowToHighLevelBlockStore>(
-        make_unique_ref<OnDiskBlockStore2>(tempdir.path())
-    );
-  }
-private:
-  TempDir tempdir;
-};
-
-INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreWithRandomKeysTest, OnDiskBlockStoreWithRandomKeysTestFixture);
 
 class OnDiskBlockStore2TestFixture: public BlockStore2TestFixture {
 public:

@@ -19,6 +19,10 @@ namespace testfake {
 FakeBlockStore::FakeBlockStore()
  : _blocks(), _used_dataregions_for_blocks(), _mutex() {}
 
+BlockId FakeBlockStore::createBlockId() {
+  return BlockId::Random();
+}
+
 optional<unique_ref<Block>> FakeBlockStore::tryCreate(const BlockId &blockId, Data data) {
   std::unique_lock<std::mutex> lock(_mutex);
   auto insert_result = _blocks.emplace(blockId, std::move(data));

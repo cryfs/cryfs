@@ -39,9 +39,6 @@ using IntegrityBlockStoreTestFixture_singleclient = IntegrityBlockStoreTestFixtu
 using IntegrityBlockStoreTestFixture_multiclient_noIntegrityChecks = IntegrityBlockStoreTestFixture<true, false>;
 using IntegrityBlockStoreTestFixture_singleclient_noIntegrityChecks = IntegrityBlockStoreTestFixture<true, true>;
 
-
-// TODO Why is here no IntegrityBlockStoreWithRandomKeysTest?
-
 INSTANTIATE_TYPED_TEST_CASE_P(Integrity_multiclient, BlockStoreTest, IntegrityBlockStoreTestFixture_multiclient);
 INSTANTIATE_TYPED_TEST_CASE_P(Integrity_singleclient, BlockStoreTest, IntegrityBlockStoreTestFixture_singleclient);
 INSTANTIATE_TYPED_TEST_CASE_P(Integrity_multiclient_noIntegrityChecks, BlockStoreTest, IntegrityBlockStoreTestFixture_multiclient_noIntegrityChecks);

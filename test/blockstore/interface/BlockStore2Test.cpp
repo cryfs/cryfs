@@ -1,4 +1,4 @@
-#include "blockstore/interface/BlockStore.h"
+#include "blockstore/interface/BlockStore2.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <cpp-utils/data/DataFixture.h>
@@ -18,49 +18,28 @@ using boost::optional;
 
 using namespace blockstore;
 
-class BlockStoreMock: public BlockStore {
+class BlockStore2Mock: public BlockStore2 {
 public:
-    MOCK_METHOD0(createBlockId, BlockId());
-    optional<unique_ref<Block>> tryCreate(const BlockId &blockId, Data data) {
-        return cpputils::nullcheck(std::unique_ptr<Block>(do_create(blockId, data)));
-    }
-    MOCK_METHOD2(do_create, Block*(const BlockId &, const Data &data));
-    unique_ref<Block> overwrite(const BlockId &blockId, Data data) {
-        return cpputils::nullcheck(std::unique_ptr<Block>(do_overwrite(blockId, data))).value();
-    }
-    MOCK_METHOD2(do_overwrite, Block*(const BlockId &, const Data &data));
-    optional<unique_ref<Block>> load(const BlockId &blockId) {
-        return cpputils::nullcheck(std::unique_ptr<Block>(do_load(blockId)));
-    }
-    MOCK_METHOD1(do_load, Block*(const BlockId &));
-    void remove(unique_ref<Block> block) {UNUSED(block);}
-    MOCK_METHOD1(remove, void(const BlockId &));
+    MOCK_CONST_METHOD0(createBlockId, BlockId());
+    MOCK_METHOD2(tryCreate, bool(const BlockId &blockId, const cpputils::Data &data));
+    MOCK_METHOD2(store, void(const BlockId &, const Data &data));
+    MOCK_CONST_METHOD1(load, optional<Data>(const BlockId &));
+    MOCK_METHOD1(remove, bool(const BlockId &));
     MOCK_CONST_METHOD0(numBlocks, uint64_t());
     MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
     MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));
     MOCK_CONST_METHOD1(forEachBlock, void(std::function<void (const blockstore::BlockId &)>));
 };
 
-class BlockMock: public Block {
+class BlockStore2Test: public Test {
 public:
-    BlockMock(): Block(BlockId::Random()) {}
-    MOCK_CONST_METHOD0(data, const void*());
-    MOCK_METHOD3(write, void(const void*, uint64_t, uint64_t));
-    MOCK_METHOD0(flush, void());
-    MOCK_CONST_METHOD0(size, size_t());
-    MOCK_METHOD1(resize, void(size_t));
-    MOCK_CONST_METHOD0(blockId, const BlockId&());
-};
-
-class BlockStoreTest: public Test {
-public:
-    BlockStoreTest() :blockStoreMock(), blockStore(blockStoreMock),
+    BlockStore2Test() :blockStoreMock(), blockStore(blockStoreMock),
                       blockId1(BlockId::FromString("1491BB4932A389EE14BC7090AC772972")),
                       blockId2(BlockId::FromString("AC772971491BB4932A389EE14BC7090A")),
                       blockId3(BlockId::FromString("1BB4932A38AC77C7090A2971499EE14B")) {}
 
-    BlockStoreMock blockStoreMock;
-    BlockStore &blockStore;
+    BlockStore2Mock blockStoreMock;
+    BlockStore2 &blockStore;
     const BlockId blockId1;
     const BlockId blockId2;
     const BlockId blockId3;
@@ -73,90 +52,90 @@ public:
     }
 };
 
-TEST_F(BlockStoreTest, DataIsPassedThrough0) {
+TEST_F(BlockStore2Test, DataIsPassedThrough0) {
     Data data = createDataWithSize(0);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data)))).WillOnce(Return(new BlockMock));
-    blockStore.create(data);
+    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, DataIsPassedThrough1) {
+TEST_F(BlockStore2Test, DataIsPassedThrough1) {
     Data data = createDataWithSize(1);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data)))).WillOnce(Return(new BlockMock));
-    blockStore.create(data);
+    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, DataIsPassedThrough1024) {
+TEST_F(BlockStore2Test, DataIsPassedThrough1024) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data)))).WillOnce(Return(new BlockMock));
-    blockStore.create(data);
+    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, BlockIdIsCorrect) {
+TEST_F(BlockStore2Test, BlockIdIsCorrect) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, do_create(blockId1, _)).WillOnce(Return(new BlockMock));
-    blockStore.create(data);
+    EXPECT_CALL(blockStoreMock, tryCreate(blockId1, _)).WillOnce(Return(true));
+    EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, TwoBlocksGetDifferentIds) {
+TEST_F(BlockStore2Test, TwoBlocksGetDifferentIds) {
     EXPECT_CALL(blockStoreMock, createBlockId())
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2));
-    EXPECT_CALL(blockStoreMock, do_create(_, _))
+    EXPECT_CALL(blockStoreMock, tryCreate(_, _))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
-                return new BlockMock;
+                return true;
             }))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId2, blockId);
-                return new BlockMock;
+                return true;
             }));
 
     Data data = createDataWithSize(1024);
-    blockStore.create(data);
-    blockStore.create(data);
+    EXPECT_EQ(blockId1, blockStore.create(data));
+    EXPECT_EQ(blockId2, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, WillTryADifferentIdIfKeyAlreadyExists) {
+TEST_F(BlockStore2Test, WillTryADifferentIdIfKeyAlreadyExists) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId())
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2));
-    EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data))))
+    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data))))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
-                return nullptr;
+                return false;
             }))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId2, blockId);
-                return new BlockMock;
+                return true;
             }));
 
-    blockStore.create(data);
+    EXPECT_EQ(blockId2, blockStore.create(data));
 }
 
-TEST_F(BlockStoreTest, WillTryADifferentIdIfIdAlreadyExistsTwoTimes) {
+TEST_F(BlockStore2Test, WillTryADifferentIdIfIdAlreadyExistsTwoTimes) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId())
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2))
             .WillOnce(Return(blockId3));
-    EXPECT_CALL(blockStoreMock, do_create(_, Eq(ByRef(data))))
+    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data))))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
-                return nullptr;
+                return false;
             }))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId2, blockId);
-                return nullptr;
+                return false;
             }))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId3, blockId);
-                return new BlockMock;
+                return true;
             }));
 
-    blockStore.create(data);
+    EXPECT_EQ(blockId3, blockStore.create(data));
 }

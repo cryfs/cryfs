@@ -5,7 +5,6 @@
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::BlockStore;
-using blockstore::BlockStoreWithRandomKeys;
 using blockstore::mock::MockBlockStore;
 using blockstore::testfake::FakeBlockStore;
 using cpputils::unique_ref;

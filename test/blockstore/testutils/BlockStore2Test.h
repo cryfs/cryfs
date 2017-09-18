@@ -383,6 +383,41 @@ TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_twoblocks) {
   this->EXPECT_UNORDERED_EQ({blockId2}, mockForEachBlockCallback.called_with);
 }
 
+TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
+  EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
+}
+
+TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndDifferentSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
+  EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(4096)));
+}
+
+TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(0)));
+  EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
+}
+/*
+TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
+  EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(0)));
+}
+
+TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndBothNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(0)));
+  EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(0)));
+}*/
+
 REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
   givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds,
@@ -430,7 +465,14 @@ REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
   ForEachBlock_twoblocks,
   ForEachBlock_threeblocks,
   ForEachBlock_doesntListRemovedBlocks_oneblock,
-  ForEachBlock_doesntListRemovedBlocks_twoblocks
+  ForEachBlock_doesntListRemovedBlocks_twoblocks,
+  TryCreateTwoBlocksWithSameBlockIdAndSameSize,
+  TryCreateTwoBlocksWithSameBlockIdAndDifferentSize,
+  TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize
+  //TODO Just disabled because gtest doesn't allow more template parameters. Fix and reenable!
+  //     see https://github.com/google/googletest/issues/1267
+  //TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize,
+  //TryCreateTwoBlocksWithSameBlockIdAndBothNullSize
 );
 
 

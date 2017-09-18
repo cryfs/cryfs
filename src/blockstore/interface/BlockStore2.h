@@ -15,6 +15,10 @@ class BlockStore2 {
 public:
   virtual ~BlockStore2() {}
 
+  virtual BlockId createBlockId() const {
+    return BlockId::Random();
+  }
+
   __attribute__((warn_unused_result))
   virtual bool tryCreate(const BlockId &blockId, const cpputils::Data &data) = 0;
   __attribute__((warn_unused_result))
@@ -27,7 +31,7 @@ public:
   virtual void store(const BlockId &blockId, const cpputils::Data &data) = 0;
 
   BlockId create(const cpputils::Data& data) {
-    BlockId blockId = BlockId::Random();
+    BlockId blockId = createBlockId();
     bool success = tryCreate(blockId, data);
     if (success) {
       return blockId;

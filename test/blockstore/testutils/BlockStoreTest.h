@@ -286,6 +286,56 @@ TYPED_TEST_P(BlockStoreTest, Resize_Smaller_ToZero_BlockIsStillUsable) {
   this->TestBlockIsUsable(std::move(block), blockStore.get());
 }
 
+TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
+  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(1024));
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
+}
+/*
+TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndDifferentSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
+  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(4096));
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
+}
+
+TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto block = blockStore->tryCreate(blockId, cpputils::Data(0));
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
+  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(1024));
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
+}
+
+TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
+  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(0));
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
+}
+
+TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndBothNullSize) {
+  auto blockStore = this->fixture.createBlockStore();
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  auto block = blockStore->tryCreate(blockId, cpputils::Data(0));
+  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
+  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(0));
+  EXPECT_NE(boost::none, block);
+  EXPECT_EQ(boost::none, block2);
+}*/
+
 #include "BlockStoreTest_Size.h"
 #include "BlockStoreTest_Data.h"
 
@@ -333,7 +383,6 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     ForEachBlock_twoblocks,
     ForEachBlock_threeblocks,
     ForEachBlock_doesntListRemovedBlocks_oneblock,
-    ForEachBlock_doesntListRemovedBlocks_twoblocks,
     Resize_Larger_FromZero,
     Resize_Larger_FromZero_BlockIsStillUsable,
     Resize_Larger,
@@ -341,7 +390,14 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     Resize_Smaller,
     Resize_Smaller_BlockIsStillUsable,
     Resize_Smaller_ToZero,
-    Resize_Smaller_ToZero_BlockIsStillUsable
+    Resize_Smaller_ToZero_BlockIsStillUsable,
+    TryCreateTwoBlocksWithSameBlockIdAndSameSize
+    //TODO Just disabled because gtest doesn't allow more template parameters. Fix and reenable!
+    //     see https://github.com/google/googletest/issues/1267
+    //TryCreateTwoBlocksWithSameBlockIdAndDifferentSize,
+    //TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize,
+    //TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize,
+    //TryCreateTwoBlocksWithSameBlockIdAndBothNullSize,
 );
 
 

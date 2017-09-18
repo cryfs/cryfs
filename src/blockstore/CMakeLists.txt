@@ -5,7 +5,6 @@ set(SOURCES
   utils/IdWrapper.cpp
   utils/BlockStoreUtils.cpp
   utils/FileDoesntExistException.cpp
-  interface/helpers/BlockStoreWithRandomKeys.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
   implementations/inmemory/InMemoryBlockStore2.cpp
@@ -27,7 +26,7 @@ set(SOURCES
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
   implementations/integrity/IntegrityBlockStore2.cpp
   implementations/integrity/KnownBlockVersions.cpp
-        implementations/integrity/ClientIdAndBlockId.cpp
+  implementations/integrity/ClientIdAndBlockId.cpp
   implementations/integrity/IntegrityViolationError.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
