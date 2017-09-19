@@ -55,15 +55,17 @@ namespace cryfs {
     }
 
     uint32_t CryConfigConsole::_askBlocksizeBytes() const {
-        vector<string> sizes = {"8KB", "32KB", "64KB", "512KB", "1MB", "4MB"};
+        vector<string> sizes = {"4KB", "8KB", "16KB", "32KB", "64KB", "512KB", "1MB", "4MB"};
         int index = _console->ask("Which block size do you want to use?", sizes);
         switch(index) {
-            case 0: return 8*1024;
-            case 1: return 32*1024;
-            case 2: return 64*1024;
-            case 3: return 512*1024;
-            case 4: return 1024*1024;
-            case 5: return 4*1024*1024;
+            case 0: return 4*1024;
+            case 1: return 8*1024;
+            case 2: return 16*1024;
+            case 3: return 32*1024;
+            case 4: return 64*1024;
+            case 5: return 512*1024;
+            case 6: return 1024*1024;
+            case 7: return 4*1024*1024;
             default: ASSERT(false, "Unhandled case");
         }
     }
