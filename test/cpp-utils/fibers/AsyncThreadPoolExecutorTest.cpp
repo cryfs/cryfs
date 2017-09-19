@@ -42,8 +42,8 @@ TEST(AsyncThreadPoolExecutorTest, givenExecutorWithOneThread_whenExecutingNonBlo
 }
 
 TEST(AsyncThreadPoolExecutorTest, givenExecutorWithOneThread_whenExecutingTwoDependentTasks_thenReturnsCorrectValue) {
-    std::promise<bool> isRunningPromise;
-    std::future<bool> isRunningFuture = isRunningPromise.get_future();
+    boost::fibers::promise<bool> isRunningPromise;
+    boost::fibers::future<bool> isRunningFuture = isRunningPromise.get_future();
     std::promise<int> intermediateValuePromise;
 
     boost::fibers::promise<int> finalValuePromise;
@@ -66,15 +66,13 @@ TEST(AsyncThreadPoolExecutorTest, givenExecutorWithOneThread_whenExecutingTwoDep
         finalValuePromise.set_value(finalValue);
     }).detach();
 
-    boost::fibers::fiber([&executor, isRunningFuture = std::move(isRunningFuture), intermediateValuePromise = std::move(intermediateValuePromise)] () mutable {
-        // wait until first task is running
-        EXPECT_TRUE(isRunningFuture.get());
+    // wait until first task is running
+    EXPECT_TRUE(isRunningFuture.get());
 
-        // now the created task is blocked on the intermediate value. Create another task that supplies it.
-        executor.execute([intermediateValuePromise = std::move(intermediateValuePromise)] () mutable {
-            intermediateValuePromise.set_value(5);
-        });
-    }).detach();
+    // now the created task is blocked on the intermediate value. Create another task that supplies it.
+    executor.execute([intermediateValuePromise = std::move(intermediateValuePromise)] () mutable {
+        intermediateValuePromise.set_value(5);
+    });
 
     // wait until the final value is supplied
     int finalValue = finalValueFuture.get();
