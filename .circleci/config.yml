@@ -93,7 +93,7 @@ references:
     save_cache:
       key: v2_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
       paths:
-      - /tmp/boost_1_56_0
+      - /tmp/boost_1_62_0
   upgrade_boost: &upgrade_boost
     run:
       name: Upgrade Boost
@@ -102,9 +102,9 @@ references:
         export NUMCORES=`nproc`
         echo Using $NUMCORES cores
         # Download and prepare boost (only if not already present from cache)
-        if [ ! -d "/tmp/boost_1_56_0" ]; then
+        if [ ! -d "/tmp/boost_1_62_0" ]; then
           echo "Didn't find boost in cache. Downloading and building."
-          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.56.0/boost_1_56_0.tar.bz2/download
+          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.62.0/boost_1_62_0.tar.bz2/download
           if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "1ce9871c3a2519682538a5f1331938b948123432d99aea0ce026958cbebd25d84019a3a28c452724b9693df98a8d1264bb2d93d2fee508453f8b42836e67481e" ]; then
             echo Correct sha512sum
           else
@@ -115,14 +115,14 @@ references:
           echo Extracting...
           tar -xf /tmp/boost.tar.bz2 -C /tmp
           rm -rf boost.tar.bz2
-          cd /tmp/boost_1_56_0
+          cd /tmp/boost_1_62_0
           ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
           cd ..
         else
           echo Found boost in cache. Use cache and build.
         fi
         # Compile and install boost (if cached, this should be fast)
-        cd /tmp/boost_1_56_0
+        cd /tmp/boost_1_62_0
         sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
   build_pre: &build_pre
     restore_cache:

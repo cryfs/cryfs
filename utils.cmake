@@ -58,7 +58,7 @@ function(target_add_boost TARGET)
         set(Boost_USE_STATIC_LIBS OFF)
     endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
     set(BOOST_THREAD_VERSION 4)
-    find_package(Boost 1.56.0
+    find_package(Boost 1.62.0
             REQUIRED
             COMPONENTS ${ARGN})
     target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})

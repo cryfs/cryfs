@@ -51,12 +51,13 @@ Requirements
   - GCC version >= 4.8 or Clang >= 3.7
   - CMake version >= 2.8
   - libcurl4 (including development headers)
-  - Boost libraries version >= 1.56 (including development headers)
+  - Boost libraries version >= 1.62 (including development headers)
     - filesystem
     - system
     - chrono
     - program_options
     - thread
+    - fiber
   - Crypto++ version >= 5.6.3 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
