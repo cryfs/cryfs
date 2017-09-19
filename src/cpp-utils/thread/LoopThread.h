@@ -16,6 +16,9 @@ namespace cpputils {
         // The loopIteration callback returns true, if more iterations should be run, and false, if the thread should be terminated.
         LoopThread(std::function<bool()> loopIteration);
         ~LoopThread();
+
+        LoopThread(LoopThread&& rhs);
+
         void start();
         void stop();
 

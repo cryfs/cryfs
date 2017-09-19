@@ -7,6 +7,7 @@ set(SOURCES
         crypto/kdf/PasswordBasedKDF.cpp
         crypto/RandomPadding.cpp
         crypto/symmetric/EncryptionKey.cpp
+        fibers/AsyncThreadPoolExecutor.cpp
         process/daemonize.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp
@@ -22,6 +23,8 @@ set(SOURCES
         io/pipestream.cpp
         thread/LoopThread.cpp
         thread/ThreadSystem.cpp
+        thread/MPMCQueue.cpp
+        thread/ThreadPoolExecutor.cpp
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp
@@ -47,8 +50,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC pthread curl)
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package() instead of find_library().
 find_library_with_path(CryptoPP cryptopp CRYPTOPP_LIB_PATH)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CryptoPP} scrypt spdlog)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CryptoPP} scrypt spdlog folly)
 
-target_add_boost(${PROJECT_NAME} filesystem system thread)
+target_add_boost(${PROJECT_NAME} filesystem system thread fiber)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})

@@ -6,13 +6,19 @@ using boost::none;
 
 namespace cpputils {
 
-    LoopThread::LoopThread(function<bool()> loopIteration): _loopIteration(loopIteration), _runningHandle(none) {
+    LoopThread::LoopThread(function<bool()> loopIteration)
+        : _loopIteration(loopIteration), _runningHandle(none) {
     }
 
     LoopThread::~LoopThread() {
         if (_runningHandle != none) {
             stop();
         }
+    }
+
+    LoopThread::LoopThread(LoopThread&& rhs)
+        : _loopIteration(std::move(rhs._loopIteration)), _runningHandle(std::move(rhs._runningHandle)) {
+        rhs._runningHandle = none; // don't destroy the thread in the original destructor
     }
 
     void LoopThread::start() {

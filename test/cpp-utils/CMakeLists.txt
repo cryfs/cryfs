@@ -7,6 +7,7 @@ set(SOURCES
     crypto/kdf/SCryptTest.cpp
     crypto/kdf/SCryptParametersTest.cpp
     MacrosIncludeTest.cpp
+    fibers/AsyncThreadPoolExecutorTest.cpp
     pointer/unique_ref_test.cpp
     pointer/cast_include_test.cpp
     pointer/cast_test.cpp
@@ -20,6 +21,7 @@ set(SOURCES
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp
     tempfile/TempDirTest.cpp
+    thread/ThreadPoolExecutorTest.cpp
     network/CurlHttpClientTest.cpp
     network/FakeHttpClientTest.cpp
     io/ConsoleIncludeTest.cpp
