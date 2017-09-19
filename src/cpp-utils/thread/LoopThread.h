@@ -22,6 +22,8 @@ namespace cpputils {
     private:
         std::function<bool()> _loopIteration;
         boost::optional<ThreadSystem::Handle> _runningHandle;
+
+        DISALLOW_COPY_AND_ASSIGN(LoopThread);
     };
 }
 
