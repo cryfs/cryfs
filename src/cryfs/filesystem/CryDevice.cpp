@@ -13,6 +13,7 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
+#include <blockstore/implementations/async/AsyncBlockStore2.h>
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"
 #include "../config/CryCipher.h"
@@ -38,6 +39,7 @@ using blobstore::onblocks::BlobStoreOnBlocks;
 using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore2;
 using blockstore::integrity::IntegrityBlockStore2;
+using blockstore::async::AsyncBlockStore2;
 using gitversion::VersionCompare;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -54,6 +56,10 @@ using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using namespace cpputils::logging;
 
 namespace bf = boost::filesystem;
+
+// TODO Make dependent on number of CPU cores and/or configurable
+// TODO Figure out how many threads are actually used under high load
+constexpr size_t NUM_BLOCKSTORE_THREADS = 10;
 
 namespace cryfs {
 
@@ -95,8 +101,11 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
      make_unique_ref<LowToHighLevelBlockStore>(
-         make_unique_ref<CachingBlockStore2>(
-             std::move(integrityEncryptedBlockStore)
+         make_unique_ref<AsyncBlockStore2>(
+             make_unique_ref<CachingBlockStore2>(
+                 std::move(integrityEncryptedBlockStore)
+             ),
+             NUM_BLOCKSTORE_THREADS
          )
      ),
      configFile->config()->BlocksizeBytes());
