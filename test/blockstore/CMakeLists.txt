@@ -7,6 +7,8 @@ set(SOURCES
     interface/BlockTest.cpp
     implementations/testfake/TestFakeBlockStoreTest.cpp
     implementations/mock/MockBlockStoreTest.cpp
+    implementations/async/AsyncBlockStoreTest_Generic.cpp
+    implementations/async/AsyncBlockStoreTest_Specific.cpp
     implementations/inmemory/InMemoryBlockStoreTest.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Generic.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp

@@ -5,6 +5,7 @@ set(SOURCES
   utils/IdWrapper.cpp
   utils/BlockStoreUtils.cpp
   utils/FileDoesntExistException.cpp
+  implementations/async/AsyncBlockStore2.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
   implementations/inmemory/InMemoryBlockStore2.cpp

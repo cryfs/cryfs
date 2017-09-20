@@ -3,12 +3,13 @@
 #include <thread>
 #include <memory>
 #include <future>
+#include <condition_variable>
 #include <cpp-utils/lock/ConditionBarrier.h>
 
 using namespace blockstore::caching;
 using std::chrono::seconds;
 using std::string;
-using cpputils::ConditionBarrier;
+using ConditionBarrier = cpputils::ConditionBarrier<std::mutex, std::condition_variable>;
 using std::unique_ptr;
 using std::make_unique;
 using std::future;
