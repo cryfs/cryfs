@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <boost/optional.hpp>
+#include <boost/fiber/mutex.hpp>
 
 namespace blobstore {
 namespace onblocks {
@@ -43,7 +44,7 @@ private:
 
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> _datatree;
   mutable boost::optional<uint64_t> _sizeCache;
-  mutable std::mutex _mutex;
+  mutable boost::fibers::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(BlobOnBlocks);
 };

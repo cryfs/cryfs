@@ -26,6 +26,11 @@ public:
 
   uint32_t numChildren() const;
 
+  /*
+  //TODO This might be a better approach for leaf traverser
+  void setChild(unsigned int index, const DataNode &child_blockId);
+  void setNumChildren(unsigned int numChildren);
+  */
   void addChild(const DataNode &child_blockId);
 
   void removeLastChild();

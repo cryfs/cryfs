@@ -11,6 +11,7 @@
 #include <cpp-utils/data/Serializer.h>
 #include <mutex>
 #include <unordered_set>
+#include <boost/fiber/mutex.hpp>
 
 namespace blockstore {
     namespace integrity {
@@ -44,7 +45,7 @@ namespace blockstore {
 
             boost::filesystem::path _stateFilePath;
             uint32_t _myClientId;
-            mutable std::mutex _mutex;
+            mutable boost::fibers::mutex _mutex;
             bool _valid;
 
             static const std::string HEADER;

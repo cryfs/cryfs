@@ -5,6 +5,7 @@
 #include "../../interface/BlockStore2.h"
 #include <cpp-utils/macros.h>
 #include <unordered_map>
+#include <boost/fiber/mutex.hpp>
 
 namespace blockstore {
 namespace inmemory {
@@ -27,7 +28,7 @@ private:
   bool _tryCreate(const BlockId &blockId, const cpputils::Data &data);
 
   std::unordered_map<BlockId, cpputils::Data> _blocks;
-  mutable std::mutex _mutex;
+  mutable boost::fibers::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(InMemoryBlockStore2);
 };

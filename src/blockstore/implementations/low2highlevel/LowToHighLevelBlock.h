@@ -15,6 +15,7 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/data/DataUtils.h>
 #include <mutex>
+#include <boost/fiber/mutex.hpp>
 #include <cpp-utils/logging/logging.h>
 #include "LowToHighLevelBlockStore.h"
 
@@ -41,7 +42,7 @@ private:
   BlockStore2 *_baseBlockStore;
   cpputils::Data _data;
   bool _dataChanged;
-  std::mutex _mutex;
+  boost::fibers::mutex _mutex;
 
   void _storeToBaseBlock();
 

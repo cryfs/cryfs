@@ -8,6 +8,7 @@
 #include "FsBlob.h"
 #include "utils/DirEntryList.h"
 #include <mutex>
+#include <boost/fiber/mutex.hpp>
 
 namespace cryfs {
     namespace fsblobstore {
@@ -84,7 +85,7 @@ namespace cryfs {
             FsBlobStore *_fsBlobStore;
             std::function<off_t (const blockstore::BlockId&)> _getLstatSize;
             DirEntryList _entries;
-            mutable std::mutex _mutex;
+            mutable boost::fibers::mutex _mutex;
             bool _changed;
 
             DISALLOW_COPY_AND_ASSIGN(DirBlob);

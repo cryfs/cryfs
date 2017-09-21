@@ -20,7 +20,7 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils blockstore folly)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread)
 target_enable_style_warnings(${PROJECT_NAME})

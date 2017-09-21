@@ -101,11 +101,12 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStor
   // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
   return make_unique_ref<BlobStoreOnBlocks>(
      make_unique_ref<LowToHighLevelBlockStore>(
-         make_unique_ref<AsyncBlockStore2>(
-             make_unique_ref<CachingBlockStore2>(
-                 std::move(integrityEncryptedBlockStore)
-             ),
-             NUM_BLOCKSTORE_THREADS
+         // TODO Caching vs Async in which order?
+         make_unique_ref<CachingBlockStore2>(
+             make_unique_ref<AsyncBlockStore2>(
+                 std::move(integrityEncryptedBlockStore),
+                 NUM_BLOCKSTORE_THREADS
+             )
          )
      ),
      configFile->config()->BlocksizeBytes());

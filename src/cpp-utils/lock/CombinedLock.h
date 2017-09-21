@@ -2,6 +2,7 @@
 #define MESSMER_CPPUTILS_LOCK_COMBINEDLOCK_H
 
 #include "../macros.h"
+#include <boost/fiber/mutex.hpp>
 
 namespace cpputils {
 
@@ -11,7 +12,7 @@ namespace cpputils {
      */
     class CombinedLock final {
     public:
-        CombinedLock(std::unique_lock<std::mutex> *outer, std::unique_lock<std::mutex> *inner)
+        CombinedLock(std::unique_lock<boost::fibers::mutex> *outer, std::unique_lock<boost::fibers::mutex> *inner)
                 : _outer(outer), _inner(inner) {
         }
 
@@ -26,8 +27,8 @@ namespace cpputils {
         }
 
     private:
-        std::unique_lock<std::mutex> *_outer;
-        std::unique_lock<std::mutex> *_inner;
+        std::unique_lock<boost::fibers::mutex> *_outer;
+        std::unique_lock<boost::fibers::mutex> *_inner;
 
         DISALLOW_COPY_AND_ASSIGN(CombinedLock);
     };

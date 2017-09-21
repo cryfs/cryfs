@@ -6,6 +6,7 @@
 #include <cpp-utils/macros.h>
 #include "../caching/cache/Cache.h"
 #include <unordered_set>
+#include <boost/fiber/mutex.hpp>
 
 namespace blockstore {
 namespace caching {
@@ -50,7 +51,7 @@ private:
   friend class CachedBlock;
 
   // TODO Store CachedBlock directly, without unique_ref
-  mutable std::mutex _cachedBlocksNotInBaseStoreMutex;
+  mutable boost::fibers::mutex _cachedBlocksNotInBaseStoreMutex;
   mutable std::unordered_set<BlockId> _cachedBlocksNotInBaseStore;
   mutable Cache<BlockId, cpputils::unique_ref<CachedBlock>, 1000> _cache;
 

@@ -10,7 +10,7 @@
 
 using std::function;
 using std::unique_lock;
-using std::mutex;
+using boost::fibers::mutex;
 using cpputils::unique_ref;
 using cpputils::Data;
 using blobstore::onblocks::datanodestore::DataLeafNode;

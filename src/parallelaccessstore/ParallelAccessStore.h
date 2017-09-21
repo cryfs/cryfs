@@ -12,7 +12,7 @@
 #include <cpp-utils/macros.h>
 #include "ParallelAccessBaseStore.h"
 #include <cpp-utils/assert/assert.h>
-
+#include <boost/fiber/mutex.hpp>
 
 //TODO Refactor
 //TODO Test cases
@@ -88,7 +88,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(OpenResource);
   };
 
-  mutable std::mutex _mutex;
+  mutable boost::fibers::mutex _mutex;
   cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> _baseStore;
 
   std::unordered_map<Key, OpenResource> _openResources;
@@ -117,7 +117,7 @@ ParallelAccessStore<Resource, ResourceRef, Key>::ParallelAccessStore(cpputils::u
 
 template<class Resource, class ResourceRef, class Key>
 bool ParallelAccessStore<Resource, ResourceRef, Key>::isOpened(const Key &key) const {
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::lock_guard<boost::fibers::mutex> lock(_mutex);
   return _openResources.find(key) != _openResources.end();
 };
 
@@ -132,7 +132,7 @@ template<class Resource, class ResourceRef, class Key>
 template<class ActualResourceRef>
 cpputils::unique_ref<ActualResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef) {
   static_assert(std::is_base_of<ResourceRef, ActualResourceRef>::value, "Wrong ResourceRef type");
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::lock_guard<boost::fibers::mutex> lock(_mutex);
   return _add<ActualResourceRef>(key, std::move(resource), createResourceRef);
 }
 
@@ -156,7 +156,7 @@ cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key
 
 template<class Resource, class ResourceRef, class Key>
 cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key>::loadOrAdd(const Key &key, std::function<void (ResourceRef*)> onExists, std::function<cpputils::unique_ref<Resource> ()> onAdd, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<boost::fibers::mutex> lock(_mutex);
     auto found = _openResources.find(key);
     if (found == _openResources.end()) {
         auto resource = onAdd();
@@ -179,7 +179,7 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
 template<class Resource, class ResourceRef, class Key>
 boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource, ResourceRef, Key>::load(const Key &key, std::function<cpputils::unique_ref<ResourceRef>(Resource*)> createResourceRef) {
   //TODO This lock doesn't allow loading different blocks in parallel. Can we only lock the requested key?
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::lock_guard<boost::fibers::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   if (found == _openResources.end()) {
     auto resource = _baseStore->loadFromBaseStore(key);
@@ -202,14 +202,14 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 
   //Wait for last resource user to release it
   auto resourceToRemove = resourceToRemoveFuture.get();
-  std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+  std::lock_guard<boost::fibers::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
   _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
   _baseStore->removeFromBaseStore(std::move(resourceToRemove));
 }
 
 template<class Resource, class ResourceRef, class Key>
 std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
-    std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
+    std::lock_guard <boost::fibers::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
     auto insertResult = _resourcesToRemove.emplace(key, std::promise < cpputils::unique_ref < Resource >> ());
     ASSERT(true == insertResult.second, "Inserting failed");
     return insertResult.first->second.get_future();
@@ -222,7 +222,7 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
         auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
         //Wait for last resource user to release it
         auto resourceToRemove = resourceToRemoveFuture.get();
-        std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+        std::lock_guard<boost::fibers::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
         _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
         _baseStore->removeFromBaseStore(std::move(resourceToRemove));
     } else {
@@ -232,7 +232,7 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::release(const Key &key) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  std::lock_guard<boost::fibers::mutex> lock(_mutex);
   auto found = _openResources.find(key);
   ASSERT(found != _openResources.end(), "Didn't find key");
   found->second.releaseReference();

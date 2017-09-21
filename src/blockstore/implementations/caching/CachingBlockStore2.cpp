@@ -5,7 +5,7 @@
 
 using std::make_unique;
 using std::string;
-using std::mutex;
+using boost::fibers::mutex;
 using std::lock_guard;
 using std::piecewise_construct;
 using std::make_tuple;
@@ -17,7 +17,6 @@ using cpputils::make_unique_ref;
 using boost::optional;
 using boost::none;
 using std::unique_lock;
-using std::mutex;
 
 namespace blockstore {
 namespace caching {

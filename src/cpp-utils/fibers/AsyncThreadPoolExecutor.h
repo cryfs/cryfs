@@ -6,6 +6,8 @@
 #include <boost/fiber/future/promise.hpp>
 #include <type_traits>
 
+// TODO Replace all (reasonable) std::mutex and std::condition_variable in the codebase with fiber variants
+
 namespace cpputils {
 
 /**

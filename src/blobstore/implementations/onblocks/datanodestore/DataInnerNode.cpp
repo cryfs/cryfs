@@ -92,6 +92,17 @@ void DataInnerNode::addChild(const DataNode &child) {
   LastChild()->setBlockId(child.blockId());
 }
 
+/*
+void DataInnerNode::setChild(unsigned int index, const DataNode &child) {
+    ASSERT(numChildren() < maxStoreableChildren(), "Adding more children than we can store");
+    ASSERT(child.depth() == depth()-1, "The child that should be added has wrong depth");
+    getChild(index)->setBlockId(child.blockId());
+}
+
+void DataInnerNode::setNumChildren(unsigned int numChildren) {
+    node().setSize(numChildren);
+}*/
+
 void DataInnerNode::removeLastChild() {
   ASSERT(node().Size() > 1, "There is no child to remove");
   LastChild()->setBlockId(BlockId::Null());

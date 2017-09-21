@@ -4,6 +4,8 @@
 #include "../../datanodestore/DataInnerNode.h"
 #include "../../datanodestore/DataNodeStore.h"
 #include "../../utils/Math.h"
+#include <boost/fiber/future.hpp>
+#include <cpp-utils/lock/ConditionBarrier.h>
 
 using std::function;
 using std::vector;
@@ -15,6 +17,10 @@ using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
+using namespace cpputils::logging;
+using ConditionBarrier = cpputils::ConditionBarrier<boost::fibers::mutex, boost::fibers::condition_variable>;
+//TODO Use wait_all pattern instead of creating a set of futures and then awaiting all of them
+//TODO Think about potential race conditions here
 
 namespace blobstore {
     namespace onblocks {
@@ -120,38 +126,62 @@ namespace blobstore {
 
                 // If we traverse outside of the valid region (i.e. usually would only traverse to new leaves and not to the last leaf),
                 // we still have to descend to the last old child to fill it with leaves and grow the last old leaf.
+                vector<boost::fibers::future<bool>> tasks; // TODO future<void> possible?
+                tasks.reserve(endChild-beginChild + 1);
                 if (isLeftBorderOfTraversal && beginChild >= numChildren) {
                     ASSERT(numChildren > 0, "Node doesn't have children.");
                     auto childBlockId = root->getChild(numChildren-1)->blockId();
                     uint32_t childOffset = (numChildren-1) * leavesPerChild;
-                    _traverseExistingSubtree(childBlockId, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
-                                             [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
-                                             [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
-                                             [] (DataInnerNode* /*node*/) {ASSERT(false, "We don't actually traverse any leaves.");});
+                    tasks.emplace_back(boost::fibers::async([this, childBlockId, root, leavesPerChild, childOffset] () {
+                        _traverseExistingSubtree(childBlockId, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
+                                                 [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
+                                                 [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
+                                                 [] (DataInnerNode* /*node*/) {ASSERT(false, "We don't actually traverse any leaves.");});
+                        return true;
+                    }));
                 }
 
                 // Traverse existing children
                 for (uint32_t childIndex = beginChild; childIndex < std::min(endChild, numChildren); ++childIndex) {
-                    auto childBlockId = root->getChild(childIndex)->blockId();
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-                    bool isFirstChild = (childIndex == beginChild);
-                    bool isLastExistingChild = (childIndex == numChildren - 1);
-                    bool isLastChild = isLastExistingChild && (numChildren == endChild);
-                    ASSERT(localEndIndex <= leavesPerChild, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
-                    _traverseExistingSubtree(childBlockId, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
-                                             isRightBorderNode && isLastChild, shouldGrowLastExistingLeaf && isLastExistingChild, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                    // TODO Reduce number of lambda parameters
+                    // TODO Why does it crash if I enable async here?
+                    //tasks.emplace_back(boost::fibers::async([this, root, beginChild, endChild, childIndex, leafOffset, isLeftBorderOfTraversal, isRightBorderNode, shouldGrowLastExistingLeaf, leavesPerChild, beginIndex, endIndex, numChildren, &onExistingLeaf, &onCreateLeaf, &onBacktrackFromSubtree] () {
+                        auto childBlockId = root->getChild(childIndex)->blockId();
+                        uint32_t childOffset = childIndex * leavesPerChild;
+                        uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
+                        uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                        bool isFirstChild = (childIndex == beginChild);
+                        bool isLastExistingChild = (childIndex == numChildren - 1);
+                        bool isLastChild = isLastExistingChild && (numChildren == endChild);
+                        ASSERT(localEndIndex <= leavesPerChild, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
+                        _traverseExistingSubtree(childBlockId, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
+                                                 isRightBorderNode && isLastChild, shouldGrowLastExistingLeaf && isLastExistingChild, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+                    //    return true;
+                    //}));
                 }
 
                 // Traverse new children (including gap children, i.e. children that are created but not traversed because they're to the right of the current size, but to the left of the traversal region)
+                std::vector<boost::fibers::future<unique_ref<DataNode>>> newChildren;
+                newChildren.reserve(endChild - numChildren);
                 for (uint32_t childIndex = numChildren; childIndex < endChild; ++childIndex) {
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = std::min(leavesPerChild, utils::maxZeroSubtraction(beginIndex, childOffset));
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-                    auto leafCreator = (childIndex >= beginChild) ? onCreateLeaf : _createMaxSizeLeaf();
-                    auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, root->depth() - 1, leafCreator, onBacktrackFromSubtree);
-                    root->addChild(*child);
+                    // TODO Reduce number of lambda parameters
+                    newChildren.emplace_back(boost::fibers::async([this, root, childIndex, leavesPerChild, leafOffset, beginIndex, beginChild, endIndex, &onCreateLeaf, &onBacktrackFromSubtree] () {
+                        uint32_t childOffset = childIndex * leavesPerChild;
+                        uint32_t localBeginIndex = std::min(leavesPerChild, utils::maxZeroSubtraction(beginIndex, childOffset));
+                        uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                        auto leafCreator = (childIndex >= beginChild) ? onCreateLeaf : _createMaxSizeLeaf();
+                        auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, root->depth() - 1, leafCreator, onBacktrackFromSubtree);
+                        return child;
+                    }));
+                }
+                //LOG(INFO, "New in traverse existing tree parallelity: {}", newChildren.size());
+                for (auto& newChild : newChildren) {
+                    root->addChild(*newChild.get());
+                }
+
+                //LOG(INFO, "Traverse existing tree parallelity: {}", tasks.size());
+                for (auto& task : tasks) {
+                    task.wait();
                 }
 
                 // This is only a backtrack, if we actually visited a leaf here.
@@ -175,30 +205,43 @@ namespace blobstore {
                 uint32_t beginChild = beginIndex/leavesPerChild;
                 uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
 
-                vector<blockstore::BlockId> children;
+                vector<boost::fibers::future<blockstore::BlockId>> children;
                 children.reserve(endChild);
                 // TODO Remove redundancy of following two for loops by using min/max for calculating the parameters of the recursive call.
                 // Create gap children (i.e. children before the traversal but after the current size)
                 for (uint32_t childIndex = 0; childIndex < beginChild; ++childIndex) {
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    auto child = _createNewSubtree(leavesPerChild, leavesPerChild, leafOffset + childOffset, depth - 1,
-                                                   [] (uint32_t /*index*/)->Data {ASSERT(false, "We're only creating gap leaves here, not traversing any.");},
-                                                   [] (DataInnerNode* /*node*/) {});
-                    ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
-                    children.push_back(child->blockId());
+                    children.push_back(boost::fibers::async([this, childIndex, leavesPerChild, leafOffset, depth] () {
+                        uint32_t childOffset = childIndex * leavesPerChild;
+                        auto child = _createNewSubtree(leavesPerChild, leavesPerChild, leafOffset + childOffset,
+                                                       depth - 1,
+                                                       [](uint32_t /*index*/) -> Data { ASSERT(false, "We're only creating gap leaves here, not traversing any."); },
+                                                       [](DataInnerNode * /*node*/) {});
+                        ASSERT(child->depth() == depth - 1, "Created child node has wrong depth");
+                        return child->blockId();
+                    }));
                 }
                 // Create new children that are traversed
                 for(uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-                    auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, depth - 1, onCreateLeaf, onBacktrackFromSubtree);
-                    ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
-                    children.push_back(child->blockId());
+                    children.push_back(boost::fibers::async([this, childIndex, leavesPerChild, leafOffset, beginIndex, endIndex, depth, &onCreateLeaf, &onBacktrackFromSubtree] () {
+                        uint32_t childOffset = childIndex * leavesPerChild;
+                        uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
+                        uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                        auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset,
+                                                       depth - 1, onCreateLeaf, onBacktrackFromSubtree);
+                        ASSERT(child->depth() == depth - 1, "Created child node has wrong depth");
+                        return child->blockId();
+                    }));
                 }
 
                 ASSERT(children.size() > 0, "No children created");
-                auto newNode = _nodeStore->createNewInnerNode(depth, children);
+
+                vector<blockstore::BlockId> childrenIds;
+                childrenIds.reserve(children.size());
+                //LOG(INFO, "Create new tree parallelity: {}", children.size());
+                for (auto&& child : children) {
+                    childrenIds.push_back(child.get());
+                }
+                auto newNode = _nodeStore->createNewInnerNode(depth, childrenIds);
 
                 // This is only a backtrack, if we actually created a leaf here.
                 if (endIndex > beginIndex) {

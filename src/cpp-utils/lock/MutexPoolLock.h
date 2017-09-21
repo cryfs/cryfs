@@ -12,7 +12,7 @@ namespace cpputils {
             _pool->lock(_lockName);
         }
 
-        MutexPoolLock(LockPool<LockName> *pool, const LockName &lockName, std::unique_lock<std::mutex> *lockToFreeWhileWaiting)
+        MutexPoolLock(LockPool<LockName> *pool, const LockName &lockName, std::unique_lock<boost::fibers::mutex> *lockToFreeWhileWaiting)
                 : _pool(pool), _lockName(lockName) {
             _pool->lock(_lockName, lockToFreeWhileWaiting);
         }

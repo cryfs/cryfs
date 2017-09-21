@@ -9,6 +9,8 @@
 #include "../assert/assert.h"
 #include "../macros.h"
 #include "CombinedLock.h"
+#include <boost/fiber/mutex.hpp>
+#include <boost/fiber/condition_variable.hpp>
 
 //TODO Test
 //TODO Rename package to synchronization
@@ -21,7 +23,7 @@ namespace cpputils {
         LockPool();
         ~LockPool();
         void lock(const LockName &lockName);
-        void lock(const LockName &lockName, std::unique_lock<std::mutex> *lockToFreeWhileWaiting);
+        void lock(const LockName &lockName, std::unique_lock<boost::fibers::mutex> *lockToFreeWhileWaiting);
         void release(const LockName &lockName);
 
     private:
@@ -29,8 +31,8 @@ namespace cpputils {
         template<class OuterLock> void _lock(const LockName &lockName, OuterLock *lockToFreeWhileWaiting);
 
         std::vector<LockName> _lockedLocks;
-        std::mutex _mutex;
-        std::condition_variable_any _cv;
+        boost::fibers::mutex _mutex;
+        boost::fibers::condition_variable_any _cv;
 
         DISALLOW_COPY_AND_ASSIGN(LockPool);
     };
@@ -43,9 +45,9 @@ namespace cpputils {
     }
 
     template<class LockName>
-    inline void LockPool<LockName>::lock(const LockName &lockName, std::unique_lock<std::mutex> *lockToFreeWhileWaiting) {
+    inline void LockPool<LockName>::lock(const LockName &lockName, std::unique_lock<boost::fibers::mutex> *lockToFreeWhileWaiting) {
         ASSERT(lockToFreeWhileWaiting->owns_lock(), "Given lock must be locked");
-        std::unique_lock<std::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
+        std::unique_lock<boost::fibers::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
         // Order of locking/unlocking is important and should be the same order as everywhere else to prevent deadlocks.
         // Since when entering the function, lockToFreeWhileWaiting is already locked and mutexLock is locked afterwards,
         // the condition variable should do it in the same order. We use combinedLock for this.
@@ -56,7 +58,7 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::lock(const LockName &lockName) {
-        std::unique_lock<std::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
+        std::unique_lock<boost::fibers::mutex> mutexLock(_mutex); // TODO Is shared_lock enough here?
         _lock(lockName, &mutexLock);
         ASSERT(mutexLock.owns_lock(), "Lock hasn't been correctly relocked");
     }
@@ -79,7 +81,7 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::release(const LockName &lockName) {
-        std::unique_lock<std::mutex> mutexLock(_mutex);
+        std::unique_lock<boost::fibers::mutex> mutexLock(_mutex);
         auto found = std::find(_lockedLocks.begin(), _lockedLocks.end(), lockName);
         ASSERT(found != _lockedLocks.end(), "Lock given to release() was not locked");
         _lockedLocks.erase(found);

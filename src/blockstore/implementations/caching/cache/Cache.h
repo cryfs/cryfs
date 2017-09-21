@@ -11,6 +11,7 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/lock/MutexPoolLock.h>
 #include <cpp-utils/pointer/gcc_4_8_compatibility.h>
+#include <boost/fiber/mutex.hpp>
 
 namespace blockstore {
 namespace caching {
@@ -35,15 +36,15 @@ public:
   void flush();
 
 private:
-  void _makeSpaceForEntry(std::unique_lock<std::mutex> *lock);
-  void _deleteEntry(std::unique_lock<std::mutex> *lock);
+  void _makeSpaceForEntry(std::unique_lock<boost::fibers::mutex> *lock);
+  void _deleteEntry(std::unique_lock<boost::fibers::mutex> *lock);
   void _deleteOldEntriesParallel();
   void _deleteAllEntriesParallel();
   void _deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches);
   void _deleteMatchingEntriesAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
   bool _deleteMatchingEntryAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
 
-  mutable std::mutex _mutex;
+  mutable boost::fibers::mutex _mutex;
   cpputils::LockPool<Key> _currentlyFlushingEntries;
   QueueMap<Key, CacheEntry<Key, Value>> _cachedBlocks;
   std::unique_ptr<PeriodicTask> _timeoutFlusher;
@@ -70,7 +71,7 @@ Cache<Key, Value, MAX_ENTRIES>::~Cache() {
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 boost::optional<Value> Cache<Key, Value, MAX_ENTRIES>::pop(const Key &key) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   cpputils::MutexPoolLock<Key> lockEntryFromBeingPopped(&_currentlyFlushingEntries, key, &lock);
 
   auto found = _cachedBlocks.pop(key);
@@ -82,14 +83,14 @@ boost::optional<Value> Cache<Key, Value, MAX_ENTRIES>::pop(const Key &key) {
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::push(const Key &key, Value value) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   ASSERT(_cachedBlocks.size() <= MAX_ENTRIES, "Cache too full");
   _makeSpaceForEntry(&lock);
   _cachedBlocks.push(key, CacheEntry<Key, Value>(std::move(value)));
 }
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-void Cache<Key, Value, MAX_ENTRIES>::_makeSpaceForEntry(std::unique_lock<std::mutex> *lock) {
+void Cache<Key, Value, MAX_ENTRIES>::_makeSpaceForEntry(std::unique_lock<boost::fibers::mutex> *lock) {
   // _deleteEntry releases the lock while the Value destructor is running.
   // So we can destruct multiple entries in parallel and also call pop() or push() while doing so.
   // However, if another thread calls push() before we get the lock back, the cache is full again.
@@ -101,7 +102,7 @@ void Cache<Key, Value, MAX_ENTRIES>::_makeSpaceForEntry(std::unique_lock<std::mu
 };
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-void Cache<Key, Value, MAX_ENTRIES>::_deleteEntry(std::unique_lock<std::mutex> *lock) {
+void Cache<Key, Value, MAX_ENTRIES>::_deleteEntry(std::unique_lock<boost::fibers::mutex> *lock) {
   ASSERT(lock->owns_lock(), "The operations in this function require a locked mutex");
   auto key = _cachedBlocks.peekKey();
   ASSERT(key != boost::none, "There was no entry to delete");
@@ -153,7 +154,7 @@ template<class Key, class Value, uint32_t MAX_ENTRIES>
 bool Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntryAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
   // This function can be called in parallel by multiple threads and will then cause the Value destructors
   // to be called in parallel. The call to _deleteEntry() releases the lock while the Value destructor is running.
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   if (_cachedBlocks.size() > 0 && matches(*_cachedBlocks.peek())) {
     _deleteEntry(&lock);
     ASSERT(lock.owns_lock(), "Something strange happened with the lock. It should be locked again when we come back.");
@@ -165,7 +166,7 @@ bool Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntryAtBeginning(std::functi
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 uint32_t Cache<Key, Value, MAX_ENTRIES>::size() const {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   return _cachedBlocks.size();
 };
 

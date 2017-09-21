@@ -8,7 +8,7 @@ using std::unordered_map;
 using std::pair;
 using std::string;
 using std::unique_lock;
-using std::mutex;
+using boost::fibers::mutex;
 using boost::optional;
 using boost::none;
 using cpputils::Data;

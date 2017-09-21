@@ -7,7 +7,7 @@ using cpputils::make_unique_ref;
 using cpputils::Data;
 namespace DataUtils = cpputils::DataUtils;
 using std::unique_lock;
-using std::mutex;
+using boost::fibers::mutex;
 
 namespace blockstore {
 namespace lowtohighlevel {

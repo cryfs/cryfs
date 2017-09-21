@@ -9,6 +9,7 @@
 #include <cpp-utils/data/DataUtils.h>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <mutex>
+#include <boost/fiber/mutex.hpp>
 
 namespace blockstore {
 class BlockStore;
@@ -40,7 +41,7 @@ private:
 
   cpputils::unique_ref<Block> _baseBlock;
   cpputils::Data _decompressedData;
-  std::mutex _mutex;
+  boost::fibers::mutex _mutex;
   bool _dataChanged;
 
   DISALLOW_COPY_AND_ASSIGN(CompressedBlock);
@@ -82,7 +83,7 @@ CompressedBlock<Compressor>::CompressedBlock(cpputils::unique_ref<Block> baseBlo
 
 template<class Compressor>
 CompressedBlock<Compressor>::~CompressedBlock() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   _compressToBaseBlock();
 }
 
@@ -99,7 +100,7 @@ void CompressedBlock<Compressor>::write(const void *source, uint64_t offset, uin
 
 template<class Compressor>
 void CompressedBlock<Compressor>::flush() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   _compressToBaseBlock();
   return _baseBlock->flush();
 }
@@ -117,7 +118,7 @@ void CompressedBlock<Compressor>::resize(size_t newSize) {
 
 template<class Compressor>
 cpputils::unique_ref<Block> CompressedBlock<Compressor>::releaseBaseBlock() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<boost::fibers::mutex> lock(_mutex);
   _compressToBaseBlock();
   return std::move(_baseBlock);
 }
