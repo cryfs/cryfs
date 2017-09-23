@@ -3,7 +3,7 @@
 #include <gitversion/gitversion.h>
 #include <cpp-utils/random/Random.h>
 #include <cryfs/localstate/LocalStateDir.h>
-#include <cryfs/localstate/MyClientId.h>
+#include <cryfs/localstate/LocalStateMetadata.h>
 
 using cpputils::Console;
 using cpputils::unique_ref;
@@ -30,7 +30,8 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobId());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetFilesystemId(_generateFilesystemID());
-        uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config.FilesystemId())).loadOrGenerate();
+        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()));
+        uint32_t myClientId = localState.myClientId();
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
 #ifndef CRYFS_NO_COMPATIBILITY
         config.SetHasVersionNumbers(true);

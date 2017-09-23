@@ -7,7 +7,7 @@
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
 #include "../localstate/LocalStateDir.h"
-#include "../localstate/MyClientId.h"
+#include "../localstate/LocalStateMetadata.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -57,7 +57,8 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(const b
     config->save();
   }
   _checkCipher(*config->config());
-  uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config->config()->FilesystemId())).loadOrGenerate();
+  auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config->config()->FilesystemId()));
+  uint32_t myClientId = localState.myClientId();
   _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
   return ConfigLoadResult {std::move(*config), myClientId};
 }

@@ -19,7 +19,6 @@
 #include <cpp-utils/system/homedir.h>
 #include <gitversion/VersionCompare.h>
 #include <blockstore/interface/BlockStore2.h>
-#include "cryfs/localstate/MyClientId.h"
 #include "cryfs/localstate/LocalStateDir.h"
 
 using std::string;

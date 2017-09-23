@@ -40,8 +40,8 @@ set(LIB_SOURCES
         filesystem/cachingfsblobstore/SymlinkBlobRef.cpp
         filesystem/CryFile.cpp
         filesystem/CryDevice.cpp
-        localstate/MyClientId.cpp
         localstate/LocalStateDir.cpp
+        localstate/LocalStateMetadata.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})
