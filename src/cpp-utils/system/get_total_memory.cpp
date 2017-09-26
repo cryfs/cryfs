@@ -1,6 +1,6 @@
 #include "get_total_memory.h"
-#include <sys/sysctl.h>
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <unistd.h>
 #include <stdexcept>
 
