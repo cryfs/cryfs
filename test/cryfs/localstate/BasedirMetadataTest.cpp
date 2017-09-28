@@ -36,32 +36,32 @@ public:
 };
 
 TEST_F(BasedirMetadataTest, givenEmptyState_whenCalled_thenSucceeds) {
-  EXPECT_TRUE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id1));
+  EXPECT_TRUE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id1));
 }
 
 TEST_F(BasedirMetadataTest, givenStateWithBasedir_whenCalledForDifferentBasedir_thenSucceeds) {
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir2, id1);
-  EXPECT_TRUE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id1));
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir2, id1).save();
+  EXPECT_TRUE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id1));
 }
 
 TEST_F(BasedirMetadataTest, givenStateWithBasedir_whenCalledWithSameId_thenSucceeds) {
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id1);
-  EXPECT_TRUE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id1));
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id1).save();
+  EXPECT_TRUE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id1));
 }
 
 TEST_F(BasedirMetadataTest, givenStateWithBasedir_whenCalledWithDifferentId_thenFails) {
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id2);
-  EXPECT_FALSE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id1));
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id2).save();
+  EXPECT_FALSE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id1));
 }
 
 TEST_F(BasedirMetadataTest, givenStateWithUpdatedBasedir_whenCalledWithSameId_thenSucceeds) {
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id2);
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id1);
-  EXPECT_TRUE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id1));
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id2).save();
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id1).save();
+  EXPECT_TRUE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id1));
 }
 
 TEST_F(BasedirMetadataTest, givenStateWithUpdatedBasedir_whenCalledWithDifferentId_thenFails) {
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id2);
-  BasedirMetadata::updateFilesystemIdForBasedir(basedir1, id1);
-  EXPECT_FALSE(BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir1, id2));
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id2).save();
+  BasedirMetadata::load().updateFilesystemIdForBasedir(basedir1, id1).save();
+  EXPECT_FALSE(BasedirMetadata::load().filesystemIdForBasedirIsCorrect(basedir1, id2));
 }

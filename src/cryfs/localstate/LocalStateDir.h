@@ -11,7 +11,7 @@ namespace cryfs {
     class LocalStateDir final {
     public:
         static boost::filesystem::path forFilesystemId(const CryConfig::FilesystemID &filesystemId);
-        static boost::filesystem::path forMapFromBasedirToConfigFiles();
+        static boost::filesystem::path forBasedirMetadata();
 
         // Use this from test cases to not pollute local config
         // TODO Make test cases call this

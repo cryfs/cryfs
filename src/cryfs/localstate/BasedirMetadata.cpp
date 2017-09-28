@@ -15,68 +15,57 @@ using std::ostream;
 using std::istream;
 using std::ifstream;
 using std::ofstream;
+using std::string;
 
 namespace cryfs {
 
 namespace {
-bf::path _localStateConfigFile(const bf::path& basedir) {
-  std::string basedir_id;
-  CryptoPP::SHA512 hash;
-  CryptoPP::StringSource(bf::canonical(basedir).native(), true,
-      new CryptoPP::HashFilter(hash,
-          new CryptoPP::HexEncoder(
-              new CryptoPP::StringSink(basedir_id)
-          )
-      )
-  );
-  return LocalStateDir::forMapFromBasedirToConfigFiles() / basedir_id;
-}
 
-void _serialize(ostream& stream, const CryConfig::FilesystemID& filesystemId) {
-  ptree pt;
-  pt.put<std::string>("filesystemId", filesystemId.ToString());
+ptree _load(const bf::path &metadataFilePath) {
+  ptree result;
 
-  write_json(stream, pt);
-}
-
-CryConfig::FilesystemID _deserialize(istream& stream) {
-  ptree pt;
-  read_json(stream, pt);
-
-  std::string filesystemId = pt.get<std::string>("filesystemId");
-
-  return CryConfig::FilesystemID::FromString(filesystemId);
-}
-
-optional<CryConfig::FilesystemID> _load(const bf::path &metadataFilePath) {
   ifstream file(metadataFilePath.native());
-  if (!file.good()) {
-    // State file doesn't exist
-    return none;
+  if (file.good()) {
+    read_json(file, result);
   }
-  return _deserialize(file);
+
+  return result;
 }
 
-void _save(const bf::path &metadataFilePath, const CryConfig::FilesystemID& filesystemId) {
+void _save(const bf::path &metadataFilePath, const ptree& data) {
   ofstream file(metadataFilePath.native(), std::ios::trunc);
-  _serialize(file, filesystemId);
+  write_json(file, data);
+}
+
+string jsonPathForBasedir(const bf::path &basedir) {
+  return bf::canonical(basedir).native() + ".filesystemId";
 }
 
 }
 
-bool BasedirMetadata::filesystemIdForBasedirIsCorrect(const bf::path &basedir, const CryConfig::FilesystemID &filesystemId) {
-  auto metadataFile = _localStateConfigFile(basedir);
-  auto loaded = _load(metadataFile);
-  if (loaded == none) {
-    // Local state not known. Possibly the file system is currently being created.
-    return true;
+BasedirMetadata::BasedirMetadata(ptree data)
+  :_data(std::move(data)) {}
+
+BasedirMetadata BasedirMetadata::load() {
+  return BasedirMetadata(_load(LocalStateDir::forBasedirMetadata()));
+}
+
+void BasedirMetadata::save() {
+  _save(LocalStateDir::forBasedirMetadata(), _data);
+}
+
+bool BasedirMetadata::filesystemIdForBasedirIsCorrect(const bf::path &basedir, const CryConfig::FilesystemID &filesystemId) const {
+  auto entry = _data.get_optional<string>(jsonPathForBasedir(basedir));
+  if (entry == boost::none) {
+    return true; // Basedir not known in local state yet.
   }
-  return loaded == filesystemId;
+  auto filesystemIdFromState = CryConfig::FilesystemID::FromString(*entry);
+  return filesystemIdFromState == filesystemId;
 }
 
-void BasedirMetadata::updateFilesystemIdForBasedir(const bf::path &basedir, const CryConfig::FilesystemID &filesystemId) {
-  auto metadataFile = _localStateConfigFile(basedir);
-  _save(metadataFile, filesystemId);
+BasedirMetadata& BasedirMetadata::updateFilesystemIdForBasedir(const bf::path &basedir, const CryConfig::FilesystemID &filesystemId) {
+  _data.put<string>(jsonPathForBasedir(basedir), filesystemId.ToString());
+  return *this;
 }
 
 }

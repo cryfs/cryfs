@@ -14,18 +14,17 @@ namespace cryfs {
     }
 
     bf::path LocalStateDir::forFilesystemId(const CryConfig::FilesystemID &filesystemId) {
-        _createDirIfNotExists(appDir());
-        bf::path filesystems_dir = appDir() / "filesystems";
-        _createDirIfNotExists(filesystems_dir);
-        bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
-        _createDirIfNotExists(this_filesystem_dir);
-        return this_filesystem_dir;
+      _createDirIfNotExists(appDir());
+      bf::path filesystems_dir = appDir() / "filesystems";
+      _createDirIfNotExists(filesystems_dir);
+      bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
+      _createDirIfNotExists(this_filesystem_dir);
+      return this_filesystem_dir;
     }
 
-    bf::path LocalStateDir::forMapFromBasedirToConfigFiles() {
-      bf::path result = appDir() / "map_basedir_initialconfigfile";
-      _createDirIfNotExists(result);
-      return result;
+    bf::path LocalStateDir::forBasedirMetadata() {
+      _createDirIfNotExists(appDir());
+      return appDir() / "basedirs";
     }
 
     void LocalStateDir::_createDirIfNotExists(const bf::path &path) {

@@ -198,14 +198,16 @@ namespace cryfs {
     }
 
     void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config) {
-        if (!BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
+      auto basedirMetadata = BasedirMetadata::load();
+        if (!basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
           if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
             throw std::runtime_error(
                 "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.");
           }
         }
         // Update local state (or create it if it didn't exist yet)
-        BasedirMetadata::updateFilesystemIdForBasedir(basedir, config.config()->FilesystemId());
+        basedirMetadata.updateFilesystemIdForBasedir(basedir, config.config()->FilesystemId());
+        basedirMetadata.save();
     }
 
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
