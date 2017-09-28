@@ -67,7 +67,7 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
   uint32_t value;
   file >> value;
   file.close();
-  //bf::remove(myClientIdFile);
+  bf::remove(myClientIdFile);
   return value;
 }
 #endif

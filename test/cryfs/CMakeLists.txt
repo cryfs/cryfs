@@ -17,7 +17,8 @@ set(SOURCES
     filesystem/CryFsTest.cpp
     filesystem/CryNodeTest.cpp
     filesystem/FileSystemTest.cpp
-        localstate/LocalStateMetadataTest.cpp
+    localstate/LocalStateMetadataTest.cpp
+    localstate/BasedirMetadataTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

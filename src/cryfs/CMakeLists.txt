@@ -42,6 +42,7 @@ set(LIB_SOURCES
         filesystem/CryDevice.cpp
         localstate/LocalStateDir.cpp
         localstate/LocalStateMetadata.cpp
+        localstate/BasedirMetadata.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})

@@ -21,6 +21,8 @@
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/localstate/LocalStateDir.h>
+#include <cryfs/localstate/BasedirMetadata.h>
 #include "Environment.h"
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
@@ -195,6 +197,17 @@ namespace cryfs {
         return *configFile;
     }
 
+    void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config) {
+        if (!BasedirMetadata::filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
+          if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
+            throw std::runtime_error(
+                "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.");
+          }
+        }
+        // Update local state (or create it if it didn't exist yet)
+        BasedirMetadata::updateFilesystemIdForBasedir(basedir, config.config()->FilesystemId());
+    }
+
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
@@ -203,6 +216,7 @@ namespace cryfs {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
             }
+            _checkConfigIntegrity(options.baseDir(), config->configFile);
             return std::move(*config);
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
