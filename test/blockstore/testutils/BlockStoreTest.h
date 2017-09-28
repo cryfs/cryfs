@@ -285,7 +285,7 @@ TYPED_TEST_P(BlockStoreTest, Resize_Smaller_ToZero_BlockIsStillUsable) {
   block->resize(0);
   this->TestBlockIsUsable(std::move(block), blockStore.get());
 }
-
+/*
 TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
   auto blockStore = this->fixture.createBlockStore();
   blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
@@ -295,7 +295,7 @@ TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
   EXPECT_NE(boost::none, block);
   EXPECT_EQ(boost::none, block2);
 }
-/*
+
 TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndDifferentSize) {
   auto blockStore = this->fixture.createBlockStore();
   blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
@@ -383,6 +383,7 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     ForEachBlock_twoblocks,
     ForEachBlock_threeblocks,
     ForEachBlock_doesntListRemovedBlocks_oneblock,
+    ForEachBlock_doesntListRemovedBlocks_twoblocks,
     Resize_Larger_FromZero,
     Resize_Larger_FromZero_BlockIsStillUsable,
     Resize_Larger,
@@ -390,10 +391,10 @@ REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
     Resize_Smaller,
     Resize_Smaller_BlockIsStillUsable,
     Resize_Smaller_ToZero,
-    Resize_Smaller_ToZero_BlockIsStillUsable,
-    TryCreateTwoBlocksWithSameBlockIdAndSameSize
+    Resize_Smaller_ToZero_BlockIsStillUsable
     //TODO Just disabled because gtest doesn't allow more template parameters. Fix and reenable!
     //     see https://github.com/google/googletest/issues/1267
+    //TryCreateTwoBlocksWithSameBlockIdAndSameSize,
     //TryCreateTwoBlocksWithSameBlockIdAndDifferentSize,
     //TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize,
     //TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize,
