@@ -2,6 +2,7 @@ Version 0.9.8 (unreleased)
 --------------
 Compatibility:
 * Runs on Debian with FreeBSD kernel
+* Runs on FreeBSD 11.1
 * Works with Crypto++ 6.0
 
 Fixed bugs:
