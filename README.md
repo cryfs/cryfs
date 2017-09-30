@@ -10,7 +10,7 @@ Easy install (Ubuntu 17.04 and later, Debian Stretch and later)
 
     sudo apt install cryfs
 
-Manual install (Ubuntu)
+Manual install (older Ubuntu versions)
 -----------------------
 
     # Add apt key
@@ -23,7 +23,7 @@ Manual install (Ubuntu)
     sudo apt-get update
     sudo apt-get install cryfs
 
-Manual install (Debian)
+Manual install (older Debian versions)
 -----------------------
     # Add apt key
     wget -O - https://www.cryfs.org/apt.key | sudo apt-key add -
