@@ -102,7 +102,7 @@ public:
     }
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto cfg = CryConfigFile::load(file.path(), password).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -121,7 +121,7 @@ public:
     }
 
     void ChangeFilesystemID(const CryConfig::FilesystemID &filesystemId, const string& password = "mypassword") {
-      auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+      auto cfg = CryConfigFile::load(file.path(), password).value();
       cfg.config()->SetFilesystemId(filesystemId);
       cfg.save();
     }
