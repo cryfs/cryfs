@@ -12,8 +12,9 @@
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/network/FakeHttpClient.h>
 #include "../../cryfs/testutils/MockConsole.h"
+#include "../../cryfs/testutils/TestWithFakeHomeDirectory.h"
 
-class CliTest : public ::testing::Test {
+class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:
     CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
 
