@@ -98,7 +98,11 @@ public:
         FakeRandomGenerator generator(Data::FromString(encKey));
         auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
                                       askPassword, none, none, none);
-        auto cfg = loader.loadOrCreate(file.path()).value().configFile;
+        loader.loadOrCreate(file.path()).value().configFile;
+    }
+
+    void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
+        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -114,6 +118,12 @@ public:
         auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
+    }
+
+    void ChangeFilesystemID(const CryConfig::FilesystemID &filesystemId, const string& password = "mypassword") {
+      auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+      cfg.config()->SetFilesystemId(filesystemId);
+      cfg.save();
     }
 
     string olderVersion() {
@@ -199,6 +209,15 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
     CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
     auto loaded = Load().value();
     EXPECT_EQ("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3", loaded.config()->EncryptionKey());
+}
+
+TEST_F(CryConfigLoaderTest, EncryptionKey_Load_whenKeyChanged_thenFails) {
+  CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
+  ChangeEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E4");
+  EXPECT_THROW(
+      Load(),
+      std::runtime_error
+  );
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
@@ -313,8 +332,3 @@ TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
     uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path()).value().myClientId;
     EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path()).value().myClientId);
 }
-
-// TODO Test behavior if
-//   - filesystem id changed
-//   - filesystem id correct but encryption key changed
-// TODO Add cryfs-cli tests for the same thing

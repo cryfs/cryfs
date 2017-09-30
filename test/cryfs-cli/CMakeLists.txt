@@ -11,6 +11,7 @@ set(SOURCES
     CliTest_ShowingHelp.cpp
     EnvironmentTest.cpp
     VersionCheckerTest.cpp
+    IntegrityCheckTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

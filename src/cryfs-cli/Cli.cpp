@@ -108,7 +108,7 @@ namespace cryfs {
     }
 
     void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
-        VersionChecker versionChecker(std::move(httpClient));
+        VersionChecker versionChecker(httpClient.get());
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;

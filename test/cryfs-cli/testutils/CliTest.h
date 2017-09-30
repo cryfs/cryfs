@@ -26,8 +26,8 @@ public:
     cpputils::TempFile configfile;
     std::shared_ptr<MockConsole> console;
 
-    std::shared_ptr<cpputils::HttpClient> _httpClient() {
-        std::shared_ptr<cpputils::FakeHttpClient> httpClient = std::make_shared<cpputils::FakeHttpClient>();
+    cpputils::unique_ref<cpputils::HttpClient> _httpClient() {
+        cpputils::unique_ref<cpputils::FakeHttpClient> httpClient = cpputils::make_unique_ref<cpputils::FakeHttpClient>();
         httpClient->addWebsite("https://www.cryfs.org/version_info.json", "{\"version_info\":{\"current\":\"0.8.5\"}}");
         return httpClient;
     }
@@ -44,7 +44,7 @@ public:
         std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
         std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
         // Run Cryfs
-        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console, _httpClient()).main(_args.size(), _args.data());
+        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient());
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message = "") {

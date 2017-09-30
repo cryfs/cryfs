@@ -12,12 +12,12 @@ namespace cryfs {
     class VersionChecker final {
     public:
         //TODO Write a cpputils::shared_ref and use it
-        VersionChecker(cpputils::unique_ref<cpputils::HttpClient> httpClient);
+        VersionChecker(cpputils::HttpClient* httpClient);
 
         boost::optional<std::string> newestVersion() const;
         boost::optional<std::string> securityWarningFor(const std::string &version) const;
     private:
-        static boost::optional<boost::property_tree::ptree> _getVersionInfo(cpputils::unique_ref<cpputils::HttpClient> httpClient);
+        static boost::optional<boost::property_tree::ptree> _getVersionInfo(cpputils::HttpClient* httpClient);
         static boost::optional<boost::property_tree::ptree> _parseJson(const std::string &json);
 
         boost::optional<boost::property_tree::ptree> _versionInfo;
