@@ -14,23 +14,30 @@ using std::ifstream;
 using std::ofstream;
 using std::istream;
 using std::ostream;
-using cpputils::Random;
+using std::string;
 using blockstore::integrity::KnownBlockVersions;
+using cpputils::hash::Hash;
+using cpputils::Data;
+using cpputils::Random;
 namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-LocalStateMetadata::LocalStateMetadata(uint32_t myClientId)
-: _myClientId(myClientId) {}
+LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
+: _myClientId(myClientId), _encryptionKeyHash(std::move(encryptionKeyHash)) {}
 
-LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath) {
+LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey) {
   auto metadataFile = statePath / "metadata";
   auto loaded = _load(metadataFile);
-  if (loaded != none) {
-      return *loaded;
+  if (loaded == none) {
+    // If it couldn't be loaded, generate a new client id.
+    return _generate(metadataFile, encryptionKey);
   }
-  // If it couldn't be loaded, generate a new client id.
-  return _generate(metadataFile);
+
+  if (loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
+    throw std::runtime_error("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?");
+  }
+  return *loaded;
 }
 
 optional<LocalStateMetadata> LocalStateMetadata::_load(const bf::path &metadataFilePath) {
@@ -73,7 +80,7 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
 #endif
 }
 
-LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePath) {
+LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePath, const Data& encryptionKey) {
   uint32_t myClientId = _generateClientId();
 #ifndef CRYFS_NO_COMPATIBILITY
   // In the old format, this was stored in a "myClientId" file. If that file exists, load it from there.
@@ -83,7 +90,7 @@ LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePat
   }
 #endif
 
-  LocalStateMetadata result(myClientId);
+  LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey, cpputils::hash::generateSalt()));
   result._save(metadataFilePath);
   return result;
 }
@@ -91,6 +98,8 @@ LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePat
 void LocalStateMetadata::_serialize(ostream& stream) const {
   ptree pt;
   pt.put<uint32_t>("myClientId", myClientId());
+  pt.put<string>("encryptionKey.salt", _encryptionKeyHash.salt.ToString());
+  pt.put<string>("encryptionKey.hash", _encryptionKeyHash.digest.ToString());
 
   write_json(stream, pt);
 }
@@ -100,9 +109,13 @@ LocalStateMetadata LocalStateMetadata::_deserialize(istream& stream) {
   read_json(stream, pt);
 
   uint32_t myClientId = pt.get<uint32_t>("myClientId");
+  string encryptionKeySalt = pt.get<string>("encryptionKey.salt");
+  string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
 
-  return LocalStateMetadata(myClientId);
+  return LocalStateMetadata(myClientId, Hash{
+      .digest = cpputils::hash::Digest::FromString(std::move(encryptionKeyDigest)),
+      .salt = cpputils::hash::Salt::FromString(std::move(encryptionKeySalt))
+  });
 }
-
 
 }

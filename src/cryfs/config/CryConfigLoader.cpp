@@ -57,7 +57,7 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(const b
     config->save();
   }
   _checkCipher(*config->config());
-  auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config->config()->FilesystemId()));
+  auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()));
   uint32_t myClientId = localState.myClientId();
   _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
   return ConfigLoadResult {std::move(*config), myClientId};

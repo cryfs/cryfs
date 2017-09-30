@@ -7,6 +7,7 @@ set(SOURCES
         crypto/kdf/PasswordBasedKDF.cpp
         crypto/RandomPadding.cpp
         crypto/symmetric/EncryptionKey.cpp
+        crypto/hash/Hash.cpp
         process/daemonize.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp

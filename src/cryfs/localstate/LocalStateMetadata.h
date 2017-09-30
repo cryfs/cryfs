@@ -5,26 +5,28 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
 #include <iostream>
+#include <cpp-utils/crypto/hash/Hash.h>
 
 namespace cryfs {
 
 class LocalStateMetadata final {
 public:
 
-  static LocalStateMetadata loadOrGenerate(const boost::filesystem::path &statePath);
+  static LocalStateMetadata loadOrGenerate(const boost::filesystem::path &statePath, const cpputils::Data& encryptionKey);
 
   uint32_t myClientId() const;
 
 private:
-  LocalStateMetadata(uint32_t myClientId);
+  const uint32_t _myClientId;
+  const cpputils::hash::Hash _encryptionKeyHash;
 
   static boost::optional<LocalStateMetadata> _load(const boost::filesystem::path &metadataFilePath);
   static LocalStateMetadata _deserialize(std::istream& stream);
-  static LocalStateMetadata _generate(const boost::filesystem::path &metadataFilePath);
+  static LocalStateMetadata _generate(const boost::filesystem::path &metadataFilePath, const cpputils::Data& encryptionKey);
   void _save(const boost::filesystem::path &metadataFilePath) const;
   void _serialize(std::ostream& stream) const;
 
-  const uint32_t _myClientId;
+  LocalStateMetadata(uint32_t myClientId, cpputils::hash::Hash encryptionKey);
 };
 
 inline uint32_t LocalStateMetadata::myClientId() const {

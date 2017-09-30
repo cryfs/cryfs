@@ -1,5 +1,7 @@
 #include "Data.h"
 #include <stdexcept>
+#include <cryptopp/hex.h>
+#include <cpp-utils/crypto/cryptopp_byte.h>
 
 using std::istream;
 using std::ofstream;
@@ -39,6 +41,28 @@ std::streampos Data::_getStreamSize(istream &stream) {
 Data Data::LoadFromStream(istream &stream, size_t size) {
   Data result(size);
   stream.read(static_cast<char*>(result.data()), result.size());
+  return result;
+}
+
+Data Data::FromString(const std::string &data) {
+  ASSERT(data.size() % 2 == 0, "hex encoded data cannot have odd number of characters");
+  Data result(data.size() / 2);
+  CryptoPP::StringSource(data, true,
+    new CryptoPP::HexDecoder(
+      new CryptoPP::ArraySink((CryptoPP::byte*)result._data, result.size())
+    )
+  );
+  return result;
+}
+
+std::string Data::ToString() const {
+  std::string result;
+  CryptoPP::ArraySource((CryptoPP::byte*)_data, _size, true,
+    new CryptoPP::HexEncoder(
+        new CryptoPP::StringSink(result)
+    )
+  );
+  ASSERT(result.size() == 2 * _size, "Created wrongly sized string");
   return result;
 }
 

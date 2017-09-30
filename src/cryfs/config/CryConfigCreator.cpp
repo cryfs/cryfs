@@ -28,10 +28,11 @@ namespace cryfs {
         config.SetCreatedWithVersion(gitversion::VersionString());
         config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
         config.SetRootBlob(_generateRootBlobId());
-        config.SetEncryptionKey(_generateEncKey(config.Cipher()));
         config.SetFilesystemId(_generateFilesystemID());
-        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()));
+        auto encryptionKey = _generateEncKey(config.Cipher());
+        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey));
         uint32_t myClientId = localState.myClientId();
+        config.SetEncryptionKey(std::move(encryptionKey));
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
 #ifndef CRYFS_NO_COMPATIBILITY
         config.SetHasVersionNumbers(true);
