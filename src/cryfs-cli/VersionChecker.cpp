@@ -8,17 +8,16 @@
 using boost::optional;
 using boost::none;
 using std::string;
-using std::shared_ptr;
-using std::make_shared;
 using cpputils::HttpClient;
 using cpputils::CurlHttpClient;
 using boost::property_tree::ptree;
 using boost::property_tree::json_parser_error;
+using cpputils::unique_ref;
 using namespace cpputils::logging;
 
 namespace cryfs {
 
-    VersionChecker::VersionChecker(shared_ptr<HttpClient> httpClient)
+    VersionChecker::VersionChecker(unique_ref<HttpClient> httpClient)
             : _versionInfo(_getVersionInfo(std::move(httpClient))) {
     }
 
@@ -49,7 +48,7 @@ namespace cryfs {
         return none;
     }
 
-    optional<ptree> VersionChecker::_getVersionInfo(shared_ptr<HttpClient> httpClient) {
+    optional<ptree> VersionChecker::_getVersionInfo(unique_ref<HttpClient> httpClient) {
         long timeoutMsec = 2000;
         optional<string> response = httpClient->get("https://www.cryfs.org/version_info.json", timeoutMsec);
         if (response == none) {

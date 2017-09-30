@@ -72,8 +72,8 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false) {
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
             _console = make_shared<NoninteractiveConsole>(console);
@@ -82,7 +82,7 @@ namespace cryfs {
         }
     }
 
-    void Cli::_showVersion() {
+    void Cli::_showVersion(unique_ref<HttpClient> httpClient) {
         cout << "CryFS Version " << gitversion::VersionString() << endl;
         if (gitversion::IsDevVersion()) {
             cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
@@ -99,7 +99,7 @@ namespace cryfs {
         } else if (Environment::isNoninteractive()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
         } else {
-            _checkForUpdates();
+            _checkForUpdates(std::move(httpClient));
         }
 #else
 # warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
@@ -107,8 +107,8 @@ namespace cryfs {
         cout << endl;
     }
 
-    void Cli::_checkForUpdates() {
-        VersionChecker versionChecker(_httpClient);
+    void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
+        VersionChecker versionChecker(std::move(httpClient));
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;
@@ -378,9 +378,9 @@ namespace cryfs {
         return false;
     }
 
-    int Cli::main(int argc, const char *argv[]) {
+    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient) {
         cpputils::showBacktraceOnSigSegv();
-        _showVersion();
+        _showVersion(std::move(httpClient));
 
         ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
 
