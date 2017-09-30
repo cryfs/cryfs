@@ -281,7 +281,18 @@ TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
     EXPECT_NE(boost::none, Load());
 }
 
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(0);
 
+    CreateWithVersion(gitversion::VersionString());
+    EXPECT_NE(boost::none, Load());
+}
+
+TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(false));
+
+    string version = olderVersion();
+    CreateWithVersion(version);
     try {
         Load();
         EXPECT_TRUE(false); // expect throw
@@ -296,18 +307,7 @@ TEST_F(CryConfigLoaderTest, MyClientIdIsIndeterministic) {
     uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path()).value().myClientId;
     EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path()).value().myClientId);
 }
-TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
-  EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(0);
 
-  CreateWithVersion(gitversion::VersionString());
-  EXPECT_NE(boost::none, Load());
-}
-
-TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
-  EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(false));
-
-  string version = olderVersion();
-  CreateWithVersion(version);
 TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
     TempFile file(false);
     uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path()).value().myClientId;
