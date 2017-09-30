@@ -15,6 +15,7 @@ using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::SCrypt;
 using cpputils::DataFixture;
+using cpputils::Data;
 using cpputils::NoninteractiveConsole;
 using boost::optional;
 using boost::none;
@@ -34,6 +35,20 @@ namespace boost {
     }
 }
 #include <boost/optional/optional_io.hpp>
+
+class FakeRandomGenerator final : public cpputils::RandomGenerator {
+public:
+  FakeRandomGenerator(Data output)
+      : _output(std::move(output)) {}
+
+  void _get(void *target, size_t bytes) override {
+    ASSERT_EQ(_output.size(), bytes);
+    std::memcpy(target, _output.data(), bytes);
+  }
+
+private:
+  Data _output;
+};
 
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
@@ -79,7 +94,11 @@ public:
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto askPassword = [password] { return password;};
+        FakeRandomGenerator generator(Data::FromString(encKey));
+        auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
+                                      askPassword, none, none, none);
+        auto cfg = loader.loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -177,9 +196,9 @@ TEST_F(CryConfigLoaderTest, RootBlob_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
-    CreateWithEncryptionKey("encryptionkey");
+    CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
     auto loaded = Load().value();
-    EXPECT_EQ("encryptionkey", loaded.config()->EncryptionKey());
+    EXPECT_EQ("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3", loaded.config()->EncryptionKey());
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
