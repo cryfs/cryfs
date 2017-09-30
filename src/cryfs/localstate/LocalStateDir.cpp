@@ -6,10 +6,8 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
     namespace {
-      // TODO constexpr?
-      bf::path& appDir() {
-        static bf::path singleton = cpputils::system::HomeDirectory::get() / ".cryfs";
-        return singleton;
+      bf::path appDir() {
+        return cpputils::system::HomeDirectory::get() / ".cryfs";
       }
     }
 
@@ -31,9 +29,5 @@ namespace cryfs {
         if (!bf::exists(path)) {
             bf::create_directories(path);
         }
-    }
-
-    void LocalStateDir::setAppDir(boost::filesystem::path path) {
-      appDir() = std::move(path);
     }
 }

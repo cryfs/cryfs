@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cryfs/config/CryConfigLoader.h>
 #include "../testutils/MockConsole.h"
+#include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
@@ -34,7 +35,7 @@ namespace boost {
 }
 #include <boost/optional/optional_io.hpp>
 
-class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
+class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
     CryConfigLoaderTest(): file(false) {
         console = mockConsole();
