@@ -7,7 +7,7 @@ references:
     run:
       name: Initialize Cache
       command: |
-        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}" > /tmp/_build_env_vars
+        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}_${CXXFLAGS}" > /tmp/_build_env_vars
         echo Build env vars used for cache keys:
         cat /tmp/_build_env_vars
   container_setup_pre: &container_setup_pre
