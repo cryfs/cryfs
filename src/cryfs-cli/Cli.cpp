@@ -213,7 +213,7 @@ namespace cryfs {
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(), options.missingBlockIsIntegrityViolation());
+            auto config = _loadOrCreateConfigFile(std::move(configFile), options.cipher(), options.blocksizeBytes(), options.missingBlockIsIntegrityViolation());
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
@@ -226,17 +226,17 @@ namespace cryfs {
         }
     }
 
-    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, const optional<bool> &missingBlockIsIntegrityViolation) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, const optional<bool> &missingBlockIsIntegrityViolation) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath));
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath));
         }
     }
 

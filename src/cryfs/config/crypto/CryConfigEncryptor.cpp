@@ -15,8 +15,8 @@ namespace cryfs {
     constexpr size_t CryConfigEncryptor::OuterKeySize;
     constexpr size_t CryConfigEncryptor::MaxTotalKeySize;
 
-    CryConfigEncryptor::CryConfigEncryptor(FixedSizeData<MaxTotalKeySize> derivedKey, cpputils::Data kdfParameters)
-            : _derivedKey(std::move(derivedKey)), _kdfParameters(std::move(kdfParameters)) {
+    CryConfigEncryptor::CryConfigEncryptor(const FixedSizeData<MaxTotalKeySize>& derivedKey, cpputils::Data kdfParameters)
+            : _derivedKey(derivedKey), _kdfParameters(std::move(kdfParameters)) {
     }
 
     Data CryConfigEncryptor::encrypt(const Data &plaintext, const string &cipherName) const {

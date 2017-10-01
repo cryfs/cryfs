@@ -18,26 +18,26 @@ public:
   CryConfig(const CryConfig &rhs) = default;
 
   const std::string &RootBlob() const;
-  void SetRootBlob(const std::string &value);
+  void SetRootBlob(std::string value);
 
   const std::string &EncryptionKey() const;
-  void SetEncryptionKey(const std::string &value);
+  void SetEncryptionKey(std::string value);
 
   const std::string &Cipher() const;
-  void SetCipher(const std::string &value);
+  void SetCipher(std::string value);
 
   const std::string &Version() const;
-  void SetVersion(const std::string &value);
+  void SetVersion(std::string value);
 
   const std::string &CreatedWithVersion() const;
-  void SetCreatedWithVersion(const std::string &value);
+  void SetCreatedWithVersion(std::string value);
 
   uint64_t BlocksizeBytes() const;
   void SetBlocksizeBytes(uint64_t value);
 
   using FilesystemID = cpputils::FixedSizeData<16>;
   const FilesystemID &FilesystemId() const;
-  void SetFilesystemId(const FilesystemID &value);
+  void SetFilesystemId(FilesystemID value);
 
   // If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
   // Because this only works in a single-client setting, only this one client Id is allowed to access the file system.

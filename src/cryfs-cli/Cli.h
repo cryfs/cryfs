@@ -24,7 +24,7 @@ namespace cryfs {
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options);
         void _checkConfigIntegrity(const boost::filesystem::path& basedir, const CryConfigFile& config);
-        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, const boost::optional<bool> &missingBlockIsIntegrityViolation);
+        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(boost::filesystem::path configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, const boost::optional<bool> &missingBlockIsIntegrityViolation);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();

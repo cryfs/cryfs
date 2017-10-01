@@ -26,7 +26,7 @@ namespace cryfs {
     };
 
     inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback)
-        :_callback(callback), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
+        :_callback(std::move(callback)), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
         resetTimer();
         _checkTimeoutThread.start();
     }

@@ -13,7 +13,7 @@ namespace cryfs {
     public:
         static constexpr size_t CONFIG_SIZE = 900;  // Inner config data is grown to this size before encryption to hide its actual size
 
-        ConcreteInnerEncryptor(typename Cipher::EncryptionKey key);
+        ConcreteInnerEncryptor(const typename Cipher::EncryptionKey& key);
 
         InnerConfig encrypt(const cpputils::Data &config) const override;
         boost::optional<cpputils::Data> decrypt(const InnerConfig &innerConfig) const override;
@@ -26,8 +26,8 @@ namespace cryfs {
     };
 
     template<class Cipher>
-    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(typename Cipher::EncryptionKey key)
-            : _key(std::move(key)) {
+    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(const typename Cipher::EncryptionKey& key)
+            : _key(key) {
     }
 
     template<class Cipher>

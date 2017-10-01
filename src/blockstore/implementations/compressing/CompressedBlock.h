@@ -111,7 +111,7 @@ size_t CompressedBlock<Compressor>::size() const {
 
 template<class Compressor>
 void CompressedBlock<Compressor>::resize(size_t newSize) {
-  _decompressedData = cpputils::DataUtils::resize(std::move(_decompressedData), newSize);
+  _decompressedData = cpputils::DataUtils::resize(_decompressedData, newSize);
   _dataChanged = true;
 }
 

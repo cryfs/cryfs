@@ -39,7 +39,7 @@ size_t FakeBlock::size() const {
 }
 
 void FakeBlock::resize(size_t newSize) {
-  *_data = cpputils::DataUtils::resize(std::move(*_data), newSize);
+  *_data = cpputils::DataUtils::resize(*_data, newSize);
   _dataChanged = true;
 }
 

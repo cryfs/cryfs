@@ -14,7 +14,7 @@ namespace cryfs {
         using Cipher = cpputils::AES256_GCM;
         static constexpr size_t CONFIG_SIZE = 1024;  // Config data is grown to this size before encryption to hide its actual size
 
-        OuterEncryptor(Cipher::EncryptionKey key, cpputils::Data kdfParameters);
+        OuterEncryptor(const Cipher::EncryptionKey& key, cpputils::Data kdfParameters);
 
         OuterConfig encrypt(const cpputils::Data &encryptedInnerConfig) const;
         boost::optional<cpputils::Data> decrypt(const OuterConfig &outerConfig) const;

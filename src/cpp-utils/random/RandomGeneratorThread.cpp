@@ -21,7 +21,7 @@ namespace cpputils {
         size_t neededRandomDataSize = _maxSize - _buffer->size();
         ASSERT(_maxSize > _buffer->size(), "This could theoretically fail if another thread refilled the buffer. But we should be the only refilling thread.");
         Data randomData = _generateRandomData(neededRandomDataSize);
-        _buffer->add(std::move(randomData));
+        _buffer->add(randomData);
         return true; // Run another iteration (don't terminate thread)
     }
 

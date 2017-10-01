@@ -19,7 +19,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname);
+  explicit Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname);
   ~Fuse();
 
   void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
