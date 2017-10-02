@@ -211,7 +211,7 @@ fuse_operations *operations() {
 
 Fuse::~Fuse() {
   for(char *arg : _argv) {
-    delete arg;
+    delete[] arg;
     arg = nullptr;
   }
   _argv.clear();
