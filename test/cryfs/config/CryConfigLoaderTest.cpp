@@ -34,6 +34,11 @@ namespace boost {
         return stream << "CryConfigFile()";
     }
 }
+namespace cryfs {
+  inline ostream &operator<<(ostream &stream, const CryConfigLoader::ConfigLoadResult &) {
+    return stream << "ConfigLoadResult()";
+  }
+}
 #include <boost/optional/optional_io.hpp>
 
 class FakeRandomGenerator final : public cpputils::RandomGenerator {
@@ -98,7 +103,7 @@ public:
         FakeRandomGenerator generator(Data::FromString(encKey));
         auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
                                       askPassword, none, none, none);
-        loader.loadOrCreate(file.path()).value().configFile;
+        ASSERT_NE(boost::none, loader.loadOrCreate(file.path()));
     }
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
