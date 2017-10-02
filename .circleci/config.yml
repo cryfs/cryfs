@@ -351,9 +351,9 @@ jobs:
       CXX: clang++-5.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-5.0
-      CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer"
+      CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fsanitize-address-use-after-scope"
       BUILD_TYPE: "Debug"
-      ASAN_OPTIONS: "check_initialization_order=1 detect_leaks=1"
+      ASAN_OPTIONS: "check_initialization_order=1 detect_leaks=1 detect_stack_use_after_return=1"
 
 workflows:
   version: 2
