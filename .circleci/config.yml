@@ -353,6 +353,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
+      ASAN_OPTIONS: "check_initialization_order=1 detect_leaks=1"
 
 workflows:
   version: 2
