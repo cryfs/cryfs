@@ -344,6 +344,15 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
+  address_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer"
+      BUILD_TYPE: "Debug"
 
 workflows:
   version: 2
@@ -383,5 +392,7 @@ workflows:
     - clang_5_0_release:
         <<: *enable_for_tags
     - no_compatibility:
+        <<: *enable_for_tags
+    - address_sanitizer:
         <<: *enable_for_tags
 
