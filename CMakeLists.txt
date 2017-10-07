@@ -37,7 +37,7 @@ if(SYSTEM_NAME STREQUAL "FreeBSD")
   message("use a linker built from ports")
 
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") # using Clang
-    # Ensure FreeBSD build uses current clang >= from ports
+    # Ensure that FreeBSD build uses current clang from ports
     # which is required to correctly link the required libraries.
     # Since FreeBSD 11.1 bundles clang 4.0.0, require at least 5.0
     message("you have to use clang built from ports")
