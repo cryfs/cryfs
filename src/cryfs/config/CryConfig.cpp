@@ -89,40 +89,40 @@ const std::string &CryConfig::RootBlob() const {
   return _rootBlob;
 }
 
-void CryConfig::SetRootBlob(const std::string &value) {
-  _rootBlob = value;
+void CryConfig::SetRootBlob(std::string value) {
+  _rootBlob = std::move(value);
 }
 
 const string &CryConfig::EncryptionKey() const {
   return _encKey;
 }
 
-void CryConfig::SetEncryptionKey(const std::string &value) {
-  _encKey = value;
+void CryConfig::SetEncryptionKey(std::string value) {
+  _encKey = std::move(value);
 }
 
 const std::string &CryConfig::Cipher() const {
   return _cipher;
 };
 
-void CryConfig::SetCipher(const std::string &value) {
-  _cipher = value;
+void CryConfig::SetCipher(std::string value) {
+  _cipher = std::move(value);
 }
 
 const std::string &CryConfig::Version() const {
   return _version;
 }
 
-void CryConfig::SetVersion(const std::string &value) {
-  _version = value;
+void CryConfig::SetVersion(std::string value) {
+  _version = std::move(value);
 }
 
 const std::string &CryConfig::CreatedWithVersion() const {
   return _createdWithVersion;
 }
 
-void CryConfig::SetCreatedWithVersion(const std::string &value) {
-  _createdWithVersion = value;
+void CryConfig::SetCreatedWithVersion(std::string value) {
+  _createdWithVersion = std::move(value);
 }
 
 uint64_t CryConfig::BlocksizeBytes() const {
@@ -137,8 +137,8 @@ const CryConfig::FilesystemID &CryConfig::FilesystemId() const {
   return _filesystemId;
 }
 
-void CryConfig::SetFilesystemId(const FilesystemID &value) {
-  _filesystemId = value;
+void CryConfig::SetFilesystemId(FilesystemID value) {
+  _filesystemId = std::move(value);
 }
 
 optional<uint32_t> CryConfig::ExclusiveClientId() const {

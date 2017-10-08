@@ -21,6 +21,8 @@
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/localstate/LocalStateDir.h>
+#include <cryfs/localstate/BasedirMetadata.h>
 #include "Environment.h"
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
@@ -70,8 +72,8 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false) {
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
             _console = make_shared<NoninteractiveConsole>(console);
@@ -80,7 +82,7 @@ namespace cryfs {
         }
     }
 
-    void Cli::_showVersion() {
+    void Cli::_showVersion(unique_ref<HttpClient> httpClient) {
         cout << "CryFS Version " << gitversion::VersionString() << endl;
         if (gitversion::IsDevVersion()) {
             cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
@@ -97,7 +99,7 @@ namespace cryfs {
         } else if (Environment::isNoninteractive()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
         } else {
-            _checkForUpdates();
+            _checkForUpdates(std::move(httpClient));
         }
 #else
 # warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
@@ -105,8 +107,8 @@ namespace cryfs {
         cout << endl;
     }
 
-    void Cli::_checkForUpdates() {
-        VersionChecker versionChecker(_httpClient);
+    void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
+        VersionChecker versionChecker(httpClient.get());
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;
@@ -195,14 +197,28 @@ namespace cryfs {
         return *configFile;
     }
 
+    void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config) {
+      auto basedirMetadata = BasedirMetadata::load();
+        if (!basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
+          if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
+            throw std::runtime_error(
+                "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.");
+          }
+        }
+        // Update local state (or create it if it didn't exist yet)
+        basedirMetadata.updateFilesystemIdForBasedir(basedir, config.config()->FilesystemId());
+        basedirMetadata.save();
+    }
+
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(), options.missingBlockIsIntegrityViolation());
+            auto config = _loadOrCreateConfigFile(std::move(configFile), options.cipher(), options.blocksizeBytes(), options.missingBlockIsIntegrityViolation());
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
             }
+            _checkConfigIntegrity(options.baseDir(), config->configFile);
             return std::move(*config);
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
@@ -210,17 +226,17 @@ namespace cryfs {
         }
     }
 
-    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, const optional<bool> &missingBlockIsIntegrityViolation) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, const optional<bool> &missingBlockIsIntegrityViolation) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath));
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath));
         }
     }
 
@@ -362,9 +378,9 @@ namespace cryfs {
         return false;
     }
 
-    int Cli::main(int argc, const char *argv[]) {
+    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient) {
         cpputils::showBacktraceOnSigSegv();
-        _showVersion();
+        _showVersion(std::move(httpClient));
 
         ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
 

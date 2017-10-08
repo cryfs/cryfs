@@ -45,6 +45,10 @@ public:
   static Data LoadFromStream(std::istream &stream, size_t size);
   void StoreToStream(std::ostream &stream) const;
 
+  // TODO Unify ToString/FromString functions from Data/FixedSizeData using free functions
+  static Data FromString(const std::string &data);
+  std::string ToString() const;
+
 private:
   size_t _size;
   void *_data;

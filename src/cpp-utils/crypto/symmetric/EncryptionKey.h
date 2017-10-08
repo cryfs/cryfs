@@ -27,7 +27,7 @@ private:
         constexpr static size_t BINARY_LENGTH = FixedSizeData<KeySize>::BINARY_LENGTH;
         constexpr static size_t STRING_LENGTH = FixedSizeData<KeySize>::STRING_LENGTH;
 
-        EncryptionKeyData(const FixedSizeData<KeySize >& keyData);
+        EncryptionKeyData(const FixedSizeData<KeySize>& keyData);
         ~EncryptionKeyData();
 
         // Disallow copying and moving

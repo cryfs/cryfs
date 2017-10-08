@@ -7,7 +7,7 @@
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
 #include "../localstate/LocalStateDir.h"
-#include "../localstate/MyClientId.h"
+#include "../localstate/LocalStateMetadata.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -31,16 +31,16 @@ using namespace cpputils::logging;
 namespace cryfs {
 
 CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
-    : _console(console), _creator(console, keyGenerator), _scryptSettings(scryptSettings),
+    : _console(console), _creator(std::move(console), keyGenerator), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine),
       _missingBlockIsIntegrityViolationFromCommandLine(missingBlockIsIntegrityViolationFromCommandLine) {
 }
 
-optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(const bf::path &filename) {
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
-  auto config = CryConfigFile::load(filename, password);
+  auto config = CryConfigFile::load(std::move(filename), password);
   if (config == none) {
     return none;
   }
@@ -57,7 +57,8 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(const b
     config->save();
   }
   _checkCipher(*config->config());
-  uint32_t myClientId = MyClientId(LocalStateDir::forFilesystemId(config->config()->FilesystemId())).loadOrGenerate();
+  auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()));
+  uint32_t myClientId = localState.myClientId();
   _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
   return ConfigLoadResult {std::move(*config), myClientId};
 }
@@ -100,20 +101,20 @@ void CryConfigLoader::_checkMissingBlocksAreIntegrityViolations(CryConfigFile *c
   }
 }
 
-optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(const bf::path &filename) {
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::path filename) {
   if (bf::exists(filename)) {
-    return _loadConfig(filename);
+    return _loadConfig(std::move(filename));
   } else {
-    return _createConfig(filename);
+    return _createConfig(std::move(filename));
   }
 }
 
-CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(const bf::path &filename) {
+CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(bf::path filename) {
   auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine, _missingBlockIsIntegrityViolationFromCommandLine);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
   std::cout << "Creating config file (this can take some time)..." << std::flush;
-  auto result = CryConfigFile::create(filename, std::move(config.config), password, _scryptSettings);
+  auto result = CryConfigFile::create(std::move(filename), std::move(config.config), password, _scryptSettings);
   std::cout << "done" << std::endl;
   return ConfigLoadResult {std::move(result), config.myClientId};
 }

@@ -92,7 +92,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         }
     }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, noIntegrityChecks, missingBlockIsIntegrityViolation, fuseOptions);
+    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, noIntegrityChecks, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions));
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {

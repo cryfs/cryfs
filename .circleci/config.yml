@@ -7,7 +7,7 @@ references:
     run:
       name: Initialize Cache
       command: |
-        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}" > /tmp/_build_env_vars
+        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}_${CXXFLAGS}" > /tmp/_build_env_vars
         echo Build env vars used for cache keys:
         cat /tmp/_build_env_vars
   container_setup_pre: &container_setup_pre
@@ -49,7 +49,7 @@ references:
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libcrypto++-dev libssl-dev libfuse-dev python
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
 
@@ -344,6 +344,17 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
+  address_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fno-common -fsanitize-address-use-after-scope"
+      BUILD_TYPE: "Debug"
+      # Note: Leak detection is disabled because libfuse itself is leaky...
+      ASAN_OPTIONS: "detect_leaks=0 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
 
 workflows:
   version: 2
@@ -383,5 +394,7 @@ workflows:
     - clang_5_0_release:
         <<: *enable_for_tags
     - no_compatibility:
+        <<: *enable_for_tags
+    - address_sanitizer:
         <<: *enable_for_tags
 

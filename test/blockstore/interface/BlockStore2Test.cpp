@@ -16,6 +16,12 @@ using cpputils::DataFixture;
 using cpputils::unique_ref;
 using boost::optional;
 
+namespace boost {
+    inline void PrintTo(const optional<cpputils::Data> &, ::std::ostream *os) {
+        *os << "optional<Data>";
+    }
+}
+
 using namespace blockstore;
 
 class BlockStore2Mock: public BlockStore2 {

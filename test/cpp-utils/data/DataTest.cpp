@@ -14,6 +14,7 @@ using cpputils::TempFile;
 
 using std::ifstream;
 using std::ofstream;
+using std::string;
 
 namespace bf = boost::filesystem;
 
@@ -205,4 +206,18 @@ TEST_F(DataTest, LargesizeSize) {
 TEST_F(DataTest, LoadingNonexistingFile) {
   TempFile file(false); // Pass false to constructor, so the tempfile is not created
   EXPECT_FALSE(Data::LoadFromFile(file.path()));
+}
+
+class DataTestWithStringParam: public DataTest, public WithParamInterface<string> {};
+INSTANTIATE_TEST_CASE_P(DataTestWithStringParam, DataTestWithStringParam, Values("", "2898B4B8A13C0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
+
+TEST_P(DataTestWithStringParam, FromAndToString) {
+  Data data = Data::FromString(GetParam());
+  EXPECT_EQ(GetParam(), data.ToString());
+}
+
+TEST_P(DataTestWithStringParam, ToAndFromString) {
+  Data data = Data::FromString(GetParam());
+  Data data2 = Data::FromString(data.ToString());
+  EXPECT_EQ(data, data2);
 }

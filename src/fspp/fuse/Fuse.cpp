@@ -211,14 +211,14 @@ fuse_operations *operations() {
 
 Fuse::~Fuse() {
   for(char *arg : _argv) {
-    delete arg;
+    delete[] arg;
     arg = nullptr;
   }
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname)
-  :_fs(fs), _mountdir(), _running(false), _fstype(fstype), _fsname(fsname) {
+Fuse::Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname)
+  :_fs(fs), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)) {
 }
 
 void Fuse::_logException(const std::exception &e) {

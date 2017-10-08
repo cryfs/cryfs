@@ -4,6 +4,7 @@
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "../testutils/MockConsole.h"
+#include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
 
@@ -46,7 +47,7 @@ using ::testing::WithParamInterface;
 #define IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
   EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false))
 
-class CryConfigCreatorTest: public ::testing::Test {
+class CryConfigCreatorTest: public ::testing::Test, TestWithFakeHomeDirectory {
 public:
     CryConfigCreatorTest()
             : console(make_shared<MockConsole>()),

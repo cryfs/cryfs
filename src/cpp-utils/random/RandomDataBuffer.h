@@ -15,7 +15,7 @@ namespace cpputils {
 
         void get(void *target, size_t bytes);
 
-        void add(Data data);
+        void add(const Data& data);
 
     private:
         size_t _usedUntil;
@@ -37,7 +37,7 @@ namespace cpputils {
         _usedUntil += numBytes;
     }
 
-    inline void RandomDataBuffer::add(Data newData) {
+    inline void RandomDataBuffer::add(const Data& newData) {
         // Concatenate old and new random data
         size_t oldSize = size();
         Data combined(oldSize + newData.size());

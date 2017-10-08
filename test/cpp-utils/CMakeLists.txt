@@ -6,6 +6,7 @@ set(SOURCES
     crypto/symmetric/testutils/FakeAuthenticatedCipher.cpp
     crypto/kdf/SCryptTest.cpp
     crypto/kdf/SCryptParametersTest.cpp
+    crypto/hash/HashTest.cpp
     MacrosIncludeTest.cpp
     pointer/unique_ref_test.cpp
     pointer/cast_include_test.cpp

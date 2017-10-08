@@ -16,14 +16,15 @@
 namespace cryfs {
     class Cli final {
     public:
-        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::shared_ptr<cpputils::Console> console, std::shared_ptr<cpputils::HttpClient> httpClient);
-        int main(int argc, const char *argv[]);
+        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::shared_ptr<cpputils::Console> console);
+        int main(int argc, const char *argv[], cpputils::unique_ref<cpputils::HttpClient> httpClient);
 
     private:
-        void _checkForUpdates();
+        void _checkForUpdates(cpputils::unique_ref<cpputils::HttpClient> httpClient);
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options);
-        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, const boost::optional<bool> &missingBlockIsIntegrityViolation);
+        void _checkConfigIntegrity(const boost::filesystem::path& basedir, const CryConfigFile& config);
+        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(boost::filesystem::path configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, const boost::optional<bool> &missingBlockIsIntegrityViolation);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();
@@ -31,7 +32,7 @@ namespace cryfs {
         static std::string _askPasswordFromStdin(const std::string &prompt);
         static bool _confirmPassword(const std::string &password);
         static bool _checkPassword(const std::string &password);
-        void _showVersion();
+        void _showVersion(cpputils::unique_ref<cpputils::HttpClient> httpClient);
         void _initLogfile(const program_options::ProgramOptions &options);
         void _sanityChecks(const program_options::ProgramOptions &options);
         void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
@@ -46,7 +47,6 @@ namespace cryfs {
         cpputils::RandomGenerator &_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
-        std::shared_ptr<cpputils::HttpClient> _httpClient;
         bool _noninteractive;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);

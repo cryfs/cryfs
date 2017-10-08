@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cryfs/config/CryConfigLoader.h>
 #include "../testutils/MockConsole.h"
+#include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
@@ -14,6 +15,7 @@ using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::SCrypt;
 using cpputils::DataFixture;
+using cpputils::Data;
 using cpputils::NoninteractiveConsole;
 using boost::optional;
 using boost::none;
@@ -32,9 +34,28 @@ namespace boost {
         return stream << "CryConfigFile()";
     }
 }
+namespace cryfs {
+  inline ostream &operator<<(ostream &stream, const CryConfigLoader::ConfigLoadResult &) {
+    return stream << "ConfigLoadResult()";
+  }
+}
 #include <boost/optional/optional_io.hpp>
 
-class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole {
+class FakeRandomGenerator final : public cpputils::RandomGenerator {
+public:
+  FakeRandomGenerator(Data output)
+      : _output(std::move(output)) {}
+
+  void _get(void *target, size_t bytes) override {
+    ASSERT_EQ(_output.size(), bytes);
+    std::memcpy(target, _output.data(), bytes);
+  }
+
+private:
+  Data _output;
+};
+
+class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
     CryConfigLoaderTest(): file(false) {
         console = mockConsole();
@@ -78,7 +99,15 @@ public:
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto askPassword = [password] { return password;};
+        FakeRandomGenerator generator(Data::FromString(encKey));
+        auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
+                                      askPassword, none, none, none);
+        ASSERT_NE(boost::none, loader.loadOrCreate(file.path()));
+    }
+
+    void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
+        auto cfg = CryConfigFile::load(file.path(), password).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
@@ -94,6 +123,12 @@ public:
         auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
+    }
+
+    void ChangeFilesystemID(const CryConfig::FilesystemID &filesystemId, const string& password = "mypassword") {
+      auto cfg = CryConfigFile::load(file.path(), password).value();
+      cfg.config()->SetFilesystemId(filesystemId);
+      cfg.save();
     }
 
     string olderVersion() {
@@ -176,9 +211,18 @@ TEST_F(CryConfigLoaderTest, RootBlob_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
-    CreateWithEncryptionKey("encryptionkey");
+    CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
     auto loaded = Load().value();
-    EXPECT_EQ("encryptionkey", loaded.config()->EncryptionKey());
+    EXPECT_EQ("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3", loaded.config()->EncryptionKey());
+}
+
+TEST_F(CryConfigLoaderTest, EncryptionKey_Load_whenKeyChanged_thenFails) {
+  CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
+  ChangeEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E4");
+  EXPECT_THROW(
+      Load(),
+      std::runtime_error
+  );
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {

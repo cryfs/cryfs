@@ -8,16 +8,16 @@ using std::vector;
 using boost::optional;
 namespace bf = boost::filesystem;
 
-ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir, const optional<bf::path> &configFile,
-                               bool foreground, const optional<double> &unmountAfterIdleMinutes,
-                               const optional<bf::path> &logFile, const optional<string> &cipher,
-                               const optional<uint32_t> &blocksizeBytes,
+ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf::path> configFile,
+                               bool foreground, optional<double> unmountAfterIdleMinutes,
+                               optional<bf::path> logFile, optional<string> cipher,
+                               optional<uint32_t> blocksizeBytes,
                                bool noIntegrityChecks,
-                               const boost::optional<bool> &missingBlockIsIntegrityViolation,
-                               const vector<string> &fuseOptions)
-    :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground), _noIntegrityChecks(noIntegrityChecks),
-     _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
-     _missingBlockIsIntegrityViolation(missingBlockIsIntegrityViolation), _logFile(logFile), _fuseOptions(fuseOptions) {
+                               boost::optional<bool> missingBlockIsIntegrityViolation,
+                               vector<string> fuseOptions)
+    :_baseDir(std::move(baseDir)), _mountDir(std::move(mountDir)), _configFile(std::move(configFile)), _foreground(foreground), _noIntegrityChecks(noIntegrityChecks),
+     _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
+     _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)), _fuseOptions(std::move(fuseOptions)) {
 }
 
 const bf::path &ProgramOptions::baseDir() const {

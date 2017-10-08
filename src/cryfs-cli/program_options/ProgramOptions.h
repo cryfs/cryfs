@@ -12,15 +12,15 @@ namespace cryfs {
     namespace program_options {
         class ProgramOptions final {
         public:
-            ProgramOptions(const boost::filesystem::path &baseDir, const boost::filesystem::path &mountDir,
-                           const boost::optional<boost::filesystem::path> &configFile,
-                           bool foreground, const boost::optional<double> &unmountAfterIdleMinutes,
-                           const boost::optional<boost::filesystem::path> &logFile,
-                           const boost::optional<std::string> &cipher,
-                           const boost::optional<uint32_t> &blocksizeBytes,
+            ProgramOptions(boost::filesystem::path baseDir, boost::filesystem::path mountDir,
+                           boost::optional<boost::filesystem::path> configFile,
+                           bool foreground, boost::optional<double> unmountAfterIdleMinutes,
+                           boost::optional<boost::filesystem::path> logFile,
+                           boost::optional<std::string> cipher,
+                           boost::optional<uint32_t> blocksizeBytes,
                            bool noIntegrityChecks,
-                           const boost::optional<bool> &missingBlockIsIntegrityViolation,
-                           const std::vector<std::string> &fuseOptions);
+                           boost::optional<bool> missingBlockIsIntegrityViolation,
+                           std::vector<std::string> fuseOptions);
             ProgramOptions(ProgramOptions &&rhs) = default;
 
             const boost::filesystem::path &baseDir() const;

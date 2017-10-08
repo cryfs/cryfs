@@ -67,7 +67,7 @@ size_t LowToHighLevelBlock::size() const {
 }
 
 void LowToHighLevelBlock::resize(size_t newSize) {
-  _data = DataUtils::resize(std::move(_data), newSize);
+  _data = DataUtils::resize(_data, newSize);
   _dataChanged = true;
 }
 
