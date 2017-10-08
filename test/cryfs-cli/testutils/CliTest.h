@@ -28,7 +28,7 @@ public:
     std::shared_ptr<cpputils::HttpClient> _httpClient() {
         std::shared_ptr<cpputils::FakeHttpClient> httpClient = std::make_shared<cpputils::FakeHttpClient>();
         httpClient->addWebsite("https://www.cryfs.org/version_info.json", "{\"version_info\":{\"current\":\"0.8.5\"}}");
-        return httpClient;
+        return std::shared_ptr<cpputils::HttpClient>(std::move(httpClient));
     }
 
     void run(std::vector<const char*> args) {
