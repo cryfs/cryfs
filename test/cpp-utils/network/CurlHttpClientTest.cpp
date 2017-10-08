@@ -9,6 +9,12 @@ using testing::MatchesRegex;
 
 using namespace cpputils;
 
+// Disable these by default because they depend on network
+// and - even if network is available - can fail depending
+// on the concrete network setup (e.g. if invalid domains are
+// answered with an ISP page instead of HTTP error)
+#ifdef CRYFS_ENABLE_NETWORK_TESTS
+
 TEST(CurlHttpClientTest, InvalidProtocol) {
     EXPECT_EQ(none, CurlHttpClient().get("invalid://example.com"));
 }
@@ -30,3 +36,5 @@ TEST(CurlHttpClientTest, ValidHttps) {
     string content = CurlHttpClient().get("https://example.com").value();
     EXPECT_THAT(content, MatchesRegex(".*Example Domain.*"));
 }
+
+#endif
