@@ -68,8 +68,8 @@ bool operator!=(const Data &lhs, const Data &rhs);
 // ---------------------------
 
 inline Data::Data(size_t size)
-        : _size(size), _data(std::malloc(size)) {
-  if (nullptr == _data) {
+        : _size(size), _data((size == 0)?nullptr:std::malloc(size)) {
+  if (_size != 0 && nullptr == _data) {
     throw std::bad_alloc();
   }
 }
@@ -98,14 +98,18 @@ inline Data::~Data() {
 
 inline Data Data::copy() const {
   Data copy(_size);
-  std::memcpy(copy._data, _data, _size);
+  if (_size != 0) {
+      std::memcpy(copy._data, _data, _size);
+  }
   return copy;
 }
 
 inline Data Data::copyAndRemovePrefix(size_t prefixSize) const {
   ASSERT(prefixSize <= _size, "Can't remove more than there is");
   Data copy(_size - prefixSize);
-  std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
+  if (_size != 0) { // If _size == 0, then _data == nullptr, so better don't call memcpy.
+    std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
+  }
   return copy;
 }
 
@@ -130,7 +134,9 @@ inline size_t Data::size() const {
 }
 
 inline Data &Data::FillWithZeroes() & {
-    std::memset(_data, 0, _size);
+    if (_size != 0) {
+        std::memset(_data, 0, _size);
+    }
     return *this;
 }
 
