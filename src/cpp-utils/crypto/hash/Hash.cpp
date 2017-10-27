@@ -9,7 +9,7 @@ namespace cpputils {
 namespace hash {
 
 Hash hash(const Data& data, Salt salt) {
-  SHA512 hasher;
+  SHA512 hasher; // NOLINT (workaround for clang-warning in libcrypto++)
   hasher.Update((CryptoPP::byte*)salt.data(), Salt::BINARY_LENGTH);
   hasher.Update((CryptoPP::byte*)data.data(), data.size());
 
