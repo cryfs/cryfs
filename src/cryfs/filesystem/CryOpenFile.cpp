@@ -25,7 +25,7 @@ CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlobRef> parent,
 
 CryOpenFile::~CryOpenFile() {
   //TODO
-}
+} // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();

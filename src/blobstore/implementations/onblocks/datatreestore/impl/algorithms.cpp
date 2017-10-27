@@ -40,10 +40,12 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
     if (condition(*currentNode)) {
       result = std::move(currentNode);
     }
-    ASSERT(lastChild != none || static_cast<int>(i) == rootNode->depth()-1, "Couldn't get last child as inner node but we're not deep enough yet for the last child to be a leaf");
-    if (lastChild != none) {
-      currentNode = cpputils::WithOwnership(std::move(*lastChild));
+    if (lastChild == none) {
+        // lastChild is a leaf
+        ASSERT(static_cast<int>(i) == rootNode->depth()-1, "Couldn't get last child as inner node but we're not deep enough yet for the last child to be a leaf");
+        break;
     }
+    currentNode = cpputils::WithOwnership(std::move(*lastChild));
   }
 
   return result;

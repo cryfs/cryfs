@@ -48,7 +48,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
   parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
-  auto blob = LoadBlob();
+  auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }
 

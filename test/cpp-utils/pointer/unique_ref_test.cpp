@@ -190,21 +190,21 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigning_thenOldInstanceInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClass_thenPointsToSameObject) {
   unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
   unique_ref<SomeBaseClass> base = make_unique_ref<SomeBaseClass>(10);
   base = std::move(child);
-  EXPECT_EQ(3, base->v);
+  EXPECT_EQ(3, base->v); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClass_thenOldInstanceInvalid) {
   unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
   unique_ref<SomeBaseClass> obj2 = make_unique_ref<SomeBaseClass>(10);
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToUniquePtr_thenPointsToSameObject) {
@@ -219,7 +219,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToUniquePtr_thenOldInstanc
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::unique_ptr<SomeClass> obj2 = std::make_unique<SomeClass>();
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassUniquePtr_thenPointsToSameObject) {
@@ -233,7 +233,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassUniquePtr_thenO
   unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
   std::unique_ptr<SomeBaseClass> obj2 = std::make_unique<SomeBaseClass>(10);
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToSharedPtr_thenPointsToSameObject) {
@@ -248,7 +248,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToSharedPtr_thenOldInstanc
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::shared_ptr<SomeClass> obj2 = std::make_shared<SomeClass>();
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassSharedPtr_thenPointsToSameObject) {
@@ -262,7 +262,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassSharedPtr_thenO
   unique_ref<SomeChildClass> obj1 = make_unique_ref<SomeChildClass>(3);
   std::shared_ptr<SomeBaseClass> obj2 = std::make_shared<SomeBaseClass>(10);
   obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenPointsToSameObject) {
@@ -275,7 +275,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenPointsToSameObject
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenOldInstanceInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenPointsToSameObject) {
@@ -287,7 +287,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenPointsT
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenOldInstanceInvalid) {
   unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
   unique_ref<SomeBaseClass> base = std::move(child);
-  EXPECT_FALSE(child.is_valid());
+  EXPECT_FALSE(child.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenPointsToSameObject) {
@@ -300,7 +300,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenPointsT
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenOldInstanceInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::unique_ptr<SomeClass> obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_thenPointsToSameObject) {
@@ -312,7 +312,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_th
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_thenOldInstanceInvalid) {
   unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
   std::unique_ptr<SomeBaseClass> base = std::move(child);
-  EXPECT_FALSE(child.is_valid());
+  EXPECT_FALSE(child.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenPointsToSameObject) {
@@ -325,7 +325,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenPointsT
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenOldInstanceInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::shared_ptr<SomeClass> obj2 = std::move(obj1);
-  EXPECT_FALSE(obj1.is_valid());
+  EXPECT_FALSE(obj1.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_thenPointsToSameObject) {
@@ -337,7 +337,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_th
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_thenOldInstanceInvalid) {
   unique_ref<SomeChildClass> child = make_unique_ref<SomeChildClass>(3);
   std::shared_ptr<SomeBaseClass> base = std::move(child);
-  EXPECT_FALSE(child.is_valid());
+  EXPECT_FALSE(child.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, Swap) {
@@ -388,7 +388,7 @@ TEST_F(UniqueRefTest, SwapFromRValue) {
   SomeClass *obj1ptr = obj1.get();
   SomeClass *obj2ptr = obj2.get();
   std::swap(std::move(obj1), obj2);
-  EXPECT_EQ(obj2ptr, obj1.get());
+  EXPECT_EQ(obj2ptr, obj1.get()); // NOLINT (intentional use-after-move)
   EXPECT_EQ(obj1ptr, obj2.get());
 }
 
@@ -399,7 +399,7 @@ TEST_F(UniqueRefTest, SwapWithRValue) {
   SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, std::move(obj2));
   EXPECT_EQ(obj2ptr, obj1.get());
-  EXPECT_EQ(obj1ptr, obj2.get());
+  EXPECT_EQ(obj1ptr, obj2.get()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, CanBePutInContainer_Primitive) {
@@ -503,8 +503,8 @@ TEST_F(UniqueRefTest, Equality_Nullptr) {
   unique_ref<int> var2 = make_unique_ref<int>(4);
   makeInvalid(std::move(var1));
   makeInvalid(std::move(var2));
-  EXPECT_TRUE(var1 == var2);
-  EXPECT_FALSE(var1 != var2);
+  EXPECT_TRUE(var1 == var2); // NOLINT (intentional use-after-move)
+  EXPECT_FALSE(var1 != var2); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, Nonequality) {
@@ -518,16 +518,16 @@ TEST_F(UniqueRefTest, Nonequality_NullptrLeft) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var1));
-  EXPECT_TRUE(var1 != var2);
-  EXPECT_FALSE(var1 == var2);
+  EXPECT_TRUE(var1 != var2); // NOLINT (intentional use-after-move)
+  EXPECT_FALSE(var1 == var2); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, Nonequality_NullptrRight) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var2));
-  EXPECT_TRUE(var1 != var2);
-  EXPECT_FALSE(var1 == var2);
+  EXPECT_TRUE(var1 != var2); // NOLINT (intentional use-after-move)
+  EXPECT_FALSE(var1 == var2); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, HashIsDifferent) {
@@ -540,14 +540,14 @@ TEST_F(UniqueRefTest, HashIsDifferent_NullptrLeft) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var1));
-  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2)); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, HashIsDifferent_NullptrRight) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var2));
-  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+  EXPECT_NE(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2)); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, HashIsSame_BothNullptr) {
@@ -555,7 +555,7 @@ TEST_F(UniqueRefTest, HashIsSame_BothNullptr) {
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var1));
   makeInvalid(std::move(var2));
-  EXPECT_EQ(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2));
+  EXPECT_EQ(std::hash<unique_ref<int>>()(var1), std::hash<unique_ref<int>>()(var2)); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, OneIsLess) {
@@ -568,14 +568,14 @@ TEST_F(UniqueRefTest, NullptrIsLess1) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var1));
-  EXPECT_TRUE(std::less<unique_ref<int>>()(var1, var2));
+  EXPECT_TRUE(std::less<unique_ref<int>>()(var1, var2)); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, NullptrIsLess2) {
   unique_ref<int> var1 = make_unique_ref<int>(3);
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var2));
-  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
+  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2)); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
@@ -583,7 +583,7 @@ TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
   unique_ref<int> var2 = make_unique_ref<int>(3);
   makeInvalid(std::move(var1));
   makeInvalid(std::move(var2));
-  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2));
+  EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2)); // NOLINT (intentional use-after-move)
 }
 
 namespace {
@@ -656,7 +656,7 @@ TEST_F(UniqueRefTest, givenUniqueRefWithDefaultDeleter_whenDestructCalled_thenCa
   auto obj = make_unique_ref<DestructableMock>(&wasDestructed);
   destruct(std::move(obj));
   EXPECT_TRUE(wasDestructed);
-  EXPECT_FALSE(obj.is_valid());
+  EXPECT_FALSE(obj.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 namespace {
@@ -703,7 +703,7 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDefaultConstructibleDeleter_whenDe
   auto obj = nullcheck(std::unique_ptr<bool, SetToTrueDeleter>(&wasDestructed)).value();
   destruct(std::move(obj));
   EXPECT_TRUE(wasDestructed);
-  EXPECT_FALSE(obj.is_valid());
+  EXPECT_FALSE(obj.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 namespace {
@@ -753,7 +753,7 @@ TEST_F(UniqueRefTest, givenUniqueRefWithCustomDeleterInstance_whenDestructCalled
   auto obj = nullcheck(std::unique_ptr<int, SetToDeleter>(&value, SetToDeleter(4))).value();
   destruct(std::move(obj));
   EXPECT_EQ(4, value);
-  EXPECT_FALSE(obj.is_valid());
+  EXPECT_FALSE(obj.is_valid()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(UniqueRefTest, givenUniquePtrWithCustomDeleterInstance_whenMovedToUniquePtr_thenHasSameDeleterInstance) {

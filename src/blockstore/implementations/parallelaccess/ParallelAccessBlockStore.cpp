@@ -57,7 +57,7 @@ unique_ref<Block> ParallelAccessBlockStore::overwrite(const BlockId &blockId, Da
   auto onAdd = [this, blockId, &data] {
       return _baseBlockStore->overwrite(blockId, data.copy()); // TODO Without copy?
   };
-  return _parallelAccessStore.loadOrAdd(blockId, onExists, onAdd);
+  return _parallelAccessStore.loadOrAdd(blockId, onExists, onAdd); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 }
 
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {

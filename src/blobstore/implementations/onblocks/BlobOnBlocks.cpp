@@ -28,7 +28,7 @@ BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
 }
 
 BlobOnBlocks::~BlobOnBlocks() {
-}
+} // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 
 uint64_t BlobOnBlocks::size() const {
   if (_sizeCache == boost::none) {

@@ -289,7 +289,7 @@ void CryDevice::RemoveBlob(const blockstore::BlockId &blockId) {
 
 BlockId CryDevice::GetOrCreateRootBlobId(CryConfigFile *configFile) {
   string root_blockId = configFile->config()->RootBlob();
-  if (root_blockId == "") {
+  if (root_blockId == "") { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
     auto new_blockId = CreateRootBlobAndReturnId();
     configFile->config()->SetRootBlob(new_blockId.ToString());
     configFile->save();

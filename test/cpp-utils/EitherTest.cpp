@@ -49,22 +49,22 @@ public:
   void EXPECT_LEFT_IS(const Expected &expected, either<Left, Right> &value) {
     EXPECT_IS_LEFT(value);
     EXPECT_EQ(expected, value.left());
-    EXPECT_EQ(expected, value.left_opt().get());
+    EXPECT_EQ(expected, value.left_opt().value());
     EXPECT_EQ(boost::none, value.right_opt());
     const either<Left, Right> &const_value = value;
     EXPECT_EQ(expected, const_value.left());
-    EXPECT_EQ(expected, const_value.left_opt().get());
+    EXPECT_EQ(expected, const_value.left_opt().value());
     EXPECT_EQ(boost::none, const_value.right_opt());
   }
   template<class Left, class Right, class Expected>
   void EXPECT_RIGHT_IS(const Expected &expected, either<Left, Right> &value) {
     EXPECT_IS_RIGHT(value);
     EXPECT_EQ(expected, value.right());
-    EXPECT_EQ(expected, value.right_opt().get());
+    EXPECT_EQ(expected, value.right_opt().value());
     EXPECT_EQ(boost::none, value.left_opt());
     const either<Left, Right> &const_value = value;
     EXPECT_EQ(expected, const_value.right());
-    EXPECT_EQ(expected, const_value.right_opt().get());
+    EXPECT_EQ(expected, const_value.right_opt().value());
     EXPECT_EQ(boost::none, const_value.left_opt());
   }
 };
@@ -244,13 +244,13 @@ TEST_F(EitherTest, ModifyRight) {
 
 TEST_F(EitherTest, ModifyLeftOpt) {
   either<string, int> val = string("mystring1");
-  val.left_opt().get() = "mystring2";
+  val.left_opt().value() = "mystring2";
   EXPECT_LEFT_IS("mystring2", val);
 }
 
 TEST_F(EitherTest, ModifyRightOpt) {
   either<int, string> val = string("mystring1");
-  val.right_opt().get() = "mystring2";
+  val.right_opt().value() = "mystring2";
   EXPECT_RIGHT_IS("mystring2", val);
 }
 

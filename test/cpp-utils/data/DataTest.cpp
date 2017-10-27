@@ -141,8 +141,8 @@ TEST_F(DataTest, MoveConstructor) {
   Data original = DataFixture::generate(1024);
   Data copy(std::move(original));
   EXPECT_EQ(DataFixture::generate(1024), copy);
-  EXPECT_EQ(nullptr, original.data());
-  EXPECT_EQ(0u, original.size());
+  EXPECT_EQ(nullptr, original.data()); // NOLINT (intentional use-after-move)
+  EXPECT_EQ(0u, original.size()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(DataTest, MoveAssignment) {
@@ -150,8 +150,8 @@ TEST_F(DataTest, MoveAssignment) {
   Data copy(0);
   copy = std::move(original);
   EXPECT_EQ(DataFixture::generate(1024), copy);
-  EXPECT_EQ(nullptr, original.data());
-  EXPECT_EQ(0u, original.size());
+  EXPECT_EQ(nullptr, original.data()); // NOLINT (intentional use-after-move)
+  EXPECT_EQ(0u, original.size()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(DataTest, Equality) {

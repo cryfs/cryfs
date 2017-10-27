@@ -45,7 +45,7 @@ unique_ref<fspp::OpenFile> CryFile::open(int flags) {
 
 void CryFile::truncate(off_t size) {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob();
+  auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   blob->resize(size);
   parent()->updateModificationTimestampForChild(blockId());
 }

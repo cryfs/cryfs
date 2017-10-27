@@ -31,13 +31,33 @@ function(target_activate_cpp14 TARGET)
     endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
 endfunction(target_activate_cpp14)
 
+# Find clang-tidy executable (for use in target_enable_style_warnings)
+find_program(
+  CLANG_TIDY_EXE
+  NAMES "clang-tidy"
+  DOC "Path to clang-tidy executable"
+)
+if(NOT CLANG_TIDY_EXE)
+  message(WARNING "clang-tidy not found. Checks are disabled")
+else()
+  message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
+  set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-system-headers=0")
+endif()
+
 #################################################
 # Enable style compiler warnings
 #
 #  Uses: target_enable_style_warnings(buildtarget)
 #################################################
 function(target_enable_style_warnings TARGET)
+    # Enable compiler options
     target_compile_options(${TARGET} PRIVATE -Wall -Wextra)
+
+    # Enable clang-tidy
+    set_target_properties(
+      ${TARGET} PROPERTIES
+      CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
+    )
 endfunction(target_enable_style_warnings)
 
 ##################################################

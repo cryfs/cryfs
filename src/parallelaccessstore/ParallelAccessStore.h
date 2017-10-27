@@ -210,7 +210,7 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 template<class Resource, class ResourceRef, class Key>
 std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
     std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
-    auto insertResult = _resourcesToRemove.emplace(key, std::promise < cpputils::unique_ref < Resource >> ());
+    auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
     ASSERT(true == insertResult.second, "Inserting failed");
     return insertResult.first->second.get_future();
 };

@@ -155,7 +155,7 @@ const CryDevice *CryNode::device() const {
 unique_ref<FsBlobRef> CryNode::LoadBlob() const {
   auto blob = _device->LoadBlob(_blockId);
   ASSERT(_parent == none || blob->parentPointer() == (*_parent)->blockId(), "Blob has wrong parent pointer.");
-  return blob;
+  return blob;  // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 }
 
 const blockstore::BlockId &CryNode::blockId() const {
