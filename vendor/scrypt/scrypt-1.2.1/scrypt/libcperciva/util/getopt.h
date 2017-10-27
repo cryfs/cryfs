@@ -21,8 +21,8 @@
 
 /* Work around LLVM bug. */
 #ifdef __clang__
-#warning Working around bug in LLVM optimizer
-#warning For more details see https://llvm.org/bugs/show_bug.cgi?id=27190
+//#warning Working around bug in LLVM optimizer
+//#warning For more details see https://llvm.org/bugs/show_bug.cgi?id=27190
 #define DO_SETJMP _DO_SETJMP(__LINE__)
 #define _DO_SETJMP(x) __DO_SETJMP(x)
 #define __DO_SETJMP(x)							\
