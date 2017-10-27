@@ -55,6 +55,7 @@ private:
 
   static std::streampos _getStreamSize(std::istream &stream);
   void _readFromStream(std::istream &stream);
+  static void* _alloc(size_t size);
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
@@ -62,14 +63,20 @@ private:
 bool operator==(const Data &lhs, const Data &rhs);
 bool operator!=(const Data &lhs, const Data &rhs);
 
+inline void* Data::_alloc(size_t size) {
+    // std::malloc has implementation defined behavior for size=0.
+    // Let's define the behavior.
+    return std::malloc((size == 0)?1:size);
+}
+
 
 // ---------------------------
 // Inline function definitions
 // ---------------------------
 
 inline Data::Data(size_t size)
-        : _size(size), _data((size == 0)?nullptr:std::malloc(size)) {
-  if (_size != 0 && nullptr == _data) {
+        : _size(size), _data(_alloc(size)) {
+  if (nullptr == _data) {
     throw std::bad_alloc();
   }
 }
@@ -98,18 +105,14 @@ inline Data::~Data() {
 
 inline Data Data::copy() const {
   Data copy(_size);
-  if (_size != 0) {
-      std::memcpy(copy._data, _data, _size);
-  }
+  std::memcpy(copy._data, _data, _size);
   return copy;
 }
 
 inline Data Data::copyAndRemovePrefix(size_t prefixSize) const {
   ASSERT(prefixSize <= _size, "Can't remove more than there is");
   Data copy(_size - prefixSize);
-  if (_size != 0) { // If _size == 0, then _data == nullptr, so better don't call memcpy.
-    std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
-  }
+  std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
   return copy;
 }
 
@@ -134,9 +137,7 @@ inline size_t Data::size() const {
 }
 
 inline Data &Data::FillWithZeroes() & {
-    if (_size != 0) {
-        std::memset(_data, 0, _size);
-    }
+    std::memset(_data, 0, _size);
     return *this;
 }
 
