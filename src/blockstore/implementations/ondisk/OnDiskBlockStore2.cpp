@@ -76,7 +76,7 @@ optional<Data> OnDiskBlockStore2::load(const BlockId &blockId) const {
   if (fileContent == none) {
     return boost::none;
   }
-  return _checkAndRemoveHeader(std::move(*fileContent));
+  return _checkAndRemoveHeader(*fileContent);
 }
 
 void OnDiskBlockStore2::store(const BlockId &blockId, const Data &data) {
@@ -99,7 +99,7 @@ uint64_t OnDiskBlockStore2::numBlocks() const {
 }
 
 uint64_t OnDiskBlockStore2::estimateNumFreeBytes() const {
-  struct statvfs stat;
+  struct statvfs stat{};
   int result = ::statvfs(_rootDir.c_str(), &stat);
   if (0 != result) {
     throw std::runtime_error("Error calling statvfs()");

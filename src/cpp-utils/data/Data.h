@@ -17,8 +17,8 @@ public:
   explicit Data(size_t size);
   ~Data();
 
-  Data(Data &&rhs); // move constructor
-  Data &operator=(Data &&rhs); // move assignment
+  Data(Data &&rhs) noexcept;
+  Data &operator=(Data &&rhs) noexcept;
 
   Data copy() const;
 
@@ -81,14 +81,14 @@ inline Data::Data(size_t size)
   }
 }
 
-inline Data::Data(Data &&rhs)
+inline Data::Data(Data &&rhs) noexcept
         : _size(rhs._size), _data(rhs._data) {
   // Make rhs invalid, so the memory doesn't get freed in its destructor.
   rhs._data = nullptr;
   rhs._size = 0;
 }
 
-inline Data &Data::operator=(Data &&rhs) {
+inline Data &Data::operator=(Data &&rhs) noexcept {
   std::free(_data);
   _data = rhs._data;
   _size = rhs._size;

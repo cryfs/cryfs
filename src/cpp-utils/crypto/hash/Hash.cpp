@@ -17,8 +17,8 @@ Hash hash(const Data& data, Salt salt) {
   hasher.Final((CryptoPP::byte*)digest.data());
 
   return Hash{
-      .digest = std::move(digest),
-      .salt = std::move(salt)
+      .digest = digest,
+      .salt = salt
   };
 }
 

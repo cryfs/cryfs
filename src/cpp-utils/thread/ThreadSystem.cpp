@@ -62,7 +62,7 @@ namespace cpputils {
 
     boost::thread ThreadSystem::_startThread(function<bool()> loopIteration) {
         return boost::thread([loopIteration = std::move(loopIteration)] {
-            ThreadSystem::_runThread(std::move(loopIteration));
+            ThreadSystem::_runThread(loopIteration);
         });
     }
 

@@ -12,7 +12,7 @@ namespace parallelaccessfsblobstore {
 class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::BlockId> {
 public:
   explicit ParallelAccessFsBlobStoreAdapter(cachingfsblobstore::CachingFsBlobStore *baseBlobStore)
-    :_baseBlobStore(std::move(baseBlobStore)) {
+    :_baseBlobStore(baseBlobStore) {
   }
 
   boost::optional<cpputils::unique_ref<cachingfsblobstore::FsBlobRef>> loadFromBaseStore(const blockstore::BlockId &blockId) override {

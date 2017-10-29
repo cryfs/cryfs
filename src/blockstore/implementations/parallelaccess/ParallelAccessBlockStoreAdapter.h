@@ -12,7 +12,7 @@ namespace parallelaccess {
 class ParallelAccessBlockStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<Block, BlockId> {
 public:
   explicit ParallelAccessBlockStoreAdapter(BlockStore *baseBlockStore)
-    :_baseBlockStore(std::move(baseBlockStore)) {
+    :_baseBlockStore(baseBlockStore) {
   }
 
   boost::optional<cpputils::unique_ref<Block>> loadFromBaseStore(const BlockId &blockId) override {

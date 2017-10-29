@@ -17,7 +17,7 @@ namespace cpputils {
             _pool->lock(_lockName, lockToFreeWhileWaiting);
         }
         
-        MutexPoolLock(MutexPoolLock &&rhs): _pool(rhs._pool), _lockName(rhs._lockName) {
+        MutexPoolLock(MutexPoolLock &&rhs) noexcept: _pool(rhs._pool), _lockName(std::move(rhs._lockName)) {
             rhs._pool = nullptr;
         }
 

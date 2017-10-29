@@ -1,8 +1,31 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,misc-use-after-move,misc-unused-using-decls,misc-unused-alias-decls'
+# TODO Enable (some of) the explicitly disabled checks. Possibly needs helper types from gsl library or similar to enable full cppcoreguidelines.
+# TODO Enable more checks (google-*, hicpp-*, llvm-*, modernize-*, mpi-*, performance-*, readability-*)
+# TODO Maybe just enable * and disable a list instead?
+Checks: |
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  misc-*,
+  boost-use-to-string,
+  -cert-env33-c,
+  -cert-err58-cpp,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-no-malloc,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-type-vararg,
+  -misc-macro-parentheses,
+  -misc-unused-raii
 WarningsAsErrors: ''
 HeaderFilterRegex: '/src/|/test/'
-CheckOptions:    
+CheckOptions:
   - key:             google-readability-braces-around-statements.ShortStatementLines
     value:           '1'
   - key:             google-readability-function-size.StatementThreshold

@@ -161,7 +161,7 @@ inline bool operator!=(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs)
 
 }
 
-namespace std {
+namespace std { // NOLINT (intentional change of namespace std)
     template<class T, class D>
     inline void swap(cpputils::unique_ref<T, D>& lhs, cpputils::unique_ref<T, D>& rhs) noexcept {
         lhs.swap(rhs);

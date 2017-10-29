@@ -24,7 +24,7 @@ namespace bf = boost::filesystem;
 namespace cryfs {
 
 LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
-: _myClientId(myClientId), _encryptionKeyHash(std::move(encryptionKeyHash)) {}
+: _myClientId(myClientId), _encryptionKeyHash(encryptionKeyHash) {}
 
 LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey) {
   auto metadataFile = statePath / "metadata";
@@ -113,8 +113,8 @@ LocalStateMetadata LocalStateMetadata::_deserialize(istream& stream) {
   string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
 
   return LocalStateMetadata(myClientId, Hash{
-      .digest = cpputils::hash::Digest::FromString(std::move(encryptionKeyDigest)),
-      .salt = cpputils::hash::Salt::FromString(std::move(encryptionKeySalt))
+      .digest = cpputils::hash::Digest::FromString(encryptionKeyDigest),
+      .salt = cpputils::hash::Salt::FromString(encryptionKeySalt)
   });
 }
 

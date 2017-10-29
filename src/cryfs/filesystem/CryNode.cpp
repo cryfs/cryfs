@@ -170,7 +170,7 @@ void CryNode::stat(struct ::stat *result) const {
     result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
     result->st_nlink = 1;
-    struct timespec now;
+    struct timespec now{};
     clock_gettime(CLOCK_REALTIME, &now);
     result->st_atim = now;
     result->st_mtim = now;

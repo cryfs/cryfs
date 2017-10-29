@@ -215,8 +215,8 @@ void IntegrityBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(block
     return;
   }
   cpputils::Data data = std::move(*data_);
-  cpputils::Data dataWithHeader = _prependHeaderToData(blockId, knownBlockVersions->myClientId(), version, std::move(data));
-  baseBlockStore->store(blockId, std::move(dataWithHeader));
+  cpputils::Data dataWithHeader = _prependHeaderToData(blockId, knownBlockVersions->myClientId(), version, data);
+  baseBlockStore->store(blockId, dataWithHeader);
 }
 #endif
 

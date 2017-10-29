@@ -63,7 +63,7 @@ private:
   class OpenResource final {
   public:
 	OpenResource(cpputils::unique_ref<Resource> resource): _resource(std::move(resource)), _refCount(0) {}
-    OpenResource(OpenResource &&rhs) = default;
+    OpenResource(OpenResource &&rhs) noexcept = default;
 
 	Resource *getReference() {
 	  ++_refCount;

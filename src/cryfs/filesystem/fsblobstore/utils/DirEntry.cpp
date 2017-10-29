@@ -57,7 +57,7 @@ namespace cryfs {
         }
 
         timespec DirEntry::_deserializeTimeValue(const char **pos) {
-            timespec value;
+            timespec value{};
             value.tv_sec = *(uint64_t*)(*pos);
             *pos += sizeof(uint64_t);
             value.tv_nsec = *(uint32_t*)(*pos);

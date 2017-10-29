@@ -34,7 +34,7 @@ public:
   template<size_t size> FixedSizeData<SIZE-size> drop() const;
 
 private:
-  FixedSizeData() {}
+  FixedSizeData(): _data() {}
   template<size_t _SIZE> friend class FixedSizeData;
 
   unsigned char _data[BINARY_LENGTH];

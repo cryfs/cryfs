@@ -18,7 +18,7 @@ namespace blockstore {
         class KnownBlockVersions final {
         public:
             KnownBlockVersions(const boost::filesystem::path &stateFilePath, uint32_t myClientId);
-            KnownBlockVersions(KnownBlockVersions &&rhs);
+            KnownBlockVersions(KnownBlockVersions &&rhs); // NOLINT (intentionally not noexcept)
             ~KnownBlockVersions();
 
             __attribute__((warn_unused_result))

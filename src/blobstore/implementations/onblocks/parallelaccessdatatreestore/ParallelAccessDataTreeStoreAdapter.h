@@ -14,7 +14,7 @@ namespace parallelaccessdatatreestore {
 class ParallelAccessDataTreeStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<datatreestore::DataTree, blockstore::BlockId> {
 public:
   ParallelAccessDataTreeStoreAdapter(datatreestore::DataTreeStore *baseDataTreeStore)
-    :_baseDataTreeStore(std::move(baseDataTreeStore)) {
+    :_baseDataTreeStore(baseDataTreeStore) {
   }
 
   boost::optional<cpputils::unique_ref<datatreestore::DataTree>> loadFromBaseStore(const blockstore::BlockId &blockId) override {

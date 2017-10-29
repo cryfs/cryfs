@@ -69,7 +69,7 @@ public:
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
     cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
     ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
-    auto block = blockStore->create(std::move(serialized));
+    auto block = blockStore->create(serialized);
     return DataNodeView(std::move(block));
   }
 

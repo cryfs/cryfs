@@ -27,7 +27,7 @@ KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath, uint32_t m
     _loadStateFile();
 }
 
-KnownBlockVersions::KnownBlockVersions(KnownBlockVersions &&rhs)
+KnownBlockVersions::KnownBlockVersions(KnownBlockVersions &&rhs) // NOLINT (intentionally not noexcept)
         : _knownVersions(), _lastUpdateClientId(), _stateFilePath(), _myClientId(0), _mutex(), _valid(true) {
     unique_lock<mutex> rhsLock(rhs._mutex);
     unique_lock<mutex> lock(_mutex);

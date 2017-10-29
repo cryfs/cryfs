@@ -136,7 +136,7 @@ const CryConfig::FilesystemID &CryConfig::FilesystemId() const {
 }
 
 void CryConfig::SetFilesystemId(FilesystemID value) {
-  _filesystemId = std::move(value);
+  _filesystemId = value;
 }
 
 optional<uint32_t> CryConfig::ExclusiveClientId() const {

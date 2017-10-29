@@ -17,7 +17,7 @@ namespace cpputils {
  */
 class DontEchoStdinToStdoutRAII final {
 public:
-    DontEchoStdinToStdoutRAII() {
+    DontEchoStdinToStdoutRAII(): _old_state() {
         tcgetattr(STDIN_FILENO, &_old_state);
         termios new_state = _old_state;
         new_state.c_lflag &= ~ECHO;

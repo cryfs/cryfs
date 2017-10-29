@@ -11,7 +11,7 @@ namespace cpputils {
     namespace time {
 
         inline timespec now() {
-            struct timespec now;
+            struct timespec now{};
             clock_gettime(CLOCK_REALTIME, &now);
             return now;
         }

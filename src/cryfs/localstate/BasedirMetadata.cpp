@@ -43,7 +43,7 @@ string jsonPathForBasedir(const bf::path &basedir) {
 }
 
 BasedirMetadata::BasedirMetadata(ptree data)
-  :_data(std::move(data)) {}
+  :_data(data) {}
 
 BasedirMetadata BasedirMetadata::load() {
   return BasedirMetadata(_load(LocalStateDir::forBasedirMetadata()));
