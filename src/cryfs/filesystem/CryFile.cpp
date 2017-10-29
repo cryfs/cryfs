@@ -4,11 +4,8 @@
 #include "CryOpenFile.h"
 #include <fspp/fuse/FuseErrnoException.h>
 
-namespace bf = boost::filesystem;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
-using fspp::fuse::FuseErrnoException;
 
 using blockstore::BlockId;
 using boost::none;

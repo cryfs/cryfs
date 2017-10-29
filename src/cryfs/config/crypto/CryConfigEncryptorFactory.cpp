@@ -8,8 +8,6 @@ using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::Data;
-using cpputils::FixedSizeData;
-using cpputils::SCryptParameters;
 using cpputils::SCrypt;
 using cpputils::SCryptSettings;
 using std::string;

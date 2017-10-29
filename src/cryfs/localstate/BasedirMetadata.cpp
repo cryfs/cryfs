@@ -9,7 +9,6 @@ namespace bf = boost::filesystem;
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;
 using boost::property_tree::read_json;
-using boost::optional;
 using boost::none;
 using std::ostream;
 using std::istream;

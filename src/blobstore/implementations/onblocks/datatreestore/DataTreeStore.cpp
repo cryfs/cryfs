@@ -9,7 +9,6 @@ using boost::optional;
 using boost::none;
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataNode;
 
 namespace blobstore {
 namespace onblocks {

@@ -4,7 +4,6 @@
 #include "KnownBlockVersions.h"
 
 namespace bf = boost::filesystem;
-using std::unordered_map;
 using std::pair;
 using std::string;
 using std::unique_lock;
@@ -12,7 +11,6 @@ using std::mutex;
 using boost::optional;
 using boost::none;
 using cpputils::Data;
-using cpputils::Random;
 using cpputils::Serializer;
 using cpputils::Deserializer;
 

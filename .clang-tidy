@@ -1,5 +1,5 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,misc-use-after-move'
+Checks:          'clang-diagnostic-*,clang-analyzer-*,misc-use-after-move,misc-unused-using-decls,misc-unused-alias-decls'
 WarningsAsErrors: ''
 HeaderFilterRegex: '/src/|/test/'
 CheckOptions:    

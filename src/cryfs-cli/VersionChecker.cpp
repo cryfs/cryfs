@@ -9,10 +9,8 @@ using boost::optional;
 using boost::none;
 using std::string;
 using cpputils::HttpClient;
-using cpputils::CurlHttpClient;
 using boost::property_tree::ptree;
 using boost::property_tree::json_parser_error;
-using cpputils::unique_ref;
 using namespace cpputils::logging;
 
 namespace cryfs {

@@ -13,8 +13,6 @@ using std::unique_lock;
 using std::mutex;
 using cpputils::unique_ref;
 using cpputils::Data;
-using blobstore::onblocks::datanodestore::DataLeafNode;
-using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blockstore::BlockId;
 using blobstore::onblocks::datatreestore::LeafHandle;
 

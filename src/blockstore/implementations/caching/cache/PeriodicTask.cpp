@@ -2,7 +2,6 @@
 #include <cpp-utils/logging/logging.h>
 
 using std::function;
-using std::endl;
 using namespace cpputils::logging;
 
 namespace blockstore {

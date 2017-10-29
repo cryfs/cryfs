@@ -10,21 +10,15 @@
 #include "../localstate/LocalStateMetadata.h"
 
 namespace bf = boost::filesystem;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using cpputils::Console;
-using cpputils::Random;
 using cpputils::RandomGenerator;
 using cpputils::SCryptSettings;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
-using std::vector;
 using std::string;
 using std::function;
 using std::shared_ptr;
-using std::unique_ptr;
-using std::make_unique;
 using gitversion::VersionCompare;
 using namespace cpputils::logging;
 

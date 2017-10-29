@@ -3,13 +3,11 @@
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
 
-namespace bf = boost::filesystem;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using blobstore::BlobStore;
 using blockstore::BlockId;
 using boost::none;
-using std::function;
 using std::vector;
 
 namespace cryfs {

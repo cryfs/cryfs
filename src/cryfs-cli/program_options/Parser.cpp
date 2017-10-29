@@ -9,7 +9,6 @@ namespace po = boost::program_options;
 namespace bf = boost::filesystem;
 using namespace cryfs::program_options;
 using cryfs::CryConfigConsole;
-using std::pair;
 using std::vector;
 using std::cerr;
 using std::endl;

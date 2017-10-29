@@ -14,8 +14,6 @@
 namespace bf = boost::filesystem;
 
 using blockstore::BlockId;
-using blobstore::Blob;
-using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
@@ -25,7 +23,6 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using namespace cpputils::logging;
 
 //TODO Get rid of this in favor of an exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {

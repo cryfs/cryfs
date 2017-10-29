@@ -6,7 +6,6 @@
 #include "CryDevice.h"
 #include <fspp/fuse/FuseErrnoException.h>
 
-namespace bf = boost::filesystem;
 
 using std::shared_ptr;
 using cpputils::unique_ref;
@@ -14,8 +13,6 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 //TODO Get rid of this in favor of a exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
-using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 

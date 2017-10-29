@@ -4,8 +4,6 @@
 
 namespace bf = boost::filesystem;
 using std::string;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 
 namespace cpputils {
     namespace system {

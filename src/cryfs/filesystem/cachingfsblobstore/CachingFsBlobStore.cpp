@@ -1,16 +1,12 @@
 #include "CachingFsBlobStore.h"
 #include "../fsblobstore/FsBlobStore.h"
 
-namespace bf = boost::filesystem;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using blobstore::BlobStore;
 using blockstore::BlockId;
 using boost::optional;
 using boost::none;
-using std::function;
-using cryfs::fsblobstore::FsBlobStore;
 using cryfs::fsblobstore::FsBlob;
 using cryfs::fsblobstore::FileBlob;
 using cryfs::fsblobstore::DirBlob;

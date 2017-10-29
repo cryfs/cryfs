@@ -3,7 +3,6 @@
 #include "OuterConfig.h"
 
 using std::string;
-using cpputils::unique_ref;
 using cpputils::Data;
 using cpputils::RandomPadding;
 using boost::optional;

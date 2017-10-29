@@ -1,9 +1,7 @@
 #include "CryConfigConsole.h"
 #include "CryCipher.h"
 
-using cpputils::unique_ref;
 using cpputils::Console;
-using boost::optional;
 using boost::none;
 using std::string;
 using std::vector;

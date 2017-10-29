@@ -3,12 +3,10 @@
 #include "LowToHighLevelBlock.h"
 
 using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using cpputils::Data;
 using boost::none;
 using boost::optional;
 using std::string;
-namespace bf = boost::filesystem;
 
 namespace blockstore {
 namespace lowtohighlevel {

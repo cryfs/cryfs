@@ -3,15 +3,9 @@
 #include "../fsblobstore/FsBlobStore.h"
 
 namespace bf = boost::filesystem;
-using cryfs::cachingfsblobstore::CachingFsBlobStore;
-using cryfs::fsblobstore::FsBlob;
-using cryfs::fsblobstore::FileBlob;
-using cryfs::fsblobstore::DirBlob;
-using cryfs::fsblobstore::SymlinkBlob;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::optional;
-using boost::none;
 using blockstore::BlockId;
 
 namespace cryfs {

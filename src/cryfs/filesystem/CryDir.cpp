@@ -13,7 +13,6 @@
 #include "fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
 namespace bf = boost::filesystem;

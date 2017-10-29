@@ -24,20 +24,15 @@
 using std::string;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
-using blockstore::BlockStore;
 using blockstore::BlockStore2;
 using blockstore::BlockId;
-using blockstore::encrypted::EncryptedBlockStore2;
 using blobstore::BlobStore;
 using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
-using blobstore::onblocks::BlobOnBlocks;
 using blockstore::caching::CachingBlockStore2;
 using blockstore::integrity::IntegrityBlockStore2;
-using gitversion::VersionCompare;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;

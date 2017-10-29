@@ -7,7 +7,6 @@
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/random/Random.h>
 
-namespace bf = boost::filesystem;
 
 using boost::property_tree::ptree;
 using boost::optional;
@@ -15,7 +14,6 @@ using boost::none;
 using std::string;
 using std::stringstream;
 using cpputils::Data;
-using gitversion::VersionCompare;
 using cpputils::Random;
 
 namespace cryfs {

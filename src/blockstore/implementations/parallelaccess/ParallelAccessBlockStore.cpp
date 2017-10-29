@@ -6,7 +6,6 @@
 #include <cpp-utils/assert/assert.h>
 
 using std::string;
-using std::promise;
 using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using boost::none;

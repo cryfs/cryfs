@@ -6,12 +6,10 @@
 #include <cryfs/localstate/LocalStateMetadata.h>
 
 using cpputils::Console;
-using cpputils::unique_ref;
 using cpputils::RandomGenerator;
 using cpputils::Random;
 using std::string;
 using std::shared_ptr;
-using std::vector;
 using boost::optional;
 using boost::none;
 

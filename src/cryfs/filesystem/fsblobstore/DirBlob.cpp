@@ -13,8 +13,6 @@
 
 using std::vector;
 using std::string;
-using std::pair;
-using std::make_pair;
 
 using blobstore::Blob;
 using blockstore::BlockId;

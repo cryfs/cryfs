@@ -18,20 +18,14 @@ using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataLeafNode;
-using blobstore::onblocks::datanodestore::DataNodeLayout;
 
-using std::dynamic_pointer_cast;
 using std::function;
 using boost::shared_mutex;
 using boost::shared_lock;
 using boost::unique_lock;
 using boost::none;
-using std::vector;
 
-using cpputils::dynamic_pointer_move;
 using cpputils::optional_ownership_ptr;
-using cpputils::WithOwnership;
-using cpputils::WithoutOwnership;
 using cpputils::unique_ref;
 using cpputils::Data;
 

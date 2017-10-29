@@ -4,10 +4,8 @@
 #include "DataNodeStore.h"
 #include <blockstore/utils/BlockStoreUtils.h>
 
-using blockstore::Block;
 using blockstore::BlockId;
 
-using std::runtime_error;
 using cpputils::unique_ref;
 
 namespace blobstore {

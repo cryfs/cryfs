@@ -2,7 +2,6 @@
 #include "DataInnerNode.h"
 #include <cpp-utils/assert/assert.h>
 
-using blockstore::Block;
 using cpputils::Data;
 using blockstore::BlockId;
 using blockstore::BlockStore;

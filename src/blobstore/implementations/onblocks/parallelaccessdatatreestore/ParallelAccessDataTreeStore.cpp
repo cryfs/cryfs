@@ -14,7 +14,6 @@ using blockstore::BlockId;
 namespace blobstore {
 namespace onblocks {
 using datatreestore::DataTreeStore;
-using datatreestore::DataTree;
 namespace parallelaccessdatatreestore {
 
 //TODO Here and for other stores (DataTreeStore, ...): Make small functions inline

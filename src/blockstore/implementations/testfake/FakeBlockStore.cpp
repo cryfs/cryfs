@@ -6,7 +6,6 @@
 using std::make_shared;
 using std::string;
 using std::mutex;
-using std::lock_guard;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

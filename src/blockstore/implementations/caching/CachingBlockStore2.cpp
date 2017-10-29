@@ -3,14 +3,8 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/system/get_total_memory.h>
 
-using std::make_unique;
 using std::string;
 using std::mutex;
-using std::lock_guard;
-using std::piecewise_construct;
-using std::make_tuple;
-using std::make_pair;
-using std::vector;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

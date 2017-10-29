@@ -14,9 +14,7 @@
 #include <sstream>
 
 using namespace fspp;
-using cpputils::dynamic_pointer_move;
 using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
 using boost::none;
