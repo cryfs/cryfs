@@ -49,7 +49,7 @@ references:
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libcrypto++-dev libssl-dev libfuse-dev python
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libcrypto++-dev libssl-dev libfuse-dev python clang-tidy
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
 
