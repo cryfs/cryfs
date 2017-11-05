@@ -16,7 +16,7 @@ public:
   explicit CacheEntry(Value value): _lastAccess(currentTime()), _value(std::move(value)) {
   }
 
-  CacheEntry(CacheEntry &&) noexcept = default;
+  CacheEntry(CacheEntry&& rhs) noexcept: _lastAccess(std::move(rhs._lastAccess)), _value(std::move(rhs._value)) {}
 
   double ageSeconds() const {
     return ((double)(currentTime() - _lastAccess).total_nanoseconds()) / ((double)1000000000);

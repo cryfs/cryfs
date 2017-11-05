@@ -250,7 +250,7 @@ TEST_F(EitherTest, ModifyLeftOpt) {
 
 TEST_F(EitherTest, ModifyRightOpt) {
   either<int, string> val = string("mystring1");
-  val.right_opt().value() = "mystring2";
+  val.right_opt().get() = "mystring2";
   EXPECT_RIGHT_IS("mystring2", val);
 }
 
