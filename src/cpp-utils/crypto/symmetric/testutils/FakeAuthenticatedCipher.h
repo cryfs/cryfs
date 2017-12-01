@@ -13,20 +13,20 @@ namespace cpputils {
 
     struct FakeKey {
         static FakeKey FromBinary(const void *data) {
-          return FakeKey{*(uint8_t *) data};
+          return FakeKey{*(uint64_t *) data};
         }
 
-        static constexpr unsigned int BINARY_LENGTH = 1;
+        static constexpr unsigned int BINARY_LENGTH = sizeof(uint64_t);
 
         static FakeKey CreateKey(RandomGenerator &randomGenerator) {
-            auto data = randomGenerator.getFixedSize<1>();
-            return FakeKey{*((uint8_t *) data.data())};
+            auto data = randomGenerator.getFixedSize<sizeof(uint64_t)>();
+            return FakeKey{*((uint64_t *) data.data())};
         }
 
-        uint8_t value;
+        uint64_t value;
     };
 
-    // This is a fake cipher that uses an indeterministic caesar chiffre and a 4-byte checksum for a simple authentication mechanism
+    // This is a fake cipher that uses an indeterministic xor chiffre and a 8-byte checksum for a simple authentication mechanism
     class FakeAuthenticatedCipher {
     public:
         BOOST_CONCEPT_ASSERT((CipherConcept<FakeAuthenticatedCipher>));
@@ -42,71 +42,78 @@ namespace cpputils {
         }
 
         static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
-          return plaintextBlockSize + 5;
+          return plaintextBlockSize + sizeof(uint64_t) + sizeof(uint64_t);
         }
 
         static constexpr unsigned int plaintextSize(unsigned int ciphertextBlockSize) {
-          return ciphertextBlockSize - 5;
+          return ciphertextBlockSize - sizeof(uint64_t) - sizeof(uint64_t);
         }
 
         static Data encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
           Data result(ciphertextSize(plaintextSize));
 
           //Add a random IV
-          uint8_t iv = std::uniform_int_distribution<uint8_t>()(random_);
-          std::memcpy(result.data(), &iv, 1);
+          uint64_t iv = std::uniform_int_distribution<uint64_t>()(random_);
+          std::memcpy(result.data(), &iv, sizeof(uint64_t));
 
-          //Use caesar chiffre on plaintext
-          _caesar((CryptoPP::byte *) result.data() + 1, plaintext, plaintextSize, encKey.value + iv);
+          //Use xor chiffre on plaintext
+          _xor((CryptoPP::byte *) result.data() + sizeof(uint64_t), plaintext, plaintextSize, encKey.value ^ iv);
 
           //Add checksum information
-          int32_t checksum = _checksum((CryptoPP::byte *) result.data(), encKey, plaintextSize + 1);
-          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + 1, &checksum, 4);
+          uint64_t checksum = _checksum((CryptoPP::byte *) result.data(), encKey, plaintextSize + sizeof(uint64_t));
+          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + sizeof(uint64_t), &checksum, sizeof(uint64_t));
 
           return result;
         }
 
         static boost::optional <Data> decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize,
                                               const EncryptionKey &encKey) {
-          //We need at least 5 bytes (iv + checksum)
-          if (ciphertextSize < 5) {
+          //We need at least 16 bytes (iv + checksum)
+          if (ciphertextSize < 16) {
             return boost::none;
           }
 
           //Check checksum
-          int32_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + 1);
-          int32_t actualParity = *(int32_t * )(ciphertext + plaintextSize(ciphertextSize) + 1);
+          uint64_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + sizeof(uint64_t));
+          uint64_t actualParity = *(uint64_t * )(ciphertext + plaintextSize(ciphertextSize) + sizeof(uint64_t));
           if (expectedParity != actualParity) {
             return boost::none;
           }
 
-          //Decrypt caesar chiffre from ciphertext
-          int32_t iv = *(int32_t *) ciphertext;
+          //Decrypt xor chiffre from ciphertext
+          uint64_t iv = *(uint64_t *) ciphertext;
           Data result(plaintextSize(ciphertextSize));
-          _caesar((CryptoPP::byte *) result.data(), ciphertext + 1, plaintextSize(ciphertextSize), -(encKey.value + iv));
+          _xor((CryptoPP::byte *) result.data(), ciphertext + sizeof(uint64_t), plaintextSize(ciphertextSize), encKey.value ^ iv);
           return std::move(result);
         }
 
         static constexpr const char *NAME = "FakeAuthenticatedCipher";
 
     private:
-        static int32_t _checksum(const CryptoPP::byte *data, FakeKey encKey, unsigned int size) {
-          int32_t checksum = 34343435 * encKey.value; // some init value
-          const int32_t *intData = reinterpret_cast<const int32_t *>(data);
-          unsigned int intSize = size / sizeof(int32_t);
+        static uint64_t _checksum(const CryptoPP::byte *data, FakeKey encKey, unsigned int size) {
+          uint64_t checksum = 34343435 * encKey.value; // some init value
+          const uint64_t *intData = reinterpret_cast<const uint64_t *>(data);
+          unsigned int intSize = size / sizeof(uint64_t);
           for (unsigned int i = 0; i < intSize; ++i) {
-            checksum = ((int64_t)checksum) + intData[i];
+            checksum = ((uint64_t)checksum) + intData[i];
           }
-          unsigned int remainingBytes = size - 4 * intSize;
+          unsigned int remainingBytes = size - sizeof(uint64_t) * intSize;
           for (unsigned int i = 0; i < remainingBytes; ++i) {
-            checksum = ((int64_t)checksum) + (data[4 * intSize + i] << (24 - 8 * i));
+            checksum = ((uint64_t)checksum) + (data[8 * intSize + i] << (56 - 8 * i));
           }
           return checksum;
         }
 
-        static void _caesar(CryptoPP::byte *dst, const CryptoPP::byte *src, unsigned int size, uint8_t key) {
-          for (unsigned int i = 0; i < size; ++i) {
-            dst[i] = src[i] + key;
+        static void _xor(CryptoPP::byte *dst, const CryptoPP::byte *src, unsigned int size, uint64_t key) {
+          const uint64_t *srcIntData = reinterpret_cast<const uint64_t *>(src);
+          uint64_t *dstIntData = reinterpret_cast<uint64_t *>(dst);
+          unsigned int intSize = size / sizeof(uint64_t);
+          for (unsigned int i = 0; i < intSize; ++i) {
+              dstIntData[i] = srcIntData[i] ^ key;
+          }
+          unsigned int remainingBytes = size - sizeof(uint64_t) * intSize;
+          for (unsigned int i = 0; i < remainingBytes; ++i) {
+              dst[8 * intSize + i] = src[8 * intSize + i] ^ ((key >> (56 - 8*i)) & 0xFF);
           }
         }
 
