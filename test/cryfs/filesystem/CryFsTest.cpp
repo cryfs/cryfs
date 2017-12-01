@@ -16,19 +16,14 @@
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
 using ::testing::Test;
-using ::testing::Return;
-using ::testing::_;
 using std::make_shared;
 using cpputils::TempDir;
 using cpputils::TempFile;
-using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
-using cpputils::Console;
 using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::Data;
-using cpputils::system::FakeHomeDirectoryRAII;
 using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;

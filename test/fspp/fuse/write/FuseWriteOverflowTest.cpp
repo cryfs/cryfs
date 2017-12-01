@@ -5,13 +5,9 @@
 #include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
-using ::testing::StrEq;
-using ::testing::Eq;
-using ::testing::Return;
 using ::testing::Invoke;
 using ::testing::Action;
 
-using std::min;
 using cpputils::DataFixture;
 using cpputils::Data;
 

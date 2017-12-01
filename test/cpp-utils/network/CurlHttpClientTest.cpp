@@ -4,8 +4,6 @@
 #include "cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
 
 using std::string;
-using boost::none;
-using testing::MatchesRegex;
 
 using namespace cpputils;
 

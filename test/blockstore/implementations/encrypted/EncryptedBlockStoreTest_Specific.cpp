@@ -1,6 +1,6 @@
 #include "cpp-utils/crypto/cryptopp_byte.h"
 #include <gtest/gtest.h>
-#include "../../../cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "blockstore/utils/BlockStoreUtils.h"
@@ -54,7 +54,7 @@ public:
 
   blockstore::BlockId CopyBaseBlock(const blockstore::BlockId &blockId) {
     auto source = baseBlockStore->load(blockId).value();
-    return baseBlockStore->create(std::move(source));
+    return baseBlockStore->create(source);
   }
 
 private:

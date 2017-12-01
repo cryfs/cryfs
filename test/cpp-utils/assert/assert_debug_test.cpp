@@ -5,7 +5,6 @@
 #undef NDEBUG
 #include "cpp-utils/assert/assert.h"
 
-using testing::MatchesRegex;
 
 TEST(AssertTest_DebugBuild, DoesntDieIfTrue) {
     ASSERT(true, "bla");

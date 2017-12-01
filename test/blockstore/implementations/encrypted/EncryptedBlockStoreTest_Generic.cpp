@@ -7,10 +7,9 @@
 #include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
 //TODO Move FakeAuthenticatedCipher out of test folder to normal folder. Dependencies should not point into tests of other modules.
-#include "../../../cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include <gtest/gtest.h>
 
-using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::BlockStore2;

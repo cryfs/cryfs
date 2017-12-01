@@ -6,7 +6,6 @@
 
 using namespace cpputils::logging;
 using std::string;
-using testing::MatchesRegex;
 
 class LoggerTest: public LoggingTest {};
 

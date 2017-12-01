@@ -2,8 +2,6 @@
 
 #include "fspp/fuse/FuseErrnoException.h"
 
-using ::testing::_;
-using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;

@@ -15,11 +15,11 @@ public:
     return MinimalValueType(value);
   }
 
-  MinimalValueType(MinimalValueType &&rhs): MinimalValueType(rhs.value()) {
+  MinimalValueType(MinimalValueType &&rhs) noexcept: MinimalValueType(rhs.value()) {
     rhs._isMoved = true;
   }
 
-  MinimalValueType &operator=(MinimalValueType &&rhs) {
+  MinimalValueType &operator=(MinimalValueType &&rhs) noexcept {
     _value = rhs.value();
     _isMoved = false;
     rhs._isMoved = true;

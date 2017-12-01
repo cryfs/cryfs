@@ -7,14 +7,7 @@
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include "blobstore/implementations/onblocks/datatreestore/impl/algorithms.h"
 
-using ::testing::Test;
-using std::pair;
-using std::make_pair;
 
-using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataNode;
-using blobstore::onblocks::datanodestore::DataInnerNode;
-using blockstore::testfake::FakeBlockStore;
 using blockstore::BlockId;
 using namespace blobstore::onblocks::datatreestore::algorithms;
 

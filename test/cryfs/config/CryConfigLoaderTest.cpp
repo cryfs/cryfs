@@ -10,8 +10,6 @@
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
 
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::SCrypt;
 using cpputils::DataFixture;
@@ -23,7 +21,6 @@ using std::string;
 using std::ostream;
 using std::make_shared;
 using ::testing::Return;
-using ::testing::_;
 using ::testing::HasSubstr;
 
 using namespace cryfs;

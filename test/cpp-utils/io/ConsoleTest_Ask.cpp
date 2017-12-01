@@ -2,11 +2,8 @@
 
 using std::stringstream;
 using std::string;
-using std::vector;
 using std::istream;
 using std::ostream;
-using std::future;
-using std::initializer_list;
 
 class ConsoleTest_Ask: public ConsoleTest {};
 

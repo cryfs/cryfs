@@ -1,15 +1,10 @@
 #include "testutils/DataTreeTest.h"
 #include <gmock/gmock.h>
 
-using ::testing::_;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using blobstore::onblocks::datanodestore::DataLeafNode;
-using blobstore::onblocks::datanodestore::DataInnerNode;
-using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
-using blobstore::onblocks::datatreestore::DataTree;
 using blockstore::BlockId;
 
 class DataTreeTest_NumStoredBytes: public DataTreeTest {

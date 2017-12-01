@@ -13,8 +13,6 @@ using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::NoninteractiveConsole;
 using fspp::Device;
-using ::testing::Return;
-using ::testing::_;
 using boost::none;
 using std::make_shared;
 using blockstore::inmemory::InMemoryBlockStore2;

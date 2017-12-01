@@ -8,7 +8,7 @@ template<class ConcreteFileSystemTestFixture>
 class FsppOpenFileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
     void IN_STAT(fspp::OpenFile *openFile, std::function<void (struct stat)> callback) {
-        struct stat st;
+        struct stat st{};
         openFile->stat(&st);
         callback(st);
     }

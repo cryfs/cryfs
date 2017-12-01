@@ -1,10 +1,7 @@
 #include "testutils/FuseReadDirTest.h"
 
-using ::testing::_;
 using ::testing::StrEq;
-using ::testing::Return;
 
-using std::vector;
 using std::string;
 
 class FuseReadDirDirnameTest: public FuseReadDirTest {

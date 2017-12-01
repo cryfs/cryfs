@@ -8,7 +8,6 @@ using ::testing::Eq;
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
-using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::datatreestore::LeafHandle;
 using blockstore::BlockId;
 

@@ -590,7 +590,7 @@ namespace {
 class OnlyMoveable {
 public:
   OnlyMoveable(int value_): value(value_)  {}
-  OnlyMoveable(OnlyMoveable &&source): value(source.value) {source.value = -1;}
+  OnlyMoveable(OnlyMoveable &&source) noexcept: value(source.value) {source.value = -1;}
   bool operator==(const OnlyMoveable &rhs) const {
     return value == rhs.value;
   }

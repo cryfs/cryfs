@@ -1,6 +1,5 @@
 #include "testutils/FuseOpenTest.h"
 
-using ::testing::_;
 using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;

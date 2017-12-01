@@ -2,15 +2,8 @@
 #include "../../testutils/OpenFileHandle.h"
 #include <condition_variable>
 
-using ::testing::_;
-using ::testing::StrEq;
-using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::InSequence;
-using ::testing::AtLeast;
 
 using std::string;
 using std::mutex;

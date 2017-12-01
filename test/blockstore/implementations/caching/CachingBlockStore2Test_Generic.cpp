@@ -5,7 +5,6 @@
 #include "../../testutils/BlockStore2Test.h"
 #include <gtest/gtest.h>
 
-using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::BlockStore2;
@@ -13,8 +12,6 @@ using blockstore::caching::CachingBlockStore2;
 using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blockstore::inmemory::InMemoryBlockStore2;
 
-using cpputils::Data;
-using cpputils::DataFixture;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 

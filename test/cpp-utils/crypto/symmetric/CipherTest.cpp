@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include "cpp-utils/crypto/symmetric/Cipher.h"
 #include "cpp-utils/crypto/symmetric/ciphers.h"
-#include "testutils/FakeAuthenticatedCipher.h"
+#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 
 #include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/Data.h"

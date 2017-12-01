@@ -10,7 +10,7 @@
 class FsppNodeTestHelper {
 public:
   void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) {
-    struct stat st;
+    struct stat st{};
     file->stat(&st);
     callback(st);
   }

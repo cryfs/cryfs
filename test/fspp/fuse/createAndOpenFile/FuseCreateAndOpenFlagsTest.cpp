@@ -1,10 +1,7 @@
 #include "testutils/FuseCreateAndOpenTest.h"
 
-using ::testing::_;
-using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
-using ::testing::Return;
 
 class FuseCreateAndOpenFlagsTest: public FuseCreateAndOpenTest, public WithParamInterface<mode_t> {
 };

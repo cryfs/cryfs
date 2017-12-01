@@ -9,6 +9,8 @@ namespace blockstore {
     namespace integrity {
 
         struct ClientIdAndBlockId final {
+            ClientIdAndBlockId(uint32_t clientId_, BlockId blockId_): clientId(clientId_), blockId(blockId_) {}
+
             uint32_t clientId;
             BlockId blockId;
         };

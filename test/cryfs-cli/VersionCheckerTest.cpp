@@ -3,8 +3,6 @@
 #include <cpp-utils/network/FakeHttpClient.h>
 #include <cpp-utils/pointer/unique_ref.h>
 
-using std::shared_ptr;
-using std::make_shared;
 using std::string;
 using cpputils::FakeHttpClient;
 using cpputils::unique_ref;

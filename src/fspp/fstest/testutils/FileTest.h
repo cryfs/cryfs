@@ -29,7 +29,7 @@ public:
 
   //TODO IN_STAT still needed after moving it to FsppNodeTest?
   void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (struct stat)> callback) {
-	  struct stat st1, st2;
+	  struct stat st1{}, st2{};
 	  node->stat(&st1);
 	  callback(st1);
 	  file->open(O_RDONLY)->stat(&st2);

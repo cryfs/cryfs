@@ -2,6 +2,7 @@ project (cpp-utils)
 
 set(SOURCES
         crypto/symmetric/ciphers.cpp
+        crypto/symmetric/testutils/FakeAuthenticatedCipher.cpp
         crypto/kdf/Scrypt.cpp
         crypto/kdf/SCryptParameters.cpp
         crypto/kdf/PasswordBasedKDF.cpp

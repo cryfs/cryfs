@@ -3,8 +3,6 @@
 using namespace fspp::fuse;
 using namespace fspp::fuse;
 
-using ::testing::_;
-using ::testing::StrEq;
 
 typedef FuseTest BasicFuseTest;
 

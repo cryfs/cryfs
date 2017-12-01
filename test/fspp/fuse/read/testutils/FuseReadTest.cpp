@@ -14,7 +14,7 @@ FuseReadTest::ReadError FuseReadTest::ReadFileReturnError(const char *filename, 
 
   auto fd = OpenFile(fs.get(), filename);
 
-  ReadError result;
+  ReadError result{};
   errno = 0;
   result.read_bytes = ::pread(fd->fd(), buf, count, offset);
   result.error = errno;

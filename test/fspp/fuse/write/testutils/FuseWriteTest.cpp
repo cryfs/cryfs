@@ -14,7 +14,7 @@ FuseWriteTest::WriteError FuseWriteTest::WriteFileReturnError(const char *filena
 
   auto fd = OpenFile(fs.get(), filename);
 
-  WriteError result;
+  WriteError result{};
   errno = 0;
   result.written_bytes = ::pwrite(fd->fd(), buf, count, offset);
   result.error = errno;

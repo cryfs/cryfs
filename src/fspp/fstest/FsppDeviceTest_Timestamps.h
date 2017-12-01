@@ -16,7 +16,7 @@ public:
   }
 
   void Test_Load_While_Not_Loaded() {
-    struct stat oldStat;
+    struct stat oldStat{};
     {
         auto node = this->CreateNode("/mynode");
         oldStat = this->stat(*node);

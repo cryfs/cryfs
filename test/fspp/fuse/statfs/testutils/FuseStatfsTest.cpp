@@ -6,12 +6,12 @@ using ::testing::_;
 using ::testing::Invoke;
 
 void FuseStatfsTest::Statfs(const std::string &path) {
-  struct ::statvfs dummy;
+  struct ::statvfs dummy{};
   Statfs(path, &dummy);
 }
 
 int FuseStatfsTest::StatfsReturnError(const std::string &path) {
-  struct ::statvfs dummy;
+  struct ::statvfs dummy{};
   return StatfsReturnError(path, &dummy);
 }
 
@@ -38,7 +38,7 @@ struct ::statvfs FuseStatfsTest::CallStatfsWithImpl(function<void(struct ::statv
     implementation(stat);
   }));
 
-  struct ::statvfs result;
+  struct ::statvfs result{};
   Statfs(FILENAME, &result);
 
   return result;

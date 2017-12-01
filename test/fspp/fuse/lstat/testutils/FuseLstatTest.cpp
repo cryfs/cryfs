@@ -6,12 +6,12 @@ using ::testing::_;
 using ::testing::Invoke;
 
 void FuseLstatTest::LstatPath(const std::string &path) {
-  struct stat dummy;
+  struct stat dummy{};
   LstatPath(path, &dummy);
 }
 
 int FuseLstatTest::LstatPathReturnError(const std::string &path) {
-  struct stat dummy;
+  struct stat dummy{};
   return LstatPathReturnError(path, &dummy);
 }
 
@@ -45,7 +45,7 @@ struct stat FuseLstatTest::CallLstatWithImpl(function<void(struct stat*)> implem
     implementation(stat);
   }));
 
-  struct stat result;
+  struct stat result{};
   LstatPath(FILENAME, &result);
 
   return result;

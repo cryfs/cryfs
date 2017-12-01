@@ -13,7 +13,6 @@ using ::testing::ByRef;
 using std::string;
 using cpputils::Data;
 using cpputils::DataFixture;
-using cpputils::unique_ref;
 using boost::optional;
 
 namespace boost {

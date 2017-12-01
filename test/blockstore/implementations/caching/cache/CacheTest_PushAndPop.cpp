@@ -5,7 +5,6 @@
 #include "testutils/MinimalValueType.h"
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
-using ::testing::Test;
 
 using namespace blockstore::caching;
 

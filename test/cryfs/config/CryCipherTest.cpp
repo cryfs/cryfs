@@ -53,7 +53,7 @@ public:
         unique_ref<InMemoryBlockStore2> _baseStore = make_unique_ref<InMemoryBlockStore2>();
         InMemoryBlockStore2 *baseStore = _baseStore.get();
         unique_ref<BlockStore2> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
-        bool created = encryptedStore->tryCreate(blockId, std::move(data));
+        bool created = encryptedStore->tryCreate(blockId, data);
         EXPECT_TRUE(created);
         return _loadBlock(baseStore, blockId);
     }
@@ -61,7 +61,7 @@ public:
     template<class Cipher>
     Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
         unique_ref<InMemoryBlockStore2> baseStore = make_unique_ref<InMemoryBlockStore2>();
-        bool created = baseStore->tryCreate(blockId, std::move(data));
+        bool created = baseStore->tryCreate(blockId, data);
         EXPECT_TRUE(created);
         EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
         return _loadBlock(&encryptedStore, blockId);

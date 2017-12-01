@@ -5,8 +5,6 @@
 using ::testing::Test;
 
 using cpputils::Data;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 
 using blockstore::inmemory::InMemoryBlockStore2;
 

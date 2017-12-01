@@ -25,7 +25,7 @@ int FuseUtimensTest::UtimensReturnError(const char *filename, timespec lastAcces
 }
 
 struct timespec FuseUtimensTest::makeTimespec(time_t tv_sec, long tv_nsec) {
-  struct timespec result;
+  struct timespec result{};
   result.tv_sec = tv_sec;
   result.tv_nsec = tv_nsec;
   return result;

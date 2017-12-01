@@ -2,8 +2,6 @@
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::BlockId;
-using cpputils::unique_ref;
-using blobstore::Blob;
 using boost::none;
 
 TEST_F(BlobStoreTest, LoadNonexistingKeyOnEmptyBlobstore) {

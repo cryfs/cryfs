@@ -1,7 +1,5 @@
 #include "FuseRenameTest.h"
 
-using ::testing::Action;
-using ::testing::Invoke;
 
 void FuseRenameTest::Rename(const char *from, const char *to) {
   int error = RenameReturnError(from, to);

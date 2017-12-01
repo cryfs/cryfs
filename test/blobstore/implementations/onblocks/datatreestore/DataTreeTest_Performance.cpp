@@ -2,16 +2,10 @@
 
 #include <gmock/gmock.h>
 
-using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataLeafNode;
-using blobstore::onblocks::datanodestore::DataInnerNode;
-using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::datatreestore::LeafHandle;
 using blockstore::BlockId;
-using blockstore::testfake::FakeBlockStore;
 using cpputils::Data;
-using cpputils::make_unique_ref;
 
 class DataTreeTest_Performance: public DataTreeTest {
 public:

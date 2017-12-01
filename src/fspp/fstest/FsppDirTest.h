@@ -48,11 +48,11 @@ public:
 };
 TYPED_TEST_CASE_P(FsppDirTest);
 
-fspp::Dir::Entry DirEntry(const std::string &name) {
+inline fspp::Dir::Entry DirEntry(const std::string &name) {
   return fspp::Dir::Entry(fspp::Dir::EntryType::DIR, name);
 }
 
-fspp::Dir::Entry FileEntry(const std::string &name) {
+inline fspp::Dir::Entry FileEntry(const std::string &name) {
   return fspp::Dir::Entry(fspp::Dir::EntryType::FILE, name);
 }
 

@@ -1,9 +1,7 @@
 project (cpp-utils-test)
 
 set(SOURCES
-    EitherIncludeTest.cpp
     crypto/symmetric/CipherTest.cpp
-    crypto/symmetric/testutils/FakeAuthenticatedCipher.cpp
     crypto/kdf/SCryptTest.cpp
     crypto/kdf/SCryptParametersTest.cpp
     crypto/hash/HashTest.cpp
@@ -42,7 +40,6 @@ set(SOURCES
     logging/LoggingTest.cpp
     logging/LoggerIncludeTest.cpp
     logging/LoggingIncludeTest.cpp
-    EitherTest.cpp
     assert/assert_release_test.cpp
     assert/backtrace_include_test.cpp
     assert/assert_include_test.cpp

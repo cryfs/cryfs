@@ -6,17 +6,13 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 
-using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::BlockStore2;
 using blockstore::integrity::IntegrityBlockStore2;
-using blockstore::integrity::KnownBlockVersions;
 using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blockstore::inmemory::InMemoryBlockStore2;
 
-using cpputils::Data;
-using cpputils::DataFixture;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;
 using cpputils::TempFile;

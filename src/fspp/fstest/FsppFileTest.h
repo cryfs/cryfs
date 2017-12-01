@@ -79,8 +79,8 @@ public:
   }
 
   void Test_Utimens(fspp::File *file, fspp::Node *node) {
-    struct timespec ATIME; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
-    struct timespec MTIME; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
+    struct timespec ATIME{}; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
+    struct timespec MTIME{}; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
     node->utimens(ATIME, MTIME);
     this->IN_STAT(file, node, [this, ATIME, MTIME] (struct stat st) {
         this->EXPECT_ATIME_EQ(ATIME, st);

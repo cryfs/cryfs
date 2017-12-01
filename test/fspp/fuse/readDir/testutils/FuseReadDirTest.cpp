@@ -4,7 +4,6 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
-using std::initializer_list;
 
 using ::testing::Action;
 using ::testing::Return;

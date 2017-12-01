@@ -6,7 +6,6 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::chrono::milliseconds;
 using boost::chrono::minutes;
-using boost::chrono::duration_cast;
 using boost::this_thread::sleep_for;
 using namespace cryfs;
 

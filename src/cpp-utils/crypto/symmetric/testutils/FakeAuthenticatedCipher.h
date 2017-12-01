@@ -7,6 +7,7 @@
 #include "cpp-utils/data/FixedSizeData.h"
 #include "cpp-utils/data/Data.h"
 #include "cpp-utils/random/RandomGenerator.h"
+#include <random>
 
 namespace cpputils {
 
@@ -52,7 +53,7 @@ namespace cpputils {
           Data result(ciphertextSize(plaintextSize));
 
           //Add a random IV
-          uint8_t iv = rand();
+          uint8_t iv = std::uniform_int_distribution<uint8_t>()(random_);
           std::memcpy(result.data(), &iv, 1);
 
           //Use caesar chiffre on plaintext
@@ -108,6 +109,8 @@ namespace cpputils {
             dst[i] = src[i] + key;
           }
         }
+
+        static std::random_device random_;
     };
 
 }

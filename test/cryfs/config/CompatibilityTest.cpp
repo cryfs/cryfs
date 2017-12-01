@@ -8,12 +8,10 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/config/CryConfigFile.h>
 
-using std::vector;
 using cpputils::Data;
 using cpputils::AES256_GCM;
 using cpputils::Serpent128_CFB;
 using cpputils::TempFile;
-namespace bf = boost::filesystem;
 using namespace cryfs;
 
 // Test that config files created with (old) versions of cryfs are still loadable.

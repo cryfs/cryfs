@@ -5,9 +5,7 @@
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
-using blockstore::testfake::FakeBlockStore;
 using blockstore::BlockId;
-using blobstore::onblocks::datanodestore::DataNodeStore;
 using boost::none;
 
 using namespace blobstore::onblocks::datatreestore;

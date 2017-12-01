@@ -3,7 +3,6 @@
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using namespace cryfs::program_options;
-using std::vector;
 using boost::none;
 using boost::optional;
 using std::ostream;

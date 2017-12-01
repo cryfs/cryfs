@@ -10,17 +10,12 @@ using namespace cryfs;
 
 using boost::optional;
 using boost::none;
-using cpputils::Console;
 using cpputils::NoninteractiveConsole;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using std::string;
-using std::vector;
 using std::shared_ptr;
 using std::make_shared;
 using ::testing::_;
 using ::testing::Return;
-using ::testing::Invoke;
 using ::testing::ValuesIn;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAreArray;

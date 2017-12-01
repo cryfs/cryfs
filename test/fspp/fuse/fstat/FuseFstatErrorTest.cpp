@@ -3,15 +3,11 @@
 #include "fspp/fuse/FuseErrnoException.h"
 
 using ::testing::_;
-using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;
-using ::testing::Return;
 using ::testing::Throw;
 
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 
 using namespace fspp::fuse;
 

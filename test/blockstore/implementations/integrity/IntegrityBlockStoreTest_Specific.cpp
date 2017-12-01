@@ -102,7 +102,7 @@ public:
   }
 
   void insertBaseBlock(const blockstore::BlockId &blockId, Data data) {
-    EXPECT_TRUE(baseBlockStore->tryCreate(blockId, std::move(data)));
+    EXPECT_TRUE(baseBlockStore->tryCreate(blockId, data));
   }
 
 private:
