@@ -1469,7 +1469,7 @@ class FunctionMockerBase : public UntypedFunctionMockerBase {
     MutexLock l(&g_gmock_mutex);
     VerifyAndClearExpectationsLocked();
     Mock::UnregisterLocked(this);
-    ClearDefaultActionsLocked();
+    ClearDefaultActionsLocked(); // NOLINT
   }
 
   // Returns the ON_CALL spec that matches this mock function with the
