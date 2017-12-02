@@ -54,10 +54,10 @@ function(target_enable_style_warnings TARGET)
     target_compile_options(${TARGET} PRIVATE -Wall -Wextra)
 
     # Enable clang-tidy
-    set_target_properties(
-      ${TARGET} PROPERTIES
-      CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-    )
+    #set_target_properties(
+    #  ${TARGET} PROPERTIES
+    #  CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
+    #)
 endfunction(target_enable_style_warnings)
 
 ##################################################
