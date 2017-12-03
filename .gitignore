@@ -2,6 +2,7 @@ umltest.inner.sh
 umltest.status
 /build
 /cmake
+/cmake-build-*
 /.idea
 *~
 
