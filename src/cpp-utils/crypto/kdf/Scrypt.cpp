@@ -24,7 +24,7 @@ namespace cpputils {
     void SCrypt::derive(void *destination, size_t size, const string &password) {
         _checkCallOnlyOnce();
         int errorcode = crypto_scrypt(reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
-                                      reinterpret_cast<const uint8_t*>(_config.salt().data()), _config.salt().size(),
+                                      static_cast<const uint8_t*>(_config.salt().data()), _config.salt().size(),
                                       _config.N(), _config.r(), _config.p(),
                                       static_cast<uint8_t*>(destination), size);
         if (errorcode != 0) {

@@ -23,7 +23,7 @@ namespace datatreestore {
 namespace algorithms {
 
 optional<unique_ref<DataInnerNode>> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
-  BlockId blockId = node.LastChild()->blockId();
+  BlockId blockId = node.readLastChild().blockId();
   auto lastChild = nodeStore->load(blockId);
   ASSERT(lastChild != none, "Couldn't load last child");
   return dynamic_pointer_move<DataInnerNode>(*lastChild);

@@ -118,7 +118,7 @@ private:
 
   void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
     cpputils::Data read(count);
-    std::memcpy(read.data(), (uint8_t*)block.data() + offset, count);
+    std::memcpy(read.data(), static_cast<const uint8_t*>(block.data()) + offset, count);
     EXPECT_EQ(expected, read);
   }
 
@@ -127,7 +127,7 @@ private:
     cpputils::Data end(testData.blocksize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
-    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+    std::memcpy(end.data(), expected.dataOffset(start+count), end.size());
 
     EXPECT_DATA_READS_AS(begin, block, 0, start);
     EXPECT_DATA_READS_AS(end, block, start + count, end.size());

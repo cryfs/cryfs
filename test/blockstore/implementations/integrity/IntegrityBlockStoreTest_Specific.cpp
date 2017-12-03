@@ -13,6 +13,8 @@ using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::TempFile;
+using cpputils::serialize;
+using cpputils::deserialize;
 using boost::none;
 using std::make_unique;
 using std::unique_ptr;
@@ -66,7 +68,7 @@ public:
 
   void modifyBlock(const blockstore::BlockId &blockId) {
     auto block = blockStore->load(blockId).value();
-    byte* first_byte = (byte*)block.data();
+    byte* first_byte = static_cast<byte*>(block.data());
     *first_byte = *first_byte + 1;
     blockStore->store(blockId, block);
   }
@@ -77,23 +79,26 @@ public:
 
   void decreaseVersionNumber(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
-    uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::VERSION_HEADER_OFFSET);
-    ASSERT(*version > 1, "Can't decrease the lowest allowed version number");
-    *version -= 1;
+    void* versionPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::VERSION_HEADER_OFFSET;
+    uint64_t version = deserialize<uint64_t>(versionPtr);
+    ASSERT(version > 1, "Can't decrease the lowest allowed version number");
+    serialize<uint64_t>(versionPtr, version-1);
     baseBlockStore->store(blockId, baseBlock);
   }
 
   void increaseVersionNumber(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
-    uint64_t* version = (uint64_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::VERSION_HEADER_OFFSET);
-    *version += 1;
+    void* versionPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::VERSION_HEADER_OFFSET;
+    uint64_t version = deserialize<uint64_t>(versionPtr);
+    serialize<uint64_t>(versionPtr, version+1);
     baseBlockStore->store(blockId, baseBlock);
   }
 
   void changeClientId(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
-    uint32_t* clientId = (uint32_t*)((uint8_t*)baseBlock.data()+IntegrityBlockStore2::CLIENTID_HEADER_OFFSET);
-    *clientId += 1;
+    void* clientIdPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::CLIENTID_HEADER_OFFSET;
+    uint64_t clientId = deserialize<uint64_t>(clientIdPtr);
+    serialize<uint64_t>(clientIdPtr, clientId+1);
     baseBlockStore->store(blockId, baseBlock);
   }
 

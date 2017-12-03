@@ -84,7 +84,7 @@ public:
     Data end(GetParam().blobsize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
-    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+    std::memcpy(end.data(), expected.dataOffset(start+count), end.size());
 
     EXPECT_DATA_READS_AS(begin, blob, 0, start);
     EXPECT_DATA_READS_AS(end, blob, start + count, end.size());
@@ -152,7 +152,7 @@ TEST_P(BlobReadWriteDataTest, WriteWholeAndReadPart) {
   blob->write(this->backgroundData.data(), 0, GetParam().blobsize);
   Data read(GetParam().count);
   blob->read(read.data(), GetParam().offset, GetParam().count);
-  EXPECT_EQ(0, std::memcmp(read.data(), (uint8_t*)this->backgroundData.data()+GetParam().offset, GetParam().count));
+  EXPECT_EQ(0, std::memcmp(read.data(), this->backgroundData.dataOffset(GetParam().offset), GetParam().count));
 }
 
 TEST_P(BlobReadWriteDataTest, WritePartAndReadWhole) {
@@ -161,6 +161,6 @@ TEST_P(BlobReadWriteDataTest, WritePartAndReadWhole) {
   blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
   Data read = readBlob(*blob);
   EXPECT_EQ(0, std::memcmp(read.data(), this->backgroundData.data(), GetParam().offset));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)read.data()+GetParam().offset, this->foregroundData.data(), GetParam().count));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)read.data()+GetParam().offset+GetParam().count, (uint8_t*)this->backgroundData.data()+GetParam().offset+GetParam().count, GetParam().blobsize-GetParam().count-GetParam().offset));
+  EXPECT_EQ(0, std::memcmp(read.dataOffset(GetParam().offset), this->foregroundData.data(), GetParam().count));
+  EXPECT_EQ(0, std::memcmp(read.dataOffset(GetParam().offset+GetParam().count), this->backgroundData.dataOffset(GetParam().offset+GetParam().count), GetParam().blobsize-GetParam().count-GetParam().offset));
 }

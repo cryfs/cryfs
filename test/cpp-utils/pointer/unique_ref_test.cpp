@@ -91,36 +91,36 @@ TEST(MakeUniqueRefTest, CanAssignToBaseClassSharedPtr) {
 
 TEST(NullcheckTest, givenUniquePtrToInt_withNullptr_whenNullcheckCalled_thenReturnsNone) {
   boost::optional<unique_ref<int>> var = nullcheck(std::unique_ptr<int>(nullptr));
-  EXPECT_FALSE((bool)var);
+  EXPECT_FALSE(static_cast<bool>(var));
 }
 
 TEST(NullcheckTest, givenUniquePtrToObject_withNullptr_whenNullcheckCalled_thenReturnsNone) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::unique_ptr<SomeClass0Parameters>(nullptr));
-  EXPECT_FALSE((bool)var);
+  EXPECT_FALSE(static_cast<bool>(var));
 }
 
 TEST(NullcheckTest, givenUniquePtrToInt_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<int>> var = nullcheck(std::make_unique<int>(3));
-  EXPECT_TRUE((bool)var);
+  EXPECT_TRUE(static_cast<bool>(var));
   EXPECT_EQ(3, **var);
 }
 
 TEST(NullcheckTest, givenUniquePtrToObject_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass0Parameters>> var = nullcheck(std::make_unique<SomeClass0Parameters>());
-  EXPECT_TRUE((bool)var);
+  EXPECT_TRUE(static_cast<bool>(var));
   //Check that the type is correct
   EXPECT_EQ(var->get(), dynamic_cast<SomeClass0Parameters*>(var->get()));
 }
 
 TEST(NullcheckTest, givenUniquePtrToObjectWith1Parameter_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass1Parameter>> var = nullcheck(std::make_unique<SomeClass1Parameter>(5));
-  EXPECT_TRUE((bool)var);
+  EXPECT_TRUE(static_cast<bool>(var));
   EXPECT_EQ(5, (*var)->param);
 }
 
 TEST(NullcheckTest, givenUniquePtrToObjectWith2Parameters_withNonNullptr_whenNullcheckCalled_thenReturnsUniqueRef) {
   boost::optional<unique_ref<SomeClass2Parameters>> var = nullcheck(std::make_unique<SomeClass2Parameters>(7,2));
-  EXPECT_TRUE((bool)var);
+  EXPECT_TRUE(static_cast<bool>(var));
   EXPECT_EQ(7, (*var)->param1);
   EXPECT_EQ(2, (*var)->param2);
 }

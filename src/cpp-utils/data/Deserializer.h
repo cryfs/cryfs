@@ -6,6 +6,7 @@
 #include "../macros.h"
 #include "../assert/assert.h"
 #include "FixedSizeData.h"
+#include "SerializationHelper.h"
 
 namespace cpputils {
     class Deserializer final {
@@ -79,7 +80,7 @@ namespace cpputils {
         if (_pos + sizeof(DataType) > _source->size()) {
             throw std::runtime_error("Deserialization failed - size overflow");
         }
-        DataType result = *reinterpret_cast<const DataType*>(_source->dataOffset(_pos));
+        DataType result = deserialize<DataType>(_source->dataOffset(_pos));
         _pos += sizeof(DataType);
         return result;
     }
@@ -122,7 +123,7 @@ namespace cpputils {
             throw std::runtime_error("Deserialization failed - missing nullbyte for string termination");
         }
         uint64_t size = static_cast<const uint8_t*>(nullbytepos) - static_cast<const uint8_t*>(_source->dataOffset(_pos));
-        std::string result(reinterpret_cast<const char*>(_source->dataOffset(_pos)), size);
+        std::string result(static_cast<const char*>(_source->dataOffset(_pos)), size);
         _pos += size + 1;
         return result;
     }

@@ -51,7 +51,7 @@ endif()
 #################################################
 function(target_enable_style_warnings TARGET)
     # Enable compiler options
-    target_compile_options(${TARGET} PRIVATE -Wall -Wextra)
+    target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
 
     # Enable clang-tidy
     #set_target_properties(

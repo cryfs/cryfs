@@ -1,4 +1,5 @@
 #include "DataFixture.h"
+#include "SerializationHelper.h"
 
 namespace cpputils {
   Data DataFixture::generate(size_t size, long long int seed) {
@@ -8,7 +9,7 @@ namespace cpputils {
       //MMIX linear congruential generator
       val *= 6364136223846793005L;
       val += 1442695040888963407;
-      reinterpret_cast<long long int*>(result.data())[i] = val;
+      serialize<long long int>(result.dataOffset(i*sizeof(long long int)), val);
     }
     uint64_t alreadyWritten = (size/sizeof(long long int))*sizeof(long long int);
     val *= 6364136223846793005L;
@@ -16,7 +17,7 @@ namespace cpputils {
     char *remainingBytes = reinterpret_cast<char*>(&val);
     //Fill remaining bytes
     for(size_t i=0; i<size-alreadyWritten; ++i) {
-      reinterpret_cast<char*>(result.data())[alreadyWritten + i] = remainingBytes[i];
+      serialize<char>(result.dataOffset(alreadyWritten + i), remainingBytes[i]);
     }
     return result;
   }

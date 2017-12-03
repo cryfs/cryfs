@@ -1,9 +1,12 @@
 #include <blockstore/interface/BlockStore2.h>
 #include "IntegrityBlockStore2.h"
 #include "KnownBlockVersions.h"
+#include <cpp-utils/data/SerializationHelper.h>
 
 using cpputils::Data;
 using cpputils::unique_ref;
+using cpputils::serialize;
+using cpputils::deserialize;
 using std::string;
 using boost::optional;
 using boost::none;
@@ -25,11 +28,11 @@ constexpr unsigned int IntegrityBlockStore2::HEADER_LENGTH;
 Data IntegrityBlockStore2::_prependHeaderToData(const BlockId& blockId, uint32_t myClientId, uint64_t version, const Data &data) {
   static_assert(HEADER_LENGTH == sizeof(FORMAT_VERSION_HEADER) + BlockId::BINARY_LENGTH + sizeof(myClientId) + sizeof(version), "Wrong header length");
   Data result(data.size() + HEADER_LENGTH);
-  std::memcpy(result.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(result.dataOffset(ID_HEADER_OFFSET), blockId.data().data(), BlockId::BINARY_LENGTH);
-  std::memcpy(result.dataOffset(CLIENTID_HEADER_OFFSET), &myClientId, sizeof(myClientId));
-  std::memcpy(result.dataOffset(VERSION_HEADER_OFFSET), &version, sizeof(version));
-  std::memcpy((uint8_t*)result.dataOffset(HEADER_LENGTH), data.data(), data.size());
+  serialize<uint16_t>(result.dataOffset(0), FORMAT_VERSION_HEADER);
+  blockId.ToBinary(result.dataOffset(ID_HEADER_OFFSET));
+  serialize<uint32_t>(result.dataOffset(CLIENTID_HEADER_OFFSET), myClientId);
+  serialize<uint64_t>(result.dataOffset(VERSION_HEADER_OFFSET), version);
+  std::memcpy(result.dataOffset(HEADER_LENGTH), data.data(), data.size());
   return result;
 }
 
@@ -62,13 +65,11 @@ void IntegrityBlockStore2::_checkIdHeader(const BlockId &expectedBlockId, const 
 }
 
 uint16_t IntegrityBlockStore2::_readFormatHeader(const Data &data) {
-  return *reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data());
+  return deserialize<uint16_t>(data.data());
 }
 
 uint32_t IntegrityBlockStore2::_readClientId(const Data &data) {
-  uint32_t clientId;
-  std::memcpy(&clientId, data.dataOffset(CLIENTID_HEADER_OFFSET), sizeof(clientId));
-  return clientId;
+  return deserialize<uint32_t>(data.dataOffset(CLIENTID_HEADER_OFFSET));
 }
 
 BlockId IntegrityBlockStore2::_readBlockId(const Data &data) {
@@ -76,9 +77,7 @@ BlockId IntegrityBlockStore2::_readBlockId(const Data &data) {
 }
 
 uint64_t IntegrityBlockStore2::_readVersion(const Data &data) {
-  uint64_t version;
-  std::memcpy(&version, data.dataOffset(VERSION_HEADER_OFFSET), sizeof(version));
-  return version;
+  return deserialize<uint64_t>(data.dataOffset(VERSION_HEADER_OFFSET));
 }
 
 Data IntegrityBlockStore2::_removeHeader(const Data &data) {
@@ -146,8 +145,8 @@ optional<Data> IntegrityBlockStore2::load(const BlockId &blockId) const {
 #ifndef CRYFS_NO_COMPATIBILITY
 Data IntegrityBlockStore2::_migrateBlock(const BlockId &blockId, const Data &data) {
   Data migrated(data.size() + BlockId::BINARY_LENGTH);
-  std::memcpy(migrated.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
-  std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET), blockId.data().data(), BlockId::BINARY_LENGTH);
+  serialize<uint16_t>(migrated.dataOffset(0), FORMAT_VERSION_HEADER);
+  blockId.ToBinary(migrated.dataOffset(ID_HEADER_OFFSET));
   std::memcpy(migrated.dataOffset(ID_HEADER_OFFSET + BlockId::BINARY_LENGTH), data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER));
   ASSERT(migrated.size() == sizeof(FORMAT_VERSION_HEADER) + BlockId::BINARY_LENGTH + (data.size() - sizeof(FORMAT_VERSION_HEADER)), "Wrong offset computation");
   return migrated;

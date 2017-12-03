@@ -18,8 +18,8 @@ public:
     same_type(UINT32_C(0), X::ciphertextSize(UINT32_C(5)));
     same_type(UINT32_C(0), X::plaintextSize(UINT32_C(5)));
     typename X::EncryptionKey key = X::EncryptionKey::CreateKey(Random::OSRandom());
-    same_type(Data(0), X::encrypt((uint8_t*)nullptr, UINT32_C(0), key));
-    same_type(boost::optional<Data>(Data(0)), X::decrypt((uint8_t*)nullptr, UINT32_C(0), key));
+    same_type(Data(0), X::encrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
+    same_type(boost::optional<Data>(Data(0)), X::decrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
     string name = X::NAME;
   }
 

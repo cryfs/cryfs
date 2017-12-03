@@ -137,9 +137,9 @@ unique_ref<DataInnerNode> DataTreeTest::CreateTwoLeafWithSecondLeafSize(uint32_t
 unique_ref<DataInnerNode> DataTreeTest::CreateFullTwoLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullTwoLevel();
   for (uint32_t i = 0; i < root->numChildren()-1; ++i) {
-    LoadLeafNode(root->getChild(i)->blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
+    LoadLeafNode(root->readChild(i).blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
   }
-  LoadLeafNode(root->LastChild()->blockId())->resize(size);
+  LoadLeafNode(root->readLastChild().blockId())->resize(size);
   return root;
 }
 
@@ -176,12 +176,12 @@ unique_ref<DataInnerNode> DataTreeTest::CreateThreeLevelWithThreeChildrenAndLast
 unique_ref<DataInnerNode> DataTreeTest::CreateFullThreeLevelWithLastLeafSize(uint32_t size) {
   auto root = CreateFullThreeLevel();
   for (uint32_t i = 0; i < root->numChildren(); ++i) {
-    auto node = LoadInnerNode(root->getChild(i)->blockId());
+    auto node = LoadInnerNode(root->readChild(i).blockId());
     for (uint32_t j = 0; j < node->numChildren(); ++j) {
-      LoadLeafNode(node->getChild(j)->blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
+      LoadLeafNode(node->readChild(j).blockId())->resize(nodeStore->layout().maxBytesPerLeaf());
     }
   }
-  LoadLeafNode(LoadInnerNode(root->LastChild()->blockId())->LastChild()->blockId())->resize(size);
+  LoadLeafNode(LoadInnerNode(root->readLastChild().blockId())->readLastChild().blockId())->resize(size);
   return root;
 }
 
@@ -205,14 +205,14 @@ void DataTreeTest::EXPECT_IS_INNER_NODE(const BlockId &blockId) {
 void DataTreeTest::EXPECT_IS_TWONODE_CHAIN(const BlockId &blockId) {
   auto node = LoadInnerNode(blockId);
   EXPECT_EQ(1u, node->numChildren());
-  EXPECT_IS_LEAF_NODE(node->getChild(0)->blockId());
+  EXPECT_IS_LEAF_NODE(node->readChild(0).blockId());
 }
 
 void DataTreeTest::EXPECT_IS_FULL_TWOLEVEL_TREE(const BlockId &blockId) {
   auto node = LoadInnerNode(blockId);
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
   for (unsigned int i = 0; i < node->numChildren(); ++i) {
-    EXPECT_IS_LEAF_NODE(node->getChild(i)->blockId());
+    EXPECT_IS_LEAF_NODE(node->readChild(i).blockId());
   }
 }
 
@@ -220,10 +220,10 @@ void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const BlockId &blockId) {
   auto root = LoadInnerNode(blockId);
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), root->numChildren());
   for (unsigned int i = 0; i < root->numChildren(); ++i) {
-    auto node = LoadInnerNode(root->getChild(i)->blockId());
+    auto node = LoadInnerNode(root->readChild(i).blockId());
     EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), node->numChildren());
     for (unsigned int j = 0; j < node->numChildren(); ++j) {
-      EXPECT_IS_LEAF_NODE(node->getChild(j)->blockId());
+      EXPECT_IS_LEAF_NODE(node->readChild(j).blockId());
     }
   }
 }
@@ -235,7 +235,7 @@ void DataTreeTest::CHECK_DEPTH(int depth, const BlockId &blockId) {
     auto node = LoadInnerNode(blockId);
     EXPECT_EQ(depth, node->depth());
     for (uint32_t i = 0; i < node->numChildren(); ++i) {
-      CHECK_DEPTH(depth-1, node->getChild(i)->blockId());
+      CHECK_DEPTH(depth-1, node->readChild(i).blockId());
     }
   }
 }

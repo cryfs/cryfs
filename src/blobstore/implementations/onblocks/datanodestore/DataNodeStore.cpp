@@ -99,7 +99,7 @@ void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
   auto inner = dynamic_pointer_move<DataInnerNode>(node);
   ASSERT(inner != none, "Is neither a leaf nor an inner node");
   for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
-    removeSubtree((*inner)->depth()-1, (*inner)->getChild(i)->blockId());
+    removeSubtree((*inner)->depth()-1, (*inner)->readChild(i).blockId());
   }
   remove(std::move(*inner));
 }
@@ -115,7 +115,7 @@ void DataNodeStore::removeSubtree(uint8_t depth, const BlockId &blockId) {
     ASSERT(inner != none, "Is not an inner node, but depth was not zero");
     ASSERT((*inner)->depth() == depth, "Wrong depth given");
     for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
-      removeSubtree(depth-1, (*inner)->getChild(i)->blockId());
+      removeSubtree(depth-1, (*inner)->readChild(i).blockId());
     }
     remove(std::move(*inner));
   }

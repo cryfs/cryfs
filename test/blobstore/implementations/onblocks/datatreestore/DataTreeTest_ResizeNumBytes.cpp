@@ -69,9 +69,9 @@ public:
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->blockId());
+        EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
       }
-      EXPECT_IS_LEFTMAXDATA_TREE(inner->LastChild()->blockId());
+      EXPECT_IS_LEFTMAXDATA_TREE(inner->readLastChild().blockId());
     }
   }
 
@@ -80,7 +80,7 @@ public:
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->blockId());
+        EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
       }
     } else {
       DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
@@ -114,7 +114,7 @@ public:
       return std::move(*leaf);
     }
     auto inner = dynamic_pointer_move<DataInnerNode>(root).value();
-    return LastLeaf(inner->LastChild()->blockId());
+    return LastLeaf(inner->readLastChild().blockId());
   }
 
   uint32_t oldLastLeafSize;
@@ -208,7 +208,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), (uint64_t)nodeStore->layout().maxBytesPerLeaf()));
+  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));

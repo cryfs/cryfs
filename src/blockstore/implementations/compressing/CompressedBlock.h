@@ -68,7 +68,7 @@ cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::O
 
 template<class Compressor>
 cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Decompress(cpputils::unique_ref<Block> baseBlock) {
-  cpputils::Data decompressed = Compressor::Decompress((CryptoPP::byte*)baseBlock->data(), baseBlock->size());
+  cpputils::Data decompressed = Compressor::Decompress(baseBlock->data(), baseBlock->size());
   return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressed));
 }
 
@@ -93,7 +93,7 @@ const void *CompressedBlock<Compressor>::data() const {
 
 template<class Compressor>
 void CompressedBlock<Compressor>::write(const void *source, uint64_t offset, uint64_t size) {
-  std::memcpy((uint8_t*)_decompressedData.dataOffset(offset), source, size);
+  std::memcpy(_decompressedData.dataOffset(offset), source, size);
   _dataChanged = true;
 }
 

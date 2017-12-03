@@ -68,7 +68,7 @@ set<BlockId> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
             auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
             if (innerNode != none) {
                 for (uint32_t childIndex = 0; childIndex < (*innerNode)->numChildren(); ++childIndex) {
-                    auto child = (*innerNode)->getChild(childIndex)->blockId();
+                    auto child = (*innerNode)->readChild(childIndex).blockId();
                     unaccountedBlocks.erase(child);
                 }
             }

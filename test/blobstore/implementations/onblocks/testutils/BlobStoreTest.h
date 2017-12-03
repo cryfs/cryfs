@@ -16,7 +16,7 @@ public:
 
   cpputils::unique_ref<blobstore::Blob> loadBlob(const blockstore::BlockId &blockId) {
     auto loaded = blobStore->load(blockId);
-    EXPECT_TRUE((bool)loaded);
+    EXPECT_TRUE(static_cast<bool>(loaded));
     return std::move(*loaded);
   }
 

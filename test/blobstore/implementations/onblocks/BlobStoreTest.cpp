@@ -25,13 +25,13 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteDirectly) {
   auto blob = blobStore->create();
   BlockId blockId = blob->blockId();
   blobStore->remove(std::move(blob));
-  EXPECT_FALSE((bool)blobStore->load(blockId));
+  EXPECT_FALSE(static_cast<bool>(blobStore->load(blockId)));
 }
 
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteByKey) {
   auto blockId = blobStore->create()->blockId();
   blobStore->remove(blockId);
-  EXPECT_FALSE((bool)blobStore->load(blockId));
+  EXPECT_FALSE(static_cast<bool>(blobStore->load(blockId)));
 }
 
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
@@ -39,5 +39,5 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
   BlockId blockId = blob->blockId();
   reset(std::move(blob));
   blobStore->remove(loadBlob(blockId));
-  EXPECT_FALSE((bool)blobStore->load(blockId));
+  EXPECT_FALSE(static_cast<bool>(blobStore->load(blockId)));
 }

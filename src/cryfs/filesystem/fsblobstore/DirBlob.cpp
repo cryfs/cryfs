@@ -152,7 +152,7 @@ void DirBlob::statChildWithSizeAlreadySet(const BlockId &blockId, struct ::stat 
   result->st_mtim = child.lastModificationTime();
   result->st_ctim = child.lastMetadataChangeTime();
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
-  result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, (off_t)512);
+  result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, static_cast<off_t>(512));
   result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
 }
 

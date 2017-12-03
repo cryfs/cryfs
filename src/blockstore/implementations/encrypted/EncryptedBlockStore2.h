@@ -6,6 +6,7 @@
 #include "cpp-utils/crypto/cryptopp_byte.h"
 #include <cpp-utils/macros.h>
 #include <cpp-utils/crypto/symmetric/Cipher.h>
+#include <cpp-utils/data/SerializationHelper.h>
 
 namespace blockstore {
 namespace encrypted {
@@ -122,14 +123,14 @@ inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const
 
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const cpputils::Data &data) const {
-  cpputils::Data encrypted = Cipher::encrypt((CryptoPP::byte*)data.data(), data.size(), _encKey);
+  cpputils::Data encrypted = Cipher::encrypt(static_cast<const CryptoPP::byte*>(data.data()), data.size(), _encKey);
   return _prependFormatHeaderToData(encrypted);
 }
 
 template<class Cipher>
 inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::_tryDecrypt(const BlockId &blockId, const cpputils::Data &data) const {
   _checkFormatHeader(data);
-  boost::optional<cpputils::Data> decrypted = Cipher::decrypt((CryptoPP::byte*)data.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.size() - sizeof(FORMAT_VERSION_HEADER), _encKey);
+  boost::optional<cpputils::Data> decrypted = Cipher::decrypt(static_cast<const CryptoPP::byte*>(data.dataOffset(sizeof(FORMAT_VERSION_HEADER))), data.size() - sizeof(FORMAT_VERSION_HEADER), _encKey);
   if (decrypted == boost::none) {
     // TODO Log warning
     return boost::none;
@@ -164,7 +165,7 @@ inline bool EncryptedBlockStore2<Cipher>::_blockIdHeaderIsCorrect(const BlockId 
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_prependFormatHeaderToData(const cpputils::Data &data) {
   cpputils::Data dataWithHeader(sizeof(FORMAT_VERSION_HEADER) + data.size());
-  std::memcpy(dataWithHeader.dataOffset(0), &FORMAT_VERSION_HEADER, sizeof(FORMAT_VERSION_HEADER));
+  cpputils::serialize<uint16_t>(dataWithHeader.dataOffset(0), FORMAT_VERSION_HEADER);
   std::memcpy(dataWithHeader.dataOffset(sizeof(FORMAT_VERSION_HEADER)), data.data(), data.size());
   return dataWithHeader;
 }
@@ -184,7 +185,7 @@ inline void EncryptedBlockStore2<Cipher>::_checkFormatHeader(const cpputils::Dat
 
 template<class Cipher>
 uint16_t EncryptedBlockStore2<Cipher>::_readFormatHeader(const cpputils::Data &data) {
-  return *reinterpret_cast<decltype(FORMAT_VERSION_HEADER)*>(data.data());
+  return cpputils::deserialize<uint16_t>(data.data());
 }
 
 template<class Cipher>

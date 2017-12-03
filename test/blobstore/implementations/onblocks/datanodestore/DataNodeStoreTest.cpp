@@ -92,7 +92,7 @@ TEST_F(DataNodeStoreTest, CreatedInnerNodeIsInitialized) {
   auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
   EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->getChild(0)->blockId());
+  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
 }
 
 TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {

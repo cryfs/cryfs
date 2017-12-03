@@ -17,6 +17,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::string;
 using cpputils::DataFixture;
+using cpputils::deserialize;
 
 //TODO Split into multiple files
 
@@ -186,7 +187,7 @@ TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
   leaf->resize(randomData.size());
 
   //Check that the space was filled with zeroes
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), ((uint8_t*)loadData(*leaf).data())+smaller_size, 100));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(loadData(*leaf).data())+smaller_size, 100));
 }
 
 TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
@@ -195,14 +196,14 @@ TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
   {
     //At first, we expect there to be random data in the underlying data block
     auto block = blockStore->load(blockId).value();
-    EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
+    EXPECT_EQ(0, std::memcmp(randomData.dataOffset(smaller_size), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 
   //After shrinking, we expect there to be zeroes in the underlying data block
   ResizeLeaf(blockId, smaller_size);
   {
     auto block = blockStore->load(blockId).value();
-    EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
+    EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 }
 
@@ -221,7 +222,7 @@ TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
   unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), LAYOUT, *child);
 
   EXPECT_EQ(1u, converted->numChildren());
-  EXPECT_EQ(child->blockId(), converted->getChild(0)->blockId());
+  EXPECT_EQ(child->blockId(), converted->readChild(0).blockId());
   EXPECT_EQ(leaf_blockId, converted->blockId());
 }
 
@@ -229,7 +230,7 @@ TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   BlockId blockId = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
 
   auto block = blockStore->load(blockId).value();
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 
 TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf) {
@@ -250,10 +251,10 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
   EXPECT_EQ(0, std::memcmp(loadData(*leaf).data(), loadData(*copied).data(), leaf->numBytes()));
 
   //Test that they have different data regions (changing the original one doesn't change the copy)
-  char data = '\0';
+  uint8_t data = 0;
   leaf->write(&data, 0, 1);
-  EXPECT_EQ(data, *(char*)loadData(*leaf).data());
-  EXPECT_NE(data, *(char*)loadData(*copied).data());
+  EXPECT_EQ(data, deserialize<uint8_t>(loadData(*leaf).data()));
+  EXPECT_NE(data, deserialize<uint8_t>(loadData(*copied).data()));
 }
 
 
@@ -292,7 +293,7 @@ public:
     Data end(GetParam().leafsize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
-    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+    std::memcpy(end.data(), expected.dataOffset(start+count), end.size());
 
     EXPECT_DATA_READS_AS(begin, leaf, 0, start);
     EXPECT_DATA_READS_AS(end, leaf, start + count, end.size());

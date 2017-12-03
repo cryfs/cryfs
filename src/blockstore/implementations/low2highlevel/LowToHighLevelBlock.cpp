@@ -48,12 +48,12 @@ LowToHighLevelBlock::~LowToHighLevelBlock() {
 }
 
 const void *LowToHighLevelBlock::data() const {
-  return (uint8_t*)_data.data();
+  return _data.data();
 }
 
 void LowToHighLevelBlock::write(const void *source, uint64_t offset, uint64_t count) {
   ASSERT(offset <= size() && offset + count <= size(), "Write outside of valid area"); //Also check offset < size() because of possible overflow in the addition
-  std::memcpy((uint8_t*)_data.data()+offset, source, count);
+  std::memcpy(_data.dataOffset(offset), source, count);
   _dataChanged = true;
 }
 

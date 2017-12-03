@@ -13,7 +13,7 @@ using std::ostringstream;
 namespace cpputils {
 
     size_t CurlHttpClient::write_data(void *ptr, size_t size, size_t nmemb, ostringstream *stream) {
-        stream->write((const char *) ptr, size * nmemb);
+        stream->write(static_cast<const char *>(ptr), size * nmemb);
         return size * nmemb;
     }
 

@@ -211,11 +211,11 @@ void DirEntryList::setMode(const BlockId &blockId, mode_t mode) {
 bool DirEntryList::setUidGid(const BlockId &blockId, uid_t uid, gid_t gid) {
     auto found = _findById(blockId);
     bool changed = false;
-    if (uid != (uid_t)-1) {
+    if (uid != static_cast<uid_t>(-1)) {
         found->setUid(uid);
         changed = true;
     }
-    if (gid != (gid_t)-1) {
+    if (gid != static_cast<gid_t>(-1)) {
         found->setGid(gid);
         changed = true;
     }

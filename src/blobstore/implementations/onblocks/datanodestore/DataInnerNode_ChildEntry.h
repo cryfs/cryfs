@@ -10,17 +10,19 @@ namespace datanodestore{
 
 struct DataInnerNode_ChildEntry final {
 public:
-  blockstore::BlockId blockId() const {
-    return blockstore::BlockId::FromBinary(_blockIdData);
-  }
-private:
-  void setBlockId(const blockstore::BlockId &blockId) {
-    blockId.ToBinary(_blockIdData);
-  }
-  friend class DataInnerNode;
-  uint8_t _blockIdData[blockstore::BlockId::BINARY_LENGTH];
+  DataInnerNode_ChildEntry(const blockstore::BlockId &blockId): _blockId(blockId) {}
 
-  DISALLOW_COPY_AND_ASSIGN(DataInnerNode_ChildEntry);
+  const blockstore::BlockId& blockId() const {
+    return _blockId;
+  }
+
+  DataInnerNode_ChildEntry(const DataInnerNode_ChildEntry&) = delete;
+  DataInnerNode_ChildEntry& operator=(const DataInnerNode_ChildEntry&) = delete;
+  DataInnerNode_ChildEntry(DataInnerNode_ChildEntry&&) = default;
+  DataInnerNode_ChildEntry& operator=(DataInnerNode_ChildEntry&&) = default;
+
+private:
+  blockstore::BlockId _blockId;
 };
 
 }

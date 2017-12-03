@@ -122,7 +122,7 @@ namespace blobstore {
                 // we still have to descend to the last old child to fill it with leaves and grow the last old leaf.
                 if (isLeftBorderOfTraversal && beginChild >= numChildren) {
                     ASSERT(numChildren > 0, "Node doesn't have children.");
-                    auto childBlockId = root->getChild(numChildren-1)->blockId();
+                    auto childBlockId = root->readLastChild().blockId();
                     uint32_t childOffset = (numChildren-1) * leavesPerChild;
                     _traverseExistingSubtree(childBlockId, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
                                              [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
@@ -132,7 +132,7 @@ namespace blobstore {
 
                 // Traverse existing children
                 for (uint32_t childIndex = beginChild; childIndex < std::min(endChild, numChildren); ++childIndex) {
-                    auto childBlockId = root->getChild(childIndex)->blockId();
+                    auto childBlockId = root->readChild(childIndex).blockId();
                     uint32_t childOffset = childIndex * leavesPerChild;
                     uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
                     uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
@@ -169,7 +169,7 @@ namespace blobstore {
                     return _nodeStore->createNewLeafNode(leafCreator(leafOffset));
                 }
 
-                uint8_t minNeededDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)endIndex);
+                uint8_t minNeededDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), static_cast<uint64_t>(endIndex));
                 ASSERT(depth >= minNeededDepth, "Given tree depth doesn't fit given number of leaves to create.");
                 uint32_t leavesPerChild = _maxLeavesForTreeDepth(depth-1);
                 uint32_t beginChild = beginIndex/leavesPerChild;
@@ -208,7 +208,7 @@ namespace blobstore {
             }
 
             uint32_t LeafTraverser::_maxLeavesForTreeDepth(uint8_t depth) const {
-                return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)depth);
+                return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), static_cast<uint64_t>(depth));
             }
 
             function<Data (uint32_t index)> LeafTraverser::_createMaxSizeLeaf() const {
@@ -221,7 +221,7 @@ namespace blobstore {
             unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildReplaceRootWithItsChild(unique_ref<DataNode> root) {
                 DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
                 if (inner != nullptr && inner->numChildren() == 1) {
-                    auto newRoot = _whileRootHasOnlyOneChildRemoveRootReturnChild(inner->getChild(0)->blockId());
+                    auto newRoot = _whileRootHasOnlyOneChildRemoveRootReturnChild(inner->readChild(0).blockId());
                     auto result = _nodeStore->overwriteNodeWith(std::move(root), *newRoot);
                     _nodeStore->remove(std::move(newRoot));
                     return result;
@@ -237,7 +237,7 @@ namespace blobstore {
                 if (inner == none) {
                     return std::move(*current);
                 } else if ((*inner)->numChildren() == 1) {
-                    auto result = _whileRootHasOnlyOneChildRemoveRootReturnChild((*inner)->getChild(0)->blockId());
+                    auto result = _whileRootHasOnlyOneChildRemoveRootReturnChild((*inner)->readChild(0).blockId());
                     _nodeStore->remove(std::move(*inner));
                     return result;
                 } else {

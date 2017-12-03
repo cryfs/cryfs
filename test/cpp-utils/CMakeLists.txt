@@ -34,6 +34,7 @@ set(SOURCES
     data/DataFixtureTest.cpp
     data/DataTest.cpp
     data/FixedSizeDataIncludeTest.cpp
+    data/SerializationHelperTest.cpp
     data/DataIncludeTest.cpp
     logging/LoggingLevelTest.cpp
     logging/LoggerTest.cpp

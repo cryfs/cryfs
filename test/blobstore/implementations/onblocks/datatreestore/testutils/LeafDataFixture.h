@@ -23,7 +23,7 @@ public:
       EXPECT_EQ(_data.size(), leaf.numBytes());
       EXPECT_EQ(0, std::memcmp(_data.data(), loadData(leaf).data(), _data.size()));
     } else {
-      EXPECT_LE(onlyCheckNumBytes, (int)leaf.numBytes());
+      EXPECT_LE(onlyCheckNumBytes, static_cast<int>(leaf.numBytes()));
       EXPECT_EQ(0, std::memcmp(_data.data(), loadData(leaf).data(), onlyCheckNumBytes));
     }
   }

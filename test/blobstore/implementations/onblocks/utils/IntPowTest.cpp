@@ -73,5 +73,5 @@ TEST_F(IntPowTest, ArbitraryNumbers3) {
 TEST_F(IntPowTest, 64bit) {
   uint64_t value = UINT64_C(1024)*1024*1024*1024;
   EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
-  EXPECT_EQ(value*value*value, intPow(value, (uint64_t)3));
+  EXPECT_EQ(value*value*value, intPow(value, UINT64_C(3)));
 }

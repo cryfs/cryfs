@@ -152,7 +152,7 @@ TEST_F(BlobSizeDataTest, DataStaysIntactWhenGrowing) {
   blob->write(randomData.data(), 0, MEDIUM_SIZE);
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), randomData.data(), MEDIUM_SIZE));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)readBlob(*blob).data() + MEDIUM_SIZE, ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
+  EXPECT_EQ(0, std::memcmp(readBlob(*blob).dataOffset(MEDIUM_SIZE), ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
 }
 
 TEST_F(BlobSizeDataTest, DataStaysIntactWhenShrinking) {
@@ -168,5 +168,5 @@ TEST_F(BlobSizeDataTest, ChangedAreaIsZeroedOutWhenShrinkingAndRegrowing) {
   blob->resize(MEDIUM_SIZE);
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), randomData.data(), MEDIUM_SIZE));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)readBlob(*blob).data() + MEDIUM_SIZE, ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
+  EXPECT_EQ(0, std::memcmp(readBlob(*blob).dataOffset(MEDIUM_SIZE), ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
 }

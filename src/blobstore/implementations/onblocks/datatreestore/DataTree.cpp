@@ -82,8 +82,8 @@ uint32_t DataTree::_computeNumLeaves(const DataNode &node) const {
   }
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(node);
-  uint64_t numLeavesInLeftChildren = (uint64_t)(inner.numChildren()-1) * leavesPerFullChild(inner);
-  auto lastChild = _nodeStore->load(inner.LastChild()->blockId());
+  uint64_t numLeavesInLeftChildren = static_cast<uint64_t>(inner.numChildren()-1) * leavesPerFullChild(inner);
+  auto lastChild = _nodeStore->load(inner.readLastChild().blockId());
   ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numLeavesInRightChild = _computeNumLeaves(**lastChild);
 
@@ -112,7 +112,7 @@ void DataTree::_traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {
-  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), (uint64_t)root.depth()-1);
+  return utils::intPow(_nodeStore->layout().maxChildrenPerInnerNode(), static_cast<uint64_t>(root.depth())-1);
 }
 
 uint64_t DataTree::numStoredBytes() const {
@@ -132,7 +132,7 @@ uint64_t DataTree::_numStoredBytes(const DataNode &root) const {
 
   const DataInnerNode &inner = dynamic_cast<const DataInnerNode&>(root);
   uint64_t numBytesInLeftChildren = (inner.numChildren()-1) * leavesPerFullChild(inner) * _nodeStore->layout().maxBytesPerLeaf();
-  auto lastChild = _nodeStore->load(inner.LastChild()->blockId());
+  auto lastChild = _nodeStore->load(inner.readLastChild().blockId());
   ASSERT(lastChild != none, "Couldn't load last child");
   uint64_t numBytesInRightChild = _numStoredBytes(**lastChild);
 
@@ -159,14 +159,14 @@ void DataTree::resizeNumBytes(uint64_t newNumBytes) {
   auto onBacktrackFromSubtree = [this, newNumLeaves, maxChildrenPerInnerNode] (DataInnerNode* node) {
       // This is only called for the right border nodes of the new tree.
       // When growing size, the following is a no-op. When shrinking, we're deleting the children that aren't needed anymore.
-      uint32_t maxLeavesPerChild = utils::intPow((uint64_t)maxChildrenPerInnerNode, ((uint64_t)node->depth()-1));
+      uint32_t maxLeavesPerChild = utils::intPow(static_cast<uint64_t>(maxChildrenPerInnerNode), (static_cast<uint64_t>(node->depth())-1));
       uint32_t neededNodesOnChildLevel = utils::ceilDivision(newNumLeaves, maxLeavesPerChild);
       uint32_t neededSiblings = utils::ceilDivision(neededNodesOnChildLevel, maxChildrenPerInnerNode);
       uint32_t neededChildrenForRightBorderNode = neededNodesOnChildLevel - (neededSiblings-1) * maxChildrenPerInnerNode;
       ASSERT(neededChildrenForRightBorderNode <= node->numChildren(), "Node has too few children");
       // All children to the right of the new right-border-node are removed including their subtree.
       while(node->numChildren() > neededChildrenForRightBorderNode) {
-        _nodeStore->removeSubtree(node->depth()-1, node->LastChild()->blockId());
+        _nodeStore->removeSubtree(node->depth()-1, node->readLastChild().blockId());
         node->removeLastChild();
       }
   };

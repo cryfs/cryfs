@@ -124,7 +124,7 @@ TEST_F(DataInnerNodeTest, InitializesCorrectly) {
   auto node = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()});
 
   EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->getChild(0)->blockId());
+  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
 }
 
 TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
@@ -132,22 +132,22 @@ TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
   auto node = DataInnerNode::InitializeNewNode(blockStore->load(blockId).value(), nodeStore->layout(), 1, {leaf->blockId()});
 
   EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->getChild(0)->blockId());
+  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
 }
 
 TEST_F(DataInnerNodeTest, IsCorrectlyInitializedAfterLoading) {
   auto loaded = CreateAndLoadNewInnerNode(*leaf);
 
   EXPECT_EQ(1u, loaded->numChildren());
-  EXPECT_EQ(leaf->blockId(), loaded->getChild(0)->blockId());
+  EXPECT_EQ(leaf->blockId(), loaded->readChild(0).blockId());
 }
 
 TEST_F(DataInnerNodeTest, AddingASecondLeaf) {
   BlockId leaf2_blockId = AddALeafTo(node.get());
 
   EXPECT_EQ(2u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->getChild(0)->blockId());
-  EXPECT_EQ(leaf2_blockId, node->getChild(1)->blockId());
+  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
+  EXPECT_EQ(leaf2_blockId, node->readChild(1).blockId());
 }
 
 TEST_F(DataInnerNodeTest, AddingASecondLeafAndReload) {
@@ -155,8 +155,8 @@ TEST_F(DataInnerNodeTest, AddingASecondLeafAndReload) {
   auto loaded = CreateAndLoadNewInnerNode(1, {leaf->blockId(), leaf2->blockId()});
 
   EXPECT_EQ(2u, loaded->numChildren());
-  EXPECT_EQ(leaf->blockId(), loaded->getChild(0)->blockId());
-  EXPECT_EQ(leaf2->blockId(), loaded->getChild(1)->blockId());
+  EXPECT_EQ(leaf->blockId(), loaded->readChild(0).blockId());
+  EXPECT_EQ(leaf2->blockId(), loaded->readChild(1).blockId());
 }
 
 TEST_F(DataInnerNodeTest, BuildingAThreeLevelTree) {
@@ -164,8 +164,8 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTree) {
   auto parent = CreateNewInnerNode(node->depth()+1, {node->blockId(), node2->blockId()});
 
   EXPECT_EQ(2u, parent->numChildren());
-  EXPECT_EQ(node->blockId(), parent->getChild(0)->blockId());
-  EXPECT_EQ(node2->blockId(), parent->getChild(1)->blockId());
+  EXPECT_EQ(node->blockId(), parent->readChild(0).blockId());
+  EXPECT_EQ(node2->blockId(), parent->readChild(1).blockId());
 }
 
 TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
@@ -173,8 +173,8 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   auto parent = CreateAndLoadNewInnerNode(node->depth()+1, {node->blockId(), node2->blockId()});
 
   EXPECT_EQ(2u, parent->numChildren());
-  EXPECT_EQ(node->blockId(), parent->getChild(0)->blockId());
-  EXPECT_EQ(node2->blockId(), parent->getChild(1)->blockId());
+  EXPECT_EQ(node->blockId(), parent->readChild(0).blockId());
+  EXPECT_EQ(node2->blockId(), parent->readChild(1).blockId());
 }
 
 TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
@@ -183,7 +183,7 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
   unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), nodeStore->layout(), *child);
 
   EXPECT_EQ(1u, converted->numChildren());
-  EXPECT_EQ(child->blockId(), converted->getChild(0)->blockId());
+  EXPECT_EQ(child->blockId(), converted->readChild(0).blockId());
   EXPECT_EQ(node_blockId, converted->blockId());
 }
 
@@ -191,7 +191,7 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
   BlockId blockId = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
 
   auto block = blockStore->load(blockId).value();
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 
 TEST_F(DataInnerNodeTest, CopyingCreatesNewNode) {
@@ -203,7 +203,7 @@ TEST_F(DataInnerNodeTest, CopyInnerNodeWithOneChild) {
   auto copied = CopyInnerNode(*node);
 
   EXPECT_EQ(node->numChildren(), copied->numChildren());
-  EXPECT_EQ(node->getChild(0)->blockId(), copied->getChild(0)->blockId());
+  EXPECT_EQ(node->readChild(0).blockId(), copied->readChild(0).blockId());
 }
 
 TEST_F(DataInnerNodeTest, CopyInnerNodeWithTwoChildren) {
@@ -211,21 +211,21 @@ TEST_F(DataInnerNodeTest, CopyInnerNodeWithTwoChildren) {
   auto copied = CopyInnerNode(*node);
 
   EXPECT_EQ(node->numChildren(), copied->numChildren());
-  EXPECT_EQ(node->getChild(0)->blockId(), copied->getChild(0)->blockId());
-  EXPECT_EQ(node->getChild(1)->blockId(), copied->getChild(1)->blockId());
+  EXPECT_EQ(node->readChild(0).blockId(), copied->readChild(0).blockId());
+  EXPECT_EQ(node->readChild(1).blockId(), copied->readChild(1).blockId());
 }
 
 TEST_F(DataInnerNodeTest, LastChildWhenOneChild) {
-  EXPECT_EQ(leaf->blockId(), node->LastChild()->blockId());
+  EXPECT_EQ(leaf->blockId(), node->readLastChild().blockId());
 }
 
 TEST_F(DataInnerNodeTest, LastChildWhenTwoChildren) {
   BlockId blockId = AddALeafTo(node.get());
-  EXPECT_EQ(blockId, node->LastChild()->blockId());
+  EXPECT_EQ(blockId, node->readLastChild().blockId());
 }
 
 TEST_F(DataInnerNodeTest, LastChildWhenThreeChildren) {
   AddALeafTo(node.get());
   BlockId blockId = AddALeafTo(node.get());
-  EXPECT_EQ(blockId, node->LastChild()->blockId());
+  EXPECT_EQ(blockId, node->readLastChild().blockId());
 }

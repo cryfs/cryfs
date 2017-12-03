@@ -21,7 +21,7 @@ namespace cpputils {
     inline OSRandomGenerator::OSRandomGenerator() {}
 
     inline void OSRandomGenerator::_get(void *target, size_t bytes) {
-        CryptoPP::OS_GenerateRandomBlock(true, (CryptoPP::byte*)target, bytes);
+        CryptoPP::OS_GenerateRandomBlock(true, static_cast<CryptoPP::byte*>(target), bytes);
     }
 }
 

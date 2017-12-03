@@ -38,7 +38,7 @@ unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, con
 
 void DataLeafNode::read(void *target, uint64_t offset, uint64_t size) const {
   ASSERT(offset <= node().Size() && offset + size <= node().Size(), "Read out of valid area"); // Also check offset, because the addition could lead to overflows
-  std::memcpy(target, (uint8_t*)node().data() + offset, size);
+  std::memcpy(target, static_cast<const uint8_t*>(node().data()) + offset, size);
 }
 
 void DataLeafNode::write(const void *source, uint64_t offset, uint64_t size) {

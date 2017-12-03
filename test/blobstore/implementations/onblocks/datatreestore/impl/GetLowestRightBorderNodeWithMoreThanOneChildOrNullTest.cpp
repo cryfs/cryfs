@@ -66,7 +66,7 @@ public:
 
   TestData CreateFullThreeLevelTree() {
     auto root = CreateFullThreeLevel();
-    return TestData{root->blockId(), root->LastChild()->blockId()};
+    return TestData{root->blockId(), root->readLastChild().blockId()};
   }
 };
 

@@ -31,6 +31,7 @@ set(SOURCES
         random/RandomDataBuffer.cpp
         random/RandomGenerator.cpp
         lock/LockPool.cpp
+        data/SerializationHelper.cpp
         data/Serializer.cpp
         data/Deserializer.cpp
         data/DataFixture.cpp

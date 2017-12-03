@@ -19,7 +19,7 @@ TEST_F(DataTreeTest_NumStoredBytes, CreatedTreeIsEmpty) {
 class DataTreeTest_NumStoredBytes_P: public DataTreeTest_NumStoredBytes, public WithParamInterface<uint32_t> {};
 INSTANTIATE_TEST_CASE_P(EmptyLastLeaf, DataTreeTest_NumStoredBytes_P, Values(0u));
 INSTANTIATE_TEST_CASE_P(HalfFullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(5u, 10u));
-INSTANTIATE_TEST_CASE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values((uint32_t)DataNodeLayout(DataTreeTest_NumStoredBytes::BLOCKSIZE_BYTES).maxBytesPerLeaf()));
+INSTANTIATE_TEST_CASE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(static_cast<uint32_t>(DataNodeLayout(DataTreeTest_NumStoredBytes::BLOCKSIZE_BYTES).maxBytesPerLeaf())));
 
 TEST_P(DataTreeTest_NumStoredBytes_P, SingleLeaf) {
   BlockId blockId = CreateLeafWithSize(GetParam())->blockId();

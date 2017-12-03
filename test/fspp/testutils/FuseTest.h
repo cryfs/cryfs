@@ -19,25 +19,25 @@
   RETURNTYPE NAME(const boost::filesystem::path &path) override {  \
     return NAME(path.c_str());                                     \
   }                                                                \
-  MOCK_METHOD1(NAME, RETURNTYPE(const char*));                     \
+  MOCK_METHOD1(NAME, RETURNTYPE(const char*))                      \
 
 #define MOCK_PATH_METHOD2(NAME, RETURNTYPE, PARAM1)                               \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 param1) override {  \
     return NAME(path.c_str(), param1);                                            \
   }                                                                               \
-  MOCK_METHOD2(NAME, RETURNTYPE(const char*, PARAM1));                            \
+  MOCK_METHOD2(NAME, RETURNTYPE(const char*, PARAM1))                             \
 
 #define MOCK_PATH_METHOD3(NAME, RETURNTYPE, PARAM1, PARAM2)                              \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 p1, PARAM2 p2) override {  \
     return NAME(path.c_str(), p1, p2);                                                   \
   }                                                                                      \
-  MOCK_METHOD3(NAME, RETURNTYPE(const char*, PARAM1, PARAM2));                           \
+  MOCK_METHOD3(NAME, RETURNTYPE(const char*, PARAM1, PARAM2))                            \
 
 #define MOCK_PATH_METHOD4(NAME, RETURNTYPE, PARAM1, PARAM2, PARAM3)                                 \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 p1, PARAM2 p2, PARAM3 p3) override {  \
     return NAME(path.c_str(), p1, p2, p3);                                                          \
   }                                                                                                 \
-  MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3));                              \
+  MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3))                               \
 
 class MockFilesystem: public fspp::fuse::Filesystem {
 public:

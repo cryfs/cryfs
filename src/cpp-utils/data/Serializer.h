@@ -7,6 +7,7 @@
 #include "../macros.h"
 #include "../assert/assert.h"
 #include <string>
+#include "SerializationHelper.h"
 
 namespace cpputils {
     //TODO Test Serializer/Deserializer
@@ -83,11 +84,10 @@ namespace cpputils {
 
     template<typename DataType>
     inline void Serializer::_write(DataType obj) {
-        static_assert(std::is_pod<DataType>::value, "Can only serialize PODs");
         if (_pos + sizeof(DataType) > _result.size()) {
             throw std::runtime_error("Serialization failed - size overflow");
         }
-        *reinterpret_cast<DataType*>(_result.dataOffset(_pos)) = obj;
+        serialize<DataType>(_result.dataOffset(_pos), obj);
         _pos += sizeof(DataType);
     }
 

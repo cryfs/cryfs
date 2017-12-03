@@ -15,7 +15,7 @@ public:
 
     void EXPECT_SIZE(uint64_t expectedSize, fspp::OpenFile *openFile) {
         IN_STAT(openFile, [expectedSize] (struct stat st) {
-            EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
+            EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.st_size));
         });
 
         EXPECT_NUMBYTES_READABLE(expectedSize, openFile);
@@ -26,7 +26,7 @@ public:
         //Try to read one byte more than the expected size
         ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
         //and check that it only read the expected size (but also not less)
-        EXPECT_EQ(expectedSize, (uint64_t)readBytes);
+        EXPECT_EQ(expectedSize, static_cast<uint64_t>(readBytes));
     }
 };
 

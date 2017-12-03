@@ -30,7 +30,7 @@ const void *FakeBlock::data() const {
 
 void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
   ASSERT(offset <= _data->size() && offset + size <= _data->size(), "Write outside of valid area"); //Also check offset < _data->size() because of possible overflow in the addition
-  std::memcpy((uint8_t*)_data->data()+offset, source, size);
+  std::memcpy(_data->dataOffset(offset), source, size);
   _dataChanged = true;
 }
 

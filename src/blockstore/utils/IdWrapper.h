@@ -5,6 +5,7 @@
 #include <string>
 #include <cpp-utils/data/FixedSizeData.h>
 #include <cpp-utils/random/Random.h>
+#include <cpp-utils/data/SerializationHelper.h>
 
 namespace blockstore {
 
@@ -101,7 +102,7 @@ inline bool operator!=(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
     template <> struct hash<IdWrapper> {                                                                               \
       size_t operator()(const IdWrapper &idWrapper) const {                                                            \
         /*Ids are random, so it is enough to use the first few bytes as a hash */                                      \
-        return *(size_t*)(idWrapper.id_.data());                                                                       \
+        return cpputils::deserialize<size_t>(idWrapper.id_.data());                                                    \
       }                                                                                                                \
     };                                                                                                                 \
     /*Allow using IdWrapper in std::map / std::set */                                                                  \

@@ -115,7 +115,7 @@ TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptr1) {
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptrWithoutOwnership) {
-  optional_ownership_ptr<TestObject> ptr = WithoutOwnership((TestObject*)nullptr);
+  optional_ownership_ptr<TestObject> ptr = WithoutOwnership(static_cast<TestObject*>(nullptr));
   UNUSED(ptr);
 }
 

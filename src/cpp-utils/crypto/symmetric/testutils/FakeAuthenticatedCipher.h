@@ -8,19 +8,20 @@
 #include "cpp-utils/data/Data.h"
 #include "cpp-utils/random/RandomGenerator.h"
 #include <random>
+#include <cpp-utils/data/SerializationHelper.h>
 
 namespace cpputils {
 
     struct FakeKey {
         static FakeKey FromBinary(const void *data) {
-          return FakeKey{*(uint64_t *) data};
+          return FakeKey{deserialize<uint64_t>(data)};
         }
 
         static constexpr unsigned int BINARY_LENGTH = sizeof(uint64_t);
 
         static FakeKey CreateKey(RandomGenerator &randomGenerator) {
             auto data = randomGenerator.getFixedSize<sizeof(uint64_t)>();
-            return FakeKey{*((uint64_t *) data.data())};
+            return FromBinary(data.data());
         }
 
         uint64_t value;
@@ -54,14 +55,14 @@ namespace cpputils {
 
           //Add a random IV
           uint64_t iv = std::uniform_int_distribution<uint64_t>()(random_);
-          std::memcpy(result.data(), &iv, sizeof(uint64_t));
+          serialize<uint64_t>(result.data(), iv);
 
           //Use xor chiffre on plaintext
-          _xor((CryptoPP::byte *) result.data() + sizeof(uint64_t), plaintext, plaintextSize, encKey.value ^ iv);
+          _xor(static_cast<CryptoPP::byte*>(result.dataOffset(sizeof(uint64_t))), plaintext, plaintextSize, encKey.value ^ iv);
 
           //Add checksum information
-          uint64_t checksum = _checksum((CryptoPP::byte *) result.data(), encKey, plaintextSize + sizeof(uint64_t));
-          std::memcpy((CryptoPP::byte *) result.data() + plaintextSize + sizeof(uint64_t), &checksum, sizeof(uint64_t));
+          uint64_t checksum = _checksum(static_cast<const CryptoPP::byte*>(result.data()), encKey, plaintextSize + sizeof(uint64_t));
+          serialize<uint64_t>(result.dataOffset(plaintextSize + sizeof(uint64_t)), checksum);
 
           return result;
         }
@@ -75,45 +76,35 @@ namespace cpputils {
 
           //Check checksum
           uint64_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + sizeof(uint64_t));
-          uint64_t actualParity = *(uint64_t * )(ciphertext + plaintextSize(ciphertextSize) + sizeof(uint64_t));
+          uint64_t actualParity = deserialize<uint64_t>(ciphertext + plaintextSize(ciphertextSize) + sizeof(uint64_t));
           if (expectedParity != actualParity) {
             return boost::none;
           }
 
           //Decrypt xor chiffre from ciphertext
-          uint64_t iv = *(uint64_t *) ciphertext;
+          uint64_t iv = deserialize<uint64_t>(ciphertext);
           Data result(plaintextSize(ciphertextSize));
-          _xor((CryptoPP::byte *) result.data(), ciphertext + sizeof(uint64_t), plaintextSize(ciphertextSize), encKey.value ^ iv);
+          _xor(static_cast<CryptoPP::byte *>(result.data()), ciphertext + sizeof(uint64_t), plaintextSize(ciphertextSize), encKey.value ^ iv);
+
           return std::move(result);
         }
 
         static constexpr const char *NAME = "FakeAuthenticatedCipher";
 
     private:
-        static uint64_t _checksum(const CryptoPP::byte *data, FakeKey encKey, unsigned int size) {
+        static uint64_t _checksum(const CryptoPP::byte *data, FakeKey encKey, std::size_t size) {
           uint64_t checksum = 34343435 * encKey.value; // some init value
-          const uint64_t *intData = reinterpret_cast<const uint64_t *>(data);
-          unsigned int intSize = size / sizeof(uint64_t);
-          for (unsigned int i = 0; i < intSize; ++i) {
-            checksum = ((uint64_t)checksum) + intData[i];
+
+          for (unsigned int i = 0; i < size; ++i) {
+            checksum ^= (static_cast<uint64_t>(data[i]) << (56 - 8 * (i%8)));
           }
-          unsigned int remainingBytes = size - sizeof(uint64_t) * intSize;
-          for (unsigned int i = 0; i < remainingBytes; ++i) {
-            checksum = ((uint64_t)checksum) + (data[8 * intSize + i] << (56 - 8 * i));
-          }
+
           return checksum;
         }
 
         static void _xor(CryptoPP::byte *dst, const CryptoPP::byte *src, unsigned int size, uint64_t key) {
-          const uint64_t *srcIntData = reinterpret_cast<const uint64_t *>(src);
-          uint64_t *dstIntData = reinterpret_cast<uint64_t *>(dst);
-          unsigned int intSize = size / sizeof(uint64_t);
-          for (unsigned int i = 0; i < intSize; ++i) {
-              dstIntData[i] = srcIntData[i] ^ key;
-          }
-          unsigned int remainingBytes = size - sizeof(uint64_t) * intSize;
-          for (unsigned int i = 0; i < remainingBytes; ++i) {
-              dst[8 * intSize + i] = src[8 * intSize + i] ^ ((key >> (56 - 8*i)) & 0xFF);
+          for (unsigned int i = 0; i < size; ++i) {
+            dst[i] = src[i] ^ ((key >> (56 - 8*(i%8))) & 0xFF);
           }
         }
 

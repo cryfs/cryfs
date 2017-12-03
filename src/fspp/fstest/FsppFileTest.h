@@ -74,7 +74,7 @@ public:
   void Test_Chmod(fspp::File *file, fspp::Node *node) {
     node->chmod(S_IFREG | S_IRUSR | S_IWOTH);
     this->IN_STAT(file, node, [] (struct stat st){
-        EXPECT_EQ((mode_t)(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
+        EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
     });
   }
 

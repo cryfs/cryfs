@@ -16,7 +16,7 @@ namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 using namespace fspp::fuse;
 
-#define FUSE_OBJ ((Fuse *) fuse_get_context()->private_data)
+#define FUSE_OBJ (static_cast<Fuse *>(fuse_get_context()->private_data))
 
 // Remove the following line, if you don't want to output each fuse operation on the console
 //#define FSPP_LOG 1
@@ -236,7 +236,7 @@ void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
 
   _argv = _build_argv(mountdir, fuseOptions);
 
-  fuse_main(_argv.size(), _argv.data(), operations(), (void*)this);
+  fuse_main(_argv.size(), _argv.data(), operations(), this);
 }
 
 vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> &fuseOptions) {

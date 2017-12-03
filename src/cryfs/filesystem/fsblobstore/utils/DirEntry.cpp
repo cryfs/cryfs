@@ -1,4 +1,6 @@
+#include <cpp-utils/data/SerializationHelper.h>
 #include "DirEntry.h"
+#include <cstdint>
 
 using std::vector;
 using std::string;
@@ -6,6 +8,64 @@ using blockstore::BlockId;
 
 namespace cryfs {
     namespace fsblobstore {
+
+        namespace {
+            template<typename DataType>
+            size_t _serialize(void* dst, const DataType& obj) {
+                cpputils::serialize<DataType>(dst, obj);
+                return sizeof(DataType);
+            }
+
+            template<typename DataType>
+            DataType _deserialize(const char** src) {
+                DataType result = cpputils::deserialize<DataType>(*src);
+                *src += sizeof(DataType);
+                return result;
+            }
+
+            constexpr size_t _serializedTimeValueSize() {
+                return sizeof(uint64_t) + sizeof(uint32_t);
+            }
+
+            unsigned int _serializeTimeValue(uint8_t *dest, timespec value) {
+                unsigned int offset = 0;
+                offset += _serialize<uint64_t>(dest + offset, value.tv_sec);
+                offset += _serialize<uint32_t>(dest + offset, value.tv_nsec);
+                ASSERT(offset == _serializedTimeValueSize(), "serialized to wrong size");
+                return offset;
+            }
+
+            timespec _deserializeTimeValue(const char **pos) {
+                timespec value{};
+                value.tv_sec = _deserialize<uint64_t>(pos);
+                value.tv_nsec = _deserialize<uint32_t>(pos);
+                return value;
+            }
+
+            unsigned int _serializeString(uint8_t *dest, const string &value) {
+                std::memcpy(dest, value.c_str(), value.size()+1);
+                return value.size() + 1;
+            }
+
+            string _deserializeString(const char **pos) {
+                size_t length = strlen(*pos);
+                string value(*pos, length);
+                *pos += length + 1;
+                return value;
+            }
+
+            unsigned int _serializeBlockId(uint8_t *dest, const BlockId &blockId) {
+                blockId.ToBinary(dest);
+                return blockId.BINARY_LENGTH;
+            }
+
+            BlockId _deserializeBlockId(const char **pos) {
+                BlockId blockId = BlockId::FromBinary(*pos);
+                *pos += BlockId::BINARY_LENGTH;
+                return blockId;
+            }
+        }
+
         void DirEntry::serialize(uint8_t *dest) const {
             ASSERT(
                     ((_type == fspp::Dir::EntryType::FILE) && S_ISREG(_mode) && !S_ISDIR(_mode) && !S_ISLNK(_mode)) ||
@@ -15,10 +75,10 @@ namespace cryfs {
                     _mode & S_IFDIR) + ", " + std::to_string(_mode & S_IFLNK) + ", " + std::to_string(static_cast<uint8_t>(_type))
             );
             unsigned int offset = 0;
-            offset += _serializeUint8(dest + offset, static_cast<uint8_t>(_type));
-            offset += _serializeUint32(dest + offset, _mode);
-            offset += _serializeUint32(dest + offset, _uid);
-            offset += _serializeUint32(dest + offset, _gid);
+            offset += _serialize<uint8_t>(dest + offset, static_cast<uint8_t>(_type));
+            offset += _serialize<uint32_t>(dest + offset, _mode);
+            offset += _serialize<uint32_t>(dest + offset, _uid);
+            offset += _serialize<uint32_t>(dest + offset, _gid);
             offset += _serializeTimeValue(dest + offset, _lastAccessTime);
             offset += _serializeTimeValue(dest + offset, _lastModificationTime);
             offset += _serializeTimeValue(dest + offset, _lastMetadataChangeTime);
@@ -28,10 +88,10 @@ namespace cryfs {
         }
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
-            fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(_deserializeUint8(&pos));
-            mode_t mode = _deserializeUint32(&pos);
-            uid_t uid = _deserializeUint32(&pos);
-            gid_t gid = _deserializeUint32(&pos);
+            fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(_deserialize<uint8_t>(&pos));
+            mode_t mode = _deserialize<uint32_t>(&pos);
+            uid_t uid = _deserialize<uint32_t>(&pos);
+            gid_t gid = _deserialize<uint32_t>(&pos);
             timespec lastAccessTime = _deserializeTimeValue(&pos);
             timespec lastModificationTime = _deserializeTimeValue(&pos);
             timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);
@@ -40,74 +100,6 @@ namespace cryfs {
 
             result->emplace_back(type, name, blockId, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;
-        }
-
-        unsigned int DirEntry::_serializeTimeValue(uint8_t *dest, timespec value) {
-            unsigned int offset = 0;
-            *reinterpret_cast<uint64_t*>(dest+offset) = value.tv_sec;
-            offset += sizeof(uint64_t);
-            *reinterpret_cast<uint32_t*>(dest+offset) = value.tv_nsec;
-            offset += sizeof(uint32_t);
-            ASSERT(offset == _serializedTimeValueSize(), "serialized to wrong size");
-            return offset;
-        }
-
-        size_t DirEntry::_serializedTimeValueSize() {
-            return sizeof(uint64_t) + sizeof(uint32_t);
-        }
-
-        timespec DirEntry::_deserializeTimeValue(const char **pos) {
-            timespec value{};
-            value.tv_sec = *(uint64_t*)(*pos);
-            *pos += sizeof(uint64_t);
-            value.tv_nsec = *(uint32_t*)(*pos);
-            *pos += sizeof(uint32_t);
-            return value;
-        }
-
-        unsigned int DirEntry::_serializeUint8(uint8_t *dest, uint8_t value) {
-            *reinterpret_cast<uint8_t*>(dest) = value;
-            return sizeof(uint8_t);
-        }
-
-        uint8_t DirEntry::_deserializeUint8(const char **pos) {
-            uint8_t value = *(uint8_t*)(*pos);
-            *pos += sizeof(uint8_t);
-            return value;
-        }
-
-        unsigned int DirEntry::_serializeUint32(uint8_t *dest, uint32_t value) {
-            *reinterpret_cast<uint32_t*>(dest) = value;
-            return sizeof(uint32_t);
-        }
-
-        uint32_t DirEntry::_deserializeUint32(const char **pos) {
-            uint32_t value = *(uint32_t*)(*pos);
-            *pos += sizeof(uint32_t);
-            return value;
-        }
-
-        unsigned int DirEntry::_serializeString(uint8_t *dest, const string &value) {
-            std::memcpy(dest, value.c_str(), value.size()+1);
-            return value.size() + 1;
-        }
-
-        string DirEntry::_deserializeString(const char **pos) {
-            size_t length = strlen(*pos);
-            string value(*pos, length);
-            *pos += length + 1;
-            return value;
-        }
-
-        unsigned int DirEntry::_serializeBlockId(uint8_t *dest, const BlockId &blockId) {
-            blockId.ToBinary(dest);
-            return blockId.BINARY_LENGTH;
-        }
-
-        BlockId DirEntry::_deserializeBlockId(const char **pos) {
-            BlockId blockId = BlockId::FromBinary(*pos);
-            *pos += BlockId::BINARY_LENGTH;
-            return blockId;
         }
 
         size_t DirEntry::serializedSize() const {

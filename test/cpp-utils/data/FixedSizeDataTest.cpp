@@ -89,19 +89,19 @@ const Data FixedSizeDataTestWithBinaryParam::VALUE2(DataFixture::generate(SIZE, 
 INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   EXPECT_DATA_EQ(*GetParam(), data);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromAndToBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data output(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(output.data());
   EXPECT_EQ(*GetParam(), output);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, ToAndFromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data stored(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(stored.data());
   FixedSizeData<SIZE> loaded = FixedSizeData<SIZE>::FromBinary(stored.data());

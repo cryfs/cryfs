@@ -49,7 +49,7 @@ Data Data::FromString(const std::string &data) {
   Data result(data.size() / 2);
   CryptoPP::StringSource(data, true,
     new CryptoPP::HexDecoder(
-      new CryptoPP::ArraySink((CryptoPP::byte*)result._data, result.size())
+      new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result._data), result.size())
     )
   );
   return result;
@@ -57,7 +57,7 @@ Data Data::FromString(const std::string &data) {
 
 std::string Data::ToString() const {
   std::string result;
-  CryptoPP::ArraySource((CryptoPP::byte*)_data, _size, true,
+  CryptoPP::ArraySource(static_cast<const CryptoPP::byte*>(_data), _size, true,
     new CryptoPP::HexEncoder(
         new CryptoPP::StringSink(result)
     )
