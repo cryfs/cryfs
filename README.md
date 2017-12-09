@@ -37,7 +37,9 @@ Manual install (older Debian versions)
 
 GUI
 ===
-If you want to use a GUI to mount your CryFS volumes, take a look at the [SiriKali project](https://mhogomchungu.github.io/sirikali/). You have to install the GUI **and** also CryFS itself for it to work.
+Theres some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
+- [SiriKali](https://mhogomchungu.github.io/sirikali/)
+- [Plasma Vault](https://www.kde.org/announcements/plasma-5.11.0.php) in KDE Plasma >= 5.11
 
 Building from source
 ====================
