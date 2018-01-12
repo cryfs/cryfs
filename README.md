@@ -8,12 +8,12 @@ See [https://www.cryfs.org](https://www.cryfs.org).
 Install latest release
 ======================
 
-Easy install (Ubuntu and Debian)
+Easy install (Ubuntu 17.04 and later, Debian Stretch and later)
 --------------------------------
 
-    wget -O - https://www.cryfs.org/install.sh | sudo bash
+    sudo apt install cryfs
 
-Manual install (Ubuntu)
+Manual install (older Ubuntu versions)
 -----------------------
 
     # Add apt key
@@ -26,7 +26,7 @@ Manual install (Ubuntu)
     sudo apt-get update
     sudo apt-get install cryfs
 
-Manual install (Debian)
+Manual install (older Debian versions)
 -----------------------
     # Add apt key
     wget -O - https://www.cryfs.org/apt.key | sudo apt-key add -
@@ -40,7 +40,9 @@ Manual install (Debian)
 
 GUI
 ===
-If you want to use a GUI to mount your CryFS volumes, take a look at the [SiriKali project](https://mhogomchungu.github.io/sirikali/). You have to install the GUI **and** also CryFS itself for it to work.
+Theres some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
+- [SiriKali](https://mhogomchungu.github.io/sirikali/)
+- [Plasma Vault](https://www.kde.org/announcements/plasma-5.11.0.php) in KDE Plasma >= 5.11
 
 Building from source
 ====================

@@ -14,13 +14,20 @@ New Features & Improvements:
 Fixed bugs:
 * `du` shows correct file system size on Mac OS X.
 
-Version 0.9.8 (unreleased)
+
+Version 0.9.8
 --------------
 Compatibility:
+* Runs on Debian with FreeBSD kernel
+* Runs on FreeBSD 11.1
 * Works with Crypto++ 6.0
+
+Improvements:
+* added a man page
 
 Fixed bugs:
 * `du` shows correct file system size
+* Updated spdlog dependency to fix build on newer systems
 
 Version 0.9.7
 --------------
