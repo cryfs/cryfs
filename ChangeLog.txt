@@ -1,4 +1,4 @@
-Version 0.9.8 (unreleased)
+Version 0.9.8
 --------------
 Compatibility:
 * Runs on Debian with FreeBSD kernel
