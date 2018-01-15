@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
+#include <atomic>
 
 namespace fspp {
 class Device;
@@ -69,7 +70,7 @@ private:
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
-  bool _running;
+  std::atomic<bool> _running;
   std::string _fstype;
   boost::optional<std::string> _fsname;
 

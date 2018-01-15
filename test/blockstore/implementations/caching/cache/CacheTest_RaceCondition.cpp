@@ -20,7 +20,7 @@ using std::future;
 
 class ObjectWithLongDestructor {
 public:
-    ObjectWithLongDestructor(ConditionBarrier *onDestructorStarted, bool *destructorFinished)
+    ObjectWithLongDestructor(ConditionBarrier *onDestructorStarted, std::atomic<bool> *destructorFinished)
             : _onDestructorStarted(onDestructorStarted), _destructorFinished(destructorFinished) {}
     ~ObjectWithLongDestructor() {
         _onDestructorStarted->release();
@@ -29,7 +29,7 @@ public:
     }
 private:
     ConditionBarrier *_onDestructorStarted;
-    bool *_destructorFinished;
+    std::atomic<bool> *_destructorFinished;
 
     DISALLOW_COPY_AND_ASSIGN(ObjectWithLongDestructor);
 };
@@ -42,7 +42,7 @@ public:
 
     Cache<int, unique_ptr<ObjectWithLongDestructor>, MAX_ENTRIES> cache;
     ConditionBarrier destructorStarted;
-    bool destructorFinished;
+    std::atomic<bool> destructorFinished;
 
     int pushObjectWithLongDestructor() {
         cache.push(2, make_unique<ObjectWithLongDestructor>(&destructorStarted, &destructorFinished));

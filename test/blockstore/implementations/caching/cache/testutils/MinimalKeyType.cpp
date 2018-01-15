@@ -1,3 +1,3 @@
 #include "MinimalKeyType.h"
 
-int MinimalKeyType::instances = 0;
+std::atomic<int> MinimalKeyType::instances(0);
