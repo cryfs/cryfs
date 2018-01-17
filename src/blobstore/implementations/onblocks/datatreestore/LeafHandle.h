@@ -30,6 +30,10 @@ namespace blobstore {
                     return _nodeStore;
                 }
 
+                bool isLoaded() const {
+                    return _leaf.get() != nullptr;
+                }
+
             private:
                 datanodestore::DataNodeStore *_nodeStore;
                 blockstore::BlockId _blockId;

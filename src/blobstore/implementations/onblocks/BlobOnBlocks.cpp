@@ -126,12 +126,13 @@ void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
   auto onExistingLeaf = [source, offset, count] (uint64_t indexOfFirstLeafByte, LeafHandle leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
       ASSERT(indexOfFirstLeafByte+leafDataOffset>=offset && indexOfFirstLeafByte-offset+leafDataOffset <= count && indexOfFirstLeafByte-offset+leafDataOffset+leafDataSize <= count, "Reading from source out of bounds");
-      if (leafDataOffset == 0 && leafDataSize == leaf.nodeStore()->layout().maxBytesPerLeaf()) {
+      if (!leaf.isLoaded() && leafDataOffset == 0 && leafDataSize == leaf.nodeStore()->layout().maxBytesPerLeaf()) {
+        // This is an optimization case - in case we write the full leaf and it isn't loaded yet, no need to load it, just overwrite it.
         Data leafData(leafDataSize);
         std::memcpy(leafData.data(), static_cast<const uint8_t*>(source) + indexOfFirstLeafByte - offset, leafDataSize);
         leaf.nodeStore()->overwriteLeaf(leaf.blockId(), std::move(leafData));
       } else {
-            //TODO Simplify formula, make it easier to understand
+        //TODO Simplify formula, make it easier to understand
         leaf.node()->write(static_cast<const uint8_t*>(source) + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset,
                            leafDataSize);
       }

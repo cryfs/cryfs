@@ -111,9 +111,11 @@ TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
   EXPECT_EQ(6u, blob->size());
 }
 
-TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {
+TEST_F(BlobSizeTest, ChangingSizeThenLoadingWorks) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->blockId());
+  auto blockId = blob->blockId();
+  cpputils::destruct(std::move(blob));
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -143,7 +145,9 @@ TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowingAndLoading) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->blockId());
+  auto blockId = blob->blockId();
+  cpputils::destruct(std::move(blob));
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(0, std::memcmp(readBlob(*loaded).data(), ZEROES.data(), LARGE_SIZE)); 
 }
 

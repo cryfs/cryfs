@@ -8,8 +8,6 @@ set(SOURCES
     implementations/testfake/TestFakeBlockStoreTest.cpp
     implementations/mock/MockBlockStoreTest.cpp
     implementations/inmemory/InMemoryBlockStoreTest.cpp
-    implementations/parallelaccess/ParallelAccessBlockStoreTest_Generic.cpp
-    implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
     implementations/compressing/CompressingBlockStoreTest.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
     implementations/encrypted/EncryptedBlockStoreTest_Generic.cpp
@@ -39,6 +37,7 @@ set(SOURCES
     implementations/integrity/IntegrityBlockStoreTest_Generic.cpp
     implementations/integrity/IntegrityBlockStoreTest_Specific.cpp
     implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
+    implementations/threadsafe/ThreadsafeBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

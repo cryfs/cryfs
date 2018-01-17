@@ -8,9 +8,6 @@ set(SOURCES
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
   implementations/inmemory/InMemoryBlockStore2.cpp
-  implementations/parallelaccess/ParallelAccessBlockStore.cpp
-  implementations/parallelaccess/BlockRef.cpp
-  implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp
   implementations/compressing/CompressingBlockStore.cpp
   implementations/compressing/CompressedBlock.cpp
   implementations/compressing/compressors/RunLengthEncoding.cpp
@@ -24,6 +21,8 @@ set(SOURCES
   implementations/caching/cache/QueueMap.cpp
   implementations/low2highlevel/LowToHighLevelBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
+  implementations/threadsafe/ThreadsafeBlock.cpp
+  implementations/threadsafe/ThreadsafeBlockStore.cpp
   implementations/integrity/IntegrityBlockStore2.cpp
   implementations/integrity/KnownBlockVersions.cpp
   implementations/integrity/ClientIdAndBlockId.cpp
