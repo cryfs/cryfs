@@ -1,4 +1,4 @@
-#include "parallelaccessdatatreestore/DataTreeRef.h"
+#include "datatreestore/DataTree.h"
 #include "BlobOnBlocks.h"
 
 #include "datanodestore/DataLeafNode.h"
@@ -19,9 +19,9 @@ using blobstore::onblocks::datatreestore::LeafHandle;
 namespace blobstore {
 namespace onblocks {
 
-using parallelaccessdatatreestore::DataTreeRef;
+using datatreestore::DataTree;
 
-BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
+BlobOnBlocks::BlobOnBlocks(unique_ref<DataTree> datatree)
 : _datatree(std::move(datatree)), _sizeCache(boost::none), _mutex() {
 }
 
@@ -155,7 +155,7 @@ const BlockId &BlobOnBlocks::blockId() const {
   return _datatree->blockId();
 }
 
-unique_ref<DataTreeRef> BlobOnBlocks::releaseTree() {
+unique_ref<DataTree> BlobOnBlocks::releaseTree() {
   return std::move(_datatree);
 }
 

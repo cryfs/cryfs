@@ -1,9 +1,6 @@
 project (blobstore)
 
 set(SOURCES
-    implementations/onblocks/parallelaccessdatatreestore/ParallelAccessDataTreeStoreAdapter.cpp
-    implementations/onblocks/parallelaccessdatatreestore/DataTreeRef.cpp
-    implementations/onblocks/parallelaccessdatatreestore/ParallelAccessDataTreeStore.cpp
     implementations/onblocks/utils/Math.cpp
     implementations/onblocks/BlobStoreOnBlocks.cpp
     implementations/onblocks/datanodestore/DataNode.cpp

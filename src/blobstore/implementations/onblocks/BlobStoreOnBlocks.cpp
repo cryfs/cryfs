@@ -1,5 +1,5 @@
-#include "parallelaccessdatatreestore/DataTreeRef.h"
-#include "parallelaccessdatatreestore/ParallelAccessDataTreeStore.h"
+#include "datatreestore/DataTree.h"
+#include "datatreestore/DataTreeStore.h"
 #include <blockstore/implementations/threadsafe/ThreadsafeBlockStore.h>
 #include "datanodestore/DataLeafNode.h"
 #include "datanodestore/DataNodeStore.h"
@@ -25,10 +25,9 @@ namespace onblocks {
 
 using datanodestore::DataNodeStore;
 using datatreestore::DataTreeStore;
-using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint64_t physicalBlocksizeBytes)
-        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ThreadsafeBlockStore>(std::move(blockStore)), physicalBlocksizeBytes)))) {
+        : _dataTreeStore(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ThreadsafeBlockStore>(std::move(blockStore)), physicalBlocksizeBytes))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {

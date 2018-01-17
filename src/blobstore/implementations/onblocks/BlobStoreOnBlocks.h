@@ -8,8 +8,8 @@
 
 namespace blobstore {
 namespace onblocks {
-namespace parallelaccessdatatreestore {
-class ParallelAccessDataTreeStore;
+namespace datatreestore {
+class DataTreeStore;
 }
 
 //TODO Make blobstore able to cope with incomplete data (some blocks missing, because they're not synchronized yet) and write test cases for that
@@ -32,7 +32,7 @@ public:
   uint64_t estimateSpaceForNumBlocksLeft() const override;
 
 private:
-  cpputils::unique_ref<parallelaccessdatatreestore::ParallelAccessDataTreeStore> _dataTreeStore;
+  cpputils::unique_ref<datatreestore::DataTreeStore> _dataTreeStore;
 
   DISALLOW_COPY_AND_ASSIGN(BlobStoreOnBlocks);
 };
