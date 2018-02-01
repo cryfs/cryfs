@@ -12,6 +12,7 @@ using cryfs::CryConfigConsole;
 using std::pair;
 using std::vector;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using boost::optional;
@@ -105,6 +106,9 @@ po::variables_map Parser::_parseOptions(const vector<string> &options, const vec
     if (vm.count("show-ciphers")) {
         _showCiphersAndExit(supportedCiphers);
     }
+    if (vm.count("version")) {
+        _showVersionAndExit();
+    }
     po::notify(vm);
 
     return vm;
@@ -135,6 +139,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
+            ("version", "Show CryFS version number")
             ;
     desc->add(options);
 }
@@ -173,4 +178,9 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
          << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
          << endl;
     exit(1);
+}
+
+[[noreturn]] void Parser::_showVersionAndExit() {
+  // no need to show version because it was already shown in the CryFS header before parsing program options
+  exit(1);
 }

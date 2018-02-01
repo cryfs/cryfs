@@ -2,6 +2,7 @@ Version 0.9.9 (unreleased)
 --------------
 Improvements:
 * Add --allow-filesystem-upgrade option which will upgrade old file systems without asking the user. This will be especially helpful for GUI tools.
+* Add --version option that shows the CryFS version and exits.
 
 Version 0.9.8
 --------------

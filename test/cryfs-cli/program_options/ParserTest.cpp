@@ -2,6 +2,7 @@
 #include <cryfs-cli/program_options/Parser.h>
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gitversion/gitversion.h>
 
 using namespace cryfs;
 using namespace cryfs::program_options;
@@ -51,6 +52,16 @@ TEST_F(ProgramOptionsParserTest, ShowCiphers) {
         parse({"./myExecutable", "--show-ciphers"}),
         ::testing::ExitedWithCode(0),
         "aes-256-gcm"
+    );
+}
+
+
+TEST_F(ProgramOptionsParserTest, Version) {
+    string expected = "CryFS Version " + gitversion::VersionString();
+    EXPECT_EXIT(
+        parse({"./myExecutable", "--version"}),
+        ::testing::ExitedWithCode(0),
+        expected.c_str()
     );
 }
 
