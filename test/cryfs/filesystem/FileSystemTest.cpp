@@ -30,7 +30,7 @@ public:
     auto blockStore = cpputils::make_unique_ref<FakeBlockStore>();
     auto askPassword = [] {return "mypassword";};
     auto config = CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none)
-            .loadOrCreate(configFile.path()).value();
+            .loadOrCreate(configFile.path(), false).value();
     return make_unique_ref<CryDevice>(std::move(config), std::move(blockStore));
   }
 
