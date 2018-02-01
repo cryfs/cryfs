@@ -99,8 +99,8 @@ bool starts_with(const bf::path& pth, const bf::path& prefix) {
 }
 
 bool path_is_real_prefix(const bf::path& pth, const bf::path& prefix) {
-  // TODO Better iterator-based implementation instead of calling size()
-  return pth.size() > prefix.size() && starts_with(pth, prefix);
+  bf::path::const_iterator it;
+  return skipPrefix(pth, prefix, it) && it != pth.end();
 }
 
 // taken from folly (Apache License) https://github.com/facebook/folly/blob/cd1bdc9/folly/experimental/io/FsUtil.cpp
