@@ -56,9 +56,9 @@ public:
         return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false).value();
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
+    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false, bool allowFilesystemUpgrade = false) {
         EXPECT_TRUE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false);
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), allowFilesystemUpgrade);
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
@@ -275,4 +275,20 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
     } catch (const std::runtime_error &e) {
         EXPECT_THAT(e.what(), HasSubstr("It has to be migrated."));
     }
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+    string version = olderVersion();
+    CreateWithVersion(version);
+    EXPECT_NE(boost::none, Load("mypassword", none, true, true));
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_InteractiveMode) {
+  EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+  string version = olderVersion();
+  CreateWithVersion(version);
+  EXPECT_NE(boost::none, Load("mypassword", none, false, true));
 }

@@ -52,6 +52,16 @@ TEST_F(ProgramOptionsTest, ForegroundTrue) {
     EXPECT_TRUE(testobj.foreground());
 }
 
+TEST_F(ProgramOptionsTest, AllowFilesystemUpgradeFalse) {
+    ProgramOptions testobj("", "", none, false, false, none, none, none, none, {"./myExecutable"});
+    EXPECT_FALSE(testobj.allowFilesystemUpgrade());
+}
+
+TEST_F(ProgramOptionsTest, AllowFilesystemUpgradeTrue) {
+    ProgramOptions testobj("", "", none, false, true, none, none, none, none, {"./myExecutable"});
+    EXPECT_TRUE(testobj.allowFilesystemUpgrade());
+}
+
 TEST_F(ProgramOptionsTest, LogfileNone) {
     ProgramOptions testobj("", "", none, true, false, none, none, none, none, {"./myExecutable"});
     EXPECT_EQ(none, testobj.logFile());
@@ -103,3 +113,4 @@ TEST_F(ProgramOptionsTest, SomeFuseOptions) {
     //Fuse should have the mount dir as first parameter
     EXPECT_VECTOR_EQ({"-f", "--longoption"}, testobj.fuseOptions());
 }
+

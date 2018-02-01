@@ -74,6 +74,26 @@ TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
     EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
 }
 
+TEST_F(ProgramOptionsParserTest, Foreground_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, Foreground_True) {
+    ProgramOptions options = parse({"./myExecutable", "-f", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.allowFilesystemUpgrade());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_True) {
+    ProgramOptions options = parse({"./myExecutable", "--allow-filesystem-upgrade", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.allowFilesystemUpgrade());
+}
+
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--logfile", "/home/user/mylogfile", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/mylogfile", options.logFile().value());

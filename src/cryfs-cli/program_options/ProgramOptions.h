@@ -25,7 +25,6 @@ namespace cryfs {
             const boost::filesystem::path &mountDir() const;
             const boost::optional<boost::filesystem::path> &configFile() const;
             bool foreground() const;
-            // TODO add test cases for allowFilesystemUpgrade
             bool allowFilesystemUpgrade() const;
             const boost::optional<std::string> &cipher() const;
             const boost::optional<uint32_t> &blocksizeBytes() const;
