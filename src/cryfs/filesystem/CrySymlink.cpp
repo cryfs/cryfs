@@ -3,7 +3,7 @@
 #include <fspp/fuse/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CrySymlink.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "fsblobstore/SymlinkBlob.h"
 #include "fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
@@ -17,21 +17,21 @@ using boost::none;
 using boost::optional;
 using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
-using cryfs::parallelaccessfsblobstore::SymlinkBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::SymlinkBlob;
+using cryfs::fsblobstore::DirBlob;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CrySymlink::CrySymlink(CryDevice *device, bf::path path, std::shared_ptr<DirBlob> parent, optional<std::shared_ptr<DirBlob>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(path), std::move(parent), std::move(grandparent), blockId) {
 }
 
 CrySymlink::~CrySymlink() {
 }
 
-unique_ref<SymlinkBlobRef> CrySymlink::LoadBlob() const {
+unique_ref<SymlinkBlob> CrySymlink::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  auto symlink_blob = dynamic_pointer_move<SymlinkBlobRef>(blob);
+  auto symlink_blob = dynamic_pointer_move<SymlinkBlob>(blob);
   ASSERT(symlink_blob != none, "Blob does not store a symlink");
   return std::move(*symlink_blob);
 }

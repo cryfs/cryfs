@@ -10,9 +10,11 @@ New Features & Improvements:
 * CryFS tells the operating system to not swap the encryption key to the disk (note: this is best-effort and cannot be guaranteed. Hibernation, for example, will still write the encryption key to the disk)
 * New block size options: 4KB and 16KB
 * New default block size: 16KB
+* Improved thread-safety. Deadlocks should be much less likely.
 
 Fixed bugs:
 * `du` shows correct file system size on Mac OS X.
+* rename returns correct error code when trying to move a dir into its own subtree.
 
 
 Version 0.9.9 (unreleased)

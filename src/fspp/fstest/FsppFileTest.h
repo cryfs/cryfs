@@ -12,76 +12,76 @@
 template<class ConcreteFileSystemTestFixture>
 class FsppFileTest: public FileTest<ConcreteFileSystemTestFixture> {
 public:
-  void Test_Open_RDONLY(fspp::File *file) {
-    file->open(O_RDONLY);
+  void Test_Open_RDONLY(std::function<cpputils::unique_ref<fspp::File>()> file) {
+    file()->open(O_RDONLY);
   }
 
-  void Test_Open_WRONLY(fspp::File *file) {
-    file->open(O_WRONLY);
+  void Test_Open_WRONLY(std::function<cpputils::unique_ref<fspp::File>()> file) {
+    file()->open(O_WRONLY);
   }
 
-  void Test_Open_RDWR(fspp::File *file) {
-    file->open(O_RDONLY);
+  void Test_Open_RDWR(std::function<cpputils::unique_ref<fspp::File>()> file) {
+    file()->open(O_RDONLY);
   }
 
-  void Test_Truncate_DontChange1(fspp::File *file, fspp::Node *node) {
-	file->truncate(0);
-	this->EXPECT_SIZE(0, file, node);
+  void Test_Truncate_DontChange1(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+	  file()->truncate(0);
+	  this->EXPECT_SIZE(0, file, node);
   }
 
-  void Test_Truncate_GrowTo1(fspp::File *file, fspp::Node *node) {
-	file->truncate(1);
-	this->EXPECT_SIZE(1, file, node);
+  void Test_Truncate_GrowTo1(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+	  file()->truncate(1);
+	  this->EXPECT_SIZE(1, file, node);
   }
 
-  void Test_Truncate_Grow(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, file, node);
+  void Test_Truncate_Grow(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+	  file()->truncate(10*1024*1024);
+	  this->EXPECT_SIZE(10*1024*1024, file, node);
   }
 
-  void Test_Truncate_DontChange2(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, file, node);
+  void Test_Truncate_DontChange2(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+	  file()->truncate(10*1024*1024);
+	  file()->truncate(10*1024*1024);
+	  this->EXPECT_SIZE(10*1024*1024, file, node);
   }
 
-  void Test_Truncate_Shrink(fspp::File *file, fspp::Node *node) {
-    file->truncate(10*1024*1024);
-    file->truncate(5*1024*1024);
+  void Test_Truncate_Shrink(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+    file()->truncate(10*1024*1024);
+    file()->truncate(5*1024*1024);
     this->EXPECT_SIZE(5*1024*1024, file, node);
   }
 
-  void Test_Truncate_ShrinkTo0(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	file->truncate(0);
-	this->EXPECT_SIZE(0, file, node);
+  void Test_Truncate_ShrinkTo0(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+	  file()->truncate(10*1024*1024);
+	  file()->truncate(0);
+	  this->EXPECT_SIZE(0, file, node);
   }
 
-  void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {
-    node->chown(100, 200);
+  void Test_Chown_Uid(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+    node()->chown(100, 200);
     this->IN_STAT(file, node, [] (struct stat st){
         EXPECT_EQ(100u, st.st_uid);
     });
   }
 
-  void Test_Chown_Gid(fspp::File *file, fspp::Node *node) {
-    node->chown(100, 200);
+  void Test_Chown_Gid(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+    node()->chown(100, 200);
     this->IN_STAT(file, node, [] (struct stat st){
         EXPECT_EQ(200u, st.st_gid);
     });
   }
 
-  void Test_Chmod(fspp::File *file, fspp::Node *node) {
-    node->chmod(S_IFREG | S_IRUSR | S_IWOTH);
+  void Test_Chmod(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
+    node()->chmod(S_IFREG | S_IRUSR | S_IWOTH);
     this->IN_STAT(file, node, [] (struct stat st){
         EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
     });
   }
 
-  void Test_Utimens(fspp::File *file, fspp::Node *node) {
+  void Test_Utimens(std::function<cpputils::unique_ref<fspp::File>()> file, std::function<cpputils::unique_ref<fspp::Node>()> node) {
     struct timespec ATIME{}; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
     struct timespec MTIME{}; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
-    node->utimens(ATIME, MTIME);
+    node()->utimens(ATIME, MTIME);
     this->IN_STAT(file, node, [this, ATIME, MTIME] (struct stat st) {
         this->EXPECT_ATIME_EQ(ATIME, st);
         this->EXPECT_MTIME_EQ(MTIME, st);
@@ -92,107 +92,107 @@ public:
 TYPED_TEST_CASE_P(FsppFileTest);
 
 TYPED_TEST_P(FsppFileTest, Open_RDONLY) {
-  this->Test_Open_RDONLY(this->file_root.get());
+  this->Test_Open_RDONLY(this->file_root());
 }
 
 TYPED_TEST_P(FsppFileTest, Open_RDONLY_Nested) {
-  this->Test_Open_RDONLY(this->file_nested.get());
+  this->Test_Open_RDONLY(this->file_nested());
 }
 
 TYPED_TEST_P(FsppFileTest, Open_WRONLY) {
-  this->Test_Open_WRONLY(this->file_root.get());
+  this->Test_Open_WRONLY(this->file_root());
 }
 
 TYPED_TEST_P(FsppFileTest, Open_WRONLY_Nested) {
-  this->Test_Open_WRONLY(this->file_nested.get());
+  this->Test_Open_WRONLY(this->file_nested());
 }
 
 TYPED_TEST_P(FsppFileTest, Open_RDWR) {
-  this->Test_Open_RDWR(this->file_root.get());
+  this->Test_Open_RDWR(this->file_root());
 }
 
 TYPED_TEST_P(FsppFileTest, Open_RDWR_Nested) {
-  this->Test_Open_RDWR(this->file_nested.get());
+  this->Test_Open_RDWR(this->file_nested());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_DontChange1) {
-  this->Test_Truncate_DontChange1(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_DontChange1(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_DontChange1_Nested) {
-  this->Test_Truncate_DontChange1(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_DontChange1(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_GrowTo1) {
-  this->Test_Truncate_GrowTo1(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_GrowTo1(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_GrowTo1_Nested) {
-  this->Test_Truncate_GrowTo1(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_GrowTo1(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_Grow) {
-  this->Test_Truncate_Grow(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_Grow(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_Grow_Nested) {
-  this->Test_Truncate_Grow(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_Grow(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_DontChange2) {
-  this->Test_Truncate_DontChange2(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_DontChange2(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_DontChange2_Nested) {
-  this->Test_Truncate_DontChange2(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_DontChange2(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_Shrink) {
-  this->Test_Truncate_Shrink(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_Shrink(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_Shrink_Nested) {
-  this->Test_Truncate_Shrink(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_Shrink(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_ShrinkTo0) {
-  this->Test_Truncate_ShrinkTo0(this->file_root.get(), this->file_root_node.get());
+  this->Test_Truncate_ShrinkTo0(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Truncate_ShrinkTo0_Nested) {
-  this->Test_Truncate_ShrinkTo0(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Truncate_ShrinkTo0(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid) {
-    this->Test_Chown_Uid(this->file_root.get(), this->file_root_node.get());
+    this->Test_Chown_Uid(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid_Nested) {
-    this->Test_Chown_Uid(this->file_nested.get(), this->file_nested_node.get());
+    this->Test_Chown_Uid(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid) {
-    this->Test_Chown_Gid(this->file_root.get(), this->file_root_node.get());
+    this->Test_Chown_Gid(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid_Nested) {
-    this->Test_Chown_Gid(this->file_nested.get(), this->file_nested_node.get());
+    this->Test_Chown_Gid(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod) {
-    this->Test_Chmod(this->file_root.get(), this->file_root_node.get());
+    this->Test_Chmod(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod_Nested) {
-    this->Test_Chmod(this->file_nested.get(), this->file_nested_node.get());
+    this->Test_Chmod(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens) {
-    this->Test_Utimens(this->file_root.get(), this->file_root_node.get());
+    this->Test_Utimens(this->file_root(), this->file_root_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
-    this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
+    this->Test_Utimens(this->file_nested(), this->file_nested_node());
 }
 
 TYPED_TEST_P(FsppFileTest, Remove) {

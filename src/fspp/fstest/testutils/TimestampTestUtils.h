@@ -32,10 +32,10 @@ public:
         }
     }
 
-    void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(const fspp::OpenFile &node, std::function<void()> operation, std::initializer_list<TimestampUpdateBehavior> behaviorChecks) {
+    void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(std::function<cpputils::unique_ref<fspp::OpenFile>()> node, std::function<void()> operation, std::initializer_list<TimestampUpdateBehavior> behaviorChecks) {
         EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(
-            [this, &node](){return this->stat(node);},
-            [this, &node](){return this->stat(node);},
+            [this, &node](){return this->stat(*node());},
+            [this, &node](){return this->stat(*node());},
             operation,
             behaviorChecks
         );

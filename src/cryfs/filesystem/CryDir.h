@@ -4,13 +4,13 @@
 
 #include <fspp/fs_interface/Dir.h>
 #include "CryNode.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "fsblobstore/DirBlob.h"
 
 namespace cryfs {
 
 class CryDir final: public fspp::Dir, public CryNode {
 public:
-  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryDir(CryDevice *device, boost::filesystem::path path, boost::optional<std::shared_ptr<fsblobstore::DirBlob>> parent, boost::optional<std::shared_ptr<fsblobstore::DirBlob>> grandparent, const blockstore::BlockId &blockId);
   ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -26,7 +26,7 @@ public:
   void remove() override;
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::DirBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

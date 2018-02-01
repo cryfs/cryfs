@@ -3,15 +3,15 @@
 #define MESSMER_CRYFS_FILESYSTEM_CRYOPENFILE_H_
 
 #include <fspp/fs_interface/OpenFile.h>
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "fsblobstore/FileBlob.h"
+#include "fsblobstore/DirBlob.h"
 
 namespace cryfs {
 class CryDevice;
 
 class CryOpenFile final: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(const CryDevice *device, std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
+  explicit CryOpenFile(const CryDevice *device, std::shared_ptr<fsblobstore::DirBlob> parent, cpputils::unique_ref<fsblobstore::FileBlob> fileBlob);
   ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
@@ -24,8 +24,8 @@ public:
 
 private:
   const CryDevice *_device;
-  std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> _parent;
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> _fileBlob;
+  std::shared_ptr<fsblobstore::DirBlob> _parent;
+  cpputils::unique_ref<fsblobstore::FileBlob> _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };

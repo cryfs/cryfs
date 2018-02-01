@@ -33,13 +33,13 @@ public:
 TYPED_TEST_CASE_P(FsppOpenFileTest);
 
 TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
-    auto file = this->CreateFile("/myfile");
+    this->CreateFile("/myfile");
     auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
     this->EXPECT_SIZE(0, openFile.get());
 }
 
 TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
-    auto file = this->CreateFile("/myfile");
+    this->CreateFile("/myfile");
     auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
     this->IN_STAT(openFile.get(), [] (struct stat st) {
         EXPECT_TRUE(S_ISREG(st.st_mode));

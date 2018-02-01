@@ -11,10 +11,10 @@ public:
 TYPED_TEST_CASE_P(FsppSymlinkTest_Timestamps);
 
 TYPED_TEST_P(FsppSymlinkTest_Timestamps, target) {
-    auto symlink = this->CreateSymlink("/mysymlink");
+    this->CreateSymlink("/mysymlink");
     this->setModificationTimestampLaterThanAccessTimestamp("/mysymlink"); // to make sure that even in relatime behavior, the read access below changes the access timestamp
-    auto operation = [&symlink] () {
-        symlink->target();
+    auto operation = [this] () {
+        this->LoadSymlink("/mysymlink")->target();
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mysymlink", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }

@@ -10,10 +10,10 @@
 #include <fspp/fs_interface/Device.h>
 #include <cryfs/localstate/LocalStateDir.h>
 
-#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "fsblobstore/FsBlobStore.h"
+#include "fsblobstore/DirBlob.h"
+#include "fsblobstore/FileBlob.h"
+#include "fsblobstore/SymlinkBlob.h"
 
 namespace cryfs {
 
@@ -23,15 +23,16 @@ public:
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::BlockId &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::BlockId &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::BlockId &blockId);
+  cpputils::unique_ref<fsblobstore::FileBlob> CreateFileBlob(const blockstore::BlockId &parent);
+  cpputils::unique_ref<fsblobstore::DirBlob> CreateDirBlob(const blockstore::BlockId &parent);
+  cpputils::unique_ref<fsblobstore::SymlinkBlob> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+  cpputils::unique_ref<fsblobstore::FsBlob> LoadBlob(const blockstore::BlockId &blockId);
   struct DirBlobWithParent {
-      cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
-      boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
+      std::shared_ptr<fsblobstore::DirBlob> blob;
+      boost::optional<std::shared_ptr<fsblobstore::DirBlob>> parent;
   };
-  DirBlobWithParent LoadDirBlobWithParent(const boost::filesystem::path &path);
+  DirBlobWithParent LoadDirBlobWithParent(const boost::filesystem::path &absoutePath);
+  DirBlobWithParent LoadDirBlobWithParent(const boost::filesystem::path &relativePath, std::shared_ptr<fsblobstore::FsBlob> anchor);
   void RemoveBlob(const blockstore::BlockId &blockId);
 
   void onFsAction(std::function<void()> callback);
@@ -47,14 +48,14 @@ public:
 
 private:
 
-  cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
+  cpputils::unique_ref<fsblobstore::FsBlobStore> _fsBlobStore;
 
   blockstore::BlockId _rootBlobId;
   std::vector<std::function<void()>> _onFsAction;
 
   blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);
   blockstore::BlockId CreateRootBlobAndReturnId();
-  static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
+  static cpputils::unique_ref<fsblobstore::FsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
 #ifndef CRYFS_NO_COMPATIBILITY
   static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);
 #endif
@@ -63,10 +64,12 @@ private:
   static cpputils::unique_ref<blockstore::BlockStore2> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore2> baseBlockStore);
 
   struct BlobWithParent {
-      cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> blob;
-      boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
+      std::shared_ptr<fsblobstore::FsBlob> blob;
+      boost::optional<std::shared_ptr<fsblobstore::DirBlob>> parent;
   };
-  BlobWithParent LoadBlobWithParent(const boost::filesystem::path &path);
+  BlobWithParent LoadBlobWithParent(const boost::filesystem::path &absolutePath);
+  BlobWithParent LoadBlobWithParent(const boost::filesystem::path &relativePath, std::shared_ptr<fsblobstore::FsBlob> anchor);
+  DirBlobWithParent makeDirBlobWithParent(BlobWithParent blob);
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };

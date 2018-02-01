@@ -10,80 +10,81 @@ public:
     cpputils::unique_ref<fspp::File> CreateFileWithSize(const boost::filesystem::path &path, off_t size) {
         auto file = this->CreateFile(path);
         file->truncate(size);
+        cpputils::destruct(std::move(file));
         assert(this->stat(*this->Load(path)).st_size == size);
-        return file;
+        return this->LoadFile(path);
     }
 };
 TYPED_TEST_CASE_P(FsppFileTest_Timestamps);
 
 TYPED_TEST_P(FsppFileTest_Timestamps, open_nomode) {
-    auto file = this->CreateFile("/myfile");
-    auto operation = [&file] () {
-        file->open(0);
+    this->CreateFile("/myfile");
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->open(0);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, open_rdonly) {
-    auto file = this->CreateFile("/myfile");
-    auto operation = [&file] () {
-        file->open(O_RDONLY);
+    this->CreateFile("/myfile");
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->open(O_RDONLY);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, open_wronly) {
-    auto file = this->CreateFile("/myfile");
-    auto operation = [&file] () {
-        file->open(O_WRONLY);
+    this->CreateFile("/myfile");
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->open(O_WRONLY);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, open_rdwr) {
-    auto file = this->CreateFile("/myfile");
-    auto operation = [&file] () {
-        file->open(O_RDWR);
+    this->CreateFile("/myfile");
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->open(O_RDWR);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, truncate_empty_to_empty) {
-    auto file = this->CreateFileWithSize("/myfile", 0);
-    auto operation = [&file] () {
-        file->truncate(0);
+    this->CreateFileWithSize("/myfile", 0);
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->truncate(0);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, truncate_empty_to_nonempty) {
-    auto file = this->CreateFileWithSize("/myfile", 0);
-    auto operation = [&file] () {
-        file->truncate(10);
+    this->CreateFileWithSize("/myfile", 0);
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->truncate(10);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, truncate_nonempty_to_empty) {
-    auto file = this->CreateFileWithSize("/myfile", 10);
-    auto operation = [&file] () {
-        file->truncate(0);
+    this->CreateFileWithSize("/myfile", 10);
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->truncate(0);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, truncate_nonempty_to_nonempty_shrink) {
-    auto file = this->CreateFileWithSize("/myfile", 10);
-    auto operation = [&file] () {
-        file->truncate(5);
+    this->CreateFileWithSize("/myfile", 10);
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->truncate(5);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
 TYPED_TEST_P(FsppFileTest_Timestamps, truncate_nonempty_to_nonempty_grow) {
-    auto file = this->CreateFileWithSize("/myfile", 10);
-    auto operation = [&file] () {
-        file->truncate(20);
+    this->CreateFileWithSize("/myfile", 10);
+    auto operation = [this] () {
+        this->LoadFile("/myfile")->truncate(20);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }

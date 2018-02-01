@@ -26,19 +26,8 @@ set(LIB_SOURCES
         filesystem/fsblobstore/SymlinkBlob.cpp
         filesystem/fsblobstore/DirBlob.cpp
         filesystem/CryNode.cpp
-        filesystem/parallelaccessfsblobstore/DirBlobRef.cpp
-        filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.cpp
-        filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStoreAdapter.cpp
-        filesystem/parallelaccessfsblobstore/FsBlobRef.cpp
-        filesystem/parallelaccessfsblobstore/FileBlobRef.cpp
-        filesystem/parallelaccessfsblobstore/SymlinkBlobRef.cpp
         filesystem/CrySymlink.cpp
         filesystem/CryDir.cpp
-        filesystem/cachingfsblobstore/DirBlobRef.cpp
-        filesystem/cachingfsblobstore/CachingFsBlobStore.cpp
-        filesystem/cachingfsblobstore/FsBlobRef.cpp
-        filesystem/cachingfsblobstore/FileBlobRef.cpp
-        filesystem/cachingfsblobstore/SymlinkBlobRef.cpp
         filesystem/CryFile.cpp
         filesystem/CryDevice.cpp
         localstate/LocalStateDir.cpp

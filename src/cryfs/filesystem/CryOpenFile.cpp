@@ -9,14 +9,14 @@
 
 using std::shared_ptr;
 using cpputils::unique_ref;
-using cryfs::parallelaccessfsblobstore::FileBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::FileBlob;
+using cryfs::fsblobstore::DirBlob;
 
 //TODO Get rid of this in favor of a exception hierarchy
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlobRef> parent, unique_ref<FileBlobRef> fileBlob)
+CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlob> parent, unique_ref<FileBlob> fileBlob)
 : _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
 }
 

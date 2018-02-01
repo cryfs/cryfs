@@ -26,12 +26,12 @@ using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::DirBlob;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryDir::CryDir(CryDevice *device, boost::filesystem::path path, optional<std::shared_ptr<DirBlob>> parent, optional<std::shared_ptr<DirBlob>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(path), std::move(parent), std::move(grandparent), blockId) {
 }
 
 CryDir::~CryDir() {
@@ -62,9 +62,9 @@ void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
   blob->AddChildDir(name, child->blockId(), mode, uid, gid, now, now);
 }
 
-unique_ref<DirBlobRef> CryDir::LoadBlob() const {
+unique_ref<DirBlob> CryDir::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  auto dir_blob = dynamic_pointer_move<DirBlobRef>(blob);
+  auto dir_blob = dynamic_pointer_move<DirBlob>(blob);
   ASSERT(dir_blob != none, "Blob does not store a directory");
   return std::move(*dir_blob);
 }

@@ -16,6 +16,7 @@ public:
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOENT, e.getErrno());
         }
+        cpputils::destruct(std::move(node));
         //Old node should still exist
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
@@ -24,7 +25,7 @@ public:
         this->CreateNode("/oldname");
         this->CreateFile("/somefile");
         try {
-            this->Load("/somefile")->rename("/somefile/newname");
+            this->Load("/oldname")->rename("/somefile/newname");
             EXPECT_TRUE(false); // Expect it throws an exception
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
@@ -32,6 +33,18 @@ public:
         //Nodes should still exist
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/somefile"));
+    }
+
+    void Test_Error_TargetParentDirIsSubdirOfSource() {
+      this->CreateNode("/oldname");
+      try {
+        this->Load("/oldname")->rename("/oldname/newname");
+        EXPECT_TRUE(false); // Expect it throws an exception
+      } catch (const fspp::fuse::FuseErrnoException &e) {
+        EXPECT_EQ(EINVAL, e.getErrno());
+      }
+      //Nodes should still exist
+      EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
     void Test_Error_RootDir() {
@@ -47,6 +60,7 @@ public:
     void Test_InRoot() {
         auto node = this->CreateNode("/oldname");
         node->rename("/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -55,6 +69,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         node->rename("/mydir/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
@@ -63,6 +78,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
         node->rename("/mydir/oldname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/oldname"));
     }
@@ -71,6 +87,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
         node->rename("/mydir/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
@@ -79,6 +96,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         node->rename("/oldname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
@@ -87,6 +105,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         node->rename("/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -96,6 +115,7 @@ public:
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir/oldname");
         node->rename("/mydir2/oldname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/oldname"));
     }
@@ -105,20 +125,55 @@ public:
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir/oldname");
         node->rename("/mydir2/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/newname"));
+    }
+
+    void Test_ToSubdir() {
+      this->CreateDir("/mydir");
+      this->CreateDir("/mydir/mydir2");
+      auto node = this->CreateNode("/mydir/oldname");
+      node->rename("/mydir/mydir2/newname");
+      cpputils::destruct(std::move(node));
+      EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
+      EXPECT_NE(boost::none, this->device->Load("/mydir/mydir2/newname"));
+    }
+
+    void Test_ToSubdirOfSiblingDir() {
+      this->CreateDir("/mydir");
+      this->CreateDir("/mydir2");
+      this->CreateDir("/mydir2/subdir");
+      auto node = this->CreateNode("/mydir/oldname");
+      node->rename("/mydir2/subdir/newname");
+      cpputils::destruct(std::move(node));
+      EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
+      EXPECT_NE(boost::none, this->device->Load("/mydir2/subdir/newname"));
+    }
+
+    void Test_ToUnrelatedDir() {
+      this->CreateDir("/mydir");
+      this->CreateDir("/mydir/subdir");
+      this->CreateDir("/mydir2");
+      this->CreateDir("/mydir2/subdir");
+      auto node = this->CreateNode("/mydir/subdir/oldname");
+      node->rename("/mydir2/subdir/newname");
+      cpputils::destruct(std::move(node));
+      EXPECT_EQ(boost::none, this->device->Load("/mydir/subdir/oldname"));
+      EXPECT_NE(boost::none, this->device->Load("/mydir2/subdir/newname"));
     }
 
     void Test_ToItself() {
         auto node = this->CreateNode("/oldname");
         node->rename("/oldname");
+        cpputils::destruct(std::move(node));
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
     void Test_Overwrite_InSameDir() {
-        auto node = this->CreateNode("/oldname");
+        this->CreateNode("/oldname");
         this->CreateNode("/newname");
-        node->rename("/newname");
+        this->Load("/oldname")->rename("/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -126,18 +181,18 @@ public:
     void Test_Overwrite_InDifferentDir() {
         this->CreateDir("/parent1");
         this->CreateDir("/parent2");
-        auto node = this->CreateNode("/parent1/oldname");
+        this->CreateNode("/parent1/oldname");
         this->CreateNode("/parent2/newname");
-        node->rename("/parent2/newname");
+        this->Load("/parent1/oldname")->rename("/parent2/newname");
         EXPECT_EQ(boost::none, this->device->Load("/parent1/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
 
     void Test_Overwrite_DoesntHaveSameEntryTwice() {
-        auto node = this->CreateNode("/oldname");
+        this->CreateNode("/oldname");
         this->CreateNode("/newname");
         EXPECT_EQ(4u, this->LoadDir("/")->children()->size()); // 4, because of '.' and '..'
-        node->rename("/newname");
+        this->Load("/oldname")->rename("/newname");
         EXPECT_EQ(3u, this->LoadDir("/")->children()->size()); // 3, because of '.' and '..'
     }
 
@@ -204,6 +259,7 @@ public:
         auto node = this->CreateNode("/oldname");
         node->rename("/mydir1/newname");
         node->rename("/mydir2/newname");
+        cpputils::destruct(std::move(node));
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_EQ(boost::none, this->device->Load("/mydir1/newname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/newname"));
@@ -213,6 +269,7 @@ public:
 REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     Error_TargetParentDirDoesntExist,
     Error_TargetParentDirIsFile,
+    Error_TargetParentDirIsSubdirOfSource,
     Error_RootDir,
     InRoot,
     InNested,
@@ -222,6 +279,9 @@ REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
     NestedToRoot_NewName,
     NestedToNested_SameName,
     NestedToNested_NewName,
+    ToSubdir,
+    ToSubdirOfSiblingDir,
+    ToUnrelatedDir,
     ToItself,
     Overwrite_InSameDir,
     Overwrite_InDifferentDir,

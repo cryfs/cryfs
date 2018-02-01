@@ -13,21 +13,22 @@ using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
-using cryfs::parallelaccessfsblobstore::FileBlobRef;
+using cryfs::fsblobstore::DirBlob;
+using cryfs::fsblobstore::FileBlob;
+namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryFile::CryFile(CryDevice *device, bf::path path, std::shared_ptr<DirBlob> parent, optional<std::shared_ptr<DirBlob>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(path), std::move(parent), std::move(grandparent), blockId) {
 }
 
 CryFile::~CryFile() {
 }
 
-unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
+unique_ref<fsblobstore::FileBlob> CryFile::LoadBlob() const {
   auto blob = CryNode::LoadBlob();
-  auto file_blob = dynamic_pointer_move<FileBlobRef>(blob);
+  auto file_blob = dynamic_pointer_move<FileBlob>(blob);
   ASSERT(file_blob != none, "Blob does not store a file");
   return std::move(*file_blob);
 }

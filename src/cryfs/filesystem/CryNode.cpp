@@ -18,8 +18,8 @@ using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
-using cryfs::parallelaccessfsblobstore::FsBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::FsBlob;
+using cryfs::fsblobstore::DirBlob;
 using namespace cpputils::logging;
 
 //TODO Get rid of this in favor of an exception hierarchy
@@ -27,8 +27,9 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+CryNode::CryNode(CryDevice *device, bf::path path, optional<std::shared_ptr<DirBlob>> parent, optional<std::shared_ptr<DirBlob>> grandparent, const BlockId &blockId)
 : _device(device),
+  _path(std::move(path)),
   _parent(none),
   _grandparent(none),
   _blockId(blockId) {
@@ -55,30 +56,110 @@ bool CryNode::isRootDir() const {
   return _parent == none;
 }
 
-shared_ptr<const DirBlobRef> CryNode::parent() const {
+shared_ptr<const DirBlob> CryNode::parent() const {
   ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
   return *_parent;
 }
 
-shared_ptr<DirBlobRef> CryNode::parent() {
+shared_ptr<DirBlob> CryNode::parent() {
   ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
   return *_parent;
 }
 
-optional<DirBlobRef*> CryNode::grandparent() {
+optional<DirBlob*> CryNode::grandparent() {
   if (_grandparent == none) {
     return none;
   }
   return _grandparent->get();
 }
 
+namespace {
+// taken from folly (Apache License) https://github.com/facebook/folly/blob/cd1bdc9/folly/experimental/io/FsUtil.cpp
+bool skipPrefix(const bf::path& pth, const bf::path& prefix, bf::path::const_iterator& it) {
+  it = pth.begin();
+  for (auto& p : prefix) {
+    if (it == pth.end()) {
+      return false;
+    }
+    if (p == ".") {
+      // Should only occur at the end, if prefix ends with a slash
+      continue;
+    }
+    if (*it++ != p) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// taken from folly (Apache License) https://github.com/facebook/folly/blob/cd1bdc9/folly/experimental/io/FsUtil.cpp
+bool starts_with(const bf::path& pth, const bf::path& prefix) {
+  bf::path::const_iterator it;
+  return skipPrefix(pth, prefix, it);
+}
+
+bool path_is_real_prefix(const bf::path& pth, const bf::path& prefix) {
+  // TODO Better iterator-based implementation instead of calling size()
+  return pth.size() > prefix.size() && starts_with(pth, prefix);
+}
+
+// taken from folly (Apache License) https://github.com/facebook/folly/blob/cd1bdc9/folly/experimental/io/FsUtil.cpp
+bf::path remove_prefix(const bf::path& pth, const bf::path& prefix) {
+  bf::path::const_iterator it;
+  if (!skipPrefix(pth, prefix, it)) {
+    throw std::logic_error(
+        "Path does not start with prefix");
+  }
+
+  bf::path p;
+  for (; it != pth.end(); ++it) {
+    p /= *it;
+  }
+
+  return p;
+}
+}
+
+
 void CryNode::rename(const bf::path &to) {
+  // TODO Split into smaller functions
   device()->callFsActionCallbacks();
+  ASSERT(_path.empty() || _path.is_absolute(), (string() + "from has to be an absolute path, but is: " + _path.c_str()).c_str());
+  ASSERT(to.is_absolute(), "rename target has to be an absolute path. If this assert throws, we have to add code here that makes the path absolute.");
+  ASSERT(_path.empty() == (_parent == none), "Path can be empty if and only if we're the root directory");
+
   if (_parent == none) {
     //We are the root direcory.
     throw FuseErrnoException(EBUSY);
   }
-  auto targetDirWithParent = _device->LoadDirBlobWithParent(to.parent_path());
+
+  if (path_is_real_prefix(to, _path)) {
+    // Tried to make a dir a subdir of itself
+    throw FuseErrnoException(EINVAL);
+  }
+
+  // We have to treat cases where the move goes into a subdirectory, the same directory or a sibling directory
+  // specially, because we cache the _parent and _grandparent dir blobs in members and (due to locking) can't request
+  // them from the blobstore anymore. So use the already loaded _parent and _grandparent blobs instead.
+  CryDevice::DirBlobWithParent targetDirWithParent;
+  if (path_is_real_prefix(to, _path.parent_path())) {
+    // Target is either in same directory (i.e. we're renaming not moving), or in a subdirectory.
+    // We can't use normal loading of the target dir starting from the file system root, because that would
+    // try to load the parent blob, while it is still stored in the _parent member. This would crash.
+    auto relativePath = remove_prefix(to.parent_path(), _path.parent_path());
+    targetDirWithParent = _device->LoadDirBlobWithParent(relativePath, *_parent);
+  } else if (_grandparent != none && path_is_real_prefix(to, _path.parent_path().parent_path())) {
+    // Target is in a sibling directory
+    // We can't use normal loading of the target dir starting from the file system root, because that would
+    // try to load the grandparent blob, while it is still stored in the _grandparent member. This would crash.
+    auto relativePath = remove_prefix(to.parent_path(), _path.parent_path().parent_path());
+    targetDirWithParent = _device->LoadDirBlobWithParent(relativePath, *_grandparent);
+  } else {
+    // Target isn't in the same, sub or sibling directory.
+    // We can use normal loading of the target dir starting from the file system root.
+    targetDirWithParent = _device->LoadDirBlobWithParent(to.parent_path());
+  }
+
   auto targetDir = std::move(targetDirWithParent.blob);
   auto targetDirParent = std::move(targetDirWithParent.parent);
 
@@ -102,6 +183,7 @@ void CryNode::rename(const bf::path &to) {
     LoadBlob()->setParentPointer(targetDir->blockId());
     _parent = std::move(targetDir);
   }
+  _path = to;
 }
 
 void CryNode::_updateParentModificationTimestamp() {
@@ -112,7 +194,7 @@ void CryNode::_updateParentModificationTimestamp() {
   }
 }
 
-void CryNode::_updateTargetDirModificationTimestamp(const DirBlobRef &targetDir, optional<unique_ref<DirBlobRef>> targetDirParent) {
+void CryNode::_updateTargetDirModificationTimestamp(const DirBlob &targetDir, optional<shared_ptr<DirBlob>> targetDirParent) {
   if (targetDirParent != none) {
     // TODO Handle timestamps of the root directory (targetDirParent == none) correctly.
     (*targetDirParent)->updateModificationTimestampForChild(targetDir.blockId());
@@ -149,7 +231,7 @@ const CryDevice *CryNode::device() const {
   return _device;
 }
 
-unique_ref<FsBlobRef> CryNode::LoadBlob() const {
+unique_ref<FsBlob> CryNode::LoadBlob() const {
   auto blob = _device->LoadBlob(_blockId);
   ASSERT(_parent == none || blob->parentPointer() == (*_parent)->blockId(), "Blob has wrong parent pointer.");
   return blob;  // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )

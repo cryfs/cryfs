@@ -8,7 +8,7 @@ template<class ConcreteFileSystemTestFixture>
 class FsppDeviceTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
   void Test_Load_While_Loaded() {
-    auto node = this->CreateNode("/mynode");
+    this->CreateNode("/mynode");
     auto operation = [this] () {
         this->device->Load("/mynode");
     };

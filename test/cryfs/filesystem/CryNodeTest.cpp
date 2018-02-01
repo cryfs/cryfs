@@ -19,6 +19,7 @@ public:
     unique_ref<CryNode> CreateFile(const bf::path &path) {
         auto parentDir = device().LoadDir(path.parent_path()).value();
         parentDir->createAndOpenFile(path.filename().native(), MODE_PUBLIC, 0, 0);
+        //cpputils::destruct(std::move(parentDir));
         auto file = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(file).value();
     }
@@ -27,6 +28,7 @@ public:
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = dynamic_pointer_move<CryDir>(_parentDir).value();
         parentDir->createDir(path.filename().native(), MODE_PUBLIC, 0, 0);
+        //cpputils::destruct(std::move(parentDir));
         auto createdDir = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(createdDir).value();
     }
@@ -35,6 +37,7 @@ public:
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = dynamic_pointer_move<CryDir>(_parentDir).value();
         parentDir->createSymlink(path.filename().native(), "/target", 0, 0);
+        //cpputils::destruct(std::move(parentDir));
         auto createdSymlink = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(createdSymlink).value();
     }
@@ -50,10 +53,10 @@ TEST_F(CryNodeTest, Rename_DoesntLeaveBlocksOver) {
 // TODO Add similar test cases (i.e. checking number of blocks) for other situations in rename, and also for other operations (e.g. deleting files).
 
 TEST_F(CryNodeTest, Rename_Overwrite_DoesntLeaveBlocksOver) {
-    auto node = CreateFile("/oldname");
+    CreateFile("/oldname");
     CreateFile("/newexistingname");
     EXPECT_EQ(3u, device().numBlocks()); // In the beginning, there is three blocks (the root block and the two created files). If that is not true anymore, we'll have to adapt the test case.
-    node->rename("/newexistingname");
+    device().Load("/oldname").value()->rename("/newexistingname");
     EXPECT_EQ(2u, device().numBlocks()); // Only the blocks of one file are left
 }
 
