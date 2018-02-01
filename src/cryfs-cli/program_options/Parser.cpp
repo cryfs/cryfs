@@ -182,5 +182,5 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
 
 [[noreturn]] void Parser::_showVersionAndExit() {
   // no need to show version because it was already shown in the CryFS header before parsing program options
-  exit(1);
+  exit(0);
 }
