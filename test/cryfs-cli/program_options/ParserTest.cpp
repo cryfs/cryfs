@@ -55,16 +55,6 @@ TEST_F(ProgramOptionsParserTest, ShowCiphers) {
     );
 }
 
-
-TEST_F(ProgramOptionsParserTest, Version) {
-    string expected = "CryFS Version " + gitversion::VersionString();
-    EXPECT_EXIT(
-        parse({"./myExecutable", "--version"}),
-        ::testing::ExitedWithCode(0),
-        expected.c_str()
-    );
-}
-
 TEST_F(ProgramOptionsParserTest, BaseDir_Absolute) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
