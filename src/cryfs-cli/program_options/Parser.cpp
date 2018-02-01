@@ -11,6 +11,7 @@ using namespace cryfs::program_options;
 using cryfs::CryConfigConsole;
 using std::vector;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using boost::optional;
@@ -58,6 +59,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (foreground) {
         fuseOptions.push_back(const_cast<char*>("-f"));
     }
+    bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     optional<double> unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();
@@ -91,7 +93,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         }
     }
 
-    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, noIntegrityChecks, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions));
+    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, noIntegrityChecks, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions));
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -126,6 +128,9 @@ po::variables_map Parser::_parseOptions(const vector<string> &options, const vec
     if (vm.count("show-ciphers")) {
         _showCiphersAndExit(supportedCiphers);
     }
+    if (vm.count("version")) {
+        _showVersionAndExit();
+    }
     po::notify(vm);
 
     return vm;
@@ -155,9 +160,11 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
             ("no-integrity-checks", "Disable integrity checks. Integrity checks ensure that your file system was not manipulated or rolled back to an earlier version. Disabling them is needed if you want to load an old snapshot of your file system.")
             ("missing-block-is-integrity-violation", po::value<bool>(), "Whether to treat a missing block as an integrity violation. This makes sure you notice if an attacker deleted some of your files, but only works in single-client mode. You will not be able to use the file system on other devices.")
+            ("allow-filesystem-upgrade", "Allow upgrading the file system if it was created with an old CryFS version. After the upgrade, older CryFS versions might not be able to use the file system anymore.")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
+            ("version", "Show CryFS version number")
             ;
     desc->add(options);
 }
@@ -196,4 +203,9 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
          << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
          << endl;
     exit(1);
+}
+
+[[noreturn]] void Parser::_showVersionAndExit() {
+  // no need to show version because it was already shown in the CryFS header before parsing program options
+  exit(0);
 }

@@ -22,6 +22,7 @@ using std::ostream;
 using std::make_shared;
 using ::testing::Return;
 using ::testing::HasSubstr;
+using ::testing::_;
 
 using namespace cryfs;
 
@@ -71,12 +72,12 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_FALSE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path()).value().configFile;
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false).value().configFile;
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
+    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false, bool allowFilesystemUpgrade = false) {
         EXPECT_TRUE(file.exists());
-        auto loadResult = loader(password, noninteractive, cipher).loadOrCreate(file.path());
+        auto loadResult = loader(password, noninteractive, cipher).loadOrCreate(file.path(), allowFilesystemUpgrade);
         if (loadResult == none) {
             return none;
         }
@@ -84,13 +85,13 @@ public:
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
@@ -100,7 +101,7 @@ public:
         FakeRandomGenerator generator(Data::FromString(encKey));
         auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
                                       askPassword, none, none, none);
-        ASSERT_NE(boost::none, loader.loadOrCreate(file.path()));
+        ASSERT_NE(boost::none, loader.loadOrCreate(file.path(), false));
     }
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
@@ -110,14 +111,14 @@ public:
     }
 
     void CreateWithVersion(const string &version, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
         cfg.config()->SetVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
 
     void CreateWithFilesystemID(const CryConfig::FilesystemID &filesystemId, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
     }
@@ -325,12 +326,28 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
 TEST_F(CryConfigLoaderTest, MyClientIdIsIndeterministic) {
     TempFile file1(false);
     TempFile file2(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path()).value().myClientId;
-    EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path()).value().myClientId);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path(), false).value().myClientId;
+    EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path(), false).value().myClientId);
 }
 
 TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
     TempFile file(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path()).value().myClientId;
-    EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path()).value().myClientId);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path(), false).value().myClientId;
+    EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path(), false).value().myClientId);
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+    string version = olderVersion();
+    CreateWithVersion(version);
+    EXPECT_NE(boost::none, Load("mypassword", none, true, true));
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_InteractiveMode) {
+  EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+  string version = olderVersion();
+  CreateWithVersion(version);
+  EXPECT_NE(boost::none, Load("mypassword", none, false, true));
 }

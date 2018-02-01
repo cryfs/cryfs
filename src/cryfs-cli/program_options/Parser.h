@@ -21,6 +21,7 @@ namespace cryfs {
                                                        boost::program_options::positional_options_description *positional);
             [[noreturn]] static void _showHelpAndExit();
             [[noreturn]] static void _showCiphersAndExit(const std::vector<std::string> &supportedCiphers);
+            [[noreturn]] static void _showVersionAndExit();
             static boost::program_options::variables_map _parseOptionsOrShowHelp(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static boost::program_options::variables_map _parseOptions(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static void _checkValidCipher(const std::string &cipher, const std::vector<std::string> &supportedCiphers);

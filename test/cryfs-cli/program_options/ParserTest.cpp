@@ -2,6 +2,7 @@
 #include <cryfs-cli/program_options/Parser.h>
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gitversion/gitversion.h>
 
 using namespace cryfs;
 using namespace cryfs::program_options;
@@ -54,6 +55,16 @@ TEST_F(ProgramOptionsParserTest, ShowCiphers) {
     );
 }
 
+
+TEST_F(ProgramOptionsParserTest, Version) {
+    string expected = "CryFS Version " + gitversion::VersionString();
+    EXPECT_EXIT(
+        parse({"./myExecutable", "--version"}),
+        ::testing::ExitedWithCode(0),
+        expected.c_str()
+    );
+}
+
 TEST_F(ProgramOptionsParserTest, BaseDir_Absolute) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
     EXPECT_EQ("/home/user/baseDir", options.baseDir());
@@ -72,6 +83,26 @@ TEST_F(ProgramOptionsParserTest, MountDir_Absolute) {
 TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "mountDir"});
     EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
+}
+
+TEST_F(ProgramOptionsParserTest, Foreground_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, Foreground_True) {
+    ProgramOptions options = parse({"./myExecutable", "-f", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.allowFilesystemUpgrade());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_True) {
+    ProgramOptions options = parse({"./myExecutable", "--allow-filesystem-upgrade", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.allowFilesystemUpgrade());
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
