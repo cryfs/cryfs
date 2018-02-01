@@ -201,7 +201,7 @@ namespace cryfs {
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         try {
             auto configFile = _determineConfigFile(options);
-            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes());
+            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade());
             if (config == none) {
                 std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
                 exit(1);
@@ -213,17 +213,17 @@ namespace cryfs {
         }
     }
 
-    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes) {
+    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes).loadOrCreate(configFilePath, allowFilesystemUpgrade);
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes).loadOrCreate(configFilePath);
+                                   cipher, blocksizeBytes).loadOrCreate(configFilePath, allowFilesystemUpgrade);
         }
     }
 

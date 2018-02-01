@@ -14,7 +14,7 @@ namespace cryfs {
         public:
             ProgramOptions(const boost::filesystem::path &baseDir, const boost::filesystem::path &mountDir,
                            const boost::optional<boost::filesystem::path> &configFile,
-                           bool foreground, const boost::optional<double> &unmountAfterIdleMinutes,
+                           bool foreground, bool allowFilesystemUpgrade, const boost::optional<double> &unmountAfterIdleMinutes,
                            const boost::optional<boost::filesystem::path> &logFile,
                            const boost::optional<std::string> &cipher,
                            const boost::optional<uint32_t> &blocksizeBytes,
@@ -25,6 +25,8 @@ namespace cryfs {
             const boost::filesystem::path &mountDir() const;
             const boost::optional<boost::filesystem::path> &configFile() const;
             bool foreground() const;
+            // TODO add test cases for allowFilesystemUpgrade
+            bool allowFilesystemUpgrade() const;
             const boost::optional<std::string> &cipher() const;
             const boost::optional<uint32_t> &blocksizeBytes() const;
             const boost::optional<double> &unmountAfterIdleMinutes() const;
@@ -36,6 +38,7 @@ namespace cryfs {
             boost::filesystem::path _mountDir;
             boost::optional<boost::filesystem::path> _configFile;
             bool _foreground;
+            bool _allowFilesystemUpgrade;
             boost::optional<std::string> _cipher;
             boost::optional<uint32_t> _blocksizeBytes;
             boost::optional<double> _unmountAfterIdleMinutes;

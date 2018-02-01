@@ -51,6 +51,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (foreground) {
         options.second.push_back(const_cast<char*>("-f"));
     }
+    bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     optional<double> unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();
@@ -69,7 +70,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         blocksizeBytes = vm["blocksize"].as<uint32_t>();
     }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, allowFilesystemUpgrade, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, options.second);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -130,6 +131,7 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("foreground,f", "Run CryFS in foreground.")
             ("cipher", po::value<string>(), cipher_description.c_str())
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
+            ("allow-filesystem-upgrade", "Allow upgrading the file system if it was created with an old CryFS version. After the upgrade, older CryFS versions might not be able to use the file system anymore.")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")

@@ -1,6 +1,7 @@
 Version 0.9.9 (unreleased)
 --------------
-
+Improvements:
+* Add --allow-filesystem-upgrade option which will upgrade old file systems without asking the user. This will be especially helpful for GUI tools.
 
 Version 0.9.8
 --------------

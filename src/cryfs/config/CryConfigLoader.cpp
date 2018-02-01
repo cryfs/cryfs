@@ -32,7 +32,7 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
 }
 
-optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
+optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, bool allowFilesystemUpgrade) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
   auto config = CryConfigFile::load(filename, password);
@@ -40,7 +40,7 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
     return none;
   }
   std::cout << "done" << std::endl;
-  _checkVersion(*config->config());
+  _checkVersion(*config->config(), allowFilesystemUpgrade);
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
   if (config->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config->config()->Version(), "0.9.3-rc1")) {
@@ -55,13 +55,13 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename) {
   return std::move(*config);
 }
 
-void CryConfigLoader::_checkVersion(const CryConfig &config) {
+void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
   if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
       throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". Please update your CryFS version.");
     }
   }
-  if (gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
+  if (!allowFilesystemUpgrade && gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
       throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". It has to be migrated.");
     }
@@ -74,9 +74,9 @@ void CryConfigLoader::_checkCipher(const CryConfig &config) const {
   }
 }
 
-optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename) {
+optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename, bool allowFilesystemUpgrade) {
   if (bf::exists(filename)) {
-    return _loadConfig(filename);
+    return _loadConfig(filename, allowFilesystemUpgrade);
   } else {
     return _createConfig(filename);
   }

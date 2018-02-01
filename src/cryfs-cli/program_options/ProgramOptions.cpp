@@ -9,11 +9,11 @@ using boost::optional;
 namespace bf = boost::filesystem;
 
 ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir, const optional<bf::path> &configFile,
-                               bool foreground, const optional<double> &unmountAfterIdleMinutes,
+                               bool foreground, bool allowFilesystemUpgrade, const optional<double> &unmountAfterIdleMinutes,
                                const optional<bf::path> &logFile, const optional<string> &cipher,
                                const optional<uint32_t> &blocksizeBytes,
                                const vector<string> &fuseOptions)
-    :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground),
+    :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade),
      _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
      _logFile(logFile), _fuseOptions(fuseOptions) {
 }
@@ -32,6 +32,10 @@ const optional<bf::path> &ProgramOptions::configFile() const {
 
 bool ProgramOptions::foreground() const {
     return _foreground;
+}
+
+bool ProgramOptions::allowFilesystemUpgrade() const {
+  return _allowFilesystemUpgrade;
 }
 
 const optional<double> &ProgramOptions::unmountAfterIdleMinutes() const {
