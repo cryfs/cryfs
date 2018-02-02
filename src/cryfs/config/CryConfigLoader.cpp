@@ -79,17 +79,17 @@ void CryConfigLoader::_checkCipher(const CryConfig &config) const {
 
 void CryConfigLoader::_checkMissingBlocksAreIntegrityViolations(CryConfigFile *configFile, uint32_t myClientId) {
   if (_missingBlockIsIntegrityViolationFromCommandLine == optional<bool>(true) && configFile->config()->ExclusiveClientId() == none) {
-    throw std::runtime_error("You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that.");
+    throw CryfsException("You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that.", ErrorCode::FilesystemHasDifferentIntegritySetup);
   }
   if (_missingBlockIsIntegrityViolationFromCommandLine == optional<bool>(false) && configFile->config()->ExclusiveClientId() != none) {
-    throw std::runtime_error("You specified on the command line to not treat missing blocks as integrity violations, but the file system is setup to do that.");
+    throw CryfsException("You specified on the command line to not treat missing blocks as integrity violations, but the file system is setup to do that.", ErrorCode::FilesystemHasDifferentIntegritySetup);
   }
 
   // If the file system is set up to treat missing blocks as integrity violations, but we're accessing from a different client, ask whether they want to disable the feature.
   auto exclusiveClientId = configFile->config()->ExclusiveClientId();
   if (exclusiveClientId != none && *exclusiveClientId != myClientId) {
     if (!_console->askYesNo("\nThis filesystem is setup to treat missing blocks as integrity violations and therefore only works in single-client mode. You are trying to access it from a different client.\nDo you want to disable this integrity feature and stop treating missing blocks as integrity violations?\nChoosing yes will not affect the confidentiality of your data, but in future you might not notice if an attacker deletes one of your files.", false)) {
-      throw std::runtime_error("File system is in single-client mode and can only be used from the client that created it.");
+      throw CryfsException("File system is in single-client mode and can only be used from the client that created it.", ErrorCode::SingleClientFileSystem);
     }
     configFile->config()->SetExclusiveClientId(none);
     configFile->save();

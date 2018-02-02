@@ -39,6 +39,18 @@ enum class ErrorCode : int {
 
   // Something's wrong with the file system.
   InvalidFilesystem = 19,
+
+  // The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This could mean an attacker replaced the file system with a different one.
+  FilesystemIdChanged = 20,
+
+  // The filesystem encryption key differs from the last time we loaded this filesystem. This could mean an attacker replaced the file system with a different one.
+  EncryptionKeyChanged = 21,
+
+  // The command line options and the file system disagree on whether missing blocks should be treated as integrity violations.
+  FilesystemHasDifferentIntegritySetup = 22,
+
+  // File system is in single-client mode and can only be used from the client that created it.
+  SingleClientFileSystem = 23,
 };
 
 inline int exitCode(ErrorCode code) {

@@ -193,11 +193,11 @@ namespace cryfs {
     }
 
     void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config) {
-      auto basedirMetadata = BasedirMetadata::load();
+        auto basedirMetadata = BasedirMetadata::load();
         if (!basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
           if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
-            throw std::runtime_error(
-                "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.");
+            throw CryfsException(
+                "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.", ErrorCode::FilesystemIdChanged);
           }
         }
         // Update local state (or create it if it didn't exist yet)
@@ -231,28 +231,32 @@ namespace cryfs {
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
         try {
-            auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
-            auto config = _loadOrCreateConfig(options);
-            CryDevice device(std::move(config.configFile), std::move(blockStore), config.myClientId, options.noIntegrityChecks(), config.configFile.config()->missingBlockIsIntegrityViolation());
-            _sanityCheckFilesystem(&device);
-            fspp::FilesystemImpl fsimpl(&device);
-            fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+options.baseDir().native());
+          auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
+          auto config = _loadOrCreateConfig(options);
+          CryDevice device(std::move(config.configFile), std::move(blockStore), config.myClientId,
+                           options.noIntegrityChecks(), config.configFile.config()->missingBlockIsIntegrityViolation());
+          _sanityCheckFilesystem(&device);
+          fspp::FilesystemImpl fsimpl(&device);
+          fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@" + options.baseDir().native());
 
-            _initLogfile(options);
+          _initLogfile(options);
 
-            //TODO Test auto unmounting after idle timeout
-            //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
-            auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
-            if (idleUnmounter != none) {
-                device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
-            }
+          //TODO Test auto unmounting after idle timeout
+          //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
+          auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] { fuse.stop(); });
+          if (idleUnmounter != none) {
+            device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
+          }
 
 #ifdef __APPLE__
-            std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
+          std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
 #else
-            std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
+          std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n"
+                    << std::endl;
 #endif
-            fuse.run(options.mountDir(), options.fuseOptions());
+          fuse.run(options.mountDir(), options.fuseOptions());
+        } catch (const CryfsException &e) {
+            throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
             LOG(ERROR, "Crashed: {}", e.what());
         } catch (...) {

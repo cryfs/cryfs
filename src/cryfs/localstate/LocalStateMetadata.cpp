@@ -4,6 +4,7 @@
 #include <cpp-utils/random/Random.h>
 #include <boost/filesystem.hpp>
 #include <blockstore/implementations/integrity/KnownBlockVersions.h>
+#include <cryfs/CryfsException.h>
 
 using boost::optional;
 using boost::none;
@@ -35,7 +36,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
   }
 
   if (loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
-    throw std::runtime_error("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?");
+    throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;
 }

@@ -1,10 +1,12 @@
 #include "testutils/CliTest.h"
 #include <cryfs/config/CryConfigFile.h>
+#include <cryfs/ErrorCodes.h>
 
 using std::vector;
 using std::string;
 using cryfs::CryConfig;
 using cryfs::CryConfigFile;
+using cryfs::ErrorCode;
 
 class CliTest_IntegrityCheck: public CliTest {
 public:
@@ -28,7 +30,8 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
   modifyFilesystemId();
   EXPECT_RUN_ERROR(
       args,
-      "Error: The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir."
+      "Error: The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.",
+      ErrorCode::FilesystemIdChanged
   );
 }
 
@@ -39,6 +42,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
   modifyFilesystemKey();
   EXPECT_RUN_ERROR(
       args,
-      "Error: The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?"
+      "Error: The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?",
+      ErrorCode::EncryptionKeyChanged
   );
 }
