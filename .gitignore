@@ -10,3 +10,4 @@ src/gitversion/*.pyc
 src/gitversion/__pycache__
 cmake-build-debug
 cmake-build-release
+cmake-build-test
