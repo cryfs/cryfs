@@ -165,7 +165,7 @@ references:
         cd cmake
         ./test/gitversion/gitversion-test
         if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
-        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] || [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
         ./test/blockstore/blockstore-test
         ./test/blobstore/blobstore-test
         ./test/cryfs/cryfs-test
