@@ -13,6 +13,8 @@
 #include <cpp-utils/network/FakeHttpClient.h>
 #include "../../cryfs/testutils/MockConsole.h"
 #include "../../cryfs/testutils/TestWithFakeHomeDirectory.h"
+#include <cryfs/ErrorCodes.h>
+#include <cpp-utils/testutils/CaptureStderrRAII.h>
 
 class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:
@@ -32,7 +34,7 @@ public:
         return std::move(httpClient);
     }
 
-    void run(std::vector<const char*> args) {
+    int run(std::vector<const char*> args) {
         std::vector<const char*> _args;
         _args.reserve(args.size()+1);
         _args.push_back("cryfs");
@@ -44,19 +46,18 @@ public:
         std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
         std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
         // Run Cryfs
-        cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient());
+        return cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient());
     }
 
-    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message = "") {
-        EXPECT_RUN_ERROR(args, (message+".*Usage").c_str());
+    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message, cryfs::ErrorCode errorCode) {
+        EXPECT_RUN_ERROR(args, (".*Usage:.*"+message).c_str(), errorCode);
     }
 
-    void EXPECT_RUN_ERROR(std::vector<const char*> args, const char *message) {
-        EXPECT_EXIT(
-            run(args),
-            ::testing::ExitedWithCode(1),
-            message
-        );
+    void EXPECT_RUN_ERROR(std::vector<const char*> args, const char* message, cryfs::ErrorCode errorCode) {
+        cpputils::CaptureStderrRAII capturedStderr;
+        int exit_code = run(args);
+        capturedStderr.EXPECT_MATCHES(string(".*") + message + ".*");
+        EXPECT_EQ(exitCode(errorCode), exit_code);
     }
 
     void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
