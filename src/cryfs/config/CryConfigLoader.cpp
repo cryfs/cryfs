@@ -6,6 +6,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
+#include "../CryfsException.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;
@@ -58,19 +59,19 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, b
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
   if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
-      throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". Please update your CryFS version.");
+      throw CryfsException("This filesystem is for CryFS " + config.Version() + ". Please update your CryFS version.", ErrorCode::TooNewFilesystemFormat);
     }
   }
   if (!allowFilesystemUpgrade && gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
-      throw std::runtime_error("This filesystem is for CryFS " + config.Version() + ". It has to be migrated.");
+      throw CryfsException("This filesystem is for CryFS " + config.Version() + ". It has to be migrated.", ErrorCode::TooOldFilesystemFormat);
     }
   }
 }
 
 void CryConfigLoader::_checkCipher(const CryConfig &config) const {
   if (_cipherFromCommandLine != none && config.Cipher() != *_cipherFromCommandLine) {
-    throw std::runtime_error(string() + "Filesystem uses " + config.Cipher() + " cipher and not " + *_cipherFromCommandLine + " as specified.");
+    throw CryfsException(string() + "Filesystem uses " + config.Cipher() + " cipher and not " + *_cipherFromCommandLine + " as specified.", ErrorCode::WrongCipher);
   }
 }
 

@@ -3,6 +3,7 @@
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/network/CurlHttpClient.h>
 #include <cpp-utils/io/IOStreamConsole.h>
+#include <cryfs/CryfsException.h>
 
 using namespace cryfs;
 using cpputils::Random;
@@ -17,8 +18,13 @@ int main(int argc, const char *argv[]) {
         auto &keyGenerator = Random::OSRandom();
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>(),
                    make_shared<CurlHttpClient>()).main(argc, argv);
+    } catch (const CryfsException &e) {
+        if (e.errorCode() != ErrorCode::Success) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
+        return exitCode(e.errorCode());
     } catch (const std::exception &e) {
         cerr << "Error: " << e.what();
-        return EXIT_FAILURE;
+        return exitCode(ErrorCode::UnspecifiedError);
     }
 }

@@ -7,6 +7,7 @@ using ::testing::Return;
 using ::testing::_;
 using std::vector;
 using cpputils::TempFile;
+using cryfs::ErrorCode;
 
 struct TestConfig {
     bool externalConfigfile;
@@ -41,10 +42,11 @@ public:
         EXPECT_RUN_SUCCESS(args(), mountdir);
     }
 
-    void Test_Run_Error(const char *expectedError) {
+    void Test_Run_Error(const char *expectedError, cryfs::ErrorCode errorCode) {
         EXPECT_RUN_ERROR(
             args(),
-            expectedError
+            expectedError,
+            errorCode
         );
     }
 
@@ -85,7 +87,7 @@ TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
     mountdir = basedir;
-    Test_Run_Error("Error: base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 bf::path make_relative(const bf::path &path) {
@@ -100,26 +102,26 @@ bf::path make_relative(const bf::path &path) {
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {
     mountdir = make_relative(basedir);
-    Test_Run_Error("Error: base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BaseDirRelative) {
     mountdir = basedir;
     basedir = make_relative(basedir);
-    Test_Run_Error("Error: base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
     basedir = make_relative(basedir);
     mountdir = basedir;
-    Test_Run_Error("Error: base directory can't be inside the mount directory");
+    Test_Run_Error("Error: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     _basedir.remove();
     // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(false));
-    Test_Run_Error("Error: base directory not found");
+    Test_Run_Error("Error: base directory not found", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
@@ -128,7 +130,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
     ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
-    Test_Run_Error("Error: base directory not found");
+    Test_Run_Error("Error: base directory not found", ErrorCode::InaccessibleBaseDir);
     ::unsetenv("CRYFS_FRONTEND");
 }
 
@@ -143,7 +145,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
 TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
     TempFile basedirfile;
     basedir = basedirfile.path();
-    Test_Run_Error("Error: base directory is not a directory");
+    Test_Run_Error("Error: base directory is not a directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
@@ -155,29 +157,29 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
     SetNoReadPermission(basedir);
-    Test_Run_Error("Error: Could not read from base directory");
+    Test_Run_Error("Error: Could not read from base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
     SetNoWritePermission(basedir);
-    Test_Run_Error("Error: Could not write to base directory");
+    Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
     SetNoExePermission(basedir);
-    Test_Run_Error("Error: Could not write to base directory");
+    Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
     SetNoPermission(basedir);
-    Test_Run_Error("Error: Could not write to base directory");
+    Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
     _mountdir.remove();
     // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", _)).WillByDefault(Return(false));
-    Test_Run_Error("Error: mount directory not found");
+    Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
@@ -186,7 +188,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
     ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
-    Test_Run_Error("Error: mount directory not found");
+    Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
     ::unsetenv("CRYFS_FRONTEND");
 }
 
@@ -201,7 +203,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
 TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
     TempFile mountdirfile;
     mountdir = mountdirfile.path();
-    Test_Run_Error("Error: mount directory is not a directory");
+    Test_Run_Error("Error: mount directory is not a directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
@@ -213,20 +215,20 @@ TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoReadPermission) {
     SetNoReadPermission(mountdir);
-    Test_Run_Error("Error: Could not read from mount directory");
+    Test_Run_Error("Error: Could not read from mount directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
     SetNoWritePermission(mountdir);
-    Test_Run_Error("Error: Could not write to mount directory");
+    Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
     SetNoExePermission(mountdir);
-    Test_Run_Error("Error: Could not write to mount directory");
+    Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoPermission) {
     SetNoPermission(mountdir);
-    Test_Run_Error("Error: Could not write to mount directory");
+    Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }

@@ -2,6 +2,7 @@ project (cryfs)
 
 set(LIB_SOURCES
 #    cryfs.cpp
+        CryfsException.cpp
         config/crypto/outer/OuterConfig.cpp
         config/crypto/outer/OuterEncryptor.cpp
         config/crypto/CryConfigEncryptorFactory.cpp

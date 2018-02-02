@@ -24,6 +24,7 @@
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include "Environment.h"
+#include <cryfs/CryfsException.h>
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
@@ -169,7 +170,7 @@ namespace cryfs {
         //TODO Test
         string password = _askPasswordFromStdin("Password: ");
         if (!_checkPassword(password)) {
-            throw std::runtime_error("Invalid password. Password cannot be empty.");
+            throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
         }
         return password;
     }
@@ -199,18 +200,13 @@ namespace cryfs {
     }
 
     CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
-        try {
-            auto configFile = _determineConfigFile(options);
-            auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade());
-            if (config == none) {
-                std::cerr << "Could not load config file. Did you enter the correct password?" << std::endl;
-                exit(1);
-            }
-            return std::move(*config);
-        } catch (const std::exception &e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-            exit(1);
+        auto configFile = _determineConfigFile(options);
+        auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(),
+                                              options.allowFilesystemUpgrade());
+        if (config == none) {
+          throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
         }
+        return std::move(*config);
     }
 
     optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade) {
@@ -262,11 +258,11 @@ namespace cryfs {
         //Try to list contents of base directory
         auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
         if (_rootDir == none) {
-            throw std::runtime_error("Couldn't find root blob");
+            throw CryfsException("Couldn't find root blob", ErrorCode::InvalidFilesystem);
         }
         auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
         if (rootDir == none) {
-            throw std::runtime_error("Base directory blob doesn't contain a directory");
+            throw CryfsException("Base directory blob doesn't contain a directory", ErrorCode::InvalidFilesystem);
         }
         (*rootDir)->children(); // Load children
     }
@@ -293,39 +289,40 @@ namespace cryfs {
     }
 
     void Cli::_sanityChecks(const ProgramOptions &options) {
-        _checkDirAccessible(options.baseDir(), "base directory");
-        _checkDirAccessible(options.mountDir(), "mount directory");
+        _checkDirAccessible(options.baseDir(), "base directory", ErrorCode::InaccessibleBaseDir);
+        _checkDirAccessible(options.mountDir(), "mount directory", ErrorCode::InaccessibleMountDir);
         _checkMountdirDoesntContainBasedir(options);
     }
 
-    void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name) {
+    void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name, ErrorCode errorCode) {
         if (!bf::exists(dir)) {
             bool create = _console->askYesNo("Could not find " + name + ". Do you want to create it?", false);
             if (create) {
                 if (!bf::create_directory(dir)) {
-                    throw std::runtime_error("Error creating "+name);
+                    throw CryfsException("Error creating "+name, errorCode);
                 }
             } else {
-                throw std::runtime_error(name + " not found.");
+                //std::cerr << "Exit code: " << exitCode(errorCode) << std::endl;
+                throw CryfsException(name + " not found.", errorCode);
             }
         }
         if (!bf::is_directory(dir)) {
-            throw std::runtime_error(name+" is not a directory.");
+            throw CryfsException(name+" is not a directory.", errorCode);
         }
-        auto file = _checkDirWriteable(dir, name);
-        _checkDirReadable(dir, file, name);
+        auto file = _checkDirWriteable(dir, name, errorCode);
+        _checkDirReadable(dir, file, name, errorCode);
     }
 
-    shared_ptr<TempFile> Cli::_checkDirWriteable(const bf::path &dir, const std::string &name) {
+    shared_ptr<TempFile> Cli::_checkDirWriteable(const bf::path &dir, const std::string &name, ErrorCode errorCode) {
         auto path = dir / "tempfile";
         try {
             return make_shared<TempFile>(path);
         } catch (const std::runtime_error &e) {
-            throw std::runtime_error("Could not write to "+name+".");
+            throw CryfsException("Could not write to "+name+".", errorCode);
         }
     }
 
-    void Cli::_checkDirReadable(const bf::path &dir, shared_ptr<TempFile> tempfile, const std::string &name) {
+    void Cli::_checkDirReadable(const bf::path &dir, shared_ptr<TempFile> tempfile, const std::string &name, ErrorCode errorCode) {
         ASSERT(bf::equivalent(dir, tempfile->path().parent_path()), "This function should be called with a file inside the directory");
         try {
             bool found = false;
@@ -340,13 +337,13 @@ namespace cryfs {
                 throw std::runtime_error("Error accessing "+name+".");
             }
         } catch (const boost::filesystem::filesystem_error &e) {
-            throw std::runtime_error("Could not read from "+name+".");
+            throw CryfsException("Could not read from "+name+".", errorCode);
         }
     }
 
     void Cli::_checkMountdirDoesntContainBasedir(const ProgramOptions &options) {
         if (_pathContains(options.mountDir(), options.baseDir())) {
-            throw std::runtime_error("base directory can't be inside the mount directory.");
+            throw CryfsException("base directory can't be inside the mount directory.", ErrorCode::BaseDirInsideMountDir);
         }
     }
 
@@ -367,17 +364,21 @@ namespace cryfs {
 
     int Cli::main(int argc, const char *argv[]) {
         cpputils::showBacktraceOnSigSegv();
-        _showVersion();
-
-        ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
 
         try {
+            _showVersion();
+            ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
             _runFilesystem(options);
+        } catch (const CryfsException &e) {
+            if (e.errorCode() != ErrorCode::Success) {
+              std::cerr << "Error: " << e.what() << std::endl;
+            }
+            return exitCode(e.errorCode());
         } catch (const std::runtime_error &e) {
             std::cerr << "Error: " << e.what() << std::endl;
-            exit(1);
+            return exitCode(ErrorCode::UnspecifiedError);
         }
-        return 0;
+        return exitCode(ErrorCode::Success);
     }
 }
