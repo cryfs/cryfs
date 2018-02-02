@@ -5,14 +5,14 @@
 #include "LockPool.h"
 
 namespace cpputils {
-    template<class LockName, bool Recursive = false>
+    template<class LockName>
     class MutexPoolLock final {
     public:
-        MutexPoolLock(LockPool<LockName, Recursive> *pool, const LockName &lockName): _pool(pool), _lockName(lockName) {
+        MutexPoolLock(LockPool<LockName> *pool, const LockName &lockName): _pool(pool), _lockName(lockName) {
             _pool->lock(_lockName);
         }
 
-        MutexPoolLock(LockPool<LockName, Recursive> *pool, const LockName &lockName, std::unique_lock<std::mutex> *lockToFreeWhileWaiting)
+        MutexPoolLock(LockPool<LockName> *pool, const LockName &lockName, std::unique_lock<std::mutex> *lockToFreeWhileWaiting)
                 : _pool(pool), _lockName(lockName) {
             _pool->lock(_lockName, lockToFreeWhileWaiting);
         }
@@ -34,13 +34,11 @@ namespace cpputils {
         }
 
     private:
-        LockPool<LockName, Recursive> *_pool;
+        LockPool<LockName> *_pool;
         LockName _lockName;
         
         DISALLOW_COPY_AND_ASSIGN(MutexPoolLock);
     };
-
-    template<class LockName> using RecursiveMutexPoolLock = MutexPoolLock<LockName, true>;
 }
 
 #endif
