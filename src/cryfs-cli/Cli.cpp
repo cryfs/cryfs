@@ -247,6 +247,8 @@ namespace cryfs {
             std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
 #endif
             fuse.run(options.mountDir(), options.fuseOptions());
+        } catch (const CryfsException &e) {
+            throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
             LOG(ERROR, "Crashed: {}", e.what());
         } catch (...) {
