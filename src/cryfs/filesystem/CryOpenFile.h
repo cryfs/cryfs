@@ -11,11 +11,11 @@ class CryDevice;
 
 class CryOpenFile final: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(const CryDevice *device, std::shared_ptr<fsblobstore::DirBlob> parent, cpputils::unique_ref<fsblobstore::FileBlob> fileBlob);
+  explicit CryOpenFile(CryDevice *device, blockstore::BlockId parent, blockstore::BlockId fileBlob);
   ~CryOpenFile();
 
   void stat(struct ::stat *result) const override;
-  void truncate(off_t size) const override;
+  void truncate(off_t size) override;
   size_t read(void *buf, size_t count, off_t offset) const override;
   void write(const void *buf, size_t count, off_t offset) override;
   void flush() override;
@@ -23,9 +23,12 @@ public:
   void fdatasync() override;
 
 private:
-  const CryDevice *_device;
-  std::shared_ptr<fsblobstore::DirBlob> _parent;
-  cpputils::unique_ref<fsblobstore::FileBlob> _fileBlob;
+  cpputils::unique_ref<fsblobstore::FileBlob> _Load() const;
+  cpputils::unique_ref<fsblobstore::DirBlob> _LoadParent() const;
+
+  CryDevice *_device;
+  blockstore::BlockId _parent;
+  blockstore::BlockId _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };

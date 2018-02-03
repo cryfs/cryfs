@@ -16,8 +16,8 @@ using cryfs::fsblobstore::DirBlob;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlob> parent, unique_ref<FileBlob> fileBlob)
-: _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
+CryOpenFile::CryOpenFile(CryDevice *device, blockstore::BlockId parent, blockstore::BlockId fileBlob)
+: _device(device), _parent(parent), _fileBlob(fileBlob) {
 }
 
 CryOpenFile::~CryOpenFile() {
@@ -26,43 +26,56 @@ CryOpenFile::~CryOpenFile() {
 
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
-  _parent->flush();
 }
 
 void CryOpenFile::stat(struct ::stat *result) const {
   _device->callFsActionCallbacks();
-  result->st_size = _fileBlob->size();
-  _parent->statChildWithSizeAlreadySet(_fileBlob->blockId(), result);
+  result->st_size = _Load()->size();
+  _LoadParent()->statChildWithSizeAlreadySet(_fileBlob, result);
 }
 
-void CryOpenFile::truncate(off_t size) const {
+void CryOpenFile::truncate(off_t size) {
   _device->callFsActionCallbacks();
-  _fileBlob->resize(size);
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
+  _Load()->resize(size);
+  _LoadParent()->updateModificationTimestampForChild(_fileBlob);
 }
 
 size_t CryOpenFile::read(void *buf, size_t count, off_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
-  return _fileBlob->read(buf, offset, count);
+  _LoadParent()->updateAccessTimestampForChild(_fileBlob, fsblobstore::TimestampUpdateBehavior::RELATIME);
+  return _Load()->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, size_t count, off_t offset) {
   _device->callFsActionCallbacks();
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
-  _fileBlob->write(buf, offset, count);
+  _LoadParent()->updateModificationTimestampForChild(_fileBlob);
+  _Load()->write(buf, offset, count);
 }
 
 void CryOpenFile::fsync() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
-  _parent->flush();
 }
 
 void CryOpenFile::fdatasync() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
+}
+
+unique_ref<fsblobstore::FileBlob> CryOpenFile::_Load() const {
+  auto blob = _device->LoadBlob(_fileBlob);
+  auto fileBlob = cpputils::dynamic_pointer_move<fsblobstore::FileBlob>(blob);
+  if (fileBlob == boost::none) {
+    throw std::runtime_error("Blob for open file is not a file blob");
+  }
+  return std::move(*fileBlob);
+}
+
+unique_ref<fsblobstore::DirBlob> CryOpenFile::_LoadParent() const {
+  auto blob = _device->LoadBlob(_parent);
+  auto dirBlob = cpputils::dynamic_pointer_move<fsblobstore::DirBlob>(blob);
+  if (dirBlob == boost::none) {
+    throw std::runtime_error("Blob for parent dir of open file is not a dir");
+  }
+  return std::move(*dirBlob);
 }
 
 }
