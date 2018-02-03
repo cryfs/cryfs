@@ -8,6 +8,7 @@
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
+#include <gitversion/parser.h>
 #include <gitversion/VersionCompare.h>
 
 using cpputils::TempFile;
@@ -113,6 +114,7 @@ public:
     void CreateWithVersion(const string &version, const string &password = "mypassword") {
         auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
         cfg.config()->SetVersion(version);
+        cfg.config()->SetLastOpenedWithVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
@@ -130,19 +132,20 @@ public:
     }
 
     string olderVersion() {
+        auto versionInfo = gitversion::Parser::parse(CryConfig::FilesystemFormatVersion);
         string olderVersion;
-        if (std::stol(gitversion::MinorVersion()) > 0) {
-            olderVersion = gitversion::MajorVersion() + "." + std::to_string(std::stol(gitversion::MinorVersion()) - 1);
+        if (std::stol(versionInfo.minorVersion) > 0) {
+            olderVersion = versionInfo.majorVersion + "." + std::to_string(std::stol(versionInfo.minorVersion) - 1);
         } else {
-            olderVersion = std::to_string(std::stol(gitversion::MajorVersion()) - 1) + "." + gitversion::MinorVersion();
+            olderVersion = std::to_string(std::stol(versionInfo.majorVersion) - 1) + "." + versionInfo.minorVersion;
         }
-        assert(gitversion::VersionCompare::isOlderThan(olderVersion, gitversion::VersionString()));
+        assert(gitversion::VersionCompare::isOlderThan(olderVersion, CryConfig::FilesystemFormatVersion));
         return olderVersion;
     }
 
     string newerVersion() {
         string newerVersion = gitversion::MajorVersion()+"."+std::to_string(std::stol(gitversion::MinorVersion())+1);
-        assert(gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), newerVersion));
+        assert(gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, newerVersion));
         return newerVersion;
     }
 
@@ -244,7 +247,8 @@ TEST_F(CryConfigLoaderTest, Cipher_Create) {
 TEST_F(CryConfigLoaderTest, Version_Load) {
     CreateWithVersion("0.9.2");
     auto loaded = Load().value();
-    EXPECT_EQ(gitversion::VersionString(), loaded.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, loaded.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), loaded.config()->LastOpenedWithVersion());
     EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
 }
 
@@ -252,13 +256,15 @@ TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOn
     CreateWithVersion("0.9.2", "mypassword");
     Load().value();
     auto configFile = CryConfigFile::load(file.path(), "mypassword").value();
-    EXPECT_EQ(gitversion::VersionString(), configFile.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, configFile.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), configFile.config()->LastOpenedWithVersion());
     EXPECT_EQ("0.9.2", configFile.config()->CreatedWithVersion());
 }
 
 TEST_F(CryConfigLoaderTest, Version_Create) {
     auto created = Create();
-    EXPECT_EQ(gitversion::VersionString(), created.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, created.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), created.config()->LastOpenedWithVersion());
     EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
 }
 

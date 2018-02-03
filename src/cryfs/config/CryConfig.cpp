@@ -18,12 +18,15 @@ using cpputils::Random;
 
 namespace cryfs {
 
+constexpr const char* CryConfig::FilesystemFormatVersion;
+
 CryConfig::CryConfig()
 : _rootBlob("")
 , _encKey("")
 , _cipher("")
 , _version("")
 , _createdWithVersion("")
+, _lastOpenedWithVersion("")
 , _blocksizeBytes(0)
 , _filesystemId(FilesystemID::Null())
 , _exclusiveClientId(none)
@@ -45,6 +48,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._cipher = pt.get<string>("cryfs.cipher");
   cfg._version = pt.get<string>("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
   cfg._createdWithVersion = pt.get<string>("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
+  cfg._lastOpenedWithVersion = pt.get<string>("cryfs.lastOpenedWithVersion", cfg._version); // In CryFS <= 0.9.8, we didn't have this field, but used the cryfs.version field for this purpose.
   cfg._blocksizeBytes = pt.get<uint64_t>("cryfs.blocksizeBytes", 32832); // CryFS <= 0.9.2 used a 32KB block size which was this physical block size.
   cfg._exclusiveClientId = pt.get_optional<uint32_t>("cryfs.exclusiveClientId");
 #ifndef CRYFS_NO_COMPATIBILITY
@@ -69,6 +73,7 @@ Data CryConfig::save() const {
   pt.put<string>("cryfs.cipher", _cipher);
   pt.put<string>("cryfs.version", _version);
   pt.put<string>("cryfs.createdWithVersion", _createdWithVersion);
+  pt.put<string>("cryfs.lastOpenedWithVersion", _lastOpenedWithVersion);
   pt.put<uint64_t>("cryfs.blocksizeBytes", _blocksizeBytes);
   pt.put<string>("cryfs.filesystemId", _filesystemId.ToString());
   if (_exclusiveClientId != none) {
@@ -115,12 +120,20 @@ void CryConfig::SetVersion(std::string value) {
   _version = std::move(value);
 }
 
+const std::string &CryConfig::LastOpenedWithVersion() const {
+  return _lastOpenedWithVersion;
+}
+
 const std::string &CryConfig::CreatedWithVersion() const {
   return _createdWithVersion;
 }
 
 void CryConfig::SetCreatedWithVersion(std::string value) {
   _createdWithVersion = std::move(value);
+}
+
+void CryConfig::SetLastOpenedWithVersion(const std::string &value) {
+  _lastOpenedWithVersion = value;
 }
 
 uint64_t CryConfig::BlocksizeBytes() const {

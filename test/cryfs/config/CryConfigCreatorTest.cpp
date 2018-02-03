@@ -187,9 +187,14 @@ TEST_F(CryConfigCreatorTest, SetsCorrectCreatedWithVersion) {
     EXPECT_EQ(gitversion::VersionString(), config.CreatedWithVersion());
 }
 
+TEST_F(CryConfigCreatorTest, SetsCorrectLastOpenedWithVersion) {
+    CryConfig config = noninteractiveCreator.create(none, none);
+    EXPECT_EQ(gitversion::VersionString(), config.CreatedWithVersion());
+}
+
 TEST_F(CryConfigCreatorTest, SetsCorrectVersion) {
     CryConfig config = noninteractiveCreator.create(none, none, none).config;
-    EXPECT_EQ(gitversion::VersionString(), config.Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, config.Version());
 }
 
 //TODO Add test cases ensuring that the values entered are correctly taken
