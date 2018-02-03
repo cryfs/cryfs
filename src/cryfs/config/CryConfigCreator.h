@@ -19,7 +19,7 @@ namespace cryfs {
             uint32_t myClientId;
         };
 
-        ConfigCreateResult create(const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine);
+        ConfigCreateResult create(const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool allowReplacedFilesystem);
     private:
         std::string _generateCipher(const boost::optional<std::string> &cipherFromCommandLine);
         std::string _generateEncKey(const std::string &cipher);

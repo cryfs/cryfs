@@ -12,7 +12,7 @@ namespace cryfs {
 class LocalStateMetadata final {
 public:
 
-  static LocalStateMetadata loadOrGenerate(const boost::filesystem::path &statePath, const cpputils::Data& encryptionKey);
+  static LocalStateMetadata loadOrGenerate(const boost::filesystem::path &statePath, const cpputils::Data& encryptionKey, bool allowReplacedFilesystem);
 
   uint32_t myClientId() const;
 

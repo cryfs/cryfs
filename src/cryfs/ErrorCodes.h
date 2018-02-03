@@ -40,10 +40,10 @@ enum class ErrorCode : int {
   // Something's wrong with the file system.
   InvalidFilesystem = 19,
 
-  // The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This could mean an attacker replaced the file system with a different one.
+  // The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This could mean an attacker replaced the file system with a different one. You can pass the --allow-replaced-filesystem option to allow this.
   FilesystemIdChanged = 20,
 
-  // The filesystem encryption key differs from the last time we loaded this filesystem. This could mean an attacker replaced the file system with a different one.
+  // The filesystem encryption key differs from the last time we loaded this filesystem. This could mean an attacker replaced the file system with a different one. You can pass the --allow-replaced-filesystem option to allow this.
   EncryptionKeyChanged = 21,
 
   // The command line options and the file system disagree on whether missing blocks should be treated as integrity violations.

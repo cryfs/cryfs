@@ -21,11 +21,11 @@ public:
       uint32_t myClientId;
   };
 
-  boost::optional<ConfigLoadResult> loadOrCreate(boost::filesystem::path filename, bool allowFilesystemUpgrade);
+  boost::optional<ConfigLoadResult> loadOrCreate(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
 
 private:
-    boost::optional<ConfigLoadResult> _loadConfig(boost::filesystem::path filename, bool allowFilesystemUpgrade);
-    ConfigLoadResult _createConfig(boost::filesystem::path filename);
+    boost::optional<ConfigLoadResult> _loadConfig(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
+    ConfigLoadResult _createConfig(boost::filesystem::path filename, bool allowReplacedFilesystem);
     void _checkVersion(const CryConfig &config, bool allowFilesystemUpgrade);
     void _checkCipher(const CryConfig &config) const;
     void _checkMissingBlocksAreIntegrityViolations(CryConfigFile *configFile, uint32_t myClientId);

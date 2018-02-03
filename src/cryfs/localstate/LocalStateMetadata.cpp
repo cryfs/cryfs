@@ -27,7 +27,7 @@ namespace cryfs {
 LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
 : _myClientId(myClientId), _encryptionKeyHash(encryptionKeyHash) {}
 
-LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey) {
+LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey, bool allowReplacedFilesystem) {
   auto metadataFile = statePath / "metadata";
   auto loaded = _load(metadataFile);
   if (loaded == none) {
@@ -35,7 +35,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
     return _generate(metadataFile, encryptionKey);
   }
 
-  if (loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
+  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
     throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;

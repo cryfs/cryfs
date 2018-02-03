@@ -19,7 +19,7 @@ namespace cryfs {
         :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator) {
     }
 
-    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine, const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine) {
+    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine, const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool allowReplacedFilesystem) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetVersion(gitversion::VersionString());
@@ -28,7 +28,7 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobId());
         config.SetFilesystemId(_generateFilesystemID());
         auto encryptionKey = _generateEncKey(config.Cipher());
-        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey));
+        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
         uint32_t myClientId = localState.myClientId();
         config.SetEncryptionKey(std::move(encryptionKey));
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));

@@ -192,9 +192,9 @@ namespace cryfs {
         return *configFile;
     }
 
-    void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config) {
+    void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config, bool allowReplacedFilesystem) {
         auto basedirMetadata = BasedirMetadata::load();
-        if (!basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
+        if (!allowReplacedFilesystem && !basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
           if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
             throw CryfsException(
                 "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.", ErrorCode::FilesystemIdChanged);
@@ -207,25 +207,25 @@ namespace cryfs {
 
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
         auto configFile = _determineConfigFile(options);
-        auto config = _loadOrCreateConfigFile(std::move(configFile), options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation());
+        auto config = _loadOrCreateConfigFile(std::move(configFile), options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation(), options.allowReplacedFilesystem());
         if (config == none) {
           throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
         }
-        _checkConfigIntegrity(options.baseDir(), config->configFile);
+        _checkConfigIntegrity(options.baseDir(), config->configFile, options.allowReplacedFilesystem());
         return std::move(*config);
     }
 
-    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         } else {
             return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade);
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         }
     }
 
