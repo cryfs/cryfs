@@ -22,8 +22,9 @@ namespace cryfs {
     CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
-        config.SetVersion(gitversion::VersionString());
+        config.SetVersion(CryConfig::FilesystemFormatVersion);
         config.SetCreatedWithVersion(gitversion::VersionString());
+        config.SetLastOpenedWithVersion(gitversion::VersionString());
         config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
         config.SetRootBlob(_generateRootBlobKey());
         config.SetEncryptionKey(_generateEncKey(config.Cipher()));

@@ -41,6 +41,12 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, b
     return none;
   }
   std::cout << "done" << std::endl;
+#ifndef CRYFS_NO_COMPATIBILITY
+  //Since 0.9.7 and 0.9.8 set their own version to cryfs.version instead of the filesystem format version (which is 0.9.6), overwrite it
+  if (config->config()->Version() == "0.9.7" || config->config()->Version() == "0.9.8") {
+    config->config()->SetVersion("0.9.6");
+  }
+#endif
   _checkVersion(*config->config(), allowFilesystemUpgrade);
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
@@ -48,8 +54,12 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, b
     config->config()->SetBlocksizeBytes(32832);
   }
 #endif
-  if (config->config()->Version() != gitversion::VersionString()) {
-    config->config()->SetVersion(gitversion::VersionString());
+  if (config->config()->Version() != CryConfig::FilesystemFormatVersion) {
+    config->config()->SetVersion(CryConfig::FilesystemFormatVersion);
+    config->save();
+  }
+  if (config->config()->LastOpenedWithVersion() != gitversion::VersionString()) {
+    config->config()->SetLastOpenedWithVersion(gitversion::VersionString());
     config->save();
   }
   _checkCipher(*config->config());
@@ -57,14 +67,14 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, b
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
-  if (gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), config.Version())) {
-    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
-      throw CryfsException("This filesystem is for CryFS " + config.Version() + ". Please update your CryFS version.", ErrorCode::TooNewFilesystemFormat);
+  if (gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, config.Version())) {
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " or later and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
+      throw CryfsException("This filesystem is for CryFS " + config.Version() + " or later. Please update your CryFS version.", ErrorCode::TooNewFilesystemFormat);
     }
   }
-  if (!allowFilesystemUpgrade && gitversion::VersionCompare::isOlderThan(config.Version(), gitversion::VersionString())) {
-    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + ". It can be migrated to CryFS " + gitversion::VersionString() + ", but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
-      throw CryfsException("This filesystem is for CryFS " + config.Version() + ". It has to be migrated.", ErrorCode::TooOldFilesystemFormat);
+  if (!allowFilesystemUpgrade && gitversion::VersionCompare::isOlderThan(config.Version(), CryConfig::FilesystemFormatVersion)) {
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). You're running a CryFS version using storage format " + CryConfig::FilesystemFormatVersion + ". It can be migrated, but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
+      throw CryfsException("This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). It has to be migrated.", ErrorCode::TooOldFilesystemFormat);
     }
   }
 }

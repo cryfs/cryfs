@@ -12,6 +12,8 @@ namespace cryfs {
 
 class CryConfig final {
 public:
+  static constexpr const char* FilesystemFormatVersion = "0.9.6";
+
   //TODO No default constructor, pass in config values instead!
   CryConfig();
   CryConfig(CryConfig &&rhs);
@@ -32,6 +34,9 @@ public:
   const std::string &CreatedWithVersion() const;
   void SetCreatedWithVersion(const std::string &value);
 
+  const std::string &LastOpenedWithVersion() const;
+  void SetLastOpenedWithVersion(const std::string &value);
+
   uint64_t BlocksizeBytes() const;
   void SetBlocksizeBytes(uint64_t value);
 
@@ -48,6 +53,7 @@ private:
   std::string _cipher;
   std::string _version;
   std::string _createdWithVersion;
+  std::string _lastOpenedWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
 
