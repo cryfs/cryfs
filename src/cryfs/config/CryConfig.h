@@ -12,7 +12,7 @@ namespace cryfs {
 
 class CryConfig final {
 public:
-  static constexpr const char* FilesystemFormatVersion = "0.9.6";
+  static constexpr const char* FilesystemFormatVersion = "0.10";
 
   //TODO No default constructor, pass in config values instead!
   CryConfig();
