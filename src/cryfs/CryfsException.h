@@ -4,6 +4,7 @@
 
 #include "ErrorCodes.h"
 #include <stdexcept>
+#include <string>
 
 namespace cryfs {
 
