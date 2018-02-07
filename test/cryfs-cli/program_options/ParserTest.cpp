@@ -2,6 +2,9 @@
 #include <cryfs-cli/program_options/Parser.h>
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gitversion/gitversion.h>
+#include <cryfs/CryfsException.h>
+#include <cpp-utils/testutils/CaptureStderrRAII.h>
 
 using namespace cryfs;
 using namespace cryfs::program_options;
@@ -9,6 +12,7 @@ using std::vector;
 using std::string;
 using boost::none;
 namespace bf = boost::filesystem;
+using cpputils::CaptureStderrRAII;
 
 class ProgramOptionsParserTest: public ProgramOptionsTestBase {
 public:
@@ -19,39 +23,58 @@ public:
 };
 
 TEST_F(ProgramOptionsParserTest, MissingAllOptions) {
-    EXPECT_DEATH(
-        parse({"./myExecutable"}),
-        "Usage:"
-    );
+    CaptureStderrRAII captureStderr;
+    try {
+      parse({"./myExecutable"});
+      EXPECT_TRUE(false); // expect throws
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::InvalidArguments, e.errorCode());
+      captureStderr.EXPECT_MATCHES("Usage:"); // expect show usage information
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, MissingDir) {
-    EXPECT_DEATH(
-        parse({"./myExecutable", "/home/user/baseDir"}),
-        "Usage:"
-    );
+    CaptureStderrRAII captureStderr;
+    try {
+      parse({"./myExecutable", "/home/user/baseDir"});
+      EXPECT_TRUE(false); // expect throw
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::InvalidArguments, e.errorCode());
+      captureStderr.EXPECT_MATCHES("Usage:"); // expect show usage information
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, HelpLongOption) {
-    EXPECT_DEATH(
-        parse({"./myExecutable", "--help"}),
-        "Usage:"
-    );
+    CaptureStderrRAII captureStderr;
+    try {
+      parse({"./myExecutable", "--help"});
+      EXPECT_TRUE(false); // expect throw
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::Success, e.errorCode());
+      captureStderr.EXPECT_MATCHES("Usage:"); // expect show usage information
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, HelpShortOption) {
-    EXPECT_DEATH(
-        parse({"./myExecutable", "-h"}),
-        "Usage:"
-    );
+    CaptureStderrRAII captureStderr;
+    try {
+      parse({"./myExecutable", "-h"});
+      EXPECT_TRUE(false); // expect throw
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::Success, e.errorCode());
+      captureStderr.EXPECT_MATCHES("Usage:"); // expect show usage information
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, ShowCiphers) {
-    EXPECT_EXIT(
-        parse({"./myExecutable", "--show-ciphers"}),
-        ::testing::ExitedWithCode(0),
-        "aes-256-gcm"
-    );
+    CaptureStderrRAII captureStderr;
+    try {
+      parse({"./myExecutable", "--show-ciphers"});
+      EXPECT_TRUE(false); // expect throw
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::Success, e.errorCode());
+      captureStderr.EXPECT_MATCHES("aes-256-gcm"); // expect show ciphers
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, BaseDir_Absolute) {
@@ -72,6 +95,26 @@ TEST_F(ProgramOptionsParserTest, MountDir_Absolute) {
 TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "mountDir"});
     EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
+}
+
+TEST_F(ProgramOptionsParserTest, Foreground_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, Foreground_True) {
+    ProgramOptions options = parse({"./myExecutable", "-f", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.foreground());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_False) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/basedir", "mountdir"});
+    EXPECT_FALSE(options.allowFilesystemUpgrade());
+}
+
+TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_True) {
+    ProgramOptions options = parse({"./myExecutable", "--allow-filesystem-upgrade", "/home/user/basedir", "mountdir"});
+    EXPECT_TRUE(options.allowFilesystemUpgrade());
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
@@ -115,10 +158,13 @@ TEST_F(ProgramOptionsParserTest, CipherNotGiven) {
 }
 
 TEST_F(ProgramOptionsParserTest, InvalidCipher) {
-    EXPECT_DEATH(
-            parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"}),
-            "Invalid cipher: invalid-cipher"
-    );
+    try {
+      parse({"./myExecutable", "/home/user/baseDir", "--cipher", "invalid-cipher", "/home/user/mountDir"});
+      EXPECT_TRUE(false); // expect throw
+    } catch (const CryfsException& e) {
+      EXPECT_EQ(ErrorCode::InvalidArguments, e.errorCode());
+      EXPECT_THAT(e.what(), testing::MatchesRegex(".*Invalid cipher: invalid-cipher.*"));
+    }
 }
 
 TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven) {

@@ -7,6 +7,7 @@
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
+#include <gitversion/parser.h>
 #include <gitversion/VersionCompare.h>
 
 using cpputils::unique_ref;
@@ -53,59 +54,61 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_FALSE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path()).value();
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false).value();
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
+    optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false, bool allowFilesystemUpgrade = false) {
         EXPECT_TRUE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path());
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), allowFilesystemUpgrade);
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value();
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value();
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value();
         cfg.config()->SetEncryptionKey(encKey);
         cfg.save();
     }
 
     void CreateWithVersion(const string &version, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value();
         cfg.config()->SetVersion(version);
+        cfg.config()->SetLastOpenedWithVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
 
     void CreateWithFilesystemID(const CryConfig::FilesystemID &filesystemId, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path()).value();
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value();
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
     }
 
     string olderVersion() {
+        auto versionInfo = gitversion::Parser::parse(CryConfig::FilesystemFormatVersion);
         string olderVersion;
-        if (std::stol(gitversion::MinorVersion()) > 0) {
-            olderVersion = gitversion::MajorVersion() + "." + std::to_string(std::stol(gitversion::MinorVersion()) - 1);
+        if (std::stol(versionInfo.minorVersion) > 0) {
+            olderVersion = versionInfo.majorVersion + "." + std::to_string(std::stol(versionInfo.minorVersion) - 1);
         } else {
-            olderVersion = std::to_string(std::stol(gitversion::MajorVersion()) - 1) + "." + gitversion::MinorVersion();
+            olderVersion = std::to_string(std::stol(versionInfo.majorVersion) - 1) + "." + versionInfo.minorVersion;
         }
-        assert(gitversion::VersionCompare::isOlderThan(olderVersion, gitversion::VersionString()));
+        assert(gitversion::VersionCompare::isOlderThan(olderVersion, CryConfig::FilesystemFormatVersion));
         return olderVersion;
     }
 
     string newerVersion() {
         string newerVersion = gitversion::MajorVersion()+"."+std::to_string(std::stol(gitversion::MinorVersion())+1);
-        assert(gitversion::VersionCompare::isOlderThan(gitversion::VersionString(), newerVersion));
+        assert(gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, newerVersion));
         return newerVersion;
     }
 
@@ -198,7 +201,8 @@ TEST_F(CryConfigLoaderTest, Cipher_Create) {
 TEST_F(CryConfigLoaderTest, Version_Load) {
     CreateWithVersion("0.9.2");
     auto loaded = Load().value();
-    EXPECT_EQ(gitversion::VersionString(), loaded.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, loaded.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), loaded.config()->LastOpenedWithVersion());
     EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
 }
 
@@ -206,13 +210,15 @@ TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOn
     CreateWithVersion("0.9.2", "mypassword");
     Load().value();
     auto configFile = CryConfigFile::load(file.path(), "mypassword").value();
-    EXPECT_EQ(gitversion::VersionString(), configFile.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, configFile.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), configFile.config()->LastOpenedWithVersion());
     EXPECT_EQ("0.9.2", configFile.config()->CreatedWithVersion());
 }
 
 TEST_F(CryConfigLoaderTest, Version_Create) {
     auto created = Create();
-    EXPECT_EQ(gitversion::VersionString(), created.config()->Version());
+    EXPECT_EQ(CryConfig::FilesystemFormatVersion, created.config()->Version());
+    EXPECT_EQ(gitversion::VersionString(), created.config()->LastOpenedWithVersion());
     EXPECT_EQ(gitversion::VersionString(), created.config()->CreatedWithVersion());
 }
 
@@ -275,4 +281,20 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
     } catch (const std::runtime_error &e) {
         EXPECT_THAT(e.what(), HasSubstr("It has to be migrated."));
     }
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
+    EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+    string version = olderVersion();
+    CreateWithVersion(version);
+    EXPECT_NE(boost::none, Load("mypassword", none, true, true));
+}
+
+TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_InteractiveMode) {
+  EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+
+  string version = olderVersion();
+  CreateWithVersion(version);
+  EXPECT_NE(boost::none, Load("mypassword", none, false, true));
 }

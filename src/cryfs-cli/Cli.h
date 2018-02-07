@@ -11,6 +11,7 @@
 #include <cpp-utils/network/HttpClient.h>
 #include <cryfs/filesystem/CryDevice.h>
 #include "CallAfterTimeout.h"
+#include <cryfs/ErrorCodes.h>
 
 namespace cryfs {
     class Cli final {
@@ -22,7 +23,7 @@ namespace cryfs {
         void _checkForUpdates();
         void _runFilesystem(const program_options::ProgramOptions &options);
         CryConfigFile _loadOrCreateConfig(const program_options::ProgramOptions &options);
-        boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes);
+        boost::optional<CryConfigFile> _loadOrCreateConfigFile(const boost::filesystem::path &configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();
@@ -35,9 +36,9 @@ namespace cryfs {
         void _sanityChecks(const program_options::ProgramOptions &options);
         void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
         bool _pathContains(const boost::filesystem::path &parent, const boost::filesystem::path &child);
-        void _checkDirAccessible(const boost::filesystem::path &dir, const std::string &name);
-        std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name);
-        void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name);
+        void _checkDirAccessible(const boost::filesystem::path &dir, const std::string &name, ErrorCode errorCode);
+        std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name, ErrorCode errorCode);
+        void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name, ErrorCode errorCode);
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
         void _sanityCheckFilesystem(CryDevice *device);
 

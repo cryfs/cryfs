@@ -33,7 +33,7 @@ install:
 - chmod +x run_with_fuse.sh
 - cmake --version
 #  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
-- sudo cp -a /dev/urandom /dev/random
+- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then sudo cp -a /dev/urandom /dev/random; fi
 script:
 - cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
 - make -j$NUMCORES

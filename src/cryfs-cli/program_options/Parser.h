@@ -4,6 +4,7 @@
 
 #include "ProgramOptions.h"
 #include <boost/program_options.hpp>
+#include <cryfs/ErrorCodes.h>
 
 namespace cryfs {
     namespace program_options {
@@ -19,8 +20,10 @@ namespace cryfs {
             static void _addAllowedOptions(boost::program_options::options_description *desc);
             static void _addPositionalOptionForBaseDir(boost::program_options::options_description *desc,
                                                        boost::program_options::positional_options_description *positional);
-            [[noreturn]] static void _showHelpAndExit();
+            static void _showHelp();
+            [[noreturn]] static void _showHelpAndExit(const std::string& message, ErrorCode errorCode);
             [[noreturn]] static void _showCiphersAndExit(const std::vector<std::string> &supportedCiphers);
+            [[noreturn]] static void _showVersionAndExit();
             static boost::program_options::variables_map _parseOptionsOrShowHelp(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static boost::program_options::variables_map _parseOptions(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static void _checkValidCipher(const std::string &cipher, const std::vector<std::string> &supportedCiphers);

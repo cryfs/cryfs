@@ -3,15 +3,18 @@
 #include <iostream>
 #include <boost/optional.hpp>
 #include <cryfs/config/CryConfigConsole.h>
+#include <cryfs/CryfsException.h>
 #include <cryfs-cli/Environment.h>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
 using namespace cryfs::program_options;
 using cryfs::CryConfigConsole;
+using cryfs::CryfsException;
 using std::pair;
 using std::vector;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using boost::optional;
@@ -34,12 +37,10 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     po::variables_map vm = _parseOptionsOrShowHelp(options.first, supportedCiphers);
 
     if (!vm.count("base-dir")) {
-        std::cerr << "Please specify a base directory.\n";
-        _showHelpAndExit();
+        _showHelpAndExit("Please specify a base directory.", ErrorCode::InvalidArguments);
     }
     if (!vm.count("mount-dir")) {
-        std::cerr << "Please specify a mount directory.\n";
-        _showHelpAndExit();
+        _showHelpAndExit("Please specify a mount directory.", ErrorCode::InvalidArguments);
     }
     bf::path baseDir = bf::absolute(vm["base-dir"].as<string>());
     bf::path mountDir = bf::absolute(vm["mount-dir"].as<string>());
@@ -51,6 +52,7 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (foreground) {
         options.second.push_back(const_cast<char*>("-f"));
     }
+    bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     optional<double> unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();
@@ -69,22 +71,28 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         blocksizeBytes = vm["blocksize"].as<uint32_t>();
     }
 
-    return ProgramOptions(baseDir, mountDir, configfile, foreground, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, options.second);
+    return ProgramOptions(baseDir, mountDir, configfile, foreground, allowFilesystemUpgrade, unmountAfterIdleMinutes, logfile, cipher, blocksizeBytes, options.second);
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
     if (std::find(supportedCiphers.begin(), supportedCiphers.end(), cipher) == supportedCiphers.end()) {
-        std::cerr << "Invalid cipher: " << cipher << std::endl;
-        exit(1);
+        throw CryfsException("Invalid cipher: " + cipher, ErrorCode::InvalidArguments);
     }
 }
 
 po::variables_map Parser::_parseOptionsOrShowHelp(const vector<string> &options, const vector<string> &supportedCiphers) {
     try {
-        return _parseOptions(options, supportedCiphers);
+      return _parseOptions(options, supportedCiphers);
+    } catch (const CryfsException& e) {
+        // If CryfsException is thrown, we already know what's wrong.
+        // Show usage information and pass through the exception, don't catch it.
+        if (e.errorCode() != ErrorCode::Success) {
+          _showHelp();
+        }
+        throw;
     } catch(const std::exception &e) {
         std::cerr << e.what() << std::endl;
-        _showHelpAndExit();
+        _showHelpAndExit("Invalid arguments", ErrorCode::InvalidArguments);
     }
 }
 
@@ -99,10 +107,13 @@ po::variables_map Parser::_parseOptions(const vector<string> &options, const vec
     po::store(po::command_line_parser(_options.size(), _options.data())
                       .options(desc).positional(positional_desc).run(), vm);
     if (vm.count("help")) {
-        _showHelpAndExit();
+        _showHelpAndExit("", ErrorCode::Success);
     }
     if (vm.count("show-ciphers")) {
         _showCiphersAndExit(supportedCiphers);
+    }
+    if (vm.count("version")) {
+        _showVersionAndExit();
     }
     po::notify(vm);
 
@@ -130,9 +141,11 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("foreground,f", "Run CryFS in foreground.")
             ("cipher", po::value<string>(), cipher_description.c_str())
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
+            ("allow-filesystem-upgrade", "Allow upgrading the file system if it was created with an old CryFS version. After the upgrade, older CryFS versions might not be able to use the file system anymore.")
             ("show-ciphers", "Show list of supported ciphers.")
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
+            ("version", "Show CryFS version number")
             ;
     desc->add(options);
 }
@@ -152,23 +165,32 @@ void Parser::_addPositionalOptionForBaseDir(po::options_description *desc, po::p
     for (const auto &cipher : supportedCiphers) {
         std::cerr << cipher << "\n";
     }
-    exit(0);
+    throw CryfsException("", ErrorCode::Success);
 }
 
-[[noreturn]] void Parser::_showHelpAndExit() {
-    cerr << "Usage: cryfs [options] baseDir mountPoint [-- [FUSE Mount Options]]\n";
-    po::options_description desc;
-    _addAllowedOptions(&desc);
-    cerr << desc << endl;
-    cerr << "Environment variables:\n"
-         << "  " << Environment::FRONTEND_KEY << "=" << Environment::FRONTEND_NONINTERACTIVE << "\n"
-         << "\tWork better together with tools.\n"
-         << "\tWith this option set, CryFS won't ask anything, but use default values\n"
-         << "\tfor options you didn't specify on command line. Furthermore, it won't\n"
-         << "\task you to enter a new password a second time (password confirmation).\n"
-         << "  " << Environment::NOUPDATECHECK_KEY << "=true\n"
-         << "\tBy default, CryFS connects to the internet to check for known\n"
-         << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
-         << endl;
-    exit(1);
+void Parser::_showHelp() {
+  cerr << "Usage: cryfs [options] baseDir mountPoint [-- [FUSE Mount Options]]\n";
+  po::options_description desc;
+  _addAllowedOptions(&desc);
+  cerr << desc << endl;
+  cerr << "Environment variables:\n"
+       << "  " << Environment::FRONTEND_KEY << "=" << Environment::FRONTEND_NONINTERACTIVE << "\n"
+       << "\tWork better together with tools.\n"
+       << "\tWith this option set, CryFS won't ask anything, but use default values\n"
+       << "\tfor options you didn't specify on command line. Furthermore, it won't\n"
+       << "\task you to enter a new password a second time (password confirmation).\n"
+       << "  " << Environment::NOUPDATECHECK_KEY << "=true\n"
+       << "\tBy default, CryFS connects to the internet to check for known\n"
+       << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
+       << endl;
+}
+
+[[noreturn]] void Parser::_showHelpAndExit(const std::string& message, ErrorCode errorCode) {
+    _showHelp();
+    throw CryfsException(message, errorCode);
+}
+
+[[noreturn]] void Parser::_showVersionAndExit() {
+  // no need to show version because it was already shown in the CryFS header before parsing program options
+    throw CryfsException("", ErrorCode::Success);
 }

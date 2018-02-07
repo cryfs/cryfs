@@ -16,12 +16,12 @@ public:
   CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
-  boost::optional<CryConfigFile> loadOrCreate(const boost::filesystem::path &filename);
+  boost::optional<CryConfigFile> loadOrCreate(const boost::filesystem::path &filename, bool allowFilesystemUpgrade);
 
 private:
-    boost::optional<CryConfigFile> _loadConfig(const boost::filesystem::path &filename);
+    boost::optional<CryConfigFile> _loadConfig(const boost::filesystem::path &filename, bool allowFilesystemUpgrade);
     CryConfigFile _createConfig(const boost::filesystem::path &filename);
-    void _checkVersion(const CryConfig &config);
+    void _checkVersion(const CryConfig &config, bool allowFilesystemUpgrade);
     void _checkCipher(const CryConfig &config) const;
 
     std::shared_ptr<cpputils::Console> _console;

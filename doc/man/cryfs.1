@@ -19,7 +19,7 @@ cryfs \- cryptographic filesystem for the cloud
 [\fB\-\-\fR \fIfuse-options\fR]
 .br
 .\" show-ciphers syntax
-.B cryfs \-\-help\fR|\fB\-\-show-ciphers
+.B cryfs \-\-help\fR|\fB\-\-version\fR|\fB\-\-show-ciphers
 .
 .
 .
@@ -119,6 +119,12 @@ Show a help message containing short descriptions for all options.
 Show a list of all supported encryption ciphers.
 .
 .
+.TP
+\fB\-\-version\fR
+.
+Show the CryFS version number.
+.
+.
 .SS Encryption parameters
 .
 .TP
@@ -154,6 +160,12 @@ Use \fIfile\fR as configuration file for this CryFS storage instead of
 \fB\-f\fR, \fB\-\-foreground\fI
 .
 Run CryFS in the foreground. Stop using CTRL-C.
+.
+.
+.TP
+\fB\-\-allow-filesystem-upgrade\fI
+.
+Allow upgrading the file system if it was created with an old CryFS version. After the upgrade, older CryFS versions might not be able to use the file system anymore.
 .
 .
 .TP
