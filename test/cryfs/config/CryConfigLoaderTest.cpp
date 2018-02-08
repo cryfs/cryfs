@@ -73,12 +73,12 @@ public:
 
     CryConfigFile Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
         EXPECT_FALSE(file.exists());
-        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false).value().configFile;
+        return loader(password, noninteractive, cipher).loadOrCreate(file.path(), false, false).value().configFile;
     }
 
     optional<CryConfigFile> Load(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false, bool allowFilesystemUpgrade = false) {
         EXPECT_TRUE(file.exists());
-        auto loadResult = loader(password, noninteractive, cipher).loadOrCreate(file.path(), allowFilesystemUpgrade);
+        auto loadResult = loader(password, noninteractive, cipher).loadOrCreate(file.path(), allowFilesystemUpgrade, false);
         if (loadResult == none) {
             return none;
         }
@@ -86,13 +86,13 @@ public:
     }
 
     void CreateWithRootBlob(const string &rootBlob, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false, false).value().configFile;
         cfg.config()->SetRootBlob(rootBlob);
         cfg.save();
     }
 
     void CreateWithCipher(const string &cipher, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false, false).value().configFile;
         cfg.config()->SetCipher(cipher);
         cfg.save();
     }
@@ -102,7 +102,7 @@ public:
         FakeRandomGenerator generator(Data::FromString(encKey));
         auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
                                       askPassword, none, none, none);
-        ASSERT_NE(boost::none, loader.loadOrCreate(file.path(), false));
+        ASSERT_NE(boost::none, loader.loadOrCreate(file.path(), false, false));
     }
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
@@ -111,16 +111,16 @@ public:
         cfg.save();
     }
 
-    void CreateWithVersion(const string &version, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
-        cfg.config()->SetVersion(version);
+    void CreateWithVersion(const string &version, const string& formatVersion, const string &password = "mypassword") {
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false, false).value().configFile;
+        cfg.config()->SetVersion(formatVersion);
         cfg.config()->SetLastOpenedWithVersion(version);
         cfg.config()->SetCreatedWithVersion(version);
         cfg.save();
     }
-
+  
     void CreateWithFilesystemID(const CryConfig::FilesystemID &filesystemId, const string &password = "mypassword") {
-        auto cfg = loader(password, false).loadOrCreate(file.path(), false).value().configFile;
+        auto cfg = loader(password, false).loadOrCreate(file.path(), false, false).value().configFile;
         cfg.config()->SetFilesystemId(filesystemId);
         cfg.save();
     }
@@ -245,7 +245,7 @@ TEST_F(CryConfigLoaderTest, Cipher_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, Version_Load) {
-    CreateWithVersion("0.9.2");
+    CreateWithVersion("0.9.2", "0.9.2");
     auto loaded = Load().value();
     EXPECT_EQ(CryConfig::FilesystemFormatVersion, loaded.config()->Version());
     EXPECT_EQ(gitversion::VersionString(), loaded.config()->LastOpenedWithVersion());
@@ -253,7 +253,7 @@ TEST_F(CryConfigLoaderTest, Version_Load) {
 }
 
 TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOnLoad) {
-    CreateWithVersion("0.9.2", "mypassword");
+    CreateWithVersion("0.9.2", "0.9.2", "mypassword");
     Load().value();
     auto configFile = CryConfigFile::load(file.path(), "mypassword").value();
     EXPECT_EQ(CryConfig::FilesystemFormatVersion, configFile.config()->Version());
@@ -284,7 +284,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(true));
 
     string version = newerVersion();
-    CreateWithVersion(version);
+    CreateWithVersion(version, version);
     EXPECT_NE(boost::none, Load());
 }
 
@@ -292,7 +292,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(false));
 
     string version = newerVersion();
-    CreateWithVersion(version);
+    CreateWithVersion(version, version);
     try {
         Load();
         EXPECT_TRUE(false); // expect throw
@@ -305,14 +305,14 @@ TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(true));
 
     string version = olderVersion();
-    CreateWithVersion(version);
+    CreateWithVersion(version, version);
     EXPECT_NE(boost::none, Load());
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), _)).Times(0);
 
-    CreateWithVersion(gitversion::VersionString());
+    CreateWithVersion(gitversion::VersionString(), CryConfig::FilesystemFormatVersion);
     EXPECT_NE(boost::none, Load());
 }
 
@@ -320,7 +320,7 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(false));
 
     string version = olderVersion();
-    CreateWithVersion(version);
+    CreateWithVersion(version, version);
     try {
         Load();
         EXPECT_TRUE(false); // expect throw
@@ -332,21 +332,21 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
 TEST_F(CryConfigLoaderTest, MyClientIdIsIndeterministic) {
     TempFile file1(false);
     TempFile file2(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path(), false).value().myClientId;
-    EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path(), false).value().myClientId);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path(), false, false).value().myClientId;
+    EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path(), false, false).value().myClientId);
 }
 
 TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
     TempFile file(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path(), false).value().myClientId;
-    EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path(), false).value().myClientId);
+    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path(), false, false).value().myClientId;
+    EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path(), false, false).value().myClientId);
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
 
     string version = olderVersion();
-    CreateWithVersion(version);
+    CreateWithVersion(version, version);
     EXPECT_NE(boost::none, Load("mypassword", none, true, true));
 }
 
@@ -354,6 +354,6 @@ TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramAr
   EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
 
   string version = olderVersion();
-  CreateWithVersion(version);
+  CreateWithVersion(version, version);
   EXPECT_NE(boost::none, Load("mypassword", none, false, true));
 }
