@@ -47,7 +47,7 @@ public:
 
   void ModifyBaseBlock(const blockstore::BlockId &blockId) {
     auto block = baseBlockStore->load(blockId).value();
-    byte* middle_byte = static_cast<CryptoPP::byte*>(block.data()) + 10;
+    CryptoPP::byte* middle_byte = static_cast<CryptoPP::byte*>(block.data()) + 10;
     *middle_byte = *middle_byte + 1;
     baseBlockStore->store(blockId, block);
   }

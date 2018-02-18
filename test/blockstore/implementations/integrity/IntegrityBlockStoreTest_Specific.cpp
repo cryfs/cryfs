@@ -68,7 +68,7 @@ public:
 
   void modifyBlock(const blockstore::BlockId &blockId) {
     auto block = blockStore->load(blockId).value();
-    byte* first_byte = static_cast<byte*>(block.data());
+    CryptoPP::byte* first_byte = static_cast<CryptoPP::byte*>(block.data());
     *first_byte = *first_byte + 1;
     blockStore->store(blockId, block);
   }
