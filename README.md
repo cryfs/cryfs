@@ -1,4 +1,4 @@
-# CryFS [![CircleCI](https://circleci.com/gh/cryfs/cryfs/tree/next.svg?style=svg)](https://circleci.com/gh/cryfs/cryfs/tree/next)
+# CryFS [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs) [![CircleCI](https://circleci.com/gh/cryfs/cryfs/tree/master.svg?style=svg)](https://circleci.com/gh/cryfs/cryfs/tree/master)
 
 **TODO:** Update CI link to correct branch when merging next->develop or develop->master
 
