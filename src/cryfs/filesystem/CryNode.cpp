@@ -125,7 +125,7 @@ void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
   if (_parent == none) {
     //We are the root direcory.
     //TODO What should we do?
-    throw FuseErrnoException(EIO);
+    return;
   }
   (*_parent)->utimensChild(_blockId, lastAccessTime, lastModificationTime);
 }
