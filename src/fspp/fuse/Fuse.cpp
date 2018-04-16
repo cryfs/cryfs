@@ -222,7 +222,7 @@ Fuse::Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsna
 }
 
 void Fuse::_logException(const std::exception &e) {
-  LOG(ERROR, "Exception thrown: ", e.what());
+  LOG(ERROR, "Exception thrown: {}", e.what());
 }
 
 void Fuse::_logUnknownException() {

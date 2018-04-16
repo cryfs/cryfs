@@ -14,7 +14,7 @@ if(NOT BUILD_TESTING)
     set(BUILD_TESTING OFF CACHE BOOL "BUILD_TESTING")
 endif(NOT BUILD_TESTING)
 
-# Default vaule is to build in release mode
+# Default value is to build in release mode
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
