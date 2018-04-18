@@ -185,7 +185,7 @@ void CryNode::chmod(mode_t mode) {
   if (_parent == none) {
     //We are the root direcory.
 	//TODO What should we do?
-	throw FuseErrnoException(EIO);
+	return;
   }
   (*_parent)->chmodChild(_blockId, mode);
 }
@@ -195,7 +195,7 @@ void CryNode::chown(uid_t uid, gid_t gid) {
   if (_parent == none) {
 	//We are the root direcory.
 	//TODO What should we do?
-	throw FuseErrnoException(EIO);
+	return;
   }
   (*_parent)->chownChild(_blockId, uid, gid);
 }
