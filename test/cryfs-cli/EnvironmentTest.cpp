@@ -1,11 +1,14 @@
 #include <gtest/gtest.h>
 #include <cryfs-cli/Environment.h>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace cryfs;
 using std::string;
 using boost::optional;
 using boost::none;
+
+namespace bf = boost::filesystem;
 
 class EnvironmentTest : public ::testing::Test {
 public:
@@ -61,4 +64,23 @@ TEST_F(EnvironmentTest, NoUpdateCheck_SetToOtherValue) {
     WithEnv env("CRYFS_NO_UPDATE_CHECK", "someothervalue");
     // No matter what the value is, setting the environment variable says we don't do update checks.
     EXPECT_TRUE(Environment::noUpdateCheck());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_NotSet) {
+    EXPECT_EQ(Environment::defaultLocalStateDir(), Environment::localStateDir());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_Set) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", "/my/local/state/dir");
+    EXPECT_EQ("/my/local/state/dir", Environment::localStateDir().native());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithDot) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", "./dir");
+    EXPECT_EQ((bf::current_path() / "./dir").native(), Environment::localStateDir().native());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithoutDot) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", "dir");
+    EXPECT_EQ((bf::current_path() / "dir").native(), Environment::localStateDir().native());
 }

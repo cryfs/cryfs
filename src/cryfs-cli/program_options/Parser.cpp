@@ -210,6 +210,11 @@ void Parser::_showHelp() {
        << "  " << Environment::NOUPDATECHECK_KEY << "=true\n"
        << "\tBy default, CryFS connects to the internet to check for known\n"
        << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
+       << "  " << Environment::LOCALSTATEDIR_KEY << "=[path]\n"
+       << "\tSets the directory cryfs uses to store local state. This local state\n"
+       << "\tis used to recognize known file systems and run integrity checks\n"
+       << "\t(i.e. check that they haven't been modified by an attacker.\n"
+       << "\tDefault value: " << Environment::defaultLocalStateDir().c_str() << "\n"
        << endl;
 }
 

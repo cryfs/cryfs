@@ -25,11 +25,12 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
-    : _console(console), _creator(std::move(console), keyGenerator), _scryptSettings(scryptSettings),
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, LocalStateDir localStateDir, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
+    : _console(console), _creator(std::move(console), keyGenerator, localStateDir), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine),
-      _missingBlockIsIntegrityViolationFromCommandLine(missingBlockIsIntegrityViolationFromCommandLine) {
+      _missingBlockIsIntegrityViolationFromCommandLine(missingBlockIsIntegrityViolationFromCommandLine),
+      _localStateDir(std::move(localStateDir)) {
 }
 
 optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
@@ -62,7 +63,7 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::pat
     config->save();
   }
   _checkCipher(*config->config());
-  auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()), allowReplacedFilesystem);
+  auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()), allowReplacedFilesystem);
   uint32_t myClientId = localState.myClientId();
   _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
   return ConfigLoadResult {std::move(*config), myClientId};

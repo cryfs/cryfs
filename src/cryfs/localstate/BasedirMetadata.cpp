@@ -42,15 +42,17 @@ string jsonPathForBasedir(const bf::path &basedir) {
 
 }
 
-BasedirMetadata::BasedirMetadata(ptree data)
-  :_data(data) {}
+BasedirMetadata::BasedirMetadata(ptree data, bf::path filename)
+  :_filename(std::move(filename)), _data(std::move(data)) {}
 
-BasedirMetadata BasedirMetadata::load() {
-  return BasedirMetadata(_load(LocalStateDir::forBasedirMetadata()));
+BasedirMetadata BasedirMetadata::load(const LocalStateDir& localStateDir) {
+  auto filename = localStateDir.forBasedirMetadata();
+  auto loaded = _load(filename);
+  return BasedirMetadata(std::move(loaded), std::move(filename));
 }
 
 void BasedirMetadata::save() {
-  _save(LocalStateDir::forBasedirMetadata(), _data);
+  _save(_filename, _data);
 }
 
 bool BasedirMetadata::filesystemIdForBasedirIsCorrect(const bf::path &basedir, const CryConfig::FilesystemID &filesystemId) const {

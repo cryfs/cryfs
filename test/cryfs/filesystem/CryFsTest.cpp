@@ -33,38 +33,40 @@ using namespace cryfs;
 
 class CryFsTest: public Test, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
-  CryFsTest(): rootdir(), config(false) {
+  CryFsTest(): tempLocalStateDir(), localStateDir(tempLocalStateDir.path()), rootdir(), config(false) {
   }
 
   CryConfigFile loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
+    return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword, askPassword, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
   }
 
   unique_ref<OnDiskBlockStore2> blockStore() {
     return make_unique_ref<OnDiskBlockStore2>(rootdir.path());
   }
 
+  cpputils::TempDir tempLocalStateDir;
+  LocalStateDir localStateDir;
   TempDir rootdir;
   TempFile config;
 };
 
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
+  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);

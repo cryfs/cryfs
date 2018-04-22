@@ -23,16 +23,18 @@ class CryFsTestFixture: public FileSystemTestFixture, public TestWithMockConsole
 public:
   CryFsTestFixture()
   // Don't create config tempfile yet
-  : configFile(false) {}
+  : tempLocalStateDir(), localStateDir(tempLocalStateDir.path()), configFile(false) {}
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<InMemoryBlockStore2>();
     auto askPassword = [] {return "mypassword";};
-    auto config = CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), SCrypt::TestSettings, askPassword, askPassword, none, none, none)
+    auto config = CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword, askPassword, none, none, none)
             .loadOrCreate(configFile.path(), false, false).value();
-    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), config.myClientId, false, false);
+    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false);
   }
 
+  cpputils::TempDir tempLocalStateDir;
+  LocalStateDir localStateDir;
   cpputils::TempFile configFile;
 };
 

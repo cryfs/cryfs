@@ -56,17 +56,17 @@ private:
 
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
-    CryConfigLoaderTest(): file(false) {
+    CryConfigLoaderTest(): file(false), tempLocalStateDir(), localStateDir(tempLocalStateDir.path()) {
         console = mockConsole();
     }
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
         auto askPassword = [password] { return password;};
         if(noninteractive) {
-            return CryConfigLoader(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword,
+            return CryConfigLoader(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword,
                                    askPassword, cipher, none, none);
         } else {
-            return CryConfigLoader(console, cpputils::Random::PseudoRandom(), SCrypt::TestSettings, askPassword,
+            return CryConfigLoader(console, cpputils::Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword,
                                    askPassword, cipher, none, none);
         }
     }
@@ -100,7 +100,7 @@ public:
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
         auto askPassword = [password] { return password;};
         FakeRandomGenerator generator(Data::FromString(encKey));
-        auto loader = CryConfigLoader(console, generator, SCrypt::TestSettings, askPassword,
+        auto loader = CryConfigLoader(console, generator, localStateDir, SCrypt::TestSettings, askPassword,
                                       askPassword, none, none, none);
         ASSERT_NE(boost::none, loader.loadOrCreate(file.path(), false, false));
     }
@@ -151,6 +151,8 @@ public:
 
     std::shared_ptr<MockConsole> console;
     TempFile file;
+    cpputils::TempDir tempLocalStateDir;
+    LocalStateDir localStateDir;
 };
 
 TEST_F(CryConfigLoaderTest, CreatesNewIfNotExisting) {

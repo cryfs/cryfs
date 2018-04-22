@@ -15,8 +15,8 @@ using boost::none;
 
 namespace cryfs {
 
-    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator)
-        :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator) {
+    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator, LocalStateDir localStateDir)
+        :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator), _localStateDir(std::move(localStateDir)) {
     }
 
     CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine, const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool allowReplacedFilesystem) {
@@ -29,7 +29,7 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobId());
         config.SetFilesystemId(_generateFilesystemID());
         auto encryptionKey = _generateEncKey(config.Cipher());
-        auto localState = LocalStateMetadata::loadOrGenerate(LocalStateDir::forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
+        auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
         uint32_t myClientId = localState.myClientId();
         config.SetEncryptionKey(std::move(encryptionKey));
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));

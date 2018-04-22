@@ -192,8 +192,8 @@ namespace cryfs {
         return *configFile;
     }
 
-    void Cli::_checkConfigIntegrity(const bf::path& basedir, const CryConfigFile& config, bool allowReplacedFilesystem) {
-        auto basedirMetadata = BasedirMetadata::load();
+    void Cli::_checkConfigIntegrity(const bf::path& basedir, const LocalStateDir& localStateDir, const CryConfigFile& config, bool allowReplacedFilesystem) {
+        auto basedirMetadata = BasedirMetadata::load(localStateDir);
         if (!allowReplacedFilesystem && !basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
           if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
             throw CryfsException(
@@ -205,24 +205,24 @@ namespace cryfs {
         basedirMetadata.save();
     }
 
-    CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options) {
+    CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options, const LocalStateDir& localStateDir) {
         auto configFile = _determineConfigFile(options);
-        auto config = _loadOrCreateConfigFile(std::move(configFile), options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation(), options.allowReplacedFilesystem());
+        auto config = _loadOrCreateConfigFile(std::move(configFile), localStateDir, options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation(), options.allowReplacedFilesystem());
         if (config == none) {
           throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
         }
-        _checkConfigIntegrity(options.baseDir(), config->configFile, options.allowReplacedFilesystem());
+        _checkConfigIntegrity(options.baseDir(), localStateDir, config->configFile, options.allowReplacedFilesystem());
         return std::move(*config);
     }
 
-    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
         if (_noninteractive) {
-            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
+            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
                                    &Cli::_askPasswordNoninteractive,
                                    &Cli::_askPasswordNoninteractive,
                                    cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         } else {
-            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
+            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
                                    &Cli::_askPasswordForExistingFilesystem,
                                    &Cli::_askPasswordForNewFilesystem,
                                    cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
@@ -231,9 +231,10 @@ namespace cryfs {
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
         try {
+          LocalStateDir localStateDir(Environment::localStateDir());
           auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
-          auto config = _loadOrCreateConfig(options);
-          CryDevice device(std::move(config.configFile), std::move(blockStore), config.myClientId,
+          auto config = _loadOrCreateConfig(options, localStateDir);
+          CryDevice device(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
                            options.noIntegrityChecks(), config.configFile.config()->missingBlockIsIntegrityViolation());
           _sanityCheckFilesystem(&device);
           fspp::FilesystemImpl fsimpl(&device);

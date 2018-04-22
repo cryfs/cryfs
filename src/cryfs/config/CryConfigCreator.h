@@ -5,13 +5,14 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/random/RandomGenerator.h>
 #include <cpp-utils/io/Console.h>
+#include <cryfs/localstate/LocalStateDir.h>
 #include "CryConfig.h"
 #include "CryConfigConsole.h"
 
 namespace cryfs {
     class CryConfigCreator final {
     public:
-        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator);
+        CryConfigCreator(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &encryptionKeyGenerator, LocalStateDir localStateDir);
         CryConfigCreator(CryConfigCreator &&rhs) = default;
 
         struct ConfigCreateResult {
@@ -32,6 +33,7 @@ namespace cryfs {
         std::shared_ptr<cpputils::Console> _console;
         CryConfigConsole _configConsole;
         cpputils::RandomGenerator &_encryptionKeyGenerator;
+        LocalStateDir _localStateDir;
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigCreator);
     };

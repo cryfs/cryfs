@@ -5,12 +5,13 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include "../config/CryConfig.h"
+#include "LocalStateDir.h"
 
 namespace cryfs {
 
 class BasedirMetadata final {
 public:
-  static BasedirMetadata load();
+  static BasedirMetadata load(const LocalStateDir& localStateDir);
   void save();
 
   BasedirMetadata(const BasedirMetadata&) = delete;
@@ -22,8 +23,9 @@ public:
   BasedirMetadata& updateFilesystemIdForBasedir(const boost::filesystem::path &basedir, const CryConfig::FilesystemID &filesystemId);
 
 private:
-  BasedirMetadata(boost::property_tree::ptree data);
+  BasedirMetadata(boost::property_tree::ptree data, boost::filesystem::path filename);
 
+  boost::filesystem::path _filename;
   boost::property_tree::ptree _data;
 };
 

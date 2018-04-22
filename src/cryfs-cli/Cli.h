@@ -23,9 +23,9 @@ namespace cryfs {
     private:
         void _checkForUpdates(cpputils::unique_ref<cpputils::HttpClient> httpClient);
         void _runFilesystem(const program_options::ProgramOptions &options);
-        CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options);
-        void _checkConfigIntegrity(const boost::filesystem::path& basedir, const CryConfigFile& config, bool allowReplacedFilesystem);
-        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(boost::filesystem::path configFilePath, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const boost::optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem);
+        CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options, const LocalStateDir& localStateDir);
+        void _checkConfigIntegrity(const boost::filesystem::path& basedir, const LocalStateDir& localStateDir, const CryConfigFile& config, bool allowReplacedFilesystem);
+        boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(boost::filesystem::path configFilePath, LocalStateDir localStateDir, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const boost::optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
         static std::string _askPasswordForExistingFilesystem();
         static std::string _askPasswordForNewFilesystem();

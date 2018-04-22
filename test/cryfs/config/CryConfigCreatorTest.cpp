@@ -7,6 +7,7 @@
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
+#include <cryfs/localstate/LocalStateDir.h>
 
 using namespace cryfs;
 
@@ -43,12 +44,15 @@ class CryConfigCreatorTest: public ::testing::Test, TestWithFakeHomeDirectory {
 public:
     CryConfigCreatorTest()
             : console(make_shared<MockConsole>()),
-              creator(console, cpputils::Random::PseudoRandom()),
-              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom()) {
+              tempLocalStateDir(), localStateDir(tempLocalStateDir.path()),
+              creator(console, cpputils::Random::PseudoRandom(), localStateDir),
+              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir) {
         EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).WillRepeatedly(ChooseAnyCipher());
         EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).WillRepeatedly(Return(0));
     }
     shared_ptr<MockConsole> console;
+    cpputils::TempDir tempLocalStateDir;
+    LocalStateDir localStateDir;
     CryConfigCreator creator;
     CryConfigCreator noninteractiveCreator;
 

@@ -10,11 +10,13 @@ namespace cryfs {
 
     class LocalStateDir final {
     public:
-        static boost::filesystem::path forFilesystemId(const CryConfig::FilesystemID &filesystemId);
-        static boost::filesystem::path forBasedirMetadata();
+        LocalStateDir(boost::filesystem::path appDir);
+
+        boost::filesystem::path forFilesystemId(const CryConfig::FilesystemID &filesystemId) const;
+        boost::filesystem::path forBasedirMetadata() const;
 
     private:
-        LocalStateDir(); // static functions only
+        boost::filesystem::path _appDir;
 
         static void _createDirIfNotExists(const boost::filesystem::path &path);
     };
