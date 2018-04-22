@@ -212,8 +212,8 @@ void Parser::_showHelp() {
        << "\tsecurity vulnerabilities and new versions. This option disables this.\n"
        << "  " << Environment::LOCALSTATEDIR_KEY << "=[path]\n"
        << "\tSets the directory cryfs uses to store local state. This local state\n"
-       << "\tis used to recognize known file systems and run integrity checks\n"
-       << "\t(i.e. check that they haven't been modified by an attacker.\n"
+       << "\tis used to recognize known file systems and run integrity checks,\n"
+       << "\ti.e. check that they haven't been modified by an attacker.\n"
        << "\tDefault value: " << Environment::defaultLocalStateDir().c_str() << "\n"
        << endl;
 }
