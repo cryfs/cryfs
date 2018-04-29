@@ -12,10 +12,10 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
                                bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, optional<double> unmountAfterIdleMinutes,
                                optional<bf::path> logFile, optional<string> cipher,
                                optional<uint32_t> blocksizeBytes,
-                               bool noIntegrityChecks,
+                               bool allowIntegrityViolations,
                                boost::optional<bool> missingBlockIsIntegrityViolation,
                                vector<string> fuseOptions)
-    :_baseDir(std::move(baseDir)), _mountDir(std::move(mountDir)), _configFile(std::move(configFile)), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _noIntegrityChecks(noIntegrityChecks),
+    :_baseDir(std::move(baseDir)), _mountDir(std::move(mountDir)), _configFile(std::move(configFile)), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
      _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
      _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)), _fuseOptions(std::move(fuseOptions)) {
 }
@@ -56,8 +56,8 @@ const optional<uint32_t> &ProgramOptions::blocksizeBytes() const {
     return _blocksizeBytes;
 }
 
-bool ProgramOptions::noIntegrityChecks() const {
-    return _noIntegrityChecks;
+bool ProgramOptions::allowIntegrityViolations() const {
+    return _allowIntegrityViolations;
 }
 
 bool ProgramOptions::allowReplacedFilesystem() const {

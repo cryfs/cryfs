@@ -19,7 +19,7 @@ namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
+  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
 
   void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) override;
 
@@ -54,12 +54,12 @@ private:
 
   blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);
   blockstore::BlockId CreateRootBlobAndReturnId();
-  static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
+  static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
 #ifndef CRYFS_NO_COMPATIBILITY
   static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);
 #endif
-  static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
-  static cpputils::unique_ref<blockstore::BlockStore2> CreateIntegrityEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool noIntegrityChecks, bool missingBlockIsIntegrityViolation);
+  static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
+  static cpputils::unique_ref<blockstore::BlockStore2> CreateIntegrityEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
   static cpputils::unique_ref<blockstore::BlockStore2> CreateEncryptedBlockStore(const CryConfig &config, cpputils::unique_ref<blockstore::BlockStore2> baseBlockStore);
 
   struct BlobWithParent {

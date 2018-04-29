@@ -202,14 +202,14 @@ TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationGiven_False) {
     EXPECT_FALSE(options.missingBlockIsIntegrityViolation().value());
 }
 
-TEST_F(ProgramOptionsParserTest, NoIntegrityChecks_True) {
-    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--no-integrity-checks", "/home/user/mountDir"});
-    EXPECT_TRUE(options.noIntegrityChecks());
+TEST_F(ProgramOptionsParserTest, AllowIntegrityViolations_True) {
+    ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "--allow-integrity-violations", "/home/user/mountDir"});
+    EXPECT_TRUE(options.allowIntegrityViolations());
 }
 
-TEST_F(ProgramOptionsParserTest, NoIntegrityChecks_False) {
+TEST_F(ProgramOptionsParserTest, AllowIntegrityViolations_False) {
     ProgramOptions options = parse({"./myExecutable", "/home/user/baseDir", "/home/user/mountDir"});
-    EXPECT_FALSE(options.noIntegrityChecks());
+    EXPECT_FALSE(options.allowIntegrityViolations());
 }
 
 TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationNotGiven) {

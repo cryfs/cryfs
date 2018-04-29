@@ -116,14 +116,14 @@ TEST_F(ProgramOptionsTest, MissingBlockIsIntegrityViolationNone) {
     EXPECT_EQ(none, testobj.missingBlockIsIntegrityViolation());
 }
 
-TEST_F(ProgramOptionsTest, NoIntegrityChecksFalse) {
+TEST_F(ProgramOptionsTest, AllowIntegrityViolationsFalse) {
     ProgramOptions testobj("", "", none, true, false, false, none, none, none, none, false, none, {"./myExecutable"});
-    EXPECT_FALSE(testobj.noIntegrityChecks());
+    EXPECT_FALSE(testobj.allowIntegrityViolations());
 }
 
-TEST_F(ProgramOptionsTest, NoIntegrityChecksTrue) {
+TEST_F(ProgramOptionsTest, AllowIntegrityViolationsTrue) {
     ProgramOptions testobj("", "", none, true, false, false, none, none, none, none, true, none, {"./myExecutable"});
-    EXPECT_TRUE(testobj.noIntegrityChecks());
+    EXPECT_TRUE(testobj.allowIntegrityViolations());
 }
 
 TEST_F(ProgramOptionsTest, EmptyFuseOptions) {

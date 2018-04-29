@@ -235,7 +235,7 @@ namespace cryfs {
           auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
           auto config = _loadOrCreateConfig(options, localStateDir);
           CryDevice device(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
-                           options.noIntegrityChecks(), config.configFile.config()->missingBlockIsIntegrityViolation());
+                           options.allowIntegrityViolations(), config.configFile.config()->missingBlockIsIntegrityViolation());
           _sanityCheckFilesystem(&device);
           fspp::FilesystemImpl fsimpl(&device);
           fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@" + options.baseDir().native());
