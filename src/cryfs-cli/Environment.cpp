@@ -22,7 +22,7 @@ namespace cryfs {
     }
 
     const bf::path& Environment::defaultLocalStateDir() {
-        static const bf::path value = cpputils::system::HomeDirectory::get() / ".cryfs";
+        static const bf::path value = cpputils::system::HomeDirectory::getXDGDataDir() / "cryfs";
         return value;
     }
 

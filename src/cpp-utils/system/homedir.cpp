@@ -36,6 +36,15 @@ namespace cpputils {
             return homedir;
         }
 
+        bf::path HomeDirectory::getXDGDataDir() {
+            const char* xdg_data_dir = std::getenv("XDG_DATA_HOME");
+            if (xdg_data_dir != nullptr) {
+                return xdg_data_dir;
+            }
+
+            return cpputils::system::HomeDirectory::get() / ".local" / "share";
+        }
+
         FakeHomeDirectoryRAII::FakeHomeDirectoryRAII(const boost::filesystem::path &fakeHomeDirectory)
                 :_oldHomeDirectory(HomeDirectory::singleton()._home_directory) {
             HomeDirectory::singleton()._home_directory = fakeHomeDirectory;

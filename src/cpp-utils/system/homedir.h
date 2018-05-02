@@ -15,6 +15,8 @@ namespace cpputils {
         public:
             static const boost::filesystem::path &get();
 
+            static boost::filesystem::path getXDGDataDir();
+
         private:
             boost::filesystem::path _home_directory;
 
