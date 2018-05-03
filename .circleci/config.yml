@@ -160,16 +160,17 @@ references:
   test: &test
     run:
       name: Test
+      no_output_timeout: 120m
       command: |
         cd cmake
         ./test/gitversion/gitversion-test
-        ./test/cpp-utils/cpp-utils-test
-        ./test/fspp/fspp-test
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
         ./test/parallelaccessstore/parallelaccessstore-test
         ./test/blockstore/blockstore-test
         ./test/blobstore/blobstore-test
-        ./test/cryfs/cryfs-test
-        ./test/cryfs-cli/cryfs-cli-test
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs/cryfs-test ; fi
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
   job_definition: &job_definition
     <<: *container_config
     steps:
@@ -191,22 +192,22 @@ references:
         only: /.*/
 
 jobs:
-  gcc_4_8_debug:
+  gcc_4_9_debug:
     <<: *job_definition
     environment:
-      CC: gcc-4.8
-      CXX: g++-4.8
+      CC: gcc-4.9
+      CXX: g++-4.9
       BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-4.8"
+      APT_COMPILER_PACKAGE: "g++-4.9"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
-  gcc_4_8_release:
+  gcc_4_9_release:
     <<: *job_definition
     environment:
-      CC: gcc-4.8
-      CXX: g++-4.8
+      CC: gcc-4.9
+      CXX: g++-4.9
       BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-4.8"
+      APT_COMPILER_PACKAGE: "g++-4.9"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
   gcc_5_debug:
@@ -355,15 +356,26 @@ jobs:
       BUILD_TYPE: "Debug"
       # Note: Leak detection is disabled because libfuse itself is leaky...
       ASAN_OPTIONS: "detect_leaks=0 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
+      DISABLE_BROKEN_ASAN_TESTS: true
+  thread_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
+      BUILD_TYPE: "Debug"
+      DISABLE_BROKEN_TSAN_TESTS: true
 
 workflows:
   version: 2
 
   build_and_test:
     jobs:
-    - gcc_4_8_debug:
+    - gcc_4_9_debug:
         <<: *enable_for_tags
-    - gcc_4_8_release:
+    - gcc_4_9_release:
         <<: *enable_for_tags
     - gcc_5_debug:
         <<: *enable_for_tags
@@ -397,4 +409,5 @@ workflows:
         <<: *enable_for_tags
     - address_sanitizer:
         <<: *enable_for_tags
-
+    - thread_sanitizer:
+        <<: *enable_for_tags
