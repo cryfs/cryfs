@@ -23,8 +23,8 @@ using blockstore::compressing::RunLengthEncoding;
 class BigBlobsTest : public ::testing::Test {
 public:
     static constexpr size_t BLOCKSIZE = 32 * 1024;
-    static constexpr uint64_t SMALL_BLOB_SIZE = UINT64_C(1024)*1024*1024*3.9; // 3.9 GB (<4GB)
-    static constexpr uint64_t LARGE_BLOB_SIZE = UINT64_C(1024)*1024*1024*4.1; // 4.1 GB (>4GB)
+    static constexpr uint64_t SMALL_BLOB_SIZE = UINT64_C(1024)*1024*1024*3.95; // 3.95 GB (<4GB)
+    static constexpr uint64_t LARGE_BLOB_SIZE = UINT64_C(1024)*1024*1024*4.05; // 4.05 GB (>4GB)
 
     static constexpr uint64_t max_uint_32 = std::numeric_limits<uint32_t>::max();
     static_assert(SMALL_BLOB_SIZE < max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
