@@ -46,7 +46,21 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC pthread curl)
+find_package(CURL)
+if(NOT ${CURL_FOUND})
+	message(FATAL_ERROR "CURL library not found")                                                 
+endif()
+include_directories(${CURL_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})                                       
+
+find_package(Backtrace)
+if(NOT ${Backtrace_FOUND})
+	message(FATAL_ERROR "Backtrace library not found")                                            
+endif()
+include_directories(${Backtrace_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES}) 
+
+target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package() instead of find_library().
 find_library_with_path(CryptoPP cryptopp CRYPTOPP_LIB_PATH)
