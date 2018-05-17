@@ -7,7 +7,7 @@
 #include "CryFile.h"
 #include <fspp/fuse/FuseErrnoException.h>
 #include <cpp-utils/pointer/cast.h>
-#include <cpp-utils/system/clock_gettime.h>
+#include <cpp-utils/system/time.h>
 #include <cpp-utils/system/stat.h>
 #include <cpp-utils/logging/logging.h>
 
@@ -170,8 +170,7 @@ void CryNode::stat(struct ::stat *result) const {
     result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
     result->st_nlink = 1;
-    struct timespec now{};
-    clock_gettime(CLOCK_REALTIME, &now);
+    struct timespec now = cpputils::time::now();
     result->st_atim = now;
     result->st_mtim = now;
     result->st_ctim = now;
