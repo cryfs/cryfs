@@ -37,7 +37,8 @@ set(SOURCES
         data/DataFixture.cpp
         data/DataUtils.cpp
         data/Data.cpp
-        assert/backtrace.cpp
+        assert/backtrace_nonwindows.cpp
+        assert/backtrace_windows.cpp
         assert/AssertFailed.cpp
         system/get_total_memory.cpp
         system/homedir.cpp

@@ -1,3 +1,5 @@
+#if !defined(_MSC_VER)
+
 #include "backtrace.h"
 #include <execinfo.h>
 #include <signal.h>
@@ -12,12 +14,9 @@ using std::string;
 using std::ostringstream;
 using namespace cpputils::logging;
 
-//TODO Use the following? https://github.com/bombela/backward-cpp
-
 namespace cpputils {
 
-    //TODO Refactor (for example: RAII or at least try{}finally{} instead of  free())
-
+namespace {
     std::string demangle(const string &mangledName) {
         string result;
         int status = -10;
@@ -37,7 +36,8 @@ namespace cpputils {
         if (startMangledName == string::npos || endMangledName == string::npos) {
             return backtraceLine;
         }
-        return demangle(backtraceLine.substr(startMangledName+1, endMangledName-startMangledName-1)) + ": (" + backtraceLine.substr(0, startMangledName) + backtraceLine.substr(endMangledName);
+        return demangle(backtraceLine.substr(startMangledName + 1, endMangledName - startMangledName - 1)) + ": (" +
+               backtraceLine.substr(0, startMangledName) + backtraceLine.substr(endMangledName);
     }
 
     string backtrace_to_string(void *array[], size_t size) {
@@ -49,20 +49,29 @@ namespace cpputils {
         free(ptr);
         return result.str();
     }
+}
 
-    string backtrace() {
-        constexpr unsigned int MAX_SIZE = 100;
-        void *array[MAX_SIZE];
-        size_t size = ::backtrace(array, MAX_SIZE);
-        return backtrace_to_string(array, size);
-    }
+	string backtrace() {
+		constexpr unsigned int MAX_SIZE = 100;
+		void *array[MAX_SIZE];
+		size_t size = ::backtrace(array, MAX_SIZE);
+		return backtrace_to_string(array, size);
+	}
 
+namespace {
     void sigsegv_handler(int) {
         LOG(ERROR, "SIGSEGV\n{}", backtrace());
         exit(1);
     }
-
-    void showBacktraceOnSigSegv() {
-        signal(SIGSEGV, sigsegv_handler);
-    }
 }
+
+	void showBacktraceOnSigSegv() {
+		auto result = signal(SIGSEGV, sigsegv_handler);
+		if (SIG_ERR == result) {
+			LOG(ERROR, "Failed to set sigsegv signal handler. Errno: {}", errno);
+		}
+	}
+
+}
+
+#endif
