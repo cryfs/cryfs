@@ -46,6 +46,7 @@ set(SOURCES
     assert/assert_include_test.cpp
     assert/assert_debug_test.cpp
     system/MemoryTest.cpp
+    system/HomedirTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

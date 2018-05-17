@@ -6,14 +6,8 @@
 #include <cpp-utils/system/homedir.h>
 
 class TestWithFakeHomeDirectory {
-public:
-    TestWithFakeHomeDirectory()
-        :homedir(), fakeHomeDirRAII(homedir.path()) {
-    }
-
 private:
-    cpputils::TempDir homedir;
-    cpputils::system::FakeHomeDirectoryRAII fakeHomeDirRAII;
+    cpputils::system::FakeTempHomeDirectoryRAII fakeHomeDirRAII;
 };
 
 #endif

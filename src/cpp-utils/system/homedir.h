@@ -5,6 +5,7 @@
 #include <boost/filesystem/path.hpp>
 #include "../macros.h"
 #include <cpp-utils/pointer/unique_ref.h>
+#include "../tempfile/TempDir.h"
 
 namespace cpputils {
     namespace system {
@@ -15,14 +16,14 @@ namespace cpputils {
         public:
             static const boost::filesystem::path &get();
 
-            static boost::filesystem::path getXDGDataDir();
+            static const boost::filesystem::path &getXDGDataDir();
 
         private:
             boost::filesystem::path _home_directory;
+			boost::filesystem::path _appdata_directory;
 
             HomeDirectory();
             static HomeDirectory &singleton();
-            boost::filesystem::path _get_home_directory();
 
             friend class FakeHomeDirectoryRAII;
 
@@ -32,14 +33,26 @@ namespace cpputils {
 
         class FakeHomeDirectoryRAII final {
         public:
-            FakeHomeDirectoryRAII(const boost::filesystem::path &fakeHomeDirectory);
+            FakeHomeDirectoryRAII(const boost::filesystem::path &fakeHomeDirectory, const boost::filesystem::path &fakeAppdataDirectory);
             ~FakeHomeDirectoryRAII();
 
         private:
             boost::filesystem::path _oldHomeDirectory;
+			boost::filesystem::path _oldAppdataDirectory;
 
             DISALLOW_COPY_AND_ASSIGN(FakeHomeDirectoryRAII);
         };
+
+		class FakeTempHomeDirectoryRAII final {
+		public:
+			FakeTempHomeDirectoryRAII();
+
+		private:
+			TempDir _tempDir;
+			FakeHomeDirectoryRAII _fakeHome;
+
+			DISALLOW_COPY_AND_ASSIGN(FakeTempHomeDirectoryRAII);
+		};
 
     }
 }
