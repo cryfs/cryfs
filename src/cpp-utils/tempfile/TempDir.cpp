@@ -21,7 +21,7 @@ void TempDir::remove() {
       bf::remove_all(_path);
     }
   } catch (const boost::filesystem::filesystem_error &e) {
-    LOG(ERROR, "Could not delete tempfile.");
+    LOG(ERR, "Could not delete tempfile.");
   }
 }
 

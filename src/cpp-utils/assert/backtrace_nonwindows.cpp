@@ -62,7 +62,7 @@ namespace {
 
 namespace {
     void sigsegv_handler(int) {
-        LOG(ERROR, "SIGSEGV\n{}", backtrace());
+        LOG(ERR, "SIGSEGV\n{}", backtrace());
         exit(1);
     }
 }
@@ -70,7 +70,7 @@ namespace {
 	void showBacktraceOnSigSegv() {
 		auto result = signal(SIGSEGV, sigsegv_handler);
 		if (SIG_ERR == result) {
-			LOG(ERROR, "Failed to set sigsegv signal handler. Errno: {}", errno);
+			LOG(ERR, "Failed to set sigsegv signal handler. Errno: {}", errno);
 		}
 	}
 

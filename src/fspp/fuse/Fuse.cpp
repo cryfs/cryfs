@@ -222,11 +222,11 @@ Fuse::Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsna
 }
 
 void Fuse::_logException(const std::exception &e) {
-  LOG(ERROR, "Exception thrown: {}", e.what());
+  LOG(ERR, "Exception thrown: {}", e.what());
 }
 
 void Fuse::_logUnknownException() {
-  LOG(ERROR, "Unknown exception thrown");
+  LOG(ERR, "Unknown exception thrown");
 }
 
 void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
@@ -296,7 +296,7 @@ void Fuse::stop() {
   int ret = system(("fusermount -z -u " + _mountdir.native()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
 #endif
   if (ret != 0) {
-    LOG(ERROR, "Could not unmount filesystem");
+    LOG(ERR, "Could not unmount filesystem");
   }
 }
 
@@ -308,7 +308,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
     _fs->lstat(path, stbuf);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::getattr: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::getattr: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -339,7 +339,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
     _fs->fstat(fileinfo->fh, stbuf);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::fgetattr: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::fgetattr: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -360,7 +360,7 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
     _fs->readSymlink(path, buf, size);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::readlink: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::readlink: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -390,7 +390,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
     _fs->mkdir(path, mode, context->uid, context->gid);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::mkdir: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::mkdir: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -411,7 +411,7 @@ int Fuse::unlink(const bf::path &path) {
     _fs->unlink(path);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::unlink: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::unlink: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -432,7 +432,7 @@ int Fuse::rmdir(const bf::path &path) {
     _fs->rmdir(path);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::rmdir: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::rmdir: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -454,7 +454,7 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
     _fs->createSymlink(from, to, context->uid, context->gid);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::symlink: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::symlink: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -477,7 +477,7 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
     _fs->rename(from, to);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::rename: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::rename: {}", e.what());
     return -EIO;
   } catch(fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
@@ -508,7 +508,7 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
 	_fs->chmod(path, mode);
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::chmod: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::chmod: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
@@ -529,7 +529,7 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
 	_fs->chown(path, uid, gid);
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::chown: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::chown: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
 	return -e.getErrno();
@@ -550,7 +550,7 @@ int Fuse::truncate(const bf::path &path, off_t size) {
     _fs->truncate(path, size);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::truncate: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::truncate: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -572,7 +572,7 @@ int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) 
     _fs->ftruncate(fileinfo->fh, size);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::ftruncate: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::ftruncate: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -593,7 +593,7 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
     _fs->utimens(path, times[0], times[1]);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::utimens: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::utimens: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -614,7 +614,7 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
     fileinfo->fh = _fs->openFile(path, fileinfo->flags);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::open: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::open: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -636,7 +636,7 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
     _fs->closeFile(fileinfo->fh);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::release: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::release: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -657,7 +657,7 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   try {
     return _fs->read(fileinfo->fh, buf, size, offset);
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::read: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::read: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -679,7 +679,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
     _fs->write(fileinfo->fh, buf, size, offset);
     return size;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::write: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::write: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -701,7 +701,7 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
     _fs->statfs(path, fsstat);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::statfs: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::statfs: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -723,7 +723,7 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
     _fs->flush(fileinfo->fh);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::flush: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::flush: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -749,7 +749,7 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
     }
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::fsync: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::fsync: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -799,7 +799,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
     }
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::readdir: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::readdir: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -853,7 +853,7 @@ int Fuse::access(const bf::path &path, int mask) {
     _fs->access(path, mask);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::access: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::access: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();
@@ -875,7 +875,7 @@ int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
     fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
-    LOG(ERROR, "AssertFailed in Fuse::create: {}", e.what());
+    LOG(ERR, "AssertFailed in Fuse::create: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
     return -e.getErrno();

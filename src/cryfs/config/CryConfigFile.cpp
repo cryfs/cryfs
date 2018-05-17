@@ -28,7 +28,7 @@ CryConfigFile::~CryConfigFile() {
 optional<CryConfigFile> CryConfigFile::load(bf::path path, const string &password) {
     auto encryptedConfigData = Data::LoadFromFile(path);
     if (encryptedConfigData == none) {
-        LOG(ERROR, "Config file not found");
+        LOG(ERR, "Config file not found");
         return none;
     }
     auto encryptor = CryConfigEncryptorFactory::loadKey(*encryptedConfigData, password);
@@ -41,7 +41,7 @@ optional<CryConfigFile> CryConfigFile::load(bf::path path, const string &passwor
     }
     CryConfig config = CryConfig::load(decrypted->data);
     if (config.Cipher() != decrypted->cipherName) {
-        LOG(ERROR, "Inner cipher algorithm used to encrypt config file doesn't match config value");
+        LOG(ERR, "Inner cipher algorithm used to encrypt config file doesn't match config value");
         return none;
     }
     auto configFile = CryConfigFile(std::move(path), std::move(config), std::move(*encryptor));

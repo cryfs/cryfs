@@ -9,10 +9,15 @@
 namespace cpputils {
     namespace logging {
 
-        constexpr struct ERROR_TYPE {} ERROR {};
-        constexpr struct WARN_TYPE {} WARN {};
-        constexpr struct INFO_TYPE {} INFO {};
-        constexpr struct DEBUG_TYPE {} DEBUG {};
+		struct ERROR_TYPE {};
+		struct WARN_TYPE {};
+		struct INFO_TYPE {};
+		struct DEBUG_TYPE {};
+
+        constexpr ERROR_TYPE ERR;
+        constexpr WARN_TYPE WARN;
+        constexpr INFO_TYPE INFO;
+        constexpr DEBUG_TYPE DEBUG;
 
         inline void setLogger(std::shared_ptr<spdlog::logger> newLogger) {
             logger().setLogger(newLogger);

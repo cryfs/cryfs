@@ -37,12 +37,12 @@ public:
     }
 
     void EXPECT_ERROR_LOG_ENABLED() {
-        LOG(ERROR, "My log message");
+        LOG(ERR, "My log message");
         EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
     }
 
     void EXPECT_ERROR_LOG_DISABLED() {
-        LOG(ERROR, "My log message");
+        LOG(ERR, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 };
@@ -110,7 +110,7 @@ TEST_F(LoggingLevelTest, WARNING_SetAfterSettingLogger) {
 }
 
 TEST_F(LoggingLevelTest, ERROR_SetBeforeSettingLogger) {
-    setLevel(ERROR);
+    setLevel(ERR);
     setLogger(mockLogger.get());
     EXPECT_DEBUG_LOG_DISABLED();
     EXPECT_INFO_LOG_DISABLED();
@@ -120,7 +120,7 @@ TEST_F(LoggingLevelTest, ERROR_SetBeforeSettingLogger) {
 
 TEST_F(LoggingLevelTest, ERROR_SetAfterSettingLogger) {
     setLogger(mockLogger.get());
-    setLevel(ERROR);
+    setLevel(ERR);
     EXPECT_DEBUG_LOG_DISABLED();
     EXPECT_INFO_LOG_DISABLED();
     EXPECT_WARNING_LOG_DISABLED();

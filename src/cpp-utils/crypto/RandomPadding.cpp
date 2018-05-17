@@ -24,7 +24,7 @@ namespace cpputils {
     optional<Data> RandomPadding::remove(const Data &data) {
         uint32_t size = deserialize<uint32_t>(data.data());
         if(sizeof(size) + size >= data.size()) {
-            LOG(ERROR, "Config file is invalid: Invalid padding.");
+            LOG(ERR, "Config file is invalid: Invalid padding.");
             return boost::none;
         };
         Data result(size);

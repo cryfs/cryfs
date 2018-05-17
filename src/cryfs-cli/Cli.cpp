@@ -259,9 +259,9 @@ namespace cryfs {
         } catch (const CryfsException &e) {
             throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
-            LOG(ERROR, "Crashed: {}", e.what());
+            LOG(ERR, "Crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR, "Crashed");
+            LOG(ERR, "Crashed");
         }
     }
 

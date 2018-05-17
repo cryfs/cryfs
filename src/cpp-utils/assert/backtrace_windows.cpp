@@ -101,7 +101,7 @@ namespace cpputils {
 		LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 		{
 			std::string backtrace = backtrace_to_string(pExceptionInfo->ContextRecord);
-			LOG(ERROR, "Top level exception. Backtrace:\n{}", backtrace);
+			LOG(ERR, "Top level exception. Backtrace:\n{}", backtrace);
 
 			return EXCEPTION_CONTINUE_SEARCH;
 		}

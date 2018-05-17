@@ -201,7 +201,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   optional<unique_ref<DirBlobRef>> parentBlob = none;
   optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootBlobId);
   if (currentBlobOpt == none) {
-    LOG(ERROR, "Could not load root blob. Is the base directory accessible?");
+    LOG(ERR, "Could not load root blob. Is the base directory accessible?");
     throw FuseErrnoException(EIO);
   }
   unique_ref<FsBlobRef> currentBlob = std::move(*currentBlobOpt);
@@ -267,7 +267,7 @@ unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target, 
 unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::BlockId &blockId) {
   auto blob = _fsBlobStore->load(blockId);
   if (blob == none) {
-    LOG(ERROR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
+    LOG(ERR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
     throw FuseErrnoException(EIO);
   }
   return std::move(*blob);
@@ -276,7 +276,7 @@ unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::BlockId &blockId) {
 void CryDevice::RemoveBlob(const blockstore::BlockId &blockId) {
   auto blob = _fsBlobStore->load(blockId);
   if (blob == none) {
-    LOG(ERROR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
+    LOG(ERR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
     throw FuseErrnoException(EIO);
   }
   _fsBlobStore->remove(std::move(*blob));

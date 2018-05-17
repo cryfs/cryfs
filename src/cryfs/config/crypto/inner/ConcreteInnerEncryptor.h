@@ -33,12 +33,12 @@ namespace cryfs {
     template<class Cipher>
     boost::optional<cpputils::Data> ConcreteInnerEncryptor<Cipher>::decrypt(const InnerConfig &innerConfig) const {
         if (innerConfig.cipherName != Cipher::NAME) {
-            cpputils::logging::LOG(cpputils::logging::ERROR, "Initialized ConcreteInnerEncryptor with wrong cipher");
+            cpputils::logging::LOG(cpputils::logging::ERR, "Initialized ConcreteInnerEncryptor with wrong cipher");
             return boost::none;
         }
         auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(innerConfig.encryptedConfig.data()), innerConfig.encryptedConfig.size(), _key);
         if (decrypted == boost::none) {
-            cpputils::logging::LOG(cpputils::logging::ERROR, "Failed decrypting configuration file");
+            cpputils::logging::LOG(cpputils::logging::ERR, "Failed decrypting configuration file");
             return boost::none;
         }
         auto configData = cpputils::RandomPadding::remove(*decrypted);

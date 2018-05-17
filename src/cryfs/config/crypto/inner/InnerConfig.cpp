@@ -23,7 +23,7 @@ namespace cryfs {
             serializer.writeTailData(encryptedConfig);
             return serializer.finished();
         } catch (const exception &e) {
-            LOG(ERROR, "Error serializing inner configuration: {}", e.what());
+            LOG(ERR, "Error serializing inner configuration: {}", e.what());
             throw; // This is a programming logic error, pass through exception.
         }
     }
@@ -37,7 +37,7 @@ namespace cryfs {
             deserializer.finished();
             return InnerConfig {cipherName, std::move(result)};
         } catch (const exception &e) {
-            LOG(ERROR, "Error deserializing inner configuration: {}", e.what());
+            LOG(ERR, "Error deserializing inner configuration: {}", e.what());
             return none; // This can be caused by invalid input data and does not have to be a programming error. Don't throw exception.
         }
     }

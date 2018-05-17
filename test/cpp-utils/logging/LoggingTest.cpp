@@ -59,7 +59,7 @@ TEST_F(LoggingTest, DebugLog) {
 
 TEST_F(LoggingTest, ErrorLog) {
     setLogger(mockLogger.get());
-    LOG(ERROR, "My log message");
+    LOG(ERR, "My log message");
     EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
 }
 

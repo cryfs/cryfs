@@ -77,9 +77,9 @@ namespace cpputils {
         } catch (const boost::thread_interrupted &e) {
             //Do nothing, exit thread.
         } catch (const std::exception &e) {
-            LOG(ERROR, "LoopThread crashed: {}", e.what());
+            LOG(ERR, "LoopThread crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR, "LoopThread crashed");
+            LOG(ERR, "LoopThread crashed");
         }
         //TODO We should remove the thread from _runningThreads here, not in stop().
     }

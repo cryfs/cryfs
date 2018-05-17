@@ -62,7 +62,7 @@ bool OnDiskBlockStore2::remove(const BlockId &blockId) {
   }
   bool retval = boost::filesystem::remove(filepath);
   if (!retval) {
-    cpputils::logging::LOG(cpputils::logging::ERROR, "Couldn't find block {} to remove", blockId.ToString());
+    cpputils::logging::LOG(cpputils::logging::ERR, "Couldn't find block {} to remove", blockId.ToString());
     return false;
   }
   if (boost::filesystem::is_empty(filepath.parent_path())) {
