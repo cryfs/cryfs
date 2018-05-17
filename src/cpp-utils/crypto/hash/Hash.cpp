@@ -17,8 +17,8 @@ Hash hash(const Data& data, Salt salt) {
   hasher.Final(static_cast<CryptoPP::byte*>(digest.data()));
 
   return Hash{
-      .digest = digest,
-      .salt = salt
+      digest,
+      salt
   };
 }
 
