@@ -1,12 +1,9 @@
 #if defined(_MSC_VER)
 
 #include "backtrace.h"
-#include <signal.h>
-#include <iostream>
 #include <string>
 #include <sstream>
 #include "../logging/logging.h"
-#include <Windows.h>
 #include <Dbghelp.h>
 
 using std::string;
