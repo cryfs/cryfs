@@ -8,6 +8,7 @@
 #include "cpp-utils/assert/assert.h"
 
 using testing::MatchesRegex;
+using testing::HasSubstr;
 
 TEST(AssertTest_ReleaseBuild, DoesntThrowIfTrue) {
   ASSERT(true, "bla");
@@ -26,7 +27,18 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
     EXPECT_THAT(e.what(), MatchesRegex(
-        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:25: my message.*"
+        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:26: my message.*"
+    ));
+  }
+}
+
+TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
+  try {
+    ASSERT(2==5, "my message");
+    FAIL();
+  } catch (const cpputils::AssertFailed &e) {
+    EXPECT_THAT(e.what(), HasSubstr(
+            "cpputils::backtrace"
     ));
   }
 }

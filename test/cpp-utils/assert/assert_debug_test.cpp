@@ -23,3 +23,10 @@ TEST(AssertTest_DebugBuild, AssertMessage) {
       "Assertion \\[2==5\\] failed in .*/assert_debug_test.cpp:[0-9]+: my message"
     );
 }
+
+TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
+    EXPECT_DEATH(
+        ASSERT(2==5, "my message"),
+        "cpputils::backtrace"
+    );
+}

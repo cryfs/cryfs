@@ -43,8 +43,6 @@ set(SOURCES
     logging/LoggingIncludeTest.cpp
     assert/assert_release_test.cpp
     assert/backtrace_test.cpp
-    assert/backtrace_include_test.cpp
-    assert/assert_include_test.cpp
     assert/assert_debug_test.cpp
     system/GetTotalMemoryTest.cpp
     system/TimeTest.cpp

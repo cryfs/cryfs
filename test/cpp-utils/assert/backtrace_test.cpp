@@ -14,3 +14,19 @@ TEST(BacktraceTest, ContainsTopLevelLine) {
     EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
     EXPECT_THAT(backtrace, HasSubstr("ContainsTopLevelLine"));
 }
+
+namespace {
+void cause_sigsegv() {
+    cpputils::showBacktraceOnSigSegv();
+    int* ptr = nullptr;
+    int a = *ptr;
+    (void)a;
+}
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
+    EXPECT_DEATH(
+        cause_sigsegv(),
+        "cpputils::backtrace"
+    );
+}
