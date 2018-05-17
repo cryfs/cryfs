@@ -45,6 +45,7 @@ set(SOURCES
     assert/backtrace_include_test.cpp
     assert/assert_include_test.cpp
     assert/assert_debug_test.cpp
+    system/GetTotalMemoryTest.cpp
     system/TimeTest.cpp
     system/MemoryTest.cpp
     system/HomedirTest.cpp
