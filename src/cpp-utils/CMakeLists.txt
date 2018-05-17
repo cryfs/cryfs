@@ -42,7 +42,8 @@ set(SOURCES
         assert/AssertFailed.cpp
         system/get_total_memory.cpp
         system/homedir.cpp
-        system/memory.cpp
+        system/memory_nonwindows.cpp
+        system/memory_windows.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

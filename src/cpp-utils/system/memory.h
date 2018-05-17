@@ -10,11 +10,11 @@ namespace cpputils {
 // i.e. tells the operating system not to swap it.
 class DontSwapMemoryRAII final {
 public:
-    DontSwapMemoryRAII(const void* addr, size_t len);
+    DontSwapMemoryRAII(void* addr, size_t len);
     ~DontSwapMemoryRAII();
 
 private:
-    const void* addr_;
+    void* const addr_;
     const size_t len_;
 };
 
