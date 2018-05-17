@@ -10,6 +10,8 @@
 #include <sstream>
 #include "../logging/logging.h"
 
+// TODO Add file and line number on non-windows
+
 using std::string;
 using std::ostringstream;
 using namespace cpputils::logging;
