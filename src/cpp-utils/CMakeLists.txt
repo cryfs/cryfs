@@ -58,6 +58,12 @@ find_package(Backtrace REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
 
+if(NOT WIN32)
+  find_package(Backtrace REQUIRED)
+  target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
+endif(NOT WIN32)
+
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
