@@ -21,6 +21,7 @@ set(SOURCES
     tempfile/TempDirTest.cpp
     network/CurlHttpClientTest.cpp
     network/FakeHttpClientTest.cpp
+    io/DontEchoStdinToStdoutRAIITest.cpp
     io/ConsoleIncludeTest.cpp
     io/ConsoleTest_AskYesNo.cpp
     io/ConsoleTest_Print.cpp
