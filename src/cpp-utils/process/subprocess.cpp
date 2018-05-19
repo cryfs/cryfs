@@ -1,7 +1,16 @@
 #include "subprocess.h"
 #include <cstdio>
 #include <stdexcept>
+
+#if !defined(_MSC_VER)
 #include <sys/wait.h>
+constexpr const char* openmode = "re";
+#else
+#define popen _popen
+#define pclose _pclose
+#define WEXITSTATUS(a) a
+constexpr const char* openmode = "r";
+#endif
 
 using std::string;
 
@@ -33,7 +42,7 @@ namespace cpputils {
     }
 
     FILE *Subprocess::_call(const string &command) {
-        FILE *subprocess = popen(command.c_str(), "r");
+        FILE *subprocess = popen(command.c_str(), openmode);
         if (!subprocess)
         {
             throw std::runtime_error("Error starting subprocess "+command);
