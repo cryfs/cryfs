@@ -32,7 +32,6 @@ Requirements
     - chrono
     - program_options
     - thread
-  - Crypto++ version >= 5.6.3 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
@@ -40,13 +39,13 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static cryptopp-devel openssl-devel fuse-devel python
+        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
 
         # Macintosh
-        brew install cmake boost cryptopp openssl
+        brew install cmake boost openssl
 
 Build & Install
 ---------------
@@ -98,13 +97,7 @@ On most systems, CMake should find the libraries automatically. However, that do
 
         cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/osxfuse/headers"
 
-4. **CryptoPP library not found**
-
-    Pass in the library path with
-
-        cmake .. -DCRYPTOPP_LIB_PATH=/path/to/cryptopp
-
-5. **Openssl headers not found**
+4. **Openssl headers not found**
 
     Pass in the include path with
 
