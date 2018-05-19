@@ -115,7 +115,7 @@ namespace cpputils {
 		return backtrace_to_string(&context);
 	}
 
-	void showBacktraceOnSigSegv() {
+	void showBacktraceOnCrash() {
 		SetUnhandledExceptionFilter(TopLevelExceptionHandler);
 	}
 

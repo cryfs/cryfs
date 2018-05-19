@@ -374,7 +374,7 @@ namespace cryfs {
     }
 
     int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient) {
-        cpputils::showBacktraceOnSigSegv();
+        cpputils::showBacktraceOnCrash();
 
         try {
             _showVersion(std::move(httpClient));

@@ -1,4 +1,5 @@
 #include <gmock/gmock.h>
+#include <csignal>
 #include "cpp-utils/assert/backtrace.h"
 
 using std::string;
@@ -16,17 +17,62 @@ TEST(BacktraceTest, ContainsTopLevelLine) {
 }
 
 namespace {
-void cause_sigsegv() {
-    cpputils::showBacktraceOnSigSegv();
+void nullptr_access() {
+    cpputils::showBacktraceOnCrash();
     int* ptr = nullptr;
-    int a = *ptr;
-    (void)a;
+    *ptr = 5;
 }
+void raise_signal(int signal) {
+    cpputils::showBacktraceOnCrash();
+    ::raise(signal);
+}
+}
+
+TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
+    EXPECT_DEATH(
+        nullptr_access(),
+        "cpputils::backtrace"
+    );
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
     EXPECT_DEATH(
-        cause_sigsegv(),
-        "cpputils::backtrace"
+            raise_signal(SIGSEGV),
+            "cpputils::backtrace"
+    );
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
+    EXPECT_DEATH(
+            raise_signal(SIGABRT),
+            "cpputils::backtrace"
+    );
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigIll) {
+    EXPECT_DEATH(
+            raise_signal(SIGILL),
+            "cpputils::backtrace"
+    );
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigSegv_ShowsCorrectSignalName) {
+    EXPECT_DEATH(
+            raise_signal(SIGSEGV),
+            "SIGSEGV"
+    );
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {
+    EXPECT_DEATH(
+            raise_signal(SIGABRT),
+            "SIGABRT"
+    );
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigIll_ShowsCorrectSignalName) {
+    EXPECT_DEATH(
+            raise_signal(SIGILL),
+            "SIGILL"
     );
 }

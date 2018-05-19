@@ -58,7 +58,10 @@ find_package(Backtrace REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 # TODO From Crypto++ 5.7 on, it should support cmake with find_package() instead of find_library().
 find_library_with_path(CryptoPP cryptopp CRYPTOPP_LIB_PATH)
