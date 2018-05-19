@@ -50,19 +50,13 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-find_package(CURL)
-if(NOT ${CURL_FOUND})
-	message(FATAL_ERROR "CURL library not found")                                                 
-endif()
-include_directories(${CURL_INCLUDE_DIRS})
+find_package(CURL REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})                                       
 
-find_package(Backtrace)
-if(NOT ${Backtrace_FOUND})
-	message(FATAL_ERROR "Backtrace library not found")                                            
-endif()
-include_directories(${Backtrace_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES}) 
+find_package(Backtrace REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
 
