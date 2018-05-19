@@ -1,6 +1,4 @@
 This directory contains external projects, taken from the following locations:
-scrypt: http://www.tarsnap.com/scrypt.html
- - changed: commented out compiler warnings about a workaround for a llvm bug
 googletest: https://github.com/google/googletest/tree/release-1.8.0
  - changed: added NOLINT comment as workaround for clang-tidy warning https://github.com/google/googletest/issues/853
 spdlog: https://github.com/gabime/spdlog/tree/v0.16.3/include/spdlog
