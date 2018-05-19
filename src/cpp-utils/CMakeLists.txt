@@ -63,7 +63,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC scrypt spdlog cryptopp)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread)
 target_enable_style_warnings(${PROJECT_NAME})

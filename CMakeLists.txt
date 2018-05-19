@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_policy(SET CMP0054 NEW)
 
 # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
 
