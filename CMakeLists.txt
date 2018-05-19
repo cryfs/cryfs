@@ -3,6 +3,10 @@ cmake_policy(SET CMP0054 NEW)
 
 # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
 
+# TODO Perf test:
+#  - try if setting CRYPTOPP_NATIVE_ARCH=ON and adding -march=native to the compile commands for cryfs source files makes a difference
+#    -> if yes, offer a cmake option to enable both of these
+
 project(cryfs)
 
 include(utils.cmake)
