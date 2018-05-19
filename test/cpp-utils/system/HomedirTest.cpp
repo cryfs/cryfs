@@ -13,8 +13,13 @@ TEST(HomedirTest, HomedirExists) {
     EXPECT_TRUE(bf::exists(HomeDirectory::get()));
 }
 
-TEST(HomedirTest, AppDataDirExists) {
-    EXPECT_TRUE(bf::exists(HomeDirectory::getXDGDataDir()));
+TEST(HomedirTest, AppDataDirIsValid) {
+    auto dir = HomeDirectory::getXDGDataDir();
+    EXPECT_FALSE(dir.empty());
+    EXPECT_GE(dir.size(), 2u); // has at least two components
+    for(const auto& component : dir) {
+        EXPECT_TRUE(component.native() == "/" || bf::native(component.native()));
+    }
 }
 
 TEST(HomedirTest, FakeHomeDirectorySetsHomedirCorrectly) {
