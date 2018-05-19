@@ -5,14 +5,14 @@
 #   from http://cmake.org/Wiki/CMake_Released_Versions.
 # TODO: Decide if this still applies.
 
-MESSAGE( STATUS
-"*************************************************************************\n\
-The Crypto++ library does not officially support CMake. CMake support is a\n\
-community effort, and the library works with the folks using CMake to help\n\
-improve it. If you find an issue then please fix it or report it at\n\
-https://github.com/noloader/cryptopp-cmake.\n\
--- *************************************************************************"
-)
+#MESSAGE( STATUS
+#"*************************************************************************\n\
+#The Crypto++ library does not officially support CMake. CMake support is a\n\
+#community effort, and the library works with the folks using CMake to help\n\
+#improve it. If you find an issue then please fix it or report it at\n\
+#https://github.com/noloader/cryptopp-cmake.\n\
+#-- *************************************************************************"
+#)
 
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
