@@ -4,3 +4,5 @@ scrypt: http://www.tarsnap.com/scrypt.html
 googletest: https://github.com/google/googletest/tree/release-1.8.0
  - changed: added NOLINT comment as workaround for clang-tidy warning https://github.com/google/googletest/issues/853
 spdlog: https://github.com/gabime/spdlog/tree/v0.16.3/include/spdlog
+cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_7_0_0
+ - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/7f3b3540740b365bed673936852d70795c0104f3
