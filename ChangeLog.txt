@@ -10,6 +10,7 @@ New Features & Improvements:
 * CryFS tells the operating system to not swap the encryption key to the disk (note: this is best-effort and cannot be guaranteed. Hibernation, for example, will still write the encryption key to the disk)
 * New block size options: 4KB and 16KB
 * New default block size: 16KB
+* Increased scrypt hardness to (N=1048576, r=4, p=8) to make it harder to crack the key while allowing cryfs to take advantage of multicore machines.
 
 Fixed bugs:
 * `du` shows correct file system size on Mac OS X.
