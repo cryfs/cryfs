@@ -17,6 +17,7 @@ require_clang_version(3.7)
 # Default value is not to build test cases
 option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
+option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
 
 # Default value is to build in release mode
 if(NOT CMAKE_BUILD_TYPE)
