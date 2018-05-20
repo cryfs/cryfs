@@ -3,14 +3,23 @@
 #include <stdexcept>
 #include <cerrno>
 
-#if !defined(_MSC_VER)
+#if defined(__APPLE__)
+
+#include <sys/wait.h>
+constexpr const char* openmode = "r";
+
+#elif !defined(_MSC_VER)
+
 #include <sys/wait.h>
 constexpr const char* openmode = "re";
+
 #else
+
 #define popen _popen
 #define pclose _pclose
 #define WEXITSTATUS(a) a
 constexpr const char* openmode = "r";
+
 #endif
 
 using std::string;
@@ -23,7 +32,7 @@ namespace cpputils {
         FILE *subprocess = popen(command.c_str(), openmode);
         if (!subprocess)
         {
-            throw std::runtime_error("Error starting subprocess "+command);
+            throw std::runtime_error("Error starting subprocess "+command + ". Errno: " + std::to_string(errno));
         }
         return subprocess;
     }
