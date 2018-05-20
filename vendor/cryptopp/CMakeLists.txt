@@ -1,6 +1,7 @@
 project(mycryptopp)
 
 add_library(cryptopp dummy.cpp)
+# note: include directory is called vendor_cryptopp instead of cryptopp to avoid include clashes with system headers
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(OpenMP)
@@ -17,7 +18,7 @@ set(BUILD_TESTING OFF)
 set(BUILD_DOCUMENTATION OFF)
 set(BUILD_SHARED OFF)
 set(BUILD_STATIC ON)
-add_subdirectory(cryptopp EXCLUDE_FROM_ALL)
+add_subdirectory(vendor_cryptopp EXCLUDE_FROM_ALL)
 
 target_link_libraries(cryptopp PRIVATE cryptopp-static)
 

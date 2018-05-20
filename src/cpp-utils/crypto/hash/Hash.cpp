@@ -1,6 +1,6 @@
 #include "Hash.h"
 #include <cpp-utils/random/Random.h>
-#include <cryptopp/sha.h>
+#include <vendor_cryptopp/sha.h>
 
 using cpputils::Random;
 using CryptoPP::SHA512;

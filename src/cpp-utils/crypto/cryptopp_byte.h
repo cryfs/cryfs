@@ -2,7 +2,7 @@
 #ifndef _CPPUTILS_CRYPTO_CRYPTOPP_BYTE_H
 #define _CPPUTILS_CRYPTO_CRYPTOPP_BYTE_H
 
-#include <cryptopp/cryptlib.h>
+#include <vendor_cryptopp/cryptlib.h>
 
 // If we're running an older CryptoPP version, CryptoPP::byte isn't defined yet.
 // Define it. Refer to "byte" type in the global namespace (placed by CryptoPP).

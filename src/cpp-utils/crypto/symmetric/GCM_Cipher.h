@@ -6,7 +6,7 @@
 #include "../../data/FixedSizeData.h"
 #include "../../data/Data.h"
 #include "../../random/Random.h"
-#include <cryptopp/gcm.h>
+#include <vendor_cryptopp/gcm.h>
 #include "Cipher.h"
 #include "EncryptionKey.h"
 

@@ -1,6 +1,6 @@
 #include "Data.h"
 #include <stdexcept>
-#include <cryptopp/hex.h>
+#include <vendor_cryptopp/hex.h>
 #include <cpp-utils/crypto/cryptopp_byte.h>
 
 using std::istream;

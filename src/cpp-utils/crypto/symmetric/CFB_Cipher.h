@@ -7,7 +7,7 @@
 #include "../../data/Data.h"
 #include "../../random/Random.h"
 #include <boost/optional.hpp>
-#include <cryptopp/modes.h>
+#include <vendor_cryptopp/modes.h>
 #include "Cipher.h"
 #include "EncryptionKey.h"
 

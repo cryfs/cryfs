@@ -3,7 +3,7 @@
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <cpp-utils/data/Data.h>
-#include <cryptopp/hex.h>
+#include <vendor_cryptopp/hex.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/config/CryConfigFile.h>

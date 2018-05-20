@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 #define MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 
-#include <cryptopp/hex.h>
+#include <vendor_cryptopp/hex.h>
 #include <string>
 #include <cstring>
 #include "../assert/assert.h"

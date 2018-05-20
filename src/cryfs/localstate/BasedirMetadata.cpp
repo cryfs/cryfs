@@ -1,7 +1,7 @@
 #include "BasedirMetadata.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <cryptopp/sha.h>
+#include <vendor_cryptopp/sha.h>
 #include <boost/filesystem/operations.hpp>
 #include "LocalStateDir.h"
 

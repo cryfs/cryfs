@@ -4,7 +4,7 @@
 
 #include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGenerator.h"
-#include <cryptopp/osrng.h>
+#include <vendor_cryptopp/osrng.h>
 
 namespace cpputils {
     class OSRandomGenerator final : public RandomGenerator {
