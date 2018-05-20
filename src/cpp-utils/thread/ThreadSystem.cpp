@@ -12,9 +12,13 @@ namespace cpputils {
     }
 
     ThreadSystem::ThreadSystem(): _runningThreads(), _mutex() {
+#if !defined(_MSC_VER)
         //Stopping the thread before fork() (and then also restarting it in the parent thread after fork()) is important,
         //because as a running thread it might hold locks or condition variables that won't play well when forked.
         pthread_atfork(&ThreadSystem::_onBeforeFork, &ThreadSystem::_onAfterFork, &ThreadSystem::_onAfterFork);
+#else
+		// not needed on windows because we don't fork
+#endif
     }
 
     ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration) {
