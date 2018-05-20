@@ -15,19 +15,14 @@ require_gcc_version(4.8)
 require_clang_version(3.7)
 
 # Default value is not to build test cases
-if(NOT BUILD_TESTING)
-    set(BUILD_TESTING OFF CACHE BOOL "BUILD_TESTING")
-endif(NOT BUILD_TESTING)
+option(BUILD_TESTING "build test cases" OFF)
+option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
 
 # Default value is to build in release mode
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# Default value is to do update checks
-if(NOT CRYFS_UPDATE_CHECKS)
-    set(CRYFS_UPDATE_CHECKS ON CACHE BOOL "CRYFS_UPDATE_CHECKS")
-endif(NOT CRYFS_UPDATE_CHECKS)
 
 add_subdirectory(vendor)
 add_subdirectory(src)
