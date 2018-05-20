@@ -14,7 +14,7 @@ namespace bf = boost::filesystem;
 namespace cpputils {
 
 optional<Data> Data::LoadFromFile(const bf::path &filepath) {
-  ifstream file(filepath.c_str(), ios::binary);
+  ifstream file(filepath.string().c_str(), ios::binary);
   if (!file.good()) {
     return boost::none;
   }

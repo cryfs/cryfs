@@ -12,7 +12,7 @@ int FuseUnlinkTest::UnlinkReturnError(const char *filename) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / filename;
-  int retval = ::unlink(realpath.c_str());
+  int retval = ::unlink(realpath.string().c_str());
   if (0 == retval) {
     return 0;
   } else {

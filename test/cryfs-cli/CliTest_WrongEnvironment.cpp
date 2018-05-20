@@ -51,14 +51,14 @@ public:
     }
 
     vector<const char*> args() {
-        vector<const char*> result = {basedir.c_str(), mountdir.c_str()};
+        vector<const char*> result = {basedir.string().c_str(), mountdir.string().c_str()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
-            result.push_back(configfile.path().c_str());
+            result.push_back(configfile.path().string().c_str());
         }
         if (GetParam().logIsNotStderr) {
             result.push_back("--logfile");
-            result.push_back(logfile.path().c_str());
+            result.push_back(logfile.path().string().c_str());
         }
         if (GetParam().runningInForeground) {
             result.push_back("-f");

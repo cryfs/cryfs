@@ -51,7 +51,7 @@ set<BlockId> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto blockId = BlockId::FromString(file->path().filename().c_str());
+            auto blockId = BlockId::FromString(file->path().filename().string().c_str());
             unaccountedBlocks.insert(blockId);
         }
     }
@@ -63,7 +63,7 @@ set<BlockId> _getBlockstoreUnaccountedBlocks(const CryConfig &config) {
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto blockId = BlockId::FromString(file->path().filename().c_str());
+            auto blockId = BlockId::FromString(file->path().filename().string().c_str());
             auto node = nodeStore->load(blockId);
             auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
             if (innerNode != none) {
@@ -89,7 +89,7 @@ set<BlockId> _getBlocksReferencedByDirEntries(const CryConfig &config) {
     for (auto file = directory_iterator("/home/heinzi/basedir"); file != directory_iterator(); ++file) {
         cout << "\r" << (++i) << "/" << numBlocks << flush;
         if (file->path().filename() != "cryfs.config") {
-            auto blockId = BlockId::FromString(file->path().filename().c_str());
+            auto blockId = BlockId::FromString(file->path().filename().string().c_str());
             try {
                 auto blob = fsBlobStore->load(blockId);
                 if (blob != none) {

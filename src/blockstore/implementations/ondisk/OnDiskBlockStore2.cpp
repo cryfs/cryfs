@@ -100,7 +100,7 @@ uint64_t OnDiskBlockStore2::numBlocks() const {
 
 uint64_t OnDiskBlockStore2::estimateNumFreeBytes() const {
   struct statvfs stat{};
-  int result = ::statvfs(_rootDir.c_str(), &stat);
+  int result = ::statvfs(_rootDir.string().c_str(), &stat);
   if (0 != result) {
     throw std::runtime_error("Error calling statvfs()");
   }
@@ -117,9 +117,9 @@ uint64_t OnDiskBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) c
 void OnDiskBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
   for (auto prefixDir = boost::filesystem::directory_iterator(_rootDir); prefixDir != boost::filesystem::directory_iterator(); ++prefixDir) {
     if (boost::filesystem::is_directory(prefixDir->path())) {
-      std::string blockIdPrefix = prefixDir->path().filename().native();
+      std::string blockIdPrefix = prefixDir->path().filename().string();
       for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
-        std::string blockIdPostfix = block->path().filename().native();
+        std::string blockIdPostfix = block->path().filename().string();
         callback(BlockId::FromString(blockIdPrefix + blockIdPostfix));
       }
     }

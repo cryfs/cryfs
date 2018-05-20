@@ -243,7 +243,7 @@ vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> 
   vector<char *> argv;
   argv.reserve(6 + fuseOptions.size()); // fuseOptions + executable name + mountdir + 2x fuse options (subtype, fsname), each taking 2 entries ("-o", "key=value").
   argv.push_back(_create_c_string(_fstype)); // The first argument (executable name) is the file system type
-  argv.push_back(_create_c_string(mountdir.native())); // The second argument is the mountdir
+  argv.push_back(_create_c_string(mountdir.string())); // The second argument is the mountdir
   for (const string &option : fuseOptions) {
     argv.push_back(_create_c_string(option));
   }
@@ -291,9 +291,9 @@ bool Fuse::running() const {
 void Fuse::stop() {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
 #ifdef __APPLE__
-  int ret = system(("umount " + _mountdir.native()).c_str());
+  int ret = system(("umount " + _mountdir.string()).c_str());
 #else
-  int ret = system(("fusermount -z -u " + _mountdir.native()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
+  int ret = system(("fusermount -z -u " + _mountdir.string()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
 #endif
   if (ret != 0) {
     LOG(ERR, "Could not unmount filesystem");
@@ -331,7 +331,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   // special case of a path of "/", I need to do a getattr on the
   // underlying base directory instead of doing the fgetattr().
   // TODO Check if necessary
-  if (path.native() == "/") {
+  if (path.string() == "/") {
     return getattr(path, stbuf);
   }
 
@@ -495,7 +495,7 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
   LOG(WARN, "NOT IMPLEMENTED: link({}, {})", from, to);
   //auto real_from = _impl->RootDir() / from;
   //auto real_to = _impl->RootDir() / to;
-  //int retstat = ::link(real_from.c_str(), real_to.c_str());
+  //int retstat = ::link(real_from.string().c_str(), real_to.string().c_str());
   //return errcode_map(retstat);
   return ENOSYS;
 }

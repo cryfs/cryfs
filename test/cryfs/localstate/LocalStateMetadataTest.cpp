@@ -31,7 +31,7 @@ TEST_F(LocalStateMetadataTest, myClientId_ValueIsRandomForNewClient) {
 
 #ifndef CRYFS_NO_COMPATIBILITY
 TEST_F(LocalStateMetadataTest, myClientId_TakesLegacyValueIfSpecified) {
-  ofstream file((stateDir.path() / "myClientId").native());
+  ofstream file((stateDir.path() / "myClientId").string());
   file << 12345u;
   file.close();
 

@@ -216,7 +216,7 @@ int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode, uid_t u
   PROFILE(_createAndOpenFileNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_createAndOpenFileNanosec_withoutLoading);
-  auto file = dir->createAndOpenFile(path.filename().native(), mode, uid, gid);
+  auto file = dir->createAndOpenFile(path.filename().string(), mode, uid, gid);
   return _open_files.open(std::move(file));
 }
 
@@ -224,7 +224,7 @@ void FilesystemImpl::mkdir(const bf::path &path, mode_t mode, uid_t uid, gid_t g
   PROFILE(_mkdirNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_mkdirNanosec_withoutLoading);
-  dir->createDir(path.filename().native(), mode, uid, gid);
+  dir->createDir(path.filename().string(), mode, uid, gid);
 }
 
 void FilesystemImpl::rmdir(const bf::path &path) {
@@ -285,12 +285,12 @@ void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, uid
   PROFILE(_createSymlinkNanosec);
   auto parent = LoadDir(from.parent_path());
   PROFILE(_createSymlinkNanosec_withoutLoading);
-  parent->createSymlink(from.filename().native(), to, uid, gid);
+  parent->createSymlink(from.filename().string(), to, uid, gid);
 }
 
 void FilesystemImpl::readSymlink(const bf::path &path, char *buf, size_t size) {
   PROFILE(_readSymlinkNanosec);
-  string target = LoadSymlink(path)->target().native();
+  string target = LoadSymlink(path)->target().string();
   PROFILE(_readSymlinkNanosec_withoutLoading);
   std::memcpy(buf, target.c_str(), std::min(target.size()+1, size));
   buf[size-1] = '\0';

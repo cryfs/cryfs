@@ -27,7 +27,7 @@ public:
   }
 
   void CreateFile(const bf::path &path) {
-    ofstream file(path.c_str());
+    ofstream file(path.string().c_str());
   }
 };
 

@@ -60,7 +60,7 @@ public:
 
   unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const string &filename) {
     auto real_path = fs->mountDir() / filename;
-    auto fd = make_unique_ref<OpenFileHandle>(real_path.c_str(), O_RDONLY);
+    auto fd = make_unique_ref<OpenFileHandle>(real_path.string().c_str(), O_RDONLY);
     EXPECT_GE(fd->fd(), 0) << "Opening file failed";
     return fd;
   }

@@ -21,7 +21,7 @@ public:
   bf::path filepath_sample;
 
   void CreateFile(const bf::path &path) {
-    ofstream file(path.c_str());
+    ofstream file(path.string().c_str());
   }
 };
 
@@ -33,20 +33,20 @@ TEST_F(TempFileTest, FileIsCreated) {
 
 TEST_F(TempFileTest, FileIsReadable) {
   TempFile file;
-  ifstream opened(file.path().c_str());
+  ifstream opened(file.path().string().c_str());
   EXPECT_TRUE(opened.good());
 }
 
 TEST_F(TempFileTest, FileIsCreatedEmpty) {
   TempFile file;
-  ifstream opened(file.path().c_str());
+  ifstream opened(file.path().string().c_str());
   opened.get();
   EXPECT_TRUE(opened.eof());
 }
 
 TEST_F(TempFileTest, FileIsWriteable) {
   TempFile file;
-  ofstream opened(file.path().c_str());
+  ofstream opened(file.path().string().c_str());
   EXPECT_TRUE(opened.good());
 }
 

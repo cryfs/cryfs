@@ -42,7 +42,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
 }
 
 optional<LocalStateMetadata> LocalStateMetadata::_load(const bf::path &metadataFilePath) {
-  ifstream file(metadataFilePath.native());
+  ifstream file(metadataFilePath.string());
   if (!file.good()) {
     // State file doesn't exist
     return none;
@@ -51,7 +51,7 @@ optional<LocalStateMetadata> LocalStateMetadata::_load(const bf::path &metadataF
 }
 
 void LocalStateMetadata::_save(const bf::path &metadataFilePath) const {
-  ofstream file(metadataFilePath.native(), std::ios::trunc);
+  ofstream file(metadataFilePath.string(), std::ios::trunc);
   _serialize(file);
 }
 
@@ -67,7 +67,7 @@ uint32_t _generateClientId() {
 #ifndef CRYFS_NO_COMPATIBILITY
 optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePath) {
   auto myClientIdFile = metadataFilePath.parent_path() / "myClientId";
-  ifstream file(myClientIdFile.native());
+  ifstream file(myClientIdFile.string());
   if (!file.good()) {
     return none;
   }

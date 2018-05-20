@@ -8,7 +8,7 @@ using std::string;
 namespace blockstore {
 
 FileDoesntExistException::FileDoesntExistException(const bf::path &filepath)
-: runtime_error(string("The file ")+filepath.c_str()+" doesn't exist") {
+: runtime_error(string("The file ")+filepath.string()+" doesn't exist") {
 }
 
 FileDoesntExistException::~FileDoesntExistException() {

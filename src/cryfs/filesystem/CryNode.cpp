@@ -92,10 +92,10 @@ void CryNode::rename(const bf::path &to) {
   };
   _updateParentModificationTimestamp();
   if (targetDir->blockId() == (*_parent)->blockId()) {
-    targetDir->RenameChild(oldEntry.blockId(), to.filename().native(), onOverwritten);
+    targetDir->RenameChild(oldEntry.blockId(), to.filename().string(), onOverwritten);
   } else {
     _updateTargetDirModificationTimestamp(*targetDir, std::move(targetDirParent));
-    targetDir->AddOrOverwriteChild(to.filename().native(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
+    targetDir->AddOrOverwriteChild(to.filename().string(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
                                    oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
     // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.

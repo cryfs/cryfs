@@ -39,14 +39,14 @@ public:
   DataTestWithSizeParam(): randomData(DataFixture::generate(GetParam())) {}
 
   static void StoreData(const Data &data, const bf::path &filepath) {
-    ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
+    ofstream file(filepath.string().c_str(), std::ios::binary | std::ios::trunc);
     file.write(static_cast<const char*>(data.data()), data.size());
   }
 
   static void EXPECT_STORED_FILE_DATA_CORRECT(const Data &data, const bf::path &filepath) {
     EXPECT_EQ(data.size(), bf::file_size(filepath));
 
-    ifstream file(filepath.c_str(), std::ios::binary);
+    ifstream file(filepath.string().c_str(), std::ios::binary);
     char *read_data = new char[data.size()];
     file.read(read_data, data.size());
 

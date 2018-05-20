@@ -62,17 +62,17 @@ public:
   }
 
   cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createDir(path.filename().string(), this->MODE_PUBLIC, 0, 0);
     return this->LoadDir(path);
   }
 
   cpputils::unique_ref<fspp::File> CreateFile(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().string(), this->MODE_PUBLIC, 0, 0);
     return this->LoadFile(path);
   }
 
   cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path, const boost::filesystem::path &target = "/my/symlink/target") {
-    this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), target, 0, 0);
+    this->LoadDir(path.parent_path())->createSymlink(path.filename().string(), target, 0, 0);
     return this->LoadSymlink(path);
   }
 

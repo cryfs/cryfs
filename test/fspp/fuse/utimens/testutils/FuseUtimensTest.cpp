@@ -16,7 +16,7 @@ int FuseUtimensTest::UtimensReturnError(const char *filename, timespec lastAcces
   struct timeval casted_times[2];
   TIMESPEC_TO_TIMEVAL(&casted_times[0], &lastAccessTime);
   TIMESPEC_TO_TIMEVAL(&casted_times[1], &lastModificationTime);
-  int retval = ::utimes(realpath.c_str(), casted_times);
+  int retval = ::utimes(realpath.string().c_str(), casted_times);
   if (0 == retval) {
     return 0;
   } else {

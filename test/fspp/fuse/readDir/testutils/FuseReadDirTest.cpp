@@ -43,7 +43,7 @@ DIR *FuseReadDirTest::openDir(TempTestFS *fs, const char *dirname) {
 
 DIR *FuseReadDirTest::openDirAllowError(TempTestFS *fs, const char *dirname) {
   auto realpath = fs->mountDir() / dirname;
-  return ::opendir(realpath.c_str());
+  return ::opendir(realpath.string().c_str());
 }
 
 void FuseReadDirTest::readDirEntries(DIR *dir, vector<string> *result) {

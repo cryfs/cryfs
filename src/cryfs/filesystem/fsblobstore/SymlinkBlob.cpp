@@ -21,7 +21,7 @@ SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
 unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const blockstore::BlockId &parent) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::SYMLINK, parent);
   FsBlobView symlinkBlobView(std::move(blob));
-  string targetStr = target.native();
+  string targetStr = target.string();
   symlinkBlobView.resize(targetStr.size());
   symlinkBlobView.write(targetStr.c_str(), 0, targetStr.size());
   return make_unique_ref<SymlinkBlob>(symlinkBlobView.releaseBaseBlob());
@@ -39,7 +39,7 @@ const bf::path &SymlinkBlob::target() const {
 }
 
 off_t SymlinkBlob::lstat_size() const {
-  return target().native().size();
+  return target().string().size();
 }
 
 }

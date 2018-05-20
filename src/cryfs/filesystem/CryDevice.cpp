@@ -171,7 +171,7 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   auto parent = std::move(parentWithGrandparent.blob);
   auto grandparent = std::move(parentWithGrandparent.parent);
 
-  auto optEntry = parent->GetChild(path.filename().native());
+  auto optEntry = parent->GetChild(path.filename().string());
   if (optEntry == boost::none) {
     return boost::none;
   }
@@ -213,7 +213,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
     }
 
-    auto childOpt = (*currentDir)->GetChild(component.c_str());
+    auto childOpt = (*currentDir)->GetChild(component.string());
     if (childOpt == boost::none) {
       throw FuseErrnoException(ENOENT); // Child entry in directory not found
     }

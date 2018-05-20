@@ -24,7 +24,7 @@ int FuseLstatTest::LstatPathReturnError(const std::string &path, struct stat *re
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::lstat(realpath.c_str(), result);
+  int retval = ::lstat(realpath.string().c_str(), result);
   if (retval == 0) {
     return 0;
   } else {

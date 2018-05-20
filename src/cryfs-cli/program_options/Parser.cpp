@@ -214,7 +214,7 @@ void Parser::_showHelp() {
        << "\tSets the directory cryfs uses to store local state. This local state\n"
        << "\tis used to recognize known file systems and run integrity checks,\n"
        << "\ti.e. check that they haven't been modified by an attacker.\n"
-       << "\tDefault value: " << Environment::defaultLocalStateDir().c_str() << "\n"
+       << "\tDefault value: " << Environment::defaultLocalStateDir().string() << "\n"
        << endl;
 }
 

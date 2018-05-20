@@ -20,7 +20,7 @@ class FuseFstatErrorTest: public FuseFstatTest, public WithParamInterface<int> {
 public:
   /*unique_ref<OpenFileHandle> CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
     auto real_path = fs->mountDir() / filename;
-    return make_unique_ref<OpenFileHandle>(real_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    return make_unique_ref<OpenFileHandle>(real_path.string().c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   }*/
 };
 INSTANTIATE_TEST_CASE_P(FuseFstatErrorTest, FuseFstatErrorTest, Values(EACCES, EBADF, EFAULT, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EOVERFLOW));

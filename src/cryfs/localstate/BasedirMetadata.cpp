@@ -23,7 +23,7 @@ namespace {
 ptree _load(const bf::path &metadataFilePath) {
   ptree result;
 
-  ifstream file(metadataFilePath.native());
+  ifstream file(metadataFilePath.string());
   if (file.good()) {
     read_json(file, result);
   }
@@ -32,12 +32,12 @@ ptree _load(const bf::path &metadataFilePath) {
 }
 
 void _save(const bf::path &metadataFilePath, const ptree& data) {
-  ofstream file(metadataFilePath.native(), std::ios::trunc);
+  ofstream file(metadataFilePath.string(), std::ios::trunc);
   write_json(file, data);
 }
 
 string jsonPathForBasedir(const bf::path &basedir) {
-  return bf::canonical(basedir).native() + ".filesystemId";
+  return bf::canonical(basedir).string() + ".filesystemId";
 }
 
 }

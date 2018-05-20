@@ -20,7 +20,7 @@ public:
 private:
   unique_ref<OpenFileHandle> CreateAndOpenFile(const TempTestFS *fs, const char *filename) {
     auto realpath = fs->mountDir() / filename;
-    auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_RDONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+    auto fd = make_unique_ref<OpenFileHandle>(realpath.string().c_str(), O_RDONLY | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
     EXPECT_GE(fd->fd(), 0) << "Creating file failed";
     return fd;
   }

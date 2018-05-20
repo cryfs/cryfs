@@ -22,7 +22,7 @@ int FuseFsyncTest::FsyncFileReturnError(const char *filename) {
 
 unique_ref<OpenFileHandle> FuseFsyncTest::OpenFile(const TempTestFS *fs, const char *filename) {
   auto realpath = fs->mountDir() / filename;
-  auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_RDWR);
+  auto fd = make_unique_ref<OpenFileHandle>(realpath.string().c_str(), O_RDWR);
   EXPECT_GE(fd->fd(), 0) << "Error opening file";
   return fd;
 }

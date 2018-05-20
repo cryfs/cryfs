@@ -24,7 +24,7 @@ public:
 };
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
-  vector<const char*> args {basedir.c_str(), mountdir.c_str(), "--cipher", "aes-256-gcm", "-f"};
+  vector<const char*> args {basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
   EXPECT_RUN_SUCCESS(args, mountdir);
   modifyFilesystemId();
@@ -36,7 +36,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
 }
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
-  vector<const char*> args {basedir.c_str(), mountdir.c_str(), "--cipher", "aes-256-gcm", "-f"};
+  vector<const char*> args {basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
   EXPECT_RUN_SUCCESS(args, mountdir);
   modifyFilesystemKey();

@@ -17,25 +17,25 @@
 
 #define MOCK_PATH_METHOD1(NAME, RETURNTYPE)                        \
   RETURNTYPE NAME(const boost::filesystem::path &path) override {  \
-    return NAME(path.c_str());                                     \
+    return NAME(path.string().c_str());                            \
   }                                                                \
   MOCK_METHOD1(NAME, RETURNTYPE(const char*))                      \
 
 #define MOCK_PATH_METHOD2(NAME, RETURNTYPE, PARAM1)                               \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 param1) override {  \
-    return NAME(path.c_str(), param1);                                            \
+    return NAME(path.string().c_str(), param1);                                   \
   }                                                                               \
   MOCK_METHOD2(NAME, RETURNTYPE(const char*, PARAM1))                             \
 
 #define MOCK_PATH_METHOD3(NAME, RETURNTYPE, PARAM1, PARAM2)                              \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 p1, PARAM2 p2) override {  \
-    return NAME(path.c_str(), p1, p2);                                                   \
+    return NAME(path.string().c_str(), p1, p2);                                          \
   }                                                                                      \
   MOCK_METHOD3(NAME, RETURNTYPE(const char*, PARAM1, PARAM2))                            \
 
 #define MOCK_PATH_METHOD4(NAME, RETURNTYPE, PARAM1, PARAM2, PARAM3)                                 \
   RETURNTYPE NAME(const boost::filesystem::path &path, PARAM1 p1, PARAM2 p2, PARAM3 p3) override {  \
-    return NAME(path.c_str(), p1, p2, p3);                                                          \
+    return NAME(path.string().c_str(), p1, p2, p3);                                                 \
   }                                                                                                 \
   MOCK_METHOD4(NAME, RETURNTYPE(const char*, PARAM1, PARAM2, PARAM3))                               \
 
@@ -61,20 +61,20 @@ public:
   MOCK_PATH_METHOD1(rmdir, void);
   MOCK_PATH_METHOD1(unlink, void);
   void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) override {
-    return rename(from.c_str(), to.c_str());
+    return rename(from.string().c_str(), to.string().c_str());
   }
   MOCK_METHOD2(rename, void(const char*, const char*));
   cpputils::unique_ref<std::vector<fspp::Dir::Entry>> readDir(const boost::filesystem::path &path) override {
-    return cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.c_str()))).value();
+    return cpputils::nullcheck(std::unique_ptr<std::vector<fspp::Dir::Entry>>(readDir(path.string().c_str()))).value();
   }
   MOCK_METHOD1(readDir, std::vector<fspp::Dir::Entry>*(const char*));
   void utimens(const boost::filesystem::path &path, timespec lastAccessTime, timespec lastModificationTime) override {
-    return utimens(path.c_str(), lastAccessTime, lastModificationTime);
+    return utimens(path.string().c_str(), lastAccessTime, lastModificationTime);
   }
   MOCK_METHOD3(utimens, void(const char*, timespec, timespec));
   MOCK_PATH_METHOD2(statfs, void, struct statvfs*);
   void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) override {
-    return createSymlink(to.c_str(), from.c_str(), uid, gid);
+    return createSymlink(to.string().c_str(), from.string().c_str(), uid, gid);
   }
   MOCK_PATH_METHOD2(chmod, void, mode_t);
   MOCK_PATH_METHOD3(chown, void, uid_t, gid_t);

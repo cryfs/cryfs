@@ -23,7 +23,7 @@ FuseWriteTest::WriteError FuseWriteTest::WriteFileReturnError(const char *filena
 
 unique_ref<OpenFileHandle> FuseWriteTest::OpenFile(const TempTestFS *fs, const char *filename) {
   auto realpath = fs->mountDir() / filename;
-  auto fd = make_unique_ref<OpenFileHandle>(realpath.c_str(), O_WRONLY);
+  auto fd = make_unique_ref<OpenFileHandle>(realpath.string().c_str(), O_WRONLY);
   EXPECT_GE(fd->fd(), 0) << "Error opening file";
   return fd;
 }

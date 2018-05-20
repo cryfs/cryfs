@@ -18,7 +18,7 @@ public:
 
     unique_ref<CryNode> CreateFile(const bf::path &path) {
         auto parentDir = device().LoadDir(path.parent_path()).value();
-        parentDir->createAndOpenFile(path.filename().native(), MODE_PUBLIC, 0, 0);
+        parentDir->createAndOpenFile(path.filename().string(), MODE_PUBLIC, 0, 0);
         auto file = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(file).value();
     }
@@ -26,7 +26,7 @@ public:
     unique_ref<CryNode> CreateDir(const bf::path &path) {
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = dynamic_pointer_move<CryDir>(_parentDir).value();
-        parentDir->createDir(path.filename().native(), MODE_PUBLIC, 0, 0);
+        parentDir->createDir(path.filename().string(), MODE_PUBLIC, 0, 0);
         auto createdDir = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(createdDir).value();
     }
@@ -34,7 +34,7 @@ public:
     unique_ref<CryNode> CreateSymlink(const bf::path &path) {
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = dynamic_pointer_move<CryDir>(_parentDir).value();
-        parentDir->createSymlink(path.filename().native(), "/target", 0, 0);
+        parentDir->createSymlink(path.filename().string(), "/target", 0, 0);
         auto createdSymlink = device().Load(path).value();
         return dynamic_pointer_move<CryNode>(createdSymlink).value();
     }

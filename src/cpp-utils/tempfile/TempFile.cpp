@@ -11,7 +11,7 @@ namespace cpputils {
 TempFile::TempFile(const bf::path &path, bool create)
   : _path(path) {
   if (create) {
-    ofstream file(_path.c_str());
+    ofstream file(_path.string().c_str());
     if (!file.good()) {
       throw std::runtime_error("Could not create tempfile");
     }

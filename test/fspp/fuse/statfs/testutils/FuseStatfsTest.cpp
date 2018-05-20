@@ -24,7 +24,7 @@ int FuseStatfsTest::StatfsReturnError(const std::string &path, struct ::statvfs 
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::statvfs(realpath.c_str(), result);
+  int retval = ::statvfs(realpath.string().c_str(), result);
   if (retval == 0) {
     return 0;
   } else {

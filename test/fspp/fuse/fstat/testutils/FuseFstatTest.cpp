@@ -20,7 +20,7 @@ int FuseFstatTest::CreateFileReturnError(const TempTestFS *fs, const std::string
 
 unique_ref<OpenFileHandle> FuseFstatTest::CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
   auto real_path = fs->mountDir() / filename;
-  auto fd = make_unique_ref<OpenFileHandle>(real_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+  auto fd = make_unique_ref<OpenFileHandle>(real_path.string().c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   return fd;
 }
 

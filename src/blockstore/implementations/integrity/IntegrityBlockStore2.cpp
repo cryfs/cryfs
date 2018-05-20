@@ -90,7 +90,7 @@ void IntegrityBlockStore2::_checkNoPastIntegrityViolations() const {
                              "There was an integrity violation detected. Preventing any further access to the file system. " +
                              "If you want to reset the integrity data (i.e. accept changes made by a potential attacker), " +
                              "please unmount the file system and delete the following file before re-mounting it: " +
-                             _knownBlockVersions.path().native());
+                             _knownBlockVersions.path().string());
   }
 }
 

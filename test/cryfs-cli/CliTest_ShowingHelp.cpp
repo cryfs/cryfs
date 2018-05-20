@@ -9,7 +9,7 @@ TEST_F(CliTest_ShowingHelp, HelpLongOption) {
 }
 
 TEST_F(CliTest_ShowingHelp, HelpLongOptionTogetherWithOtherOptions) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str(), mountdir.c_str(), "--help"}, "", ErrorCode::Success);
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.string().c_str(), mountdir.string().c_str(), "--help"}, "", ErrorCode::Success);
 }
 
 TEST_F(CliTest_ShowingHelp, HelpShortOption) {
@@ -17,7 +17,7 @@ TEST_F(CliTest_ShowingHelp, HelpShortOption) {
 }
 
 TEST_F(CliTest_ShowingHelp, HelpShortOptionTogetherWithOtherOptions) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str(), mountdir.c_str(), "-h"}, "", ErrorCode::Success);
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.string().c_str(), mountdir.string().c_str(), "-h"}, "", ErrorCode::Success);
 }
 
 TEST_F(CliTest_ShowingHelp, MissingAllOptions) {
@@ -25,5 +25,5 @@ TEST_F(CliTest_ShowingHelp, MissingAllOptions) {
 }
 
 TEST_F(CliTest_ShowingHelp, MissingDir) {
-    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.c_str()}, "Please specify a mount directory", ErrorCode::InvalidArguments);
+    EXPECT_EXIT_WITH_HELP_MESSAGE({basedir.string().c_str()}, "Please specify a mount directory", ErrorCode::InvalidArguments);
 }

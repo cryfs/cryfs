@@ -72,15 +72,15 @@ TEST_F(EnvironmentTest, LocalStateDir_NotSet) {
 
 TEST_F(EnvironmentTest, LocalStateDir_Set) {
     WithEnv env("CRYFS_LOCAL_STATE_DIR", "/my/local/state/dir");
-    EXPECT_EQ("/my/local/state/dir", Environment::localStateDir().native());
+    EXPECT_EQ("/my/local/state/dir", Environment::localStateDir().string());
 }
 
 TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithDot) {
     WithEnv env("CRYFS_LOCAL_STATE_DIR", "./dir");
-    EXPECT_EQ((bf::current_path() / "./dir").native(), Environment::localStateDir().native());
+    EXPECT_EQ((bf::current_path() / "./dir").string(), Environment::localStateDir().string());
 }
 
 TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithoutDot) {
     WithEnv env("CRYFS_LOCAL_STATE_DIR", "dir");
-    EXPECT_EQ((bf::current_path() / "dir").native(), Environment::localStateDir().native());
+    EXPECT_EQ((bf::current_path() / "dir").string(), Environment::localStateDir().string());
 }
