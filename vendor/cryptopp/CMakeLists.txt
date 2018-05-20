@@ -5,13 +5,21 @@ add_library(cryptopp dummy.cpp)
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(NOT DISABLE_OPENMP)
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS})
-        target_link_libraries(cryptopp PRIVATE ${OpenMP_CXX_FLAGS})
-    else(OPENMP_FOUND)
-        message(FATAL_ERROR "Did not find OpenMP. Build with -DDISABLE_OPENMP=ON if you want to allow this and are willing to take the performance hit.")
-    endif(OPENMP_FOUND)
+    if(APPLE AND (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0"
+            AND ßCMAKE_VERSION VERSION_LESS "3.8.0")
+        # Workaround because older cmake on apple doesn't support FindOpenMP
+        set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fopenmp")
+        target_link_libraries(cryptopp PRIVATE -lomp)
+    else()
+        find_package(OpenMP)
+        if(OPENMP_FOUND)
+            set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS})
+            target_link_libraries(cryptopp PRIVATE ${OpenMP_CXX_FLAGS})
+        else(OPENMP_FOUND)
+            message(FATAL_ERROR "Did not find OpenMP. Build with -DDISABLE_OPENMP=ON if you want to allow this and are willing to take the performance hit.")
+        endif(OPENMP_FOUND)
+    endif()
 endif(NOT DISABLE_OPENMP)
 
 

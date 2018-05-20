@@ -35,6 +35,7 @@ Requirements
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
+  - OpenMP
 
 You can use the following commands to install these requirements
 
@@ -45,7 +46,7 @@ You can use the following commands to install these requirements
         sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
 
         # Macintosh
-        brew install cmake boost openssl
+        brew install cmake boost openssl libomp
 
 Build & Install
 ---------------
