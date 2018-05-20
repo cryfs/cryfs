@@ -15,6 +15,7 @@ set(SOURCES
     pointer/unique_ref_include_test.cpp
     process/daemonize_include_test.cpp
     process/subprocess_include_test.cpp
+    process/SubprocessTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp

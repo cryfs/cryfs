@@ -17,31 +17,8 @@ using std::string;
 namespace cpputils {
     //TODO Exception safety
 
-    string Subprocess::call(const string &command) {
-        FILE *subprocessOutput = _call(command);
-
-        string result;
-        char buffer[1024];
-        while(fgets(buffer, sizeof(buffer), subprocessOutput) != nullptr) {
-            result += buffer;
-        }
-
-        auto returncode = pclose(subprocessOutput);
-        if(WEXITSTATUS(returncode) != 0) {
-            throw std::runtime_error("Subprocess \""+command+"\" exited with code "+std::to_string(WEXITSTATUS(returncode)));
-        }
-
-        return result;
-    }
-
-    int Subprocess::callAndGetReturnCode(const string &command) {
-        FILE *subprocess = _call(command);
-
-        auto returncode = pclose(subprocess);
-        return WEXITSTATUS(returncode);
-    }
-
-    FILE *Subprocess::_call(const string &command) {
+    namespace {
+    FILE *_call(const string &command) {
         FILE *subprocess = popen(command.c_str(), openmode);
         if (!subprocess)
         {
@@ -49,4 +26,43 @@ namespace cpputils {
         }
         return subprocess;
     }
+
+    string _getOutput(FILE *subprocess) {
+        string output;
+        char buffer[1024];
+        while(fgets(buffer, sizeof(buffer), subprocess) != nullptr) {
+            output += buffer;
+        }
+        return output;
+    }
+
+    int _close(FILE *subprocess) {
+        auto returncode = pclose(subprocess);
+        if(returncode == -1) {
+            throw std::runtime_error("Error calling pclose. Errno: " + std::to_string(errno));
+        }
+        if (WIFEXITED(returncode) == 0) {
+            // WEXITSTATUS is only valud if WIFEXITED is 0.
+            throw std::runtime_error("WIFEXITED returned " + std::to_string(WIFEXITED(returncode)));
+        }
+        return WEXITSTATUS(returncode);
+    }
+    }
+
+    SubprocessResult Subprocess::call(const string &command) {
+        FILE *subprocess = _call(command);
+        string output = _getOutput(subprocess);
+        int exitcode = _close(subprocess);
+
+        return SubprocessResult {output, exitcode};
+    }
+
+    SubprocessResult Subprocess::check_call(const string &command) {
+        auto result = call(command);
+        if(result.exitcode != 0) {
+            throw SubprocessError("Subprocess \""+command+"\" exited with code "+std::to_string(result.exitcode));
+        }
+        return result;
+    }
+
 }
