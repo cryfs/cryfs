@@ -19,7 +19,7 @@ fi
 
 if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
   brew cask install osxfuse
-  brew install cryptopp
+  brew install libomp
 fi
 
 # By default, travis only fetches the newest 50 commits. We need more in case we're further from the last version tag, so the build doesn't fail because it can't generate the version number.
