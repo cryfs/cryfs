@@ -1,6 +1,7 @@
 #include "subprocess.h"
 #include <cstdio>
 #include <stdexcept>
+#include <cerrno>
 
 #if !defined(_MSC_VER)
 #include <sys/wait.h>
