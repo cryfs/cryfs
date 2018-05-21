@@ -21,7 +21,7 @@ namespace blockstore {
             KnownBlockVersions(KnownBlockVersions &&rhs); // NOLINT (intentionally not noexcept)
             ~KnownBlockVersions();
 
-            __attribute__((warn_unused_result))
+			WARN_UNUSED_RESULT
             bool checkAndUpdateVersion(uint32_t clientId, const BlockId &blockId, uint64_t version);
 
             uint64_t incrementVersion(const BlockId &blockId);

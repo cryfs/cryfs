@@ -19,12 +19,12 @@ public:
     return BlockId::Random();
   }
 
-  __attribute__((warn_unused_result))
+  WARN_UNUSED_RESULT
   virtual bool tryCreate(const BlockId &blockId, const cpputils::Data &data) = 0;
-  __attribute__((warn_unused_result))
+  WARN_UNUSED_RESULT
   virtual bool remove(const BlockId &blockId) = 0;
 
-  __attribute__((warn_unused_result))
+  WARN_UNUSED_RESULT
   virtual boost::optional<cpputils::Data> load(const BlockId &blockId) const = 0;
 
   // Store the block with the given blockId. If it doesn't exist, it is created.
