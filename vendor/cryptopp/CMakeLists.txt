@@ -20,6 +20,8 @@ if(NOT DISABLE_OPENMP)
             message(FATAL_ERROR "Did not find OpenMP. Build with -DDISABLE_OPENMP=ON if you want to allow this and are willing to take the performance hit.")
         endif(OPENMP_FOUND)
     endif()
+else(NOT DISABLE_OPENMP)
+    message(WARNING "OpenMP is disabled. This can cause degraded performance.")
 endif(NOT DISABLE_OPENMP)
 
 
