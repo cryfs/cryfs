@@ -6,7 +6,7 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
-#include <future>
+#include <boost/thread/future.hpp>
 #include <cassert>
 #include <type_traits>
 #include <cpp-utils/macros.h>
@@ -92,13 +92,13 @@ private:
   cpputils::unique_ref<ParallelAccessBaseStore<Resource, Key>> _baseStore;
 
   std::unordered_map<Key, OpenResource> _openResources;
-  std::map<Key, std::promise<cpputils::unique_ref<Resource>>> _resourcesToRemove;
+  std::map<Key, boost::promise<cpputils::unique_ref<Resource>>> _resourcesToRemove;
 
   template<class ActualResourceRef>
   cpputils::unique_ref<ActualResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
 
-  std::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key);
-  cpputils::unique_ref<Resource> _waitForResourceToRemove(const Key &key, std::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
+  boost::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key);
+  cpputils::unique_ref<Resource> _waitForResourceToRemove(const Key &key, boost::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
 
   void release(const Key &key);
   friend class CachedResource;
@@ -208,9 +208,9 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 }
 
 template<class Resource, class ResourceRef, class Key>
-std::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
+boost::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
     std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
-    auto insertResult = _resourcesToRemove.emplace(key, std::promise<cpputils::unique_ref<Resource>>());
+    auto insertResult = _resourcesToRemove.emplace(key, boost::promise<cpputils::unique_ref<Resource>>());
     ASSERT(true == insertResult.second, "Inserting failed");
     return insertResult.first->second.get_future();
 };
