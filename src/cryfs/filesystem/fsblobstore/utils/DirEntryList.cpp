@@ -3,7 +3,7 @@
 #include <cpp-utils/system/time.h>
 
 //TODO Get rid of that in favor of better error handling
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 
 using cpputils::Data;
 using std::string;

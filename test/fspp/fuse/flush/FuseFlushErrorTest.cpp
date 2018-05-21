@@ -1,6 +1,6 @@
 #include "testutils/FuseFlushTest.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::WithParamInterface;
 using ::testing::StrEq;

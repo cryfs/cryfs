@@ -2,7 +2,7 @@
 
 #include "CryDevice.h"
 #include "CryOpenFile.h"
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 
 
 //TODO Get rid of this in favor of exception hierarchy

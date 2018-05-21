@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 #include "CryDevice.h"
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 
 
 using std::shared_ptr;

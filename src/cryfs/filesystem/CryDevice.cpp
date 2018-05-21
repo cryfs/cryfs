@@ -7,7 +7,7 @@
 #include "CryFile.h"
 #include "CrySymlink.h"
 
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>

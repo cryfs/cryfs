@@ -2,7 +2,7 @@
 #include <cassert>
 
 //TODO Remove and replace with exception hierarchy
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 
 #include <blobstore/implementations/onblocks/utils/Math.h>
 #include <cpp-utils/data/Data.h>

@@ -6,7 +6,7 @@
 #include <gmock/gmock.h>
 
 #include "fspp/fuse/Filesystem.h"
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 #include "fspp/fuse/Fuse.h"
 #include "fspp/fs_interface/Dir.h"
 

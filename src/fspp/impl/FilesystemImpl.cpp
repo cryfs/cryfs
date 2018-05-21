@@ -5,7 +5,7 @@
 #include "../fs_interface/Dir.h"
 #include "../fs_interface/Symlink.h"
 
-#include "../fuse/FuseErrnoException.h"
+#include "../fs_interface/FuseErrnoException.h"
 #include "../fs_interface/File.h"
 #include "../fs_interface/Node.h"
 

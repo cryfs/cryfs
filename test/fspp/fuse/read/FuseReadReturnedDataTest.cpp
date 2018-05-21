@@ -4,7 +4,7 @@
 #include "testutils/FuseReadTest.h"
 #include <cpp-utils/pointer/unique_ref.h>
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 #include <tuple>
 #include <cstdlib>

@@ -5,7 +5,7 @@
 #include "CryDevice.h"
 #include "CryDir.h"
 #include "CryFile.h"
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/time.h>
 #include <cpp-utils/system/stat.h>

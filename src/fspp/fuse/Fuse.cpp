@@ -2,7 +2,7 @@
 #include <memory>
 #include <cassert>
 
-#include "FuseErrnoException.h"
+#include "../fs_interface/FuseErrnoException.h"
 #include "Filesystem.h"
 #include <iostream>
 #include <cpp-utils/assert/assert.h>

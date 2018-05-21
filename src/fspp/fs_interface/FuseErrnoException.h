@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <cpp-utils/assert/assert.h>
 
+// TODO Need a portable way to report errors
+
 namespace fspp {
 namespace fuse{
 

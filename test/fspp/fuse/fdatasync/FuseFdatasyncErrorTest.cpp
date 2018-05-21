@@ -1,6 +1,6 @@
 #include "testutils/FuseFdatasyncTest.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::Throw;
 using ::testing::WithParamInterface;

@@ -2,7 +2,7 @@
 #ifndef MESSMER_FSPP_FSTEST_FSPPDEVICETEST_H_
 #define MESSMER_FSPP_FSTEST_FSPPDEVICETEST_H_
 
-#include <fspp/fuse/FuseErrnoException.h>
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 template<class ConcreteFileSystemTestFixture>
 class FsppDeviceTest: public FileSystemTest<ConcreteFileSystemTestFixture> {

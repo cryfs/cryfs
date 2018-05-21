@@ -3,7 +3,7 @@
 #define MESSMER_FSPP_FSTEST_FSPPNODETEST_STAT_H_
 
 #include "testutils/FsppNodeTest.h"
-#include "../fuse/FuseErrnoException.h"
+#include "../fs_interface/FuseErrnoException.h"
 
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Stat: public FsppNodeTest<ConcreteFileSystemTestFixture> {

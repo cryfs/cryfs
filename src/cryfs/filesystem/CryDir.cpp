@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"

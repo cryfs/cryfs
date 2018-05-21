@@ -1,6 +1,6 @@
 #include "CrySymlink.h"
 
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CrySymlink.h"
 #include "parallelaccessfsblobstore/SymlinkBlobRef.h"

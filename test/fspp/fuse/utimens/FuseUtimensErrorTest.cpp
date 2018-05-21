@@ -1,5 +1,5 @@
 #include "testutils/FuseUtimensTest.h"
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::_;
 using ::testing::StrEq;
