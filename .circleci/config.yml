@@ -150,10 +150,17 @@ references:
         ccache --max-size=512M
         ccache --show-stats
 
+        # Disable OpenMP if it is clang, because Ubuntu 14.04 doesn't have the libomp-dev package needed to support OpenMP for clang.
+        if [[ ${APT_COMPILER_PACKAGE} == clang* ]]; then
+          OPENMP_PARAMS="-DDISABLE_OPENMP=ON"
+        else
+          OPENMP_PARAMS=""
+        fi
+
         # Build
         mkdir cmake
         cd cmake
-        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS}
         make -j$NUMCORES
 
         ccache --show-stats

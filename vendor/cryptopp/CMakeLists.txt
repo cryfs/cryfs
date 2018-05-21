@@ -5,13 +5,14 @@ add_library(cryptopp dummy.cpp)
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(NOT DISABLE_OPENMP)
-    if(APPLE AND (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0"
-            AND CMAKE_VERSION VERSION_LESS "3.12.0")
+    if((APPLE AND ((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
+        AND ((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0") AND (CMAKE_VERSION VERSION_LESS "3.12.0")))
         # Workaround because older cmake on apple doesn't support FindOpenMP
+        message(STATUS "Applying workaround for OSX OpenMP")
         set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fopenmp")
         target_link_libraries(cryptopp PRIVATE -lomp)
     else()
+        message(STATUS "Using OpenMP")
         find_package(OpenMP)
         if(OPENMP_FOUND)
             set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS})
