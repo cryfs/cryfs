@@ -7,7 +7,7 @@ target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 if(NOT DISABLE_OPENMP)
     if(APPLE AND (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0"
-            AND ßCMAKE_VERSION VERSION_LESS "3.8.0")
+            AND CMAKE_VERSION VERSION_LESS "3.12.0")
         # Workaround because older cmake on apple doesn't support FindOpenMP
         set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fopenmp")
         target_link_libraries(cryptopp PRIVATE -lomp)
