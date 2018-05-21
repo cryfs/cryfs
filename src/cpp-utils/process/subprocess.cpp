@@ -18,6 +18,7 @@ constexpr const char* openmode = "re";
 #define popen _popen
 #define pclose _pclose
 #define WEXITSTATUS(a) a
+#define WIFEXITED(a) true
 constexpr const char* openmode = "r";
 
 #endif
@@ -51,8 +52,8 @@ namespace cpputils {
         if(returncode == -1) {
             throw std::runtime_error("Error calling pclose. Errno: " + std::to_string(errno));
         }
-        if (WIFEXITED(returncode) == 0) {
-            // WEXITSTATUS is only valud if WIFEXITED is 0.
+        if (!WIFEXITED(returncode)) {
+            // WEXITSTATUS is only valid if WIFEXITED is 0.
             throw std::runtime_error("WIFEXITED returned " + std::to_string(WIFEXITED(returncode)));
         }
         return WEXITSTATUS(returncode);
