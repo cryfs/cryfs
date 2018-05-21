@@ -7,7 +7,6 @@
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/logging/logging.h>
-#include <sys/statvfs.h>
 
 namespace blockstore {
 namespace ondisk {

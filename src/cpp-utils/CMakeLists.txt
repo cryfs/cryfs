@@ -46,6 +46,7 @@ set(SOURCES
         system/memory_nonwindows.cpp
         system/memory_windows.cpp
         system/time.cpp
+		system/diskspace.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

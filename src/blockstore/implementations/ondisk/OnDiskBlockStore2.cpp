@@ -1,5 +1,6 @@
 #include "OnDiskBlockStore2.h"
 #include <boost/filesystem.hpp>
+#include <cpp-utils/system/diskspace.h>
 
 using std::string;
 using boost::optional;
@@ -99,12 +100,7 @@ uint64_t OnDiskBlockStore2::numBlocks() const {
 }
 
 uint64_t OnDiskBlockStore2::estimateNumFreeBytes() const {
-  struct statvfs stat{};
-  int result = ::statvfs(_rootDir.string().c_str(), &stat);
-  if (0 != result) {
-    throw std::runtime_error("Error calling statvfs()");
-  }
-  return stat.f_frsize*stat.f_bavail;
+	return cpputils::free_disk_space_in_bytes(_rootDir);
 }
 
 uint64_t OnDiskBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
