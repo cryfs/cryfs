@@ -50,6 +50,7 @@ set(SOURCES
     system/TimeTest.cpp
     system/MemoryTest.cpp
     system/HomedirTest.cpp
+    value_type/ValueTypeTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
