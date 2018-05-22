@@ -1,11 +1,18 @@
 #pragma once
-#ifndef MESSMER_CPPUTILS_VALUETYPE_H_
-#define MESSMER_CPPUTILS_VALUETYPE_H_
+#ifndef MESSMER_CPPUTILS_VALUETYPE_VALUETYPE_H_
+#define MESSMER_CPPUTILS_VALUETYPE_VALUETYPE_H_
 
 #include <functional>
 #include <cpp-utils/assert/assert.h>
 
 namespace cpputils {
+
+namespace details {
+// The Helper type is to allow the enable_if to depend on another type, say a local template type of the method.
+// If enable_if depended only on class template parameters, it wouldn't work because they're already deduced when deducing the method.
+template<class Helper, bool Condition, class Type>
+using enable_if_t = std::enable_if_t<std::is_void<Helper>::value && Condition, Type>;
+}
 
 // TODO Test
 template<class Config>
@@ -13,17 +20,40 @@ class ValueType final {
 public:
     using underlying_type = typename Config::underlying_type;
 
-    constexpr explicit ValueType(underlying_type value);
+    template<class U = void>
+    constexpr explicit ValueType(details::enable_if_t<U, Config::explicit_value_constructor_enabled(), underlying_type> value)
+    : _value(value) {}
 
-    template<class U = Config>
-    constexpr std::enable_if_t<sizeof(U) && Config::enable_value_access(), underlying_type> value() const {
+    template<class U = void>
+    constexpr details::enable_if_t<U, Config::value_access_enabled(), underlying_type> value() const {
         return _value;
-    };
+    }
 
-    constexpr ValueType& operator++();
-    constexpr ValueType operator++(int);
-    constexpr ValueType& operator--();
-    constexpr ValueType operator--(int);
+    template<class U = void>
+    constexpr details::enable_if_t<U, Config::increment_and_decrement_enabled(), ValueType&> operator++() {
+        ++_value;
+        return *this;
+    }
+
+    template<class U = void>
+    constexpr details::enable_if_t<U, Config::increment_and_decrement_enabled(), ValueType> operator++(int) {
+        ValueType<Config> tmp = *this;
+        ++(*this);
+        return tmp;
+    }
+
+    template<class U = void>
+    constexpr details::enable_if_t<U, Config::increment_and_decrement_enabled(), ValueType&> operator--() {
+        --_value;
+        return *this;
+    }
+
+    template<class U = void>
+    constexpr details::enable_if_t<U, Config::increment_and_decrement_enabled(), ValueType> operator--(int) {
+        ValueType<Config> tmp = *this;
+        --(*this);
+        return tmp;
+    }
 
     constexpr ValueType& operator+=(ValueType rhs);
     constexpr ValueType& operator-=(ValueType rhs);
@@ -65,35 +95,6 @@ inline constexpr ValueType<Config> operator "" _bytes(unsigned long long int val
     return ValueType<Config>(value);
 }*/
 
-template<class Config>
-inline constexpr ValueType<Config>::ValueType(typename Config::underlying_type value)
-        : _value(value) {}
-
-template<class Config>
-inline constexpr ValueType<Config>& ValueType<Config>::operator++() {
-    ++_value;
-    return *this;
-}
-
-template<class Config>
-inline constexpr ValueType<Config> ValueType<Config>::operator++(int) {
-    ValueType<Config> tmp = *this;
-    ++(*this);
-    return tmp;
-}
-
-template<class Config>
-inline constexpr ValueType<Config>& ValueType<Config>::operator--() {
-    --_value;
-    return *this;
-}
-
-template<class Config>
-inline constexpr ValueType<Config> ValueType<Config>::operator--(int) {
-    ValueType<Config> tmp = *this;
-    --(*this);
-    return tmp;
-}
 
 template<class Config>
 inline constexpr ValueType<Config>& ValueType<Config>::operator+=(ValueType<Config> rhs) {

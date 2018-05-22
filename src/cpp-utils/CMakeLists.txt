@@ -48,6 +48,7 @@ set(SOURCES
         system/time.cpp
 		system/diskspace.cpp
         value_type/ValueType.cpp
+        value_type/ConfigBuilder.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
