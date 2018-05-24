@@ -1,5 +1,4 @@
 #include <cpp-utils/value_type/ValueType.h>
-#include <cpp-utils/value_type/ConfigBuilder.h>
 #include <gtest/gtest.h>
 #include <utility>
 #include <unordered_set>
@@ -28,6 +27,10 @@ DEFINE_HASH_FOR_VALUE_TYPE(MyIdValueType);
 DEFINE_HASH_FOR_VALUE_TYPE(MyOrderedIdValueType);
 DEFINE_HASH_FOR_VALUE_TYPE(MyQuantityValueType);
 namespace {
+
+/**
+ * Tests for IdValueType
+ */
 
 template<class Type>
 struct IdValueTypeTest_constexpr_test {
@@ -121,11 +124,27 @@ TYPED_TEST(IdValueTypeTest, UnorderedSet) {
 
 
 
-
+/**
+ * Tests for OrderedIdValueType
+ */
 
 template<class Type>
 struct OrderedIdValueTypeTest_constexpr_test {
-   // TODO
+    static_assert(Type(3) < Type(4), "");
+    static_assert(!(Type(4) < Type(3)), "");
+    static_assert(!(Type(3) < Type(3)), "");
+
+    static_assert(Type(4) > Type(3), "");
+    static_assert(!(Type(3) > Type(4)), "");
+    static_assert(!(Type(3) > Type(3)), "");
+
+    static_assert(Type(3) <= Type(4), "");
+    static_assert(!(Type(4) <= Type(3)), "");
+    static_assert(Type(3) <= Type(3), "");
+
+    static_assert(Type(4) >= Type(3), "");
+    static_assert(!(Type(3) >= Type(4)), "");
+    static_assert(Type(3) >= Type(3), "");
 
     static constexpr bool success = true;
 };
@@ -136,7 +155,65 @@ template<class Type> class OrderedIdValueTypeTest : public testing::Test {};
 using OrderedIdValueTypeTest_types = testing::Types<MyOrderedIdValueType, MyQuantityValueType>;
 TYPED_TEST_CASE(OrderedIdValueTypeTest, OrderedIdValueTypeTest_types);
 
-// TODO Test cases for OrderedIdValueTypeTest
+TYPED_TEST(OrderedIdValueTypeTest, LessThan) {
+    TypeParam a(3);
+    TypeParam b(3);
+    TypeParam c(4);
+    EXPECT_FALSE(a < a);
+    EXPECT_FALSE(a < b);
+    EXPECT_TRUE(a < c);
+    EXPECT_FALSE(b < a);
+    EXPECT_FALSE(b < b);
+    EXPECT_TRUE(b < c);
+    EXPECT_FALSE(c < a);
+    EXPECT_FALSE(c < b);
+    EXPECT_FALSE(c < c);
+}
+
+TYPED_TEST(OrderedIdValueTypeTest, GreaterThan) {
+    TypeParam a(3);
+    TypeParam b(3);
+    TypeParam c(4);
+    EXPECT_FALSE(a > a);
+    EXPECT_FALSE(a > b);
+    EXPECT_FALSE(a > c);
+    EXPECT_FALSE(b > a);
+    EXPECT_FALSE(b > b);
+    EXPECT_FALSE(b > c);
+    EXPECT_TRUE(c > a);
+    EXPECT_TRUE(c > b);
+    EXPECT_FALSE(c > c);
+}
+
+TYPED_TEST(OrderedIdValueTypeTest, LessOrEqualThan) {
+    TypeParam a(3);
+    TypeParam b(3);
+    TypeParam c(4);
+    EXPECT_TRUE(a <= a);
+    EXPECT_TRUE(a <= b);
+    EXPECT_TRUE(a <= c);
+    EXPECT_TRUE(b <= a);
+    EXPECT_TRUE(b <= b);
+    EXPECT_TRUE(b <= c);
+    EXPECT_FALSE(c <= a);
+    EXPECT_FALSE(c <= b);
+    EXPECT_TRUE(c <= c);
+}
+
+TYPED_TEST(OrderedIdValueTypeTest, GreaterOrEqualThan) {
+    TypeParam a(3);
+    TypeParam b(3);
+    TypeParam c(4);
+    EXPECT_TRUE(a >= a);
+    EXPECT_TRUE(a >= b);
+    EXPECT_FALSE(a >= c);
+    EXPECT_TRUE(b >= a);
+    EXPECT_TRUE(b >= b);
+    EXPECT_FALSE(b >= c);
+    EXPECT_TRUE(c >= a);
+    EXPECT_TRUE(c >= b);
+    EXPECT_TRUE(c >= c);
+}
 
 TYPED_TEST(OrderedIdValueTypeTest, Set) {
     std::set<TypeParam> set;
@@ -151,7 +228,9 @@ TYPED_TEST(OrderedIdValueTypeTest, Set) {
 
 
 
-
+/**
+ * Tests for QuantityValueType
+ */
 
 template<class Type>
 struct QuantityValueTypeTest_constexpr_test {
