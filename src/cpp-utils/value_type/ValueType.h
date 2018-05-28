@@ -54,41 +54,48 @@ public:
     using underlying_type = UnderlyingType;
     using concrete_type = ConcreteType;
 
-    constexpr IdValueType(IdValueType&&) = default;
-    constexpr IdValueType(const IdValueType&) = default;
-    constexpr IdValueType& operator=(IdValueType&&) = default;
-    constexpr IdValueType& operator=(const IdValueType&) = default;
+    constexpr IdValueType(IdValueType&& rhs) noexcept(noexcept(UnderlyingType(std::move(rhs.value_)))) = default;
+    constexpr IdValueType(const IdValueType& rhs) noexcept(noexcept(UnderlyingType(rhs.value_))) = default;
+    constexpr IdValueType& operator=(IdValueType&& rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() = std::move(rhs.value_))) {
+        value_ = std::move(rhs.value_);
+        return *this;
+    }
+    constexpr IdValueType& operator=(const IdValueType& rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() = rhs.value_)) {
+        value_ = rhs.value_;
+        return *this;
+    }
 
 protected:
-    constexpr explicit IdValueType(underlying_type value) : value_(value) {
+    constexpr explicit IdValueType(underlying_type value) noexcept(noexcept(UnderlyingType(value)))
+    : value_(value) {
         static_assert(std::is_base_of<IdValueType<ConcreteType, UnderlyingType>, ConcreteType>::value,
                       "CRTP violated. First template parameter of this class must be the concrete class.");
     }
-    constexpr underlying_type& underlying_value() const {
+    constexpr underlying_type& underlying_value() const noexcept {
         return value_;
     }
 
     friend struct std::hash<ConcreteType>;
 
-    friend constexpr bool operator==(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator==(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<UnderlyingType>() == std::declval<UnderlyingType>())) {
         return lhs.value_ == rhs.value_;
     }
 
-    friend constexpr bool operator!=(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator!=(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(lhs == rhs)) {
         return !operator==(lhs, rhs);
     }
 
     underlying_type value_;
 };
 
-#define DEFINE_HASH_FOR_VALUE_TYPE(ClassName)                   \
-  namespace std {                                               \
-  template <>                                                   \
-  struct hash<ClassName> {                                      \
-    size_t operator()(ClassName x) const {                      \
-      return std::hash<ClassName::underlying_type>()(x.value_); \
-    }                                                           \
-  };                                                            \
+#define DEFINE_HASH_FOR_VALUE_TYPE(ClassName)                                                                      \
+  namespace std {                                                                                                  \
+  template <>                                                                                                      \
+  struct hash<ClassName> {                                                                                         \
+    size_t operator()(ClassName x) const noexcept(noexcept(std::hash<ClassName::underlying_type>()(x.value_))) {   \
+      return std::hash<ClassName::underlying_type>()(x.value_);                                                    \
+    }                                                                                                              \
+  };                                                                                                               \
   }
 
 
@@ -97,19 +104,19 @@ class OrderedIdValueType : public IdValueType<ConcreteType, UnderlyingType> {
 protected:
     using IdValueType<ConcreteType, UnderlyingType>::IdValueType;
 
-    friend constexpr bool operator<(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator<(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(lhs.value_ < rhs.value_)) {
         return lhs.value_ < rhs.value_;
     }
 
-    friend constexpr bool operator>(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator>(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(lhs.value_ > rhs.value_)) {
         return lhs.value_ > rhs.value_;
     }
 
-    friend constexpr bool operator>=(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator>=(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(lhs < rhs)) {
         return !operator<(lhs, rhs);
     }
 
-    friend constexpr bool operator<=(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr bool operator<=(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(lhs > rhs)) {
         return !operator>(lhs, rhs);
     }
 };
@@ -121,83 +128,83 @@ protected:
     using OrderedIdValueType<ConcreteType, UnderlyingType>::OrderedIdValueType;
 
 public:
-    constexpr ConcreteType& operator++() {
+    constexpr ConcreteType& operator++() noexcept(noexcept(++*std::declval<UnderlyingType*>())) {
         ++this->value_;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType operator++(int) {
-        ConcreteType tmp = *this;
+    constexpr ConcreteType operator++(int) noexcept(noexcept(++std::declval<ConcreteType>())) {
+        ConcreteType tmp = *static_cast<ConcreteType*>(this);
         ++(*this);
         return tmp;
     }
 
-    constexpr ConcreteType& operator--() {
+    constexpr ConcreteType& operator--() noexcept(noexcept(--*std::declval<UnderlyingType*>())) {
         --this->value_;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType operator--(int) {
-        ConcreteType tmp = *this;
+    constexpr ConcreteType operator--(int) noexcept(noexcept(--std::declval<ConcreteType>())) {
+        ConcreteType tmp = *static_cast<ConcreteType*>(this);
         --(*this);
         return tmp;
     }
 
-    constexpr ConcreteType& operator+=(ConcreteType rhs) {
+    constexpr ConcreteType& operator+=(ConcreteType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() += std::declval<UnderlyingType>())) {
         this->value_ += rhs.value_;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType& operator-=(ConcreteType rhs) {
+    constexpr ConcreteType& operator-=(ConcreteType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() -= std::declval<UnderlyingType>())) {
         this->value_ -= rhs.value_;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType& operator*=(UnderlyingType rhs) {
+    constexpr ConcreteType& operator*=(UnderlyingType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() *= std::declval<UnderlyingType>())) {
         this->value_ *= rhs;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType& operator/=(UnderlyingType rhs) {
+    constexpr ConcreteType& operator/=(UnderlyingType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() /= std::declval<UnderlyingType>())) {
         this->value_ /= rhs;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType& operator%=(UnderlyingType rhs) {
+    constexpr ConcreteType& operator%=(UnderlyingType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() %= std::declval<UnderlyingType>())) {
         this->value_ %= rhs;
-        return *this;
+        return *static_cast<ConcreteType*>(this);
     }
 
 private:
-    friend constexpr ConcreteType operator+(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr ConcreteType operator+(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() += std::declval<ConcreteType>())) {
         return lhs += rhs;
     }
 
-    friend constexpr ConcreteType operator-(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr ConcreteType operator-(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() -= std::declval<ConcreteType>())) {
         return lhs -= rhs;
     }
 
-    friend constexpr ConcreteType operator*(ConcreteType lhs, UnderlyingType rhs) {
+    friend constexpr ConcreteType operator*(ConcreteType lhs, UnderlyingType rhs) noexcept(noexcept(std::declval<ConcreteType>() *= std::declval<UnderlyingType>())) {
         return lhs *= rhs;
     }
 
-    friend constexpr ConcreteType operator*(UnderlyingType lhs, ConcreteType rhs) {
+    friend constexpr ConcreteType operator*(UnderlyingType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() * std::declval<UnderlyingType>())) {
         return rhs * lhs;
     }
 
-    friend constexpr ConcreteType operator/(ConcreteType lhs, UnderlyingType rhs) {
+    friend constexpr ConcreteType operator/(ConcreteType lhs, UnderlyingType rhs) noexcept(noexcept(std::declval<ConcreteType>() /= std::declval<UnderlyingType>())) {
         return lhs /= rhs;
     }
 
-    friend constexpr UnderlyingType operator/(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr UnderlyingType operator/(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<UnderlyingType>() / std::declval<UnderlyingType>())) {
         return lhs.value_ / rhs.value_;
     }
 
-    friend constexpr ConcreteType operator%(ConcreteType lhs, UnderlyingType rhs) {
+    friend constexpr ConcreteType operator%(ConcreteType lhs, UnderlyingType rhs) noexcept(noexcept(std::declval<ConcreteType>() %= std::declval<UnderlyingType>())) {
         return lhs %= rhs;
     }
 
-    friend constexpr UnderlyingType operator%(ConcreteType lhs, ConcreteType rhs) {
+    friend constexpr UnderlyingType operator%(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<UnderlyingType>() % std::declval<UnderlyingType>())) {
         return lhs.value_ % rhs.value_;
     }
 };
