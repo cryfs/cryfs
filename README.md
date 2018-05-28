@@ -23,7 +23,7 @@ Building from source
 Requirements
 ------------
   - Git (for getting the source code)
-  - GCC version >= 4.8 or Clang >= 3.7
+  - GCC version >= 5.0 or Clang >= 4.0
   - CMake version >= 3.0 
   - libcurl4 (including development headers)
   - Boost libraries version >= 1.56 (including development headers)

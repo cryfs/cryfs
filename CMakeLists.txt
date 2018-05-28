@@ -11,8 +11,8 @@ project(cryfs)
 
 include(utils.cmake)
 
-require_gcc_version(4.8)
-require_clang_version(3.7)
+require_gcc_version(5.0)
+require_clang_version(4.0)
 
 # Default value is not to build test cases
 option(BUILD_TESTING "build test cases" OFF)

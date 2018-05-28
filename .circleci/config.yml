@@ -199,24 +199,6 @@ references:
         only: /.*/
 
 jobs:
-  gcc_4_9_debug:
-    <<: *job_definition
-    environment:
-      CC: gcc-4.9
-      CXX: g++-4.9
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-4.9"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-  gcc_4_9_release:
-    <<: *job_definition
-    environment:
-      CC: gcc-4.9
-      CXX: g++-4.9
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-4.9"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
   gcc_5_debug:
     <<: *job_definition
     environment:
@@ -269,42 +251,6 @@ jobs:
       CXX: g++-7
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-7"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-  clang_3_7_debug:
-    <<: *job_definition
-    environment:
-      CC: clang-3.7
-      CXX: clang++-3.7
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.7
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-  clang_3_7_release:
-    <<: *job_definition
-    environment:
-      CC: clang-3.7
-      CXX: clang++-3.7
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.7
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-  clang_3_8_debug:
-    <<: *job_definition
-    environment:
-      CC: clang-3.8
-      CXX: clang++-3.8
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.8
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-  clang_3_8_release:
-    <<: *job_definition
-    environment:
-      CC: clang-3.8
-      CXX: clang++-3.8
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.8
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
   clang_4_0_debug:
@@ -380,10 +326,6 @@ workflows:
 
   build_and_test:
     jobs:
-    - gcc_4_9_debug:
-        <<: *enable_for_tags
-    - gcc_4_9_release:
-        <<: *enable_for_tags
     - gcc_5_debug:
         <<: *enable_for_tags
     - gcc_5_release:
@@ -395,14 +337,6 @@ workflows:
     - gcc_7_debug:
         <<: *enable_for_tags
     - gcc_7_release:
-        <<: *enable_for_tags
-    - clang_3_7_debug:
-        <<: *enable_for_tags
-    - clang_3_7_release:
-        <<: *enable_for_tags
-    - clang_3_8_debug:
-        <<: *enable_for_tags
-    - clang_3_8_release:
         <<: *enable_for_tags
     - clang_4_0_debug:
         <<: *enable_for_tags
