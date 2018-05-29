@@ -1,7 +1,7 @@
 include(CTest)
 
 if (BUILD_TESTING)
-  add_subdirectory(gtest-1.8.0 EXCLUDE_FROM_ALL)
+  add_subdirectory(gtest EXCLUDE_FROM_ALL)
 
   project (googletest)
   add_library(${PROJECT_NAME} dummy.cpp)
