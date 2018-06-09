@@ -54,17 +54,15 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})                                       
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})
 
-find_package(Backtrace REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
-
-if(NOT WIN32)
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+else()
   find_package(Backtrace REQUIRED)
   target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
-endif(NOT WIN32)
+endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
