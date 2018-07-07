@@ -40,20 +40,34 @@ struct IdValueTypeTest_constexpr_test {
     static constexpr Type test_copy_constructor = test_constructor;
     static_assert(Type(5) == test_copy_constructor, "");
 
+#if !defined(_MSC_VER)
+	// These aren't evaluated at compile time on MSVC :(
     static constexpr Type test_copy_assignment = (Type(4) = test_copy_constructor);
     static_assert(test_copy_assignment == Type(5), "");
 
     static constexpr Type test_move_assignment = (Type(4) = Type(3));
     static_assert(test_move_assignment == Type(3), "");
+#endif
 
     static_assert(Type(5) == Type(5), "");
-    static_assert(Type(5) != Type(6), "");
+	static_assert(!(Type(5) != Type(5)), "");
 
     static constexpr bool success = true;
 };
 static_assert(IdValueTypeTest_constexpr_test<MyIdValueType>::success, "");
 static_assert(IdValueTypeTest_constexpr_test<MyOrderedIdValueType>::success, "");
 static_assert(IdValueTypeTest_constexpr_test<MyQuantityValueType>::success, "");
+
+namespace IdValueTypeTest_constexpr_test_extras {
+	// For some reason, MSVC crashes when these are part of IdValueTypeTest_constexpr_test.
+	// so let's define them separately.
+	static_assert(!(MyIdValueType(5) == MyIdValueType(6)), "");
+	static_assert(MyIdValueType(5) != MyIdValueType(6), "");
+	static_assert(!(MyOrderedIdValueType(5) == MyOrderedIdValueType(6)), "");
+	static_assert(MyOrderedIdValueType(5) != MyOrderedIdValueType(6), "");
+	static_assert(!(MyQuantityValueType(5) == MyQuantityValueType(6)), "");
+	static_assert(MyQuantityValueType(5) != MyQuantityValueType(6), "");
+}
 
 
 template<class Type> class IdValueTypeTest : public testing::Test {
@@ -145,26 +159,36 @@ TYPED_TEST(IdValueTypeTest, UnorderedSet) {
 
 template<class Type>
 struct OrderedIdValueTypeTest_constexpr_test {
-    static_assert(Type(3) < Type(4), "");
     static_assert(!(Type(4) < Type(3)), "");
     static_assert(!(Type(3) < Type(3)), "");
 
-    static_assert(Type(4) > Type(3), "");
     static_assert(!(Type(3) > Type(4)), "");
     static_assert(!(Type(3) > Type(3)), "");
 
     static_assert(Type(3) <= Type(4), "");
-    static_assert(!(Type(4) <= Type(3)), "");
     static_assert(Type(3) <= Type(3), "");
 
     static_assert(Type(4) >= Type(3), "");
-    static_assert(!(Type(3) >= Type(4)), "");
     static_assert(Type(3) >= Type(3), "");
 
     static constexpr bool success = true;
 };
 static_assert(OrderedIdValueTypeTest_constexpr_test<MyOrderedIdValueType>::success, "");
 static_assert(OrderedIdValueTypeTest_constexpr_test<MyQuantityValueType>::success, "");
+
+namespace OrderedIdValueTypeTest_constexpr_test_extras {
+	// For some reason, MSVC crashes when these are part of IdValueTypeTest_constexpr_test.
+	// so let's define them separately.
+	static_assert(MyOrderedIdValueType(3) < MyOrderedIdValueType(4), "");
+	static_assert(MyOrderedIdValueType(4) > MyOrderedIdValueType(3), "");
+	static_assert(!(MyOrderedIdValueType(4) <= MyOrderedIdValueType(3)), "");
+	static_assert(!(MyOrderedIdValueType(3) >= MyOrderedIdValueType(4)), "");
+	static_assert(MyQuantityValueType(3) < MyQuantityValueType(4), "");
+	static_assert(MyQuantityValueType(4) > MyQuantityValueType(3), "");
+	static_assert(!(MyQuantityValueType(4) <= MyQuantityValueType(3)), "");
+	static_assert(!(MyQuantityValueType(3) >= MyQuantityValueType(4)), "");
+}
+
 
 template<class Type> class OrderedIdValueTypeTest : public testing::Test {};
 using OrderedIdValueTypeTest_types = testing::Types<MyOrderedIdValueType, MyQuantityValueType>;
@@ -241,38 +265,33 @@ TYPED_TEST(OrderedIdValueTypeTest, Set) {
 
 
 
-
-
 /**
  * Tests for QuantityValueType
  */
 
-template<class Type>
-struct QuantityValueTypeTest_constexpr_test {
-    static_assert(++Type(3) == Type(4), "");
-    static_assert(Type(3)++ == Type(3), "");
-    static_assert(--Type(3) == Type(2), "");
-    static_assert(Type(3)-- == Type(3), "");
-    static_assert((Type(3) += Type(2)) == Type(5), "");
-    static_assert((Type(3) -= Type(2)) == Type(1), "");
-    static_assert((Type(3) *= 2) == Type(6), "");
-    static_assert((Type(6) /= 2) == Type(3), "");
-    static_assert((Type(7) /= 3) == Type(2), "");
-    static_assert((Type(7) %= 3) == Type(1), "");
-    static_assert(Type(3) + Type(2) == Type(5), "");
-    static_assert(Type(3) - Type(2) == Type(1), "");
-    static_assert(Type(3) * 2 == Type(6), "");
-    static_assert(2 * Type(3) == Type(6), "");
-    static_assert(Type(6) / 2 == Type(3), "");
-    static_assert(Type(6) / Type(2) == 3, "");
-    static_assert(Type(7) / 3 == Type(2), "");
-    static_assert(Type(7) / Type(3) == 2, "");
-    static_assert(Type(7) % 3 == Type(1), "");
-    static_assert(Type(7) % Type(3) == 1, "");
-
-    static constexpr bool success = true;
+namespace QuantityValueTypeTest_constexpr_test {
+    static_assert(++MyQuantityValueType(3) == MyQuantityValueType(4), "");
+	static_assert(MyQuantityValueType(3)++ == MyQuantityValueType(3), "");
+	static_assert(--MyQuantityValueType(3) == MyQuantityValueType(2), "");
+	static_assert(MyQuantityValueType(3)-- == MyQuantityValueType(3), "");
+    static_assert((MyQuantityValueType(3) += MyQuantityValueType(2)) == MyQuantityValueType(5), "");
+    static_assert((MyQuantityValueType(3) -= MyQuantityValueType(2)) == MyQuantityValueType(1), "");
+    static_assert((MyQuantityValueType(3) *= 2) == MyQuantityValueType(6), "");
+    static_assert((MyQuantityValueType(6) /= 2) == MyQuantityValueType(3), "");
+    static_assert((MyQuantityValueType(7) /= 3) == MyQuantityValueType(2), "");
+    static_assert((MyQuantityValueType(7) %= 3) == MyQuantityValueType(1), "");
+    static_assert(MyQuantityValueType(3) + MyQuantityValueType(2) == MyQuantityValueType(5), "");
+    static_assert(MyQuantityValueType(3) - MyQuantityValueType(2) == MyQuantityValueType(1), "");
+    static_assert(MyQuantityValueType(3) * 2 == MyQuantityValueType(6), "");
+    static_assert(2 * MyQuantityValueType(3) == MyQuantityValueType(6), "");
+    static_assert(MyQuantityValueType(6) / 2 == MyQuantityValueType(3), "");
+    static_assert(MyQuantityValueType(6) / MyQuantityValueType(2) == 3, "");
+    static_assert(MyQuantityValueType(7) / 3 == MyQuantityValueType(2), "");
+    static_assert(MyQuantityValueType(7) / MyQuantityValueType(3) == 2, "");
+    static_assert(MyQuantityValueType(7) % 3 == MyQuantityValueType(1), "");
+    static_assert(MyQuantityValueType(7) % MyQuantityValueType(3) == 1, "");
 };
-static_assert(QuantityValueTypeTest_constexpr_test<MyQuantityValueType>::success, "");
+
 
 template<class Type> class QuantityValueTypeTest : public testing::Test {};
 using QuantityValueTypeTest_types = testing::Types<MyQuantityValueType>;
