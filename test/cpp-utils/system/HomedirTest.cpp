@@ -17,9 +17,6 @@ TEST(HomedirTest, AppDataDirIsValid) {
     auto dir = HomeDirectory::getXDGDataDir();
     EXPECT_FALSE(dir.empty());
     EXPECT_GE(std::distance(dir.begin(), dir.end()), 2u); // has at least two components
-    for(const auto& component : dir) {
-        EXPECT_TRUE(component.string() == "/" || bf::native(component.string()));
-    }
 }
 
 TEST(HomedirTest, FakeHomeDirectorySetsHomedirCorrectly) {

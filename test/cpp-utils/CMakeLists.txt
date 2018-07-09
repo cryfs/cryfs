@@ -53,6 +53,8 @@ set(SOURCES
     value_type/ValueTypeTest.cpp
 )
 
+add_executable(${PROJECT_NAME}_exit_status process/exit_status.cpp)
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} googletest cpp-utils)
 add_test(${PROJECT_NAME} ${PROJECT_NAME})

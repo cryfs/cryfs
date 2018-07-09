@@ -200,7 +200,11 @@ TEST_F(DataTest, LargesizeSize) {
   EXPECT_EQ(size, data.size());
 }
 #else
+#if defined(_MSC_VER)
+#pragma message This is not a 64bit architecture. Large size data tests are disabled.
+#else
 #warning This is not a 64bit architecture. Large size data tests are disabled.
+#endif
 #endif
 
 TEST_F(DataTest, LoadingNonexistingFile) {

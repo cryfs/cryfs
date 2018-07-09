@@ -140,7 +140,7 @@ private:
   }
 };
 
-constexpr std::initializer_list<size_t> SIZES = {0, 1, 1024, 4096, 10*1024*1024};
+constexpr std::array<size_t, 5> SIZES = {0, 1, 1024, 4096, 10*1024*1024};
 #define TYPED_TEST_P_FOR_ALL_SIZES(TestName)                                    \
   TYPED_TEST_P(BlockStoreTest, TestName) {                                      \
     for (auto size: SIZES) {                                                    \

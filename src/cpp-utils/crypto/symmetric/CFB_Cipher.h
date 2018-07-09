@@ -39,7 +39,9 @@ Data CFB_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, 
   auto encryption = typename CryptoPP::CFB_Mode<BlockCipher>::Encryption(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.BINARY_LENGTH, iv.data());
   Data ciphertext(ciphertextSize(plaintextSize));
   iv.ToBinary(ciphertext.data());
-  encryption.ProcessData(static_cast<CryptoPP::byte*>(ciphertext.data()) + IV_SIZE, plaintext, plaintextSize);
+  if (plaintextSize > 0) {
+	  encryption.ProcessData(static_cast<CryptoPP::byte*>(ciphertext.data()) + IV_SIZE, plaintext, plaintextSize);
+  }
   return ciphertext;
 }
 
@@ -53,7 +55,10 @@ boost::optional<Data> CFB_Cipher<BlockCipher, KeySize>::decrypt(const CryptoPP::
   const CryptoPP::byte *ciphertextData = ciphertext + IV_SIZE;
   auto decryption = typename CryptoPP::CFB_Mode<BlockCipher>::Decryption(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.BINARY_LENGTH, ciphertextIV);
   Data plaintext(plaintextSize(ciphertextSize));
-  decryption.ProcessData(static_cast<CryptoPP::byte*>(plaintext.data()), ciphertextData, plaintext.size());
+  if (plaintext.size() > 0) {
+	  // TODO Shouldn't we pass in ciphertextSize instead of plaintext.size() here as last argument (and also in the if above)?
+	  decryption.ProcessData(static_cast<CryptoPP::byte*>(plaintext.data()), ciphertextData, plaintext.size());
+  }
   return std::move(plaintext);
 }
 

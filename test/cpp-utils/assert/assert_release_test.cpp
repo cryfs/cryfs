@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <regex>
 
 //Include the ASSERT macro for a release build
 #ifndef NDEBUG
@@ -26,9 +27,12 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
     ASSERT(2==5, "my message");
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
-    EXPECT_THAT(e.what(), MatchesRegex(
-        "Assertion \\[2==5\\] failed in .*/assert_release_test.cpp:26: my message.*"
-    ));
+	  std::string msg = e.what();
+	  // For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+	  /*EXPECT_THAT(e.what(), MatchesRegex(
+		  R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)"
+	  ));*/
+	  EXPECT_TRUE(std::regex_search(e.what(), std::regex(R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)")));
   }
 }
 
