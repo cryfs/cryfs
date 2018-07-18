@@ -24,6 +24,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
+# The MSVC version on AppVeyor CI needs this
+if(MSVC)
+  add_definitions(/bigobj)
+endif()
 
 add_subdirectory(vendor)
 add_subdirectory(src)

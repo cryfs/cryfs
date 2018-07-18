@@ -235,8 +235,8 @@ bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &bloc
     const timespec lastModificationTime = found->lastModificationTime();
     const timespec now = cpputils::time::now();
     const timespec yesterday {
-        .tv_sec = now.tv_sec - 60*60*24,
-        .tv_nsec = now.tv_nsec
+        /*.tv_sec = */ now.tv_sec - 60*60*24,
+        /*.tv_nsec = */ now.tv_nsec
     };
     bool changed = false;
     if (lastAccessTime < lastModificationTime || lastAccessTime < yesterday) {

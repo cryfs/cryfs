@@ -114,8 +114,8 @@ LocalStateMetadata LocalStateMetadata::_deserialize(istream& stream) {
   string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
 
   return LocalStateMetadata(myClientId, Hash{
-      .digest = cpputils::hash::Digest::FromString(encryptionKeyDigest),
-      .salt = cpputils::hash::Salt::FromString(encryptionKeySalt)
+      /*.digest = */ cpputils::hash::Digest::FromString(encryptionKeyDigest),
+      /*.salt = */ cpputils::hash::Salt::FromString(encryptionKeySalt)
   });
 }
 

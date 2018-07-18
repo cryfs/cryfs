@@ -132,7 +132,7 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntriesParallel() {
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
   // Twice the number of cores, so we use full CPU even if half the threads are doing I/O
-  unsigned int numThreads = 2 * std::max(1u, std::thread::hardware_concurrency());
+  unsigned int numThreads = 2 * (std::max)(1u, std::thread::hardware_concurrency());
   std::vector<std::future<void>> waitHandles;
   for (unsigned int i = 0; i < numThreads; ++i) {
     waitHandles.push_back(std::async(std::launch::async, [this, matches] {

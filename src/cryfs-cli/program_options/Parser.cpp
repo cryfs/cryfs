@@ -11,6 +11,7 @@ namespace bf = boost::filesystem;
 using namespace cryfs::program_options;
 using cryfs::CryConfigConsole;
 using cryfs::CryfsException;
+using cryfs::ErrorCode;
 using std::pair;
 using std::vector;
 using std::cerr;

@@ -57,7 +57,7 @@ namespace cpputils {
         _dataAddedCv.wait(lock, [this] {
            return _buffer.size() > 0;
         });
-        size_t gettableBytes = std::min(_buffer.size(), numBytes);
+        size_t gettableBytes = (std::min)(_buffer.size(), numBytes);
         _buffer.get(target, gettableBytes);
         _dataGottenCv.notify_all();
         return gettableBytes;

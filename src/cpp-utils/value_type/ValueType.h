@@ -54,8 +54,8 @@ public:
     using underlying_type = UnderlyingType;
     using concrete_type = ConcreteType;
 
-    constexpr IdValueType(IdValueType&& rhs) noexcept(noexcept(UnderlyingType(std::move(rhs.value_)))) = default;
-    constexpr IdValueType(const IdValueType& rhs) noexcept(noexcept(UnderlyingType(rhs.value_))) = default;
+    constexpr IdValueType(IdValueType&& rhs) noexcept(noexcept(UnderlyingType(std::move(std::declval<UnderlyingType>())))) = default;
+    constexpr IdValueType(const IdValueType& rhs) noexcept(noexcept(UnderlyingType(std::declval<UnderlyingType>()))) = default;
     constexpr IdValueType& operator=(IdValueType&& rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() = std::move(rhs.value_))) {
         value_ = std::move(rhs.value_);
         return *this;
