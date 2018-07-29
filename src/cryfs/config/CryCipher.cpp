@@ -92,10 +92,15 @@ const CryCipher& CryCiphers::find(const string &cipherName) {
     return **found;
 }
 
-vector<string> CryCiphers::supportedCipherNames() {
-    vector<string> result;
-    for (const auto& cipher : CryCiphers::SUPPORTED_CIPHERS) {
-        result.push_back(cipher->cipherName());
-    }
-    return result;
+vector<string> CryCiphers::_buildSupportedCipherNames() {
+	vector<string> result;
+	for (const auto& cipher : CryCiphers::SUPPORTED_CIPHERS) {
+		result.push_back(cipher->cipherName());
+	}
+	return result;
+}
+
+const vector<string>& CryCiphers::supportedCipherNames() {
+	static vector<string> supportedCipherNames = _buildSupportedCipherNames();
+	return supportedCipherNames;
 }

@@ -15,7 +15,7 @@ class CryCipher;
 
 class CryCiphers final {
 public:
-    static std::vector<std::string> supportedCipherNames();
+    static const std::vector<std::string>& supportedCipherNames();
 
     //A static_assert in CryCipherInstance ensures that there is no cipher with a key size larger than specified here.
     //TODO Calculate this from SUPPORTED_CIPHERS instead of setting it manually
@@ -27,6 +27,8 @@ private:
     static const std::string INTEGRITY_WARNING;
 
     static const std::vector<std::shared_ptr<CryCipher>> SUPPORTED_CIPHERS;
+
+	static std::vector<std::string> _buildSupportedCipherNames();
 };
 
 
