@@ -12,6 +12,8 @@
 #include <cryfs/filesystem/fsblobstore/DirBlob.h>
 #include <cryfs/filesystem/CryDevice.h>
 
+#include <set>
+
 using namespace boost;
 using namespace boost::filesystem;
 using namespace std;
