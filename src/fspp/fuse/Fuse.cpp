@@ -16,6 +16,15 @@ namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 using namespace fspp::fuse;
 
+namespace {
+bool is_valid_fspp_path(const bf::path& path) {
+  // TODO In boost 1.63, we can use path.generic() or path.generic_path() instead of path.generic_string()
+  return path.has_root_directory()                    // must be absolute path
+         && !path.has_root_name()                     // on Windows, it shouldn't have a device specifier (i.e. no "C:")
+         && (path.c_str() == path.generic_string());  // must use portable '/' as directory separator
+}
+}
+
 #define FUSE_OBJ (static_cast<Fuse *>(fuse_get_context()->private_data))
 
 // Remove the following line, if you don't want to output each fuse operation on the console
@@ -305,6 +314,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   LOG(DEBUG, "getattr({}, _, _)", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->lstat(path, stbuf);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -336,6 +346,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   }
 
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->fstat(fileinfo->fh, stbuf);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -357,6 +368,7 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
   LOG(DEBUG, "readlink({}, _, {})", path, size);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->readSymlink(path, buf, size);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -386,6 +398,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
   LOG(DEBUG, "mkdir({}, {})", path, mode);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto context = fuse_get_context();
     _fs->mkdir(path, mode, context->uid, context->gid);
     return 0;
@@ -408,6 +421,7 @@ int Fuse::unlink(const bf::path &path) {
   LOG(DEBUG, "unlink({})", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->unlink(path);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -429,6 +443,7 @@ int Fuse::rmdir(const bf::path &path) {
   LOG(DEBUG, "rmdir({})", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->rmdir(path);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -450,6 +465,7 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
   LOG(DEBUG, "symlink({}, {})", from, to);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(from), "has to be an absolute path");
 	auto context = fuse_get_context();
     _fs->createSymlink(from, to, context->uid, context->gid);
     return 0;
@@ -472,8 +488,8 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   LOG(DEBUG, "rename({}, {})", from, to);
 #endif
   try {
-    ASSERT(from.is_absolute(), "from has to be an absolute path");
-    ASSERT(to.is_absolute(), "rename target has to be an absolute path. If this assert throws, we have to add code here that makes the path absolute.");
+    ASSERT(is_valid_fspp_path(from), "from has to be an absolute path");
+    ASSERT(is_valid_fspp_path(to), "rename target has to be an absolute path. If this assert throws, we have to add code here that makes the path absolute.");
     _fs->rename(from, to);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -505,6 +521,7 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
   LOG(DEBUG, "chmod({}, {})", path, mode);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
 	_fs->chmod(path, mode);
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -526,6 +543,7 @@ int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
   LOG(DEBUG, "chown({}, {}, {})", path, uid, gid);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
 	_fs->chown(path, uid, gid);
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -547,6 +565,7 @@ int Fuse::truncate(const bf::path &path, off_t size) {
   LOG(DEBUG, "truncate({}, {})", path, size);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->truncate(path, size);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -590,6 +609,7 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
   LOG(DEBUG, "utimens({}, _)", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->utimens(path, times[0], times[1]);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -611,6 +631,7 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
   LOG(DEBUG, "open({}, _)", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     fileinfo->fh = _fs->openFile(path, fileinfo->flags);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -698,6 +719,7 @@ int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
   LOG(DEBUG, "statfs({}, _)", path);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->statfs(path, fsstat);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -777,6 +799,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t
   UNUSED(fileinfo);
   UNUSED(offset);
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto entries = _fs->readDir(path);
     struct stat stbuf{};
     for (const auto &entry : *entries) {
@@ -850,6 +873,7 @@ int Fuse::access(const bf::path &path, int mask) {
   LOG(DEBUG, "access({}, {})", path, mask);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->access(path, mask);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
@@ -871,6 +895,7 @@ int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
   LOG(DEBUG, "create({}, {}, _)", path, mode);
 #endif
   try {
+    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto context = fuse_get_context();
     fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
     return 0;
