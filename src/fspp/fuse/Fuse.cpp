@@ -19,9 +19,9 @@ using namespace fspp::fuse;
 namespace {
 bool is_valid_fspp_path(const bf::path& path) {
   // TODO In boost 1.63, we can use path.generic() or path.generic_path() instead of path.generic_string()
-  return path.has_root_directory()                    // must be absolute path
-         && !path.has_root_name()                     // on Windows, it shouldn't have a device specifier (i.e. no "C:")
-         && (path.c_str() == path.generic_string());  // must use portable '/' as directory separator
+  return path.has_root_directory()                     // must be absolute path
+         && !path.has_root_name()                      // on Windows, it shouldn't have a device specifier (i.e. no "C:")
+         && (path.string() == path.generic_string());  // must use portable '/' as directory separator
 }
 }
 
