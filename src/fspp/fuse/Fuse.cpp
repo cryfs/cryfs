@@ -320,7 +320,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::getattr: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -352,7 +352,7 @@ int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fil
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::fgetattr: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -405,7 +405,7 @@ int Fuse::mkdir(const bf::path &path, mode_t mode) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::mkdir: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -427,7 +427,7 @@ int Fuse::unlink(const bf::path &path) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::unlink: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -449,7 +449,7 @@ int Fuse::rmdir(const bf::path &path) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::rmdir: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -472,7 +472,7 @@ int Fuse::symlink(const bf::path &from, const bf::path &to) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::symlink: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -495,7 +495,7 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::rename: {}", e.what());
     return -EIO;
-  } catch(fspp::fuse::FuseErrnoException &e) {
+  } catch(const fspp::fuse::FuseErrnoException &e) {
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
