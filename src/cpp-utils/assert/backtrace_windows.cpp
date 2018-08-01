@@ -145,13 +145,24 @@ namespace cpputils {
 			return backtrace.str();
 		}
 
+		namespace {
+			bool our_top_level_handler_set = false;
+			LPTOP_LEVEL_EXCEPTION_FILTER previous_top_level_handler = nullptr;
+		}
 
 		LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 		{
 			std::string backtrace = backtrace_to_string(pExceptionInfo->ContextRecord);
 			LOG(ERR, "Top level exception. Code: {}. Backtrace:\n{}", exception_code_string(pExceptionInfo->ExceptionRecord->ExceptionCode), backtrace);
-
-			return EXCEPTION_CONTINUE_SEARCH;
+			
+			if (previous_top_level_handler != nullptr) {
+				// There was already a top level exception handler set when we called showBacktraceOnCrash(). Call it.
+				return (*previous_top_level_handler)(pExceptionInfo);
+			} else {
+				// previous_top_level_handler == nullptr means there was no top level exception handler set when we called showBacktraceOnCrash()
+				// so there's nothing else we need to call.
+				return EXCEPTION_CONTINUE_SEARCH;
+			}
 		}
 	}
 
@@ -164,10 +175,11 @@ namespace cpputils {
 	}
 
 	void showBacktraceOnCrash() {
-		PVOID result = AddVectoredExceptionHandler(1, TopLevelExceptionHandler);
-		if (result == nullptr) {
-			throw std::runtime_error("Error setting top level exception handler");
+		if (our_top_level_handler_set) {
+			throw std::logic_error("showBackraceOnCrash: Our top level handler is already set.");
 		}
+		previous_top_level_handler = SetUnhandledExceptionFilter(TopLevelExceptionHandler);
+		our_top_level_handler_set = true;
 	}
 
 }
