@@ -32,4 +32,5 @@ int main(int argc, char* argv[]) {
 	_set_abort_behavior(0, _WRITE_ABORT_MSG);
 #endif
 	handle_exit_signal(argv);
+	return 0;
 }
