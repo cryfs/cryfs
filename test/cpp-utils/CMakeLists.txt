@@ -54,7 +54,10 @@ set(SOURCES
 )
 
 add_executable(${PROJECT_NAME}_exit_status process/exit_status.cpp)
+target_activate_cpp14(${PROJECT_NAME}_exit_status)
+
 add_executable(${PROJECT_NAME}_exit_signal assert/exit_signal.cpp)
+target_activate_cpp14(${PROJECT_NAME}_exit_signal)
 target_link_libraries(${PROJECT_NAME}_exit_signal cpp-utils)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
