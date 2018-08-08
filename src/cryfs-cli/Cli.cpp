@@ -295,7 +295,7 @@ namespace cryfs {
         } else if (options.foreground()) {
             cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
         } else {
-            cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
+            cpputils::logging::setLogger(cpputils::logging::system_logger("cryfs"));
         }
     }
 
