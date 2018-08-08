@@ -21,7 +21,7 @@ unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const 
   return make_unique_ref<FileBlob>(std::move(blob));
 }
 
-ssize_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
+size_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
   return baseBlob().tryRead(target, offset, count);
 }
 

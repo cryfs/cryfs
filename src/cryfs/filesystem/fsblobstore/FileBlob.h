@@ -13,7 +13,7 @@ namespace cryfs {
 
             FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
 
-            ssize_t read(void *target, uint64_t offset, uint64_t count) const;
+            size_t read(void *target, uint64_t offset, uint64_t count) const;
 
             void write(const void *source, uint64_t offset, uint64_t count);
 
