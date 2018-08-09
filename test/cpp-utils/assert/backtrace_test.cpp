@@ -79,28 +79,28 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException) {
 
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
 	auto output = call_process_exiting_with_sigsegv();
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
 	auto output = call_process_exiting_with_exception("my_exception_message");
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
 
 #if !defined(_MSC_VER)
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
 	auto output = call_process_exiting_with_sigabrt();
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {
