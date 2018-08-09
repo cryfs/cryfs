@@ -63,7 +63,7 @@ public:
 
 TYPED_TEST_CASE_P(CipherTest);
 
-constexpr std::array<unsigned int, 7> SIZES = {0, 1, 100, 1024, 5000, 1048576, 20971520};
+constexpr std::array<unsigned int, 7> SIZES = {{0, 1, 100, 1024, 5000, 1048576, 20971520}};
 
 TYPED_TEST_P(CipherTest, Size) {
   for (auto size: SIZES) {
