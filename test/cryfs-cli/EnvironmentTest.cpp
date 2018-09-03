@@ -2,6 +2,7 @@
 #include <cryfs-cli/Environment.h>
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
+#include <cpp-utils/system/env.h>
 
 using namespace cryfs;
 using std::string;
@@ -21,13 +22,13 @@ public:
             if (nullptr != oldValue) {
                 _oldValue = string(oldValue);
             }
-            ::setenv(key.c_str(), value.c_str(), 1);
+            cpputils::setenv(key.c_str(), value.c_str());
         }
         ~WithEnv() {
             if (none == _oldValue) {
-                ::unsetenv(_key.c_str());
+                cpputils::unsetenv(_key.c_str());
             } else {
-                ::setenv(_key.c_str(), _oldValue->c_str(), 1);
+                cpputils::setenv(_key.c_str(), _oldValue->c_str());
             }
         }
 

@@ -1,5 +1,7 @@
 #include "testutils/CliTest.h"
 
+#include <cpp-utils/system/env.h>
+
 namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
@@ -129,9 +131,9 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
-    ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
+    cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("Error: base directory not found", ErrorCode::InaccessibleBaseDir);
-    ::unsetenv("CRYFS_FRONTEND");
+    cpputils::unsetenv("CRYFS_FRONTEND");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
@@ -187,9 +189,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
-    ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
+    cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
-    ::unsetenv("CRYFS_FRONTEND");
+    cpputils::unsetenv("CRYFS_FRONTEND");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {

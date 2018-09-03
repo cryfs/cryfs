@@ -51,6 +51,7 @@ set(SOURCES
 	system/FiletimeTest.cpp
     system/MemoryTest.cpp
     system/HomedirTest.cpp
+	system/EnvTest.cpp
     value_type/ValueTypeTest.cpp
 )
 

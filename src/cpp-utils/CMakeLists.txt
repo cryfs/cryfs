@@ -49,6 +49,7 @@ set(SOURCES
 		system/diskspace.cpp
 		system/filetime_nonwindows.cpp
 		system/filetime_windows.cpp
+		system/env.cpp
         value_type/ValueType.cpp
 )
 
