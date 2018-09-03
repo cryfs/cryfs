@@ -11,7 +11,7 @@ namespace bf = boost::filesystem;
 
 // This is needed for google test to work with boost::optional<boost::filesystem::path>
 namespace boost {
-    template<> ostream& operator<< <char, std::char_traits<char>, bf::path>(ostream &stream, const optional<bf::path> &path) {
+    template<> inline ostream& operator<< <char, std::char_traits<char>, bf::path>(ostream &stream, const optional<bf::path> &path) {
         if (path == none) {
             return stream << "none";
         }

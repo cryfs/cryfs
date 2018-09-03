@@ -22,12 +22,12 @@ public:
     std::cerr.rdbuf(_oldBuffer);
   }
 
-  std::string stderr() const {
+  std::string get_stderr() const {
     return _buffer.str();
   }
 
   void EXPECT_MATCHES(const std::string &regex) {
-    EXPECT_THAT(stderr(), testing::MatchesRegex(".*" + regex + ".*"));
+    EXPECT_THAT(get_stderr(), testing::MatchesRegex(".*" + regex + ".*"));
   }
 
 private:
