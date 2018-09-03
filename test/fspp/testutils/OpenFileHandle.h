@@ -3,11 +3,15 @@
 #define MESSMER_FSPP_TEST_TESTUTILS_OPENFILEHANDLE_H_
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <cpp-utils/macros.h>
 #include <errno.h>
 #include <thread>
 #include <chrono>
+#if defined(_MSC_VER)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 class OpenFileHandle final {
 public:
