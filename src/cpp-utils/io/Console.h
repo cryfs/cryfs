@@ -13,10 +13,11 @@ namespace cpputils {
 
 class Console {
 public:
-    virtual ~Console() {}
+    virtual ~Console() = default;
     virtual unsigned int ask(const std::string &question, const std::vector<std::string> &options) = 0;
     virtual bool askYesNo(const std::string &question, bool defaultValue) = 0; // NoninteractiveConsole will just return the default value without asking the user.
     virtual void print(const std::string &output) = 0;
+    virtual std::string askPassword(const std::string &question) = 0;
 };
 
 }

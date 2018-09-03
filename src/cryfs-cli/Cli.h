@@ -27,11 +27,10 @@ namespace cryfs {
         void _checkConfigIntegrity(const boost::filesystem::path& basedir, const LocalStateDir& localStateDir, const CryConfigFile& config, bool allowReplacedFilesystem);
         boost::optional<CryConfigLoader::ConfigLoadResult> _loadOrCreateConfigFile(boost::filesystem::path configFilePath, LocalStateDir localStateDir, const boost::optional<std::string> &cipher, const boost::optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const boost::optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem);
         boost::filesystem::path _determineConfigFile(const program_options::ProgramOptions &options);
-        static std::string _askPasswordForExistingFilesystem();
-        static std::string _askPasswordForNewFilesystem();
-        static std::string _askPasswordNoninteractive();
-        static std::string _askPasswordFromStdin(const std::string &prompt);
-        static bool _confirmPassword(const std::string &password);
+        static std::function<std::string()> _askPasswordForExistingFilesystem(std::shared_ptr<cpputils::Console> console);
+        static std::function<std::string()> _askPasswordForNewFilesystem(std::shared_ptr<cpputils::Console> console);
+        static std::function<std::string()> _askPasswordNoninteractive(std::shared_ptr<cpputils::Console> console);
+        static bool _confirmPassword(cpputils::Console* console, const std::string &password);
         static bool _checkPassword(const std::string &password);
         void _showVersion(cpputils::unique_ref<cpputils::HttpClient> httpClient);
         void _initLogfile(const program_options::ProgramOptions &options);

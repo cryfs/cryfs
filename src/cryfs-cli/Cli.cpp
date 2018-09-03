@@ -124,34 +124,38 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_askPasswordForExistingFilesystem() {
-        string password = _askPasswordFromStdin("Password: ");
-        while (!_checkPassword(password)) {
-            password = _askPasswordFromStdin("Password: ");
-        }
-        return password;
+    function<string()> Cli::_askPasswordForExistingFilesystem(std::shared_ptr<cpputils::Console> console) {
+        return [console] () {
+            string password = console->askPassword("Password: ");
+            while (!_checkPassword(password)) {
+                password = console->askPassword("Password: ");
+            }
+            return password;
+        };
     };
 
-    string Cli::_askPasswordForNewFilesystem() {
-        string password;
-        bool again = false;
-        do {
-            password = _askPasswordFromStdin("Password: ");
-            if (!_checkPassword(password)) {
-                again = true;
-                continue;
-            }
-            if (!_confirmPassword(password)) {
-                again = true;
-                continue;
-            }
-            again = false;
-        } while(again);
-        return password;
+    function<string()> Cli::_askPasswordForNewFilesystem(std::shared_ptr<cpputils::Console> console) {
+        return [console] () {
+            string password;
+            bool again = false;
+            do {
+                password = console->askPassword("Password: ");
+                if (!_checkPassword(password)) {
+                    again = true;
+                    continue;
+                }
+                if (!_confirmPassword(console.get(), password)) {
+                    again = true;
+                    continue;
+                }
+                again = false;
+            } while (again);
+            return password;
+        };
     }
 
-    bool Cli::_confirmPassword(const string &password) {
-        string confirmPassword = _askPasswordFromStdin("Confirm Password: ");
+    bool Cli::_confirmPassword(cpputils::Console* console, const string &password) {
+        string confirmPassword = console->askPassword("Confirm Password: ");
         if (password != confirmPassword) {
             std::cout << "Passwords don't match" << std::endl;
             return false;
@@ -159,29 +163,15 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_askPasswordNoninteractive() {
+    function<string()> Cli::_askPasswordNoninteractive(std::shared_ptr<cpputils::Console> console) {
         //TODO Test
-        string password = _askPasswordFromStdin("Password: ");
-        if (!_checkPassword(password)) {
-            throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
-        }
-        return password;
-    }
-
-    string Cli::_askPasswordFromStdin(const string &prompt) {
-        DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
-
-        std::cout << prompt << std::flush;
-        string result;
-        std::getline(cin, result);
-        std::cout << std::endl;
-
-        //Remove trailing newline
-        if (result[result.size()-1] == '\n') {
-            result.resize(result.size()-1);
-        }
-
-        return result;
+        return [console] () {
+            string password = console->askPassword("Password: ");
+            if (!_checkPassword(password)) {
+                throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
+            }
+            return password;
+        };
     }
 
     bf::path Cli::_determineConfigFile(const ProgramOptions &options) {
@@ -218,13 +208,13 @@ namespace cryfs {
     optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
         if (_noninteractive) {
             return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
-                                   &Cli::_askPasswordNoninteractive,
-                                   &Cli::_askPasswordNoninteractive,
+                                   Cli::_askPasswordNoninteractive(_console),
+                                   Cli::_askPasswordNoninteractive(_console),
                                    cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         } else {
             return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
-                                   &Cli::_askPasswordForExistingFilesystem,
-                                   &Cli::_askPasswordForNewFilesystem,
+                                   Cli::_askPasswordForExistingFilesystem(_console),
+                                   Cli::_askPasswordForNewFilesystem(_console),
                                    cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         }
     }

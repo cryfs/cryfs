@@ -42,9 +42,8 @@ public:
             _args.push_back(arg);
         }
         auto &keyGenerator = cpputils::Random::PseudoRandom();
-        // Write 2x 'pass\n' to stdin so Cryfs can read it as password (+ password confirmation prompt)
-        std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
-        std::cin.putback('\n'); std::cin.putback('s'); std::cin.putback('s'); std::cin.putback('a'); std::cin.putback('p');
+        ON_CALL(*console, askPassword(testing::StrEq("Password: "))).WillByDefault(testing::Return("pass"));
+        ON_CALL(*console, askPassword(testing::StrEq("Confirm Password: "))).WillByDefault(testing::Return("pass"));
         // Run Cryfs
         return cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient());
     }
