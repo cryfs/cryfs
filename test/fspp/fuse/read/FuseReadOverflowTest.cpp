@@ -9,9 +9,9 @@ using namespace fspp::fuse;
 
 class FuseReadOverflowTest: public FuseReadTest {
 public:
-  const size_t FILESIZE = 1000;
-  const size_t READSIZE = 2000;
-  const size_t OFFSET = 500;
+  static constexpr size_t FILESIZE = 1000;
+  static constexpr size_t READSIZE = 2000;
+  static constexpr size_t OFFSET = 500;
 
   void SetUp() override {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
@@ -19,6 +19,10 @@ public:
     EXPECT_CALL(fsimpl, read(0, _, _, _)).WillRepeatedly(ReturnSuccessfulReadRegardingSize(FILESIZE));
   }
 };
+
+constexpr size_t FuseReadOverflowTest::FILESIZE;
+constexpr size_t FuseReadOverflowTest::READSIZE;
+constexpr size_t FuseReadOverflowTest::OFFSET;
 
 
 TEST_F(FuseReadOverflowTest, ReadMoreThanFileSizeFromBeginning) {
