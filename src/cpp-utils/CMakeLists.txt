@@ -47,6 +47,8 @@ set(SOURCES
         system/memory_windows.cpp
         system/time.cpp
 		system/diskspace.cpp
+		system/filetime_nonwindows.cpp
+		system/filetime_windows.cpp
         value_type/ValueType.cpp
 )
 
