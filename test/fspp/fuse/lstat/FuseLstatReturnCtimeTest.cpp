@@ -19,13 +19,11 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnCtimeTest, FuseLstatReturnCtimeTest, Valu
 ));
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedFileCtimeIsCorrect) {
-  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
-  EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
-  EXPECT_EQ(0, result.st_ctim.tv_nsec);
+  struct stat result = CallFileLstatWithValue(GetParam());
+  EXPECT_EQ(GetParam(), result.st_ctime);
 }
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedDirCtimeIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
-  EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
-  EXPECT_EQ(0, result.st_ctim.tv_nsec);
+  struct stat result = CallDirLstatWithValue(GetParam());
+  EXPECT_EQ(GetParam(), result.st_ctime);
 }

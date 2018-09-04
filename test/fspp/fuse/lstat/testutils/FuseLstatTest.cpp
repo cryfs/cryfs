@@ -6,25 +6,30 @@ using ::testing::_;
 using ::testing::Invoke;
 
 void FuseLstatTest::LstatPath(const std::string &path) {
-  fspp::fuse::STAT dummy{};
+  struct stat dummy{};
   LstatPath(path, &dummy);
 }
 
 int FuseLstatTest::LstatPathReturnError(const std::string &path) {
-  fspp::fuse::STAT dummy{};
+  struct stat dummy{};
   return LstatPathReturnError(path, &dummy);
 }
 
-void FuseLstatTest::LstatPath(const std::string &path, fspp::fuse::STAT *result) {
+void FuseLstatTest::LstatPath(const std::string &path, struct stat *result) {
   int error = LstatPathReturnError(path, result);
   EXPECT_EQ(0, error) << "lstat syscall failed. errno: " << error;
 }
 
-int FuseLstatTest::LstatPathReturnError(const std::string &path, fspp::fuse::STAT *result) {
+int FuseLstatTest::LstatPathReturnError(const std::string &path, struct stat *result) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
+#if defined(_MSC_VER)
+  // Windows doesn't know lstat
+  int retval = ::stat(realpath.string().c_str(), result);
+#else
   int retval = ::lstat(realpath.string().c_str(), result);
+#endif
   if (retval == 0) {
     return 0;
   } else {
@@ -32,27 +37,27 @@ int FuseLstatTest::LstatPathReturnError(const std::string &path, fspp::fuse::STA
   }
 }
 
-fspp::fuse::STAT FuseLstatTest::CallFileLstatWithImpl(function<void(fspp::fuse::STAT*)> implementation) {
+struct stat FuseLstatTest::CallFileLstatWithImpl(function<void(struct FUSE_STAT*)> implementation) {
   return CallLstatWithModeAndImpl(S_IFREG, implementation);
 }
 
-fspp::fuse::STAT FuseLstatTest::CallDirLstatWithImpl(function<void(fspp::fuse::STAT*)> implementation) {
+struct stat FuseLstatTest::CallDirLstatWithImpl(function<void(struct FUSE_STAT*)> implementation) {
   return CallLstatWithModeAndImpl(S_IFDIR, implementation);
 }
 
-fspp::fuse::STAT FuseLstatTest::CallLstatWithImpl(function<void(fspp::fuse::STAT*)> implementation) {
-  EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, fspp::fuse::STAT *stat) {
+struct stat FuseLstatTest::CallLstatWithImpl(function<void(struct FUSE_STAT*)> implementation) {
+  EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, struct FUSE_STAT *stat) {
     implementation(stat);
   }));
 
-  fspp::fuse::STAT result{};
+  struct stat result{};
   LstatPath(FILENAME, &result);
 
   return result;
 }
 
-fspp::fuse::STAT FuseLstatTest::CallLstatWithModeAndImpl(mode_t mode, function<void(fspp::fuse::STAT*)> implementation) {
-  return CallLstatWithImpl([mode, implementation] (fspp::fuse::STAT *stat) {
+struct stat FuseLstatTest::CallLstatWithModeAndImpl(mode_t mode, function<void(struct FUSE_STAT*)> implementation) {
+  return CallLstatWithImpl([mode, implementation] (struct FUSE_STAT *stat) {
     stat->st_mode = mode;
     implementation(stat);
   });

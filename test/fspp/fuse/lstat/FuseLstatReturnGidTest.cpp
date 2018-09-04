@@ -15,7 +15,7 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnGidTest, FuseLstatReturnGidTest, Values(
 ));
 
 TEST_P(FuseLstatReturnGidTest, ReturnedFileGidIsCorrect) {
-  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
+  struct stat result = CallFileLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_gid);
 }
 

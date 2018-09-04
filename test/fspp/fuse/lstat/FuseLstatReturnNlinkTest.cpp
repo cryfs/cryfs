@@ -17,12 +17,12 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnNlinkTest, FuseLstatReturnNlinkTest, Valu
 ));
 
 TEST_P(FuseLstatReturnNlinkTest, ReturnedFileNlinkIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  struct stat result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_nlink);
 }
 
 TEST_P(FuseLstatReturnNlinkTest, ReturnedDirNlinkIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  struct stat result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_nlink);
 }
 

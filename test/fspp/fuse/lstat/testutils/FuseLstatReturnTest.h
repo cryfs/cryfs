@@ -12,8 +12,8 @@ class FuseLstatReturnTest: public FuseLstatTest {
 public:
   // Set the specified (fspp::fuse::STAT) entry to the given value, and test whether it is correctly returned from the syscall.
   // The CallFile[...] version tests it on a file node of the filesystem, the CallDir[...] version on a dir node.
-  fspp::fuse::STAT CallFileLstatWithValue(Property value);
-  fspp::fuse::STAT CallDirLstatWithValue(Property value);
+  struct stat CallFileLstatWithValue(Property value);
+  struct stat CallDirLstatWithValue(Property value);
 
 private:
   std::function<void(fspp::fuse::STAT*)> SetPropertyImpl(Property value);
@@ -22,13 +22,15 @@ private:
   virtual void set(fspp::fuse::STAT *stat, Property value) = 0;
 };
 
+using struct_stat = struct stat;
+
 template<typename Property>
-fspp::fuse::STAT FuseLstatReturnTest<Property>::CallFileLstatWithValue(Property value) {
+struct_stat FuseLstatReturnTest<Property>::CallFileLstatWithValue(Property value) {
   return CallFileLstatWithImpl(SetPropertyImpl(value));
 }
 
 template<typename Property>
-fspp::fuse::STAT FuseLstatReturnTest<Property>::CallDirLstatWithValue(Property value) {
+struct_stat FuseLstatReturnTest<Property>::CallDirLstatWithValue(Property value) {
   return CallDirLstatWithImpl(SetPropertyImpl(value));
 }
 
@@ -38,6 +40,5 @@ std::function<void(fspp::fuse::STAT*)> FuseLstatReturnTest<Property>::SetPropert
     set(stat, value);
   };
 }
-
 
 #endif
