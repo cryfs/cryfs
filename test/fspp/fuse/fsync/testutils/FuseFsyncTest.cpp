@@ -12,12 +12,24 @@ int FuseFsyncTest::FsyncFileReturnError(const char *filename) {
   auto fs = TestFS();
 
   auto fd = OpenFile(fs.get(), filename);
+#if defined(_MSC_VER)
+  // Windows doesn't know fsync
+  HANDLE file_handle = reinterpret_cast<HANDLE>(_get_osfhandle(fd->fd()));
+  if (INVALID_HANDLE_VALUE == file_handle) {
+	  throw std::runtime_error("Couldn't get native handle from file descriptor");
+  }
+  BOOL success = FlushFileBuffers(file_handle);
+  if (!success) {
+	  throw std::runtime_error("FlushFileBuffer failed with error code " + std::to_string(GetLastError()));
+  }
+#else
   int retval = ::fsync(fd->fd());
   if (retval == 0) {
     return 0;
   } else {
     return errno;
   }
+#endif
 }
 
 unique_ref<OpenFileHandle> FuseFsyncTest::OpenFile(const TempTestFS *fs, const char *filename) {
