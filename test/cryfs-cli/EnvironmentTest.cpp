@@ -9,6 +9,12 @@ using std::string;
 using boost::optional;
 using boost::none;
 
+#if defined(_MSC_VER)
+constexpr const char* some_local_state_dir = "C:/my/local/state/dir";
+#else
+constexpr const char* some_local_state_dir = "/my/local/state/dir";
+#endif
+
 namespace bf = boost::filesystem;
 
 class EnvironmentTest : public ::testing::Test {
@@ -72,8 +78,8 @@ TEST_F(EnvironmentTest, LocalStateDir_NotSet) {
 }
 
 TEST_F(EnvironmentTest, LocalStateDir_Set) {
-    WithEnv env("CRYFS_LOCAL_STATE_DIR", "/my/local/state/dir");
-    EXPECT_EQ("/my/local/state/dir", Environment::localStateDir().string());
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", some_local_state_dir);
+    EXPECT_EQ(some_local_state_dir, Environment::localStateDir().string());
 }
 
 TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithDot) {

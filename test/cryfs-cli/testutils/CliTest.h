@@ -2,6 +2,11 @@
 #ifndef MESSMER_CRYFS_TEST_CLI_TESTUTILS_CLITEST_H
 #define MESSMER_CRYFS_TEST_CLI_TESTUTILS_CLITEST_H
 
+#if defined(_MSC_VER)
+#include <codecvt>
+#include <dokan/dokan.h>
+#endif
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <cpp-utils/tempfile/TempDir.h>
@@ -15,6 +20,8 @@
 #include "../../cryfs/testutils/TestWithFakeHomeDirectory.h"
 #include <cryfs/ErrorCodes.h>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
+#include <regex>
+#include <string>
 
 class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:
