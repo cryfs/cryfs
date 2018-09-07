@@ -175,11 +175,10 @@ namespace cpputils {
 	}
 
 	void showBacktraceOnCrash() {
-		if (our_top_level_handler_set) {
-			throw std::logic_error("showBackraceOnCrash: Our top level handler is already set.");
+		if (!our_top_level_handler_set) {
+			previous_top_level_handler = SetUnhandledExceptionFilter(TopLevelExceptionHandler);
+			our_top_level_handler_set = true;
 		}
-		previous_top_level_handler = SetUnhandledExceptionFilter(TopLevelExceptionHandler);
-		our_top_level_handler_set = true;
 	}
 
 }
