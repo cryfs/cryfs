@@ -98,7 +98,7 @@ bf::path make_relative(const bf::path &path) {
     for(auto iter = ++cwd.begin(); iter!=cwd.end(); ++iter) {
         result /= "..";
     }
-    result /= path;
+    result /= path.relative_path();
     return result;
 }
 
