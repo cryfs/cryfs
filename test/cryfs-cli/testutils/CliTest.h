@@ -62,28 +62,45 @@ public:
     void EXPECT_RUN_ERROR(std::vector<const char*> args, const char* message, cryfs::ErrorCode errorCode) {
         cpputils::CaptureStderrRAII capturedStderr;
         int exit_code = run(args);
-        capturedStderr.EXPECT_MATCHES(string(".*") + message + ".*");
+        capturedStderr.EXPECT_MATCHES(message);
         EXPECT_EQ(exitCode(errorCode), exit_code);
     }
 
     void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
         //TODO Make this work when run in background
         ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
-        std::thread unmountThread([&mountDir] {
+		bool unmount_success = false;
+        std::thread unmountThread([&mountDir, &unmount_success] {
+			auto start = std::chrono::steady_clock::now();
             int returncode = -1;
             while (returncode != 0) {
-#ifdef __APPLE__
+				if (std::chrono::steady_clock::now() - start > std::chrono::seconds(10)) {
+					return; // keep unmount_success = false
+				}
+#if defined(__APPLE__)
                 returncode = cpputils::Subprocess::call(std::string("umount ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
+#elif defined(_MSC_VER)
+				// Somehow this sleeping is needed to not deadlock. Race condition in mounting/unmounting?
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				std::wstring mountDir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountDir.string());
+				BOOL success = DokanRemoveMountPoint(mountDir_.c_str());
+				returncode = success ? 0 : -1;
 #else
                 returncode = cpputils::Subprocess::call(std::string("fusermount -u ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
 #endif
-                //std::this_thread::sleep_for(std::chrono::milliseconds(50)); // TODO Is this the test case duration? Does a shorter interval make the test case faster?
             }
+			unmount_success = true;
         });
         testing::internal::CaptureStdout();
         run(args);
+		std::string _stdout = testing::internal::GetCapturedStdout();
         unmountThread.join();
-        EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
+
+		EXPECT_TRUE(unmount_success);
+
+		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+        // EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
+		EXPECT_TRUE(std::regex_search(_stdout, std::regex(".*Mounting filesystem.*")));
     }
 };
 
