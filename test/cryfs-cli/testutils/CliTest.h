@@ -41,13 +41,13 @@ public:
         return std::move(httpClient);
     }
 
-    int run(std::vector<const char*> args) {
-        std::vector<const char*> _args;
-        _args.reserve(args.size()+1);
-        _args.push_back("cryfs");
-        for (const char *arg : args) {
-            _args.push_back(arg);
-        }
+    int run(const std::vector<std::string>& args) {
+		std::vector<const char*> _args;
+		_args.reserve(args.size() + 1);
+        _args.emplace_back("cryfs");
+		for (const std::string& arg : args) {
+			_args.emplace_back(arg.c_str());
+		}
         auto &keyGenerator = cpputils::Random::PseudoRandom();
         ON_CALL(*console, askPassword(testing::StrEq("Password: "))).WillByDefault(testing::Return("pass"));
         ON_CALL(*console, askPassword(testing::StrEq("Confirm Password: "))).WillByDefault(testing::Return("pass"));
@@ -55,18 +55,18 @@ public:
         return cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient());
     }
 
-    void EXPECT_EXIT_WITH_HELP_MESSAGE(std::vector<const char*> args, const std::string &message, cryfs::ErrorCode errorCode) {
+    void EXPECT_EXIT_WITH_HELP_MESSAGE(const std::vector<std::string>& args, const std::string &message, cryfs::ErrorCode errorCode) {
         EXPECT_RUN_ERROR(args, (".*Usage:.*"+message).c_str(), errorCode);
     }
 
-    void EXPECT_RUN_ERROR(std::vector<const char*> args, const char* message, cryfs::ErrorCode errorCode) {
+    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const char* message, cryfs::ErrorCode errorCode) {
         cpputils::CaptureStderrRAII capturedStderr;
         int exit_code = run(args);
         capturedStderr.EXPECT_MATCHES(message);
         EXPECT_EQ(exitCode(errorCode), exit_code);
     }
 
-    void EXPECT_RUN_SUCCESS(std::vector<const char*> args, const boost::filesystem::path &mountDir) {
+    void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::filesystem::path &mountDir) {
         //TODO Make this work when run in background
         ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
 		bool unmount_success = false;

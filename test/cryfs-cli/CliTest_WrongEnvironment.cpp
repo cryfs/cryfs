@@ -52,15 +52,15 @@ public:
         );
     }
 
-    vector<const char*> args() {
-        vector<const char*> result = {basedir.string().c_str(), mountdir.string().c_str()};
+    vector<string> args() {
+        vector<string> result = {basedir.string(), mountdir.string()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
-            result.push_back(configfile.path().string().c_str());
+            result.push_back(configfile.path().string());
         }
         if (GetParam().logIsNotStderr) {
             result.push_back("--logfile");
-            result.push_back(logfile.path().string().c_str());
+            result.push_back(logfile.path().string());
         }
         if (GetParam().runningInForeground) {
             result.push_back("-f");
