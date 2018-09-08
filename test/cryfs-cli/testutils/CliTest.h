@@ -83,11 +83,10 @@ public:
     };
 
     FilesystemOutput _run_filesystem(const std::vector<std::string>& args, const boost::optional<boost::filesystem::path>& mountDirForUnmounting) {
-        std::future<FilesystemOutput> filesystem_output = std::async(std::launch::async, [this, &args] {
-            testing::internal::CaptureStdout();
-            testing::internal::CaptureStderr();
-            int exit_code = run(args);
-            return FilesystemOutput {exit_code, testing::internal::GetCapturedStdout(), testing::internal::GetCapturedStderr()};
+		testing::internal::CaptureStdout();
+		testing::internal::CaptureStderr();
+        std::future<int> exit_code = std::async(std::launch::async, [this, &args] {
+            return run(args);
         });
 
         if (mountDirForUnmounting.is_initialized()) {
@@ -111,16 +110,32 @@ public:
             });
 
             if(std::future_status::ready != unmount_success.wait_for(std::chrono::seconds(10))) {
-                throw std::runtime_error("Unmount thread didn't finish");
+				testing::internal::GetCapturedStdout(); // stop capturing stdout
+				testing::internal::GetCapturedStderr(); // stop capturing stderr
+
+				std::cerr << "Unmount thread didn't finish";
+				// The std::future destructor of a future created with std::async blocks until the future is ready.
+				// so, instead of causing a deadlock, rather abort
+				exit(EXIT_FAILURE);
             }
             EXPECT_TRUE(unmount_success.get()); // this also re-throws any potential exceptions
         }
 
-        if(std::future_status::ready != filesystem_output.wait_for(std::chrono::seconds(10))) {
-            throw std::runtime_error("Filesystem thread didn't finish");
+        if(std::future_status::ready != exit_code.wait_for(std::chrono::seconds(10))) {
+			testing::internal::GetCapturedStdout(); // stop capturing stdout
+			testing::internal::GetCapturedStderr(); // stop capturing stderr
+			
+			std::cerr << "Filesystem thread didn't finish";
+			// The std::future destructor of a future created with std::async blocks until the future is ready.
+			// so, instead of causing a deadlock, rather abort
+			exit(EXIT_FAILURE);
         }
 
-        return filesystem_output.get();
+		return {
+			exit_code.get(),
+			testing::internal::GetCapturedStdout(),
+			testing::internal::GetCapturedStderr()
+		};
     }
 };
 
