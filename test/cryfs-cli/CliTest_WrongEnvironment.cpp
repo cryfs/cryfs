@@ -157,9 +157,16 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
     Test_Run_Success();
 }
 
+// boost::filesystem doesn't set permissions on Windows correctly
+#if !defined(_MSC_VER)
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
     SetNoReadPermission(basedir);
     Test_Run_Error("Error: Could not read from base directory", ErrorCode::InaccessibleBaseDir);
+}
+
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
+	SetNoExePermission(basedir);
+	Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
@@ -167,15 +174,11 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
     Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
-TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
-    SetNoExePermission(basedir);
-    Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
-}
-
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
     SetNoPermission(basedir);
     Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
+#endif
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
     _mountdir.remove();
@@ -215,9 +218,16 @@ TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
     Test_Run_Success();
 }
 
+// boost::filesystem doesn't set permissions on Windows correctly
+#if !defined(_MSC_VER)
 TEST_P(CliTest_WrongEnvironment, MountDir_NoReadPermission) {
     SetNoReadPermission(mountdir);
     Test_Run_Error("Error: Could not read from mount directory", ErrorCode::InaccessibleMountDir);
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
+	SetNoExePermission(mountdir);
+	Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
@@ -225,12 +235,8 @@ TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
     Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
-TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
-    SetNoExePermission(mountdir);
-    Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
-}
-
 TEST_P(CliTest_WrongEnvironment, MountDir_NoPermission) {
     SetNoPermission(mountdir);
     Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
+#endif
