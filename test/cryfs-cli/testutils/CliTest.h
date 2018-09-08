@@ -56,14 +56,14 @@ public:
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(const std::vector<std::string>& args, const std::string &message, cryfs::ErrorCode errorCode) {
-        EXPECT_RUN_ERROR(args, (".*Usage:.*"+message).c_str(), errorCode);
+        EXPECT_RUN_ERROR(args, "Usage:[^\\x00]*"+message, errorCode);
     }
 
-    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const char* message, cryfs::ErrorCode errorCode) {
+    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const std::string& message, cryfs::ErrorCode errorCode) {
         FilesystemOutput filesystem_output = _run_filesystem(args, boost::none);
 
         EXPECT_EQ(exitCode(errorCode), filesystem_output.exit_code);
-        EXPECT_TRUE(std::regex_search(filesystem_output.stderr_, std::regex(message, std::regex::basic)));
+        EXPECT_TRUE(std::regex_search(filesystem_output.stderr_, std::regex(message)));
     }
 
     void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::filesystem::path &mountDir) {
