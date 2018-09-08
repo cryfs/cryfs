@@ -60,47 +60,67 @@ public:
     }
 
     void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const char* message, cryfs::ErrorCode errorCode) {
-        cpputils::CaptureStderrRAII capturedStderr;
-        int exit_code = run(args);
-        capturedStderr.EXPECT_MATCHES(message);
-        EXPECT_EQ(exitCode(errorCode), exit_code);
+        FilesystemOutput filesystem_output = _run_filesystem(args, boost::none);
+
+        EXPECT_EQ(exitCode(errorCode), filesystem_output.exit_code);
+        EXPECT_TRUE(std::regex_search(filesystem_output.stderr_, std::regex(message, std::regex::basic)));
     }
 
     void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::filesystem::path &mountDir) {
         //TODO Make this work when run in background
         ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
-		bool unmount_success = false;
-        std::thread unmountThread([&mountDir, &unmount_success] {
-			auto start = std::chrono::steady_clock::now();
-            int returncode = -1;
-            while (returncode != 0) {
-				if (std::chrono::steady_clock::now() - start > std::chrono::seconds(10)) {
-					return; // keep unmount_success = false
-				}
+
+		FilesystemOutput filesystem_output = _run_filesystem(args, mountDir);
+
+		EXPECT_EQ(0, filesystem_output.exit_code);
+		EXPECT_TRUE(std::regex_search(filesystem_output.stdout_, std::regex("Mounting filesystem")));
+    }
+
+    struct FilesystemOutput final {
+        int exit_code;
+        std::string stdout_;
+        std::string stderr_;
+    };
+
+    FilesystemOutput _run_filesystem(const std::vector<std::string>& args, const boost::optional<boost::filesystem::path>& mountDirForUnmounting) {
+        std::future<FilesystemOutput> filesystem_output = std::async(std::launch::async, [this, &args] {
+            testing::internal::CaptureStdout();
+            testing::internal::CaptureStderr();
+            int exit_code = run(args);
+            return FilesystemOutput {exit_code, testing::internal::GetCapturedStdout(), testing::internal::GetCapturedStderr()};
+        });
+
+        if (mountDirForUnmounting.is_initialized()) {
+            boost::filesystem::path mountDir = *mountDirForUnmounting;
+            std::future<bool> unmount_success = std::async(std::launch::async, [&mountDir] {
+                int returncode = -1;
+                while (returncode != 0) {
 #if defined(__APPLE__)
-                returncode = cpputils::Subprocess::call(std::string("umount ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
+                    returncode = cpputils::Subprocess::call(std::string("umount ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
 #elif defined(_MSC_VER)
-				// Somehow this sleeping is needed to not deadlock. Race condition in mounting/unmounting?
+                    // Somehow this sleeping is needed to not deadlock. Race condition in mounting/unmounting?
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				std::wstring mountDir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountDir.string());
 				BOOL success = DokanRemoveMountPoint(mountDir_.c_str());
 				returncode = success ? 0 : -1;
 #else
-                returncode = cpputils::Subprocess::call(std::string("fusermount -u ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
+                    returncode = cpputils::Subprocess::call(std::string("fusermount -u ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
 #endif
+                }
+                return true;
+            });
+
+            if(std::future_status::ready != unmount_success.wait_for(std::chrono::seconds(10))) {
+                throw std::runtime_error("Unmount thread didn't finish");
             }
-			unmount_success = true;
-        });
-        testing::internal::CaptureStdout();
-        run(args);
-		std::string _stdout = testing::internal::GetCapturedStdout();
-        unmountThread.join();
+            EXPECT_TRUE(unmount_success.get()); // this also re-throws any potential exceptions
+        }
 
-		EXPECT_TRUE(unmount_success);
+        if(std::future_status::ready != filesystem_output.wait_for(std::chrono::seconds(10))) {
+            throw std::runtime_error("Filesystem thread didn't finish");
+        }
 
-		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
-        // EXPECT_THAT(testing::internal::GetCapturedStdout(), testing::MatchesRegex(".*Mounting filesystem.*"));
-		EXPECT_TRUE(std::regex_search(_stdout, std::regex(".*Mounting filesystem.*")));
+        return filesystem_output.get();
     }
 };
 
