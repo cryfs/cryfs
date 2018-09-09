@@ -1,4 +1,3 @@
-#include "blockstore/implementations/ondisk/OnDiskBlock.h"
 #include <cpp-utils/data/DataFixture.h>
 #include "blockstore/utils/FileDoesntExistException.h"
 #include <gtest/gtest.h>
@@ -9,6 +8,8 @@
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <fstream>
 
+// TODO This should be ported to BlockStore2
+/*
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -30,24 +31,24 @@ class OnDiskBlockLoadTest: public Test, public WithParamInterface<size_t> {
 public:
   OnDiskBlockLoadTest():
     dir(),
-    key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
-    file(dir.path() / key.ToString(), false) {
+    key(BlockId::FromString("1491BB4932A389EE14BC7090AC772972")),
+    file(dir.path() / blockId.ToString(), false) {
   }
   TempDir dir;
-  Key key;
+  BlockId key;
   TempFile file;
 
   void CreateBlockWithSize(size_t size) {
     Data data(size);
-    OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+    OnDiskBlock::CreateOnDisk(dir.path(), blockId, std::move(data));
   }
 
   void StoreData(Data data) {
-    OnDiskBlock::CreateOnDisk(dir.path(), key, std::move(data));
+    OnDiskBlock::CreateOnDisk(dir.path(), blockId, std::move(data));
   }
 
   unique_ref<OnDiskBlock> LoadBlock() {
-    return OnDiskBlock::LoadFromDisk(dir.path(), key).value();
+    return OnDiskBlock::LoadFromDisk(dir.path(), blockId).value();
   }
 
   void EXPECT_BLOCK_DATA_EQ(const Data &expected, const OnDiskBlock &actual) {
@@ -75,6 +76,7 @@ TEST_P(OnDiskBlockLoadTest, LoadedDataIsCorrect) {
 }
 
 TEST_F(OnDiskBlockLoadTest, LoadNotExistingBlock) {
-  Key key2 = Key::FromString("272EE5517627CFA147A971A8E6E747E0");
+  BlockId key2 = BlockId::FromString("272EE5517627CFA147A971A8E6E747E0");
   EXPECT_EQ(boost::none, OnDiskBlock::LoadFromDisk(dir.path(), key2));
 }
+*/

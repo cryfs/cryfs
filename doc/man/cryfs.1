@@ -169,6 +169,24 @@ Allow upgrading the file system if it was created with an old CryFS version. Aft
 .
 .
 .TP
+\fB\-\-allow-integrity-violations\fI
+.
+By default, CryFS checks for integrity violations, i.e. will notice if an adversary modified or rolled back the file system. Using this flag, you can disable the integrity checks. This can for example be helpful for loading an old snapshot of your file system without CryFS thinking an adversary rolled it back.
+.
+.
+.TP
+\fB\-\-allow-replaced-filesystem\fI
+.
+By default, CryFS remembers file systems it has seen in this base directory and checks that it didn't get replaced by an attacker with an entirely different file system since the last time it was loaded. However, if you do want to replace the file system with an entirely new one, you can pass in this option to disable the check.
+.
+.
+.TP
+\fB\-\-missing-block-is-integrity-violation\fR=true
+.
+When CryFS encounters a missing ciphertext block, it cannot cannot (yet) know if it was deleted by an unauthorized adversary or by a second authorized client. This is one of the restrictions of the integrity checks currently in place. You can enable this flag to treat missing ciphertext blocks as integrity violations, but then your file system will not be usable by multiple clients anymore. By default, this flag is disabled.
+.
+.
+.TP
 \fB\-\-logfile\fR \fIfile\fR
 .
 Write status information to \fIfile\fR. If no logfile is given, CryFS will
@@ -203,6 +221,15 @@ shell scripts.
 .
 By default, CryFS connects to the internet to check for known security
 vulnerabilities and new versions. This option disables this.
+.
+.
+.TP
+\fBCRYFS_LOCAL_STATE_DIR\fR=[path]
+.
+Sets the directory cryfs uses to store local state. This local state
+is used to recognize known file systems and run integrity checks
+(i.e. check that they haven't been modified by an attacker.
+Default value: ${HOME}/.cryfs
 .
 .
 .

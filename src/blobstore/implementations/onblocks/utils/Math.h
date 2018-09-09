@@ -33,7 +33,7 @@ inline INT_TYPE maxZeroSubtraction(INT_TYPE minuend, INT_TYPE subtrahend) {
 
 template<typename INT_TYPE>
 inline INT_TYPE ceilLog(INT_TYPE base, INT_TYPE value) {
-    return std::ceil((long double)std::log(value)/(long double)std::log(base));
+    return std::ceil(static_cast<long double>(std::log(value))/static_cast<long double>(std::log(base)));
 }
 
 }

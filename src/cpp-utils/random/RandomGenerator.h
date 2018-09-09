@@ -12,6 +12,8 @@ namespace cpputils {
         template<size_t SIZE> FixedSizeData<SIZE> getFixedSize();
         Data get(size_t size);
 
+        void write(void *target, size_t size);
+
     protected:
         virtual void _get(void *target, size_t bytes) = 0;
     private:
@@ -21,6 +23,10 @@ namespace cpputils {
     };
 
     inline RandomGenerator::RandomGenerator() {
+    }
+
+    inline void RandomGenerator::write(void *target, size_t size) {
+        _get(target, size);
     }
 
     template<size_t SIZE> inline FixedSizeData<SIZE> RandomGenerator::getFixedSize() {

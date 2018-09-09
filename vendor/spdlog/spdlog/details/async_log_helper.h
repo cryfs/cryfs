@@ -9,17 +9,15 @@
 // If the internal queue of log messages reaches its max size,
 // then the client call will block until there is more room.
 //
-// If the back thread throws during logging, a spdlog::spdlog_ex exception
-// will be thrown in client's thread when tries to log the next message
 
 #pragma once
 
-#include <spdlog/common.h>
-#include <spdlog/sinks/sink.h>
-#include <spdlog/details/mpmc_bounded_q.h>
-#include <spdlog/details/log_msg.h>
-#include <spdlog/details/os.h>
-#include <spdlog/formatter.h>
+#include "../common.h"
+#include "../sinks/sink.h"
+#include "../details/mpmc_bounded_q.h"
+#include "../details/log_msg.h"
+#include "../details/os.h"
+#include "../formatter.h"
 
 #include <chrono>
 #include <exception>
@@ -53,6 +51,7 @@ class async_log_helper
         size_t thread_id;
         std::string txt;
         async_msg_type msg_type;
+        size_t msg_id;
 
         async_msg() = default;
         ~async_msg() = default;
@@ -62,11 +61,17 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
         logger_name(std::move(other.logger_name)),
                     level(std::move(other.level)),
                     time(std::move(other.time)),
+                    thread_id(other.thread_id),
                     txt(std::move(other.txt)),
-                    msg_type(std::move(other.msg_type))
+                    msg_type(std::move(other.msg_type)),
+                    msg_id(other.msg_id)
         {}
 
-        async_msg(async_msg_type m_type) :msg_type(m_type)
+        async_msg(async_msg_type m_type):
+            level(level::info),
+            thread_id(0),
+            msg_type(m_type),
+            msg_id(0)
         {}
 
         async_msg& operator=(async_msg&& other) SPDLOG_NOEXCEPT
@@ -77,6 +82,7 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
             thread_id = other.thread_id;
             txt = std::move(other.txt);
             msg_type = other.msg_type;
+            msg_id = other.msg_id;
             return *this;
         }
 
@@ -85,12 +91,13 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
         async_msg& operator=(const async_msg& other) = delete;
 
         // construct from log_msg
-        async_msg(const details::log_msg& m) :
+        async_msg(const details::log_msg& m):
             level(m.level),
             time(m.time),
             thread_id(m.thread_id),
             txt(m.raw.data(), m.raw.size()),
-            msg_type(async_msg_type::log)
+            msg_type(async_msg_type::log),
+            msg_id(m.msg_id)
         {
 #ifndef SPDLOG_NO_NAME
             logger_name = *m.logger_name;
@@ -106,6 +113,7 @@ async_msg(async_msg&& other) SPDLOG_NOEXCEPT:
             msg.time = time;
             msg.thread_id = thread_id;
             msg.raw << txt;
+            msg.msg_id = msg_id;
         }
     };
 
@@ -135,6 +143,7 @@ public:
 
     void flush(bool wait_for_q);
 
+    void set_error_handler(spdlog::log_err_handler err_handler);
 
 private:
     formatter_ptr _formatter;
@@ -176,7 +185,7 @@ private:
 
     void handle_flush_interval(log_clock::time_point& now, log_clock::time_point& last_flush);
 
-    // sleep,yield or return immediatly using the time passed since last message as a hint
+    // sleep,yield or return immediately using the time passed since last message as a hint
     static void sleep_or_yield(const spdlog::log_clock::time_point& now, const log_clock::time_point& last_op_time);
 
     // wait until the queue is empty
@@ -221,7 +230,8 @@ inline spdlog::details::async_log_helper::~async_log_helper()
         _worker_thread.join();
     }
     catch (...) // don't crash in destructor
-    {}
+    {
+    }
 }
 
 
@@ -250,28 +260,34 @@ inline void spdlog::details::async_log_helper::push_msg(details::async_log_helpe
 inline void spdlog::details::async_log_helper::flush(bool wait_for_q)
 {
     push_msg(async_msg(async_msg_type::flush));
-    if(wait_for_q)
-        wait_empty_q(); //return only make after the above flush message was processed
+    if (wait_for_q)
+        wait_empty_q(); //return when queue is empty
 }
 
 inline void spdlog::details::async_log_helper::worker_loop()
 {
-    try
+    if (_worker_warmup_cb) _worker_warmup_cb();
+    auto last_pop = details::os::now();
+    auto last_flush = last_pop;
+    auto active = true;
+    while (active)
     {
-        if (_worker_warmup_cb) _worker_warmup_cb();
-        auto last_pop = details::os::now();
-        auto last_flush = last_pop;
-        while(process_next_msg(last_pop, last_flush));
-        if (_worker_teardown_cb) _worker_teardown_cb();
+        try
+        {
+            active = process_next_msg(last_pop, last_flush);
+        }
+        catch (const std::exception &ex)
+        {
+            _err_handler(ex.what());
+        }
+        catch(...)
+        {
+            _err_handler("Unknown exeption in async logger worker loop.");
+        }
     }
-    catch (const std::exception &ex)
-    {
-        _err_handler(ex.what());
-    }
-    catch (...)
-    {
-        _err_handler("Unknown exception");
-    }
+    if (_worker_teardown_cb) _worker_teardown_cb();
+
+
 }
 
 // process next message in the queue
@@ -300,7 +316,7 @@ inline bool spdlog::details::async_log_helper::process_next_msg(log_clock::time_
             _formatter->format(incoming_log_msg);
             for (auto &s : _sinks)
             {
-                if(s->should_log( incoming_log_msg.level))
+                if (s->should_log(incoming_log_msg.level))
                 {
                     s->log(incoming_log_msg);
                 }
@@ -342,7 +358,6 @@ inline void spdlog::details::async_log_helper::set_formatter(formatter_ptr msg_f
 // spin, yield or sleep. use the time passed since last message as a hint
 inline void spdlog::details::async_log_helper::sleep_or_yield(const spdlog::log_clock::time_point& now, const spdlog::log_clock::time_point& last_op_time)
 {
-    using namespace std::this_thread;
     using std::chrono::milliseconds;
     using std::chrono::microseconds;
 
@@ -358,20 +373,25 @@ inline void spdlog::details::async_log_helper::sleep_or_yield(const spdlog::log_
 
     // sleep for 20 ms upto 200 ms
     if (time_since_op <= milliseconds(200))
-        return sleep_for(milliseconds(20));
+        return details::os::sleep_for_millis(20);
 
-    // sleep for 200 ms
-    return sleep_for(milliseconds(200));
+    // sleep for 500 ms
+    return details::os::sleep_for_millis(500);
 }
 
 // wait for the queue to be empty
 inline void spdlog::details::async_log_helper::wait_empty_q()
 {
     auto last_op = details::os::now();
-    while (_q.approx_size() > 0)
+    while (!_q.is_empty())
     {
         sleep_or_yield(details::os::now(), last_op);
     }
+}
+
+inline void spdlog::details::async_log_helper::set_error_handler(spdlog::log_err_handler err_handler)
+{
+    _err_handler = err_handler;
 }
 
 

@@ -2,8 +2,6 @@
 
 using std::istream;
 using std::ostream;
-using boost::optional;
-using boost::none;
 using cpputils::Data;
 
 namespace cpputils {

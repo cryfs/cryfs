@@ -32,12 +32,20 @@ public:
         return _base->flush();
     }
 
-    const blockstore::Key &key() const {
-        return _base->key();
+    const blockstore::BlockId &blockId() const override {
+        return _base->blockId();
     }
 
-    off_t lstat_size() const {
+    off_t lstat_size() const override {
         return _base->lstat_size();
+    }
+
+    const blockstore::BlockId &parentPointer() const override {
+        return _base->parentPointer();
+    }
+
+    void setParentPointer(const blockstore::BlockId &parentId) override {
+        return _base->setParentPointer(parentId);
     }
 
 private:

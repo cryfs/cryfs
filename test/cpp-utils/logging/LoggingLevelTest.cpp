@@ -1,4 +1,5 @@
 #include "testutils/LoggingTest.h"
+#include <regex>
 
 using namespace cpputils::logging;
 using std::string;
@@ -8,7 +9,9 @@ class LoggingLevelTest: public LoggingTest {
 public:
     void EXPECT_DEBUG_LOG_ENABLED() {
         LOG(DEBUG, "My log message");
-        EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[debug\\].*My log message.*"));
+		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+        //EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[debug\\].*My log message.*"));
+		EXPECT_TRUE(std::regex_search(mockLogger.capturedLog(), std::regex(".*\\[MockLogger\\].*\\[debug\\].*My log message.*")));
     }
 
     void EXPECT_DEBUG_LOG_DISABLED() {
@@ -18,7 +21,9 @@ public:
 
     void EXPECT_INFO_LOG_ENABLED() {
         LOG(INFO, "My log message");
-        EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[info\\].*My log message.*"));
+		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+        //EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[info\\].*My log message.*"));
+		EXPECT_TRUE(std::regex_search(mockLogger.capturedLog(), std::regex(".*\\[MockLogger\\].*\\[info\\].*My log message.*")));
     }
 
     void EXPECT_INFO_LOG_DISABLED() {
@@ -28,7 +33,9 @@ public:
 
     void EXPECT_WARNING_LOG_ENABLED() {
         LOG(WARN, "My log message");
-        EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[warning\\].*My log message.*"));
+		EXPECT_TRUE(std::regex_search(mockLogger.capturedLog(), std::regex(".*\\[MockLogger\\].*\\[warning\\].*My log message.*")));
+		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+        //EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[warning\\].*My log message.*"));
     }
 
     void EXPECT_WARNING_LOG_DISABLED() {
@@ -37,12 +44,14 @@ public:
     }
 
     void EXPECT_ERROR_LOG_ENABLED() {
-        LOG(ERROR, "My log message");
-        EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
+        LOG(ERR, "My log message");
+		// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
+        //EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
+		EXPECT_TRUE(std::regex_search(mockLogger.capturedLog(), std::regex(".*\\[MockLogger\\].*\\[error\\].*My log message.*")));
     }
 
     void EXPECT_ERROR_LOG_DISABLED() {
-        LOG(ERROR, "My log message");
+        LOG(ERR, "My log message");
         EXPECT_EQ("", mockLogger.capturedLog());
     }
 };
@@ -110,7 +119,7 @@ TEST_F(LoggingLevelTest, WARNING_SetAfterSettingLogger) {
 }
 
 TEST_F(LoggingLevelTest, ERROR_SetBeforeSettingLogger) {
-    setLevel(ERROR);
+    setLevel(ERR);
     setLogger(mockLogger.get());
     EXPECT_DEBUG_LOG_DISABLED();
     EXPECT_INFO_LOG_DISABLED();
@@ -120,7 +129,7 @@ TEST_F(LoggingLevelTest, ERROR_SetBeforeSettingLogger) {
 
 TEST_F(LoggingLevelTest, ERROR_SetAfterSettingLogger) {
     setLogger(mockLogger.get());
-    setLevel(ERROR);
+    setLevel(ERR);
     EXPECT_DEBUG_LOG_DISABLED();
     EXPECT_INFO_LOG_DISABLED();
     EXPECT_WARNING_LOG_DISABLED();

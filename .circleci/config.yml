@@ -7,7 +7,7 @@ references:
     run:
       name: Initialize Cache
       command: |
-        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}" > /tmp/_build_env_vars
+        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}_${CXXFLAGS}" > /tmp/_build_env_vars
         echo Build env vars used for cache keys:
         cat /tmp/_build_env_vars
   container_setup_pre: &container_setup_pre
@@ -49,7 +49,7 @@ references:
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake3 make libcurl4-openssl-dev libssl-dev libfuse-dev python
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
 
@@ -150,26 +150,34 @@ references:
         ccache --max-size=512M
         ccache --show-stats
 
+        # Disable OpenMP if it is clang, because Ubuntu 14.04 doesn't have the libomp-dev package needed to support OpenMP for clang.
+        if [[ ${APT_COMPILER_PACKAGE} == clang* ]]; then
+          OPENMP_PARAMS="-DDISABLE_OPENMP=ON"
+        else
+          OPENMP_PARAMS=""
+        fi
+
         # Build
         mkdir cmake
         cd cmake
-        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS}
         make -j$NUMCORES
 
         ccache --show-stats
   test: &test
     run:
       name: Test
+      no_output_timeout: 120m
       command: |
         cd cmake
         ./test/gitversion/gitversion-test
-        ./test/cpp-utils/cpp-utils-test
-        ./test/fspp/fspp-test
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
         ./test/parallelaccessstore/parallelaccessstore-test
         ./test/blockstore/blockstore-test
         ./test/blobstore/blobstore-test
-        ./test/cryfs/cryfs-test
-        ./test/cryfs-cli/cryfs-cli-test
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs/cryfs-test ; fi
+        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
   job_definition: &job_definition
     <<: *container_config
     steps:
@@ -191,82 +199,156 @@ references:
         only: /.*/
 
 jobs:
-  gcc_4_8:
-    <<: *job_definition
-    environment:
-      CC: gcc-4.8
-      CXX: g++-4.8
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-4.8"
-  gcc_5:
+  gcc_5_debug:
     <<: *job_definition
     environment:
       CC: gcc-5
       CXX: g++-5
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-5"
-  gcc_6:
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  gcc_5_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-5
+      CXX: g++-5
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-5"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  gcc_6_debug:
     <<: *job_definition
     environment:
       CC: gcc-6
       CXX: g++-6
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-6"
-  gcc_7:
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  gcc_6_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-6
+      CXX: g++-6
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-6"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  gcc_7_debug:
     <<: *job_definition
     environment:
       CC: gcc-7
       CXX: g++-7
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-7"
-  clang_3_7:
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  gcc_7_release:
     <<: *job_definition
     environment:
-      CC: clang-3.7
-      CXX: clang++-3.7
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.7
-  clang_3_8:
-    <<: *job_definition
-    environment:
-      CC: clang-3.8
-      CXX: clang++-3.8
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-3.8
-  clang_4_0:
+      CC: gcc-7
+      CXX: g++-7
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-7"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_4_0_debug:
     <<: *job_definition
     environment:
       CC: clang-4.0
       CXX: clang++-4.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-4.0
-  clang_5_0:
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  clang_4_0_release:
+    <<: *job_definition
+    environment:
+      CC: clang-4.0
+      CXX: clang++-4.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-4.0
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  clang_5_0_debug:
     <<: *job_definition
     environment:
       CC: clang-5.0
       CXX: clang++-5.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+  clang_5_0_release:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+  no_compatibility:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
+      BUILD_TYPE: "Debug"
+  address_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fno-common -fsanitize-address-use-after-scope"
+      BUILD_TYPE: "Debug"
+      # Note: Leak detection is disabled because libfuse itself is leaky...
+      ASAN_OPTIONS: "detect_leaks=0 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
+      DISABLE_BROKEN_ASAN_TESTS: true
+  thread_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-5.0
+      CXX: clang++-5.0
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-5.0
+      CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
+      BUILD_TYPE: "Debug"
+      DISABLE_BROKEN_TSAN_TESTS: true
 
 workflows:
   version: 2
 
   build_and_test:
     jobs:
-    - gcc_4_8:
+    - gcc_5_debug:
         <<: *enable_for_tags
-    - gcc_5:
+    - gcc_5_release:
         <<: *enable_for_tags
-    - gcc_6:
+    - gcc_6_debug:
         <<: *enable_for_tags
-    - gcc_7:
+    - gcc_6_release:
         <<: *enable_for_tags
-    - clang_3_7:
+    - gcc_7_debug:
         <<: *enable_for_tags
-    - clang_3_8:
+    - gcc_7_release:
         <<: *enable_for_tags
-    - clang_4_0:
+    - clang_4_0_debug:
         <<: *enable_for_tags
-    - clang_5_0:
+    - clang_4_0_release:
         <<: *enable_for_tags
-
+    - clang_5_0_debug:
+        <<: *enable_for_tags
+    - clang_5_0_release:
+        <<: *enable_for_tags
+    - no_compatibility:
+        <<: *enable_for_tags
+    - address_sanitizer:
+        <<: *enable_for_tags
+    - thread_sanitizer:
+        <<: *enable_for_tags

@@ -47,7 +47,6 @@ TEST_F(SCryptTest, DifferentPasswordResultsInDifferentKey) {
 
 TEST_F(SCryptTest, UsesCorrectSettings) {
     auto scrypt = SCrypt::forNewKey(SCrypt::TestSettings);
-    auto derivedKey = scrypt->deriveKey<16>("mypassword");
     SCryptParameters parameters = kdfParameters(*scrypt);
     EXPECT_EQ(SCrypt::TestSettings.SALT_LEN, parameters.salt().size());
     EXPECT_EQ(SCrypt::TestSettings.N, parameters.N());
@@ -57,7 +56,6 @@ TEST_F(SCryptTest, UsesCorrectSettings) {
 
 TEST_F(SCryptTest, UsesCorrectDefaultSettings) {
     auto scrypt = SCrypt::forNewKey(SCrypt::DefaultSettings);
-    auto derivedKey = scrypt->deriveKey<16>("mypassword");
     SCryptParameters parameters = kdfParameters(*scrypt);
     EXPECT_EQ(SCrypt::DefaultSettings.SALT_LEN, parameters.salt().size());
     EXPECT_EQ(SCrypt::DefaultSettings.N, parameters.N());

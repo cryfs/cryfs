@@ -1,14 +1,12 @@
 #include "testutils/FuseReadDirTest.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::StrEq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-using std::vector;
 using std::string;
 
 using namespace fspp::fuse;

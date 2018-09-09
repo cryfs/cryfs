@@ -17,7 +17,7 @@ namespace cpputils {
 
         void get(void *target, size_t numBytes);
 
-        void add(Data data);
+        void add(const Data& data);
 
         void waitUntilSizeIsLessThan(size_t numBytes);
 
@@ -54,18 +54,18 @@ namespace cpputils {
 
     inline size_t ThreadsafeRandomDataBuffer::_get(void *target, size_t numBytes) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        _dataAddedCv.wait(lock, [this, numBytes] {
+        _dataAddedCv.wait(lock, [this] {
            return _buffer.size() > 0;
         });
-        size_t gettableBytes = std::min(_buffer.size(), numBytes);
+        size_t gettableBytes = (std::min)(_buffer.size(), numBytes);
         _buffer.get(target, gettableBytes);
         _dataGottenCv.notify_all();
         return gettableBytes;
     }
 
-    inline void ThreadsafeRandomDataBuffer::add(Data data) {
+    inline void ThreadsafeRandomDataBuffer::add(const Data& data) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        _buffer.add(std::move(data));
+        _buffer.add(data);
         _dataAddedCv.notify_all();
     }
 

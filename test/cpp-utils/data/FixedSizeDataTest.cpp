@@ -89,19 +89,19 @@ const Data FixedSizeDataTestWithBinaryParam::VALUE2(DataFixture::generate(SIZE, 
 INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   EXPECT_DATA_EQ(*GetParam(), data);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromAndToBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data output(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(output.data());
   EXPECT_EQ(*GetParam(), output);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, ToAndFromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary((uint8_t*)GetParam()->data());
+  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data stored(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(stored.data());
   FixedSizeData<SIZE> loaded = FixedSizeData<SIZE>::FromBinary(stored.data());
@@ -143,6 +143,7 @@ TEST_P(FixedSizeDataTestWithParam, Drop_One) {
 TEST_P(FixedSizeDataTestWithParam, Take_Nothing) {
   FixedSizeData<SIZE> source(GetParam());
   FixedSizeData<0> taken = source.take<0>();
+  (void)taken; // silence unused variable warning
 }
 
 TEST_P(FixedSizeDataTestWithParam, Drop_Nothing) {
@@ -160,12 +161,14 @@ TEST_P(FixedSizeDataTestWithParam, Take_All) {
 TEST_P(FixedSizeDataTestWithParam, Drop_All) {
   FixedSizeData<SIZE> source(GetParam());
   FixedSizeData<0> taken = source.drop<SIZE>();
+  (void)taken; // silence unused variable warning
 }
 
 TEST_F(FixedSizeDataTest, CopyConstructorDoesntChangeSource) {
   FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
   FixedSizeData<SIZE> data2(data1);
   EXPECT_EQ(DATA1_AS_STRING, data1.ToString());
+  (void)data2; // silence unused variable warning
 }
 
 TEST_P(FixedSizeDataTestWithParam, IsEqualAfterAssignment1) {

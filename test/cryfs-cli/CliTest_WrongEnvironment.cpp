@@ -1,5 +1,7 @@
 #include "testutils/CliTest.h"
 
+#include <cpp-utils/system/env.h>
+
 namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
@@ -50,15 +52,15 @@ public:
         );
     }
 
-    vector<const char*> args() {
-        vector<const char*> result = {basedir.c_str(), mountdir.c_str()};
+    vector<string> args() {
+        vector<string> result = {basedir.string(), mountdir.string()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
-            result.push_back(configfile.path().c_str());
+            result.push_back(configfile.path().string());
         }
         if (GetParam().logIsNotStderr) {
             result.push_back("--logfile");
-            result.push_back(logfile.path().c_str());
+            result.push_back(logfile.path().string());
         }
         if (GetParam().runningInForeground) {
             result.push_back("-f");
@@ -96,7 +98,7 @@ bf::path make_relative(const bf::path &path) {
     for(auto iter = ++cwd.begin(); iter!=cwd.end(); ++iter) {
         result /= "..";
     }
-    result /= path;
+    result /= path.relative_path();
     return result;
 }
 
@@ -129,9 +131,9 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
-    ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
+    cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("Error: base directory not found", ErrorCode::InaccessibleBaseDir);
-    ::unsetenv("CRYFS_FRONTEND");
+    cpputils::unsetenv("CRYFS_FRONTEND");
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
@@ -155,9 +157,16 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
     Test_Run_Success();
 }
 
+// boost::filesystem doesn't set permissions on Windows correctly
+#if !defined(_MSC_VER)
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoReadPermission) {
     SetNoReadPermission(basedir);
     Test_Run_Error("Error: Could not read from base directory", ErrorCode::InaccessibleBaseDir);
+}
+
+TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
+	SetNoExePermission(basedir);
+	Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
@@ -165,15 +174,11 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_NoWritePermission) {
     Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
 
-TEST_P(CliTest_WrongEnvironment, BaseDir_NoExePermission) {
-    SetNoExePermission(basedir);
-    Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
-}
-
 TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
     SetNoPermission(basedir);
     Test_Run_Error("Error: Could not write to base directory", ErrorCode::InaccessibleBaseDir);
 }
+#endif
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
     _mountdir.remove();
@@ -187,9 +192,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
-    ::setenv("CRYFS_FRONTEND", "noninteractive", 1);
+    cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
-    ::unsetenv("CRYFS_FRONTEND");
+    cpputils::unsetenv("CRYFS_FRONTEND");
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
@@ -213,9 +218,16 @@ TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
     Test_Run_Success();
 }
 
+// boost::filesystem doesn't set permissions on Windows correctly
+#if !defined(_MSC_VER)
 TEST_P(CliTest_WrongEnvironment, MountDir_NoReadPermission) {
     SetNoReadPermission(mountdir);
     Test_Run_Error("Error: Could not read from mount directory", ErrorCode::InaccessibleMountDir);
+}
+
+TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
+	SetNoExePermission(mountdir);
+	Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
@@ -223,12 +235,8 @@ TEST_P(CliTest_WrongEnvironment, MountDir_NoWritePermission) {
     Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
 
-TEST_P(CliTest_WrongEnvironment, MountDir_NoExePermission) {
-    SetNoExePermission(mountdir);
-    Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
-}
-
 TEST_P(CliTest_WrongEnvironment, MountDir_NoPermission) {
     SetNoPermission(mountdir);
     Test_Run_Error("Error: Could not write to mount directory", ErrorCode::InaccessibleMountDir);
 }
+#endif

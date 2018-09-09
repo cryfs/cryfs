@@ -17,8 +17,8 @@ public:
   }
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
-    blockstore::Key key = CreateBlock()->key();
-    auto loaded_block = blockStore->load(key).value();
+    blockstore::BlockId blockId = CreateBlock()->blockId();
+    auto loaded_block = blockStore->load(blockId).value();
     EXPECT_EQ(size, loaded_block->size());
   }
 
@@ -30,8 +30,8 @@ public:
 
   void TestLoadingUnchangedBlockData() {
     cpputils::Data data = cpputils::DataFixture::generate(size);
-    blockstore::Key key = blockStore->create(data)->key();
-    auto loaded_block = blockStore->load(key).value();
+    blockstore::BlockId blockId = blockStore->create(data)->blockId();
+    auto loaded_block = blockStore->load(blockId).value();
     EXPECT_EQ(0, std::memcmp(data.data(), loaded_block->data(), size));
   }
 
@@ -69,34 +69,34 @@ public:
 
   void TestAfterCreate_FlushesWhenDestructed() {
     cpputils::Data randomData = cpputils::DataFixture::generate(size);
-    blockstore::Key key = blockstore::Key::Null();
+    blockstore::BlockId blockId = blockstore::BlockId::Null();
     {
       auto block = blockStore->create(cpputils::Data(size));
-      key = block->key();
+      blockId = block->blockId();
       WriteDataToBlock(block.get(), randomData);
     }
-    auto loaded_block = blockStore->load(key).value();
+    auto loaded_block = blockStore->load(blockId).value();
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
   }
 
   void TestAfterLoad_FlushesWhenDestructed() {
     cpputils::Data randomData = cpputils::DataFixture::generate(size);
-    blockstore::Key key = blockstore::Key::Null();
+    blockstore::BlockId blockId = blockstore::BlockId::Null();
     {
-      key = CreateBlock()->key();
-      auto block = blockStore->load(key).value();
+      blockId = CreateBlock()->blockId();
+      auto block = blockStore->load(blockId).value();
       WriteDataToBlock(block.get(), randomData);
     }
-    auto loaded_block = blockStore->load(key).value();
+    auto loaded_block = blockStore->load(blockId).value();
     EXPECT_BLOCK_DATA_CORRECT(*loaded_block, randomData);
   }
 
   void TestLoadNonExistingBlock() {
-    EXPECT_EQ(boost::none, blockStore->load(key));
+    EXPECT_EQ(boost::none, blockStore->load(blockId));
   }
 
 private:
-  const blockstore::Key key = blockstore::Key::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   cpputils::unique_ref<blockstore::BlockStore> blockStore;
   size_t size;
 
@@ -107,23 +107,23 @@ private:
   }
 
   cpputils::unique_ref<blockstore::Block> StoreDataToBlockAndLoadIt(const cpputils::Data &data) {
-    blockstore::Key key = StoreDataToBlockAndGetKey(data);
-    return blockStore->load(key).value();
+    blockstore::BlockId blockId = StoreDataToBlockAndGetKey(data);
+    return blockStore->load(blockId).value();
   }
 
-  blockstore::Key StoreDataToBlockAndGetKey(const cpputils::Data &data) {
-    return blockStore->create(data)->key();
+  blockstore::BlockId StoreDataToBlockAndGetKey(const cpputils::Data &data) {
+    return blockStore->create(data)->blockId();
   }
 
   cpputils::unique_ref<blockstore::Block> StoreDataToBlockAndLoadItDirectlyAfterFlushing(const cpputils::Data &data) {
     auto block = blockStore->create(data);
     block->flush();
-    return blockStore->load(block->key()).value();
+    return blockStore->load(block->blockId()).value();
   }
 
   cpputils::unique_ref<blockstore::Block> CreateBlockAndLoadIt() {
-    blockstore::Key key = CreateBlock()->key();
-    return blockStore->load(key).value();
+    blockstore::BlockId blockId = CreateBlock()->blockId();
+    return blockStore->load(blockId).value();
   }
 
   cpputils::unique_ref<blockstore::Block> CreateBlock() {
@@ -140,7 +140,7 @@ private:
   }
 };
 
-constexpr std::initializer_list<size_t> SIZES = {0, 1, 1024, 4096, 10*1024*1024};
+constexpr std::array<size_t, 5> SIZES = {{0, 1, 1024, 4096, 10*1024*1024}};
 #define TYPED_TEST_P_FOR_ALL_SIZES(TestName)                                    \
   TYPED_TEST_P(BlockStoreTest, TestName) {                                      \
     for (auto size: SIZES) {                                                    \

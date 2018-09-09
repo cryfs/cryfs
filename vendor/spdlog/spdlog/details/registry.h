@@ -10,10 +10,10 @@
 // If user requests a non existing logger, nullptr will be returned
 // This class is thread safe
 
-#include <spdlog/details/null_mutex.h>
-#include <spdlog/logger.h>
-#include <spdlog/async_logger.h>
-#include <spdlog/common.h>
+#include "../details/null_mutex.h"
+#include "../logger.h"
+#include "../async_logger.h"
+#include "../common.h"
 
 #include <chrono>
 #include <functional>
@@ -64,7 +64,29 @@ public:
             new_logger->set_error_handler(_err_handler);
 
         new_logger->set_level(_level);
+        new_logger->flush_on(_flush_level);
 
+
+        //Add to registry
+        _loggers[logger_name] = new_logger;
+        return new_logger;
+    }
+
+    template<class It>
+    std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, const It& sinks_begin, const It& sinks_end)
+    {
+        std::lock_guard<Mutex> lock(_mutex);
+        throw_if_exists(logger_name);
+        auto new_logger = std::make_shared<async_logger>(logger_name, sinks_begin, sinks_end, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb);
+
+        if (_formatter)
+            new_logger->set_formatter(_formatter);
+
+        if (_err_handler)
+            new_logger->set_error_handler(_err_handler);
+
+        new_logger->set_level(_level);
+        new_logger->flush_on(_flush_level);
 
         //Add to registry
         _loggers[logger_name] = new_logger;
@@ -99,6 +121,15 @@ public:
         return create(logger_name, { sink });
     }
 
+    std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, sinks_init_list sinks)
+    {
+        return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, sinks.begin(), sinks.end());
+    }
+
+    std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, sink_ptr sink)
+    {
+        return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, { sink });
+    }
 
     void formatter(formatter_ptr f)
     {
@@ -122,6 +153,14 @@ public:
         for (auto& l : _loggers)
             l.second->set_level(log_level);
         _level = log_level;
+    }
+
+    void flush_on(level::level_enum log_level)
+    {
+        std::lock_guard<Mutex> lock(_mutex);
+        for (auto& l : _loggers)
+            l.second->flush_on(log_level);
+        _flush_level = log_level;
     }
 
     void set_error_handler(log_err_handler handler)
@@ -168,6 +207,7 @@ private:
     std::unordered_map <std::string, std::shared_ptr<logger>> _loggers;
     formatter_ptr _formatter;
     level::level_enum _level = level::info;
+    level::level_enum _flush_level = level::off;
     log_err_handler _err_handler;
     bool _async_mode = false;
     size_t _async_q_size = 0;

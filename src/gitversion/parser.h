@@ -8,14 +8,14 @@
 
 namespace gitversion {
     struct VersionInfo {
-        bool isDevVersion;
-        bool isStableVersion;
+        bool isDevVersion = false;
+        bool isStableVersion = false;
         std::string versionTag;
         std::string gitCommitId;
         std::string majorVersion;
         std::string minorVersion;
         std::string hotfixVersion;
-        unsigned int commitsSinceTag;
+        unsigned int commitsSinceTag = 0;
     };
 
     class Parser final {

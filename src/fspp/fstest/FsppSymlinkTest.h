@@ -10,33 +10,30 @@
 template<class ConcreteFileSystemTestFixture>
 class FsppSymlinkTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
-  void CreateSymlink(const std::string &source, const boost::filesystem::path &target) {
-    this->LoadDir("/")->createSymlink(source, target, 0, 0);
-  }
 };
 
 TYPED_TEST_CASE_P(FsppSymlinkTest);
 
 TYPED_TEST_P(FsppSymlinkTest, Create_AbsolutePath) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Create_RelativePath) {
-  this->CreateSymlink("mysymlink", "../target");
+  this->CreateSymlink("/mysymlink", "../target");
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Read_AbsolutePath) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
   EXPECT_EQ("/my/symlink/target", this->LoadSymlink("/mysymlink")->target());
 }
 
 TYPED_TEST_P(FsppSymlinkTest, Read_RelativePath) {
-  this->CreateSymlink("mysymlink", "../target");
+  this->CreateSymlink("/mysymlink", "../target");
   EXPECT_EQ("../target", this->LoadSymlink("/mysymlink")->target());
 }
 
-TYPED_TEST_P(FsppSymlinkTest, Delete) {
-  this->CreateSymlink("mysymlink", "/my/symlink/target");
+TYPED_TEST_P(FsppSymlinkTest, Remove) {
+  this->CreateSymlink("/mysymlink", "/my/symlink/target");
   EXPECT_NE(boost::none, this->device->Load("/mysymlink"));
   EXPECT_NE(boost::none, this->device->LoadSymlink("/mysymlink"));
   this->Load("/mysymlink")->remove();
@@ -44,12 +41,23 @@ TYPED_TEST_P(FsppSymlinkTest, Delete) {
   EXPECT_EQ(boost::none, this->device->LoadSymlink("/mysymlink"));
 }
 
+TYPED_TEST_P(FsppSymlinkTest, Remove_Nested) {
+  this->CreateDir("/mytestdir");
+  this->CreateSymlink("/mytestdir/mysymlink", "/my/symlink/target");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/mysymlink"));
+  EXPECT_NE(boost::none, this->device->LoadSymlink("/mytestdir/mysymlink"));
+  this->Load("/mytestdir/mysymlink")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mysymlink"));
+  EXPECT_EQ(boost::none, this->device->LoadSymlink("/mytestdir/mysymlink"));
+}
+
 REGISTER_TYPED_TEST_CASE_P(FsppSymlinkTest,
   Create_AbsolutePath,
   Create_RelativePath,
   Read_AbsolutePath,
   Read_RelativePath,
-  Delete
+  Remove,
+  Remove_Nested
 );
 
 //TODO Other tests?

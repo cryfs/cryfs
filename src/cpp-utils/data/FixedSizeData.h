@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 #define MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 
-#include <cryptopp/hex.h>
+#include <vendor_cryptopp/hex.h>
 #include <string>
 #include <cstring>
 #include "../assert/assert.h"
@@ -34,7 +34,7 @@ public:
   template<size_t size> FixedSizeData<SIZE-size> drop() const;
 
 private:
-  FixedSizeData() {}
+  FixedSizeData(): _data() {}
   template<size_t _SIZE> friend class FixedSizeData;
 
   unsigned char _data[BINARY_LENGTH];

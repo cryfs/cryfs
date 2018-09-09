@@ -3,12 +3,14 @@
 #define MESSMER_BLOBSTORE_TEST_IMPLEMENTATIONS_ONBLOCKS_DATATREESTORE_DATATREETEST_H_
 
 #include <gtest/gtest.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
 
 #include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
 #include "blobstore/implementations/onblocks/datatreestore/DataTreeStore.h"
+#include "blockstore/implementations/mock/MockBlockStore.h"
 
 class DataTreeTest: public ::testing::Test {
 public:
@@ -32,8 +34,8 @@ public:
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateThreeLevelMinData();
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinData();
 
-  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::Key &key);
-  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::Key &key);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> LoadInnerNode(const blockstore::BlockId &blockId);
+  cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> LoadLeafNode(const blockstore::BlockId &blockId);
 
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataLeafNode> CreateLeafWithSize(uint32_t size);
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateTwoLeafWithSecondLeafSize(uint32_t size);
@@ -44,17 +46,19 @@ public:
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFullThreeLevelWithLastLeafSize(uint32_t size);
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataInnerNode> CreateFourLevelMinDataWithLastLeafSize(uint32_t size);
 
+  cpputils::unique_ref<blockstore::mock::MockBlockStore> _blockStore;
+  blockstore::mock::MockBlockStore *blockStore;
   cpputils::unique_ref<blobstore::onblocks::datanodestore::DataNodeStore> _nodeStore;
   blobstore::onblocks::datanodestore::DataNodeStore *nodeStore;
   blobstore::onblocks::datatreestore::DataTreeStore treeStore;
 
-  void EXPECT_IS_LEAF_NODE(const blockstore::Key &key);
-  void EXPECT_IS_INNER_NODE(const blockstore::Key &key);
-  void EXPECT_IS_TWONODE_CHAIN(const blockstore::Key &key);
-  void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::Key &key);
-  void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::Key &key);
+  void EXPECT_IS_LEAF_NODE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_INNER_NODE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_TWONODE_CHAIN(const blockstore::BlockId &blockId);
+  void EXPECT_IS_FULL_TWOLEVEL_TREE(const blockstore::BlockId &blockId);
+  void EXPECT_IS_FULL_THREELEVEL_TREE(const blockstore::BlockId &blockId);
 
-  void CHECK_DEPTH(int depth, const blockstore::Key &key);
+  void CHECK_DEPTH(int depth, const blockstore::BlockId &blockId);
 
 private:
   DISALLOW_COPY_AND_ASSIGN(DataTreeTest);

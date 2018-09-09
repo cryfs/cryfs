@@ -9,7 +9,7 @@ int FuseTruncateTest::TruncateFileReturnError(const char *filename, off_t size) 
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / filename;
-  int retval = ::truncate(realpath.c_str(), size);
+  int retval = ::truncate(realpath.string().c_str(), size);
   if (retval == 0) {
     return 0;
   } else {

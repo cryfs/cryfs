@@ -15,7 +15,7 @@ using cpputils::make_unique_ref;
 
 using blockstore::BlockStore;
 using blockstore::parallelaccess::ParallelAccessBlockStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
@@ -38,8 +38,8 @@ unique_ref<Blob> BlobStoreOnBlocks::create() {
     return make_unique_ref<BlobOnBlocks>(_dataTreeStore->createNewTree());
 }
 
-optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const Key &key) {
-    auto tree = _dataTreeStore->load(key);
+optional<unique_ref<Blob>> BlobStoreOnBlocks::load(const BlockId &blockId) {
+    auto tree = _dataTreeStore->load(blockId);
     if (tree == none) {
         return none;
     }
@@ -50,6 +50,10 @@ void BlobStoreOnBlocks::remove(unique_ref<Blob> blob) {
     auto _blob = dynamic_pointer_move<BlobOnBlocks>(blob);
     ASSERT(_blob != none, "Passed Blob in BlobStoreOnBlocks::remove() is not a BlobOnBlocks.");
     _dataTreeStore->remove((*_blob)->releaseTree());
+}
+
+void BlobStoreOnBlocks::remove(const BlockId &blockId) {
+    _dataTreeStore->remove(blockId);
 }
 
 uint64_t BlobStoreOnBlocks::virtualBlocksizeBytes() const {

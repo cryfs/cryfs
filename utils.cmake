@@ -31,13 +31,36 @@ function(target_activate_cpp14 TARGET)
     endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
 endfunction(target_activate_cpp14)
 
+# Find clang-tidy executable (for use in target_enable_style_warnings)
+find_program(
+  CLANG_TIDY_EXE
+  NAMES "clang-tidy"
+  DOC "Path to clang-tidy executable"
+)
+if(NOT CLANG_TIDY_EXE)
+  message(WARNING "clang-tidy not found. Checks are disabled")
+else()
+  message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
+  set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-system-headers=0")
+endif()
+
 #################################################
 # Enable style compiler warnings
 #
 #  Uses: target_enable_style_warnings(buildtarget)
 #################################################
 function(target_enable_style_warnings TARGET)
-    target_compile_options(${TARGET} PRIVATE -Wall -Wextra)
+    # Enable compiler options
+    if (NOT MSVC)
+        # TODO Add compiler warnings on MSVC
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
+    endif()
+
+    # Enable clang-tidy
+    #set_target_properties(
+    #  ${TARGET} PROPERTIES
+    #  CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
+    #)
 endfunction(target_enable_style_warnings)
 
 ##################################################
@@ -57,11 +80,13 @@ function(target_add_boost TARGET)
         message(STATUS "Boost will be dynamically linked")
         set(Boost_USE_STATIC_LIBS OFF)
     endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
+    set(BOOST_THREAD_VERSION 4)
     find_package(Boost 1.56.0
             REQUIRED
             COMPONENTS ${ARGN})
     target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_libraries(${TARGET} PUBLIC ${Boost_LIBRARIES})
+    target_compile_definitions(${TARGET} PUBLIC BOOST_THREAD_VERSION=4)
     if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
       # Also link to rt, because boost thread needs that.
       target_link_libraries(${TARGET} PUBLIC rt)

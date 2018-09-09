@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include "cpp-utils/crypto/symmetric/Cipher.h"
 #include "cpp-utils/crypto/symmetric/ciphers.h"
-#include "testutils/FakeAuthenticatedCipher.h"
+#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 
 #include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/Data.h"
@@ -40,20 +40,20 @@ public:
   }
 
   void ExpectDoesntDecrypt(const Data &ciphertext) {
-    auto decrypted = Cipher::decrypt((CryptoPP::byte*)ciphertext.data(), ciphertext.size(), this->encKey);
+    auto decrypted = Cipher::decrypt(static_cast<const CryptoPP::byte*>(ciphertext.data()), ciphertext.size(), this->encKey);
     EXPECT_FALSE(decrypted);
   }
 
   Data Encrypt(const Data &plaintext) {
-    return Cipher::encrypt((CryptoPP::byte*)plaintext.data(), plaintext.size(), this->encKey);
+    return Cipher::encrypt(static_cast<const CryptoPP::byte*>(plaintext.data()), plaintext.size(), this->encKey);
   }
 
   Data Decrypt(const Data &ciphertext) {
-    return Cipher::decrypt((CryptoPP::byte*)ciphertext.data(), ciphertext.size(), this->encKey).value();
+    return Cipher::decrypt(static_cast<const CryptoPP::byte*>(ciphertext.data()), ciphertext.size(), this->encKey).value();
   }
 
   static Data CreateZeroes(unsigned int size) {
-    return std::move(Data(size).FillWithZeroes());
+    return Data(size).FillWithZeroes();
   }
 
   static Data CreateData(unsigned int size, unsigned int seed = 0) {
@@ -63,7 +63,7 @@ public:
 
 TYPED_TEST_CASE_P(CipherTest);
 
-constexpr std::initializer_list<unsigned int> SIZES = {0, 1, 100, 1024, 5000, 1048576, 20971520};
+constexpr std::array<unsigned int, 7> SIZES = {{0, 1, 100, 1024, 5000, 1048576, 20971520}};
 
 TYPED_TEST_P(CipherTest, Size) {
   for (auto size: SIZES) {
@@ -149,49 +149,57 @@ TYPED_TEST_CASE_P(AuthenticatedCipherTest);
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Zeroes_Size1) {
   Data ciphertext = this->Encrypt(this->zeroes1);
-  *(CryptoPP::byte*)ciphertext.data() = *(CryptoPP::byte*)ciphertext.data() + 1;
+  void* firstByte = ciphertext.data();
+  serialize<CryptoPP::byte>(firstByte, deserialize<CryptoPP::byte>(firstByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Data_Size1) {
   Data ciphertext = this->Encrypt(this->plaintext1);
-  *(CryptoPP::byte*)ciphertext.data() = *(CryptoPP::byte*)ciphertext.data() + 1;
+  void* firstByte = ciphertext.data();
+  serialize<CryptoPP::byte>(firstByte, deserialize<CryptoPP::byte>(firstByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Zeroes) {
   Data ciphertext = this->Encrypt(this->zeroes2);
-  *(CryptoPP::byte*)ciphertext.data() = *(CryptoPP::byte*)ciphertext.data() + 1;
+  void* firstByte = ciphertext.data();
+  serialize<CryptoPP::byte>(firstByte, deserialize<CryptoPP::byte>(firstByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyFirstByte_Data) {
   Data ciphertext = this->Encrypt(this->plaintext2);
-  *(CryptoPP::byte*)ciphertext.data() = *(CryptoPP::byte*)ciphertext.data() + 1;
+  void* firstByte = ciphertext.data();
+  serialize<CryptoPP::byte>(firstByte, deserialize<CryptoPP::byte>(firstByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyLastByte_Zeroes) {
   Data ciphertext = this->Encrypt(this->zeroes2);
-  ((CryptoPP::byte*)ciphertext.data())[ciphertext.size() - 1] = ((CryptoPP::byte*)ciphertext.data())[ciphertext.size() - 1] + 1;
+  void* lastByte = ciphertext.dataOffset(ciphertext.size() - 1);
+  serialize<CryptoPP::byte>(lastByte, deserialize<CryptoPP::byte>(lastByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyLastByte_Data) {
   Data ciphertext = this->Encrypt(this->plaintext2);
-  ((CryptoPP::byte*)ciphertext.data())[ciphertext.size() - 1] = ((CryptoPP::byte*)ciphertext.data())[ciphertext.size() - 1] + 1;
+  void* lastByte = ciphertext.dataOffset(ciphertext.size() - 1);
+  serialize<CryptoPP::byte>(lastByte, deserialize<CryptoPP::byte>(lastByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyMiddleByte_Zeroes) {
   Data ciphertext = this->Encrypt(this->zeroes2);
-  ((CryptoPP::byte*)ciphertext.data())[ciphertext.size()/2] = ((CryptoPP::byte*)ciphertext.data())[ciphertext.size()/2] + 1;
+  void* middleByte = ciphertext.dataOffset(ciphertext.size()/2);
+  serialize<CryptoPP::byte>(middleByte, deserialize<CryptoPP::byte>(middleByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 
 TYPED_TEST_P(AuthenticatedCipherTest, ModifyMiddleByte_Data) {
   Data ciphertext = this->Encrypt(this->plaintext2);
-  ((CryptoPP::byte*)ciphertext.data())[ciphertext.size()/2] = ((CryptoPP::byte*)ciphertext.data())[ciphertext.size()/2] + 1;
+  void* middleByte = ciphertext.dataOffset(ciphertext.size()/2);
+  serialize<CryptoPP::byte>(middleByte, deserialize<CryptoPP::byte>(middleByte) + 1);
   this->ExpectDoesntDecrypt(ciphertext);
 }
 

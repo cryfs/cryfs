@@ -4,10 +4,8 @@
 #include "DataNodeStore.h"
 #include <blockstore/utils/BlockStoreUtils.h>
 
-using blockstore::Block;
-using blockstore::Key;
+using blockstore::BlockId;
 
-using std::runtime_error;
 using cpputils::unique_ref;
 
 namespace blobstore {
@@ -31,20 +29,19 @@ const DataNodeView &DataNode::node() const {
   return _node;
 }
 
-const Key &DataNode::key() const {
-  return _node.key();
+const BlockId &DataNode::blockId() const {
+  return _node.blockId();
 }
 
 uint8_t DataNode::depth() const {
   return _node.Depth();
 }
 
-unique_ref<DataInnerNode> DataNode::convertToNewInnerNode(unique_ref<DataNode> node, const DataNode &first_child) {
-  Key key = node->key();
+unique_ref<DataInnerNode> DataNode::convertToNewInnerNode(unique_ref<DataNode> node, const DataNodeLayout &layout, const DataNode &first_child) {
   auto block = node->_node.releaseBlock();
   blockstore::utils::fillWithZeroes(block.get());
 
-  return DataInnerNode::InitializeNewNode(std::move(block), first_child);
+  return DataInnerNode::InitializeNewNode(std::move(block), layout, first_child.depth()+1, {first_child.blockId()});
 }
 
 void DataNode::flush() const {

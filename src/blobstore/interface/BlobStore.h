@@ -6,7 +6,7 @@
 #include <string>
 #include <memory>
 
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <cpp-utils/pointer/unique_ref.h>
 
 namespace blobstore {
@@ -17,8 +17,9 @@ public:
   virtual ~BlobStore() {}
 
   virtual cpputils::unique_ref<Blob> create() = 0;
-  virtual boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) = 0;
+  virtual boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::BlockId &blockId) = 0;
   virtual void remove(cpputils::unique_ref<Blob> blob) = 0;
+  virtual void remove(const blockstore::BlockId &blockId) = 0;
 
   virtual uint64_t numBlocks() const = 0;
   virtual uint64_t estimateSpaceForNumBlocksLeft() const = 0;

@@ -96,6 +96,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
 
 TYPED_TEST_P(FsppDirTest_Timestamps, children_empty) {
     auto dir = this->CreateDir("/mydir");
+    this->setModificationTimestampLaterThanAccessTimestamp("/mydir"); // to make sure that even in relatime behavior, the read access below changes the access timestamp
     auto operation = [&dir] () {
         dir->children();
     };

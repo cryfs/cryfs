@@ -1,21 +1,28 @@
 #include "Data.h"
 #include <stdexcept>
+#include <vendor_cryptopp/hex.h>
+#include <cpp-utils/crypto/cryptopp_byte.h>
 
 using std::istream;
 using std::ofstream;
 using std::ifstream;
 using std::ios;
+using boost::optional;
 
 namespace bf = boost::filesystem;
 
 namespace cpputils {
 
-boost::optional<Data> Data::LoadFromFile(const bf::path &filepath) {
-  ifstream file(filepath.c_str(), ios::binary);
+optional<Data> Data::LoadFromFile(const bf::path &filepath) {
+  ifstream file(filepath.string().c_str(), ios::binary);
   if (!file.good()) {
     return boost::none;
   }
-  return LoadFromStream(file);
+  optional<Data> result(LoadFromStream(file));
+  if (!file.good()) {
+    throw std::runtime_error("Error reading from file");
+  }
+  return result;
 }
 
 std::streampos Data::_getStreamSize(istream &stream) {
@@ -34,6 +41,28 @@ std::streampos Data::_getStreamSize(istream &stream) {
 Data Data::LoadFromStream(istream &stream, size_t size) {
   Data result(size);
   stream.read(static_cast<char*>(result.data()), result.size());
+  return result;
+}
+
+Data Data::FromString(const std::string &data) {
+  ASSERT(data.size() % 2 == 0, "hex encoded data cannot have odd number of characters");
+  Data result(data.size() / 2);
+  CryptoPP::StringSource(data, true,
+    new CryptoPP::HexDecoder(
+      new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result._data), result.size())
+    )
+  );
+  return result;
+}
+
+std::string Data::ToString() const {
+  std::string result;
+  CryptoPP::ArraySource(static_cast<const CryptoPP::byte*>(_data), _size, true,
+    new CryptoPP::HexEncoder(
+        new CryptoPP::StringSink(result)
+    )
+  );
+  ASSERT(result.size() == 2 * _size, "Created wrongly sized string");
   return result;
 }
 

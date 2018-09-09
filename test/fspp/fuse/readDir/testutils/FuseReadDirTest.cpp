@@ -4,7 +4,6 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
-using std::initializer_list;
 
 using ::testing::Action;
 using ::testing::Return;
@@ -44,7 +43,7 @@ DIR *FuseReadDirTest::openDir(TempTestFS *fs, const char *dirname) {
 
 DIR *FuseReadDirTest::openDirAllowError(TempTestFS *fs, const char *dirname) {
   auto realpath = fs->mountDir() / dirname;
-  return ::opendir(realpath.c_str());
+  return ::opendir(realpath.string().c_str());
 }
 
 void FuseReadDirTest::readDirEntries(DIR *dir, vector<string> *result) {

@@ -11,7 +11,8 @@ class DataInnerNode;
 
 class DataLeafNode final: public DataNode {
 public:
-  static cpputils::unique_ref<DataLeafNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block);
+  static cpputils::unique_ref<DataLeafNode> CreateNewNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, cpputils::Data data);
+  static cpputils::unique_ref<DataLeafNode> OverwriteNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, const blockstore::BlockId &blockId, cpputils::Data data);
 
   DataLeafNode(DataNodeView block);
   ~DataLeafNode();

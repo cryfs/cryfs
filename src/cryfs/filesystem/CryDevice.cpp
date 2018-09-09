@@ -1,4 +1,4 @@
-#include <blockstore/implementations/caching/CachingBlockStore.h>
+#include <blockstore/implementations/caching/CachingBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
@@ -7,26 +7,32 @@
 #include "CryFile.h"
 #include "CrySymlink.h"
 
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
-#include <blockstore/implementations/encrypted/EncryptedBlockStore.h>
+#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
+#include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
+#include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
 #include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cachingfsblobstore/CachingFsBlobStore.h"
 #include "../config/CryCipher.h"
+#include <cpp-utils/system/homedir.h>
+#include <gitversion/VersionCompare.h>
+#include <blockstore/interface/BlockStore2.h>
+#include "cryfs/localstate/LocalStateDir.h"
 
 using std::string;
 
 //TODO Get rid of this in favor of exception hierarchy
-using fspp::fuse::CHECK_RETVAL;
 using fspp::fuse::FuseErrnoException;
 
-using blockstore::BlockStore;
-using blockstore::Key;
-using blockstore::encrypted::EncryptedBlockStore;
+using blockstore::BlockStore2;
+using blockstore::BlockId;
+using blobstore::BlobStore;
+using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
-using blobstore::onblocks::BlobOnBlocks;
-using blockstore::caching::CachingBlockStore;
+using blockstore::caching::CachingBlockStore2;
+using blockstore::integrity::IntegrityBlockStore2;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -45,25 +51,72 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore> blockStore)
-: _fsBlobStore(
-      make_unique_ref<ParallelAccessFsBlobStore>(
-        make_unique_ref<CachingFsBlobStore>(
-          make_unique_ref<FsBlobStore>(
-            make_unique_ref<BlobStoreOnBlocks>(
-              make_unique_ref<CachingBlockStore>(
-                CreateEncryptedBlockStore(*configFile.config(), std::move(blockStore))
-              ), configFile.config()->BlocksizeBytes())))
-        )
-      ),
-  _rootKey(GetOrCreateRootKey(&configFile)),
+CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation)
+: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), &configFile, localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation)),
+  _rootBlobId(GetOrCreateRootBlobId(&configFile)),
   _onFsAction() {
 }
 
-Key CryDevice::CreateRootBlobAndReturnKey() {
-  auto rootBlob =  _fsBlobStore->createDirBlob();
+unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation) {
+  auto blobStore = CreateBlobStore(std::move(blockStore), localStateDir, configFile, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation);
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile);
+#else
+  auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+#endif
+
+  return make_unique_ref<ParallelAccessFsBlobStore>(
+    make_unique_ref<CachingFsBlobStore>(
+      std::move(fsBlobStore)
+    )
+  );
+}
+
+#ifndef CRYFS_NO_COMPATIBILITY
+unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(unique_ref<BlobStore> blobStore, CryConfigFile *configFile) {
+  string rootBlobId = configFile->config()->RootBlob();
+  if ("" == rootBlobId) {
+    return make_unique_ref<FsBlobStore>(std::move(blobStore));
+  }
+  return FsBlobStore::migrateIfNeeded(std::move(blobStore), BlockId::FromString(rootBlobId));
+}
+#endif
+
+unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation) {
+  auto integrityEncryptedBlockStore = CreateIntegrityEncryptedBlockStore(std::move(blockStore), localStateDir, configFile, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation);
+  // Create integrityEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
+  // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
+  return make_unique_ref<BlobStoreOnBlocks>(
+     make_unique_ref<LowToHighLevelBlockStore>(
+         make_unique_ref<CachingBlockStore2>(
+             std::move(integrityEncryptedBlockStore)
+         )
+     ),
+     configFile->config()->BlocksizeBytes());
+}
+
+unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation) {
+  auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
+  auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
+  auto integrityFilePath = statePath / "integritydata";
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  if (!configFile->config()->HasVersionNumbers()) {
+    IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath, myClientId);
+    configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + IntegrityBlockStore2::HEADER_LENGTH - blockstore::BlockId::BINARY_LENGTH); // Minus BlockId size because EncryptedBlockStore doesn't store the BlockId anymore (that was moved to IntegrityBlockStore)
+    configFile->config()->SetHasVersionNumbers(true);
+    configFile->save();
+  }
+#endif
+
+  return make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation);
+}
+
+BlockId CryDevice::CreateRootBlobAndReturnId() {
+  auto rootBlob =  _fsBlobStore->createDirBlob(blockstore::BlockId::Null());
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
-  return rootBlob->key();
+  return rootBlob->blockId();
 }
 
 optional<unique_ref<fspp::File>> CryDevice::LoadFile(const bf::path &path) {
@@ -105,20 +158,20 @@ optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path)
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   // TODO Is it faster to not let CryFile/CryDir/CryDevice inherit from CryNode and loading CryNode without having to know what it is?
   // TODO Split into smaller functions
-  ASSERT(path.is_absolute(), "Non absolute path given");
+  ASSERT(path.has_root_directory() && !path.has_root_name(), "Must be an absolute path (but on windows without device specifier)");
 
   callFsActionCallbacks();
 
   if (path.parent_path().empty()) {
     //We are asked to load the base directory '/'.
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootKey));
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootBlobId));
   }
 
   auto parentWithGrandparent = LoadDirBlobWithParent(path.parent_path());
   auto parent = std::move(parentWithGrandparent.blob);
   auto grandparent = std::move(parentWithGrandparent.parent);
 
-  auto optEntry = parent->GetChild(path.filename().native());
+  auto optEntry = parent->GetChild(path.filename().string());
   if (optEntry == boost::none) {
     return boost::none;
   }
@@ -126,11 +179,11 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 
   switch(entry.type()) {
     case fspp::Dir::EntryType::DIR:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry.key()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry.blockId()));
     case fspp::Dir::EntryType::FILE:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry.key()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry.blockId()));
     case  fspp::Dir::EntryType::SYMLINK:
-	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry.key()));
+	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry.blockId()));
   }
   ASSERT(false, "Switch/case not exhaustive");
 }
@@ -146,12 +199,13 @@ CryDevice::DirBlobWithParent CryDevice::LoadDirBlobWithParent(const bf::path &pa
 
 CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   optional<unique_ref<DirBlobRef>> parentBlob = none;
-  optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootKey);
+  optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootBlobId);
   if (currentBlobOpt == none) {
-    LOG(ERROR, "Could not load root blob. Is the base directory accessible?");
+    LOG(ERR, "Could not load root blob. Is the base directory accessible?");
     throw FuseErrnoException(EIO);
   }
   unique_ref<FsBlobRef> currentBlob = std::move(*currentBlobOpt);
+  ASSERT(currentBlob->parentPointer() == BlockId::Null(), "Root Blob should have a nullptr as parent");
 
   for (const bf::path &component : path.relative_path()) {
     auto currentDir = dynamic_pointer_move<DirBlobRef>(currentBlob);
@@ -159,17 +213,18 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
     }
 
-    auto childOpt = (*currentDir)->GetChild(component.c_str());
+    auto childOpt = (*currentDir)->GetChild(component.string());
     if (childOpt == boost::none) {
       throw FuseErrnoException(ENOENT); // Child entry in directory not found
     }
-    Key childKey = childOpt->key();
-    auto nextBlob = _fsBlobStore->load(childKey);
+    BlockId childId = childOpt->blockId();
+    auto nextBlob = _fsBlobStore->load(childId);
     if (nextBlob == none) {
       throw FuseErrnoException(ENOENT); // Blob for directory entry not found
     }
     parentBlob = std::move(*currentDir);
     currentBlob = std::move(*nextBlob);
+    ASSERT(currentBlob->parentPointer() == (*parentBlob)->blockId(), "Blob has wrong parent pointer");
   }
 
   return BlobWithParent{std::move(currentBlob), std::move(parentBlob)};
@@ -194,51 +249,52 @@ void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
   fsstat->f_ffree = numFreeBlocks;
   fsstat->f_namemax = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
   //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
+  fsstat->f_frsize = fsstat->f_bsize; // even though this is supposed to be ignored, osxfuse needs it.
 }
 
-unique_ref<FileBlobRef> CryDevice::CreateFileBlob() {
-  return _fsBlobStore->createFileBlob();
+unique_ref<FileBlobRef> CryDevice::CreateFileBlob(const blockstore::BlockId &parent) {
+  return _fsBlobStore->createFileBlob(parent);
 }
 
-unique_ref<DirBlobRef> CryDevice::CreateDirBlob() {
-  return _fsBlobStore->createDirBlob();
+unique_ref<DirBlobRef> CryDevice::CreateDirBlob(const blockstore::BlockId &parent) {
+  return _fsBlobStore->createDirBlob(parent);
 }
 
-unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target) {
-  return _fsBlobStore->createSymlinkBlob(target);
+unique_ref<SymlinkBlobRef> CryDevice::CreateSymlinkBlob(const bf::path &target, const blockstore::BlockId &parent) {
+  return _fsBlobStore->createSymlinkBlob(target, parent);
 }
 
-unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::Key &key) {
-  auto blob = _fsBlobStore->load(key);
+unique_ref<FsBlobRef> CryDevice::LoadBlob(const blockstore::BlockId &blockId) {
+  auto blob = _fsBlobStore->load(blockId);
   if (blob == none) {
-    LOG(ERROR, "Could not load blob {}. Is the base directory accessible?", key.ToString());
+    LOG(ERR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
     throw FuseErrnoException(EIO);
   }
   return std::move(*blob);
 }
 
-void CryDevice::RemoveBlob(const blockstore::Key &key) {
-  auto blob = _fsBlobStore->load(key);
+void CryDevice::RemoveBlob(const blockstore::BlockId &blockId) {
+  auto blob = _fsBlobStore->load(blockId);
   if (blob == none) {
-    LOG(ERROR, "Could not load blob. Is the base directory accessible?", key.ToString());
+    LOG(ERR, "Could not load blob {}. Is the base directory accessible?", blockId.ToString());
     throw FuseErrnoException(EIO);
   }
   _fsBlobStore->remove(std::move(*blob));
 }
 
-Key CryDevice::GetOrCreateRootKey(CryConfigFile *configFile) {
-  string root_key = configFile->config()->RootBlob();
-  if (root_key == "") {
-    auto new_key = CreateRootBlobAndReturnKey();
-    configFile->config()->SetRootBlob(new_key.ToString());
+BlockId CryDevice::GetOrCreateRootBlobId(CryConfigFile *configFile) {
+  string root_blockId = configFile->config()->RootBlob();
+  if (root_blockId == "") { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+    auto new_blockId = CreateRootBlobAndReturnId();
+    configFile->config()->SetRootBlob(new_blockId.ToString());
     configFile->save();
-    return new_key;
+    return new_blockId;
   }
 
-  return Key::FromString(root_key);
+  return BlockId::FromString(root_blockId);
 }
 
-cpputils::unique_ref<blockstore::BlockStore> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore> baseBlockStore) {
+cpputils::unique_ref<blockstore::BlockStore2> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore2> baseBlockStore) {
   //TODO Test that CryFS is using the specified cipher
   return CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(baseBlockStore), config.EncryptionKey());
 }

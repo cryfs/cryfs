@@ -2,7 +2,6 @@
 
 using ::testing::_;
 using ::testing::StrEq;
-using ::testing::Return;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 

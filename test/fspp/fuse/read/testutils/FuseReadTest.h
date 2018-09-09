@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_TEST_FUSE_READ_TESTUTILS_FUSEREADTEST_H_
 
 #include "../../../testutils/FuseTest.h"
+#include "../../../testutils/OpenFileHandle.h"
 
 class FuseReadTest: public FuseTest {
 public:
@@ -23,13 +24,13 @@ public:
 
   ::testing::Action<size_t(int, void*, size_t, off_t)> ReturnSuccessfulReadRegardingSize(size_t filesize) {
     return ::testing::Invoke([filesize](int, void *, size_t count, off_t offset) {
-      size_t ableToReadCount = std::min(count, (size_t)(filesize - offset));
+      size_t ableToReadCount = std::min(count, static_cast<size_t>(filesize - offset));
       return ableToReadCount;
     });
   }
 
 private:
-  int OpenFile(const TempTestFS *fs, const char *filename);
+  cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);
 };
 
 #endif

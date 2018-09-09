@@ -18,8 +18,8 @@ namespace blockstore {
 
         Data RunLengthEncoding::Compress(const Data &data) {
             ostringstream compressed;
-            uint8_t *current = (uint8_t*)data.data();
-            uint8_t *end = (uint8_t*)data.data()+data.size();
+            const uint8_t *current = static_cast<const uint8_t*>(data.data());
+            const uint8_t *end = static_cast<const uint8_t*>(data.data())+data.size();
             while (current < end) {
                 _encodeArbitraryWords(&current, end, &compressed);
                 ASSERT(current <= end, "Overflow");
@@ -32,25 +32,25 @@ namespace blockstore {
             return _extractData(&compressed);
         }
 
-        void RunLengthEncoding::_encodeArbitraryWords(uint8_t **current, uint8_t* end, ostringstream *output) {
+        void RunLengthEncoding::_encodeArbitraryWords(const uint8_t **current, const uint8_t* end, ostringstream *output) {
             uint16_t size = _arbitraryRunLength(*current, end);
-            output->write((const char*)&size, sizeof(uint16_t));
-            output->write((const char*)*current, size);
+            output->write(reinterpret_cast<const char*>(&size), sizeof(uint16_t));
+            output->write(reinterpret_cast<const char*>(*current), size);
             *current += size;
         }
 
-        uint16_t RunLengthEncoding::_arbitraryRunLength(uint8_t *start, uint8_t* end) {
+        uint16_t RunLengthEncoding::_arbitraryRunLength(const uint8_t *start, const uint8_t* end) {
             // Each stopping of an arbitrary bytes run costs us 5 byte, because we have to store the length
             // for the identical bytes run (2 byte), the identical byte itself (1 byte) and the length for the next arbitrary bytes run (2 byte).
             // So to get an advantage from stopping an arbitrary bytes run, at least 6 bytes have to be identical.
 
             // realEnd avoids an overflow of the 16bit counter
-            uint8_t *realEnd = std::min(end, start + std::numeric_limits<uint16_t>::max());
+            const uint8_t *realEnd = std::min(end, start + std::numeric_limits<uint16_t>::max());
 
             // Count the number of identical bytes and return if it finds a run of more than 6 identical bytes.
             uint8_t lastByte = *start + 1; // Something different from the first byte
             uint8_t numIdenticalBytes = 1;
-            for(uint8_t *current = start; current != realEnd; ++current) {
+            for(const uint8_t *current = start; current != realEnd; ++current) {
                 if (*current == lastByte) {
                     ++numIdenticalBytes;
                     if (numIdenticalBytes == 6) {
@@ -65,16 +65,16 @@ namespace blockstore {
             return realEnd-start;
         }
 
-        void RunLengthEncoding::_encodeIdenticalWords(uint8_t **current, uint8_t* end, ostringstream *output) {
+        void RunLengthEncoding::_encodeIdenticalWords(const uint8_t **current, const uint8_t* end, ostringstream *output) {
             uint16_t size = _countIdenticalBytes(*current, end);
-            output->write((const char*)&size, sizeof(uint16_t));
-            output->write((const char*)*current, 1);
+            output->write(reinterpret_cast<const char*>(&size), sizeof(uint16_t));
+            output->write(reinterpret_cast<const char*>(*current), 1);
             *current += size;
         }
 
-        uint16_t RunLengthEncoding::_countIdenticalBytes(uint8_t *start, uint8_t *end) {
-            uint8_t *realEnd = std::min(end, start + std::numeric_limits<uint16_t>::max()); // This prevents overflow of the 16bit counter
-            for (uint8_t *current = start+1; current != realEnd; ++current) {
+        uint16_t RunLengthEncoding::_countIdenticalBytes(const uint8_t *start, const uint8_t *end) {
+            const uint8_t *realEnd = std::min(end, start + std::numeric_limits<uint16_t>::max()); // This prevents overflow of the 16bit counter
+            for (const uint8_t *current = start+1; current != realEnd; ++current) {
                 if (*current != *start) {
                     return current-start;
                 }
@@ -92,7 +92,7 @@ namespace blockstore {
 
         Data RunLengthEncoding::Decompress(const void *data, size_t size) {
             istringstream stream;
-            _parseData((uint8_t*)data, size, &stream);
+            _parseData(static_cast<const uint8_t*>(data), size, &stream);
             ostringstream decompressed;
             while(_hasData(&stream)) {
                 _decodeArbitraryWords(&stream, &decompressed);
@@ -110,29 +110,29 @@ namespace blockstore {
         }
 
         void RunLengthEncoding::_parseData(const uint8_t *data, size_t size, istringstream *result) {
-            result->str(string((const char*)data, size));
+            result->str(string(reinterpret_cast<const char*>(data), size));
         }
 
         void RunLengthEncoding::_decodeArbitraryWords(istringstream *stream, ostringstream *decompressed) {
             uint16_t size;
-            stream->read((char*)&size, sizeof(uint16_t));
+            stream->read(reinterpret_cast<char*>(&size), sizeof(uint16_t));
             ASSERT(stream->good(), "Premature end of stream");
             Data run(size);
-            stream->read((char*)run.data(), size);
+            stream->read(static_cast<char*>(run.data()), size);
             ASSERT(stream->good(), "Premature end of stream");
-            decompressed->write((const char*)run.data(), run.size());
+            decompressed->write(static_cast<const char*>(run.data()), run.size());
         }
 
         void RunLengthEncoding::_decodeIdenticalWords(istringstream *stream, ostringstream *decompressed) {
             uint16_t size;
-            stream->read((char*)&size, sizeof(uint16_t));
+            stream->read(reinterpret_cast<char*>(&size), sizeof(uint16_t));
             ASSERT(stream->good(), "Premature end of stream");
             uint8_t value;
-            stream->read((char*)&value, 1);
+            stream->read(reinterpret_cast<char*>(&value), 1);
             ASSERT(stream->good(), "Premature end of stream");
             Data run(size);
             std::memset(run.data(), value, run.size());
-            decompressed->write((const char*)run.data(), run.size());
+            decompressed->write(static_cast<const char*>(run.data()), run.size());
         }
 
     }

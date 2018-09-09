@@ -23,13 +23,13 @@ namespace cpputils {
         inline void assert_fail_release [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             auto msg = format(expr, message, file, line);
             using namespace logging;
-            LOG(ERROR, msg);
+            LOG(ERR, msg);
             throw AssertFailed(msg);
         }
 
         inline void assert_fail_debug [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             using namespace logging;
-            LOG(ERROR, format(expr, message, file, line));
+            LOG(ERR, format(expr, message, file, line));
             abort();
         }
     }

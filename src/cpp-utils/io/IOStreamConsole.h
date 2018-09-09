@@ -13,6 +13,7 @@ namespace cpputils {
         unsigned int ask(const std::string &question, const std::vector<std::string> &options) override;
         bool askYesNo(const std::string &question, bool defaultValue) override;
         void print(const std::string &output) override;
+        std::string askPassword(const std::string &question) override;
     private:
         template<typename Return>
         Return _askForChoice(const std::string &question, std::function<boost::optional<Return> (const std::string&)> parse);

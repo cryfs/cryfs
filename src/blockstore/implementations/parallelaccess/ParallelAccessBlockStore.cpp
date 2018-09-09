@@ -6,12 +6,12 @@
 #include <cpp-utils/assert/assert.h>
 
 using std::string;
-using std::promise;
 using cpputils::dynamic_pointer_move;
 using cpputils::make_unique_ref;
 using boost::none;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Data;
 using boost::optional;
 using boost::none;
 
@@ -22,34 +22,52 @@ ParallelAccessBlockStore::ParallelAccessBlockStore(unique_ref<BlockStore> baseBl
  : _baseBlockStore(std::move(baseBlockStore)), _parallelAccessStore(make_unique_ref<ParallelAccessBlockStoreAdapter>(_baseBlockStore.get())) {
 }
 
-Key ParallelAccessBlockStore::createKey() {
-  return _baseBlockStore->createKey();
+BlockId ParallelAccessBlockStore::createBlockId() {
+  return _baseBlockStore->createBlockId();
 }
 
-optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const Key &key, cpputils::Data data) {
-  ASSERT(!_parallelAccessStore.isOpened(key), ("Key "+key.ToString()+"already exists").c_str());
-  auto block = _baseBlockStore->tryCreate(key, std::move(data));
+optional<unique_ref<Block>> ParallelAccessBlockStore::tryCreate(const BlockId &blockId, Data data) {
+  if (_parallelAccessStore.isOpened(blockId)) {
+    return none; // block already exists
+  }
+  auto block = _baseBlockStore->tryCreate(blockId, std::move(data));
   if (block == none) {
 	//TODO Test this code branch
 	return none;
   }
-  return unique_ref<Block>(_parallelAccessStore.add(key, std::move(*block)));
+  return unique_ref<Block>(_parallelAccessStore.add(blockId, std::move(*block)));
 }
 
-optional<unique_ref<Block>> ParallelAccessBlockStore::load(const Key &key) {
-  auto block = _parallelAccessStore.load(key);
+optional<unique_ref<Block>> ParallelAccessBlockStore::load(const BlockId &blockId) {
+  auto block = _parallelAccessStore.load(blockId);
   if (block == none) {
     return none;
   }
   return unique_ref<Block>(std::move(*block));
 }
 
+unique_ref<Block> ParallelAccessBlockStore::overwrite(const BlockId &blockId, Data data) {
+  auto onExists = [&data] (BlockRef *block) {
+      if (block->size() != data.size()) {
+        block->resize(data.size());
+      }
+      block->write(data.data(), 0, data.size());
+  };
+  auto onAdd = [this, blockId, &data] {
+      return _baseBlockStore->overwrite(blockId, data.copy()); // TODO Without copy?
+  };
+  return _parallelAccessStore.loadOrAdd(blockId, onExists, onAdd); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+}
 
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
-  Key key = block->key();
+  BlockId blockId = block->blockId();
   auto block_ref = dynamic_pointer_move<BlockRef>(block);
   ASSERT(block_ref != none, "Block is not a BlockRef");
-  return _parallelAccessStore.remove(key, std::move(*block_ref));
+  return _parallelAccessStore.remove(blockId, std::move(*block_ref));
+}
+
+void ParallelAccessBlockStore::remove(const BlockId &blockId) {
+  return _parallelAccessStore.remove(blockId);
 }
 
 uint64_t ParallelAccessBlockStore::numBlocks() const {
@@ -62,6 +80,10 @@ uint64_t ParallelAccessBlockStore::estimateNumFreeBytes() const {
 
 uint64_t ParallelAccessBlockStore::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
   return _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+}
+
+void ParallelAccessBlockStore::forEachBlock(std::function<void (const BlockId &)> callback) const {
+  return _baseBlockStore->forEachBlock(callback);
 }
 
 }

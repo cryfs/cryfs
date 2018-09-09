@@ -1,10 +1,6 @@
 #include "testutils/FuseRmdirTest.h"
 
-using ::testing::_;
 using ::testing::StrEq;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::Action;
 
 class FuseRmdirDirnameTest: public FuseRmdirTest {
 };

@@ -4,10 +4,7 @@
 #include "cpp-utils/data/DataFixture.h"
 
 using ::testing::Test;
-using ::testing::WithParamInterface;
-using ::testing::Values;
 
-namespace bf = boost::filesystem;
 
 using namespace cpputils;
 

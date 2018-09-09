@@ -8,6 +8,7 @@
 #include "../macros.h"
 #include <memory>
 #include <fstream>
+#include "../assert/assert.h"
 
 namespace cpputils {
 
@@ -16,10 +17,13 @@ public:
   explicit Data(size_t size);
   ~Data();
 
-  Data(Data &&rhs); // move constructor
-  Data &operator=(Data &&rhs); // move assignment
+  Data(Data &&rhs) noexcept;
+  Data &operator=(Data &&rhs) noexcept;
 
   Data copy() const;
+
+  //TODO Test copyAndRemovePrefix
+  Data copyAndRemovePrefix(size_t prefixSize) const;
 
   void *data();
   const void *data() const;
@@ -30,7 +34,8 @@ public:
 
   size_t size() const;
 
-  Data &FillWithZeroes();
+  Data &FillWithZeroes() &;
+  Data &&FillWithZeroes() &&;
 
   void StoreToFile(const boost::filesystem::path &filepath) const;
   static boost::optional<Data> LoadFromFile(const boost::filesystem::path &filepath);
@@ -40,12 +45,17 @@ public:
   static Data LoadFromStream(std::istream &stream, size_t size);
   void StoreToStream(std::ostream &stream) const;
 
+  // TODO Unify ToString/FromString functions from Data/FixedSizeData using free functions
+  static Data FromString(const std::string &data);
+  std::string ToString() const;
+
 private:
   size_t _size;
   void *_data;
 
   static std::streampos _getStreamSize(std::istream &stream);
   void _readFromStream(std::istream &stream);
+  static void* _alloc(size_t size);
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
@@ -53,26 +63,32 @@ private:
 bool operator==(const Data &lhs, const Data &rhs);
 bool operator!=(const Data &lhs, const Data &rhs);
 
+inline void* Data::_alloc(size_t size) {
+    // std::malloc has implementation defined behavior for size=0.
+    // Let's define the behavior.
+    return std::malloc((size == 0)?1:size);
+}
+
 
 // ---------------------------
 // Inline function definitions
 // ---------------------------
 
 inline Data::Data(size_t size)
-        : _size(size), _data(std::malloc(size)) {
+        : _size(size), _data(_alloc(size)) {
   if (nullptr == _data) {
     throw std::bad_alloc();
   }
 }
 
-inline Data::Data(Data &&rhs)
+inline Data::Data(Data &&rhs) noexcept
         : _size(rhs._size), _data(rhs._data) {
   // Make rhs invalid, so the memory doesn't get freed in its destructor.
   rhs._data = nullptr;
   rhs._size = 0;
 }
 
-inline Data &Data::operator=(Data &&rhs) {
+inline Data &Data::operator=(Data &&rhs) noexcept {
   std::free(_data);
   _data = rhs._data;
   _size = rhs._size;
@@ -90,6 +106,13 @@ inline Data::~Data() {
 inline Data Data::copy() const {
   Data copy(_size);
   std::memcpy(copy._data, _data, _size);
+  return copy;
+}
+
+inline Data Data::copyAndRemovePrefix(size_t prefixSize) const {
+  ASSERT(prefixSize <= _size, "Can't remove more than there is");
+  Data copy(_size - prefixSize);
+  std::memcpy(copy.data(), dataOffset(prefixSize), copy.size());
   return copy;
 }
 
@@ -113,17 +136,24 @@ inline size_t Data::size() const {
   return _size;
 }
 
-inline Data &Data::FillWithZeroes() {
-  std::memset(_data, 0, _size);
-  return *this;
+inline Data &Data::FillWithZeroes() & {
+    std::memset(_data, 0, _size);
+    return *this;
+}
+
+inline Data &&Data::FillWithZeroes() && {
+    return std::move(FillWithZeroes());
 }
 
 inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
-  std::ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
+  std::ofstream file(filepath.string().c_str(), std::ios::binary | std::ios::trunc);
   if (!file.good()) {
     throw std::runtime_error("Could not open file for writing");
   }
   StoreToStream(file);
+  if (!file.good()) {
+    throw std::runtime_error("Error writing to file");
+  }
 }
 
 inline void Data::StoreToStream(std::ostream &stream) const {

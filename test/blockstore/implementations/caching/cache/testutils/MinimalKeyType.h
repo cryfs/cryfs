@@ -3,11 +3,12 @@
 #define MESSMER_BLOCKSTORE_TEST_IMPLEMENTATIONS_CACHING_CACHE_TESTUTILS_MINIMALKEYTYPE_H_
 
 #include <unordered_map>
+#include <atomic>
 
 // This is a not-default-constructible Key type
 class MinimalKeyType {
 public:
-  static int instances;
+  static std::atomic<int> instances;
 
   static MinimalKeyType create(int value) {
     return MinimalKeyType(value);

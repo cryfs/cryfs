@@ -3,17 +3,15 @@
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <cpp-utils/data/Data.h>
-#include <cryptopp/hex.h>
+#include <vendor_cryptopp/hex.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/config/CryConfigFile.h>
 
-using std::vector;
 using cpputils::Data;
 using cpputils::AES256_GCM;
 using cpputils::Serpent128_CFB;
 using cpputils::TempFile;
-namespace bf = boost::filesystem;
 using namespace cryfs;
 
 // Test that config files created with (old) versions of cryfs are still loadable.
@@ -39,13 +37,16 @@ private:
         Data result(hex.size()/2);
         CryptoPP::StringSource(hex, true,
              new CryptoPP::HexDecoder(
-                   new CryptoPP::ArraySink((CryptoPP::byte*)result.data(), result.size())
+                   new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result.data()), result.size())
              )
         );
         return result;
     }
 
 };
+
+
+#ifndef CRYFS_NO_COMPATIBILITY
 
 TEST_F(CryConfigCompatibilityTest, v0_8_1_with_aes_256_gcm) {
     auto config = loadConfigFromHex("63727966732e636f6e6669673b303b736372797074000004000000000000010000000100000020000000000000000af023e55f804ad303c1dbdf6a2b2bed8cc1ab3d0b2f3312c073628dc041e6f3b92f54fad63a1d4e0ad47a33e65e08080dd4e5bdec0a95fe777705ad68e88eabcb4b91d4f25c32e3e44d6e893421c9efa6d4b2c56d66d0546a410de489b04160b276184ebe7dd77840ce6e414f829bb4399451e055d3406261b4faf5fb52f27e21823f8073df255f96b37edf2c2e58ecee21ae82e3883341024aff326cc4c0929f0ed90473511cbe801d1e34899b3cdb9556477be0127c35375967bf7c8392ad4d30d81479c7923900f532b195b71cff868fa1643d1f9e0a0d7996260691d7b5b8ef3c319c2f2303f822eac389e1d6822e7ee57df60c922fa10fbc7e5970e723df2fdb2a6529c94ea1d2507f55cb9bc3fecab77bf3102e96c6675a618b54bb18e632dd99d3d47fa9e24392535abc8c76f891df76c2193233d6c93851966f69def3f53108be83b30980c98e377186da71297a1b61df76e9f138a3998577a0c486452f1b6a2d89b1e62d78695ac6a062d5a4cf5972de7bc2775fd27d25337f0666250f19d6fe50fe762371befa26de6a9299d7df362780f59ccc475e28c71cc5af9e817e4e2160005393ec7fb385d467e0915e7169934ea986141101c9e6b9c62b8819c51a4422e7fe58e24c3293c3f12173a4c480334cb67c9313df667c65802fb778e20f5a4d6cfd07fffb35c2ae8fdf235882bf0e6371125509872e73bd1bc3faca72948db76d8179e08bf3391bafdede591d5623240ba072ada17c2444116bf8c08ee32367eb86eda02ecfecc625b4bc974428b8f5024df430c352b9849f48774bac1455e7364f7660abc039d2a1134cde596a1e7c3a1a8d68591e8640a2d308e2ea5f03874ba1fa8e9ffec2d1bc1541d124adcd3e9f4ed23343e2148629317e6304c63c2a5ceeeb572246393c8e50196728e0b604aa9e2d49e65680cc53ee343645412239f82500ef3d70a6b6e3335ef8cbcfe4fd46b84f634f6fe96cd1b79207a2120ac2bad668bcdbc377b98448c9afbbda9fe8164dbb48aaa68b0aaa90e52bc419ea2ea1f5e12bb649831af12f1ef14765f312640e22c5508531bd46e3ab3a7f922a91fb83332104609e385d61d3778bc5acb03bee522ea5b791d27026fd589ec2b32f04caaf2ef2effbd50e12430ef42631fdabd061966fde1489b9a1eff3fe40b295d75e36af19ae0e69559b9c81b3bc47b35fef5c7038b83db6729aac522efee897a44895804ffbeb11317a78586f8a3511905514eee86d7cf0a395f5f0af521c72542e544ff359a69150a5e64f00b020d48c20d5716331c3b0ac314eeceaadf8b73516b4273b48046b5c3a3980bade0cc25baf54afb27755d155d4b94fa556deb30d58b1d920cbe01b13479135ff84d6a9345a0d418075ecc66bd10d8d2a07963450256897018f54b2a88fffe9383913565823dbfb71568f5d9af93e542937ecde25c2d4407ad964ece5c09a1f81a57c18a8bb2aa8d9d062415903c98752d70ad7175d0d30b391da77459e9a68a69825b3bb4061bc2504789fc395");
@@ -58,3 +59,5 @@ TEST_F(CryConfigCompatibilityTest, v0_8_1_with_serpent_128_cfb) {
     EXPECT_EQ(Serpent128_CFB::NAME, config.config()->Cipher());
     EXPECT_EQ("5821ED3B0739C7EDB6A09590232EA75B", config.config()->RootBlob());
 }
+
+#endif

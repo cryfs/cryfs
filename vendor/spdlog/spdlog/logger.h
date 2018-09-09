@@ -12,8 +12,8 @@
 // 2. Format the message using the formatter function
 // 3. Pass the formatted message to its sinks to performa the actual logging
 
-#include <spdlog/sinks/base_sink.h>
-#include <spdlog/common.h>
+#include "sinks/base_sink.h"
+#include "common.h"
 
 #include <vector>
 #include <memory>
@@ -37,12 +37,24 @@ public:
 
     template <typename... Args> void log(level::level_enum lvl, const char* fmt, const Args&... args);
     template <typename... Args> void log(level::level_enum lvl, const char* msg);
-    template <typename... Args> void trace(const char* fmt, const Args&... args);
-    template <typename... Args> void debug(const char* fmt, const Args&... args);
-    template <typename... Args> void info(const char* fmt, const Args&... args);
-    template <typename... Args> void warn(const char* fmt, const Args&... args);
-    template <typename... Args> void error(const char* fmt, const Args&... args);
-    template <typename... Args> void critical(const char* fmt, const Args&... args);
+    template <typename Arg1, typename... Args> void trace(const char* fmt, const Arg1&, const Args&... args);
+    template <typename Arg1, typename... Args> void debug(const char* fmt, const Arg1&, const Args&... args);
+    template <typename Arg1, typename... Args> void info(const char* fmt, const Arg1&, const Args&... args);
+    template <typename Arg1, typename... Args> void warn(const char* fmt, const Arg1&, const Args&... args);
+    template <typename Arg1, typename... Args> void error(const char* fmt, const Arg1&, const Args&... args);
+    template <typename Arg1, typename... Args> void critical(const char* fmt, const Arg1&, const Args&... args);
+
+
+#ifdef SPDLOG_WCHAR_TO_UTF8_SUPPORT
+    template <typename... Args> void log(level::level_enum lvl, const wchar_t* msg);
+    template <typename... Args> void log(level::level_enum lvl, const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void trace(const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void debug(const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void info(const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void warn(const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void error(const wchar_t* fmt, const Args&... args);
+    template <typename... Args> void critical(const wchar_t* fmt, const Args&... args);
+#endif // SPDLOG_WCHAR_TO_UTF8_SUPPORT
 
     template <typename T> void log(level::level_enum lvl, const T&);
     template <typename T> void trace(const T&);
@@ -56,12 +68,8 @@ public:
     void set_level(level::level_enum);
     level::level_enum level() const;
     const std::string& name() const;
-    void set_pattern(const std::string&);
+    void set_pattern(const std::string&, pattern_time_type = pattern_time_type::local);
     void set_formatter(formatter_ptr);
-
-    // error handler
-    void set_error_handler(log_err_handler);
-    log_err_handler error_handler();
 
     // automatically call flush() if message level >= log_level
     void flush_on(level::level_enum log_level);
@@ -70,9 +78,13 @@ public:
 
     const std::vector<sink_ptr>& sinks() const;
 
+    // error handler
+    virtual void set_error_handler(log_err_handler);
+    virtual log_err_handler error_handler();
+
 protected:
     virtual void _sink_it(details::log_msg&);
-    virtual void _set_pattern(const std::string&);
+    virtual void _set_pattern(const std::string&, pattern_time_type);
     virtual void _set_formatter(formatter_ptr);
 
     // default error handler: print the error to stderr with the max rate of 1 message/minute
@@ -81,6 +93,9 @@ protected:
     // return true if the given message level should trigger a flush
     bool _should_flush_on(const details::log_msg&);
 
+    // increment the message count (only if defined(SPDLOG_ENABLE_MESSAGE_COUNTER))
+    void _incr_msg_counter(details::log_msg &msg);
+
     const std::string _name;
     std::vector<sink_ptr> _sinks;
     formatter_ptr _formatter;
@@ -88,7 +103,8 @@ protected:
     spdlog::level_t _flush_level;
     log_err_handler _err_handler;
     std::atomic<time_t> _last_err_time;
+    std::atomic<size_t> _msg_counter;
 };
 }
 
-#include <spdlog/details/logger_impl.h>
+#include "details/logger_impl.h"

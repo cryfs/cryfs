@@ -1,14 +1,13 @@
 project (blockstore)
 
 set(SOURCES
-  utils/Key.cpp
+  utils/BlockId.cpp
+  utils/IdWrapper.cpp
   utils/BlockStoreUtils.cpp
   utils/FileDoesntExistException.cpp
-  interface/helpers/BlockStoreWithRandomKeys.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
-  implementations/inmemory/InMemoryBlock.cpp
-  implementations/inmemory/InMemoryBlockStore.cpp
+  implementations/inmemory/InMemoryBlockStore2.cpp
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp
@@ -16,17 +15,21 @@ set(SOURCES
   implementations/compressing/CompressedBlock.cpp
   implementations/compressing/compressors/RunLengthEncoding.cpp
   implementations/compressing/compressors/Gzip.cpp
-  implementations/encrypted/EncryptedBlockStore.cpp
-  implementations/encrypted/EncryptedBlock.cpp
-  implementations/ondisk/OnDiskBlockStore.cpp
-  implementations/ondisk/OnDiskBlock.cpp
-  implementations/caching/CachingBlockStore.cpp
+  implementations/encrypted/EncryptedBlockStore2.cpp
+  implementations/ondisk/OnDiskBlockStore2.cpp
+  implementations/caching/CachingBlockStore2.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp
   implementations/caching/cache/QueueMap.cpp
-  implementations/caching/CachedBlock.cpp
-  implementations/caching/NewBlock.cpp
+  implementations/low2highlevel/LowToHighLevelBlock.cpp
+  implementations/low2highlevel/LowToHighLevelBlockStore.cpp
+  implementations/integrity/IntegrityBlockStore2.cpp
+  implementations/integrity/KnownBlockVersions.cpp
+  implementations/integrity/ClientIdAndBlockId.cpp
+  implementations/integrity/IntegrityViolationError.cpp
+  implementations/mock/MockBlockStore.cpp
+  implementations/mock/MockBlock.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

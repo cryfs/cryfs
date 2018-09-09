@@ -7,6 +7,7 @@
 #include <boost/static_assert.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cpp-utils/system/stat.h>
 
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Node.h"
@@ -61,17 +62,17 @@ public:
   }
 
   cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createDir(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createDir(path.filename().string(), this->MODE_PUBLIC, 0, 0);
     return this->LoadDir(path);
   }
 
   cpputils::unique_ref<fspp::File> CreateFile(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().native(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().string(), this->MODE_PUBLIC, 0, 0);
     return this->LoadFile(path);
   }
 
-  cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createSymlink(path.filename().native(), "/my/symlink/target", 0, 0);
+  cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path, const boost::filesystem::path &target = "/my/symlink/target") {
+    this->LoadDir(path.parent_path())->createSymlink(path.filename().string(), target, 0, 0);
     return this->LoadSymlink(path);
   }
 
@@ -85,6 +86,17 @@ public:
 
   void EXPECT_IS_SYMLINK(const cpputils::unique_ref<fspp::Node> &node) {
     EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
+  }
+
+  void setModificationTimestampLaterThanAccessTimestamp(const boost::filesystem::path& path) {
+    auto node = device->Load(path).value();
+    struct stat st{};
+    node->stat(&st);
+    st.st_mtim.tv_nsec = st.st_mtim.tv_nsec + 1;
+    node->utimens(
+            st.st_atim,
+            st.st_mtim
+    );
   }
 };
 

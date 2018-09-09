@@ -11,33 +11,29 @@ namespace datanodestore {
 
 class DataInnerNode final: public DataNode {
 public:
-  static cpputils::unique_ref<DataInnerNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block, const DataNode &first_child_key);
+  static cpputils::unique_ref<DataInnerNode> InitializeNewNode(cpputils::unique_ref<blockstore::Block> block, const DataNodeLayout &layout, uint8_t depth, const std::vector<blockstore::BlockId> &children);
+  static cpputils::unique_ref<DataInnerNode> CreateNewNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint8_t depth, const std::vector<blockstore::BlockId> &children);
+
+  using ChildEntry = DataInnerNode_ChildEntry;
 
   DataInnerNode(DataNodeView block);
   ~DataInnerNode();
 
-  using ChildEntry = DataInnerNode_ChildEntry;
-
   uint32_t maxStoreableChildren() const;
 
-  ChildEntry *getChild(unsigned int index);
-  const ChildEntry *getChild(unsigned int index) const;
+  ChildEntry readChild(unsigned int index) const;
+  ChildEntry readLastChild() const;
 
   uint32_t numChildren() const;
 
-  void addChild(const DataNode &child_key);
+  void addChild(const DataNode &child_blockId);
 
   void removeLastChild();
 
-  ChildEntry *LastChild();
-  const ChildEntry *LastChild() const;
-
 private:
-
-  ChildEntry *ChildrenBegin();
-  ChildEntry *ChildrenEnd();
-  const ChildEntry *ChildrenBegin() const;
-  const ChildEntry *ChildrenEnd() const;
+  void _writeChild(unsigned int index, const ChildEntry& child);
+  void _writeLastChild(const ChildEntry& child);
+  static cpputils::Data _serializeChildren(const std::vector<blockstore::BlockId> &children);
 
   DISALLOW_COPY_AND_ASSIGN(DataInnerNode);
 };

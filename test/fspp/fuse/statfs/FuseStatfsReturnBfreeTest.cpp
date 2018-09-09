@@ -3,9 +3,9 @@
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-class FuseStatfsReturnBfreeTest: public FuseStatfsReturnTest<fsblkcnt_t>, public WithParamInterface<fsblkcnt_t> {
+class FuseStatfsReturnBfreeTest: public FuseStatfsReturnTest<fsblkcnt64_t>, public WithParamInterface<fsblkcnt64_t> {
 private:
-  void set(struct ::statvfs *stat, fsblkcnt_t value) override {
+  void set(struct ::statvfs *stat, fsblkcnt64_t value) override {
     stat->f_bfree = value;
   }
 };

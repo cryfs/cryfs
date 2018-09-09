@@ -15,17 +15,20 @@ class ParallelAccessBlockStore final: public BlockStore {
 public:
   explicit ParallelAccessBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
 
-  Key createKey() override;
-  boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-  void remove(cpputils::unique_ref<Block> block) override;
+  BlockId createBlockId() override;
+  boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override;
+  cpputils::unique_ref<Block> overwrite(const BlockId &blockId, cpputils::Data data) override;
+  void remove(const BlockId &blockId) override;
+  void remove(cpputils::unique_ref<Block> node) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
+  void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
 private:
   cpputils::unique_ref<BlockStore> _baseBlockStore;
-  parallelaccessstore::ParallelAccessStore<Block, BlockRef, Key> _parallelAccessStore;
+  parallelaccessstore::ParallelAccessStore<Block, BlockRef, BlockId> _parallelAccessStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessBlockStore);
 };

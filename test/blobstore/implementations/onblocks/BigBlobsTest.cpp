@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <blockstore/implementations/compressing/CompressingBlockStore.h>
 #include <blockstore/implementations/compressing/compressors/RunLengthEncoding.h>
-#include <blockstore/implementations/inmemory/InMemoryBlockStore.h>
-#include <blockstore/implementations/inmemory/InMemoryBlock.h>
+#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
+#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/data/Data.h>
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
@@ -14,7 +14,8 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::DataFixture;
 using cpputils::Data;
-using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::inmemory::InMemoryBlockStore2;
+using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blockstore::compressing::CompressingBlockStore;
 using blockstore::compressing::RunLengthEncoding;
 
@@ -22,14 +23,14 @@ using blockstore::compressing::RunLengthEncoding;
 class BigBlobsTest : public ::testing::Test {
 public:
     static constexpr size_t BLOCKSIZE = 32 * 1024;
-    static constexpr uint64_t SMALL_BLOB_SIZE = UINT64_C(1024)*1024*1024*3.9; // 3.9 GB (<4GB)
-    static constexpr uint64_t LARGE_BLOB_SIZE = UINT64_C(1024)*1024*1024*4.1; // 4.1 GB (>4GB)
+    static constexpr uint64_t SMALL_BLOB_SIZE = UINT64_C(1024)*1024*1024*3.95; // 3.95 GB (<4GB)
+    static constexpr uint64_t LARGE_BLOB_SIZE = UINT64_C(1024)*1024*1024*4.05; // 4.05 GB (>4GB)
 
     static constexpr uint64_t max_uint_32 = std::numeric_limits<uint32_t>::max();
     static_assert(SMALL_BLOB_SIZE < max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
     static_assert(LARGE_BLOB_SIZE > max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
 
-    unique_ref<BlobStore> blobStore = make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CompressingBlockStore<RunLengthEncoding>>(make_unique_ref<InMemoryBlockStore>()), BLOCKSIZE);
+    unique_ref<BlobStore> blobStore = make_unique_ref<BlobStoreOnBlocks>(make_unique_ref<CompressingBlockStore<RunLengthEncoding>>(make_unique_ref<LowToHighLevelBlockStore>(make_unique_ref<InMemoryBlockStore2>())), BLOCKSIZE);
     unique_ref<Blob> blob = blobStore->create();
 };
 
@@ -64,11 +65,11 @@ TEST_F(BigBlobsTest, Resize) {
     blob->flush();
 
     //Destruct >4GB blob
-    auto key = blob->key();
+    auto blockId = blob->blockId();
     cpputils::destruct(std::move(blob));
 
     //Load >4GB blob
-    blob = blobStore->load(key).value();
+    blob = blobStore->load(blockId).value();
 
     //Remove >4GB blob
     blobStore->remove(std::move(blob));

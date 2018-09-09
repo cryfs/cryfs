@@ -6,12 +6,12 @@ using ::testing::_;
 using ::testing::Invoke;
 
 void FuseLstatTest::LstatPath(const std::string &path) {
-  struct stat dummy;
+  struct stat dummy{};
   LstatPath(path, &dummy);
 }
 
 int FuseLstatTest::LstatPathReturnError(const std::string &path) {
-  struct stat dummy;
+  struct stat dummy{};
   return LstatPathReturnError(path, &dummy);
 }
 
@@ -24,7 +24,7 @@ int FuseLstatTest::LstatPathReturnError(const std::string &path, struct stat *re
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::lstat(realpath.c_str(), result);
+  int retval = ::lstat(realpath.string().c_str(), result);
   if (retval == 0) {
     return 0;
   } else {
@@ -45,7 +45,7 @@ struct stat FuseLstatTest::CallLstatWithImpl(function<void(struct stat*)> implem
     implementation(stat);
   }));
 
-  struct stat result;
+  struct stat result{};
   LstatPath(FILENAME, &result);
 
   return result;

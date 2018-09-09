@@ -8,14 +8,16 @@ using std::vector;
 using boost::optional;
 namespace bf = boost::filesystem;
 
-ProgramOptions::ProgramOptions(const bf::path &baseDir, const bf::path &mountDir, const optional<bf::path> &configFile,
-                               bool foreground, bool allowFilesystemUpgrade, const optional<double> &unmountAfterIdleMinutes,
-                               const optional<bf::path> &logFile, const optional<string> &cipher,
-                               const optional<uint32_t> &blocksizeBytes,
-                               const vector<string> &fuseOptions)
-    :_baseDir(baseDir), _mountDir(mountDir), _configFile(configFile), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade),
-     _cipher(cipher), _blocksizeBytes(blocksizeBytes), _unmountAfterIdleMinutes(unmountAfterIdleMinutes),
-     _logFile(logFile), _fuseOptions(fuseOptions) {
+ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf::path> configFile,
+                               bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, optional<double> unmountAfterIdleMinutes,
+                               optional<bf::path> logFile, optional<string> cipher,
+                               optional<uint32_t> blocksizeBytes,
+                               bool allowIntegrityViolations,
+                               boost::optional<bool> missingBlockIsIntegrityViolation,
+                               vector<string> fuseOptions)
+    :_baseDir(std::move(baseDir)), _mountDir(std::move(mountDir)), _configFile(std::move(configFile)), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
+     _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
+     _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)), _fuseOptions(std::move(fuseOptions)) {
 }
 
 const bf::path &ProgramOptions::baseDir() const {
@@ -52,6 +54,18 @@ const optional<string> &ProgramOptions::cipher() const {
 
 const optional<uint32_t> &ProgramOptions::blocksizeBytes() const {
     return _blocksizeBytes;
+}
+
+bool ProgramOptions::allowIntegrityViolations() const {
+    return _allowIntegrityViolations;
+}
+
+bool ProgramOptions::allowReplacedFilesystem() const {
+    return _allowReplacedFilesystem;
+}
+
+const optional<bool> &ProgramOptions::missingBlockIsIntegrityViolation() const {
+    return _missingBlockIsIntegrityViolation;
 }
 
 const vector<string> &ProgramOptions::fuseOptions() const {

@@ -3,7 +3,7 @@
 #define MESSMER_FSPP_FSTEST_FSPPNODETEST_TIMESTAMPS_H_
 
 #include "testutils/FsppNodeTest.h"
-#include "../fuse/FuseErrnoException.h"
+#include "../fs_interface/FuseErrnoException.h"
 #include "testutils/TimestampTestUtils.h"
 #include <cpp-utils/system/stat.h>
 
@@ -26,7 +26,7 @@ public:
     void Test_Stat() {
         auto node = this->CreateNode("/mynode");
         auto operation = [&node] () {
-            struct stat st;
+            struct stat st{};
             node->stat(&st);
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mynode", operation, {

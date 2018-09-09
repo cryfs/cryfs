@@ -2,24 +2,20 @@
 #include "testutils/FuseWriteTest.h"
 #include "../../testutils/InMemoryFile.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 #include <tuple>
 #include <cstdlib>
 
 using ::testing::_;
-using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Combine;
-using ::testing::Eq;
-using ::testing::Return;
 using ::testing::Invoke;
 using ::testing::Action;
 
 using std::tuple;
 using std::get;
-using std::min;
 using cpputils::Data;
 using cpputils::DataFixture;
 

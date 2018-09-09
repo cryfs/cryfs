@@ -5,7 +5,6 @@
 #include "testutils/MinimalValueType.h"
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
-using ::testing::Test;
 
 using namespace blockstore::caching;
 
@@ -48,7 +47,7 @@ TEST_F(CacheTest_PushAndPop, FullCache) {
     push(i, 2*i);
   }
   for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
 }
 
@@ -60,7 +59,7 @@ TEST_F(CacheTest_PushAndPop, FullCache_PushNonOrdered_PopOrdered) {
     push(i, 2*i);
   }
   for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
 }
 
@@ -69,10 +68,10 @@ TEST_F(CacheTest_PushAndPop, FullCache_PushOrdered_PopNonOrdered) {
     push(i, 2*i);
   }
   for(unsigned int i = 1; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
   for(unsigned int i = 0; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
 }
 
@@ -100,10 +99,10 @@ TEST_F(CacheTest_PushAndPop, FullCache_PushNonOrdered_PopNonOrdered) {
     push(i, 2*i);
   }
   for(int i = roundDownToOdd(MAX_ENTRIES-1); i >= 0; i -= 2) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
   for(unsigned int i = 0; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
 }
 
@@ -116,7 +115,7 @@ TEST_F(CacheTest_PushAndPop, MoreThanFullCache) {
   EXPECT_EQ(boost::none, pop(1));
   //Check the other elements are still there
   for(unsigned int i = 2; i < MAX_ENTRIES + 2; ++i) {
-    EXPECT_EQ((signed int)(2*i), pop(i).value());
+    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
   }
 }
 

@@ -17,7 +17,7 @@ public:
   }
 
   void EXPECT_CHILDREN_ARE(const boost::filesystem::path &path, const std::initializer_list<fspp::Dir::Entry> expected) {
-	EXPECT_CHILDREN_ARE(this->LoadDir(path).get(), expected);
+    EXPECT_CHILDREN_ARE(this->LoadDir(path).get(), expected);
   }
 
   void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
@@ -48,11 +48,11 @@ public:
 };
 TYPED_TEST_CASE_P(FsppDirTest);
 
-fspp::Dir::Entry DirEntry(const std::string &name) {
+inline fspp::Dir::Entry DirEntry(const std::string &name) {
   return fspp::Dir::Entry(fspp::Dir::EntryType::DIR, name);
 }
 
-fspp::Dir::Entry FileEntry(const std::string &name) {
+inline fspp::Dir::Entry FileEntry(const std::string &name) {
   return fspp::Dir::Entry(fspp::Dir::EntryType::FILE, name);
 }
 
@@ -248,6 +248,25 @@ TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
   );
 }
 
+TYPED_TEST_P(FsppDirTest, Remove) {
+  this->CreateDir("/mytestdir");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
+  EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir"));
+  this->Load("/mytestdir")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir"));
+  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir"));
+}
+
+TYPED_TEST_P(FsppDirTest, Remove_Nested) {
+  this->CreateDir("/mytestdir");
+  this->CreateDir("/mytestdir/mydir");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/mydir"));
+  EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir/mydir"));
+  this->Load("/mytestdir/mydir")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mydir"));
+  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir/mydir"));
+}
+
 REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   Children_RootDir_Empty,
   Children_RootDir_OneFile_Directly,
@@ -272,7 +291,9 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest,
   CreateDir_InNonemptyRoot,
   CreateDir_InEmptyNestedDir,
   CreateDir_InNonemptyNestedDir,
-  CreateDir_AlreadyExisting
+  CreateDir_AlreadyExisting,
+  Remove,
+  Remove_Nested
 );
 
 

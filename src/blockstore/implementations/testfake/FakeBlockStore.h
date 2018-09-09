@@ -2,7 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_TESTFAKE_FAKEBLOCKSTORE_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_TESTFAKE_FAKEBLOCKSTORE_H_
 
-#include "../../interface/helpers/BlockStoreWithRandomKeys.h"
+#include "../../interface/BlockStore.h"
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/macros.h>
 
@@ -27,21 +27,24 @@ class FakeBlock;
  * the data (instead of a direct pointer as InMemoryBlockStore does) and flushing will copy the data back to the
  * background. This way, tests are more likely to fail if they use the blockstore wrongly.
  */
-class FakeBlockStore final: public BlockStoreWithRandomKeys {
+class FakeBlockStore final: public BlockStore {
 public:
   FakeBlockStore();
 
-  boost::optional<cpputils::unique_ref<Block>> tryCreate(const Key &key, cpputils::Data data) override;
-  boost::optional<cpputils::unique_ref<Block>> load(const Key &key) override;
-  void remove(cpputils::unique_ref<Block> block) override;
+  BlockId createBlockId() override;
+  boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;
+  cpputils::unique_ref<Block> overwrite(const blockstore::BlockId &blockId, cpputils::Data data) override;
+  boost::optional<cpputils::unique_ref<Block>> load(const BlockId &blockId) override;
+  void remove(const BlockId &blockId) override;
   uint64_t numBlocks() const override;
   uint64_t estimateNumFreeBytes() const override;
   uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
+  void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
-  void updateData(const Key &key, const cpputils::Data &data);
+  void updateData(const BlockId &blockId, const cpputils::Data &data);
 
 private:
-  std::unordered_map<Key, cpputils::Data> _blocks;
+  std::unordered_map<BlockId, cpputils::Data> _blocks;
 
   //This vector keeps a handle of the data regions for all created FakeBlock objects.
   //This way, it is ensured that no two created FakeBlock objects will work on the
@@ -52,8 +55,8 @@ private:
 
   mutable std::mutex _mutex;
 
-  cpputils::unique_ref<Block> makeFakeBlockFromData(const Key &key, const cpputils::Data &data, bool dirty);
-  boost::optional<cpputils::unique_ref<Block>> _load(const Key &key);
+  cpputils::unique_ref<Block> makeFakeBlockFromData(const BlockId &blockId, const cpputils::Data &data, bool dirty);
+  boost::optional<cpputils::unique_ref<Block>> _load(const BlockId &blockId);
 
   DISALLOW_COPY_AND_ASSIGN(FakeBlockStore);
 };

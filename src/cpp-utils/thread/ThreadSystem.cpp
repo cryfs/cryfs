@@ -12,15 +12,19 @@ namespace cpputils {
     }
 
     ThreadSystem::ThreadSystem(): _runningThreads(), _mutex() {
+#if !defined(_MSC_VER)
         //Stopping the thread before fork() (and then also restarting it in the parent thread after fork()) is important,
         //because as a running thread it might hold locks or condition variables that won't play well when forked.
         pthread_atfork(&ThreadSystem::_onBeforeFork, &ThreadSystem::_onAfterFork, &ThreadSystem::_onAfterFork);
+#else
+		// not needed on windows because we don't fork
+#endif
     }
 
     ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration) {
         boost::unique_lock<boost::mutex> lock(_mutex);
         auto thread = _startThread(loopIteration);
-        _runningThreads.push_back(RunningThread{loopIteration, std::move(thread)});
+        _runningThreads.push_back(RunningThread{std::move(loopIteration), std::move(thread)});
         return std::prev(_runningThreads.end());
     }
 
@@ -61,7 +65,9 @@ namespace cpputils {
     }
 
     boost::thread ThreadSystem::_startThread(function<bool()> loopIteration) {
-        return boost::thread(std::bind(&ThreadSystem::_runThread, loopIteration));
+        return boost::thread([loopIteration = std::move(loopIteration)] {
+            ThreadSystem::_runThread(loopIteration);
+        });
     }
 
     void ThreadSystem::_runThread(function<bool()> loopIteration) {
@@ -75,9 +81,9 @@ namespace cpputils {
         } catch (const boost::thread_interrupted &e) {
             //Do nothing, exit thread.
         } catch (const std::exception &e) {
-            LOG(ERROR, "LoopThread crashed: {}", e.what());
+            LOG(ERR, "LoopThread crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR, "LoopThread crashed");
+            LOG(ERR, "LoopThread crashed");
         }
         //TODO We should remove the thread from _runningThreads here, not in stop().
     }

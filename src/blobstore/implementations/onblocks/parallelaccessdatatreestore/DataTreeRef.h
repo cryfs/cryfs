@@ -4,25 +4,26 @@
 
 #include <parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTree.h"
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
 
 namespace blobstore {
 namespace onblocks {
 namespace parallelaccessdatatreestore {
 
-class DataTreeRef final: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key>::ResourceRefBase {
+class DataTreeRef final: public parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::BlockId>::ResourceRefBase {
 public:
   DataTreeRef(datatreestore::DataTree *baseTree): _baseTree(baseTree) {}
 
-  const blockstore::Key &key() const {
-    return _baseTree->key();
+  const blockstore::BlockId &blockId() const {
+    return _baseTree->blockId();
   }
 
   uint64_t maxBytesPerLeaf() const {
     return _baseTree->maxBytesPerLeaf();
   }
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func) {
-    return _baseTree->traverseLeaves(beginIndex, endIndex, func);
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, datatreestore::LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
+    return _baseTree->traverseLeaves(beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
   }
 
   uint32_t numLeaves() const {

@@ -7,73 +7,66 @@
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include "blobstore/implementations/onblocks/datatreestore/impl/algorithms.h"
 
-using ::testing::Test;
-using std::pair;
-using std::make_pair;
 
-using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataNode;
-using blobstore::onblocks::datanodestore::DataInnerNode;
-using blockstore::testfake::FakeBlockStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using namespace blobstore::onblocks::datatreestore::algorithms;
 
 class GetLowestRightBorderNodeWithMoreThanOneChildOrNullTest: public DataTreeTest {
 public:
   struct TestData {
-    Key rootNode;
-    Key expectedResult;
+    BlockId rootNode;
+    BlockId expectedResult;
   };
 
   void check(const TestData &testData) {
     auto root = nodeStore->load(testData.rootNode).value();
     auto result = GetLowestRightBorderNodeWithMoreThanOneChildOrNull(nodeStore, root.get());
-    EXPECT_EQ(testData.expectedResult, result->key());
+    EXPECT_EQ(testData.expectedResult, result->blockId());
   }
 
-  Key CreateLeafOnlyTree() {
-    return CreateLeaf()->key();
+  BlockId CreateLeafOnlyTree() {
+    return CreateLeaf()->blockId();
   }
 
-  Key CreateTwoRightBorderNodes() {
-    return CreateInner({CreateLeaf()})->key();
+  BlockId CreateTwoRightBorderNodes() {
+    return CreateInner({CreateLeaf()})->blockId();
   }
 
-  Key CreateThreeRightBorderNodes() {
-    return CreateInner({CreateInner({CreateLeaf()})})->key();
+  BlockId CreateThreeRightBorderNodes() {
+    return CreateInner({CreateInner({CreateLeaf()})})->blockId();
   }
 
   TestData CreateThreeRightBorderNodes_LastFull() {
     auto node = CreateFullTwoLevel();
     auto root = CreateInner({node.get()});
-    return TestData{root->key(), node->key()};
+    return TestData{root->blockId(), node->blockId()};
   }
 
   TestData CreateLargerTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData{root->key(), node->key()};
+    return TestData{root->blockId(), node->blockId()};
   }
 
   TestData CreateThreeLevelTreeWithRightBorderSingleNodeChain() {
     auto root = CreateInner({CreateFullTwoLevel(), CreateInner({CreateLeaf()})});
-    return TestData{root->key(), root->key()};
+    return TestData{root->blockId(), root->blockId()};
   }
 
   TestData CreateThreeLevelTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData{root->key(), node->key()};
+    return TestData{root->blockId(), node->blockId()};
   }
 
   TestData CreateFullTwoLevelTree() {
     auto node = CreateFullTwoLevel();
-    return TestData{node->key(), node->key()};
+    return TestData{node->blockId(), node->blockId()};
   }
 
   TestData CreateFullThreeLevelTree() {
     auto root = CreateFullThreeLevel();
-    return TestData{root->key(), root->LastChild()->key()};
+    return TestData{root->blockId(), root->readLastChild().blockId()};
   }
 };
 

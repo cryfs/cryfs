@@ -12,7 +12,7 @@ int FuseMkdirTest::MkdirReturnError(const char *dirname, mode_t mode) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / dirname;
-  int retval = ::mkdir(realpath.c_str(), mode);
+  int retval = ::mkdir(realpath.string().c_str(), mode);
   if (retval == 0) {
     return 0;
   } else {

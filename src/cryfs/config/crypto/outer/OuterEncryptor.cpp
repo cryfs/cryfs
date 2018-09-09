@@ -3,7 +3,6 @@
 #include "OuterConfig.h"
 
 using std::string;
-using cpputils::unique_ref;
 using cpputils::Data;
 using cpputils::RandomPadding;
 using boost::optional;
@@ -11,8 +10,8 @@ using boost::none;
 using namespace cpputils::logging;
 
 namespace cryfs {
-    OuterEncryptor::OuterEncryptor(Cipher::EncryptionKey key, cpputils::Data kdfParameters)
-            : _key(std::move(key)), _kdfParameters(std::move(kdfParameters)) {
+    OuterEncryptor::OuterEncryptor(const Cipher::EncryptionKey& key, cpputils::Data kdfParameters)
+            : _key(key), _kdfParameters(std::move(kdfParameters)) {
     }
 
     OuterConfig OuterEncryptor::encrypt(const Data &plaintext) const {

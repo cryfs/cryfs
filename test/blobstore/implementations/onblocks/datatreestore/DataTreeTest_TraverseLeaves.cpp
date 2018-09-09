@@ -2,22 +2,28 @@
 #include <gmock/gmock.h>
 
 using ::testing::_;
+using ::testing::Invoke;
+using ::testing::Eq;
 
 using blobstore::onblocks::datanodestore::DataLeafNode;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
-using blobstore::onblocks::datatreestore::DataTree;
-using blockstore::Key;
+using blobstore::onblocks::datatreestore::LeafHandle;
+using blockstore::BlockId;
 
 using cpputils::unique_ref;
+using cpputils::Data;
+using std::shared_ptr;
+using std::make_shared;
 
 class TraversorMock {
 public:
-  MOCK_METHOD2(called, void(DataLeafNode*, uint32_t));
+  MOCK_METHOD3(calledExistingLeaf, void(DataLeafNode*, bool, uint32_t));
+  MOCK_METHOD1(calledCreateLeaf, shared_ptr<Data>(uint32_t));
 };
 
-MATCHER_P(KeyEq, expected, "node key equals") {
-  return arg->key() == expected;
+MATCHER_P(KeyEq, expected, "node blockId equals") {
+  return arg->blockId() == expected;
 }
 
 class DataTreeTest_TraverseLeaves: public DataTreeTest {
@@ -42,25 +48,35 @@ public:
     });
   }
 
-  void EXPECT_TRAVERSE_LEAF(const Key &key, uint32_t leafIndex) {
-    EXPECT_CALL(traversor, called(KeyEq(key), leafIndex)).Times(1);
+  void EXPECT_CREATE_LEAF(uint32_t leafIndex) {
+    uint64_t maxBytesPerLeaf = nodeStore->layout().maxBytesPerLeaf();
+    EXPECT_CALL(traversor, calledCreateLeaf(Eq(leafIndex))).Times(1).WillOnce(Invoke([maxBytesPerLeaf] (uint32_t) {
+        return make_shared<Data>(maxBytesPerLeaf);
+    }));
   }
 
-  void EXPECT_TRAVERSE_ALL_CHILDREN_OF(const DataInnerNode &node, uint32_t firstLeafIndex) {
+  void EXPECT_TRAVERSE_LEAF(const BlockId &blockId, bool isRightBorderLeaf, uint32_t leafIndex) {
+    EXPECT_CALL(traversor, calledExistingLeaf(KeyEq(blockId), isRightBorderLeaf, leafIndex)).Times(1);
+  }
+
+  void EXPECT_TRAVERSE_ALL_CHILDREN_OF(const DataInnerNode &node, bool isRightBorderNode, uint32_t firstLeafIndex) {
     for (unsigned int i = 0; i < node.numChildren(); ++i) {
-      EXPECT_TRAVERSE_LEAF(node.getChild(i)->key(), firstLeafIndex+i);
+      EXPECT_TRAVERSE_LEAF(node.readChild(i).blockId(), isRightBorderNode && i == node.numChildren()-1, firstLeafIndex+i);
     }
   }
 
   void EXPECT_DONT_TRAVERSE_ANY_LEAVES() {
-    EXPECT_CALL(traversor, called(_, _)).Times(0);
+    EXPECT_CALL(traversor, calledExistingLeaf(_, _, _)).Times(0);
+    EXPECT_CALL(traversor, calledCreateLeaf(_)).Times(0);
   }
 
   void TraverseLeaves(DataNode *root, uint32_t beginIndex, uint32_t endIndex) {
     root->flush();
-    auto tree = treeStore.load(root->key()).value();
-    tree->traverseLeaves(beginIndex, endIndex, [this] (DataLeafNode *leaf, uint32_t nodeIndex) {
-      traversor.called(leaf, nodeIndex);
+    auto tree = treeStore.load(root->blockId()).value();
+    tree->traverseLeaves(beginIndex, endIndex, [this] (uint32_t nodeIndex, bool isRightBorderNode,LeafHandle leaf) {
+      traversor.calledExistingLeaf(leaf.node(), isRightBorderNode,  nodeIndex);
+    }, [this] (uint32_t nodeIndex) -> Data {
+        return traversor.calledCreateLeaf(nodeIndex)->copy();
     });
   }
 
@@ -69,7 +85,7 @@ public:
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseSingleLeafTree) {
   auto root = CreateLeaf();
-  EXPECT_TRAVERSE_LEAF(root->key(), 0);
+  EXPECT_TRAVERSE_LEAF(root->blockId(), true, 0);
 
   TraverseLeaves(root.get(), 0, 1);
 }
@@ -90,21 +106,21 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseNothingInSingleLeafTree2) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstLeafOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  EXPECT_TRAVERSE_LEAF(root->getChild(0)->key(), 0);
+  EXPECT_TRAVERSE_LEAF(root->readChild(0).blockId(), false, 0);
 
   TraverseLeaves(root.get(), 0, 1);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddleLeafOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  EXPECT_TRAVERSE_LEAF(root->getChild(5)->key(), 5);
+  EXPECT_TRAVERSE_LEAF(root->readChild(5).blockId(), false, 5);
 
   TraverseLeaves(root.get(), 5, 6);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastLeafOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  EXPECT_TRAVERSE_LEAF(root->getChild(nodeStore->layout().maxChildrenPerInnerNode()-1)->key(), nodeStore->layout().maxChildrenPerInnerNode()-1);
+  EXPECT_TRAVERSE_LEAF(root->readChild(nodeStore->layout().maxChildrenPerInnerNode()-1).blockId(), true, nodeStore->layout().maxChildrenPerInnerNode()-1);
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode()-1, nodeStore->layout().maxChildrenPerInnerNode());
 }
@@ -125,43 +141,43 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseNothingInFullTwolevelTree2) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstLeafOfThreeLevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(0)->key())->getChild(0)->key(), 0);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(0).blockId())->readChild(0).blockId(), false, 0);
 
   TraverseLeaves(root.get(), 0, 1);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddleLeafOfThreeLevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(0)->key())->getChild(5)->key(), 5);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(0).blockId())->readChild(5).blockId(), false, 5);
 
   TraverseLeaves(root.get(), 5, 6);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastLeafOfThreeLevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(1)->key())->getChild(0)->key(), nodeStore->layout().maxChildrenPerInnerNode());
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(1).blockId())->readChild(0).blockId(), true, nodeStore->layout().maxChildrenPerInnerNode());
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode(), nodeStore->layout().maxChildrenPerInnerNode()+1);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
-  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*root, 0);
+  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*root, true, 0);
 
   TraverseLeaves(root.get(), 0, nodeStore->layout().maxChildrenPerInnerNode());
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(0)->key()), 0);
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(1)->key())->getChild(0)->key(), nodeStore->layout().maxChildrenPerInnerNode());
+  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(0).blockId()), false, 0);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(1).blockId())->readChild(0).blockId(), true, nodeStore->layout().maxChildrenPerInnerNode());
 
   TraverseLeaves(root.get(), 0, nodeStore->layout().maxChildrenPerInnerNode()+1);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstChildOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(0)->key()), 0);
+  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(0).blockId()), false, 0);
 
   TraverseLeaves(root.get(), 0, nodeStore->layout().maxChildrenPerInnerNode());
 }
@@ -169,7 +185,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstChildOfThreelevelMinDataTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
   for (unsigned int i = 0; i < 5; ++i) {
-    EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(root->readChild(i).blockId(), false, i);
   }
 
   TraverseLeaves(root.get(), 0, 5);
@@ -178,7 +194,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfFullTwolevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
   for (unsigned int i = 5; i < 10; ++i) {
-    EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(root->readChild(i).blockId(), false, i);
   }
 
   TraverseLeaves(root.get(), 5, 10);
@@ -187,7 +203,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfFullTwolevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfFullTwolevelTree) {
   auto root = CreateFullTwoLevel();
   for (unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
-    EXPECT_TRAVERSE_LEAF(root->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(root->readChild(i).blockId(), i==nodeStore->layout().maxChildrenPerInnerNode()-1, i);
   }
 
   TraverseLeaves(root.get(), 5, nodeStore->layout().maxChildrenPerInnerNode());
@@ -195,9 +211,9 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfFullTwolevelTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  auto node = LoadInnerNode(root->getChild(0)->key());
+  auto node = LoadInnerNode(root->readChild(0).blockId());
   for (unsigned int i = 0; i < 5; ++i) {
-    EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(node->readChild(i).blockId(), false, i);
   }
 
   TraverseLeaves(root.get(), 0, 5);
@@ -205,9 +221,9 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelMinDataTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  auto node = LoadInnerNode(root->getChild(0)->key());
+  auto node = LoadInnerNode(root->readChild(0).blockId());
   for (unsigned int i = 5; i < 10; ++i) {
-    EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(node->readChild(i).blockId(), false, i);
   }
 
   TraverseLeaves(root.get(), 5, 10);
@@ -215,18 +231,18 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseInnerPartOfThreelevelMinDataTree) {
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfThreelevelMinDataTree) {
   auto root = CreateThreeLevelMinData();
-  auto node = LoadInnerNode(root->getChild(0)->key());
+  auto node = LoadInnerNode(root->readChild(0).blockId());
   for (unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
-    EXPECT_TRAVERSE_LEAF(node->getChild(i)->key(), i);
+    EXPECT_TRAVERSE_LEAF(node->readChild(i).blockId(), false, i);
   }
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(1)->key())->getChild(0)->key(), nodeStore->layout().maxChildrenPerInnerNode());
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(1).blockId())->readChild(0).blockId(), true, nodeStore->layout().maxChildrenPerInnerNode());
 
   TraverseLeaves(root.get(), 5, nodeStore->layout().maxChildrenPerInnerNode()+1);
 }
 
 TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstLeafOfThreelevelTree) {
   auto root = CreateThreeLevel();
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(0)->key())->getChild(0)->key(), 0);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(0).blockId())->readChild(0).blockId(), false, 0);
 
   TraverseLeaves(root.get(), 0, 1);
 }
@@ -234,7 +250,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstLeafOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastLeafOfThreelevelTree) {
   auto root = CreateThreeLevel();
   uint32_t numLeaves = nodeStore->layout().maxChildrenPerInnerNode() * 5 + 3;
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->LastChild()->key())->LastChild()->key(), numLeaves-1);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readLastChild().blockId())->readLastChild().blockId(), true, numLeaves-1);
 
   TraverseLeaves(root.get(), numLeaves-1, numLeaves);
 }
@@ -242,7 +258,7 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseLastLeafOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddleLeafOfThreelevelTree) {
   auto root = CreateThreeLevel();
   uint32_t wantedLeafIndex = nodeStore->layout().maxChildrenPerInnerNode() * 2 + 5;
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->getChild(2)->key())->getChild(5)->key(), wantedLeafIndex);
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(2).blockId())->readChild(5).blockId(), false, wantedLeafIndex);
 
   TraverseLeaves(root.get(), wantedLeafIndex, wantedLeafIndex+1);
 }
@@ -251,12 +267,12 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse all leaves in the first two children of the root
   for(unsigned int i = 0; i < 2; ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the third child of the root
-  auto child = LoadInnerNode(root->getChild(2)->key());
+  auto child = LoadInnerNode(root->readChild(2).blockId());
   for(unsigned int i = 0; i < 5; ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, 2 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
   TraverseLeaves(root.get(), 0, 2 * nodeStore->layout().maxChildrenPerInnerNode() + 5);
@@ -265,18 +281,18 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseFirstPartOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_OnlyFullChildren) {
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
-  auto child = LoadInnerNode(root->getChild(1)->key());
+  auto child = LoadInnerNode(root->readChild(1).blockId());
   for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third and fourth child of the root
   for(unsigned int i = 2; i < 4; ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(i).blockId()),false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the fifth child of the root
-  child = LoadInnerNode(root->getChild(4)->key());
+  child = LoadInnerNode(root->readChild(4).blockId());
   for(unsigned int i = 0; i < 5; ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 4 * nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, 4 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode() + 5, 4 * nodeStore->layout().maxChildrenPerInnerNode() + 5);
@@ -285,18 +301,18 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_OnlyFullC
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_AlsoLastNonfullChild) {
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
-  auto child = LoadInnerNode(root->getChild(1)->key());
+  auto child = LoadInnerNode(root->readChild(1).blockId());
   for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third, fourth and fifth child of the root
   for(unsigned int i = 2; i < 5; ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some of the leaves in the sixth child of the root
-  child = LoadInnerNode(root->getChild(5)->key());
+  child = LoadInnerNode(root->readChild(5).blockId());
   for(unsigned int i = 0; i < 2; ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode() + 5, 5 * nodeStore->layout().maxChildrenPerInnerNode() + 2);
@@ -305,18 +321,18 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfThreelevelTree_AlsoLastN
 TEST_F(DataTreeTest_TraverseLeaves, TraverseLastPartOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse some of the leaves in the second child of the root
-  auto child = LoadInnerNode(root->getChild(1)->key());
+  auto child = LoadInnerNode(root->readChild(1).blockId());
   for(unsigned int i = 5; i < nodeStore->layout().maxChildrenPerInnerNode(); ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), false, nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
   //Traverse all leaves in the third, fourth and fifth child of the root
   for(unsigned int i = 2; i < 5; ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all of the leaves in the sixth child of the root
-  child = LoadInnerNode(root->getChild(5)->key());
+  child = LoadInnerNode(root->readChild(5).blockId());
   for(unsigned int i = 0; i < child->numChildren(); ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), i == child->numChildren()-1, 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode() + 5, 5 * nodeStore->layout().maxChildrenPerInnerNode() + child->numChildren());
@@ -326,12 +342,12 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfThreelevelTree) {
   auto root = CreateThreeLevel();
   //Traverse all leaves in the third, fourth and fifth child of the root
   for(unsigned int i = 0; i < 5; ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(root->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all of the leaves in the sixth child of the root
-  auto child = LoadInnerNode(root->getChild(5)->key());
+  auto child = LoadInnerNode(root->readChild(5).blockId());
   for(unsigned int i = 0; i < child->numChildren(); ++i) {
-    EXPECT_TRAVERSE_LEAF(child->getChild(i)->key(), 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
+    EXPECT_TRAVERSE_LEAF(child->readChild(i).blockId(), i==child->numChildren()-1, 5 * nodeStore->layout().maxChildrenPerInnerNode() + i);
   }
 
   TraverseLeaves(root.get(), 0, 5 * nodeStore->layout().maxChildrenPerInnerNode() + child->numChildren());
@@ -340,19 +356,19 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfThreelevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfFourLevelTree) {
   auto root = CreateFourLevel();
   //Traverse all leaves of the full threelevel tree in the first child
-  auto firstChild = LoadInnerNode(root->getChild(0)->key());
+  auto firstChild = LoadInnerNode(root->readChild(0).blockId());
   for(unsigned int i = 0; i < firstChild->numChildren(); ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the full threelevel tree in the second child
-  auto secondChild = LoadInnerNode(root->getChild(1)->key());
+  auto secondChild = LoadInnerNode(root->readChild(1).blockId());
   for(unsigned int i = 0; i < secondChild->numChildren(); ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->getChild(i)->key()), (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->readChild(i).blockId()), false, (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the non-full threelevel tree in the third child
-  auto thirdChild = LoadInnerNode(root->getChild(2)->key());
-  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(thirdChild->getChild(0)->key()), 2 * nodeStore->layout().maxChildrenPerInnerNode() * nodeStore->layout().maxChildrenPerInnerNode());
-  EXPECT_TRAVERSE_LEAF(LoadInnerNode(thirdChild->getChild(1)->key())->getChild(0)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode() * nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode());
+  auto thirdChild = LoadInnerNode(root->readChild(2).blockId());
+  EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(thirdChild->readChild(0).blockId()), false, 2 * nodeStore->layout().maxChildrenPerInnerNode() * nodeStore->layout().maxChildrenPerInnerNode());
+  EXPECT_TRAVERSE_LEAF(LoadInnerNode(thirdChild->readChild(1).blockId())->readChild(0).blockId(), true, 2 * nodeStore->layout().maxChildrenPerInnerNode() * nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode());
 
   TraverseLeaves(root.get(), 0, 2*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode() + 1);
 }
@@ -360,27 +376,63 @@ TEST_F(DataTreeTest_TraverseLeaves, TraverseAllLeavesOfFourLevelTree) {
 TEST_F(DataTreeTest_TraverseLeaves, TraverseMiddlePartOfFourLevelTree) {
   auto root = CreateFourLevel();
   //Traverse some leaves of the full threelevel tree in the first child
-  auto firstChild = LoadInnerNode(root->getChild(0)->key());
-  auto secondChildOfFirstChild = LoadInnerNode(firstChild->getChild(1)->key());
+  auto firstChild = LoadInnerNode(root->readChild(0).blockId());
+  auto secondChildOfFirstChild = LoadInnerNode(firstChild->readChild(1).blockId());
   for(unsigned int i = 5; i < secondChildOfFirstChild->numChildren(); ++i) {
-    EXPECT_TRAVERSE_LEAF(secondChildOfFirstChild->getChild(i)->key(), nodeStore->layout().maxChildrenPerInnerNode()+i);
+    EXPECT_TRAVERSE_LEAF(secondChildOfFirstChild->readChild(i).blockId(), false, nodeStore->layout().maxChildrenPerInnerNode()+i);
   }
   for(unsigned int i = 2; i < firstChild->numChildren(); ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->getChild(i)->key()), i * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(firstChild->readChild(i).blockId()), false, i * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse all leaves of the full threelevel tree in the second child
-  auto secondChild = LoadInnerNode(root->getChild(1)->key());
+  auto secondChild = LoadInnerNode(root->readChild(1).blockId());
   for(unsigned int i = 0; i < secondChild->numChildren(); ++i) {
-    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->getChild(i)->key()), (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
+    EXPECT_TRAVERSE_ALL_CHILDREN_OF(*LoadInnerNode(secondChild->readChild(i).blockId()), false, (nodeStore->layout().maxChildrenPerInnerNode() + i) * nodeStore->layout().maxChildrenPerInnerNode());
   }
   //Traverse some leaves of the non-full threelevel tree in the third child
-  auto thirdChild = LoadInnerNode(root->getChild(2)->key());
-  auto firstChildOfThirdChild = LoadInnerNode(thirdChild->getChild(0)->key());
+  auto thirdChild = LoadInnerNode(root->readChild(2).blockId());
+  auto firstChildOfThirdChild = LoadInnerNode(thirdChild->readChild(0).blockId());
   for(unsigned int i = 0; i < firstChildOfThirdChild->numChildren()-1; ++i) {
-    EXPECT_TRAVERSE_LEAF(firstChildOfThirdChild->getChild(i)->key(), 2 * nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode()+i);
+    EXPECT_TRAVERSE_LEAF(firstChildOfThirdChild->readChild(i).blockId(), false, 2 * nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode()+i);
   }
 
   TraverseLeaves(root.get(), nodeStore->layout().maxChildrenPerInnerNode()+5, 2*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxChildrenPerInnerNode() -1);
+}
+
+TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback) {
+  auto root = CreateLeaf();
+  root->flush();
+  auto tree = treeStore.load(root->blockId()).value();
+  tree->traverseLeaves(0, 2, [this] (uint32_t leafIndex, bool /*isRightBorderNode*/, LeafHandle leaf) {
+      if (leafIndex == 0) {
+        EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf.node()->numBytes());
+      } else {
+        EXPECT_TRUE(false) << "only two nodes";
+      }
+  }, [] (uint32_t /*nodeIndex*/) -> Data {
+      return Data(1);
+  });
+}
+
+TEST_F(DataTreeTest_TraverseLeaves, LastLeafIsAlreadyResizedInCallback_TwoLevel) {
+  auto root = CreateFullTwoLevelWithLastLeafSize(5);
+  root->flush();
+  auto tree = treeStore.load(root->blockId()).value();
+  tree->traverseLeaves(0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, bool /*isRightBorderNode*/, LeafHandle leaf) {
+      EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf.node()->numBytes());
+  }, [] (uint32_t /*nodeIndex*/) -> Data {
+      return Data(1);
+  });
+}
+
+TEST_F(DataTreeTest_TraverseLeaves, ResizeFromOneLeafToMultipleLeaves) {
+  auto root = CreateLeaf();
+  EXPECT_TRAVERSE_LEAF(root->blockId(), false, 0);
+  //EXPECT_CALL(traversor, calledExistingLeaf(_, false, 0)).Times(1);
+  for (uint32_t i = 1; i < 10; ++i) {
+    EXPECT_CREATE_LEAF(i);
+  }
+  TraverseLeaves(root.get(), 0, 10);
 }
 
 //TODO Refactor the test cases that are too long

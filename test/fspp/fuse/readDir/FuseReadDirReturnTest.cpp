@@ -1,10 +1,8 @@
 #include "testutils/FuseReadDirTest.h"
 #include <cpp-utils/pointer/unique_ref.h>
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::StrEq;
-using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
@@ -14,7 +12,6 @@ using std::vector;
 using std::string;
 
 using namespace fspp::fuse;
-using fspp::Dir;
 
 unique_ref<vector<string>> LARGE_DIR(int num_entries) {
   auto result = make_unique_ref<vector<string>>();

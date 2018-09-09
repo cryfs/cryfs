@@ -8,13 +8,15 @@
 
 using blockstore::BlockStore;
 using blockstore::Block;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::dynamic_pointer_move;
 using std::runtime_error;
 using boost::optional;
 using boost::none;
+using std::vector;
 
 namespace blobstore {
 namespace onblocks {
@@ -28,7 +30,6 @@ DataNodeStore::~DataNodeStore() {
 }
 
 unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
-  ASSERT(block->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
   DataNodeView node(std::move(block));
 
   if (node.Depth() == 0) {
@@ -40,24 +41,25 @@ unique_ref<DataNode> DataNodeStore::load(unique_ref<Block> block) {
   }
 }
 
-unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(const DataNode &first_child) {
-  ASSERT(first_child.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
-  //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
-  return DataInnerNode::InitializeNewNode(std::move(block), first_child);
+unique_ref<DataInnerNode> DataNodeStore::createNewInnerNode(uint8_t depth, const vector<BlockId> &children) {
+  ASSERT(children.size() >= 1, "Inner node must have at least one child");
+  return DataInnerNode::CreateNewNode(_blockstore.get(), _layout, depth, children);
 }
 
-unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode() {
-  //TODO Initialize block and then create it in the blockstore - this is more efficient than creating it and then writing to it
-  auto block = _blockstore->create(Data(_layout.blocksizeBytes()).FillWithZeroes());
-  return DataLeafNode::InitializeNewNode(std::move(block));
+unique_ref<DataLeafNode> DataNodeStore::createNewLeafNode(Data data) {
+  return DataLeafNode::CreateNewNode(_blockstore.get(), _layout, std::move(data));
 }
 
-optional<unique_ref<DataNode>> DataNodeStore::load(const Key &key) {
-  auto block = _blockstore->load(key);
+unique_ref<DataLeafNode> DataNodeStore::overwriteLeaf(const BlockId &blockId, Data data) {
+  return DataLeafNode::OverwriteNode(_blockstore.get(), _layout, blockId, std::move(data));
+}
+
+optional<unique_ref<DataNode>> DataNodeStore::load(const BlockId &blockId) {
+  auto block = _blockstore->load(blockId);
   if (block == none) {
     return none;
   } else {
+    ASSERT((*block)->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
     return load(std::move(*block));
   }
 }
@@ -71,21 +73,52 @@ unique_ref<DataNode> DataNodeStore::createNewNodeAsCopyFrom(const DataNode &sour
 unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> target, const DataNode &source) {
   ASSERT(target->node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Target node has wrong layout. Is it from the same DataNodeStore?");
   ASSERT(source.node().layout().blocksizeBytes() == _layout.blocksizeBytes(), "Source node has wrong layout. Is it from the same DataNodeStore?");
-  Key key = target->key();
-  {
-    auto targetBlock = target->node().releaseBlock();
-    cpputils::destruct(std::move(target)); // Call destructor
-    blockstore::utils::copyTo(targetBlock.get(), source.node().block());
-  }
-  auto loaded = load(key);
-  ASSERT(loaded != none, "Couldn't load the target node after overwriting it");
-  return std::move(*loaded);
+  auto targetBlock = target->node().releaseBlock();
+  cpputils::destruct(std::move(target)); // Call destructor
+  blockstore::utils::copyTo(targetBlock.get(), source.node().block());
+  return DataNodeStore::load(std::move(targetBlock));
 }
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
-  auto block = node->node().releaseBlock();
-  cpputils::destruct(std::move(node)); // Call destructor
-  _blockstore->remove(std::move(block));
+  BlockId blockId = node->blockId();
+  cpputils::destruct(std::move(node));
+  remove(blockId);
+}
+
+void DataNodeStore::remove(const BlockId &blockId) {
+  _blockstore->remove(blockId);
+}
+
+void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
+  auto leaf = dynamic_pointer_move<DataLeafNode>(node);
+  if (leaf != none) {
+    remove(std::move(*leaf));
+    return;
+  }
+
+  auto inner = dynamic_pointer_move<DataInnerNode>(node);
+  ASSERT(inner != none, "Is neither a leaf nor an inner node");
+  for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
+    removeSubtree((*inner)->depth()-1, (*inner)->readChild(i).blockId());
+  }
+  remove(std::move(*inner));
+}
+
+void DataNodeStore::removeSubtree(uint8_t depth, const BlockId &blockId) {
+  if (depth == 0) {
+    remove(blockId);
+  } else {
+    auto node = load(blockId);
+    ASSERT(node != none, "Node for removeSubtree not found");
+
+    auto inner = dynamic_pointer_move<DataInnerNode>(*node);
+    ASSERT(inner != none, "Is not an inner node, but depth was not zero");
+    ASSERT((*inner)->depth() == depth, "Wrong depth given");
+    for (uint32_t i = 0; i < (*inner)->numChildren(); ++i) {
+      removeSubtree(depth-1, (*inner)->readChild(i).blockId());
+    }
+    remove(std::move(*inner));
+  }
 }
 
 uint64_t DataNodeStore::numNodes() const {
@@ -98,19 +131,6 @@ uint64_t DataNodeStore::estimateSpaceForNumNodesLeft() const {
 
 uint64_t DataNodeStore::virtualBlocksizeBytes() const {
   return _layout.blocksizeBytes();
-}
-
-void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
-  //TODO Make this faster by not loading the leaves but just deleting them. Can be recognized, because of the depth of their parents.
-  DataInnerNode *inner = dynamic_cast<DataInnerNode*>(node.get());
-  if (inner != nullptr) {
-    for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-      auto child = load(inner->getChild(i)->key());
-      ASSERT(child != none, "Couldn't load child node");
-      removeSubtree(std::move(*child));
-    }
-  }
-  remove(std::move(node));
 }
 
 DataNodeLayout DataNodeStore::layout() const {

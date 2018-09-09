@@ -28,19 +28,79 @@ public:
   }
 
   void TestWriteAndReadAfterLoading() {
-    blockstore::Key key = CreateBlockWriteToItAndReturnKey(foregroundData);
+    blockstore::BlockId blockId = CreateBlockWriteToItAndReturnKey(foregroundData);
 
-    auto loaded_block = blockStore->load(key).value();
+    auto loaded_block = blockStore->load(blockId).value();
     EXPECT_DATA_READS_AS(foregroundData, *loaded_block, testData.offset, testData.count);
     EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_block, testData.offset, testData.count);
   }
 
-  void TestOverwriteAndRead() {
+  void TestWriteTwiceAndRead() {
     auto block = blockStore->create(cpputils::Data(testData.blocksize));
     block->write(backgroundData.data(), 0, testData.blocksize);
     block->write(foregroundData.data(), testData.offset, testData.count);
     EXPECT_DATA_READS_AS(foregroundData, *block, testData.offset, testData.count);
     EXPECT_DATA_READS_AS_OUTSIDE_OF(backgroundData, *block, testData.offset, testData.count);
+  }
+
+  void TestOverwriteSameSizeAndReadImmediately() {
+    auto blockId = blockStore->create(cpputils::Data(testData.blocksize))->blockId();
+    auto block = blockStore->overwrite(blockId, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteSameSizeAndReadAfterLoading() {
+    auto blockId = blockStore->create(cpputils::Data(testData.blocksize))->blockId();
+    blockStore->overwrite(blockId, backgroundData.copy());
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteSmallerSizeAndReadImmediately() {
+    auto blockId = blockStore->create(cpputils::Data(testData.blocksize))->blockId();
+    auto block = blockStore->overwrite(blockId, foregroundData.copy());
+    EXPECT_EQ(testData.count, block->size());
+    EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
+  }
+
+  void TestOverwriteSmallerSizeAndReadAfterLoading() {
+    auto blockId = blockStore->create(cpputils::Data(testData.blocksize))->blockId();
+    blockStore->overwrite(blockId, foregroundData.copy());
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(testData.count, block->size());
+    EXPECT_DATA_READS_AS(foregroundData, *block, 0, testData.count);
+  }
+
+  void TestOverwriteLargerSizeAndReadImmediately() {
+    auto blockId = blockStore->create(cpputils::Data(testData.count))->blockId();
+    auto block = blockStore->overwrite(blockId, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteLargerSizeAndReadAfterLoading() {
+    auto blockId = blockStore->create(cpputils::Data(testData.count))->blockId();
+    blockStore->overwrite(blockId, backgroundData.copy());
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteNonexistingAndReadImmediately() {
+    auto blockId = blockStore->createBlockId();
+    auto block = blockStore->overwrite(blockId, backgroundData.copy());
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
+  }
+
+  void TestOverwriteNonexistingAndReadAfterLoading() {
+    auto blockId = blockStore->createBlockId();
+    blockStore->overwrite(blockId, backgroundData.copy());
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(testData.blocksize, block->size());
+    EXPECT_DATA_READS_AS(backgroundData, *block, 0, testData.blocksize);
   }
 
 private:
@@ -49,16 +109,16 @@ private:
   cpputils::Data foregroundData;
   cpputils::Data backgroundData;
 
-  blockstore::Key CreateBlockWriteToItAndReturnKey(const cpputils::Data &to_write) {
+  blockstore::BlockId CreateBlockWriteToItAndReturnKey(const cpputils::Data &to_write) {
     auto newblock = blockStore->create(cpputils::Data(testData.blocksize).FillWithZeroes());
 
     newblock->write(to_write.data(), testData.offset, testData.count);
-    return newblock->key();
+    return newblock->blockId();
   }
 
   void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
     cpputils::Data read(count);
-    std::memcpy(read.data(), (uint8_t*)block.data() + offset, count);
+    std::memcpy(read.data(), static_cast<const uint8_t*>(block.data()) + offset, count);
     EXPECT_EQ(expected, read);
   }
 
@@ -67,7 +127,7 @@ private:
     cpputils::Data end(testData.blocksize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
-    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+    std::memcpy(end.data(), expected.dataOffset(start+count), end.size());
 
     EXPECT_DATA_READS_AS(begin, block, 0, start);
     EXPECT_DATA_READS_AS(end, block, start + count, end.size());
@@ -102,6 +162,14 @@ inline std::vector<DataRange> DATA_RANGES() {
 
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadImmediately);
 TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteAndReadAfterLoading);
-TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteAndRead);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(WriteTwiceAndRead);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSameSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSameSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSmallerSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteSmallerSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteLargerSizeAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteLargerSizeAndReadAfterLoading);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteNonexistingAndReadImmediately);
+TYPED_TEST_P_FOR_ALL_DATA_RANGES(OverwriteNonexistingAndReadAfterLoading);
 
 #endif

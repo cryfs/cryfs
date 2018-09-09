@@ -12,27 +12,27 @@ namespace cryfs {
 
 class CryConfig final {
 public:
-  static constexpr const char* FilesystemFormatVersion = "0.9.6";
+  static constexpr const char* FilesystemFormatVersion = "0.10";
 
   //TODO No default constructor, pass in config values instead!
   CryConfig();
-  CryConfig(CryConfig &&rhs);
-  CryConfig(const CryConfig &rhs);
+  CryConfig(CryConfig &&rhs) = default;
+  CryConfig(const CryConfig &rhs) = default;
 
   const std::string &RootBlob() const;
-  void SetRootBlob(const std::string &value);
+  void SetRootBlob(std::string value);
 
   const std::string &EncryptionKey() const;
-  void SetEncryptionKey(const std::string &value);
+  void SetEncryptionKey(std::string value);
 
   const std::string &Cipher() const;
-  void SetCipher(const std::string &value);
+  void SetCipher(std::string value);
 
   const std::string &Version() const;
-  void SetVersion(const std::string &value);
+  void SetVersion(std::string value);
 
   const std::string &CreatedWithVersion() const;
-  void SetCreatedWithVersion(const std::string &value);
+  void SetCreatedWithVersion(std::string value);
 
   const std::string &LastOpenedWithVersion() const;
   void SetLastOpenedWithVersion(const std::string &value);
@@ -42,7 +42,21 @@ public:
 
   using FilesystemID = cpputils::FixedSizeData<16>;
   const FilesystemID &FilesystemId() const;
-  void SetFilesystemId(const FilesystemID &value);
+  void SetFilesystemId(FilesystemID value);
+
+  // If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
+  // Because this only works in a single-client setting, only this one client Id is allowed to access the file system.
+  boost::optional<uint32_t> ExclusiveClientId() const;
+  void SetExclusiveClientId(boost::optional<uint32_t> value);
+
+  bool missingBlockIsIntegrityViolation() const;
+
+#ifndef CRYFS_NO_COMPATIBILITY
+  // This is a trigger to recognize old file systems that didn't have version numbers.
+  // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
+  bool HasVersionNumbers() const;
+  void SetHasVersionNumbers(bool value);
+#endif
 
   static CryConfig load(const cpputils::Data &data);
   cpputils::Data save() const;
@@ -56,6 +70,10 @@ private:
   std::string _lastOpenedWithVersion;
   uint64_t _blocksizeBytes;
   FilesystemID _filesystemId;
+  boost::optional<uint32_t> _exclusiveClientId;
+#ifndef CRYFS_NO_COMPATIBILITY
+  bool _hasVersionNumbers;
+#endif
 
   CryConfig &operator=(const CryConfig &rhs) = delete;
 };

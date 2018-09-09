@@ -67,7 +67,7 @@ TEST(UniqueRef_DynamicPointerMoveTest, ValidParentToChildCast) {
   Child *obj = new Child();
   unique_ref<Parent> source(nullcheck(unique_ptr<Parent>(obj)).value());
   unique_ref<Child> casted = dynamic_pointer_move<Child>(source).value();
-  EXPECT_EQ(nullptr, source.get()); // source lost ownership
+  EXPECT_FALSE(source.is_valid());  // source lost ownership
   EXPECT_EQ(obj, casted.get());
 }
 
@@ -115,7 +115,7 @@ TEST(UniqueRef_DynamicPointerMoveTest, ChildToParentCast) {
   Child *obj = new Child();
   unique_ref<Child> source(nullcheck(unique_ptr<Child>(obj)).value());
   unique_ref<Parent> casted = dynamic_pointer_move<Parent>(source).value();
-  EXPECT_EQ(nullptr, source.get()); // source lost ownership
+  EXPECT_FALSE(source.is_valid());  // source lost ownership
   EXPECT_EQ(obj, casted.get());
 }
 

@@ -1,7 +1,7 @@
 #include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/Data.h"
+#include "cpp-utils/data/SerializationHelper.h"
 #include <gtest/gtest.h>
-
 #include "cpp-utils/tempfile/TempFile.h"
 
 #include <fstream>
@@ -14,6 +14,7 @@ using cpputils::TempFile;
 
 using std::ifstream;
 using std::ofstream;
+using std::string;
 
 namespace bf = boost::filesystem;
 
@@ -23,7 +24,7 @@ class DataTest: public Test {
 public:
   bool DataIsZeroes(const Data &data) {
     for (size_t i = 0; i != data.size(); ++ i) {
-      if (((char*)data.data())[i] != 0) {
+      if (deserialize<uint8_t>(data.dataOffset(i)) != 0) {
         return false;
       }
     }
@@ -38,14 +39,14 @@ public:
   DataTestWithSizeParam(): randomData(DataFixture::generate(GetParam())) {}
 
   static void StoreData(const Data &data, const bf::path &filepath) {
-    ofstream file(filepath.c_str(), std::ios::binary | std::ios::trunc);
-    file.write((char*)data.data(), data.size());
+    ofstream file(filepath.string().c_str(), std::ios::binary | std::ios::trunc);
+    file.write(static_cast<const char*>(data.data()), data.size());
   }
 
   static void EXPECT_STORED_FILE_DATA_CORRECT(const Data &data, const bf::path &filepath) {
     EXPECT_EQ(data.size(), bf::file_size(filepath));
 
-    ifstream file(filepath.c_str(), std::ios::binary);
+    ifstream file(filepath.string().c_str(), std::ios::binary);
     char *read_data = new char[data.size()];
     file.read(read_data, data.size());
 
@@ -117,7 +118,7 @@ TEST_P(DataTestWithSizeParam, Copy) {
 TEST_F(DataTest, ChangingCopyDoesntChangeOriginal) {
   Data original = DataFixture::generate(1024);
   Data copy = original.copy();
-  ((uint8_t*)copy.data())[0] = ((uint8_t*)copy.data())[0] + 1;
+  serialize<uint8_t>(copy.data(), deserialize<uint8_t>(copy.data()) + 1);
   EXPECT_EQ(DataFixture::generate(1024), original);
   EXPECT_NE(copy, original);
 }
@@ -140,8 +141,8 @@ TEST_F(DataTest, MoveConstructor) {
   Data original = DataFixture::generate(1024);
   Data copy(std::move(original));
   EXPECT_EQ(DataFixture::generate(1024), copy);
-  EXPECT_EQ(nullptr, original.data());
-  EXPECT_EQ(0u, original.size());
+  EXPECT_EQ(nullptr, original.data()); // NOLINT (intentional use-after-move)
+  EXPECT_EQ(0u, original.size()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(DataTest, MoveAssignment) {
@@ -149,8 +150,8 @@ TEST_F(DataTest, MoveAssignment) {
   Data copy(0);
   copy = std::move(original);
   EXPECT_EQ(DataFixture::generate(1024), copy);
-  EXPECT_EQ(nullptr, original.data());
-  EXPECT_EQ(0u, original.size());
+  EXPECT_EQ(nullptr, original.data()); // NOLINT (intentional use-after-move)
+  EXPECT_EQ(0u, original.size()); // NOLINT (intentional use-after-move)
 }
 
 TEST_F(DataTest, Equality) {
@@ -170,7 +171,7 @@ TEST_F(DataTest, Inequality_DifferentSize) {
 TEST_F(DataTest, Inequality_DifferentFirstByte) {
   Data data1 = DataFixture::generate(1024);
   Data data2 = DataFixture::generate(1024);
-  ((uint8_t*)data2.data())[0] = ((uint8_t*)data2.data())[0] + 1;
+  serialize<uint8_t>(data2.data(), deserialize<uint8_t>(data2.data()) + 1);
   EXPECT_FALSE(data1 == data2);
   EXPECT_TRUE(data1 != data2);
 }
@@ -178,7 +179,7 @@ TEST_F(DataTest, Inequality_DifferentFirstByte) {
 TEST_F(DataTest, Inequality_DifferentMiddleByte) {
   Data data1 = DataFixture::generate(1024);
   Data data2 = DataFixture::generate(1024);
-  ((uint8_t*)data2.data())[500] = ((uint8_t*)data2.data())[500] + 1;
+  serialize<uint8_t>(data2.dataOffset(500), deserialize<uint8_t>(data2.dataOffset(500)) + 1);
   EXPECT_FALSE(data1 == data2);
   EXPECT_TRUE(data1 != data2);
 }
@@ -186,7 +187,7 @@ TEST_F(DataTest, Inequality_DifferentMiddleByte) {
 TEST_F(DataTest, Inequality_DifferentLastByte) {
   Data data1 = DataFixture::generate(1024);
   Data data2 = DataFixture::generate(1024);
-  ((uint8_t*)data2.data())[1023] = ((uint8_t*)data2.data())[1023] + 1;
+  serialize<uint8_t>(data2.dataOffset(1023), deserialize<uint8_t>(data2.dataOffset(1023)) + 1);
   EXPECT_FALSE(data1 == data2);
   EXPECT_TRUE(data1 != data2);
 }
@@ -199,10 +200,28 @@ TEST_F(DataTest, LargesizeSize) {
   EXPECT_EQ(size, data.size());
 }
 #else
+#if defined(_MSC_VER)
+#pragma message This is not a 64bit architecture. Large size data tests are disabled.
+#else
 #warning This is not a 64bit architecture. Large size data tests are disabled.
+#endif
 #endif
 
 TEST_F(DataTest, LoadingNonexistingFile) {
   TempFile file(false); // Pass false to constructor, so the tempfile is not created
   EXPECT_FALSE(Data::LoadFromFile(file.path()));
+}
+
+class DataTestWithStringParam: public DataTest, public WithParamInterface<string> {};
+INSTANTIATE_TEST_CASE_P(DataTestWithStringParam, DataTestWithStringParam, Values("", "2898B4B8A13C0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
+
+TEST_P(DataTestWithStringParam, FromAndToString) {
+  Data data = Data::FromString(GetParam());
+  EXPECT_EQ(GetParam(), data.ToString());
+}
+
+TEST_P(DataTestWithStringParam, ToAndFromString) {
+  Data data = Data::FromString(GetParam());
+  Data data2 = Data::FromString(data.ToString());
+  EXPECT_EQ(data, data2);
 }

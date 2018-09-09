@@ -8,11 +8,13 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::Key>::ResourceRefBase {
+class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::BlockId>::ResourceRefBase {
 public:
     virtual ~FsBlobRef() {}
-    virtual const blockstore::Key &key() const = 0;
+    virtual const blockstore::BlockId &blockId() const = 0;
     virtual off_t lstat_size() const = 0;
+    virtual const blockstore::BlockId &parentPointer() const = 0;
+    virtual void setParentPointer(const blockstore::BlockId &parentId) = 0;
 
 protected:
     FsBlobRef() {}

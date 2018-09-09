@@ -6,19 +6,17 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
+#include "../localstate/LocalStateDir.h"
+#include "../localstate/LocalStateMetadata.h"
 #include "../CryfsException.h"
 
 namespace bf = boost::filesystem;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
 using cpputils::Console;
-using cpputils::Random;
 using cpputils::RandomGenerator;
 using cpputils::SCryptSettings;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
-using std::vector;
 using std::string;
 using std::function;
 using std::shared_ptr;
@@ -27,16 +25,18 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine)
-    : _console(console), _creator(console, keyGenerator), _scryptSettings(scryptSettings),
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, LocalStateDir localStateDir, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
+    : _console(console), _creator(std::move(console), keyGenerator, localStateDir), _scryptSettings(scryptSettings),
       _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
-      _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine) {
+      _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine),
+      _missingBlockIsIntegrityViolationFromCommandLine(missingBlockIsIntegrityViolationFromCommandLine),
+      _localStateDir(std::move(localStateDir)) {
 }
 
-optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, bool allowFilesystemUpgrade) {
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
   string password = _askPasswordForExistingFilesystem();
   std::cout << "Loading config file (this can take some time)..." << std::flush;
-  auto config = CryConfigFile::load(filename, password);
+  auto config = CryConfigFile::load(std::move(filename), password);
   if (config == none) {
     return none;
   }
@@ -63,7 +63,10 @@ optional<CryConfigFile> CryConfigLoader::_loadConfig(const bf::path &filename, b
     config->save();
   }
   _checkCipher(*config->config());
-  return std::move(*config);
+  auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()), allowReplacedFilesystem);
+  uint32_t myClientId = localState.myClientId();
+  _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
+  return ConfigLoadResult {std::move(*config), myClientId};
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
@@ -85,22 +88,41 @@ void CryConfigLoader::_checkCipher(const CryConfig &config) const {
   }
 }
 
-optional<CryConfigFile> CryConfigLoader::loadOrCreate(const bf::path &filename, bool allowFilesystemUpgrade) {
-  if (bf::exists(filename)) {
-    return _loadConfig(filename, allowFilesystemUpgrade);
-  } else {
-    return _createConfig(filename);
+void CryConfigLoader::_checkMissingBlocksAreIntegrityViolations(CryConfigFile *configFile, uint32_t myClientId) {
+  if (_missingBlockIsIntegrityViolationFromCommandLine == optional<bool>(true) && configFile->config()->ExclusiveClientId() == none) {
+    throw CryfsException("You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that.", ErrorCode::FilesystemHasDifferentIntegritySetup);
+  }
+  if (_missingBlockIsIntegrityViolationFromCommandLine == optional<bool>(false) && configFile->config()->ExclusiveClientId() != none) {
+    throw CryfsException("You specified on the command line to not treat missing blocks as integrity violations, but the file system is setup to do that.", ErrorCode::FilesystemHasDifferentIntegritySetup);
+  }
+
+  // If the file system is set up to treat missing blocks as integrity violations, but we're accessing from a different client, ask whether they want to disable the feature.
+  auto exclusiveClientId = configFile->config()->ExclusiveClientId();
+  if (exclusiveClientId != none && *exclusiveClientId != myClientId) {
+    if (!_console->askYesNo("\nThis filesystem is setup to treat missing blocks as integrity violations and therefore only works in single-client mode. You are trying to access it from a different client.\nDo you want to disable this integrity feature and stop treating missing blocks as integrity violations?\nChoosing yes will not affect the confidentiality of your data, but in future you might not notice if an attacker deletes one of your files.", false)) {
+      throw CryfsException("File system is in single-client mode and can only be used from the client that created it.", ErrorCode::SingleClientFileSystem);
+    }
+    configFile->config()->SetExclusiveClientId(none);
+    configFile->save();
   }
 }
 
-CryConfigFile CryConfigLoader::_createConfig(const bf::path &filename) {
-  auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine);
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
+  if (bf::exists(filename)) {
+    return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem);
+  } else {
+    return _createConfig(std::move(filename), allowReplacedFilesystem);
+  }
+}
+
+CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(bf::path filename, bool allowReplacedFilesystem) {
+  auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine, _missingBlockIsIntegrityViolationFromCommandLine, allowReplacedFilesystem);
   //TODO Ask confirmation if using insecure password (<8 characters)
   string password = _askPasswordForNewFilesystem();
   std::cout << "Creating config file (this can take some time)..." << std::flush;
-  auto result = CryConfigFile::create(filename, std::move(config), password, _scryptSettings);
+  auto result = CryConfigFile::create(std::move(filename), std::move(config.config), password, _scryptSettings);
   std::cout << "done" << std::endl;
-  return result;
+  return ConfigLoadResult {std::move(result), config.myClientId};
 }
 
 

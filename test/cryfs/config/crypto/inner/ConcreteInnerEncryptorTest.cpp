@@ -12,6 +12,8 @@ using cpputils::make_unique_ref;
 using cpputils::AES256_GCM;
 using cpputils::AES256_CFB;
 using cpputils::Twofish128_CFB;
+using cpputils::serialize;
+using cpputils::deserialize;
 using namespace cryfs;
 
 // This is needed for google test
@@ -63,7 +65,7 @@ TEST_F(ConcreteInnerEncryptorTest, DoesntDecryptWithWrongCipherName) {
 TEST_F(ConcreteInnerEncryptorTest, InvalidCiphertext) {
     auto encryptor = makeInnerEncryptor<AES256_GCM>();
     InnerConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
-    *(char*)encrypted.encryptedConfig.data() = *(char*)encrypted.encryptedConfig.data()+1; //Modify ciphertext
+    serialize<uint8_t>(encrypted.encryptedConfig.data(), deserialize<uint8_t>(encrypted.encryptedConfig.data()) + 1); //Modify ciphertext
     auto decrypted = encryptor->decrypt(encrypted);
     EXPECT_EQ(none, decrypted);
 }

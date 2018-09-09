@@ -5,7 +5,7 @@
 #include <memory>
 #include <cpp-utils/macros.h>
 #include <cpp-utils/pointer/unique_ref.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <boost/optional.hpp>
 #include "../datanodestore/DataNodeStore.h"
 
@@ -19,11 +19,12 @@ public:
   DataTreeStore(cpputils::unique_ref<datanodestore::DataNodeStore> nodeStore);
   ~DataTreeStore();
 
-  boost::optional<cpputils::unique_ref<DataTree>> load(const blockstore::Key &key);
+  boost::optional<cpputils::unique_ref<DataTree>> load(const blockstore::BlockId &blockId);
 
   cpputils::unique_ref<DataTree> createNewTree();
 
   void remove(cpputils::unique_ref<DataTree> tree);
+  void remove(const blockstore::BlockId &blockId);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;

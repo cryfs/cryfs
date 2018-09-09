@@ -65,10 +65,33 @@ public:
   }
   ~DataNodeView() {}
 
+  static DataNodeView create(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
+    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
+    auto block = blockStore->create(serialized);
+    return DataNodeView(std::move(block));
+  }
+
+  static DataNodeView initialize(cpputils::unique_ref<blockstore::Block> block, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    ASSERT(data.size() <= DataNodeLayout(block->size()).datasizeBytes(), "Data is too large for node");
+    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    ASSERT(serialized.size() == block->size(), "Block has wrong size");
+    block->write(serialized.data(), 0, serialized.size());
+    return DataNodeView(std::move(block));
+  }
+
+  static DataNodeView overwrite(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, const blockstore::BlockId &blockId, cpputils::Data data) {
+    ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
+    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    auto block = blockStore->overwrite(blockId, std::move(serialized));
+    return DataNodeView(std::move(block));
+  }
+
   DataNodeView(DataNodeView &&rhs) = default;
 
   uint16_t FormatVersion() const {
-    return *((uint8_t*)_block->data()+DataNodeLayout::FORMAT_VERSION_OFFSET_BYTES);
+    return cpputils::deserializeWithOffset<uint16_t>(_block->data(), DataNodeLayout::FORMAT_VERSION_OFFSET_BYTES);
   }
 
   void setFormatVersion(uint16_t value) {
@@ -76,7 +99,7 @@ public:
   }
 
   uint8_t Depth() const {
-    return *((uint8_t*)_block->data()+DataNodeLayout::DEPTH_OFFSET_BYTES);
+    return cpputils::deserializeWithOffset<uint8_t>(_block->data(), DataNodeLayout::DEPTH_OFFSET_BYTES);
   }
 
   void setDepth(uint8_t value) {
@@ -84,7 +107,7 @@ public:
   }
 
   uint32_t Size() const {
-    return *(uint32_t*)((uint8_t*)_block->data()+DataNodeLayout::SIZE_OFFSET_BYTES);
+    return cpputils::deserializeWithOffset<uint32_t>(_block->data(), DataNodeLayout::SIZE_OFFSET_BYTES);
   }
 
   void setSize(uint32_t value) {
@@ -92,22 +115,11 @@ public:
   }
 
   const void *data() const {
-    return (uint8_t*)_block->data() + DataNodeLayout::HEADERSIZE_BYTES;
+    return static_cast<const uint8_t*>(_block->data()) + DataNodeLayout::HEADERSIZE_BYTES;
   }
 
   void write(const void *source, uint64_t offset, uint64_t size) {
     _block->write(source, offset + DataNodeLayout::HEADERSIZE_BYTES, size);
-  }
-
-  template<typename Entry>
-  const Entry *DataBegin() const {
-    return GetOffset<DataNodeLayout::HEADERSIZE_BYTES, Entry>();
-  }
-
-  template<typename Entry>
-  const Entry *DataEnd() const {
-    const unsigned int NUM_ENTRIES = layout().datasizeBytes() / sizeof(Entry);
-    return DataBegin<Entry>() + NUM_ENTRIES;
   }
 
   DataNodeLayout layout() const {
@@ -122,8 +134,8 @@ public:
     return *_block;
   }
 
-  const blockstore::Key &key() const {
-    return _block->key();
+  const blockstore::BlockId &blockId() const {
+    return _block->blockId();
   }
 
   void flush() const {
@@ -131,9 +143,14 @@ public:
   }
 
 private:
-  template<int offset, class Type>
-  const Type *GetOffset() const {
-    return (Type*)(((const int8_t*)_block->data())+offset);
+  static cpputils::Data _serialize(const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+    cpputils::Data result(layout.blocksizeBytes());
+    cpputils::serialize<uint16_t>(result.dataOffset(layout.FORMAT_VERSION_OFFSET_BYTES), formatVersion);
+    cpputils::serialize<uint8_t>(result.dataOffset(layout.DEPTH_OFFSET_BYTES), depth);
+    cpputils::serialize<uint32_t>(result.dataOffset(layout.SIZE_OFFSET_BYTES), size);
+    std::memcpy(result.dataOffset(layout.HEADERSIZE_BYTES), data.data(), data.size());
+    std::memset(result.dataOffset(layout.HEADERSIZE_BYTES+data.size()), 0, layout.datasizeBytes()-data.size());
+    return result;
   }
 
   cpputils::unique_ref<blockstore::Block> _block;

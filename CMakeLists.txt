@@ -1,26 +1,33 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_policy(SET CMP0054 NEW)
+
+# note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
+
+# TODO Perf test:
+#  - try if setting CRYPTOPP_NATIVE_ARCH=ON and adding -march=native to the compile commands for cryfs source files makes a difference
+#    -> if yes, offer a cmake option to enable both of these
 
 project(cryfs)
 
 include(utils.cmake)
 
-require_gcc_version(4.8)
-require_clang_version(3.7)
+require_gcc_version(5.0)
+require_clang_version(4.0)
 
 # Default value is not to build test cases
-if(NOT BUILD_TESTING)
-    set(BUILD_TESTING OFF CACHE BOOL "BUILD_TESTING")
-endif(NOT BUILD_TESTING)
+option(BUILD_TESTING "build test cases" OFF)
+option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
+option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
 
-# Default vaule is to build in release mode
+# Default value is to build in release mode
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# Default value is to do update checks
-if(NOT CRYFS_UPDATE_CHECKS)
-    set(CRYFS_UPDATE_CHECKS ON CACHE BOOL "CRYFS_UPDATE_CHECKS")
-endif(NOT CRYFS_UPDATE_CHECKS)
+# The MSVC version on AppVeyor CI needs this
+if(MSVC)
+  add_definitions(/bigobj)
+endif()
 
 add_subdirectory(vendor)
 add_subdirectory(src)

@@ -11,18 +11,22 @@ namespace blobstore {
 namespace onblocks {
 namespace parallelaccessdatatreestore {
 
-class ParallelAccessDataTreeStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<datatreestore::DataTree, blockstore::Key> {
+class ParallelAccessDataTreeStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<datatreestore::DataTree, blockstore::BlockId> {
 public:
   ParallelAccessDataTreeStoreAdapter(datatreestore::DataTreeStore *baseDataTreeStore)
-    :_baseDataTreeStore(std::move(baseDataTreeStore)) {
+    :_baseDataTreeStore(baseDataTreeStore) {
   }
 
-  boost::optional<cpputils::unique_ref<datatreestore::DataTree>> loadFromBaseStore(const blockstore::Key &key) override {
-	  return _baseDataTreeStore->load(key);
+  boost::optional<cpputils::unique_ref<datatreestore::DataTree>> loadFromBaseStore(const blockstore::BlockId &blockId) override {
+	  return _baseDataTreeStore->load(blockId);
   }
 
   void removeFromBaseStore(cpputils::unique_ref<datatreestore::DataTree> dataTree) override {
 	  return _baseDataTreeStore->remove(std::move(dataTree));
+  }
+
+  void removeFromBaseStore(const blockstore::BlockId &blockId) override {
+    return _baseDataTreeStore->remove(blockId);
   }
 
 private:

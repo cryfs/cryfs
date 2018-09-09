@@ -1,13 +1,20 @@
 include(CTest)
 
 if (BUILD_TESTING)
-  # When test cases are build, disable "make install", because this would also install gtest libraries.
-  macro(install)
-  endmacro(install)
-  add_subdirectory(gtest-1.8.0)
+  # Fix how gtest links the C library on windows, see https://github.com/google/googletest/blob/4e4df226fc197c0dda6e37f5c8c3845ca1e73a49/googletest/README.md
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  set(INSTALL_GTEST off CACHE BOOL "" FORCE)
+  set(INSTALL_GMOCK off CACHE BOOL "" FORCE)
+  add_subdirectory(gtest EXCLUDE_FROM_ALL)
 
   project (googletest)
   add_library(${PROJECT_NAME} dummy.cpp)
-  target_link_libraries(${PROJECT_NAME} gtest gmock gmock_main)
+  target_link_libraries(${PROJECT_NAME} PUBLIC gtest gmock)
+  target_link_libraries(${PROJECT_NAME} PRIVATE gmock_main)
   target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${gtest_INCLUDE_DIRS}/include SYSTEM ${gmock_INCLUDE_DIRS}/include)
-endif (BUILD_TESTING)
+
+  # Disable "missing override" warning because gmock MOCK_METHOD() don't use override :(
+  if (NOT WIN32)
+    target_compile_options(${PROJECT_NAME} PUBLIC "-Wno-inconsistent-missing-override")
+  endif()
+endif()

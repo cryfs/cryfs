@@ -1,14 +1,11 @@
 #include "testutils/FuseFstatTest.h"
 
-#include "fspp/fuse/FuseErrnoException.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::_;
-using ::testing::StrEq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;
-using ::testing::Return;
-using ::testing::Throw;
 
 using namespace fspp::fuse;
 

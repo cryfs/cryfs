@@ -3,14 +3,14 @@
 #include <cryfs/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
-#include <blockstore/implementations/encrypted/EncryptedBlockStore.h>
+#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
+#include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/random/Random.h>
 
 using namespace cryfs;
 using namespace blockstore::encrypted;
-using namespace blockstore::testfake;
+using namespace blockstore::inmemory;
 using namespace blockstore;
 
 using std::initializer_list;
@@ -37,41 +37,38 @@ public:
     void EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE(const string &cipherName) {
         const auto &actualCipher = CryCiphers::find(cipherName);
         Data dataFixture = DataFixture::generate(1024);
-        string encKey = ExpectedCipher::CreateKey(Random::PseudoRandom()).ToString();
+        string encKey = ExpectedCipher::EncryptionKey::CreateKey(Random::PseudoRandom()).ToString();
         _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
     }
 
     template<class ExpectedCipher>
     void _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
-        blockstore::Key key = cpputils::Random::PseudoRandom().getFixedSize<blockstore::Key::BINARY_LENGTH>();
-        Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, key, dataFixture.copy());
-        Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, key, std::move(encrypted));
+        blockstore::BlockId blockId = blockstore::BlockId::Random();
+        Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, blockId, dataFixture.copy());
+        Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, blockId, std::move(encrypted));
         EXPECT_EQ(dataFixture, decrypted);
     }
 
-    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const std::string &encKey, const blockstore::Key &key, Data data) {
-        unique_ref<FakeBlockStore> _baseStore = make_unique_ref<FakeBlockStore>();
-        FakeBlockStore *baseStore = _baseStore.get();
-        unique_ref<BlockStore> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
-        auto created = encryptedStore->tryCreate(key, std::move(data));
-        EXPECT_NE(none, created);
-        return _loadBlock(baseStore, key);
+    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
+        unique_ref<InMemoryBlockStore2> _baseStore = make_unique_ref<InMemoryBlockStore2>();
+        InMemoryBlockStore2 *baseStore = _baseStore.get();
+        unique_ref<BlockStore2> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
+        bool created = encryptedStore->tryCreate(blockId, data);
+        EXPECT_TRUE(created);
+        return _loadBlock(baseStore, blockId);
     }
 
     template<class Cipher>
-    Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::Key &key, Data data) {
-        unique_ref<FakeBlockStore> baseStore = make_unique_ref<FakeBlockStore>();
-        auto created = baseStore->tryCreate(key, std::move(data));
-        EXPECT_NE(none, created);
-        EncryptedBlockStore<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
-        return _loadBlock(&encryptedStore, key);
+    Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
+        unique_ref<InMemoryBlockStore2> baseStore = make_unique_ref<InMemoryBlockStore2>();
+        bool created = baseStore->tryCreate(blockId, data);
+        EXPECT_TRUE(created);
+        EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
+        return _loadBlock(&encryptedStore, blockId);
     }
 
-    Data _loadBlock(BlockStore *store, const blockstore::Key &key) {
-        auto block = store->load(key).value();
-        Data data(block->size());
-        std::memcpy(data.data(), block->data(), block->size());
-        return data;
+    Data _loadBlock(BlockStore2 *store, const blockstore::BlockId &blockId) {
+        return store->load(blockId).value();
     }
 };
 
@@ -123,7 +120,7 @@ TEST_F(CryCipherTest, ThereIsACipherWithoutWarning) {
 }
 
 TEST_F(CryCipherTest, ThereIsACipherWithIntegrityWarning) {
-    EXPECT_THAT(CryCiphers::find("aes-256-cfb").warning().get(), MatchesRegex(".*integrity.*"));
+    EXPECT_THAT(CryCiphers::find("aes-256-cfb").warning().value(), MatchesRegex(".*integrity.*"));
 }
 
 #if CRYPTOPP_VERSION != 564

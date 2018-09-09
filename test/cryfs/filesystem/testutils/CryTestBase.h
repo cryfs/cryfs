@@ -2,21 +2,22 @@
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
 #include <cryfs/filesystem/CryDevice.h>
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
+#include "../../testutils/TestWithFakeHomeDirectory.h"
 
-class CryTestBase {
+class CryTestBase : public TestWithFakeHomeDirectory {
 public:
-    CryTestBase(): _configFile(false), _device(nullptr) {
-        auto fakeBlockStore = cpputils::make_unique_ref<blockstore::testfake::FakeBlockStore>();
-        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore));
+    CryTestBase(): _tempLocalStateDir(), _localStateDir(_tempLocalStateDir.path()), _configFile(false), _device(nullptr) {
+        auto fakeBlockStore = cpputils::make_unique_ref<blockstore::inmemory::InMemoryBlockStore2>();
+        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false);
     }
 
     cryfs::CryConfigFile configFile() {
         cryfs::CryConfig config;
         config.SetCipher("aes-256-gcm");
-        config.SetEncryptionKey(cpputils::AES256_GCM::CreateKey(cpputils::Random::PseudoRandom()).ToString());
+        config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom()).ToString());
         config.SetBlocksizeBytes(10240);
         return cryfs::CryConfigFile::create(_configFile.path(), std::move(config), "mypassword", cpputils::SCrypt::TestSettings);
     }
@@ -26,6 +27,8 @@ public:
     }
 
 private:
+    cpputils::TempDir _tempLocalStateDir;
+    cryfs::LocalStateDir _localStateDir;
     cpputils::TempFile _configFile;
     std::unique_ptr<cryfs::CryDevice> _device;
 };

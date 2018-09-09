@@ -5,6 +5,7 @@
 #include <cpp-utils/macros.h>
 #include <iostream>
 #include <gmock/gmock.h>
+#include <regex>
 
 namespace cpputils {
 
@@ -22,12 +23,14 @@ public:
     std::cerr.rdbuf(_oldBuffer);
   }
 
-  std::string stderr() const {
+  std::string get_stderr() const {
     return _buffer.str();
   }
 
   void EXPECT_MATCHES(const std::string &regex) {
-    EXPECT_THAT(stderr(), testing::MatchesRegex(".*" + regex + ".*"));
+    // TODO For some reason this doesn't work on MSVC
+    // EXPECT_THAT(get_stderr(), testing::MatchesRegex(".*" + regex + ".*"));
+    EXPECT_TRUE(std::regex_search(get_stderr(), std::regex(regex, std::regex::basic)));
   }
 
 private:

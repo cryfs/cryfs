@@ -2,21 +2,14 @@
 #ifndef MESSMER_CPPUTILS_SYSTEM_TIME_H
 #define MESSMER_CPPUTILS_SYSTEM_TIME_H
 
-#include <sys/types.h>
-#include "clock_gettime.h"
-
-// TODO Test
+#include <time.h>
 
 namespace cpputils {
-    namespace time {
+namespace time {
 
-        inline timespec now() {
-            struct timespec now;
-            clock_gettime(CLOCK_REALTIME, &now);
-            return now;
-        }
+timespec now();
 
-    }
+}
 }
 
 inline bool operator==(const timespec &lhs, const timespec &rhs) {

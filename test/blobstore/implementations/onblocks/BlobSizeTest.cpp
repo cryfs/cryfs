@@ -3,7 +3,7 @@
 #include <cpp-utils/data/DataFixture.h>
 
 using namespace blobstore;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::unique_ref;
@@ -64,17 +64,17 @@ TEST_F(BlobSizeTest, ResizingToItself_Large) {
 }
 
 TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
-  Key key = blob->key();
+  BlockId blockId = blob->blockId();
   reset(std::move(blob));
-  auto loaded = loadBlob(key);
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(0u, loaded->size());
 }
 
 TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
   blob->resize(LARGE_SIZE);
-  Key key = blob->key();
+  BlockId blockId = blob->blockId();
   reset(std::move(blob));
-  auto loaded = loadBlob(key);
+  auto loaded = loadBlob(blockId);
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -113,7 +113,7 @@ TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
 
 TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->key());
+  auto loaded = loadBlob(blob->blockId());
   EXPECT_EQ(LARGE_SIZE, loaded->size());
 }
 
@@ -136,13 +136,14 @@ public:
 };
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
+  //uint32_t LARGE_SIZE = 2*1024*1024;
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), ZEROES.data(), LARGE_SIZE));
 }
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowingAndLoading) {
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->key());
+  auto loaded = loadBlob(blob->blockId());
   EXPECT_EQ(0, std::memcmp(readBlob(*loaded).data(), ZEROES.data(), LARGE_SIZE)); 
 }
 
@@ -151,7 +152,7 @@ TEST_F(BlobSizeDataTest, DataStaysIntactWhenGrowing) {
   blob->write(randomData.data(), 0, MEDIUM_SIZE);
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), randomData.data(), MEDIUM_SIZE));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)readBlob(*blob).data() + MEDIUM_SIZE, ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
+  EXPECT_EQ(0, std::memcmp(readBlob(*blob).dataOffset(MEDIUM_SIZE), ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
 }
 
 TEST_F(BlobSizeDataTest, DataStaysIntactWhenShrinking) {
@@ -167,5 +168,5 @@ TEST_F(BlobSizeDataTest, ChangedAreaIsZeroedOutWhenShrinkingAndRegrowing) {
   blob->resize(MEDIUM_SIZE);
   blob->resize(LARGE_SIZE);
   EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), randomData.data(), MEDIUM_SIZE));
-  EXPECT_EQ(0, std::memcmp((uint8_t*)readBlob(*blob).data() + MEDIUM_SIZE, ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
+  EXPECT_EQ(0, std::memcmp(readBlob(*blob).dataOffset(MEDIUM_SIZE), ZEROES.data(), LARGE_SIZE-MEDIUM_SIZE));
 }

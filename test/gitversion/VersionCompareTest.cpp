@@ -48,6 +48,8 @@ TEST_F(VersionCompareTest, VersionTags) {
     EXPECT_IS_OLDER_THAN("1.0-beta", "1.0-rc1");
     EXPECT_IS_OLDER_THAN("1.0-rc1", "1.0-rc2");
     EXPECT_IS_OLDER_THAN("1.0-rc2", "1.0");
+    EXPECT_IS_OLDER_THAN("0.9.5", "0.10-m1");
+    EXPECT_IS_OLDER_THAN("0.10-m1", "0.10.0");
     EXPECT_IS_OLDER_THAN("1.0-alpha", "1.0");
     EXPECT_IS_SAME_AGE("0.9.3-alpha", "0.9.3-alpha");
     EXPECT_IS_SAME_AGE("1-beta", "1-beta");

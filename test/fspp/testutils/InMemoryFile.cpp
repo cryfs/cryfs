@@ -9,8 +9,8 @@ InMemoryFile::~InMemoryFile() {
 }
 
 int InMemoryFile::read(void *buf, size_t count, off_t offset) const {
-  size_t realCount = std::min(count, (size_t)(_data.size() - offset));
-  std::memcpy(buf, (uint8_t*)_data.data() + offset, realCount);
+  size_t realCount = std::min(count, static_cast<size_t>(_data.size() - offset));
+  std::memcpy(buf, _data.dataOffset(offset), realCount);
   return realCount;
 }
 
@@ -19,7 +19,7 @@ const void *InMemoryFile::data() const {
 }
 
 bool InMemoryFile::fileContentEquals(const Data &expected, off_t offset) const {
-  return 0 == std::memcmp((uint8_t*)expected.data(), (uint8_t*)_data.data() + offset, expected.size());
+  return 0 == std::memcmp(expected.data(), _data.dataOffset(offset), expected.size());
 }
 
 size_t InMemoryFile::size() const {
@@ -32,7 +32,7 @@ WriteableInMemoryFile::WriteableInMemoryFile(Data data): InMemoryFile(std::move(
 void WriteableInMemoryFile::write(const void *buf, size_t count, off_t offset) {
   _extendFileSizeIfNecessary(count + offset);
 
-  std::memcpy((uint8_t*)_data.data() + offset, buf, count);
+  std::memcpy(_data.dataOffset(offset), buf, count);
 }
 
 void WriteableInMemoryFile::_extendFileSizeIfNecessary(size_t size) {
@@ -52,5 +52,5 @@ bool WriteableInMemoryFile::sizeUnchanged() const {
 }
 
 bool WriteableInMemoryFile::regionUnchanged(off_t offset, size_t count) const {
-  return 0 == std::memcmp((uint8_t*)_data.data() + offset, (uint8_t*)_originalData.data() + offset, count);
+  return 0 == std::memcmp(_data.dataOffset(offset), _originalData.dataOffset(offset), count);
 }

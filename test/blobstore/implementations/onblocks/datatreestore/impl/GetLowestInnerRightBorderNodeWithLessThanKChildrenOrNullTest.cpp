@@ -7,55 +7,49 @@
 #include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include "blobstore/implementations/onblocks/datatreestore/impl/algorithms.h"
 
-using ::testing::Test;
-using std::pair;
-using std::make_pair;
 
-using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataNode;
-using blobstore::onblocks::datanodestore::DataInnerNode;
-using blockstore::testfake::FakeBlockStore;
-using blockstore::Key;
+using blockstore::BlockId;
+using cpputils::Data;
 using namespace blobstore::onblocks::datatreestore::algorithms;
 
 class GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest: public DataTreeTest {
 public:
   struct TestData {
-    Key rootNode;
-    Key expectedResult;
+    BlockId rootNode;
+    BlockId expectedResult;
   };
 
   void check(const TestData &testData) {
     auto root = nodeStore->load(testData.rootNode).value();
     auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, root.get());
-    EXPECT_EQ(testData.expectedResult, result->key());
+    EXPECT_EQ(testData.expectedResult, result->blockId());
   }
 
   TestData CreateTwoRightBorderNodes() {
     auto node = CreateInner({CreateLeaf()});
-    return TestData{node->key(), node->key()};
+    return TestData{node->blockId(), node->blockId()};
   }
 
   TestData CreateThreeRightBorderNodes() {
     auto node = CreateInner({CreateLeaf()});
     auto root = CreateInner({node.get()});
-    return TestData{root->key(), node->key()};
+    return TestData{root->blockId(), node->blockId()};
   }
 
   TestData CreateThreeRightBorderNodes_LastFull() {
     auto root = CreateInner({CreateFullTwoLevel()});
-    return TestData{root->key(), root->key()};
+    return TestData{root->blockId(), root->blockId()};
   }
 
   TestData CreateLargerTree() {
     auto node = CreateInner({CreateLeaf(), CreateLeaf()});
     auto root = CreateInner({CreateFullTwoLevel().get(), node.get()});
-    return TestData{root->key(), node->key()};
+    return TestData{root->blockId(), node->blockId()};
   }
 };
 
 TEST_F(GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNullTest, Leaf) {
-  auto leaf = nodeStore->createNewLeafNode();
+  auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto result = GetLowestInnerRightBorderNodeWithLessThanKChildrenOrNull(nodeStore, leaf.get());
   EXPECT_EQ(nullptr, result.get());
 }

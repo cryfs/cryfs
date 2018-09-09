@@ -4,7 +4,7 @@
 
 #include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGenerator.h"
-#include <cryptopp/osrng.h>
+#include <vendor_cryptopp/osrng.h>
 
 namespace cpputils {
     class OSRandomGenerator final : public RandomGenerator {
@@ -21,7 +21,7 @@ namespace cpputils {
     inline OSRandomGenerator::OSRandomGenerator() {}
 
     inline void OSRandomGenerator::_get(void *target, size_t bytes) {
-        CryptoPP::OS_GenerateRandomBlock(true, (CryptoPP::byte*)target, bytes);
+        CryptoPP::OS_GenerateRandomBlock(true, static_cast<CryptoPP::byte*>(target), bytes);
     }
 }
 

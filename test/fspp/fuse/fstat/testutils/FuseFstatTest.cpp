@@ -3,30 +3,25 @@
 using ::testing::StrEq;
 using ::testing::_;
 using ::testing::Return;
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
 
-int FuseFstatTest::CreateFile(const TempTestFS *fs, const std::string &filename) {
-  int fd = CreateFileAllowErrors(fs, filename);
-  EXPECT_GE(fd, 0) << "Opening file failed";
+
+unique_ref<OpenFileHandle> FuseFstatTest::CreateFile(const TempTestFS *fs, const std::string &filename) {
+  auto fd = CreateFileAllowErrors(fs, filename);
+  EXPECT_GE(fd->fd(), 0) << "Opening file failed";
   return fd;
 }
 
 int FuseFstatTest::CreateFileReturnError(const TempTestFS *fs, const std::string &filename) {
-  int fd = CreateFileAllowErrors(fs, filename);
-  if (fd >= 0) {
-    return 0;
-  } else {
-    return -fd;
-  }
+  auto fd = CreateFileAllowErrors(fs, filename);
+  return fd->errorcode();
 }
 
-int FuseFstatTest::CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
+unique_ref<OpenFileHandle> FuseFstatTest::CreateFileAllowErrors(const TempTestFS *fs, const std::string &filename) {
   auto real_path = fs->mountDir() / filename;
-  int fd = ::open(real_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-  if (fd >= 0) {
-    return fd;
-  } else {
-    return -errno;
-  }
+  auto fd = make_unique_ref<OpenFileHandle>(real_path.string().c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+  return fd;
 }
 
 void FuseFstatTest::OnCreateAndOpenReturnFileDescriptor(const char *filename, int descriptor) {

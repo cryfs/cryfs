@@ -6,8 +6,6 @@
 #include <memory>
 
 using ::testing::Test;
-using ::testing::WithParamInterface;
-using ::testing::Values;
 
 using cpputils::Data;
 using cpputils::DataFixture;

@@ -16,8 +16,8 @@ using cpputils::Data;
 namespace blockstore {
 namespace testfake {
 
-FakeBlock::FakeBlock(FakeBlockStore *store, const Key &key, shared_ptr<Data> data, bool dirty)
- : Block(key), _store(store), _data(data), _dataChanged(dirty) {
+FakeBlock::FakeBlock(FakeBlockStore *store, const BlockId &blockId, shared_ptr<Data> data, bool dirty)
+ : Block(blockId), _store(store), _data(data), _dataChanged(dirty) {
 }
 
 FakeBlock::~FakeBlock() {
@@ -30,7 +30,7 @@ const void *FakeBlock::data() const {
 
 void FakeBlock::write(const void *source, uint64_t offset, uint64_t size) {
   ASSERT(offset <= _data->size() && offset + size <= _data->size(), "Write outside of valid area"); //Also check offset < _data->size() because of possible overflow in the addition
-  std::memcpy((uint8_t*)_data->data()+offset, source, size);
+  std::memcpy(_data->dataOffset(offset), source, size);
   _dataChanged = true;
 }
 
@@ -39,13 +39,13 @@ size_t FakeBlock::size() const {
 }
 
 void FakeBlock::resize(size_t newSize) {
-  *_data = cpputils::DataUtils::resize(std::move(*_data), newSize);
+  *_data = cpputils::DataUtils::resize(*_data, newSize);
   _dataChanged = true;
 }
 
 void FakeBlock::flush() {
   if(_dataChanged) {
-    _store->updateData(key(), *_data);
+    _store->updateData(blockId(), *_data);
     _dataChanged = false;
   }
 }

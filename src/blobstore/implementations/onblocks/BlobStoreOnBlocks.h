@@ -20,9 +20,10 @@ public:
   ~BlobStoreOnBlocks();
 
   cpputils::unique_ref<Blob> create() override;
-  boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::Key &key) override;
+  boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::BlockId &blockId) override;
 
   void remove(cpputils::unique_ref<Blob> blob) override;
+  void remove(const blockstore::BlockId &blockId) override;
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   //virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)

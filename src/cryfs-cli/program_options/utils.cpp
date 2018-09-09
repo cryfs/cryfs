@@ -13,8 +13,8 @@ namespace cryfs {
             auto doubleDashIterator = std::find(options.begin(), options.end(), string("--"));
             vector<string> beforeDoubleDash(options.begin(), doubleDashIterator);
             vector<string> afterDoubleDash;
-            afterDoubleDash.reserve(options.size()-beforeDoubleDash.size());
-            if (options.end() >= doubleDashIterator+1) {
+            if (doubleDashIterator != options.end() && doubleDashIterator + 1 != options.end()) {
+                afterDoubleDash.reserve(options.size() - beforeDoubleDash.size() - 1);
                 std::copy(doubleDashIterator + 1, options.end(), std::back_inserter(afterDoubleDash));
             }
             return make_pair(

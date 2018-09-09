@@ -1,10 +1,11 @@
-#include "blockstore/implementations/ondisk/OnDiskBlock.h"
 #include <cpp-utils/data/DataFixture.h>
 #include <gtest/gtest.h>
 
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/tempfile/TempDir.h>
 
+// TODO This should be ported to BlockStore2
+/*
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -25,25 +26,25 @@ public:
   OnDiskBlockFlushTest()
   // Don't create the temp file yet (therefore pass false to the TempFile constructor)
   : dir(),
-    key(Key::FromString("1491BB4932A389EE14BC7090AC772972")),
-    file(dir.path() / key.ToString().substr(0,3) / key.ToString().substr(3), false),
+    key(BlockId::FromString("1491BB4932A389EE14BC7090AC772972")),
+    file(dir.path() / blockId.ToString().substr(0,3) / blockId.ToString().substr(3), false),
     randomData(DataFixture::generate(GetParam())) {
   }
   TempDir dir;
-  Key key;
+  BlockId key;
   TempFile file;
 
   Data randomData;
 
   unique_ref<OnDiskBlock> CreateBlockAndLoadItFromDisk() {
     {
-      OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy()).value();
+      OnDiskBlock::CreateOnDisk(dir.path(), blockId, randomData.copy()).value();
     }
-    return OnDiskBlock::LoadFromDisk(dir.path(), key).value();
+    return OnDiskBlock::LoadFromDisk(dir.path(), blockId).value();
   }
 
   unique_ref<OnDiskBlock> CreateBlock() {
-    return OnDiskBlock::CreateOnDisk(dir.path(), key, randomData.copy()).value();
+    return OnDiskBlock::CreateOnDisk(dir.path(), blockId, randomData.copy()).value();
   }
 
   void WriteDataToBlock(const unique_ref<OnDiskBlock> &block) {
@@ -115,3 +116,4 @@ TEST_P(OnDiskBlockFlushTest, AfterLoad_FlushesWhenDestructed) {
   }
   EXPECT_STORED_FILE_DATA_CORRECT();
 }
+*/

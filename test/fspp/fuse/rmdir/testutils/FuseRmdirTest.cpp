@@ -12,7 +12,7 @@ int FuseRmdirTest::RmdirReturnError(const char *dirname) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / dirname;
-  int retval = ::rmdir(realpath.c_str());
+  int retval = ::rmdir(realpath.string().c_str());
   if (retval == 0) {
     return 0;
   } else {

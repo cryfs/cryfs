@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_TEST_FUSE_FDATASYNC_TESTUTILS_FUSEFDATASYNCTEST_H_
 
 #include "../../../testutils/FuseTest.h"
+#include "../../../testutils/OpenFileHandle.h"
 
 class FuseFdatasyncTest: public FuseTest {
 public:
@@ -12,7 +13,7 @@ public:
   int FdatasyncFileReturnError(const char *filename);
 
 private:
-  int OpenFile(const TempTestFS *fs, const char *filename);
+  cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);
 };
 
 #endif

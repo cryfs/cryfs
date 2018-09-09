@@ -14,10 +14,10 @@ public:
     ++numCopyConstructorCalled;
     return *this;
   }
-  CopyableMovableValueType(CopyableMovableValueType &&rhs): CopyableMovableValueType(rhs._value) {
+  CopyableMovableValueType(CopyableMovableValueType &&rhs) noexcept: CopyableMovableValueType(rhs._value) {
     //Don't increase numCopyConstructorCalled
   }
-  CopyableMovableValueType &operator=(CopyableMovableValueType &&rhs) {
+  CopyableMovableValueType &operator=(CopyableMovableValueType &&rhs) noexcept {
     //Don't increase numCopyConstructorCalled
     _value = rhs._value;
     return *this;

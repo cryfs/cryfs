@@ -1,11 +1,21 @@
 #include <gtest/gtest.h>
 #include <cryfs-cli/Environment.h>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
+#include <cpp-utils/system/env.h>
 
 using namespace cryfs;
 using std::string;
 using boost::optional;
 using boost::none;
+
+#if defined(_MSC_VER)
+constexpr const char* some_local_state_dir = "C:/my/local/state/dir";
+#else
+constexpr const char* some_local_state_dir = "/my/local/state/dir";
+#endif
+
+namespace bf = boost::filesystem;
 
 class EnvironmentTest : public ::testing::Test {
 public:
@@ -18,13 +28,13 @@ public:
             if (nullptr != oldValue) {
                 _oldValue = string(oldValue);
             }
-            ::setenv(key.c_str(), value.c_str(), 1);
+            cpputils::setenv(key.c_str(), value.c_str());
         }
         ~WithEnv() {
             if (none == _oldValue) {
-                ::unsetenv(_key.c_str());
+                cpputils::unsetenv(_key.c_str());
             } else {
-                ::setenv(_key.c_str(), _oldValue->c_str(), 1);
+                cpputils::setenv(_key.c_str(), _oldValue->c_str());
             }
         }
 
@@ -61,4 +71,23 @@ TEST_F(EnvironmentTest, NoUpdateCheck_SetToOtherValue) {
     WithEnv env("CRYFS_NO_UPDATE_CHECK", "someothervalue");
     // No matter what the value is, setting the environment variable says we don't do update checks.
     EXPECT_TRUE(Environment::noUpdateCheck());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_NotSet) {
+    EXPECT_EQ(Environment::defaultLocalStateDir(), Environment::localStateDir());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_Set) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", some_local_state_dir);
+    EXPECT_EQ(some_local_state_dir, Environment::localStateDir().string());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithDot) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", "./dir");
+    EXPECT_EQ((bf::current_path() / "./dir").string(), Environment::localStateDir().string());
+}
+
+TEST_F(EnvironmentTest, LocalStateDir_ConvertsRelativeToAbsolutePath_WithoutDot) {
+    WithEnv env("CRYFS_LOCAL_STATE_DIR", "dir");
+    EXPECT_EQ((bf::current_path() / "dir").string(), Environment::localStateDir().string());
 }

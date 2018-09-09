@@ -13,6 +13,8 @@ using cpputils::AES128_CFB;
 using cpputils::AES256_GCM;
 using cpputils::Twofish256_GCM;
 using cpputils::Twofish128_CFB;
+using cpputils::serialize;
+using cpputils::deserialize;
 using boost::none;
 using namespace cryfs;
 
@@ -102,7 +104,7 @@ TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_EmptyData) {
 TEST_F(CryConfigEncryptorTest, InvalidCiphertext) {
     auto encryptor = makeEncryptor();
     Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
-    *(char*)encrypted.data() = *(char*)encrypted.data()+1; //Modify ciphertext
+    serialize<uint8_t>(encrypted.data(), deserialize<uint8_t>(encrypted.data()) + 1); //Modify ciphertext
     auto decrypted = encryptor->decrypt(encrypted);
     EXPECT_EQ(none, decrypted);
 }

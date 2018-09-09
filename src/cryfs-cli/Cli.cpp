@@ -1,8 +1,6 @@
 #include "Cli.h"
 
-#include <blockstore/implementations/ondisk/OnDiskBlockStore.h>
-#include <blockstore/implementations/inmemory/InMemoryBlockStore.h>
-#include <blockstore/implementations/inmemory/InMemoryBlock.h>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -23,6 +21,8 @@
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/localstate/LocalStateDir.h>
+#include <cryfs/localstate/BasedirMetadata.h>
 #include "Environment.h"
 #include <cryfs/CryfsException.h>
 
@@ -33,12 +33,10 @@ using namespace cryfs;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 
-using blockstore::ondisk::OnDiskBlockStore;
-using blockstore::inmemory::InMemoryBlockStore;
+using blockstore::ondisk::OnDiskBlockStore2;
 using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
-using cpputils::Random;
 using cpputils::NoninteractiveConsole;
 using cpputils::TempFile;
 using cpputils::RandomGenerator;
@@ -51,17 +49,12 @@ using std::cin;
 using std::cout;
 using std::string;
 using std::endl;
-using std::vector;
 using std::shared_ptr;
 using std::make_shared;
-using std::unique_ptr;
-using std::make_unique;
 using std::function;
 using std::make_shared;
 using boost::optional;
 using boost::none;
-using boost::chrono::duration;
-using boost::chrono::duration_cast;
 using boost::chrono::minutes;
 using boost::chrono::milliseconds;
 using cpputils::dynamic_pointer_move;
@@ -74,8 +67,8 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console, shared_ptr<HttpClient> httpClient):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _httpClient(httpClient), _noninteractive(false) {
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
             _console = make_shared<NoninteractiveConsole>(console);
@@ -84,7 +77,7 @@ namespace cryfs {
         }
     }
 
-    void Cli::_showVersion() {
+    void Cli::_showVersion(unique_ref<HttpClient> httpClient) {
         cout << "CryFS Version " << gitversion::VersionString() << endl;
         if (gitversion::IsDevVersion()) {
             cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
@@ -101,7 +94,7 @@ namespace cryfs {
         } else if (Environment::isNoninteractive()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
         } else {
-            _checkForUpdates();
+            _checkForUpdates(std::move(httpClient));
         }
 #else
 # warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
@@ -109,8 +102,8 @@ namespace cryfs {
         cout << endl;
     }
 
-    void Cli::_checkForUpdates() {
-        VersionChecker versionChecker(_httpClient);
+    void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
+        VersionChecker versionChecker(httpClient.get());
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;
@@ -131,34 +124,38 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_askPasswordForExistingFilesystem() {
-        string password = _askPasswordFromStdin("Password: ");
-        while (!_checkPassword(password)) {
-            password = _askPasswordFromStdin("Password: ");
-        }
-        return password;
+    function<string()> Cli::_askPasswordForExistingFilesystem(std::shared_ptr<cpputils::Console> console) {
+        return [console] () {
+            string password = console->askPassword("Password: ");
+            while (!_checkPassword(password)) {
+                password = console->askPassword("Password: ");
+            }
+            return password;
+        };
     };
 
-    string Cli::_askPasswordForNewFilesystem() {
-        string password;
-        bool again = false;
-        do {
-            password = _askPasswordFromStdin("Password: ");
-            if (!_checkPassword(password)) {
-                again = true;
-                continue;
-            }
-            if (!_confirmPassword(password)) {
-                again = true;
-                continue;
-            }
-            again = false;
-        } while(again);
-        return password;
+    function<string()> Cli::_askPasswordForNewFilesystem(std::shared_ptr<cpputils::Console> console) {
+        return [console] () {
+            string password;
+            bool again = false;
+            do {
+                password = console->askPassword("Password: ");
+                if (!_checkPassword(password)) {
+                    again = true;
+                    continue;
+                }
+                if (!_confirmPassword(console.get(), password)) {
+                    again = true;
+                    continue;
+                }
+                again = false;
+            } while (again);
+            return password;
+        };
     }
 
-    bool Cli::_confirmPassword(const string &password) {
-        string confirmPassword = _askPasswordFromStdin("Confirm Password: ");
+    bool Cli::_confirmPassword(cpputils::Console* console, const string &password) {
+        string confirmPassword = console->askPassword("Confirm Password: ");
         if (password != confirmPassword) {
             std::cout << "Passwords don't match" << std::endl;
             return false;
@@ -166,29 +163,15 @@ namespace cryfs {
         return true;
     }
 
-    string Cli::_askPasswordNoninteractive() {
+    function<string()> Cli::_askPasswordNoninteractive(std::shared_ptr<cpputils::Console> console) {
         //TODO Test
-        string password = _askPasswordFromStdin("Password: ");
-        if (!_checkPassword(password)) {
-            throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
-        }
-        return password;
-    }
-
-    string Cli::_askPasswordFromStdin(const string &prompt) {
-        DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
-
-        std::cout << prompt << std::flush;
-        string result;
-        std::getline(cin, result);
-        std::cout << std::endl;
-
-        //Remove trailing newline
-        if (result[result.size()-1] == '\n') {
-            result.resize(result.size()-1);
-        }
-
-        return result;
+        return [console] () {
+            string password = console->askPassword("Password: ");
+            if (!_checkPassword(password)) {
+                throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
+            }
+            return password;
+        };
     }
 
     bf::path Cli::_determineConfigFile(const ProgramOptions &options) {
@@ -199,60 +182,76 @@ namespace cryfs {
         return *configFile;
     }
 
-    CryConfigFile Cli::_loadOrCreateConfig(const ProgramOptions &options) {
+    void Cli::_checkConfigIntegrity(const bf::path& basedir, const LocalStateDir& localStateDir, const CryConfigFile& config, bool allowReplacedFilesystem) {
+        auto basedirMetadata = BasedirMetadata::load(localStateDir);
+        if (!allowReplacedFilesystem && !basedirMetadata.filesystemIdForBasedirIsCorrect(basedir, config.config()->FilesystemId())) {
+          if (!_console->askYesNo("The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?", false)) {
+            throw CryfsException(
+                "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.", ErrorCode::FilesystemIdChanged);
+          }
+        }
+        // Update local state (or create it if it didn't exist yet)
+        basedirMetadata.updateFilesystemIdForBasedir(basedir, config.config()->FilesystemId());
+        basedirMetadata.save();
+    }
+
+    CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options, const LocalStateDir& localStateDir) {
         auto configFile = _determineConfigFile(options);
-        auto config = _loadOrCreateConfigFile(configFile, options.cipher(), options.blocksizeBytes(),
-                                              options.allowFilesystemUpgrade());
+        auto config = _loadOrCreateConfigFile(std::move(configFile), localStateDir, options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation(), options.allowReplacedFilesystem());
         if (config == none) {
           throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
         }
+        _checkConfigIntegrity(options.baseDir(), localStateDir, config->configFile, options.allowReplacedFilesystem());
         return std::move(*config);
     }
 
-    optional<CryConfigFile> Cli::_loadOrCreateConfigFile(const bf::path &configFilePath, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade) {
+    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
         if (_noninteractive) {
-            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
-                                   &Cli::_askPasswordNoninteractive,
-                                   &Cli::_askPasswordNoninteractive,
-                                   cipher, blocksizeBytes).loadOrCreate(configFilePath, allowFilesystemUpgrade);
+            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
+                                   Cli::_askPasswordNoninteractive(_console),
+                                   Cli::_askPasswordNoninteractive(_console),
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         } else {
-            return CryConfigLoader(_console, _keyGenerator, _scryptSettings,
-                                   &Cli::_askPasswordForExistingFilesystem,
-                                   &Cli::_askPasswordForNewFilesystem,
-                                   cipher, blocksizeBytes).loadOrCreate(configFilePath, allowFilesystemUpgrade);
+            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
+                                   Cli::_askPasswordForExistingFilesystem(_console),
+                                   Cli::_askPasswordForNewFilesystem(_console),
+                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
         }
     }
 
     void Cli::_runFilesystem(const ProgramOptions &options) {
         try {
-            auto blockStore = make_unique_ref<OnDiskBlockStore>(options.baseDir());
-            auto config = _loadOrCreateConfig(options);
-            CryDevice device(std::move(config), std::move(blockStore));
-            _sanityCheckFilesystem(&device);
-            fspp::FilesystemImpl fsimpl(&device);
-            fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@"+options.baseDir().native());
+          LocalStateDir localStateDir(Environment::localStateDir());
+          auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
+          auto config = _loadOrCreateConfig(options, localStateDir);
+          CryDevice device(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
+                           options.allowIntegrityViolations(), config.configFile.config()->missingBlockIsIntegrityViolation());
+          _sanityCheckFilesystem(&device);
+          fspp::FilesystemImpl fsimpl(&device);
+          fspp::fuse::Fuse fuse(&fsimpl, "cryfs", "cryfs@" + options.baseDir().string());
 
-            _initLogfile(options);
+          _initLogfile(options);
 
-            //TODO Test auto unmounting after idle timeout
-            //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
-            auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] {fuse.stop();});
-            if (idleUnmounter != none) {
-                device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
-            }
+          //TODO Test auto unmounting after idle timeout
+          //TODO This can fail due to a race condition if the filesystem isn't started yet (e.g. passing --unmount-idle 0").
+          auto idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [&fuse] { fuse.stop(); });
+          if (idleUnmounter != none) {
+            device.onFsAction(std::bind(&CallAfterTimeout::resetTimer, idleUnmounter->get()));
+          }
 
 #ifdef __APPLE__
-            std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
+          std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
 #else
-            std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n" << std::endl;
+          std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n"
+                    << std::endl;
 #endif
-            fuse.run(options.mountDir(), options.fuseOptions());
+          fuse.run(options.mountDir(), options.fuseOptions());
         } catch (const CryfsException &e) {
             throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
-            LOG(ERROR, "Crashed: {}", e.what());
+            LOG(ERR, "Crashed: {}", e.what());
         } catch (...) {
-            LOG(ERROR, "Crashed");
+            LOG(ERR, "Crashed");
         }
     }
 
@@ -282,11 +281,11 @@ namespace cryfs {
         //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
         if (options.logFile() != none) {
             cpputils::logging::setLogger(
-                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", options.logFile()->native()));
+                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", options.logFile()->string()));
         } else if (options.foreground()) {
             cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
         } else {
-            cpputils::logging::setLogger(spdlog::syslog_logger("cryfs", "cryfs", LOG_PID));
+            cpputils::logging::setLogger(cpputils::logging::system_logger("cryfs"));
         }
     }
 
@@ -364,11 +363,11 @@ namespace cryfs {
         return false;
     }
 
-    int Cli::main(int argc, const char *argv[]) {
-        cpputils::showBacktraceOnSigSegv();
+    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient) {
+        cpputils::showBacktraceOnCrash();
 
         try {
-            _showVersion();
+            _showVersion(std::move(httpClient));
             ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
             _runFilesystem(options);

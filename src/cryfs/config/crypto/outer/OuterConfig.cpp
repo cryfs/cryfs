@@ -38,7 +38,7 @@ namespace cryfs {
             serializer.writeTailData(encryptedInnerConfig);
             return serializer.finished();
         } catch (const exception &e) {
-            LOG(ERROR, "Error serializing CryConfigEncryptor: {}", e.what());
+            LOG(ERR, "Error serializing CryConfigEncryptor: {}", e.what());
             throw; // This is a programming logic error. Pass through exception.
         }
     }
@@ -57,14 +57,15 @@ namespace cryfs {
             }
 #else
             _checkHeader(&deserializer);
-            _deserializeNewFormat(&deserializer);
+            return _deserializeNewFormat(&deserializer);
 #endif
         } catch (const exception &e) {
-            LOG(ERROR, "Error deserializing outer configuration: {}", e.what());
+            LOG(ERR, "Error deserializing outer configuration: {}", e.what());
             return none; // This can be caused by invalid input data and does not have to be a programming error. Don't throw exception.
         }
     }
 
+#ifndef CRYFS_NO_COMPATIBILITY
     OuterConfig OuterConfig::_deserializeOldFormat(Deserializer *deserializer) {
         auto kdfParameters = SCryptParameters::deserializeOldFormat(deserializer);
         auto kdfParametersSerialized = kdfParameters.serialize();
@@ -72,6 +73,7 @@ namespace cryfs {
         deserializer->finished();
         return OuterConfig {std::move(kdfParametersSerialized), std::move(encryptedInnerConfig), true};
     }
+#endif
 
     OuterConfig OuterConfig::_deserializeNewFormat(Deserializer *deserializer) {
         auto kdfParameters = deserializer->readData();

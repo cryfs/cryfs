@@ -7,11 +7,11 @@
 
 #pragma once
 
-#define SPDLOG_VERSION "0.12.0"
+#define SPDLOG_VERSION "0.16.3"
 
-#include <spdlog/tweakme.h>
-#include <spdlog/common.h>
-#include <spdlog/logger.h>
+#include "tweakme.h"
+#include "common.h"
+#include "logger.h"
 
 #include <memory>
 #include <functional>
@@ -36,9 +36,14 @@ void set_pattern(const std::string& format_string);
 void set_formatter(formatter_ptr f);
 
 //
-// Set global logging level for
+// Set global logging level
 //
 void set_level(level::level_enum log_level);
+
+//
+// Set global flush level
+//
+void flush_on(level::level_enum log_level);
 
 //
 // Set global error handler
@@ -69,7 +74,7 @@ void set_sync_mode();
 
 //
 // Create and register multi/single threaded basic file logger.
-// Basic logger simply writes to given file without any limitatons or rotations.
+// Basic logger simply writes to given file without any limitations or rotations.
 //
 std::shared_ptr<logger> basic_logger_mt(const std::string& logger_name, const filename_t& filename, bool truncate = false);
 std::shared_ptr<logger> basic_logger_st(const std::string& logger_name, const filename_t& filename, bool truncate = false);
@@ -106,14 +111,14 @@ std::shared_ptr<logger> stderr_color_st(const std::string& logger_name);
 // Create and register a syslog logger
 //
 #ifdef SPDLOG_ENABLE_SYSLOG
-std::shared_ptr<logger> syslog_logger(const std::string& logger_name, const std::string& ident = "", int syslog_option = 0);
+std::shared_ptr<logger> syslog_logger(const std::string& logger_name, const std::string& ident = "", int syslog_option = 0, int syslog_facilty = (1<<3));
 #endif
 
 #if defined(__ANDROID__)
 std::shared_ptr<logger> android_logger(const std::string& logger_name, const std::string& tag = "spdlog");
 #endif
 
-// Create and register a logger a single sink
+// Create and register a logger with a single sink
 std::shared_ptr<logger> create(const std::string& logger_name, const sink_ptr& sink);
 
 // Create and register a logger with multiple sinks
@@ -124,10 +129,17 @@ std::shared_ptr<logger> create(const std::string& logger_name, const It& sinks_b
 
 // Create and register a logger with templated sink type
 // Example:
-// spdlog::create<daily_file_sink_st>("mylog", "dailylog_filename", "txt");
+// spdlog::create<daily_file_sink_st>("mylog", "dailylog_filename");
 template <typename Sink, typename... Args>
 std::shared_ptr<spdlog::logger> create(const std::string& logger_name, Args...);
 
+// Create and register an async logger with a single sink
+std::shared_ptr<logger> create_async(const std::string& logger_name, const sink_ptr& sink, size_t queue_size, const async_overflow_policy overflow_policy = async_overflow_policy::block_retry, const std::function<void()>& worker_warmup_cb = nullptr, const std::chrono::milliseconds& flush_interval_ms = std::chrono::milliseconds::zero(), const std::function<void()>& worker_teardown_cb = nullptr);
+
+// Create and register an async logger with multiple sinks
+std::shared_ptr<logger> create_async(const std::string& logger_name, sinks_init_list sinks, size_t queue_size, const async_overflow_policy overflow_policy = async_overflow_policy::block_retry, const std::function<void()>& worker_warmup_cb = nullptr, const std::chrono::milliseconds& flush_interval_ms = std::chrono::milliseconds::zero(), const std::function<void()>& worker_teardown_cb = nullptr);
+template<class It>
+std::shared_ptr<logger> create_async(const std::string& logger_name, const It& sinks_begin, const It& sinks_end, size_t queue_size, const async_overflow_policy overflow_policy = async_overflow_policy::block_retry, const std::function<void()>& worker_warmup_cb = nullptr, const std::chrono::milliseconds& flush_interval_ms = std::chrono::milliseconds::zero(), const std::function<void()>& worker_teardown_cb = nullptr);
 
 // Register the given logger with the given name
 void register_logger(std::shared_ptr<logger> logger);
@@ -147,7 +159,7 @@ void drop_all();
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Trace & Debug can be switched on/off at compile time for zero cost debug statements.
-// Uncomment SPDLOG_DEBUG_ON/SPDLOG_TRACE_ON in teakme.h to enable.
+// Uncomment SPDLOG_DEBUG_ON/SPDLOG_TRACE_ON in tweakme.h to enable.
 // SPDLOG_TRACE(..) will also print current file and line.
 //
 // Example:
@@ -158,21 +170,23 @@ void drop_all();
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifdef SPDLOG_TRACE_ON
-#define SPDLOG_STR_H(x) #x
-#define SPDLOG_STR_HELPER(x) SPDLOG_STR_H(x)
-#define SPDLOG_TRACE(logger, ...) logger->trace("[" __FILE__ " line #" SPDLOG_STR_HELPER(__LINE__) "] " __VA_ARGS__)
+#  define SPDLOG_STR_H(x) #x
+#  define SPDLOG_STR_HELPER(x) SPDLOG_STR_H(x)
+#  ifdef _MSC_VER
+#    define SPDLOG_TRACE(logger, ...) logger->trace("[ " __FILE__ "(" SPDLOG_STR_HELPER(__LINE__) ") ] " __VA_ARGS__)
+#  else
+#    define SPDLOG_TRACE(logger, ...) logger->trace("[ " __FILE__ ":" SPDLOG_STR_HELPER(__LINE__) " ] " __VA_ARGS__)
+#  endif
 #else
-#define SPDLOG_TRACE(logger, ...)
+#  define SPDLOG_TRACE(logger, ...) (void)0
 #endif
 
 #ifdef SPDLOG_DEBUG_ON
-#define SPDLOG_DEBUG(logger, ...) logger->debug(__VA_ARGS__)
+#  define SPDLOG_DEBUG(logger, ...) logger->debug(__VA_ARGS__)
 #else
-#define SPDLOG_DEBUG(logger, ...)
+#  define SPDLOG_DEBUG(logger, ...) (void)0
 #endif
-
 
 }
 
-
-#include <spdlog/details/spdlog_impl.h>
+#include "details/spdlog_impl.h"

@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
+#include <atomic>
 
 namespace fspp {
 class Device;
@@ -19,7 +20,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs, const std::string &fstype, const boost::optional<std::string> &fsname);
+  explicit Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname);
   ~Fuse();
 
   void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
@@ -69,7 +70,7 @@ private:
   Filesystem *_fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
-  bool _running;
+  std::atomic<bool> _running;
   std::string _fstype;
   boost::optional<std::string> _fsname;
 

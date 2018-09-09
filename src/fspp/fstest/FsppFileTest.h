@@ -74,13 +74,13 @@ public:
   void Test_Chmod(fspp::File *file, fspp::Node *node) {
     node->chmod(S_IFREG | S_IRUSR | S_IWOTH);
     this->IN_STAT(file, node, [] (struct stat st){
-        EXPECT_EQ((mode_t)(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
+        EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
     });
   }
 
   void Test_Utimens(fspp::File *file, fspp::Node *node) {
-    struct timespec ATIME; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
-    struct timespec MTIME; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
+    struct timespec ATIME{}; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
+    struct timespec MTIME{}; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
     node->utimens(ATIME, MTIME);
     this->IN_STAT(file, node, [this, ATIME, MTIME] (struct stat st) {
         this->EXPECT_ATIME_EQ(ATIME, st);
@@ -195,6 +195,25 @@ TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
     this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
 }
 
+TYPED_TEST_P(FsppFileTest, Remove) {
+    this->CreateFile("/mytestfile");
+    EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+    EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
+    this->Load("/mytestfile")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestfile"));
+    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestfile"));
+}
+
+TYPED_TEST_P(FsppFileTest, Remove_Nested) {
+    this->CreateDir("/mytestdir");
+    this->CreateFile("/mytestdir/myfile");
+    EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
+    EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+    this->Load("/mytestdir/myfile")->remove();
+    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
+    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+}
+
 REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
   Open_RDONLY,
   Open_RDONLY_Nested,
@@ -221,7 +240,9 @@ REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
   Chmod,
   Chmod_Nested,
   Utimens,
-  Utimens_Nested
+  Utimens_Nested,
+  Remove,
+  Remove_Nested
 );
 
 //TODO access

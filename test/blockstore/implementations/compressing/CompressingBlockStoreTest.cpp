@@ -5,7 +5,6 @@
 #include "../../testutils/BlockStoreTest.h"
 #include <gtest/gtest.h>
 
-using ::testing::Test;
 
 using blockstore::BlockStore;
 using blockstore::compressing::CompressingBlockStore;

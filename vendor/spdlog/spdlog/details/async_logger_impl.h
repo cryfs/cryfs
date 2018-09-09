@@ -8,8 +8,8 @@
 // Async Logger implementation
 // Use an async_sink (queue per logger) to perform the logging in a worker thread
 
-#include <spdlog/details/async_log_helper.h>
-#include <spdlog/async_logger.h>
+#include "../details/async_log_helper.h"
+#include "../async_logger.h"
 
 #include <string>
 #include <functional>
@@ -57,15 +57,28 @@ inline void spdlog::async_logger::flush()
     _async_log_helper->flush(true);
 }
 
+// Error handler
+inline void spdlog::async_logger::set_error_handler(spdlog::log_err_handler err_handler)
+{
+    _err_handler = err_handler;
+    _async_log_helper->set_error_handler(err_handler);
+
+}
+inline spdlog::log_err_handler spdlog::async_logger::error_handler()
+{
+    return _err_handler;
+}
+
+
 inline void spdlog::async_logger::_set_formatter(spdlog::formatter_ptr msg_formatter)
 {
     _formatter = msg_formatter;
     _async_log_helper->set_formatter(_formatter);
 }
 
-inline void spdlog::async_logger::_set_pattern(const std::string& pattern)
+inline void spdlog::async_logger::_set_pattern(const std::string& pattern, pattern_time_type pattern_time)
 {
-    _formatter = std::make_shared<pattern_formatter>(pattern);
+    _formatter = std::make_shared<pattern_formatter>(pattern, pattern_time);
     _async_log_helper->set_formatter(_formatter);
 }
 
@@ -74,6 +87,9 @@ inline void spdlog::async_logger::_sink_it(details::log_msg& msg)
 {
     try
     {
+#if defined(SPDLOG_ENABLE_MESSAGE_COUNTER)
+        _incr_msg_counter(msg);
+#endif
         _async_log_helper->log(msg);
         if (_should_flush_on(msg))
             _async_log_helper->flush(false); // do async flush
@@ -82,8 +98,10 @@ inline void spdlog::async_logger::_sink_it(details::log_msg& msg)
     {
         _err_handler(ex.what());
     }
-    catch (...)
+    catch(...)
     {
-        _err_handler("Unknown exception");
+        _err_handler("Unknown exception in logger " + _name);
+        throw;
     }
+
 }

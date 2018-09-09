@@ -13,11 +13,11 @@
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
-using ::testing::Combine;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::string;
 using cpputils::DataFixture;
+using cpputils::deserialize;
 
 //TODO Split into multiple files
 
@@ -25,7 +25,7 @@ using cpputils::dynamic_pointer_move;
 
 using blockstore::BlockStore;
 using cpputils::Data;
-using blockstore::Key;
+using blockstore::BlockId;
 using blockstore::testfake::FakeBlockStore;
 using namespace blobstore;
 using namespace blobstore::onblocks;
@@ -45,7 +45,7 @@ public:
     nodeStore(make_unique_ref<DataNodeStore>(std::move(_blockStore), BLOCKSIZE_BYTES)),
     ZEROES(nodeStore->layout().maxBytesPerLeaf()),
     randomData(nodeStore->layout().maxBytesPerLeaf()),
-    leaf(nodeStore->createNewLeafNode()) {
+    leaf(nodeStore->createNewLeafNode(Data(0))) {
 
     ZEROES.FillWithZeroes();
 
@@ -60,11 +60,11 @@ public:
     return data;
   }
 
-  Key WriteDataToNewLeafBlockAndReturnKey() {
-    auto newleaf = nodeStore->createNewLeafNode();
+  BlockId WriteDataToNewLeafBlockAndReturnKey() {
+    auto newleaf = nodeStore->createNewLeafNode(Data(0));
     newleaf->resize(randomData.size());
     newleaf->write(randomData.data(), 0, randomData.size());
-    return newleaf->key();
+    return newleaf->blockId();
   }
 
   void FillLeafBlockWithData() {
@@ -76,23 +76,23 @@ public:
     leaf_to_fill->write(randomData.data(), 0, randomData.size());
   }
 
-  unique_ref<DataLeafNode> LoadLeafNode(const Key &key) {
-    auto leaf = nodeStore->load(key).value();
+  unique_ref<DataLeafNode> LoadLeafNode(const BlockId &blockId) {
+    auto leaf = nodeStore->load(blockId).value();
     return dynamic_pointer_move<DataLeafNode>(leaf).value();
   }
 
-  void ResizeLeaf(const Key &key, size_t size) {
-    auto leaf = LoadLeafNode(key);
+  void ResizeLeaf(const BlockId &blockId, size_t size) {
+    auto leaf = LoadLeafNode(blockId);
     EXPECT_IS_PTR_TYPE(DataLeafNode, leaf.get());
     leaf->resize(size);
   }
 
-  Key CreateLeafWithDataConvertItToInnerNodeAndReturnKey() {
-    auto leaf = nodeStore->createNewLeafNode();
+  BlockId CreateLeafWithDataConvertItToInnerNodeAndReturnKey() {
+    auto leaf = nodeStore->createNewLeafNode(Data(0));
     FillLeafBlockWithData(leaf.get());
-    auto child = nodeStore->createNewLeafNode();
-    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
-    return converted->key();
+    auto child = nodeStore->createNewLeafNode(Data(0));
+    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), LAYOUT, *child);
+    return converted->blockId();
   }
 
   unique_ref<DataLeafNode> CopyLeafNode(const DataLeafNode &node) {
@@ -100,10 +100,10 @@ public:
     return dynamic_pointer_move<DataLeafNode>(copied).value();
   }
 
-  Key InitializeLeafGrowAndReturnKey() {
-    auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)));
+  BlockId InitializeLeafGrowAndReturnKey() {
+    auto leaf = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(LAYOUT.maxBytesPerLeaf()));
     leaf->resize(5);
-    return leaf->key();
+    return leaf->blockId();
   }
 
   unique_ref<BlockStore> _blockStore;
@@ -120,37 +120,22 @@ private:
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
 constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
-TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterInitialization) {
-  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  Key key = block->key();
-  auto node = DataLeafNode::InitializeNewNode(std::move(block));
-  EXPECT_EQ(key, node->key());
-}
-
 TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
-  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  Key key = block->key();
-  DataLeafNode::InitializeNewNode(std::move(block));
+  BlockId blockId = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(LAYOUT.maxBytesPerLeaf()))->blockId();
 
-  auto loaded = nodeStore->load(key).value();
-  EXPECT_EQ(key, loaded->key());
+  auto loaded = nodeStore->load(blockId).value();
+  EXPECT_EQ(blockId, loaded->blockId());
 }
 
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
-  auto leaf = DataLeafNode::InitializeNewNode(blockStore->create(Data(BLOCKSIZE_BYTES)));
-  EXPECT_EQ(0u, leaf->numBytes());
-}
-
-TEST_F(DataLeafNodeTest, ReinitializesCorrectly) {
-  auto key = InitializeLeafGrowAndReturnKey();
-  auto leaf = DataLeafNode::InitializeNewNode(blockStore->load(key).value());
-  EXPECT_EQ(0u, leaf->numBytes());
+  auto leaf = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(5));
+  EXPECT_EQ(5u, leaf->numBytes());
 }
 
 TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBlock) {
-  Key key = WriteDataToNewLeafBlockAndReturnKey();
+  BlockId blockId = WriteDataToNewLeafBlockAndReturnKey();
 
-  auto loaded = LoadLeafNode(key);
+  auto loaded = LoadLeafNode(blockId);
 
   EXPECT_EQ(randomData.size(), loaded->numBytes());
   EXPECT_EQ(randomData, loadData(*loaded));
@@ -161,18 +146,18 @@ TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
 }
 
 TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero_AfterLoading) {
-  Key key = nodeStore->createNewLeafNode()->key();
-  auto leaf = LoadLeafNode(key);
+  BlockId blockId = nodeStore->createNewLeafNode(Data(0))->blockId();
+  auto leaf = LoadLeafNode(blockId);
 
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
 class DataLeafNodeSizeTest: public DataLeafNodeTest, public WithParamInterface<unsigned int> {
 public:
-  Key CreateLeafResizeItAndReturnKey() {
-    auto leaf = nodeStore->createNewLeafNode();
+  BlockId CreateLeafResizeItAndReturnKey() {
+    auto leaf = nodeStore->createNewLeafNode(Data(0));
     leaf->resize(GetParam());
-    return leaf->key();
+    return leaf->blockId();
   }
 };
 INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataNodeLayout(DataLeafNodeTest::BLOCKSIZE_BYTES).maxBytesPerLeaf()));
@@ -183,9 +168,9 @@ TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
 }
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeAfterLoading) {
-  Key key = CreateLeafResizeItAndReturnKey();
+  BlockId blockId = CreateLeafResizeItAndReturnKey();
 
-  auto leaf = LoadLeafNode(key);
+  auto leaf = LoadLeafNode(blockId);
   EXPECT_EQ(GetParam(), leaf->numBytes());
 }
 
@@ -202,23 +187,23 @@ TEST_F(DataLeafNodeTest, SpaceGetsZeroFilledWhenShrinkingAndRegrowing) {
   leaf->resize(randomData.size());
 
   //Check that the space was filled with zeroes
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), ((uint8_t*)loadData(*leaf).data())+smaller_size, 100));
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(loadData(*leaf).data())+smaller_size, 100));
 }
 
 TEST_F(DataLeafNodeTest, DataGetsZeroFilledWhenShrinking) {
-  Key key = WriteDataToNewLeafBlockAndReturnKey();
+  BlockId blockId = WriteDataToNewLeafBlockAndReturnKey();
   uint32_t smaller_size = randomData.size() - 100;
   {
     //At first, we expect there to be random data in the underlying data block
-    auto block = blockStore->load(key).value();
-    EXPECT_EQ(0, std::memcmp((char*)randomData.data()+smaller_size, (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(0, std::memcmp(randomData.dataOffset(smaller_size), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 
   //After shrinking, we expect there to be zeroes in the underlying data block
-  ResizeLeaf(key, smaller_size);
+  ResizeLeaf(blockId, smaller_size);
   {
-    auto block = blockStore->load(key).value();
-    EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
+    auto block = blockStore->load(blockId).value();
+    EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+smaller_size, 100));
   }
 }
 
@@ -232,25 +217,25 @@ TEST_F(DataLeafNodeTest, ShrinkingDoesntDestroyValidDataRegion) {
 }
 
 TEST_F(DataLeafNodeTest, ConvertToInternalNode) {
-  auto child = nodeStore->createNewLeafNode();
-  Key leaf_key = leaf->key();
-  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), *child);
+  auto child = nodeStore->createNewLeafNode(Data(0));
+  BlockId leaf_blockId = leaf->blockId();
+  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), LAYOUT, *child);
 
   EXPECT_EQ(1u, converted->numChildren());
-  EXPECT_EQ(child->key(), converted->getChild(0)->key());
-  EXPECT_EQ(leaf_key, converted->key());
+  EXPECT_EQ(child->blockId(), converted->readChild(0).blockId());
+  EXPECT_EQ(leaf_blockId, converted->blockId());
 }
 
 TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
-  Key key = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
+  BlockId blockId = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
 
-  auto block = blockStore->load(key).value();
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), (uint8_t*)block->data()+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
+  auto block = blockStore->load(blockId).value();
+  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
 }
 
 TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf) {
   auto copied = CopyLeafNode(*leaf);
-  EXPECT_NE(leaf->key(), copied->key());
+  EXPECT_NE(leaf->blockId(), copied->blockId());
 }
 
 TEST_F(DataLeafNodeTest, CopyEmptyLeaf) {
@@ -266,10 +251,10 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
   EXPECT_EQ(0, std::memcmp(loadData(*leaf).data(), loadData(*copied).data(), leaf->numBytes()));
 
   //Test that they have different data regions (changing the original one doesn't change the copy)
-  char data = '\0';
+  uint8_t data = 0;
   leaf->write(&data, 0, 1);
-  EXPECT_EQ(data, *(char*)loadData(*leaf).data());
-  EXPECT_NE(data, *(char*)loadData(*copied).data());
+  EXPECT_EQ(data, deserialize<uint8_t>(loadData(*leaf).data()));
+  EXPECT_NE(data, deserialize<uint8_t>(loadData(*copied).data()));
 }
 
 
@@ -289,12 +274,12 @@ public:
     backgroundData(DataFixture::generate(GetParam().leafsize, 1)) {
   }
 
-  Key CreateLeafWriteToItAndReturnKey(const Data &to_write) {
-    auto newleaf = nodeStore->createNewLeafNode();
+  BlockId CreateLeafWriteToItAndReturnKey(const Data &to_write) {
+    auto newleaf = nodeStore->createNewLeafNode(Data(0));
 
     newleaf->resize(GetParam().leafsize);
     newleaf->write(to_write.data(), GetParam().offset, GetParam().count);
-    return newleaf->key();
+    return newleaf->blockId();
   }
 
   void EXPECT_DATA_READS_AS(const Data &expected, const DataLeafNode &leaf, off_t offset, size_t count) {
@@ -308,7 +293,7 @@ public:
     Data end(GetParam().leafsize - count - start);
 
     std::memcpy(begin.data(), expected.data(), start);
-    std::memcpy(end.data(), (uint8_t*)expected.data()+start+count, end.size());
+    std::memcpy(end.data(), expected.dataOffset(start+count), end.size());
 
     EXPECT_DATA_READS_AS(begin, leaf, 0, start);
     EXPECT_DATA_READS_AS(end, leaf, start + count, end.size());
@@ -340,9 +325,9 @@ TEST_P(DataLeafNodeDataTest, WriteAndReadImmediately) {
 }
 
 TEST_P(DataLeafNodeDataTest, WriteAndReadAfterLoading) {
-  Key key = CreateLeafWriteToItAndReturnKey(this->foregroundData);
+  BlockId blockId = CreateLeafWriteToItAndReturnKey(this->foregroundData);
 
-  auto loaded_leaf = LoadLeafNode(key);
+  auto loaded_leaf = LoadLeafNode(blockId);
   EXPECT_DATA_READS_AS(this->foregroundData, *loaded_leaf, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded_leaf, GetParam().offset, GetParam().count);
 }

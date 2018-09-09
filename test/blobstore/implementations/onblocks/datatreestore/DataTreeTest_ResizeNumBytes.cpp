@@ -20,7 +20,7 @@ using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
 using blobstore::onblocks::utils::ceilDivision;
-using blockstore::Key;
+using blockstore::BlockId;
 using cpputils::Data;
 using boost::none;
 
@@ -31,9 +31,9 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
-    Key key = root->key();
+    BlockId blockId = root->blockId();
     cpputils::destruct(std::move(root));
-    return treeStore.load(key).value();
+    return treeStore.load(blockId).value();
   }
 
   unique_ref<DataTree> CreateLeafTreeWithSize(uint32_t size) {
@@ -64,23 +64,23 @@ public:
     return CreateTree(CreateFourLevelMinDataWithLastLeafSize(size));
   }
 
-  void EXPECT_IS_LEFTMAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  void EXPECT_IS_LEFTMAXDATA_TREE(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
+        EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
       }
-      EXPECT_IS_LEFTMAXDATA_TREE(inner->LastChild()->key());
+      EXPECT_IS_LEFTMAXDATA_TREE(inner->readLastChild().blockId());
     }
   }
 
-  void EXPECT_IS_MAXDATA_TREE(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  void EXPECT_IS_MAXDATA_TREE(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
-        EXPECT_IS_MAXDATA_TREE(inner->getChild(i)->key());
+        EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
       }
     } else {
       DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
@@ -103,18 +103,18 @@ public:
     ZEROES.FillWithZeroes();
   }
 
-  void ResizeTree(const Key &key, uint64_t size) {
-    treeStore.load(key).get()->resizeNumBytes(size);
+  void ResizeTree(const BlockId &blockId, uint64_t size) {
+    treeStore.load(blockId).get()->resizeNumBytes(size);
   }
 
-  unique_ref<DataLeafNode> LastLeaf(const Key &key) {
-    auto root = nodeStore->load(key).value();
+  unique_ref<DataLeafNode> LastLeaf(const BlockId &blockId) {
+    auto root = nodeStore->load(blockId).value();
     auto leaf = dynamic_pointer_move<DataLeafNode>(root);
     if (leaf != none) {
       return std::move(*leaf);
     }
     auto inner = dynamic_pointer_move<DataInnerNode>(root).value();
-    return LastLeaf(inner->LastChild()->key());
+    return LastLeaf(inner->readLastChild().blockId());
   }
 
   uint32_t oldLastLeafSize;
@@ -165,7 +165,7 @@ INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumByt
 TEST_P(DataTreeTest_ResizeNumBytes_P, StructureIsValid) {
   tree->resizeNumBytes(newSize);
   tree->flush();
-  EXPECT_IS_LEFTMAXDATA_TREE(tree->key());
+  EXPECT_IS_LEFTMAXDATA_TREE(tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
@@ -176,34 +176,64 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
   EXPECT_EQ(newSize, tree->numStoredBytes());
 }
 
+TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect) {
+  tree->resizeNumBytes(newSize);
+  tree->flush();
+  // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // This is what the StructureIsValid test case is for.
+  EXPECT_EQ(newNumberOfLeaves, tree->_forceComputeNumLeaves());
+}
+
+TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect_FromCache) {
+  tree->numLeaves(); // fill cache with old value
+  tree->resizeNumBytes(newSize);
+  tree->flush();
+  // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // This is what the StructureIsValid test case is for.
+  EXPECT_EQ(newNumberOfLeaves, tree->numLeaves());
+}
+
 TEST_P(DataTreeTest_ResizeNumBytes_P, DepthFlagsAreCorrect) {
   tree->resizeNumBytes(newSize);
   tree->flush();
   uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()) - 0.00000000001); // The subtraction takes care of double inaccuracies if newNumberOfLeaves == maxChildrenPerInnerNode
-  CHECK_DEPTH(depth, tree->key());
+  CHECK_DEPTH(depth, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   tree->flush();
   tree->resizeNumBytes(newSize);
-  EXPECT_EQ(key, tree->key());
+  EXPECT_EQ(blockId, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), (uint64_t)nodeStore->layout().maxBytesPerLeaf()));
+  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
-  data.FillInto(nodeStore->load(key).get().get());
+  data.FillInto(nodeStore->load(blockId).get().get());
 
-  ResizeTree(key, newSize);
+  ResizeTree(blockId, newSize);
 
   if (oldNumberOfLeaves < newNumberOfLeaves || (oldNumberOfLeaves == newNumberOfLeaves && oldLastLeafSize < newLastLeafSize)) {
-    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), oldNumberOfLeaves, oldLastLeafSize);
+    data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), oldNumberOfLeaves, oldLastLeafSize);
   } else {
-    data.EXPECT_DATA_CORRECT(nodeStore->load(key).get().get(), newNumberOfLeaves, newLastLeafSize);
+    data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), newNumberOfLeaves, newLastLeafSize);
   }
+}
+
+TEST_P(DataTreeTest_ResizeNumBytes_P, UnneededBlocksGetDeletedWhenShrinking) {
+    tree->resizeNumBytes(newSize);
+    tree->flush();
+
+    uint64_t expectedNumNodes = 1; // 1 for the root node
+    uint64_t nodesOnCurrentLevel = newNumberOfLeaves;
+    while (nodesOnCurrentLevel > 1) {
+      expectedNumNodes += nodesOnCurrentLevel;
+      nodesOnCurrentLevel = ceilDivision(nodesOnCurrentLevel, nodeStore->layout().maxChildrenPerInnerNode());
+    }
+    EXPECT_EQ(expectedNumNodes, nodeStore->numNodes());
 }
 
 //Resize to zero is not caught in the parametrized test above, in the following, we test it separately.
@@ -211,16 +241,23 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
 TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
   tree->resizeNumBytes(0);
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
-  auto leaf = LoadLeafNode(key);
+  auto leaf = LoadLeafNode(blockId);
   EXPECT_EQ(0u, leaf->numBytes());
 }
 
-TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_KeyDoesntChange) {
+TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_blockIdDoesntChange) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
-  Key key = tree->key();
+  BlockId blockId = tree->blockId();
   tree->resizeNumBytes(0);
   tree->flush();
-  EXPECT_EQ(key, tree->key());
+  EXPECT_EQ(blockId, tree->blockId());
+}
+
+TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_UnneededBlocksGetDeletedWhenShrinking) {
+  auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
+  tree->resizeNumBytes(0);
+  tree->flush();
+  EXPECT_EQ(1u, nodeStore->numNodes());
 }

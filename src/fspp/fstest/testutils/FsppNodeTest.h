@@ -10,14 +10,14 @@
 class FsppNodeTestHelper {
 public:
   void IN_STAT(fspp::Node *file, std::function<void (struct stat)> callback) {
-    struct stat st;
+    struct stat st{};
     file->stat(&st);
     callback(st);
   }
 
   void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) {
     IN_STAT(node, [expectedSize] (struct stat st) {
-      EXPECT_EQ(expectedSize, (uint64_t)st.st_size);
+      EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.st_size));
     });
   }
 };

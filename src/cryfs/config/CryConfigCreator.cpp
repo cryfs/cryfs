@@ -2,34 +2,41 @@
 #include "CryCipher.h"
 #include <gitversion/gitversion.h>
 #include <cpp-utils/random/Random.h>
+#include <cryfs/localstate/LocalStateDir.h>
+#include <cryfs/localstate/LocalStateMetadata.h>
 
 using cpputils::Console;
-using cpputils::unique_ref;
 using cpputils::RandomGenerator;
 using cpputils::Random;
 using std::string;
 using std::shared_ptr;
-using std::vector;
 using boost::optional;
 using boost::none;
 
 namespace cryfs {
 
-    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator)
-        :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator) {
+    CryConfigCreator::CryConfigCreator(shared_ptr<Console> console, RandomGenerator &encryptionKeyGenerator, LocalStateDir localStateDir)
+        :_console(console), _configConsole(console), _encryptionKeyGenerator(encryptionKeyGenerator), _localStateDir(std::move(localStateDir)) {
     }
 
-    CryConfig CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine) {
+    CryConfigCreator::ConfigCreateResult CryConfigCreator::create(const optional<string> &cipherFromCommandLine, const optional<uint32_t> &blocksizeBytesFromCommandLine, const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool allowReplacedFilesystem) {
         CryConfig config;
         config.SetCipher(_generateCipher(cipherFromCommandLine));
         config.SetVersion(CryConfig::FilesystemFormatVersion);
         config.SetCreatedWithVersion(gitversion::VersionString());
         config.SetLastOpenedWithVersion(gitversion::VersionString());
         config.SetBlocksizeBytes(_generateBlocksizeBytes(blocksizeBytesFromCommandLine));
-        config.SetRootBlob(_generateRootBlobKey());
-        config.SetEncryptionKey(_generateEncKey(config.Cipher()));
+        config.SetRootBlob(_generateRootBlobId());
         config.SetFilesystemId(_generateFilesystemID());
-        return config;
+        auto encryptionKey = _generateEncKey(config.Cipher());
+        auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
+        uint32_t myClientId = localState.myClientId();
+        config.SetEncryptionKey(std::move(encryptionKey));
+        config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
+#ifndef CRYFS_NO_COMPATIBILITY
+        config.SetHasVersionNumbers(true);
+#endif
+        return ConfigCreateResult {std::move(config), myClientId};
     }
 
     uint32_t CryConfigCreator::_generateBlocksizeBytes(const optional<uint32_t> &blocksizeBytesFromCommandLine) {
@@ -50,6 +57,21 @@ namespace cryfs {
         }
     }
 
+    optional<uint32_t> CryConfigCreator::_generateExclusiveClientId(const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, uint32_t myClientId) {
+        if (!_generateMissingBlockIsIntegrityViolation(missingBlockIsIntegrityViolationFromCommandLine)) {
+            return none;
+        }
+        return myClientId;
+    }
+
+    bool CryConfigCreator::_generateMissingBlockIsIntegrityViolation(const optional<bool> &missingBlockIsIntegrityViolationFromCommandLine) {
+        if (missingBlockIsIntegrityViolationFromCommandLine != none) {
+            return *missingBlockIsIntegrityViolationFromCommandLine;
+        } else {
+            return _configConsole.askMissingBlockIsIntegrityViolation();
+        }
+    }
+
     string CryConfigCreator::_generateEncKey(const std::string &cipher) {
         _console->print("\nGenerating secure encryption key. This might take some time..");
         auto key = CryCiphers::find(cipher).createKey(_encryptionKeyGenerator);
@@ -57,7 +79,7 @@ namespace cryfs {
         return key;
     }
 
-    string CryConfigCreator::_generateRootBlobKey() {
+    string CryConfigCreator::_generateRootBlobId() {
         //An empty root blob entry will tell CryDevice to create a new root blob
         return "";
     }

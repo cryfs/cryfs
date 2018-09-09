@@ -1,6 +1,6 @@
 #include "algorithms.h"
 #include <cpp-utils/pointer/cast.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 
 #include "../../datanodestore/DataInnerNode.h"
 #include "../../datanodestore/DataNodeStore.h"
@@ -13,7 +13,7 @@ using cpputils::unique_ref;
 using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeStore;
-using blockstore::Key;
+using blockstore::BlockId;
 using boost::optional;
 using boost::none;
 
@@ -23,8 +23,8 @@ namespace datatreestore {
 namespace algorithms {
 
 optional<unique_ref<DataInnerNode>> getLastChildAsInnerNode(DataNodeStore *nodeStore, const DataInnerNode &node) {
-  Key key = node.LastChild()->key();
-  auto lastChild = nodeStore->load(key);
+  BlockId blockId = node.readLastChild().blockId();
+  auto lastChild = nodeStore->load(blockId);
   ASSERT(lastChild != none, "Couldn't load last child");
   return dynamic_pointer_move<DataInnerNode>(*lastChild);
 }
@@ -40,10 +40,12 @@ optional_ownership_ptr<DataInnerNode> GetLowestInnerRightBorderNodeWithCondition
     if (condition(*currentNode)) {
       result = std::move(currentNode);
     }
-    ASSERT(lastChild != none || static_cast<int>(i) == rootNode->depth()-1, "Couldn't get last child as inner node but we're not deep enough yet for the last child to be a leaf");
-    if (lastChild != none) {
-      currentNode = cpputils::WithOwnership(std::move(*lastChild));
+    if (lastChild == none) {
+        // lastChild is a leaf
+        ASSERT(static_cast<int>(i) == rootNode->depth()-1, "Couldn't get last child as inner node but we're not deep enough yet for the last child to be a leaf");
+        break;
     }
+    currentNode = cpputils::WithOwnership(std::move(*lastChild));
   }
 
   return result;

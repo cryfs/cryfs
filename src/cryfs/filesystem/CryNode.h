@@ -15,7 +15,7 @@ public:
   virtual ~CryNode();
 
   // TODO grandparent is only needed to set the timestamps of the parent directory on rename and remove. Delete grandparent parameter once we store timestamps in the blob itself instead of in the directory listing.
-  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::Key &key);
+  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
   void access(int mask) const override;
   void stat(struct ::stat *result) const override;
   void chmod(mode_t mode) override;
@@ -23,12 +23,15 @@ public:
   void rename(const boost::filesystem::path &to) override;
   void utimens(timespec lastAccessTime, timespec lastModificationTime) override;
 
+  // used in test cases
+  bool checkParentPointer();
+
 protected:
   CryNode();
 
   CryDevice *device();
   const CryDevice *device() const;
-  const blockstore::Key &key() const;
+  const blockstore::BlockId &blockId() const;
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
   bool isRootDir() const;
   std::shared_ptr<const parallelaccessfsblobstore::DirBlobRef> parent() const;
@@ -46,7 +49,7 @@ private:
   CryDevice *_device;
   boost::optional<std::shared_ptr<parallelaccessfsblobstore::DirBlobRef>> _parent;
   boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> _grandparent;
-  blockstore::Key _key;
+  blockstore::BlockId _blockId;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);
 };

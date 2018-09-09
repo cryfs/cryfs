@@ -1,15 +1,14 @@
 #include "DataTreeStore.h"
-#include "../datanodestore/DataNodeStore.h"
 #include "../datanodestore/DataLeafNode.h"
 #include "DataTree.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::Data;
 using boost::optional;
 using boost::none;
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
-using blobstore::onblocks::datanodestore::DataNode;
 
 namespace blobstore {
 namespace onblocks {
@@ -22,8 +21,8 @@ DataTreeStore::DataTreeStore(unique_ref<DataNodeStore> nodeStore)
 DataTreeStore::~DataTreeStore() {
 }
 
-optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::Key &key) {
-  auto node = _nodeStore->load(key);
+optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::BlockId &blockId) {
+  auto node = _nodeStore->load(blockId);
   if (node == none) {
     return none;
   }
@@ -31,14 +30,18 @@ optional<unique_ref<DataTree>> DataTreeStore::load(const blockstore::Key &key) {
 }
 
 unique_ref<DataTree> DataTreeStore::createNewTree() {
-  auto newleaf = _nodeStore->createNewLeafNode();
+  auto newleaf = _nodeStore->createNewLeafNode(Data(0));
   return make_unique_ref<DataTree>(_nodeStore.get(), std::move(newleaf));
 }
 
 void DataTreeStore::remove(unique_ref<DataTree> tree) {
-  auto root = tree->releaseRootNode();
-  cpputils::destruct(std::move(tree)); // Destruct tree
-  _nodeStore->removeSubtree(std::move(root));
+  _nodeStore->removeSubtree(tree->releaseRootNode());
+}
+
+void DataTreeStore::remove(const blockstore::BlockId &blockId) {
+  auto tree = load(blockId);
+  ASSERT(tree != none, "Tree to remove not found");
+  remove(std::move(*tree));
 }
 
 }

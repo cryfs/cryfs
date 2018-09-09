@@ -1,5 +1,8 @@
 #include "FuseFsyncTest.h"
 
+using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+
 void FuseFsyncTest::FsyncFile(const char *filename) {
   int error = FsyncFileReturnError(filename);
   EXPECT_EQ(0, error);
@@ -8,8 +11,8 @@ void FuseFsyncTest::FsyncFile(const char *filename) {
 int FuseFsyncTest::FsyncFileReturnError(const char *filename) {
   auto fs = TestFS();
 
-  int fd = OpenFile(fs.get(), filename);
-  int retval = ::fsync(fd);
+  auto fd = OpenFile(fs.get(), filename);
+  int retval = ::fsync(fd->fd());
   if (retval == 0) {
     return 0;
   } else {
@@ -17,9 +20,9 @@ int FuseFsyncTest::FsyncFileReturnError(const char *filename) {
   }
 }
 
-int FuseFsyncTest::OpenFile(const TempTestFS *fs, const char *filename) {
+unique_ref<OpenFileHandle> FuseFsyncTest::OpenFile(const TempTestFS *fs, const char *filename) {
   auto realpath = fs->mountDir() / filename;
-  int fd = ::open(realpath.c_str(), O_RDWR);
-  EXPECT_GE(fd, 0) << "Error opening file";
+  auto fd = make_unique_ref<OpenFileHandle>(realpath.string().c_str(), O_RDWR);
+  EXPECT_GE(fd->fd(), 0) << "Error opening file";
   return fd;
 }

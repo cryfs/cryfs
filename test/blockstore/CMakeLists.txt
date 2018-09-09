@@ -2,10 +2,11 @@ project (blockstore-test)
 
 set(SOURCES
     utils/BlockStoreUtilsTest.cpp
-    interface/helpers/BlockStoreWithRandomKeysTest.cpp
     interface/BlockStoreTest.cpp
+    interface/BlockStore2Test.cpp
     interface/BlockTest.cpp
     implementations/testfake/TestFakeBlockStoreTest.cpp
+    implementations/mock/MockBlockStoreTest.cpp
     implementations/inmemory/InMemoryBlockStoreTest.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Generic.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
@@ -18,8 +19,8 @@ set(SOURCES
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockCreateTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockFlushTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
-    implementations/caching/CachingBlockStoreTest_Generic.cpp
-    implementations/caching/CachingBlockStoreTest_Specific.cpp
+    implementations/caching/CachingBlockStore2Test_Generic.cpp
+    implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
     implementations/caching/cache/testutils/CopyableMovableValueType.cpp
@@ -34,6 +35,10 @@ set(SOURCES
     implementations/caching/cache/CacheTest_RaceCondition.cpp
     implementations/caching/cache/PeriodicTaskTest.cpp
     implementations/caching/cache/QueueMapTest_Peek.cpp
+    implementations/integrity/KnownBlockVersionsTest.cpp
+    implementations/integrity/IntegrityBlockStoreTest_Generic.cpp
+    implementations/integrity/IntegrityBlockStoreTest_Specific.cpp
+    implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

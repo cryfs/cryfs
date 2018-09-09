@@ -11,9 +11,9 @@ namespace cryfs {
     template<class Cipher>
     class ConcreteInnerEncryptor final: public InnerEncryptor {
     public:
-        static constexpr size_t CONFIG_SIZE = 512;  // Inner config data is grown to this size before encryption to hide its actual size
+        static constexpr size_t CONFIG_SIZE = 900;  // Inner config data is grown to this size before encryption to hide its actual size
 
-        ConcreteInnerEncryptor(typename Cipher::EncryptionKey key);
+        ConcreteInnerEncryptor(const typename Cipher::EncryptionKey& key);
 
         InnerConfig encrypt(const cpputils::Data &config) const override;
         boost::optional<cpputils::Data> decrypt(const InnerConfig &innerConfig) const override;
@@ -26,19 +26,19 @@ namespace cryfs {
     };
 
     template<class Cipher>
-    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(typename Cipher::EncryptionKey key)
-            : _key(std::move(key)) {
+    ConcreteInnerEncryptor<Cipher>::ConcreteInnerEncryptor(const typename Cipher::EncryptionKey& key)
+            : _key(key) {
     }
 
     template<class Cipher>
     boost::optional<cpputils::Data> ConcreteInnerEncryptor<Cipher>::decrypt(const InnerConfig &innerConfig) const {
         if (innerConfig.cipherName != Cipher::NAME) {
-            cpputils::logging::LOG(cpputils::logging::ERROR, "Initialized ConcreteInnerEncryptor with wrong cipher");
+            cpputils::logging::LOG(cpputils::logging::ERR, "Initialized ConcreteInnerEncryptor with wrong cipher");
             return boost::none;
         }
         auto decrypted = Cipher::decrypt(static_cast<const uint8_t*>(innerConfig.encryptedConfig.data()), innerConfig.encryptedConfig.size(), _key);
         if (decrypted == boost::none) {
-            cpputils::logging::LOG(cpputils::logging::ERROR, "Failed decrypting configuration file");
+            cpputils::logging::LOG(cpputils::logging::ERR, "Failed decrypting configuration file");
             return boost::none;
         }
         auto configData = cpputils::RandomPadding::remove(*decrypted);

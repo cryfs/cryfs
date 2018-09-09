@@ -5,7 +5,7 @@ compiler:
 - gcc
 - clang
 os:
-- linux
+#- linux
 - osx
 addons:
   apt:
@@ -18,34 +18,6 @@ addons:
     - libcrypto++-dev
     - libfuse-dev
 install:
-# Use new clang
-- if [ "${TRAVIS_OS_NAME}" == "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
-# Detect number of CPU cores
-- export NUMCORES=`grep -c ^processor /proc/cpuinfo` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
-- echo Using $NUMCORES cores
-# Install dependencies
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./travis.install_boost.sh; fi
-- if [ "${TRAVIS_OS_NAME}" == "osx" ]; then brew cask install osxfuse && brew install cryptopp; fi
-# Install run_with_fuse.sh
-- mkdir cmake
-- cd cmake
-- wget https://raw.githubusercontent.com/smessmer/travis-utils/master/run_with_fuse.sh
-- chmod +x run_with_fuse.sh
-- cmake --version
-#  Use /dev/urandom when /dev/random is accessed, because travis doesn't have enough entropy
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then sudo cp -a /dev/urandom /dev/random; fi
+- .travisci/install.sh
 script:
-- cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
-- make -j$NUMCORES
-- ./test/gitversion/gitversion-test
-- ./test/cpp-utils/cpp-utils-test
-# TODO Also run on osx once fixed
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./run_with_fuse.sh ./test/fspp/fspp-test || exit 1; fi
-- ./test/parallelaccessstore/parallelaccessstore-test
-- ./test/blockstore/blockstore-test
-- ./test/blobstore/blobstore-test
-# TODO Also run on osx once fixed
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs/cryfs-test || exit 1; fi
-- if [ "${TRAVIS_OS_NAME}" == "linux" ]; then ./test/cryfs-cli/cryfs-cli-test || exit 1; fi
-after_script:
-- rm run_with_fuse.sh
+- .travisci/build_and_test.sh

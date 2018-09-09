@@ -3,12 +3,12 @@
 #include <cpp-utils/system/time.h>
 
 //TODO Get rid of that in favor of better error handling
-#include <fspp/fuse/FuseErrnoException.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
 
 using cpputils::Data;
 using std::string;
 using std::vector;
-using blockstore::Key;
+using blockstore::BlockId;
 
 namespace cryfs {
 namespace fsblobstore {
@@ -20,7 +20,7 @@ Data DirEntryList::serialize() const {
     Data serialized(_serializedSize());
     unsigned int offset = 0;
     for (auto iter = _entries.begin(); iter != _entries.end(); ++iter) {
-        ASSERT(iter == _entries.begin() || std::less<Key>()((iter-1)->key(), iter->key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
+        ASSERT(iter == _entries.begin() || std::less<BlockId>()((iter-1)->blockId(), iter->blockId()), "Invariant hurt: Directory entries should be ordered by blockId and not have duplicate blockIds.");
         iter->serialize(static_cast<uint8_t*>(serialized.dataOffset(offset)));
         offset += iter->serializedSize();
     }
@@ -40,7 +40,7 @@ void DirEntryList::deserializeFrom(const void *data, uint64_t size) {
     const char *pos = static_cast<const char*>(data);
     while (pos < static_cast<const char*>(data) + size) {
         pos = DirEntry::deserializeAndAddToVector(pos, &_entries);
-        ASSERT(_entries.size() == 1 || std::less<Key>()(_entries[_entries.size()-2].key(), _entries[_entries.size()-1].key()), "Invariant hurt: Directory entries should be ordered by key and not have duplicate keys.");
+        ASSERT(_entries.size() == 1 || std::less<BlockId>()(_entries[_entries.size()-2].blockId(), _entries[_entries.size()-1].blockId()), "Invariant hurt: Directory entries should be ordered by blockId and not have duplicate blockIds.");
     }
 }
 
@@ -48,41 +48,41 @@ bool DirEntryList::_hasChild(const string &name) const {
     return _entries.end() != _findByName(name);
 }
 
-void DirEntryList::add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
                             uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
-    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    _add(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirEntryList::_add(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-    auto insert_pos = _findUpperBound(blobKey);
-    _entries.emplace(insert_pos, entryType, name, blobKey, mode, uid, gid, lastAccessTime, lastModificationTime, cpputils::time::now());
+    auto insert_pos = _findUpperBound(blobId);
+    _entries.emplace(insert_pos, entryType, name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime, cpputils::time::now());
 }
 
-void DirEntryList::addOrOverwrite(const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
-                       std::function<void (const blockstore::Key &key)> onOverwritten) {
+                       std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
     auto found = _findByName(name);
     if (found != _entries.end()) {
-        onOverwritten(found->key());
-        _overwrite(found, name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+        onOverwritten(found->blockId());
+        _overwrite(found, name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     } else {
-        _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+        _add(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 }
 
-void DirEntryList::rename(const blockstore::Key &key, const std::string &name, std::function<void (const blockstore::Key &key)> onOverwritten) {
+void DirEntryList::rename(const blockstore::BlockId &blockId, const std::string &name, std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
     auto foundSameName = _findByName(name);
-    if (foundSameName != _entries.end() && foundSameName->key() != key) {
-        _checkAllowedOverwrite(foundSameName->type(), _findByKey(key)->type());
-        onOverwritten(foundSameName->key());
+    if (foundSameName != _entries.end() && foundSameName->blockId() != blockId) {
+        _checkAllowedOverwrite(foundSameName->type(), _findById(blockId)->type());
+        onOverwritten(foundSameName->blockId());
         _entries.erase(foundSameName);
     }
 
-    _findByKey(key)->setName(name);
+    _findById(blockId)->setName(name);
 }
 
 void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType) {
@@ -98,13 +98,13 @@ void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Di
     }
 }
 
-void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const Key &blobKey, fspp::Dir::EntryType entryType, mode_t mode,
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
                         uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     _checkAllowedOverwrite(entry->type(), entryType);
-    // The new entry has possibly a different key, so it has to be in a different list position (list is ordered by keys).
+    // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
     // That's why we remove-and-add instead of just modifying the existing entry.
     _entries.erase(entry);
-    _add(name, blobKey, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
+    _add(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
@@ -115,8 +115,8 @@ boost::optional<const DirEntry&> DirEntryList::get(const string &name) const {
     return *found;
 }
 
-boost::optional<const DirEntry&> DirEntryList::get(const Key &key) const {
-    auto found = _findByKey(key);
+boost::optional<const DirEntry&> DirEntryList::get(const BlockId &blockId) const {
+    auto found = _findById(blockId);
     if (found == _entries.end()) {
         return boost::none;
     }
@@ -131,10 +131,10 @@ void DirEntryList::remove(const string &name) {
     _entries.erase(found);
 }
 
-void DirEntryList::remove(const Key &key) {
-    auto lowerBound = _findLowerBound(key);
-    auto upperBound = std::find_if(lowerBound, _entries.end(), [&key] (const DirEntry &entry) {
-        return entry.key() != key;
+void DirEntryList::remove(const BlockId &blockId) {
+    auto lowerBound = _findLowerBound(blockId);
+    auto upperBound = std::find_if(lowerBound, _entries.end(), [&blockId] (const DirEntry &entry) {
+        return entry.blockId() != blockId;
     });
     _entries.erase(lowerBound, upperBound);
 }
@@ -149,32 +149,32 @@ vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) c
     return const_cast<DirEntryList*>(this)->_findByName(name);
 }
 
-vector<DirEntry>::iterator DirEntryList::_findByKey(const Key &key) {
-    auto found = _findLowerBound(key);
-    if (found == _entries.end() || found->key() != key) {
+vector<DirEntry>::iterator DirEntryList::_findById(const BlockId &blockId) {
+    auto found = _findLowerBound(blockId);
+    if (found == _entries.end() || found->blockId() != blockId) {
         throw fspp::fuse::FuseErrnoException(ENOENT);
     }
     return found;
 }
 
-vector<DirEntry>::iterator DirEntryList::_findLowerBound(const Key &key) {
-    return _findFirst(key, [&key] (const DirEntry &entry) {
-        return !std::less<Key>()(entry.key(), key);
+vector<DirEntry>::iterator DirEntryList::_findLowerBound(const BlockId &blockId) {
+    return _findFirst(blockId, [&blockId] (const DirEntry &entry) {
+        return !std::less<BlockId>()(entry.blockId(), blockId);
     });
 }
 
-vector<DirEntry>::iterator DirEntryList::_findUpperBound(const Key &key) {
-    return _findFirst(key, [&key] (const DirEntry &entry) {
-        return std::less<Key>()(key, entry.key());
+vector<DirEntry>::iterator DirEntryList::_findUpperBound(const BlockId &blockId) {
+    return _findFirst(blockId, [&blockId] (const DirEntry &entry) {
+        return std::less<BlockId>()(blockId, entry.blockId());
     });
 }
 
-vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::function<bool (const DirEntry&)> pred) {
+vector<DirEntry>::iterator DirEntryList::_findFirst(const BlockId &hint, std::function<bool (const DirEntry&)> pred) {
     //TODO Factor out a datastructure that keeps a sorted std::vector and allows these _findLowerBound()/_findUpperBound operations using this hinted linear search
     if (_entries.size() == 0) {
         return _entries.end();
     }
-    double startpos_percent = static_cast<double>(*static_cast<const unsigned char*>(hint.data())) / std::numeric_limits<unsigned char>::max();
+    double startpos_percent = static_cast<double>(*static_cast<const unsigned char*>(hint.data().data())) / std::numeric_limits<unsigned char>::max();
     auto iter = _entries.begin() + static_cast<int>(startpos_percent * (_entries.size()-1));
     ASSERT(iter >= _entries.begin() && iter < _entries.end(), "Startpos out of range");
     while(iter != _entries.begin() && pred(*iter)) {
@@ -186,8 +186,8 @@ vector<DirEntry>::iterator DirEntryList::_findFirst(const Key &hint, std::functi
     return iter;
 }
 
-vector<DirEntry>::const_iterator DirEntryList::_findByKey(const Key &key) const {
-    return const_cast<DirEntryList*>(this)->_findByKey(key);
+vector<DirEntry>::const_iterator DirEntryList::_findById(const BlockId &blockId) const {
+    return const_cast<DirEntryList*>(this)->_findById(blockId);
 }
 
 size_t DirEntryList::size() const {
@@ -202,40 +202,52 @@ DirEntryList::const_iterator DirEntryList::end() const {
     return _entries.end();
 }
 
-void DirEntryList::setMode(const Key &key, mode_t mode) {
-    auto found = _findByKey(key);
+void DirEntryList::setMode(const BlockId &blockId, mode_t mode) {
+    auto found = _findById(blockId);
     ASSERT ((S_ISREG(mode) && S_ISREG(found->mode())) || (S_ISDIR(mode) && S_ISDIR(found->mode())) || (S_ISLNK(mode)), "Unknown mode in entry");
     found->setMode(mode);
 }
 
-bool DirEntryList::setUidGid(const Key &key, uid_t uid, gid_t gid) {
-    auto found = _findByKey(key);
+bool DirEntryList::setUidGid(const BlockId &blockId, uid_t uid, gid_t gid) {
+    auto found = _findById(blockId);
     bool changed = false;
-    if (uid != (uid_t)-1) {
+    if (uid != static_cast<uid_t>(-1)) {
         found->setUid(uid);
         changed = true;
     }
-    if (gid != (gid_t)-1) {
+    if (gid != static_cast<gid_t>(-1)) {
         found->setGid(gid);
         changed = true;
     }
     return changed;
 }
 
-void DirEntryList::setAccessTimes(const blockstore::Key &key, timespec lastAccessTime, timespec lastModificationTime) {
-    auto found = _findByKey(key);
+void DirEntryList::setAccessTimes(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime) {
+    auto found = _findById(blockId);
     found->setLastAccessTime(lastAccessTime);
     found->setLastModificationTime(lastModificationTime);
 }
 
-void DirEntryList::updateAccessTimestampForChild(const blockstore::Key &key) {
-    auto found = _findByKey(key);
-    // TODO Think about implementing relatime behavior. Currently, CryFS follows strictatime.
-    found->setLastAccessTime(cpputils::time::now());
+bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior) {
+    ASSERT(timestampUpdateBehavior == TimestampUpdateBehavior::RELATIME, "Currently only relatime supported");
+    auto found = _findById(blockId);
+    const timespec lastAccessTime = found->lastAccessTime();
+    const timespec lastModificationTime = found->lastModificationTime();
+    const timespec now = cpputils::time::now();
+    const timespec yesterday {
+        /*.tv_sec = */ now.tv_sec - 60*60*24,
+        /*.tv_nsec = */ now.tv_nsec
+    };
+    bool changed = false;
+    if (lastAccessTime < lastModificationTime || lastAccessTime < yesterday) {
+        found->setLastAccessTime(now);
+        changed = true;
+    }
+    return changed;
 }
 
-void DirEntryList::updateModificationTimestampForChild(const blockstore::Key &key) {
-    auto found = _findByKey(key);
+void DirEntryList::updateModificationTimestampForChild(const blockstore::BlockId &blockId) {
+    auto found = _findById(blockId);
     found->setLastModificationTime(cpputils::time::now());
 }
 

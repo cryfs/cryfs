@@ -8,7 +8,8 @@
 #include "../datanodestore/DataNodeView.h"
 //TODO Replace with C++14 once std::shared_mutex is supported
 #include <boost/thread/shared_mutex.hpp>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
+#include "LeafHandle.h"
 
 namespace blobstore {
 namespace onblocks {
@@ -26,15 +27,20 @@ public:
   DataTree(datanodestore::DataNodeStore *nodeStore, cpputils::unique_ref<datanodestore::DataNode> rootNode);
   ~DataTree();
 
-  const blockstore::Key &key() const;
+  const blockstore::BlockId &blockId() const;
   //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
   uint64_t maxBytesPerLeaf() const;
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf);
   void resizeNumBytes(uint64_t newNumBytes);
 
   uint32_t numLeaves() const;
   uint64_t numStoredBytes() const;
+
+  uint8_t depth() const;
+
+  // only used by test cases
+  uint32_t _forceComputeNumLeaves() const;
 
   void flush() const;
 
@@ -42,32 +48,22 @@ private:
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;
-
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeaf();
-  void removeLastDataLeaf();
+  blockstore::BlockId _blockId; // BlockId is stored in a member variable, since _rootNode is nullptr while traversing, but we still want to be able to return the blockId.
+  mutable boost::optional<uint32_t> _numLeavesCache;
 
   cpputils::unique_ref<datanodestore::DataNode> releaseRootNode();
   friend class DataTreeStore;
 
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafAt(datanodestore::DataInnerNode *insertPos);
-  cpputils::optional_ownership_ptr<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, datanodestore::DataNode *child);
-  cpputils::unique_ref<datanodestore::DataNode> createChainOfInnerNodes(unsigned int num, cpputils::unique_ref<datanodestore::DataNode> child);
-  cpputils::unique_ref<datanodestore::DataLeafNode> addDataLeafToFullTree();
-
-  void deleteLastChildSubtree(datanodestore::DataInnerNode *node);
-  void ifRootHasOnlyOneChildReplaceRootWithItsChild();
-
   //TODO Use underscore for private methods
-  void _traverseLeaves(datanodestore::DataNode *root, uint32_t leafOffset, uint32_t beginIndex, uint32_t endIndex, std::function<void (datanodestore::DataLeafNode*, uint32_t)> func);
+  void _traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
+                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
+                       std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
+                       std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
   uint32_t leavesPerFullChild(const datanodestore::DataInnerNode &root) const;
   uint64_t _numStoredBytes() const;
   uint64_t _numStoredBytes(const datanodestore::DataNode &root) const;
-  uint32_t _numLeaves(const datanodestore::DataNode &node) const;
-  cpputils::optional_ownership_ptr<datanodestore::DataLeafNode> LastLeaf(datanodestore::DataNode *root);
-  cpputils::unique_ref<datanodestore::DataLeafNode> LastLeaf(cpputils::unique_ref<datanodestore::DataNode> root);
-  datanodestore::DataInnerNode* increaseTreeDepth(unsigned int levels);
-  std::vector<cpputils::unique_ref<datanodestore::DataNode>> getOrCreateChildren(datanodestore::DataInnerNode *node, uint32_t begin, uint32_t end);
-  cpputils::unique_ref<datanodestore::DataNode> addChildTo(datanodestore::DataInnerNode *node);
+  uint32_t _numLeaves() const;
+  uint32_t _computeNumLeaves(const datanodestore::DataNode &node) const;
 
   DISALLOW_COPY_AND_ASSIGN(DataTree);
 };

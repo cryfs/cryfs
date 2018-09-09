@@ -10,6 +10,7 @@ public:
     MOCK_METHOD1(print, void(const std::string&));
     MOCK_METHOD2(ask, unsigned int(const std::string&, const std::vector<std::string>&));
     MOCK_METHOD2(askYesNo, bool(const std::string&, bool));
+    MOCK_METHOD1(askPassword, std::string(const std::string&));
 };
 
 ACTION_P(ChooseCipher, cipherName) {

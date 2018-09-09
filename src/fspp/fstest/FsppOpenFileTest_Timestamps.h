@@ -24,7 +24,7 @@ TYPED_TEST_CASE_P(FsppOpenFileTest_Timestamps);
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, stat) {
     auto openFile = this->CreateAndOpenFile("/mynode");
     auto operation = [&openFile] () {
-        struct ::stat st;
+        struct ::stat st{};
         openFile->stat(&st);
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation, {this->ExpectDoesntUpdateAnyTimestamps});

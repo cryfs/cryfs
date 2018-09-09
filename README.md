@@ -1,4 +1,5 @@
-# CryFS [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs)
+# CryFS [![Build Status](https://travis-ci.org/cryfs/cryfs.svg?branch=master)](https://travis-ci.org/cryfs/cryfs) [![CircleCI](https://circleci.com/gh/cryfs/cryfs/tree/master.svg?style=svg)](https://circleci.com/gh/cryfs/cryfs/tree/master)
+
 CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.
 See [https://www.cryfs.org](https://www.cryfs.org).
 
@@ -22,8 +23,8 @@ Building from source
 Requirements
 ------------
   - Git (for getting the source code)
-  - GCC version >= 4.8 or Clang >= 3.7
-  - CMake version >= 2.8
+  - GCC version >= 5.0 or Clang >= 4.0
+  - CMake version >= 3.0 
   - libcurl4 (including development headers)
   - Boost libraries version >= 1.56 (including development headers)
     - filesystem
@@ -31,21 +32,21 @@ Requirements
     - chrono
     - program_options
     - thread
-  - Crypto++ version >= 5.6.3 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
+  - OpenMP
 
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libcrypto++-dev libssl-dev libfuse-dev python
+        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static cryptopp-devel openssl-devel fuse-devel python
+        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
 
         # Macintosh
-        brew install cmake boost cryptopp openssl
+        brew install cmake boost openssl libomp
 
 Build & Install
 ---------------
@@ -97,13 +98,7 @@ On most systems, CMake should find the libraries automatically. However, that do
 
         cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/osxfuse/headers"
 
-4. **CryptoPP library not found**
-
-    Pass in the library path with
-
-        cmake .. -DCRYPTOPP_LIB_PATH=/path/to/cryptopp
-
-5. **Openssl headers not found**
+4. **Openssl headers not found**
 
     Pass in the include path with
 

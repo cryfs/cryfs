@@ -9,22 +9,26 @@
 namespace cryfs {
 namespace parallelaccessfsblobstore {
 
-class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::Key> {
+class ParallelAccessFsBlobStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<cachingfsblobstore::FsBlobRef, blockstore::BlockId> {
 public:
-  explicit ParallelAccessFsBlobStoreAdapter(cachingfsblobstore::CachingFsBlobStore *baseBlockStore)
-    :_baseBlockStore(std::move(baseBlockStore)) {
+  explicit ParallelAccessFsBlobStoreAdapter(cachingfsblobstore::CachingFsBlobStore *baseBlobStore)
+    :_baseBlobStore(baseBlobStore) {
   }
 
-  boost::optional<cpputils::unique_ref<cachingfsblobstore::FsBlobRef>> loadFromBaseStore(const blockstore::Key &key) override {
-	return _baseBlockStore->load(key);
+  boost::optional<cpputils::unique_ref<cachingfsblobstore::FsBlobRef>> loadFromBaseStore(const blockstore::BlockId &blockId) override {
+	return _baseBlobStore->load(blockId);
   }
 
   void removeFromBaseStore(cpputils::unique_ref<cachingfsblobstore::FsBlobRef> block) override {
-	return _baseBlockStore->remove(std::move(block));
+	return _baseBlobStore->remove(std::move(block));
+  }
+
+  void removeFromBaseStore(const blockstore::BlockId &blockId) override {
+	return _baseBlobStore->remove(blockId);
   }
 
 private:
-  cachingfsblobstore::CachingFsBlobStore *_baseBlockStore;
+  cachingfsblobstore::CachingFsBlobStore *_baseBlobStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessFsBlobStoreAdapter);
 };

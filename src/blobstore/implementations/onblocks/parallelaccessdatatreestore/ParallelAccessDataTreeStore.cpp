@@ -9,12 +9,11 @@ using cpputils::make_unique_ref;
 using boost::optional;
 
 using blobstore::onblocks::datatreestore::DataTreeStore;
-using blockstore::Key;
+using blockstore::BlockId;
 
 namespace blobstore {
 namespace onblocks {
 using datatreestore::DataTreeStore;
-using datatreestore::DataTree;
 namespace parallelaccessdatatreestore {
 
 //TODO Here and for other stores (DataTreeStore, ...): Make small functions inline
@@ -26,21 +25,24 @@ ParallelAccessDataTreeStore::ParallelAccessDataTreeStore(unique_ref<DataTreeStor
 ParallelAccessDataTreeStore::~ParallelAccessDataTreeStore() {
 }
 
-optional<unique_ref<DataTreeRef>> ParallelAccessDataTreeStore::load(const blockstore::Key &key) {
-  return _parallelAccessStore.load(key);
+optional<unique_ref<DataTreeRef>> ParallelAccessDataTreeStore::load(const blockstore::BlockId &blockId) {
+  return _parallelAccessStore.load(blockId);
 }
 
 unique_ref<DataTreeRef> ParallelAccessDataTreeStore::createNewTree() {
   auto dataTree = _dataTreeStore->createNewTree();
-  Key key = dataTree->key();
-  return _parallelAccessStore.add(key, std::move(dataTree));
+  BlockId blockId = dataTree->blockId();
+  return _parallelAccessStore.add(blockId, std::move(dataTree));  // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 }
 
 void ParallelAccessDataTreeStore::remove(unique_ref<DataTreeRef> tree) {
-  Key key = tree->key();
-  return _parallelAccessStore.remove(key, std::move(tree));
+  BlockId blockId = tree->blockId();
+  return _parallelAccessStore.remove(blockId, std::move(tree));
 }
 
+void ParallelAccessDataTreeStore::remove(const BlockId &blockId) {
+  return _parallelAccessStore.remove(blockId);
+}
 
 
 }

@@ -1,7 +1,5 @@
 #include "testutils/FuseFTruncateTest.h"
 
-using ::testing::_;
-using ::testing::StrEq;
 using ::testing::Eq;
 using ::testing::Return;
 using ::testing::WithParamInterface;

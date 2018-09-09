@@ -1,10 +1,6 @@
 #include "testutils/FuseUnlinkTest.h"
 
-using ::testing::_;
 using ::testing::StrEq;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::Action;
 
 class FuseUnlinkFilenameTest: public FuseUnlinkTest {
 };

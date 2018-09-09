@@ -3,10 +3,12 @@
 #include <cpp-utils/assert/assert.h>
 
 using blockstore::Block;
+using blockstore::BlockStore;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using blockstore::Key;
+using blockstore::BlockId;
+using std::vector;
 
 namespace blobstore {
 namespace onblocks {
@@ -23,62 +25,62 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 DataInnerNode::~DataInnerNode() {
 }
 
-unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNode &first_child) {
-  DataNodeView node(std::move(block));
-  node.setFormatVersion(DataNode::FORMAT_VERSION_HEADER);
-  node.setDepth(first_child.depth() + 1);
-  node.setSize(1);
-  auto result = make_unique_ref<DataInnerNode>(std::move(node));
-  result->ChildrenBegin()->setKey(first_child.key());
-  return result;
+unique_ref<DataInnerNode> DataInnerNode::InitializeNewNode(unique_ref<Block> block, const DataNodeLayout &layout, uint8_t depth, const vector<BlockId> &children) {
+  ASSERT(children.size() >= 1, "An inner node must have at least one child");
+  Data data = _serializeChildren(children);
+
+  return make_unique_ref<DataInnerNode>(DataNodeView::initialize(std::move(block), layout, DataNode::FORMAT_VERSION_HEADER, depth, children.size(), std::move(data)));
+}
+
+unique_ref<DataInnerNode> DataInnerNode::CreateNewNode(BlockStore *blockStore, const DataNodeLayout &layout, uint8_t depth, const vector<BlockId> &children) {
+  ASSERT(children.size() >= 1, "An inner node must have at least one child");
+  Data data = _serializeChildren(children);
+
+  return make_unique_ref<DataInnerNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, depth, children.size(), std::move(data)));
+}
+
+Data DataInnerNode::_serializeChildren(const vector<BlockId> &children) {
+  Data data(sizeof(ChildEntry) * children.size());
+  uint32_t i = 0;
+  for (const BlockId &child : children) {
+    child.ToBinary(data.dataOffset(i * BlockId::BINARY_LENGTH));
+    ++i;
+  }
+  return data;
 }
 
 uint32_t DataInnerNode::numChildren() const {
   return node().Size();
 }
 
-DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() {
-  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->ChildrenBegin());
-}
-
-const DataInnerNode::ChildEntry *DataInnerNode::ChildrenBegin() const {
-  return node().DataBegin<ChildEntry>();
-}
-
-DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() {
-  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->ChildrenEnd());
-}
-
-const DataInnerNode::ChildEntry *DataInnerNode::ChildrenEnd() const {
-  return ChildrenBegin() + node().Size();
-}
-
-DataInnerNode::ChildEntry *DataInnerNode::LastChild() {
-  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->LastChild());
-}
-
-const DataInnerNode::ChildEntry *DataInnerNode::LastChild() const {
-  return getChild(numChildren()-1);
-}
-
-DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) {
-  return const_cast<ChildEntry*>(const_cast<const DataInnerNode*>(this)->getChild(index));
-}
-
-const DataInnerNode::ChildEntry *DataInnerNode::getChild(unsigned int index) const {
+DataInnerNode::ChildEntry DataInnerNode::readChild(unsigned int index) const {
   ASSERT(index < numChildren(), "Accessing child out of range");
-  return ChildrenBegin()+index;
+  return ChildEntry(BlockId::FromBinary(static_cast<const uint8_t*>(node().data()) + index * sizeof(ChildEntry)));
+}
+
+void DataInnerNode::_writeChild(unsigned int index, const ChildEntry& child) {
+  ASSERT(index < numChildren(), "Accessing child out of range");
+  node().write(child.blockId().data().data(), index * sizeof(ChildEntry), sizeof(ChildEntry));
+}
+
+DataInnerNode::ChildEntry DataInnerNode::readLastChild() const {
+  return readChild(numChildren() - 1);
+}
+
+void DataInnerNode::_writeLastChild(const ChildEntry& child) {
+  _writeChild(numChildren() - 1, child);
 }
 
 void DataInnerNode::addChild(const DataNode &child) {
   ASSERT(numChildren() < maxStoreableChildren(), "Adding more children than we can store");
   ASSERT(child.depth() == depth()-1, "The child that should be added has wrong depth");
   node().setSize(node().Size()+1);
-  LastChild()->setKey(child.key());
+  _writeLastChild(ChildEntry(child.blockId()));
 }
 
 void DataInnerNode::removeLastChild() {
   ASSERT(node().Size() > 1, "There is no child to remove");
+  _writeLastChild(ChildEntry(BlockId::Null()));
   node().setSize(node().Size()-1);
 }
 

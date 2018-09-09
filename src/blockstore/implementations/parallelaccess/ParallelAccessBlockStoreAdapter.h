@@ -9,18 +9,22 @@
 namespace blockstore {
 namespace parallelaccess {
 
-class ParallelAccessBlockStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<Block, Key> {
+class ParallelAccessBlockStoreAdapter final: public parallelaccessstore::ParallelAccessBaseStore<Block, BlockId> {
 public:
   explicit ParallelAccessBlockStoreAdapter(BlockStore *baseBlockStore)
-    :_baseBlockStore(std::move(baseBlockStore)) {
+    :_baseBlockStore(baseBlockStore) {
   }
 
-  boost::optional<cpputils::unique_ref<Block>> loadFromBaseStore(const Key &key) override {
-	return _baseBlockStore->load(key);
+  boost::optional<cpputils::unique_ref<Block>> loadFromBaseStore(const BlockId &blockId) override {
+	return _baseBlockStore->load(blockId);
   }
 
   void removeFromBaseStore(cpputils::unique_ref<Block> block) override {
 	return _baseBlockStore->remove(std::move(block));
+  }
+
+  void removeFromBaseStore(const BlockId &blockId) override {
+    return _baseBlockStore->remove(blockId);
   }
 
 private:

@@ -18,7 +18,8 @@ template<class Compressor> class CompressingBlockStore;
 template<class Compressor>
 class CompressedBlock final: public Block {
 public:
-  static boost::optional<cpputils::unique_ref<CompressedBlock>> TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data decompressedData);
+  static boost::optional<cpputils::unique_ref<CompressedBlock>> TryCreateNew(BlockStore *baseBlockStore, const BlockId &blockId, cpputils::Data decompressedData);
+  static cpputils::unique_ref<CompressedBlock> Overwrite(BlockStore *baseBlockStore, const BlockId &blockId, cpputils::Data decompressedData);
   static cpputils::unique_ref<CompressedBlock> Decompress(cpputils::unique_ref<Block> baseBlock);
 
   CompressedBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data decompressedData);
@@ -46,9 +47,9 @@ private:
 };
 
 template<class Compressor>
-boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlock<Compressor>::TryCreateNew(BlockStore *baseBlockStore, const Key &key, cpputils::Data decompressedData) {
+boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlock<Compressor>::TryCreateNew(BlockStore *baseBlockStore, const BlockId &blockId, cpputils::Data decompressedData) {
   cpputils::Data compressed = Compressor::Compress(decompressedData);
-  auto baseBlock = baseBlockStore->tryCreate(key, std::move(compressed));
+  auto baseBlock = baseBlockStore->tryCreate(blockId, std::move(compressed));
   if (baseBlock == boost::none) {
     //TODO Test this code branch
     return boost::none;
@@ -58,14 +59,22 @@ boost::optional<cpputils::unique_ref<CompressedBlock<Compressor>>> CompressedBlo
 }
 
 template<class Compressor>
+cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Overwrite(BlockStore *baseBlockStore, const BlockId &blockId, cpputils::Data decompressedData) {
+  cpputils::Data compressed = Compressor::Compress(decompressedData);
+  auto baseBlock = baseBlockStore->overwrite(blockId, std::move(compressed));
+
+  return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressedData));
+}
+
+template<class Compressor>
 cpputils::unique_ref<CompressedBlock<Compressor>> CompressedBlock<Compressor>::Decompress(cpputils::unique_ref<Block> baseBlock) {
-  cpputils::Data decompressed = Compressor::Decompress((CryptoPP::byte*)baseBlock->data(), baseBlock->size());
+  cpputils::Data decompressed = Compressor::Decompress(baseBlock->data(), baseBlock->size());
   return cpputils::make_unique_ref<CompressedBlock<Compressor>>(std::move(baseBlock), std::move(decompressed));
 }
 
 template<class Compressor>
 CompressedBlock<Compressor>::CompressedBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data decompressedData)
-        : Block(baseBlock->key()),
+        : Block(baseBlock->blockId()),
           _baseBlock(std::move(baseBlock)),
           _decompressedData(std::move(decompressedData)),
           _dataChanged(false) {
@@ -84,7 +93,7 @@ const void *CompressedBlock<Compressor>::data() const {
 
 template<class Compressor>
 void CompressedBlock<Compressor>::write(const void *source, uint64_t offset, uint64_t size) {
-  std::memcpy((uint8_t*)_decompressedData.dataOffset(offset), source, size);
+  std::memcpy(_decompressedData.dataOffset(offset), source, size);
   _dataChanged = true;
 }
 
@@ -102,7 +111,7 @@ size_t CompressedBlock<Compressor>::size() const {
 
 template<class Compressor>
 void CompressedBlock<Compressor>::resize(size_t newSize) {
-  _decompressedData = cpputils::DataUtils::resize(std::move(_decompressedData), newSize);
+  _decompressedData = cpputils::DataUtils::resize(_decompressedData, newSize);
   _dataChanged = true;
 }
 

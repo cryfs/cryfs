@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <cpp-utils/macros.h>
-#include <blockstore/utils/Key.h>
+#include <blockstore/utils/BlockId.h>
 #include <parallelaccessstore/ParallelAccessStore.h>
 #include "../datatreestore/DataTreeStore.h"
 
@@ -20,11 +20,12 @@ public:
   ParallelAccessDataTreeStore(cpputils::unique_ref<datatreestore::DataTreeStore> dataTreeStore);
   ~ParallelAccessDataTreeStore();
 
-  boost::optional<cpputils::unique_ref<DataTreeRef>> load(const blockstore::Key &key);
+  boost::optional<cpputils::unique_ref<DataTreeRef>> load(const blockstore::BlockId &blockId);
 
   cpputils::unique_ref<DataTreeRef> createNewTree();
 
   void remove(cpputils::unique_ref<DataTreeRef> tree);
+  void remove(const blockstore::BlockId &blockId);
 
   //TODO Test blocksizeBytes/numBlocks/estimateSpaceForNumBlocksLeft
   uint64_t virtualBlocksizeBytes() const;
@@ -33,7 +34,7 @@ public:
 
 private:
   cpputils::unique_ref<datatreestore::DataTreeStore> _dataTreeStore;
-  parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::Key> _parallelAccessStore;
+  parallelaccessstore::ParallelAccessStore<datatreestore::DataTree, DataTreeRef, blockstore::BlockId> _parallelAccessStore;
 
   DISALLOW_COPY_AND_ASSIGN(ParallelAccessDataTreeStore);
 };

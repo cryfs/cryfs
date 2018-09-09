@@ -3,9 +3,9 @@
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-class FuseStatfsReturnFilesTest: public FuseStatfsReturnTest<fsfilcnt_t>, public WithParamInterface<fsfilcnt_t> {
+class FuseStatfsReturnFilesTest: public FuseStatfsReturnTest<fsfilcnt64_t>, public WithParamInterface<fsfilcnt64_t> {
 private:
-  void set(struct ::statvfs *stat, fsfilcnt_t value) override {
+  void set(struct ::statvfs *stat, fsfilcnt64_t value) override {
     stat->f_files = value;
   }
 };

@@ -4,8 +4,6 @@
 
 using cpputils::Data;
 using cpputils::DataFixture;
-using cpputils::Deserializer;
-using cpputils::Serializer;
 using boost::none;
 using std::ostream;
 using namespace cryfs;

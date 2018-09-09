@@ -70,13 +70,13 @@ public:
     }
 
     static struct stat stat(const fspp::Node &node) {
-        struct stat st;
+        struct stat st{};
         node.stat(&st);
         return st;
     }
 
     static struct stat stat(const fspp::OpenFile &openFile) {
-        struct stat st;
+        struct stat st{};
         openFile.stat(&st);
         return st;
     }
