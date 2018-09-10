@@ -144,8 +144,9 @@ public:
     }
 
     string newerVersion() {
-        string newerVersion = gitversion::MajorVersion()+"."+std::to_string(std::stol(gitversion::MinorVersion())+1);
-        assert(gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, newerVersion));
+        string newerVersion = gitversion::MajorVersion()+"."+std::to_string(std::stol(gitversion::MinorVersion())+2);
+        EXPECT_TRUE(gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, newerVersion))
+            << "Format Version " << CryConfig::FilesystemFormatVersion << " should be older than Git Version " << newerVersion;
         return newerVersion;
     }
 

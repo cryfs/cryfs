@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <cpp-utils/system/stat.h>
 
 namespace cpputils {
 

@@ -1,4 +1,5 @@
 #include "testutils/FuseLstatReturnTest.h"
+#include <cpp-utils/system/stat.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <cerrno>
 
 #if !defined(_MSC_VER)
 

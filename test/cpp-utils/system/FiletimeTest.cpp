@@ -19,7 +19,11 @@ TEST(FiletimeTest, SetAndGetTime_ReturnsCorrectTime) {
 	EXPECT_EQ(0, retval);
 
 	EXPECT_EQ(accessTime.tv_sec, readAccessTime.tv_sec);
-	EXPECT_EQ(accessTime.tv_nsec, readAccessTime.tv_nsec);
 	EXPECT_EQ(modificationTime.tv_sec, readModificationTime.tv_sec);
+
+	// Apple unfortunately doesn't give us nanoseconds at all
+#if !defined(__APPLE__)
+	EXPECT_EQ(accessTime.tv_nsec, readAccessTime.tv_nsec);
 	EXPECT_EQ(modificationTime.tv_nsec, readModificationTime.tv_nsec);
+#endif
 }
