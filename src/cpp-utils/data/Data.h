@@ -9,12 +9,33 @@
 #include <memory>
 #include <fstream>
 #include "../assert/assert.h"
+#include "../pointer/unique_ref.h"
 
 namespace cpputils {
 
+struct Allocator {
+  virtual ~Allocator() = default;
+
+  virtual void* allocate(size_t size) = 0;
+  virtual void free(void* ptr, size_t size) = 0;
+};
+
+class DefaultAllocator final : public Allocator {
+public:
+    void* allocate(size_t size) override {
+      // std::malloc has implementation defined behavior for size=0.
+      // Let's define the behavior.
+      return std::malloc((size == 0) ? 1 : size);
+    }
+
+    void free(void* data, size_t /*size*/) override {
+      std::free(data);
+    }
+};
+
 class Data final {
 public:
-  explicit Data(size_t size);
+  explicit Data(size_t size, unique_ref<Allocator> allocator = make_unique_ref<DefaultAllocator>());
   ~Data();
 
   Data(Data &&rhs) noexcept;
@@ -46,16 +67,17 @@ public:
   void StoreToStream(std::ostream &stream) const;
 
   // TODO Unify ToString/FromString functions from Data/FixedSizeData using free functions
-  static Data FromString(const std::string &data);
+  static Data FromString(const std::string &data, unique_ref<Allocator> allocator = make_unique_ref<DefaultAllocator>());
   std::string ToString() const;
 
 private:
+  std::unique_ptr<Allocator> _allocator;
   size_t _size;
   void *_data;
 
   static std::streampos _getStreamSize(std::istream &stream);
   void _readFromStream(std::istream &stream);
-  static void* _alloc(size_t size);
+  void _free();
 
   DISALLOW_COPY_AND_ASSIGN(Data);
 };
@@ -63,35 +85,32 @@ private:
 bool operator==(const Data &lhs, const Data &rhs);
 bool operator!=(const Data &lhs, const Data &rhs);
 
-inline void* Data::_alloc(size_t size) {
-    // std::malloc has implementation defined behavior for size=0.
-    // Let's define the behavior.
-    return std::malloc((size == 0)?1:size);
-}
-
 
 // ---------------------------
 // Inline function definitions
 // ---------------------------
 
-inline Data::Data(size_t size)
-        : _size(size), _data(_alloc(size)) {
+inline Data::Data(size_t size, unique_ref<Allocator> allocator)
+        : _allocator(std::move(allocator)), _size(size), _data(_allocator->allocate(_size)) {
   if (nullptr == _data) {
     throw std::bad_alloc();
   }
 }
 
 inline Data::Data(Data &&rhs) noexcept
-        : _size(rhs._size), _data(rhs._data) {
+        : _allocator(std::move(rhs._allocator)), _size(rhs._size), _data(rhs._data) {
   // Make rhs invalid, so the memory doesn't get freed in its destructor.
+  rhs._allocator = nullptr;
   rhs._data = nullptr;
   rhs._size = 0;
 }
 
 inline Data &Data::operator=(Data &&rhs) noexcept {
-  std::free(_data);
+  _free();
+  _allocator = std::move(rhs._allocator);
   _data = rhs._data;
   _size = rhs._size;
+  rhs._allocator = nullptr;
   rhs._data = nullptr;
   rhs._size = 0;
 
@@ -99,8 +118,16 @@ inline Data &Data::operator=(Data &&rhs) noexcept {
 }
 
 inline Data::~Data() {
-  std::free(_data);
-  _data = nullptr;
+  _free();
+}
+
+inline void Data::_free() {
+    if (nullptr != _allocator.get()) {
+        _allocator->free(_data, _size);
+    }
+    _allocator = nullptr;
+    _data = nullptr;
+    _size = 0;
 }
 
 inline Data Data::copy() const {

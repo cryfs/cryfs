@@ -1,7 +1,7 @@
 #include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/Data.h"
 #include "cpp-utils/data/SerializationHelper.h"
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "cpp-utils/tempfile/TempFile.h"
 
 #include <fstream>
@@ -9,6 +9,8 @@
 using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
+using ::testing::Return;
+using ::testing::_;
 
 using cpputils::TempFile;
 
@@ -224,4 +226,73 @@ TEST_P(DataTestWithStringParam, ToAndFromString) {
   Data data = Data::FromString(GetParam());
   Data data2 = Data::FromString(data.ToString());
   EXPECT_EQ(data, data2);
+}
+
+struct MockAllocator final : public Allocator {
+    MOCK_METHOD1(allocate, void* (size_t));
+    MOCK_METHOD2(free, void(void*, size_t));
+};
+
+class DataTestWithMockAllocator: public DataTest {
+public:
+    char ptr_target;
+
+    unique_ref<MockAllocator> allocator = make_unique_ref<MockAllocator>();
+    MockAllocator* allocator_ptr = allocator.get();
+};
+
+TEST_F(DataTestWithMockAllocator, whenCreatingNewData_thenTakesItFromAllocator) {
+  EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+  Data data(5, std::move(allocator));
+
+  EXPECT_EQ(&ptr_target, data.data());
+}
+
+TEST_F(DataTestWithMockAllocator, whenDestructingData_thenFreesItInAllocator) {
+    EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+    Data data(5, std::move(allocator));
+
+    EXPECT_CALL(*allocator_ptr, free(&ptr_target, 5)).Times(1);
+}
+
+TEST_F(DataTestWithMockAllocator, whenMoveConstructing_thenOnlyFreesOnce) {
+    EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+
+    Data data(5, std::move(allocator));
+    Data data2 = std::move(data);
+
+    EXPECT_CALL(*allocator_ptr, free(&ptr_target, 5)).Times(1);
+}
+
+TEST_F(DataTestWithMockAllocator, whenMoveAssigning_thenOnlyFreesOnce) {
+    EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+
+    Data data(5, std::move(allocator));
+    Data data2(3);
+    data2 = std::move(data);
+
+    EXPECT_CALL(*allocator_ptr, free(&ptr_target, 5)).Times(1);
+}
+
+TEST_F(DataTestWithMockAllocator, whenMoveConstructing_thenOnlyFreesWhenSecondIsDestructed) {
+    EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+    EXPECT_CALL(*allocator_ptr, free(_, _)).Times(0);
+
+    auto data = std::make_unique<Data>(5, std::move(allocator));
+    Data data2 = std::move(*data);
+    data.reset();
+
+    EXPECT_CALL(*allocator_ptr, free(&ptr_target, 5)).Times(1);
+}
+
+TEST_F(DataTestWithMockAllocator, whenMoveAssigning_thenOnlyFreesWhenSecondIsDestructed) {
+    EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
+    EXPECT_CALL(*allocator_ptr, free(_, _)).Times(0);
+
+    auto data = std::make_unique<Data>(5, std::move(allocator));
+    Data data2(3);
+    data2 = std::move(*data);
+    data.reset();
+
+    EXPECT_CALL(*allocator_ptr, free(&ptr_target, 5)).Times(1);
 }

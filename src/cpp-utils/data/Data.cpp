@@ -44,9 +44,9 @@ Data Data::LoadFromStream(istream &stream, size_t size) {
   return result;
 }
 
-Data Data::FromString(const std::string &data) {
+Data Data::FromString(const std::string &data, unique_ref<Allocator> allocator) {
   ASSERT(data.size() % 2 == 0, "hex encoded data cannot have odd number of characters");
-  Data result(data.size() / 2);
+  Data result(data.size() / 2, std::move(allocator));
   CryptoPP::StringSource(data, true,
     new CryptoPP::HexDecoder(
       new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result._data), result.size())
