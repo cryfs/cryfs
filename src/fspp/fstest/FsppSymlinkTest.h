@@ -2,7 +2,6 @@
 #ifndef MESSMER_FSPP_FSTEST_FSPPSYMLINKTEST_H_
 #define MESSMER_FSPP_FSTEST_FSPPSYMLINKTEST_H_
 
-#include <sys/fcntl.h>
 #include <sys/stat.h>
 
 #include "testutils/FileSystemTest.h"

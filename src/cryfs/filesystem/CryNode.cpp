@@ -1,7 +1,5 @@
 #include "CryNode.h"
 
-#include <sys/time.h>
-
 #include "CryDevice.h"
 #include "CryDir.h"
 #include "CryFile.h"

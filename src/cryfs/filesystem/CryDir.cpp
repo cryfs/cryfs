@@ -3,7 +3,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <dirent.h>
 
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"

@@ -1,6 +1,4 @@
-#include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include "FuseThread.h"
 #include <csignal>
 #include <cpp-utils/assert/assert.h>
