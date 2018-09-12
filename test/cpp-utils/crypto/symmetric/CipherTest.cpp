@@ -19,7 +19,7 @@ public:
 
   static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
     Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
-    return Cipher::EncryptionKey::FromBinary(data.data());
+    return Cipher::EncryptionKey::FromString(data.ToString());
   }
 
   void CheckEncryptThenDecryptIsIdentity(const Data &plaintext) {

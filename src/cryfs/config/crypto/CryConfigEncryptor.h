@@ -23,7 +23,7 @@ namespace cryfs {
             bool wasInDeprecatedConfigFormat;
         };
 
-        CryConfigEncryptor(const cpputils::FixedSizeData<MaxTotalKeySize>& derivedKey, cpputils::Data _kdfParameters);
+        CryConfigEncryptor(cpputils::EncryptionKey<MaxTotalKeySize> derivedKey, cpputils::Data _kdfParameters);
 
         cpputils::Data encrypt(const cpputils::Data &plaintext, const std::string &cipherName) const;
         boost::optional<Decrypted> decrypt(const cpputils::Data &data) const;
@@ -32,7 +32,7 @@ namespace cryfs {
         cpputils::unique_ref<OuterEncryptor> _outerEncryptor() const;
         cpputils::unique_ref<InnerEncryptor> _innerEncryptor(const std::string &cipherName) const;
 
-        cpputils::FixedSizeData<MaxTotalKeySize> _derivedKey;
+        cpputils::EncryptionKey<MaxTotalKeySize> _derivedKey;
         cpputils::Data _kdfParameters;
 
         DISALLOW_COPY_AND_ASSIGN(CryConfigEncryptor);

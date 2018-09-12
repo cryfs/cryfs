@@ -3,19 +3,15 @@
 #define MESSMER_CPPUTILS_SYSTEM_MEMORY_H
 
 #include <cstdlib>
+#include "../data/Data.h"
 
 namespace cpputils {
 
-// While this RAII object exists, it locks a given memory address into RAM,
-// i.e. tells the operating system not to swap it.
-class DontSwapMemoryRAII final {
+// This allocator allocates memory that won't be swapped out to the disk, but will be kept in RAM
+class UnswappableAllocator final : public Allocator {
 public:
-    DontSwapMemoryRAII(void* addr, size_t len);
-    ~DontSwapMemoryRAII();
-
-private:
-    void* const addr_;
-    const size_t len_;
+    void* allocate(size_t size) override;
+    void free(void* data, size_t size) override;
 };
 
 }

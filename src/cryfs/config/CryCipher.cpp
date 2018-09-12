@@ -47,7 +47,7 @@ public:
         return Cipher::EncryptionKey::CreateKey(randomGenerator).ToString();
     }
 
-    unique_ref<InnerEncryptor> createInnerConfigEncryptor(const FixedSizeData<CryCiphers::MAX_KEY_SIZE> &key) const override {
+    unique_ref<InnerEncryptor> createInnerConfigEncryptor(const EncryptionKey<CryCiphers::MAX_KEY_SIZE>& key) const override {
         return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key.take<Cipher::EncryptionKey::BINARY_LENGTH>());
     }
 

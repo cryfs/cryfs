@@ -10,8 +10,8 @@ using boost::none;
 using namespace cpputils::logging;
 
 namespace cryfs {
-    OuterEncryptor::OuterEncryptor(const Cipher::EncryptionKey& key, cpputils::Data kdfParameters)
-            : _key(key), _kdfParameters(std::move(kdfParameters)) {
+    OuterEncryptor::OuterEncryptor(Cipher::EncryptionKey key, cpputils::Data kdfParameters)
+            : _key(std::move(key)), _kdfParameters(std::move(kdfParameters)) {
     }
 
     OuterConfig OuterEncryptor::encrypt(const Data &plaintext) const {

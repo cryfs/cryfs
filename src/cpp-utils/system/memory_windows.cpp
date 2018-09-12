@@ -9,19 +9,25 @@ using namespace cpputils::logging;
 
 namespace cpputils {
 
-DontSwapMemoryRAII::DontSwapMemoryRAII(void *addr, size_t len)
-: addr_(addr), len_(len) {
+void* UnswappableAllocator::allocate(size_t size) {
+    void* data = DefaultAllocator().allocate(size);
 	const BOOL result = ::VirtualLock(addr_, len_);
     if (!result) {
         throw std::runtime_error("Error calling VirtualLock. Errno: " + std::to_string(GetLastError()));
     }
+    return data;
 }
 
-DontSwapMemoryRAII::~DontSwapMemoryRAII() {
+void UnswappableAllocator::free(void* data, size_t size) {
 	const BOOL result = ::VirtualUnlock(addr_, len_);
     if (!result) {
         LOG(WARN, "Error calling VirtualUnlock. Errno: {}", GetLastError());
     }
+
+    // overwrite the memory with zeroes before we free it
+    std::memset(data, 0, size);
+
+    DefaultAllocator().free(data, size);
 }
 
 }

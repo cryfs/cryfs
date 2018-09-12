@@ -13,15 +13,15 @@
 namespace cpputils {
 
     struct FakeKey {
-        static FakeKey FromBinary(const void *data) {
-          return FakeKey{deserialize<uint64_t>(data)};
+        static FakeKey FromString(const std::string& keyData) {
+          return FakeKey{static_cast<uint64_t>(std::atoi(keyData.c_str()))};
         }
 
         static constexpr unsigned int BINARY_LENGTH = sizeof(uint64_t);
 
         static FakeKey CreateKey(RandomGenerator &randomGenerator) {
             auto data = randomGenerator.getFixedSize<sizeof(uint64_t)>();
-            return FromBinary(data.data());
+            return FakeKey {*reinterpret_cast<uint64_t*>(data.data())};
         }
 
         uint64_t value;

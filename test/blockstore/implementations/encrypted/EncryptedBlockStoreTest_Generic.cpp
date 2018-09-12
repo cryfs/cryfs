@@ -36,8 +36,9 @@ public:
 
 private:
   static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
-    Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
-    return Cipher::EncryptionKey::FromBinary(data.data());
+    return Cipher::EncryptionKey::FromString(
+        DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed).ToString()
+    );
   }
 };
 
@@ -54,8 +55,9 @@ public:
 
 private:
   static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
-    Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
-    return Cipher::EncryptionKey::FromBinary(data.data());
+    return Cipher::EncryptionKey::FromString(
+        DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed).ToString()
+    );
   }
 };
 

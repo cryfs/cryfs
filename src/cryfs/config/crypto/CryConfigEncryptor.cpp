@@ -14,8 +14,8 @@ namespace cryfs {
     constexpr size_t CryConfigEncryptor::OuterKeySize;
     constexpr size_t CryConfigEncryptor::MaxTotalKeySize;
 
-    CryConfigEncryptor::CryConfigEncryptor(const FixedSizeData<MaxTotalKeySize>& derivedKey, cpputils::Data kdfParameters)
-            : _derivedKey(derivedKey), _kdfParameters(std::move(kdfParameters)) {
+    CryConfigEncryptor::CryConfigEncryptor(cpputils::EncryptionKey<MaxTotalKeySize> derivedKey, cpputils::Data kdfParameters)
+            : _derivedKey(std::move(derivedKey)), _kdfParameters(std::move(kdfParameters)) {
     }
 
     Data CryConfigEncryptor::encrypt(const Data &plaintext, const string &cipherName) const {
@@ -47,11 +47,11 @@ namespace cryfs {
 
     unique_ref<OuterEncryptor> CryConfigEncryptor::_outerEncryptor() const {
         auto outerKey = _derivedKey.take<OuterKeySize>();
-        return make_unique_ref<OuterEncryptor>(outerKey, _kdfParameters.copy());
+        return make_unique_ref<OuterEncryptor>(std::move(outerKey), _kdfParameters.copy());
     }
 
     unique_ref<InnerEncryptor> CryConfigEncryptor::_innerEncryptor(const string &cipherName) const {
         auto innerKey = _derivedKey.drop<OuterKeySize>();
-        return CryCiphers::find(cipherName).createInnerConfigEncryptor(innerKey);
+        return CryCiphers::find(cipherName).createInnerConfigEncryptor(std::move(innerKey));
     }
 }

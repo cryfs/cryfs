@@ -8,6 +8,7 @@
 #include <blockstore/interface/BlockStore2.h>
 #include <cpp-utils/random/RandomGenerator.h>
 #include "crypto/inner/InnerEncryptor.h"
+#include <cpp-utils/crypto/symmetric/EncryptionKey.h>
 
 namespace cryfs {
 
@@ -40,7 +41,7 @@ public:
     virtual const boost::optional<std::string> &warning() const = 0;
     virtual cpputils::unique_ref<blockstore::BlockStore2> createEncryptedBlockstore(cpputils::unique_ref<blockstore::BlockStore2> baseBlockStore, const std::string &encKey) const = 0;
     virtual std::string createKey(cpputils::RandomGenerator &randomGenerator) const = 0;
-    virtual cpputils::unique_ref<InnerEncryptor> createInnerConfigEncryptor(const cpputils::FixedSizeData<CryCiphers::MAX_KEY_SIZE> &key) const = 0;
+    virtual cpputils::unique_ref<InnerEncryptor> createInnerConfigEncryptor(const cpputils::EncryptionKey<CryCiphers::MAX_KEY_SIZE> &key) const = 0;
 };
 
 

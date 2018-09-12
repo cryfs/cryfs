@@ -8,6 +8,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::DataFixture;
 using cpputils::Data;
+using cpputils::EncryptionKey;
 using cpputils::FixedSizeData;
 using cpputils::AES128_CFB;
 using cpputils::AES256_GCM;
@@ -40,8 +41,10 @@ public:
     }
 
 private:
-    FixedSizeData<CryConfigEncryptor::MaxTotalKeySize> _derivedKey() {
-        return DataFixture::generateFixedSize<CryConfigEncryptor::MaxTotalKeySize>(3);
+    EncryptionKey<CryConfigEncryptor::MaxTotalKeySize> _derivedKey() {
+        return EncryptionKey<CryConfigEncryptor::MaxTotalKeySize>::FromString(
+            DataFixture::generateFixedSize<CryConfigEncryptor::MaxTotalKeySize>(3).ToString()
+        );
     }
 
     Data _kdfParameters() {

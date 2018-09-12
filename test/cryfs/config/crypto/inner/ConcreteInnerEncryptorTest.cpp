@@ -28,7 +28,9 @@ class ConcreteInnerEncryptorTest : public ::testing::Test {
 public:
     template<class Cipher>
     unique_ref<InnerEncryptor> makeInnerEncryptor() {
-        auto key = DataFixture::generateFixedSize<Cipher::EncryptionKey::BINARY_LENGTH>();
+        auto key = Cipher::EncryptionKey::FromString(
+            DataFixture::generateFixedSize<Cipher::EncryptionKey::BINARY_LENGTH>().ToString()
+        );
         return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key);
     }
 };

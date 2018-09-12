@@ -10,19 +10,25 @@ using namespace cpputils::logging;
 
 namespace cpputils {
 
-DontSwapMemoryRAII::DontSwapMemoryRAII(void *addr, size_t len)
-: addr_(addr), len_(len) {
-    const int result = ::mlock(addr_, len_);
+void* UnswappableAllocator::allocate(size_t size) {
+    void* data = DefaultAllocator().allocate(size);
+    const int result = ::mlock(data, size);
     if (0 != result) {
         throw std::runtime_error("Error calling mlock. Errno: " + std::to_string(errno));
     }
+    return data;
 }
 
-DontSwapMemoryRAII::~DontSwapMemoryRAII() {
-    const int result = ::munlock(addr_, len_);
+void UnswappableAllocator::free(void* data, size_t size) {
+    const int result = ::munlock(data, size);
     if (0 != result) {
         LOG(WARN, "Error calling munlock. Errno: {}", errno);
     }
+
+    // overwrite the memory with zeroes before we free it
+    std::memset(data, 0, size);
+
+    DefaultAllocator().free(data, size);
 }
 
 }

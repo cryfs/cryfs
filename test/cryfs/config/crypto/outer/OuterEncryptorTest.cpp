@@ -28,7 +28,9 @@ public:
     }
 
     unique_ref<OuterEncryptor> makeOuterEncryptor() {
-        auto key = DataFixture::generateFixedSize<OuterEncryptor::Cipher::EncryptionKey::BINARY_LENGTH>();
+        auto key = OuterEncryptor::Cipher::EncryptionKey::FromString(
+            DataFixture::generateFixedSize<OuterEncryptor::Cipher::EncryptionKey::BINARY_LENGTH>().ToString()
+        );
         return make_unique_ref<OuterEncryptor>(key, kdfParameters());
     }
 };
