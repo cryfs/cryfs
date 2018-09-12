@@ -38,7 +38,7 @@ public:
   virtual void unlink(const boost::filesystem::path &path) = 0;
   virtual void rename(const boost::filesystem::path &from, const boost::filesystem::path &to) = 0;
   virtual void utimens(const boost::filesystem::path &path, timespec lastAccessTime, timespec lastModificationTime) = 0;
-  virtual void statfs(const boost::filesystem::path &path, struct statvfs *fsstat) = 0;
+  virtual void statfs(const boost::filesystem::path &path, struct ::statvfs *fsstat) = 0;
   //TODO We shouldn't use Dir::Entry here, that's in another layer
   virtual cpputils::unique_ref<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &path) = 0;
   //TODO Test createSymlink

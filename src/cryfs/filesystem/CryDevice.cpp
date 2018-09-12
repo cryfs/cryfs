@@ -235,21 +235,27 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   //     Possible reason: Many parallel changes to a directory blob are a race condition. Need something like ParallelAccessStore!
 }
 
-void CryDevice::statfs(const bf::path &path, struct statvfs *fsstat) {
+CryDevice::statvfs CryDevice::statfs(const bf::path &path) {
   // TODO Do we need path for something? What does it represent from fuse side?
   UNUSED(path);
   callFsActionCallbacks();
+
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
   uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
-  fsstat->f_bsize = _fsBlobStore->virtualBlocksizeBytes();
-  fsstat->f_blocks = numUsedBlocks + numFreeBlocks;
-  fsstat->f_bfree = numFreeBlocks;
-  fsstat->f_bavail = numFreeBlocks;
-  fsstat->f_files = numUsedBlocks + numFreeBlocks;
-  fsstat->f_ffree = numFreeBlocks;
-  fsstat->f_namemax = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
-  //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
-  fsstat->f_frsize = fsstat->f_bsize; // even though this is supposed to be ignored, osxfuse needs it.
+
+  statvfs result;
+  result.max_filename_length = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
+
+  result.blocksize = _fsBlobStore->virtualBlocksizeBytes();
+  result.num_total_blocks = numUsedBlocks + numFreeBlocks;
+  result.num_free_blocks = numFreeBlocks;
+  result.num_available_blocks = numFreeBlocks;
+
+  result.num_total_inodes = numUsedBlocks + numFreeBlocks;
+  result.num_free_inodes = numFreeBlocks;
+  result.num_available_inodes = numFreeBlocks;
+
+  return result;
 }
 
 unique_ref<FileBlobRef> CryDevice::CreateFileBlob(const blockstore::BlockId &parent) {

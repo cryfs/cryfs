@@ -276,9 +276,21 @@ void FilesystemImpl::utimens(const bf::path &path, timespec lastAccessTime, time
   }
 }
 
-void FilesystemImpl::statfs(const bf::path &path, struct statvfs *fsstat) {
+void FilesystemImpl::statfs(const bf::path &path, struct ::statvfs *fsstat) {
   PROFILE(_statfsNanosec);
-  _device->statfs(path, fsstat);
+  Device::statvfs stat = _device->statfs(path);
+
+  fsstat->f_bsize = stat.blocksize;
+  fsstat->f_blocks = stat.num_total_blocks;
+  fsstat->f_bfree = stat.num_free_blocks;
+  fsstat->f_bavail = stat.num_available_blocks;
+  fsstat->f_files = stat.num_total_inodes;
+  fsstat->f_ffree = stat.num_free_inodes;
+  fsstat->f_favail = stat.num_available_inodes;
+  fsstat->f_namemax = stat.max_filename_length;
+
+  //f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
+  fsstat->f_frsize = fsstat->f_bsize; // even though this is supposed to be ignored, osxfuse needs it.
 }
 
 void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, uid_t uid, gid_t gid) {

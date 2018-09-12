@@ -4,7 +4,6 @@
 
 #include <string>
 #include <functional>
-#include <sys/statvfs.h>
 
 #include "../../../testutils/FuseTest.h"
 
