@@ -7,7 +7,12 @@
 
 namespace cpputils {
 
-// This allocator allocates memory that won't be swapped out to the disk, but will be kept in RAM
+/**
+* Allocator for security relevant memory like key data.
+* The operating system will be given a hint that this memory shouldn't be swapped out to disk
+* (which is, however, only a hint and might be ignored),
+* and we'll make sure the memory is zeroed-out when deallocated.
+*/
 class UnswappableAllocator final : public Allocator {
 public:
     void* allocate(size_t size) override;
