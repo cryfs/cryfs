@@ -1,6 +1,7 @@
 #include "IOStreamConsole.h"
 #include <boost/algorithm/string/trim.hpp>
 #include "DontEchoStdinToStdoutRAII.h"
+#include <cpp-utils/assert/assert.h>
 
 using std::ostream;
 using std::istream;
@@ -104,10 +105,7 @@ string IOStreamConsole::askPassword(const string &question) {
     std::getline(_input, result);
     _output << std::endl;
 
-    //Remove trailing newline
-    if (result[result.size()-1] == '\n') {
-        result.resize(result.size()-1);
-    }
+    ASSERT(result.size() == 0 || result[result.size() - 1] != '\n', "Unexpected std::getline() behavior");
 
     return result;
 }
