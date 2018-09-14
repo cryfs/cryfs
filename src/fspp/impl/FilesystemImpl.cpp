@@ -138,16 +138,41 @@ void FilesystemImpl::closeFile(int descriptor) {
 }
 
 namespace {
-void convert_stat_info(const fspp::Node::stat_info& input, struct ::stat *output) {
+// Implementation taken from http://en.cppreference.com/w/cpp/types/void_t
+// (it takes CWG1558 into account and also works for older compilers)
+template<typename... Ts> struct make_void { typedef void type;};
+template<typename... Ts> using void_t = typename make_void<Ts...>::type;
+
+template<class Stat, class Enable = void> struct uses_timespec final : std::false_type {};
+template<class Stat> struct uses_timespec<Stat, void_t<decltype(Stat().st_atim)>> final : std::true_type {};
+
+// convert_stat_info_timestamps_ looks if struct ::stat has st_atim or st_atime members
+// and sets the correct ones.
+template<class Stat, class Enable = void> struct convert_stat_info_timestamps_ final {};
+template<class Stat> struct convert_stat_info_timestamps_<Stat, std::enable_if_t<uses_timespec<Stat>::value>> final {
+    static void call(const fspp::Node::stat_info& input, Stat* output) {
+        output->st_atim = input.atime;
+        output->st_mtim = input.mtime;
+        output->st_ctim = input.ctime;
+    }
+};
+template<class Stat> struct convert_stat_info_timestamps_<Stat, std::enable_if_t<!uses_timespec<Stat>::value>> final {
+    static void call(const fspp::Node::stat_info& input, Stat* output) {
+        output->st_atime = input.atime.tv_sec;
+        output->st_mtime = input.mtime.tv_sec;
+        output->st_ctime = input.ctime.tv_sec;
+    }
+};
+
+
+void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *output) {
     output->st_nlink = input.nlink;
     output->st_mode = input.mode;
     output->st_uid = input.uid;
     output->st_gid = input.gid;
     output->st_size = input.size;
     output->st_blocks = input.blocks;
-    output->st_atim = input.atime;
-    output->st_mtim = input.mtime;
-    output->st_ctim = input.ctime;
+    convert_stat_info_timestamps_<struct ::stat>::call(input, output);
 }
 }
 
@@ -158,14 +183,14 @@ void FilesystemImpl::lstat(const bf::path &path, struct ::stat *stbuf) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
     auto stat_info = (*node)->stat();
-    convert_stat_info(stat_info, stbuf);
+    convert_stat_info_(stat_info, stbuf);
   }
 }
 
 void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
   PROFILE(_fstatNanosec);
   auto stat_info = _open_files.get(descriptor)->stat();
-  convert_stat_info(stat_info, stbuf);
+  convert_stat_info_(stat_info, stbuf);
 }
 
 void FilesystemImpl::chmod(const boost::filesystem::path &path, mode_t mode) {
