@@ -10,7 +10,7 @@ public:
     cpputils::unique_ref<fspp::File> CreateFileWithSize(const boost::filesystem::path &path, off_t size) {
         auto file = this->CreateFile(path);
         file->truncate(size);
-        assert(this->stat(*this->Load(path)).st_size == size);
+        assert(this->stat(*this->Load(path)).size == size);
         return file;
     }
 };
