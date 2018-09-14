@@ -35,7 +35,10 @@ public:
   ConcreteFileSystemTestFixture fixture;
   cpputils::unique_ref<fspp::Device> device;
 
-  static constexpr mode_t MODE_PUBLIC = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
+  static constexpr fspp::mode_t MODE_PUBLIC = fspp::mode_t()
+        .addUserReadFlag().addUserWriteFlag().addUserExecFlag()
+        .addGroupReadFlag().addGroupWriteFlag().addGroupExecFlag()
+        .addOtherReadFlag().addOtherWriteFlag().addOtherExecFlag();
 
   cpputils::unique_ref<fspp::Node> Load(const boost::filesystem::path &path) {
     auto loaded = device->Load(path);
@@ -62,17 +65,17 @@ public:
   }
 
   cpputils::unique_ref<fspp::Dir> CreateDir(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createDir(path.filename().string(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createDir(path.filename().string(), this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
     return this->LoadDir(path);
   }
 
   cpputils::unique_ref<fspp::File> CreateFile(const boost::filesystem::path &path) {
-    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().string(), this->MODE_PUBLIC, 0, 0);
+    this->LoadDir(path.parent_path())->createAndOpenFile(path.filename().string(), this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
     return this->LoadFile(path);
   }
 
   cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path, const boost::filesystem::path &target = "/my/symlink/target") {
-    this->LoadDir(path.parent_path())->createSymlink(path.filename().string(), target, 0, 0);
+    this->LoadDir(path.parent_path())->createSymlink(path.filename().string(), target, fspp::uid_t(0), fspp::gid_t(0));
     return this->LoadSymlink(path);
   }
 
@@ -98,6 +101,7 @@ public:
     );
   }
 };
+template<class ConcreteFileSystemTestFixture> constexpr fspp::mode_t FileSystemTest<ConcreteFileSystemTestFixture>::MODE_PUBLIC;
 
 
 #endif

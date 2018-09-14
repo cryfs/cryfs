@@ -48,22 +48,22 @@ bool DirEntryList::_hasChild(const string &name) const {
     return _entries.end() != _findByName(name);
 }
 
-void DirEntryList::add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
-                            uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirEntryList::add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, fspp::mode_t mode,
+                            fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
     _add(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
-                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, fspp::mode_t mode,
+                       fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     auto insert_pos = _findUpperBound(blobId);
     _entries.emplace(insert_pos, entryType, name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime, cpputils::time::now());
 }
 
-void DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
-                       uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+void DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, fspp::mode_t mode,
+                       fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                        std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
     auto found = _findByName(name);
     if (found != _entries.end()) {
@@ -98,8 +98,8 @@ void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Di
     }
 }
 
-void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, mode_t mode,
-                        uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType, fspp::mode_t mode,
+                        fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
     _checkAllowedOverwrite(entry->type(), entryType);
     // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
     // That's why we remove-and-add instead of just modifying the existing entry.
@@ -202,20 +202,20 @@ DirEntryList::const_iterator DirEntryList::end() const {
     return _entries.end();
 }
 
-void DirEntryList::setMode(const BlockId &blockId, mode_t mode) {
+void DirEntryList::setMode(const BlockId &blockId, fspp::mode_t mode) {
     auto found = _findById(blockId);
-    ASSERT ((S_ISREG(mode) && S_ISREG(found->mode())) || (S_ISDIR(mode) && S_ISDIR(found->mode())) || (S_ISLNK(mode)), "Unknown mode in entry");
+    ASSERT ((mode.hasFileFlag() && found->mode().hasFileFlag()) || (mode.hasDirFlag() && found->mode().hasDirFlag()) || (mode.hasSymlinkFlag()), "Unknown mode in entry");
     found->setMode(mode);
 }
 
-bool DirEntryList::setUidGid(const BlockId &blockId, uid_t uid, gid_t gid) {
+bool DirEntryList::setUidGid(const BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid) {
     auto found = _findById(blockId);
     bool changed = false;
-    if (uid != static_cast<uid_t>(-1)) {
+    if (uid != fspp::uid_t(-1)) {
         found->setUid(uid);
         changed = true;
     }
-    if (gid != static_cast<gid_t>(-1)) {
+    if (gid != fspp::gid_t(-1)) {
         found->setGid(gid);
         changed = true;
     }

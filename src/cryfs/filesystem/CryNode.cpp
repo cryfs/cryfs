@@ -163,9 +163,9 @@ CryNode::stat_info CryNode::stat() const {
     stat_info result;
     //We are the root directory.
     //TODO What should we do?
-    result.uid = getuid();
-    result.gid = getgid();
-    result.mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
+    result.uid = fspp::uid_t(getuid());
+    result.gid = fspp::gid_t(getgid());
+    result.mode = fspp::mode_t().addDirFlag().addUserReadFlag().addUserWriteFlag().addUserExecFlag();
     result.size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
     result.nlink = 1;
@@ -179,7 +179,7 @@ CryNode::stat_info CryNode::stat() const {
   }
 }
 
-void CryNode::chmod(mode_t mode) {
+void CryNode::chmod(fspp::mode_t mode) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
     //We are the root direcory.
@@ -189,7 +189,7 @@ void CryNode::chmod(mode_t mode) {
   (*_parent)->chmodChild(_blockId, mode);
 }
 
-void CryNode::chown(uid_t uid, gid_t gid) {
+void CryNode::chown(fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
 	//We are the root direcory.

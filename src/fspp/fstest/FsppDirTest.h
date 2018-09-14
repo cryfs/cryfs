@@ -6,14 +6,14 @@ template<class ConcreteFileSystemTestFixture>
 class FsppDirTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
   void InitDirStructure() {
-    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/mydir")->createAndOpenFile("myfile2", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
-    this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/mydir")->createAndOpenFile("myfile2", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/mydir/mysubdir")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+    this->LoadDir("/mydir/mysubdir")->createDir("mysubsubdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   }
 
   void EXPECT_CHILDREN_ARE(const boost::filesystem::path &path, const std::initializer_list<fspp::Dir::Entry> expected) {
@@ -62,14 +62,14 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_Empty) {
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_Directly) {
   auto rootdir = this->LoadDir("/");
-  rootdir->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  rootdir->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     FileEntry("myfile")
   });
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_AfterReloadingDir) {
-  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/", {
     FileEntry("myfile")
   });
@@ -77,14 +77,14 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_AfterReloadingDir) {
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_Directly) {
   auto rootdir = this->LoadDir("/");
-  rootdir->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  rootdir->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     DirEntry("mydir")
   });
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_AfterReloadingDir) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/", {
     DirEntry("mydir")
   });
@@ -100,39 +100,39 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_LargerStructure) {
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_Empty) {
-  this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/myemptydir", {});
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_Directly) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   auto dir = this->LoadDir("/mydir");
-  dir->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  dir->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE(dir.get(), {
     FileEntry("myfile")
   });
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_AfterReloadingDir) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
-  this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+  this->LoadDir("/mydir")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/mydir", {
     FileEntry("myfile")
   });
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_Directly) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   auto dir = this->LoadDir("/mydir");
-  dir->createDir("mysubdir", this->MODE_PUBLIC, 0, 0);
+  dir->createDir("mysubdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE(dir.get(), {
     DirEntry("mysubdir")
   });
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_AfterReloadingDir) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
-  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+  this->LoadDir("/mydir")->createDir("mysubdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/mydir", {
     DirEntry("mysubdir")
   });
@@ -161,14 +161,14 @@ TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyRoot) {
-  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->LoadFile("/myfile");
   this->Load("/myfile"); // Test that we can also load the file node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
   this->InitDirStructure();
-  this->LoadDir("/")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/", {
     FileEntry("myfile"),
 	DirEntry("mydir"),
@@ -179,7 +179,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyNestedDir) {
   this->InitDirStructure();
-  this->LoadDir("/myemptydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/myemptydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/myemptydir", {
 	FileEntry("mynewfile")
   });
@@ -187,7 +187,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyNestedDir) {
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyNestedDir) {
   this->InitDirStructure();
-  this->LoadDir("/mydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/mydir")->createAndOpenFile("mynewfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/mydir", {
     FileEntry("myfile"),
 	FileEntry("myfile2"),
@@ -197,22 +197,22 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyNestedDir) {
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
-  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   //TODO Change, once we know which way of error reporting we want for such errors
   EXPECT_ANY_THROW(
-    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   );
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyRoot) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->LoadDir("/mydir");
   this->Load("/mydir"); // Test we can also load the dir node
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
   this->InitDirStructure();
-  this->LoadDir("/")->createDir("mynewdir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mynewdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/", {
     FileEntry("myfile"),
 	DirEntry("mydir"),
@@ -223,7 +223,7 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyNestedDir) {
   this->InitDirStructure();
-  this->LoadDir("/myemptydir")->createDir("mynewdir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/myemptydir")->createDir("mynewdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/myemptydir", {
 	DirEntry("mynewdir")
   });
@@ -231,7 +231,7 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyNestedDir) {
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyNestedDir) {
   this->InitDirStructure();
-  this->LoadDir("/mydir")->createDir("mynewdir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/mydir")->createDir("mynewdir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/mydir", {
     FileEntry("myfile"),
 	FileEntry("myfile2"),
@@ -241,10 +241,10 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyNestedDir) {
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
-  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+  this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   //TODO Change, once we know which way of error reporting we want for such errors
   EXPECT_ANY_THROW(
-    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, 0, 0);
+    this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   );
 }
 

@@ -41,7 +41,7 @@ TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
     auto file = this->CreateFile("/myfile");
     auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
     this->IN_STAT(openFile.get(), [] (const fspp::OpenFile::stat_info& st) {
-        EXPECT_TRUE(S_ISREG(st.mode));
+        EXPECT_TRUE(st.mode.hasFileFlag());
     });
 }
 

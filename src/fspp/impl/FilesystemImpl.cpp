@@ -141,9 +141,9 @@ void FilesystemImpl::closeFile(int descriptor) {
 namespace {
 void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *output) {
     output->st_nlink = input.nlink;
-    output->st_mode = input.mode;
-    output->st_uid = input.uid;
-    output->st_gid = input.gid;
+    output->st_mode = input.mode.value();
+    output->st_uid = input.uid.value();
+    output->st_gid = input.gid.value();
     output->st_size = input.size;
     output->st_blocks = input.blocks;
     output->st_atim = input.atime;
@@ -169,23 +169,23 @@ void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
   convert_stat_info_(stat_info, stbuf);
 }
 
-void FilesystemImpl::chmod(const boost::filesystem::path &path, mode_t mode) {
+void FilesystemImpl::chmod(const boost::filesystem::path &path, ::mode_t mode) {
   PROFILE(_chmodNanosec);
   auto node = _device->Load(path);
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
-    (*node)->chmod(mode);
+    (*node)->chmod(fspp::mode_t(mode));
   }
 }
 
-void FilesystemImpl::chown(const boost::filesystem::path &path, uid_t uid, gid_t gid) {
+void FilesystemImpl::chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid) {
   PROFILE(_chownNanosec);
   auto node = _device->Load(path);
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
-    (*node)->chown(uid, gid);
+    (*node)->chown(fspp::uid_t(uid), fspp::gid_t(gid));
   }
 }
 
@@ -229,19 +229,19 @@ void FilesystemImpl::access(const bf::path &path, int mask) {
   }
 }
 
-int FilesystemImpl::createAndOpenFile(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
+int FilesystemImpl::createAndOpenFile(const bf::path &path, ::mode_t mode, ::uid_t uid, ::gid_t gid) {
   PROFILE(_createAndOpenFileNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_createAndOpenFileNanosec_withoutLoading);
-  auto file = dir->createAndOpenFile(path.filename().string(), mode, uid, gid);
+  auto file = dir->createAndOpenFile(path.filename().string(), fspp::mode_t(mode), fspp::uid_t(uid), fspp::gid_t(gid));
   return _open_files.open(std::move(file));
 }
 
-void FilesystemImpl::mkdir(const bf::path &path, mode_t mode, uid_t uid, gid_t gid) {
+void FilesystemImpl::mkdir(const bf::path &path, ::mode_t mode, ::uid_t uid, ::gid_t gid) {
   PROFILE(_mkdirNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_mkdirNanosec_withoutLoading);
-  dir->createDir(path.filename().string(), mode, uid, gid);
+  dir->createDir(path.filename().string(), fspp::mode_t(mode), fspp::uid_t(uid), fspp::gid_t(gid));
 }
 
 void FilesystemImpl::rmdir(const bf::path &path) {
@@ -310,11 +310,11 @@ void FilesystemImpl::statfs(const bf::path &path, struct ::statvfs *fsstat) {
   fsstat->f_frsize = fsstat->f_bsize; // even though this is supposed to be ignored, osxfuse needs it.
 }
 
-void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, uid_t uid, gid_t gid) {
+void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, ::uid_t uid, ::gid_t gid) {
   PROFILE(_createSymlinkNanosec);
   auto parent = LoadDir(from.parent_path());
   PROFILE(_createSymlinkNanosec_withoutLoading);
-  parent->createSymlink(from.filename().string(), to, uid, gid);
+  parent->createSymlink(from.filename().string(), to, fspp::uid_t(uid), fspp::gid_t(gid));
 }
 
 void FilesystemImpl::readSymlink(const bf::path &path, char *buf, size_t size) {

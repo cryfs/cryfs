@@ -45,7 +45,7 @@ public:
     }
 
     void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
-                  mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                  fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                   std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
         return _base->AddOrOverwriteChild(name, blobId, type, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
     }
@@ -70,11 +70,11 @@ public:
         return _base->updateModificationTimestampForChild(blockId);
     }
 
-    void chmodChild(const blockstore::BlockId &blockId, mode_t mode) {
+    void chmodChild(const blockstore::BlockId &blockId, fspp::mode_t mode) {
         return _base->chmodChild(blockId, mode);
     }
 
-    void chownChild(const blockstore::BlockId &blockId, uid_t uid, gid_t gid) {
+    void chownChild(const blockstore::BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid) {
         return _base->chownChild(blockId, uid, gid);
     }
 
@@ -82,15 +82,15 @@ public:
         return _base->utimensChild(blockId, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
         return _base->AddChildDir(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
         return _base->AddChildFile(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
     }
 
-    void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
         return _base->AddChildSymlink(name, blobId, uid, gid, lastAccessTime, lastModificationTime);
     }
 

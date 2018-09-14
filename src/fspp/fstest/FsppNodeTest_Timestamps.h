@@ -35,7 +35,7 @@ public:
 
     void Test_Chmod() {
         auto node = this->CreateNode("/mynode");
-        mode_t mode = this->stat(*node).mode;
+        fspp::mode_t mode = this->stat(*node).mode;
         auto operation = [&node, mode] () {
             node->chmod(mode);
         };
@@ -48,8 +48,8 @@ public:
 
     void Test_Chown() {
         auto node = this->CreateNode("/mynode");
-        uid_t uid = this->stat(*node).uid;
-        gid_t gid = this->stat(*node).gid;
+        fspp::uid_t uid = this->stat(*node).uid;
+        fspp::gid_t gid = this->stat(*node).gid;
         auto operation = [&node, uid, gid] () {
             node->chown(uid, gid);
         };

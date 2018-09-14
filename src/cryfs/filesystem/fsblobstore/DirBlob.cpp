@@ -63,29 +63,33 @@ void DirBlob::_readEntriesFromBlob() {
   _entries.deserializeFrom(static_cast<uint8_t*>(data.data()), data.size());
 }
 
-void DirBlob::AddChildDir(const std::string &name, const BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirBlob::AddChildDir(const std::string &name, const BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
   std::unique_lock<std::mutex> lock(_mutex);
   _addChild(name, blobId, fspp::Dir::EntryType::DIR, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirBlob::AddChildFile(const std::string &name, const BlockId &blobId, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirBlob::AddChildFile(const std::string &name, const BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
   std::unique_lock<std::mutex> lock(_mutex);
   _addChild(name, blobId, fspp::Dir::EntryType::FILE, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
-void DirBlob::AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+void DirBlob::AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
   std::unique_lock<std::mutex> lock(_mutex);
-  _addChild(name, blobId, fspp::Dir::EntryType::SYMLINK, S_IFLNK | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH, uid, gid, lastAccessTime, lastModificationTime);
+  auto mode = fspp::mode_t().addSymlinkFlag()
+          .addUserReadFlag().addUserWriteFlag().addUserExecFlag()
+          .addGroupReadFlag().addGroupWriteFlag().addGroupExecFlag()
+          .addOtherReadFlag().addOtherWriteFlag().addOtherExecFlag();
+  _addChild(name, blobId, fspp::Dir::EntryType::SYMLINK, mode, uid, gid, lastAccessTime, lastModificationTime);
 }
 
 void DirBlob::_addChild(const std::string &name, const BlockId &blobId,
-    fspp::Dir::EntryType entryType, mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
+    fspp::Dir::EntryType entryType, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
   _entries.add(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime);
   _changed = true;
 }
 
 void DirBlob::AddOrOverwriteChild(const std::string &name, const BlockId &blobId, fspp::Dir::EntryType entryType,
-                                  mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                                  fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                                   std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.addOrOverwrite(name, blobId, entryType, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
@@ -171,13 +175,13 @@ void DirBlob::updateModificationTimestampForChild(const BlockId &blockId) {
   _changed = true;
 }
 
-void DirBlob::chmodChild(const BlockId &blockId, mode_t mode) {
+void DirBlob::chmodChild(const BlockId &blockId, fspp::mode_t mode) {
   std::unique_lock<std::mutex> lock(_mutex);
   _entries.setMode(blockId, mode);
   _changed = true;
 }
 
-void DirBlob::chownChild(const BlockId &blockId, uid_t uid, gid_t gid) {
+void DirBlob::chownChild(const BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid) {
   std::unique_lock<std::mutex> lock(_mutex);
   if(_entries.setUidGid(blockId, uid, gid)) {
     _changed = true;

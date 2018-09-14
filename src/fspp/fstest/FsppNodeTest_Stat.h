@@ -33,7 +33,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {
     this->CreateFile("/myfile");
     auto node = this->Load("/myfile");
     this->IN_STAT(node.get(), [] (const fspp::Node::stat_info& st) {
-        EXPECT_TRUE(S_ISREG(st.mode));
+        EXPECT_TRUE(st.mode.hasFileFlag());
     });
 }
 
@@ -47,7 +47,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
     this->CreateDir("/mydir");
     auto node = this->Load("/mydir");
     this->IN_STAT(node.get(), [] (const fspp::Node::stat_info& st) {
-        EXPECT_TRUE(S_ISDIR(st.mode));
+        EXPECT_TRUE(st.mode.hasDirFlag());
     });
 }
 
@@ -61,7 +61,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_SymlinkOnly, SymlinkIsSymlink) {
     this->CreateSymlink("/mysymlink");
     auto node = this->Load("/mysymlink");
     this->IN_STAT(node.get(), [] (const fspp::Node::stat_info& st) {
-        EXPECT_TRUE(S_ISLNK(st.mode));
+        EXPECT_TRUE(st.mode.hasSymlinkFlag());
     });
 }
 

@@ -68,17 +68,17 @@ namespace cryfs {
 
         void DirEntry::serialize(uint8_t *dest) const {
             ASSERT(
-                    ((_type == fspp::Dir::EntryType::FILE) && S_ISREG(_mode) && !S_ISDIR(_mode) && !S_ISLNK(_mode)) ||
-                    ((_type == fspp::Dir::EntryType::DIR) && !S_ISREG(_mode) && S_ISDIR(_mode) && !S_ISLNK(_mode)) ||
-                    ((_type == fspp::Dir::EntryType::SYMLINK) && !S_ISREG(_mode) && !S_ISDIR(_mode) && S_ISLNK(_mode))
-                    , "Wrong mode bit set for this type: " + std::to_string(_mode & S_IFREG) + ", " + std::to_string(
-                    _mode & S_IFDIR) + ", " + std::to_string(_mode & S_IFLNK) + ", " + std::to_string(static_cast<uint8_t>(_type))
+                    ((_type == fspp::Dir::EntryType::FILE) && _mode.hasFileFlag() && !_mode.hasDirFlag() && !_mode.hasSymlinkFlag()) ||
+                    ((_type == fspp::Dir::EntryType::DIR) && !_mode.hasFileFlag() && _mode.hasDirFlag() && !_mode.hasSymlinkFlag()) ||
+                    ((_type == fspp::Dir::EntryType::SYMLINK) && !_mode.hasFileFlag() && !_mode.hasDirFlag() && _mode.hasSymlinkFlag())
+                    , "Wrong mode bit set for this type: " + std::to_string(_mode.hasFileFlag()) + ", " + std::to_string(
+                    _mode.hasDirFlag()) + ", " + std::to_string(_mode.hasSymlinkFlag()) + ", " + std::to_string(static_cast<uint8_t>(_type))
             );
             unsigned int offset = 0;
             offset += _serialize<uint8_t>(dest + offset, static_cast<uint8_t>(_type));
-            offset += _serialize<uint32_t>(dest + offset, _mode);
-            offset += _serialize<uint32_t>(dest + offset, _uid);
-            offset += _serialize<uint32_t>(dest + offset, _gid);
+            offset += _serialize<uint32_t>(dest + offset, _mode.value());
+            offset += _serialize<uint32_t>(dest + offset, _uid.value());
+            offset += _serialize<uint32_t>(dest + offset, _gid.value());
             offset += _serializeTimeValue(dest + offset, _lastAccessTime);
             offset += _serializeTimeValue(dest + offset, _lastModificationTime);
             offset += _serializeTimeValue(dest + offset, _lastMetadataChangeTime);
@@ -89,9 +89,9 @@ namespace cryfs {
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
             fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(_deserialize<uint8_t>(&pos));
-            mode_t mode = _deserialize<uint32_t>(&pos);
-            uid_t uid = _deserialize<uint32_t>(&pos);
-            gid_t gid = _deserialize<uint32_t>(&pos);
+            fspp::mode_t mode = fspp::mode_t(_deserialize<uint32_t>(&pos));
+            fspp::uid_t uid = fspp::uid_t(_deserialize<uint32_t>(&pos));
+            fspp::gid_t gid = fspp::gid_t(_deserialize<uint32_t>(&pos));
             timespec lastAccessTime = _deserializeTimeValue(&pos);
             timespec lastModificationTime = _deserializeTimeValue(&pos);
             timespec lastMetadataChangeTime = _deserializeTimeValue(&pos);

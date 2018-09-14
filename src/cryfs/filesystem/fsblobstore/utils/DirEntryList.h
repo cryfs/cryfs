@@ -23,9 +23,9 @@ namespace cryfs {
             void deserializeFrom(const void *data, uint64_t size);
 
             void add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
-                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+                     fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void addOrOverwrite(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
-                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                     fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                      std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
             void rename(const blockstore::BlockId &blockId, const std::string &name, std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
             boost::optional<const DirEntry&> get(const std::string &name) const;
@@ -37,8 +37,8 @@ namespace cryfs {
             const_iterator begin() const;
             const_iterator end() const;
 
-            void setMode(const blockstore::BlockId &blockId, mode_t mode);
-            bool setUidGid(const blockstore::BlockId &blockId, uid_t uid, gid_t gid);
+            void setMode(const blockstore::BlockId &blockId, fspp::mode_t mode);
+            bool setUidGid(const blockstore::BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid);
             void setAccessTimes(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
             bool updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior);
             void updateModificationTimestampForChild(const blockstore::BlockId &blockId);
@@ -54,9 +54,9 @@ namespace cryfs {
             std::vector<DirEntry>::iterator _findLowerBound(const blockstore::BlockId &blockId);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::BlockId &hint, std::function<bool (const DirEntry&)> pred);
             void _add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
-                     mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+                     fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
-                      mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+                      fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             static void _checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType);
 
             std::vector<DirEntry> _entries;

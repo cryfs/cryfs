@@ -37,16 +37,16 @@ namespace cryfs {
 
             boost::optional<const DirEntry&> GetChild(const blockstore::BlockId &blobId) const;
 
-            void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid,
-                             gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid,
+                             fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
-            void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, mode_t mode, uid_t uid,
-                              gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid,
+                              fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
-            void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+            void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
 
             void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
-                          mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                          fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
                           std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
 
             void RenameChild(const blockstore::BlockId &blockId, const std::string &newName, std::function<void (const blockstore::BlockId &blockId)> onOverwritten);
@@ -65,9 +65,9 @@ namespace cryfs {
 
             void updateModificationTimestampForChild(const blockstore::BlockId &blockId);
 
-            void chmodChild(const blockstore::BlockId &blockId, mode_t mode);
+            void chmodChild(const blockstore::BlockId &blockId, fspp::mode_t mode);
 
-            void chownChild(const blockstore::BlockId &blockId, uid_t uid, gid_t gid);
+            void chownChild(const blockstore::BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid);
 
             void utimensChild(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
 
@@ -76,7 +76,7 @@ namespace cryfs {
         private:
 
             void _addChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
-                          mode_t mode, uid_t uid, gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
+                          fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime);
             void _readEntriesFromBlob();
             void _writeEntriesToBlob();
 

@@ -44,11 +44,11 @@ int fusepp_readlink(const char *path, char *buf, size_t size) {
   return FUSE_OBJ->readlink(bf::path(path), buf, size);
 }
 
-int fusepp_mknod(const char *path, mode_t mode, dev_t rdev) {
+int fusepp_mknod(const char *path, ::mode_t mode, dev_t rdev) {
   return FUSE_OBJ->mknod(bf::path(path), mode, rdev);
 }
 
-int fusepp_mkdir(const char *path, mode_t mode) {
+int fusepp_mkdir(const char *path, ::mode_t mode) {
   return FUSE_OBJ->mkdir(bf::path(path), mode);
 }
 
@@ -72,11 +72,11 @@ int fusepp_link(const char *from, const char *to) {
   return FUSE_OBJ->link(bf::path(from), bf::path(to));
 }
 
-int fusepp_chmod(const char *path, mode_t mode) {
+int fusepp_chmod(const char *path, ::mode_t mode) {
   return FUSE_OBJ->chmod(bf::path(path), mode);
 }
 
-int fusepp_chown(const char *path, uid_t uid, gid_t gid) {
+int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid) {
   return FUSE_OBJ->chown(bf::path(path), uid, gid);
 }
 
@@ -158,7 +158,7 @@ int fusepp_access(const char *path, int mask) {
   return FUSE_OBJ->access(bf::path(path), mask);
 }
 
-int fusepp_create(const char *path, mode_t mode, fuse_file_info *fileinfo) {
+int fusepp_create(const char *path, ::mode_t mode, fuse_file_info *fileinfo) {
   return FUSE_OBJ->create(bf::path(path), mode, fileinfo);
 }
 
@@ -385,7 +385,7 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
   }
 }
 
-int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
+int Fuse::mknod(const bf::path &path, ::mode_t mode, dev_t rdev) {
   UNUSED(rdev);
   UNUSED(mode);
   UNUSED(path);
@@ -393,7 +393,7 @@ int Fuse::mknod(const bf::path &path, mode_t mode, dev_t rdev) {
   return ENOSYS;
 }
 
-int Fuse::mkdir(const bf::path &path, mode_t mode) {
+int Fuse::mkdir(const bf::path &path, ::mode_t mode) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "mkdir({}, {})", path, mode);
 #endif
@@ -516,7 +516,7 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
   return ENOSYS;
 }
 
-int Fuse::chmod(const bf::path &path, mode_t mode) {
+int Fuse::chmod(const bf::path &path, ::mode_t mode) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "chmod({}, {})", path, mode);
 #endif
@@ -538,7 +538,7 @@ int Fuse::chmod(const bf::path &path, mode_t mode) {
   }
 }
 
-int Fuse::chown(const bf::path &path, uid_t uid, gid_t gid) {
+int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "chown({}, {}, {})", path, uid, gid);
 #endif
@@ -714,7 +714,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset
 }
 
 //TODO
-int Fuse::statfs(const bf::path &path, struct statvfs *fsstat) {
+int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "statfs({}, _)", path);
 #endif
@@ -890,7 +890,7 @@ int Fuse::access(const bf::path &path, int mask) {
   }
 }
 
-int Fuse::create(const bf::path &path, mode_t mode, fuse_file_info *fileinfo) {
+int Fuse::create(const bf::path &path, ::mode_t mode, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "create({}, {}, _)", path, mode);
 #endif

@@ -36,7 +36,7 @@ CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optio
 CryDir::~CryDir() {
 }
 
-unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t mode, uid_t uid, gid_t gid) {
+unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
@@ -49,7 +49,7 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, mode_t 
   return make_unique_ref<CryOpenFile>(device(), std::move(dirBlob), std::move(child));
 }
 
-void CryDir::createDir(const string &name, mode_t mode, uid_t uid, gid_t gid) {
+void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
@@ -87,7 +87,7 @@ fspp::Dir::EntryType CryDir::getType() const {
   return fspp::Dir::EntryType::DIR;
 }
 
-void CryDir::createSymlink(const string &name, const bf::path &target, uid_t uid, gid_t gid) {
+void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)

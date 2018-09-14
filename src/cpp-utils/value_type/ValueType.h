@@ -80,9 +80,6 @@ protected:
         static_assert(std::is_base_of<IdValueType<ConcreteType, UnderlyingType>, ConcreteType>::value,
                       "CRTP violated. First template parameter of this class must be the concrete class.");
     }
-    constexpr underlying_type& underlying_value() const noexcept {
-        return value_;
-    }
 
     friend struct std::hash<ConcreteType>;
 

@@ -13,7 +13,7 @@ TYPED_TEST_CASE_P(FsppDirTest_Timestamps);
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile) {
     auto dir = this->CreateDir("/mydir");
     auto operation = [&dir] () {
-        dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
+        dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
@@ -22,7 +22,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_inRootDir) {
     auto dir = this->LoadDir("/");
     auto operation = [&dir] () {
-        dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
+        dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
@@ -30,7 +30,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_inRootDir) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) {
     auto dir = this->CreateDir("/mydir");
     timespec lowerBound = now();
-    dir->createAndOpenFile("childname", S_IFREG, 1000, 1000);
+    dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     timespec upperBound = now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
@@ -41,7 +41,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) 
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir) {
     auto dir = this->CreateDir("/mydir");
     auto operation = [&dir] () {
-        dir->createDir("childname", S_IFDIR, 1000, 1000);
+        dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
@@ -50,7 +50,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_inRootDir) {
     auto dir = this->LoadDir("/");
     auto operation = [&dir] () {
-        dir->createDir("childname", S_IFDIR, 1000, 1000);
+        dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
@@ -58,7 +58,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir_inRootDir) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
     auto dir = this->CreateDir("/mydir");
     timespec lowerBound = now();
-    dir->createDir("childname", S_IFDIR, 1000, 1000);
+    dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     timespec upperBound = now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
@@ -69,7 +69,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink) {
     auto dir = this->CreateDir("/mydir");
     auto operation = [&dir] () {
-        dir->createSymlink("childname", "/target", 1000, 1000);
+        dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
@@ -78,7 +78,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_inRootDir) {
     auto dir = this->LoadDir("/");
     auto operation = [&dir] () {
-        dir->createSymlink("childname", "/target", 1000, 1000);
+        dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }*/
@@ -86,7 +86,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_inRootDir) {
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
     auto dir = this->CreateDir("/mydir");
     timespec lowerBound = now();
-    dir->createSymlink("childname", "/target", 1000, 1000);
+    dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
     timespec upperBound = now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
@@ -114,7 +114,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_empty_inRootDir) {
 
 TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty) {
     auto dir = this->CreateDir("/mydir");
-    dir->createAndOpenFile("filename", S_IFREG, 1000, 1000);
+    dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     auto operation = [&dir] () {
         dir->children();
     };
@@ -124,7 +124,7 @@ TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty) {
 /* TODO Re-enable this test once the root dir handles timestamps correctly
 TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty_inRootDir) {
     auto dir = this->LoadDir("/");
-    dir->createAndOpenFile("filename", S_IFREG, 1000, 1000);
+    dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
     auto operation = [&dir] () {
         dir->children();
     };

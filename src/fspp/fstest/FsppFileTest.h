@@ -57,23 +57,24 @@ public:
   }
 
   void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {
-    node->chown(100, 200);
+    node->chown(fspp::uid_t(100), fspp::gid_t(200));
     this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
-        EXPECT_EQ(100u, st.uid);
+        EXPECT_EQ(fspp::uid_t(100u), st.uid);
     });
   }
 
   void Test_Chown_Gid(fspp::File *file, fspp::Node *node) {
-    node->chown(100, 200);
+    node->chown(fspp::uid_t(100), fspp::gid_t(200));
     this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
-        EXPECT_EQ(200u, st.gid);
+        EXPECT_EQ(fspp::gid_t(200u), st.gid);
     });
   }
 
   void Test_Chmod(fspp::File *file, fspp::Node *node) {
-    node->chmod(S_IFREG | S_IRUSR | S_IWOTH);
-    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
-        EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.mode);
+    constexpr auto mode = fspp::mode_t().addFileFlag().addUserReadFlag().addOtherWriteFlag();
+    node->chmod(mode);
+    this->IN_STAT(file, node, [mode] (const fspp::Node::stat_info& st){
+        EXPECT_EQ(mode, st.mode);
     });
   }
 
