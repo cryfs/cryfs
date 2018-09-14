@@ -47,6 +47,15 @@ namespace value_type {
 * - val % scalar (returns val)
 * - val / val (returns scalar)
 * - val % val (returns scalar)
+*
+* FlagsValueType: Use this if you want a value type for bitfields (i.e. flags).
+* Additionally to what IdValueType offers, this also defines:
+* - val |= val (returns val)
+* - val &= val (returns val)
+* - val ^= val (returns val)
+* - val | val (returns val)
+* - val & val (returns val)
+* - val ^ val (returns val)
 */
 template <class ConcreteType, class UnderlyingType>
 class IdValueType {
@@ -206,6 +215,46 @@ private:
 
     friend constexpr UnderlyingType operator%(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<UnderlyingType>() % std::declval<UnderlyingType>())) {
         return lhs.value_ % rhs.value_;
+    }
+};
+
+
+template <class ConcreteType, class UnderlyingType>
+class FlagsValueType : public IdValueType<ConcreteType, UnderlyingType> {
+protected:
+    using IdValueType<ConcreteType, UnderlyingType>::IdValueType;
+
+public:
+
+    constexpr ConcreteType& operator&=(ConcreteType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() &= std::declval<UnderlyingType>())) {
+        this->value_ &= rhs.value_;
+        return *static_cast<ConcreteType*>(this);
+    }
+
+    constexpr ConcreteType& operator|=(ConcreteType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() |= std::declval<UnderlyingType>())) {
+        this->value_ |= rhs.value_;
+        return *static_cast<ConcreteType*>(this);
+    }
+
+    constexpr ConcreteType& operator^=(ConcreteType rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() ^= std::declval<UnderlyingType>())) {
+        this->value_ ^= rhs.value_;
+        return *static_cast<ConcreteType*>(this);
+    }
+
+    constexpr ConcreteType operator~() noexcept(noexcept(~*std::declval<UnderlyingType*>())) {
+        return ConcreteType(~this->value_);
+    }
+
+    friend constexpr ConcreteType operator&(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() &= std::declval<ConcreteType>())) {
+        return lhs &= rhs;
+    }
+
+    friend constexpr ConcreteType operator|(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() |= std::declval<ConcreteType>())) {
+        return lhs |= rhs;
+    }
+
+    friend constexpr ConcreteType operator^(ConcreteType lhs, ConcreteType rhs) noexcept(noexcept(std::declval<ConcreteType>() ^= std::declval<ConcreteType>())) {
+        return lhs ^= rhs;
     }
 };
 

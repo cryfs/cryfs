@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_FSINTERFACE_DIR_H_
 
 #include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/value_type/ValueType.h>
 #include <string>
 #include <boost/filesystem/path.hpp>
 

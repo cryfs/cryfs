@@ -7,6 +7,7 @@
 using cpputils::value_type::IdValueType;
 using cpputils::value_type::OrderedIdValueType;
 using cpputils::value_type::QuantityValueType;
+using cpputils::value_type::FlagsValueType;
 
 namespace {
 
@@ -22,10 +23,15 @@ struct MyQuantityValueType : QuantityValueType<MyQuantityValueType, int64_t> {
     constexpr explicit MyQuantityValueType(int64_t val): QuantityValueType(val) {}
 };
 
+struct MyFlagsValueType : FlagsValueType<MyFlagsValueType, int64_t> {
+    constexpr explicit MyFlagsValueType(int64_t val): FlagsValueType(val) {}
+};
+
 }
 DEFINE_HASH_FOR_VALUE_TYPE(MyIdValueType);
 DEFINE_HASH_FOR_VALUE_TYPE(MyOrderedIdValueType);
 DEFINE_HASH_FOR_VALUE_TYPE(MyQuantityValueType);
+DEFINE_HASH_FOR_VALUE_TYPE(MyFlagsValueType);
 namespace {
 
 /**
@@ -57,6 +63,7 @@ struct IdValueTypeTest_constexpr_test {
 static_assert(IdValueTypeTest_constexpr_test<MyIdValueType>::success, "");
 static_assert(IdValueTypeTest_constexpr_test<MyOrderedIdValueType>::success, "");
 static_assert(IdValueTypeTest_constexpr_test<MyQuantityValueType>::success, "");
+static_assert(IdValueTypeTest_constexpr_test<MyFlagsValueType>::success, "");
 
 namespace IdValueTypeTest_constexpr_test_extras {
 	// For some reason, MSVC crashes when these are part of IdValueTypeTest_constexpr_test.
@@ -67,12 +74,14 @@ namespace IdValueTypeTest_constexpr_test_extras {
 	static_assert(MyOrderedIdValueType(5) != MyOrderedIdValueType(6), "");
 	static_assert(!(MyQuantityValueType(5) == MyQuantityValueType(6)), "");
 	static_assert(MyQuantityValueType(5) != MyQuantityValueType(6), "");
+    static_assert(!(MyFlagsValueType(5) == MyFlagsValueType(6)), "");
+    static_assert(MyFlagsValueType(5) != MyFlagsValueType(6), "");
 }
 
 
 template<class Type> class IdValueTypeTest : public testing::Test {
 };
-using IdValueTypeTest_types = testing::Types<MyIdValueType, MyOrderedIdValueType, MyQuantityValueType>;
+using IdValueTypeTest_types = testing::Types<MyIdValueType, MyOrderedIdValueType, MyQuantityValueType, MyFlagsValueType>;
 TYPED_TEST_CASE(IdValueTypeTest, IdValueTypeTest_types);
 
 
@@ -395,6 +404,72 @@ TYPED_TEST(QuantityValueTypeTest, ModScalar) {
 
 TYPED_TEST(QuantityValueTypeTest, ModValue) {
     EXPECT_EQ(1, TypeParam(7) % TypeParam(3));
+}
+
+
+
+
+
+/**
+ * Tests for FlagsValueType
+ */
+
+namespace FlagsValueTypeTest_constexpr_test {
+    static_assert(~MyFlagsValueType(3) != MyFlagsValueType(3), "");
+    static_assert(~~MyFlagsValueType(3) == MyFlagsValueType(3), "");
+    static_assert(~MyFlagsValueType(3) == MyFlagsValueType(~3), "");
+
+    static_assert((MyFlagsValueType(3) & MyFlagsValueType(5)) == MyFlagsValueType(3 & 5), "");
+    static_assert((MyFlagsValueType(3) | MyFlagsValueType(5)) == MyFlagsValueType(3 | 5), "");
+    static_assert((MyFlagsValueType(3) ^ MyFlagsValueType(5)) == MyFlagsValueType(3 ^ 5), "");
+
+    static_assert((MyFlagsValueType(3) &= MyFlagsValueType(5)) == MyFlagsValueType(3 & 5), "");
+    static_assert((MyFlagsValueType(3) |= MyFlagsValueType(5)) == MyFlagsValueType(3 | 5), "");
+    static_assert((MyFlagsValueType(3) ^= MyFlagsValueType(5)) == MyFlagsValueType(3 ^ 5), "");
+}
+
+
+template<class Type> class FlagsValueTypeTest : public testing::Test {};
+using FlagsValueType_types = testing::Types<MyFlagsValueType>;
+TYPED_TEST_CASE(FlagsValueTypeTest, FlagsValueType_types);
+
+TYPED_TEST(FlagsValueTypeTest, Invert) {
+    TypeParam a(3);
+    TypeParam b(~3);
+    EXPECT_EQ(b, ~a);
+
+    a = ~a;
+    EXPECT_EQ(b, a);
+}
+
+TYPED_TEST(FlagsValueTypeTest, And) {
+    TypeParam a(3);
+    TypeParam b(5);
+    TypeParam c(3 & 5);
+    EXPECT_EQ(c, a & b);
+
+    EXPECT_EQ(c, b &= a);
+    EXPECT_EQ(c, b);
+}
+
+TYPED_TEST(FlagsValueTypeTest, Or) {
+    TypeParam a(3);
+    TypeParam b(5);
+    TypeParam c(3 | 5);
+    EXPECT_EQ(c, a | b);
+
+    EXPECT_EQ(c, b |= a);
+    EXPECT_EQ(c, b);
+}
+
+TYPED_TEST(FlagsValueTypeTest, Xor) {
+    TypeParam a(3);
+    TypeParam b(5);
+    TypeParam c(3 ^ 5);
+    EXPECT_EQ(c, a ^ b);
+
+    EXPECT_EQ(c, b ^= a);
+    EXPECT_EQ(c, b);
 }
 
 }
