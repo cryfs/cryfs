@@ -28,17 +28,16 @@ public:
   std::unique_ptr<fspp::Node> file_nested_node;
 
   //TODO IN_STAT still needed after moving it to FsppNodeTest?
-  void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (struct stat)> callback) {
-	  struct stat st1{}, st2{};
-	  node->stat(&st1);
+  void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (const fspp::Node::stat_info&)> callback) {
+	  auto st1 = node->stat();
 	  callback(st1);
-	  file->open(O_RDONLY)->stat(&st2);
+	  auto st2 = file->open(O_RDONLY)->stat();
 	  callback(st2);
   }
 
   void EXPECT_SIZE(uint64_t expectedSize, fspp::File *file, fspp::Node *node) {
-	IN_STAT(file, node, [expectedSize] (struct stat st) {
-		EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.st_size));
+	IN_STAT(file, node, [expectedSize] (const fspp::Node::stat_info& st) {
+		EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.size));
 	});
 
 	EXPECT_NUMBYTES_READABLE(expectedSize, file);
@@ -53,14 +52,14 @@ public:
 	EXPECT_EQ(expectedSize, static_cast<uint64_t>(readBytes));
   }
 
-  void EXPECT_ATIME_EQ(struct timespec expected, struct stat st) {
-	  EXPECT_EQ(expected.tv_sec, st.st_atim.tv_sec);
-	  EXPECT_EQ(expected.tv_nsec, st.st_atim.tv_nsec);
+  void EXPECT_ATIME_EQ(struct timespec expected, const fspp::Node::stat_info& st) {
+	  EXPECT_EQ(expected.tv_sec, st.atime.tv_sec);
+	  EXPECT_EQ(expected.tv_nsec, st.atime.tv_nsec);
   }
 
-  void EXPECT_MTIME_EQ(struct timespec expected, struct stat st) {
-      EXPECT_EQ(expected.tv_sec, st.st_mtim.tv_sec);
-      EXPECT_EQ(expected.tv_nsec, st.st_mtim.tv_nsec);
+  void EXPECT_MTIME_EQ(struct timespec expected, const fspp::Node::stat_info& st) {
+      EXPECT_EQ(expected.tv_sec, st.mtime.tv_sec);
+      EXPECT_EQ(expected.tv_nsec, st.mtime.tv_nsec);
   }
 };
 

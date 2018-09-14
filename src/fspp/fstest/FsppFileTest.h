@@ -58,22 +58,22 @@ public:
 
   void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {
     node->chown(100, 200);
-    this->IN_STAT(file, node, [] (struct stat st){
-        EXPECT_EQ(100u, st.st_uid);
+    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
+        EXPECT_EQ(100u, st.uid);
     });
   }
 
   void Test_Chown_Gid(fspp::File *file, fspp::Node *node) {
     node->chown(100, 200);
-    this->IN_STAT(file, node, [] (struct stat st){
-        EXPECT_EQ(200u, st.st_gid);
+    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
+        EXPECT_EQ(200u, st.gid);
     });
   }
 
   void Test_Chmod(fspp::File *file, fspp::Node *node) {
     node->chmod(S_IFREG | S_IRUSR | S_IWOTH);
-    this->IN_STAT(file, node, [] (struct stat st){
-        EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.st_mode);
+    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
+        EXPECT_EQ(static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWOTH), st.mode);
     });
   }
 
@@ -81,7 +81,7 @@ public:
     struct timespec ATIME{}; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
     struct timespec MTIME{}; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
     node->utimens(ATIME, MTIME);
-    this->IN_STAT(file, node, [this, ATIME, MTIME] (struct stat st) {
+    this->IN_STAT(file, node, [this, ATIME, MTIME] (const fspp::Node::stat_info& st) {
         this->EXPECT_ATIME_EQ(ATIME, st);
         this->EXPECT_MTIME_EQ(MTIME, st);
     });

@@ -132,28 +132,30 @@ off_t DirBlob::lstat_size() const {
   return DIR_LSTAT_SIZE;
 }
 
-void DirBlob::statChild(const BlockId &blockId, struct ::stat *result) const {
-  result->st_size = _getLstatSize(blockId);
-  statChildWithSizeAlreadySet(blockId, result);
+fspp::Node::stat_info DirBlob::statChild(const BlockId &blockId) const {
+  return statChildWithKnownSize(blockId, _getLstatSize(blockId));
 }
 
-void DirBlob::statChildWithSizeAlreadySet(const BlockId &blockId, struct ::stat *result) const {
+fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, uint64_t size) const {
+  fspp::Node::stat_info result;
+
   auto childOpt = GetChild(blockId);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
   }
   const auto &child = *childOpt;
-  result->st_mode = child.mode();
-  result->st_uid = child.uid();
-  result->st_gid = child.gid();
+  result.mode = child.mode();
+  result.uid = child.uid();
+  result.gid = child.gid();
   //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
-  result->st_nlink = 1;
-  result->st_atim = child.lastAccessTime();
-  result->st_mtim = child.lastModificationTime();
-  result->st_ctim = child.lastMetadataChangeTime();
+  result.nlink = 1;
+  result.size = size;
+  result.atime = child.lastAccessTime();
+  result.mtime = child.lastModificationTime();
+  result.ctime = child.lastMetadataChangeTime();
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
-  result->st_blocks = blobstore::onblocks::utils::ceilDivision(result->st_size, static_cast<off_t>(512));
-  result->st_blksize = _fsBlobStore->virtualBlocksizeBytes();
+  result.blocks = blobstore::onblocks::utils::ceilDivision(size, static_cast<uint64_t>(512));
+  return result;
 }
 
 void DirBlob::updateAccessTimestampForChild(const BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior) {

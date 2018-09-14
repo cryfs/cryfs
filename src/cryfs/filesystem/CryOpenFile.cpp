@@ -30,10 +30,9 @@ void CryOpenFile::flush() {
   _parent->flush();
 }
 
-void CryOpenFile::stat(struct ::stat *result) const {
+fspp::Node::stat_info CryOpenFile::stat() const {
   _device->callFsActionCallbacks();
-  result->st_size = _fileBlob->size();
-  _parent->statChildWithSizeAlreadySet(_fileBlob->blockId(), result);
+  return _parent->statChildWithKnownSize(_fileBlob->blockId(), _fileBlob->size());
 }
 
 void CryOpenFile::truncate(off_t size) const {

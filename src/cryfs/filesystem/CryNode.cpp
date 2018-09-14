@@ -157,23 +157,25 @@ const blockstore::BlockId &CryNode::blockId() const {
   return _blockId;
 }
 
-void CryNode::stat(struct ::stat *result) const {
+CryNode::stat_info CryNode::stat() const {
   device()->callFsActionCallbacks();
   if(_parent == none) {
+    stat_info result;
     //We are the root directory.
-	  //TODO What should we do?
-    result->st_uid = getuid();
-    result->st_gid = getgid();
-	  result->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
-    result->st_size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
+    //TODO What should we do?
+    result.uid = getuid();
+    result.gid = getgid();
+    result.mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR;
+    result.size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
-    result->st_nlink = 1;
+    result.nlink = 1;
     struct timespec now = cpputils::time::now();
-    result->st_atim = now;
-    result->st_mtim = now;
-    result->st_ctim = now;
+    result.atime = now;
+    result.mtime = now;
+    result.ctime = now;
+    return result;
   } else {
-    (*_parent)->statChild(_blockId, result);
+    return (*_parent)->statChild(_blockId);
   }
 }
 

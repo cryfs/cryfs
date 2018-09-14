@@ -11,6 +11,7 @@
 
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/system/stat.h>
 #include <sstream>
 
 using namespace fspp;
@@ -137,19 +138,35 @@ void FilesystemImpl::closeFile(int descriptor) {
   _open_files.close(descriptor);
 }
 
+namespace {
+void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *output) {
+    output->st_nlink = input.nlink;
+    output->st_mode = input.mode;
+    output->st_uid = input.uid;
+    output->st_gid = input.gid;
+    output->st_size = input.size;
+    output->st_blocks = input.blocks;
+    output->st_atim = input.atime;
+    output->st_mtim = input.mtime;
+    output->st_ctim = input.ctime;
+}
+}
+
 void FilesystemImpl::lstat(const bf::path &path, struct ::stat *stbuf) {
   PROFILE(_lstatNanosec);
   auto node = _device->Load(path);
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
-    (*node)->stat(stbuf);
+    auto stat_info = (*node)->stat();
+    convert_stat_info_(stat_info, stbuf);
   }
 }
 
 void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
   PROFILE(_fstatNanosec);
-  _open_files.get(descriptor)->stat(stbuf);
+  auto stat_info = _open_files.get(descriptor)->stat();
+  convert_stat_info_(stat_info, stbuf);
 }
 
 void FilesystemImpl::chmod(const boost::filesystem::path &path, mode_t mode) {

@@ -5,6 +5,7 @@
 #include <blockstore/utils/BlockId.h>
 #include <cpp-utils/macros.h>
 #include <fspp/fs_interface/Dir.h>
+#include <fspp/fs_interface/Node.h>
 #include "FsBlob.h"
 #include "utils/DirEntryList.h"
 #include <mutex>
@@ -56,9 +57,9 @@ namespace cryfs {
 
             void flush();
 
-            void statChild(const blockstore::BlockId &blockId, struct ::stat *result) const;
+            fspp::Node::stat_info statChild(const blockstore::BlockId &blockId) const;
 
-            void statChildWithSizeAlreadySet(const blockstore::BlockId &blockId, struct ::stat *result) const;
+            fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, uint64_t size) const;
 
             void updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior);
 

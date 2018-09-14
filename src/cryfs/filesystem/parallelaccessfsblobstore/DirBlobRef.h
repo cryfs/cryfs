@@ -5,6 +5,7 @@
 #include "FsBlobRef.h"
 #include "../cachingfsblobstore/DirBlobRef.h"
 #include "../fsblobstore/utils/TimestampUpdateBehavior.h"
+#include <fspp/fs_interface/Node.h>
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {
@@ -49,12 +50,12 @@ public:
         return _base->RenameChild(blockId, newName, onOverwritten);
     }
 
-    void statChild(const blockstore::BlockId &blockId, struct ::stat *result) const {
-        return _base->statChild(blockId, result);
+    fspp::Node::stat_info statChild(const blockstore::BlockId &blockId) const {
+        return _base->statChild(blockId);
     }
 
-    void statChildWithSizeAlreadySet(const blockstore::BlockId &blockId, struct ::stat *result) const {
-        return _base->statChildWithSizeAlreadySet(blockId, result);
+    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, uint64_t size) const {
+        return _base->statChildWithKnownSize(blockId, size);
     }
 
     void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior) {
