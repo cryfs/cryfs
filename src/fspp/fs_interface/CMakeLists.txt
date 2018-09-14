@@ -7,7 +7,7 @@ set(SOURCES
   Node.cpp
   OpenFile.cpp
   Symlink.cpp
-)
+  Types.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 

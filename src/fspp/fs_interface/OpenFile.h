@@ -3,7 +3,7 @@
 #define MESSMER_FSPP_FSINTERFACE_OPENFILE_H_
 
 #include <boost/filesystem.hpp>
-#include "Node.h"
+#include "Types.h"
 
 namespace fspp {
 class Device;
@@ -12,7 +12,7 @@ class OpenFile {
 public:
   virtual ~OpenFile() {}
 
-  using stat_info = typename Node::stat_info;
+  using stat_info = fspp::stat_info;
 
   virtual stat_info stat() const = 0;
   virtual void truncate(off_t size) const = 0;

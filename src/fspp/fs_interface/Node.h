@@ -3,6 +3,7 @@
 #define MESSMER_FSPP_FSINTERFACE_NODE_H_
 
 #include <boost/filesystem.hpp>
+#include "Types.h"
 
 namespace fspp {
 
@@ -10,17 +11,7 @@ class Node {
 public:
   virtual ~Node() {}
 
-  struct stat_info final {
-      uint32_t nlink;
-      uint32_t mode;
-      uint32_t uid;
-      uint32_t gid;
-      uint64_t size;
-      uint64_t blocks;
-      struct timespec atime;
-      struct timespec mtime;
-      struct timespec ctime;
-  };
+  using stat_info = fspp::stat_info;
 
   virtual stat_info stat() const = 0;
   virtual void chmod(mode_t mode) = 0;
