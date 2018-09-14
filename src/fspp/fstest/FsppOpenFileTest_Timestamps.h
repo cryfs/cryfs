@@ -14,8 +14,8 @@ public:
         auto file = this->CreateFile(path);
         file->truncate(size);
         auto openFile = file->open(O_RDWR);
-        assert(this->stat(*openFile).st_size == size);
-        assert(this->stat(*this->Load(path)).st_size == size);
+        assert(this->stat(*openFile).size == size);
+        assert(this->stat(*this->Load(path)).size == size);
         return openFile;
     }
 };
@@ -24,8 +24,7 @@ TYPED_TEST_CASE_P(FsppOpenFileTest_Timestamps);
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, stat) {
     auto openFile = this->CreateAndOpenFile("/mynode");
     auto operation = [&openFile] () {
-        struct ::stat st{};
-        openFile->stat(&st);
+        openFile->stat();
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }

@@ -90,12 +90,11 @@ public:
 
   void setModificationTimestampLaterThanAccessTimestamp(const boost::filesystem::path& path) {
     auto node = device->Load(path).value();
-    struct stat st{};
-    node->stat(&st);
-    st.st_mtim.tv_nsec = st.st_mtim.tv_nsec + 1;
+    auto st = node->stat();
+    st.mtime.tv_nsec = st.mtime.tv_nsec + 1;
     node->utimens(
-            st.st_atim,
-            st.st_mtim
+            st.atime,
+            st.mtime
     );
   }
 };

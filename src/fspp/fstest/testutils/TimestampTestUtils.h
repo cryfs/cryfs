@@ -10,7 +10,7 @@
 template<class ConcreteFileSystemTestFixture>
 class TimestampTestUtils : public virtual FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
-    using TimestampUpdateBehavior = std::function<void (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation)>;
+    using TimestampUpdateBehavior = std::function<void (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation)>;
 
     static TimestampUpdateBehavior ExpectUpdatesAccessTimestamp;
     static TimestampUpdateBehavior ExpectDoesntUpdateAccessTimestamp;
@@ -20,13 +20,13 @@ public:
     static TimestampUpdateBehavior ExpectDoesntUpdateMetadataTimestamp;
     static TimestampUpdateBehavior ExpectDoesntUpdateAnyTimestamps;
 
-    void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(std::function<struct stat()> statOld, std::function<struct stat()> statNew, std::function<void()> operation, std::initializer_list<TimestampUpdateBehavior> behaviorChecks) {
-        struct stat oldStat = statOld();
+    void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(std::function<fspp::Node::stat_info()> statOld, std::function<fspp::Node::stat_info()> statNew, std::function<void()> operation, std::initializer_list<TimestampUpdateBehavior> behaviorChecks) {
+        auto oldStat = statOld();
         ensureNodeTimestampsAreOld(oldStat);
         timespec timeBeforeOperation = cpputils::time::now();
         operation();
         timespec timeAfterOperation = cpputils::time::now();
-        struct stat newStat = statNew();
+        auto newStat = statNew();
         for (auto behaviorCheck : behaviorChecks) {
             behaviorCheck(oldStat, newStat, timeBeforeOperation, timeAfterOperation);
         }
@@ -55,30 +55,26 @@ public:
     }
 
     void EXPECT_ACCESS_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
-        EXPECT_LE(lowerBound, stat(node).st_atim);
-        EXPECT_GE(upperBound, stat(node).st_atim);
+        EXPECT_LE(lowerBound, stat(node).atime);
+        EXPECT_GE(upperBound, stat(node).atime);
     }
 
     void EXPECT_MODIFICATION_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
-        EXPECT_LE(lowerBound, stat(node).st_mtim);
-        EXPECT_GE(upperBound, stat(node).st_mtim);
+        EXPECT_LE(lowerBound, stat(node).mtime);
+        EXPECT_GE(upperBound, stat(node).mtime);
     }
 
     void EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(timespec lowerBound, timespec upperBound, const fspp::Node &node) {
-        EXPECT_LE(lowerBound, stat(node).st_ctim);
-        EXPECT_GE(upperBound, stat(node).st_ctim);
+        EXPECT_LE(lowerBound, stat(node).ctime);
+        EXPECT_GE(upperBound, stat(node).ctime);
     }
 
-    static struct stat stat(const fspp::Node &node) {
-        struct stat st{};
-        node.stat(&st);
-        return st;
+    static fspp::Node::stat_info stat(const fspp::Node &node) {
+        return node.stat();
     }
 
-    static struct stat stat(const fspp::OpenFile &openFile) {
-        struct stat st{};
-        openFile.stat(&st);
-        return st;
+    static fspp::Node::stat_info stat(const fspp::OpenFile &openFile) {
+        return openFile.stat();
     }
 
     timespec xSecondsAgo(int sec) {
@@ -87,11 +83,11 @@ public:
         return result;
     }
 
-    void ensureNodeTimestampsAreOld(const struct stat &nodeStat) {
+    void ensureNodeTimestampsAreOld(const fspp::Node::stat_info &nodeStat) {
         waitUntilClockProgresses();
-        EXPECT_LT(nodeStat.st_atim, cpputils::time::now());
-        EXPECT_LT(nodeStat.st_mtim, cpputils::time::now());
-        EXPECT_LT(nodeStat.st_ctim, cpputils::time::now());
+        EXPECT_LT(nodeStat.atime, cpputils::time::now());
+        EXPECT_LT(nodeStat.mtime, cpputils::time::now());
+        EXPECT_LT(nodeStat.ctime, cpputils::time::now());
     }
 
 private:
@@ -106,57 +102,57 @@ private:
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectUpdatesAccessTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(statBeforeOperation);
     UNUSED(timeBeforeOperation);
     UNUSED(timeAfterOperation);
-    EXPECT_LE(timeBeforeOperation, statAfterOperation.st_atim);
-    EXPECT_GE(timeAfterOperation, statAfterOperation.st_atim);
+    EXPECT_LE(timeBeforeOperation, statAfterOperation.atime);
+    EXPECT_GE(timeAfterOperation, statAfterOperation.atime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectDoesntUpdateAccessTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(timeBeforeOperation);
     UNUSED(timeAfterOperation);
-    EXPECT_EQ(statBeforeOperation.st_atim, statAfterOperation.st_atim);
+    EXPECT_EQ(statBeforeOperation.atime, statAfterOperation.atime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectUpdatesModificationTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(statBeforeOperation);
-    EXPECT_LE(timeBeforeOperation, statAfterOperation.st_mtim);
-    EXPECT_GE(timeAfterOperation, statAfterOperation.st_mtim);
+    EXPECT_LE(timeBeforeOperation, statAfterOperation.mtime);
+    EXPECT_GE(timeAfterOperation, statAfterOperation.mtime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectDoesntUpdateModificationTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(timeBeforeOperation);
     UNUSED(timeAfterOperation);
-    EXPECT_EQ(statBeforeOperation.st_mtim, statAfterOperation.st_mtim);
+    EXPECT_EQ(statBeforeOperation.mtime, statAfterOperation.mtime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectUpdatesMetadataTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(statBeforeOperation);
-    EXPECT_LE(timeBeforeOperation, statAfterOperation.st_ctim);
-    EXPECT_GE(timeAfterOperation, statAfterOperation.st_ctim);
+    EXPECT_LE(timeBeforeOperation, statAfterOperation.ctime);
+    EXPECT_GE(timeAfterOperation, statAfterOperation.ctime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectDoesntUpdateMetadataTimestamp =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     UNUSED(timeBeforeOperation);
     UNUSED(timeAfterOperation);
-    EXPECT_EQ(statBeforeOperation.st_ctim, statAfterOperation.st_ctim);
+    EXPECT_EQ(statBeforeOperation.ctime, statAfterOperation.ctime);
 };
 
 template<class ConcreteFileSystemTestFixture>
 typename TimestampTestUtils<ConcreteFileSystemTestFixture>::TimestampUpdateBehavior TimestampTestUtils<ConcreteFileSystemTestFixture>::ExpectDoesntUpdateAnyTimestamps =
-        [] (struct stat statBeforeOperation, struct stat statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
+        [] (const fspp::Node::stat_info& statBeforeOperation, const fspp::Node::stat_info& statAfterOperation, timespec timeBeforeOperation, timespec timeAfterOperation) {
     ExpectDoesntUpdateAccessTimestamp(statBeforeOperation, statAfterOperation, timeBeforeOperation, timeAfterOperation);
     ExpectDoesntUpdateModificationTimestamp(statBeforeOperation, statAfterOperation, timeBeforeOperation, timeAfterOperation);
     ExpectDoesntUpdateMetadataTimestamp(statBeforeOperation, statAfterOperation, timeBeforeOperation, timeAfterOperation);

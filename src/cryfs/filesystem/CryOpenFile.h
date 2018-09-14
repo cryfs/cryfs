@@ -14,7 +14,7 @@ public:
   explicit CryOpenFile(const CryDevice *device, std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
   ~CryOpenFile();
 
-  void stat(struct ::stat *result) const override;
+  stat_info stat() const override;
   void truncate(off_t size) const override;
   size_t read(void *buf, size_t count, off_t offset) const override;
   void write(const void *buf, size_t count, off_t offset) override;

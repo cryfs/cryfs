@@ -7,15 +7,14 @@
 template<class ConcreteFileSystemTestFixture>
 class FsppOpenFileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
-    void IN_STAT(fspp::OpenFile *openFile, std::function<void (struct stat)> callback) {
-        struct stat st{};
-        openFile->stat(&st);
+    void IN_STAT(fspp::OpenFile *openFile, std::function<void (const fspp::OpenFile::stat_info&)> callback) {
+        auto st = openFile->stat();
         callback(st);
     }
 
     void EXPECT_SIZE(uint64_t expectedSize, fspp::OpenFile *openFile) {
-        IN_STAT(openFile, [expectedSize] (struct stat st) {
-            EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.st_size));
+        IN_STAT(openFile, [expectedSize] (const fspp::OpenFile::stat_info& st) {
+            EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.size));
         });
 
         EXPECT_NUMBYTES_READABLE(expectedSize, openFile);
@@ -41,8 +40,8 @@ TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
 TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
     auto file = this->CreateFile("/myfile");
     auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
-    this->IN_STAT(openFile.get(), [] (struct stat st) {
-        EXPECT_TRUE(S_ISREG(st.st_mode));
+    this->IN_STAT(openFile.get(), [] (const fspp::OpenFile::stat_info& st) {
+        EXPECT_TRUE(S_ISREG(st.mode));
     });
 }
 

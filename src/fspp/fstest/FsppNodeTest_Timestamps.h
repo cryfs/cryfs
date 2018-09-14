@@ -26,8 +26,7 @@ public:
     void Test_Stat() {
         auto node = this->CreateNode("/mynode");
         auto operation = [&node] () {
-            struct stat st{};
-            node->stat(&st);
+            node->stat();
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mynode", operation, {
             this->ExpectDoesntUpdateAnyTimestamps
@@ -36,7 +35,7 @@ public:
 
     void Test_Chmod() {
         auto node = this->CreateNode("/mynode");
-        mode_t mode = this->stat(*node).st_mode;
+        mode_t mode = this->stat(*node).mode;
         auto operation = [&node, mode] () {
             node->chmod(mode);
         };
@@ -49,8 +48,8 @@ public:
 
     void Test_Chown() {
         auto node = this->CreateNode("/mynode");
-        uid_t uid = this->stat(*node).st_uid;
-        gid_t gid = this->stat(*node).st_gid;
+        uid_t uid = this->stat(*node).uid;
+        gid_t gid = this->stat(*node).gid;
         auto operation = [&node, uid, gid] () {
             node->chown(uid, gid);
         };
@@ -347,8 +346,8 @@ public:
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mynode", operation, {
             this->ExpectUpdatesMetadataTimestamp
         });
-        EXPECT_EQ(atime, this->stat(*node).st_atim);
-        EXPECT_EQ(mtime, this->stat(*node).st_mtim);
+        EXPECT_EQ(atime, this->stat(*node).atime);
+        EXPECT_EQ(mtime, this->stat(*node).mtime);
     }
 };
 

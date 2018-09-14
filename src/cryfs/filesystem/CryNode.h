@@ -17,7 +17,7 @@ public:
   // TODO grandparent is only needed to set the timestamps of the parent directory on rename and remove. Delete grandparent parameter once we store timestamps in the blob itself instead of in the directory listing.
   CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
   void access(int mask) const override;
-  void stat(struct ::stat *result) const override;
+  stat_info stat() const override;
   void chmod(mode_t mode) override;
   void chown(uid_t uid, gid_t gid) override;
   void rename(const boost::filesystem::path &to) override;
