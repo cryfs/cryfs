@@ -163,8 +163,14 @@ CryNode::stat_info CryNode::stat() const {
     stat_info result;
     //We are the root directory.
     //TODO What should we do?
+#if defined(_MSC_VER)
+    // TODO And what to do on Windows?
+    result.uid = fspp::uid_t(1000);
+    result.gid = fspp::gid_t(1000);
+#else
     result.uid = fspp::uid_t(getuid());
     result.gid = fspp::gid_t(getgid());
+#endif
     result.mode = fspp::mode_t().addDirFlag().addUserReadFlag().addUserWriteFlag().addUserExecFlag();
     result.size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
