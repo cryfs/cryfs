@@ -59,7 +59,7 @@ find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})
 
-if(NOT WIN32)
+if(NOT MSVC)
   find_package(Backtrace REQUIRED)
   target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
