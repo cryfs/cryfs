@@ -40,76 +40,93 @@ struct mode_t final : cpputils::value_type::FlagsValueType<mode_t, uint32_t> {
         return value_;
     }
 
+private:
+	static constexpr mode_t S_IFMT_() { return mode_t(0170000); };
+	static constexpr mode_t S_IFDIR_() { return mode_t(0040000); };
+	static constexpr mode_t S_IFREG_() { return mode_t(0100000); };
+	static constexpr mode_t S_IFLNK_() { return mode_t(0120000); };
+
+	static constexpr mode_t S_IRUSR_() { return mode_t(0000400); };
+	static constexpr mode_t S_IWUSR_() { return mode_t(0000200); };
+	static constexpr mode_t S_IXUSR_() { return mode_t(0000100); };
+	static constexpr mode_t S_IRGRP_() { return mode_t(0000040); };
+	static constexpr mode_t S_IWGRP_() { return mode_t(0000020); };
+	static constexpr mode_t S_IXGRP_() { return mode_t(0000010); };
+	static constexpr mode_t S_IROTH_() { return mode_t(0000004); };
+	static constexpr mode_t S_IWOTH_() { return mode_t(0000002); };
+	static constexpr mode_t S_IXOTH_() { return mode_t(0000001); };
+
+	static constexpr bool S_ISREG_(mode_t mode) {
+		return (mode & S_IFMT_()) == S_IFREG_();
+	}
+
+	static constexpr bool S_ISDIR_(mode_t mode) {
+		return (mode & S_IFMT_()) == S_IFDIR_();
+	}
+
+	static constexpr bool S_ISLNK_(mode_t mode) {
+		return (mode & S_IFMT_()) == S_IFLNK_();
+	}
+
+public:
     constexpr mode_t& addFileFlag() noexcept {
-        value_ |= S_IFREG;
-        return *this;
+        return *this |= S_IFREG_();
     }
 
     constexpr mode_t& addDirFlag() noexcept {
-        value_ |= S_IFDIR;
-        return *this;
+        return *this |= S_IFDIR_();
     }
 
     constexpr mode_t& addSymlinkFlag() noexcept {
-        value_ |= S_IFLNK;
-        return *this;
+        return *this |= S_IFLNK_();
     }
 
     constexpr mode_t& addUserReadFlag() noexcept {
-        value_ |= S_IRUSR;
-        return *this;
+        return *this |= S_IRUSR_();
     }
 
     constexpr mode_t& addUserWriteFlag() noexcept {
-        value_ |= S_IWUSR;
-        return *this;
+		return *this |= S_IWUSR_();
     }
 
     constexpr mode_t& addUserExecFlag() noexcept {
-        value_ |= S_IXUSR;
-        return *this;
+		return *this |= S_IXUSR_();
     }
 
     constexpr mode_t& addGroupReadFlag() noexcept {
-        value_ |= S_IRGRP;
-        return *this;
+		return *this |= S_IRGRP_();
     }
 
     constexpr mode_t& addGroupWriteFlag() noexcept {
-        value_ |= S_IWGRP;
-        return *this;
+		return *this |= S_IWGRP_();
     }
 
     constexpr mode_t& addGroupExecFlag() noexcept {
-        value_ |= S_IXGRP;
-        return *this;
+		return *this |= S_IXGRP_();
     }
 
     constexpr mode_t& addOtherReadFlag() noexcept {
-        value_ |= S_IROTH;
-        return *this;
+		return *this |= S_IROTH_();
     }
 
     constexpr mode_t& addOtherWriteFlag() noexcept {
-        value_ |= S_IWOTH;
-        return *this;
+		return *this |= S_IWOTH_();
     }
 
     constexpr mode_t& addOtherExecFlag() noexcept {
-        value_ |= S_IXOTH;
-        return *this;
+		return *this |= S_IXOTH_();
     }
 
     constexpr bool hasFileFlag() const noexcept {
-        return S_ISREG(value_);
+        return S_ISREG_(*this);
     }
 
     constexpr bool hasDirFlag() const noexcept {
-        return S_ISDIR(value_);
+        return S_ISDIR_(*this);
     }
 
     constexpr bool hasSymlinkFlag() const noexcept {
-        return S_ISLNK(value_);
+        return S_ISLNK_(*this);
     }
 };
 

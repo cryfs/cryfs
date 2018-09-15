@@ -5,8 +5,12 @@
 #include <boost/filesystem.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <sys/stat.h>
-#include <sys/statvfs.h>
 #include "../fs_interface/Dir.h"
+#if defined(_MSC_VER)
+#include <fuse/fuse.h>
+#else
+#include <sys/statvfs.h>
+#endif
 
 namespace fspp {
 namespace fuse {
