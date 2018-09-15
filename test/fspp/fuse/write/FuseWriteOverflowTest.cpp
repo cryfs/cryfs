@@ -15,44 +15,44 @@ using namespace fspp::fuse;
 
 class FuseWriteOverflowTest: public FuseWriteTest {
 public:
-  size_t FILESIZE;
-  size_t WRITESIZE;
-  size_t OFFSET;
+  fspp::num_bytes_t FILESIZE;
+  fspp::num_bytes_t WRITESIZE;
+  fspp::num_bytes_t OFFSET;
 
   WriteableInMemoryFile testFile;
   Data writeData;
 
-  FuseWriteOverflowTest(size_t filesize, size_t writesize, size_t offset)
-  : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(DataFixture::generate(FILESIZE)), writeData(DataFixture::generate(WRITESIZE)) {
+  FuseWriteOverflowTest(fspp::num_bytes_t filesize, fspp::num_bytes_t writesize, fspp::num_bytes_t offset)
+  : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(DataFixture::generate(FILESIZE.value())), writeData(DataFixture::generate(WRITESIZE.value())) {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
     EXPECT_CALL(fsimpl, write(0, _, _, _)).WillRepeatedly(WriteToFile);
   }
 
   // This write() mock implementation writes to the stored virtual file.
-  Action<void(int, const void*, size_t, off_t)> WriteToFile =
-    Invoke([this](int, const void *buf, size_t count, off_t offset) {
+  Action<void(int, const void*, fspp::num_bytes_t, fspp::num_bytes_t)> WriteToFile =
+    Invoke([this](int, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
       testFile.write(buf, count, offset);
     });
 };
 
 class FuseWriteOverflowTestWithNonemptyFile: public FuseWriteOverflowTest {
 public:
-  FuseWriteOverflowTestWithNonemptyFile(): FuseWriteOverflowTest(1000, 2000, 500) {}
+  FuseWriteOverflowTestWithNonemptyFile(): FuseWriteOverflowTest(fspp::num_bytes_t(1000), fspp::num_bytes_t(2000), fspp::num_bytes_t(500)) {}
 };
 
 TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteMoreThanFileSizeFromBeginning) {
-  WriteFile(FILENAME, writeData.data(), WRITESIZE, 0);
+  WriteFile(FILENAME, writeData.data(), WRITESIZE, fspp::num_bytes_t(0));
 
   EXPECT_EQ(WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.fileContentEquals(writeData, 0));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, fspp::num_bytes_t(0)));
 }
 
 TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteMoreThanFileSizeFromMiddle) {
   WriteFile(FILENAME, writeData.data(), WRITESIZE, OFFSET);
 
   EXPECT_EQ(OFFSET + WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.regionUnchanged(0, OFFSET));
+  EXPECT_TRUE(testFile.regionUnchanged(fspp::num_bytes_t(0), OFFSET));
   EXPECT_TRUE(testFile.fileContentEquals(writeData, OFFSET));
 }
 
@@ -60,20 +60,20 @@ TEST_F(FuseWriteOverflowTestWithNonemptyFile, WriteAfterFileEnd) {
   WriteFile(FILENAME, writeData.data(), WRITESIZE, FILESIZE + OFFSET);
 
   EXPECT_EQ(FILESIZE + OFFSET + WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.regionUnchanged(0, FILESIZE));
+  EXPECT_TRUE(testFile.regionUnchanged(fspp::num_bytes_t(0), FILESIZE));
   EXPECT_TRUE(testFile.fileContentEquals(writeData, FILESIZE + OFFSET));
 }
 
 class FuseWriteOverflowTestWithEmptyFile: public FuseWriteOverflowTest {
 public:
-  FuseWriteOverflowTestWithEmptyFile(): FuseWriteOverflowTest(0, 2000, 500) {}
+  FuseWriteOverflowTestWithEmptyFile(): FuseWriteOverflowTest(fspp::num_bytes_t(0), fspp::num_bytes_t(2000), fspp::num_bytes_t(500)) {}
 };
 
 TEST_F(FuseWriteOverflowTestWithEmptyFile, WriteToBeginOfEmptyFile) {
-  WriteFile(FILENAME, writeData.data(), WRITESIZE, 0);
+  WriteFile(FILENAME, writeData.data(), WRITESIZE, fspp::num_bytes_t(0));
 
   EXPECT_EQ(WRITESIZE, testFile.size());
-  EXPECT_TRUE(testFile.fileContentEquals(writeData, 0));
+  EXPECT_TRUE(testFile.fileContentEquals(writeData, fspp::num_bytes_t(0)));
 }
 
 TEST_F(FuseWriteOverflowTestWithEmptyFile, WriteAfterFileEnd) {

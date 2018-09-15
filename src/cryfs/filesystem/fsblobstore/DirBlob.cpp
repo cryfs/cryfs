@@ -24,9 +24,9 @@ using boost::none;
 namespace cryfs {
 namespace fsblobstore {
 
-constexpr off_t DirBlob::DIR_LSTAT_SIZE;
+constexpr fspp::num_bytes_t DirBlob::DIR_LSTAT_SIZE;
 
-DirBlob::DirBlob(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<off_t (const blockstore::BlockId&)> getLstatSize) :
+DirBlob::DirBlob(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize) :
     FsBlob(std::move(blob)), _fsBlobStore(fsBlobStore), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
@@ -43,7 +43,7 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, const blockstore::BlockId &parent, std::function<off_t(const blockstore::BlockId&)> getLstatSize) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, const blockstore::BlockId &parent, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::DIR, parent);
   return make_unique_ref<DirBlob>(fsBlobStore, std::move(blob), getLstatSize);
 }
@@ -132,7 +132,7 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
   }
 }
 
-off_t DirBlob::lstat_size() const {
+fspp::num_bytes_t DirBlob::lstat_size() const {
   return DIR_LSTAT_SIZE;
 }
 
@@ -140,7 +140,7 @@ fspp::Node::stat_info DirBlob::statChild(const BlockId &blockId) const {
   return statChildWithKnownSize(blockId, _getLstatSize(blockId));
 }
 
-fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, uint64_t size) const {
+fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, fspp::num_bytes_t size) const {
   fspp::Node::stat_info result;
 
   auto childOpt = GetChild(blockId);
@@ -158,7 +158,7 @@ fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, ui
   result.mtime = child.lastModificationTime();
   result.ctime = child.lastMetadataChangeTime();
   //TODO Move ceilDivision to general utils which can be used by cryfs as well
-  result.blocks = blobstore::onblocks::utils::ceilDivision(size, static_cast<uint64_t>(512));
+  result.blocks = blobstore::onblocks::utils::ceilDivision(size.value(), static_cast<int64_t>(512));
   return result;
 }
 
@@ -194,7 +194,7 @@ void DirBlob::utimensChild(const BlockId &blockId, timespec lastAccessTime, time
   _changed = true;
 }
 
-void DirBlob::setLstatSizeGetter(std::function<off_t(const blockstore::BlockId&)> getLstatSize) {
+void DirBlob::setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
     std::unique_lock<std::mutex> lock(_mutex);
     _getLstatSize = getLstatSize;
 }

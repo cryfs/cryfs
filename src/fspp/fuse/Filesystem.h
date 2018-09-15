@@ -25,10 +25,10 @@ public:
   virtual void chmod(const boost::filesystem::path &path, ::mode_t mode) = 0;
   //TODO Test chown
   virtual void chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid) = 0;
-  virtual void truncate(const boost::filesystem::path &path, off_t size) = 0;
-  virtual void ftruncate(int descriptor, off_t size) = 0;
-  virtual size_t read(int descriptor, void *buf, size_t count, off_t offset) = 0;
-  virtual void write(int descriptor, const void *buf, size_t count, off_t offset) = 0;
+  virtual void truncate(const boost::filesystem::path &path, fspp::num_bytes_t size) = 0;
+  virtual void ftruncate(int descriptor, fspp::num_bytes_t size) = 0;
+  virtual fspp::num_bytes_t read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) = 0;
+  virtual void write(int descriptor, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) = 0;
   virtual void fsync(int descriptor) = 0;
   virtual void fdatasync(int descriptor) = 0;
   virtual void access(const boost::filesystem::path &path, int mask) = 0;
@@ -44,7 +44,7 @@ public:
   //TODO Test createSymlink
   virtual void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, ::uid_t uid, ::gid_t gid) = 0;
   //TODO Test readSymlink
-  virtual void readSymlink(const boost::filesystem::path &path, char *buf, size_t size) = 0;
+  virtual void readSymlink(const boost::filesystem::path &path, char *buf, fspp::num_bytes_t size) = 0;
 };
 
 }

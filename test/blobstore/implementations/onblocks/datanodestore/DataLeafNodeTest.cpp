@@ -259,9 +259,9 @@ TEST_F(DataLeafNodeTest, CopyDataLeaf) {
 
 
 struct DataRange {
-  size_t leafsize;
-  off_t offset;
-  size_t count;
+  uint64_t leafsize;
+  uint64_t offset;
+  uint64_t count;
 };
 
 class DataLeafNodeDataTest: public DataLeafNodeTest, public WithParamInterface<DataRange> {
@@ -282,13 +282,13 @@ public:
     return newleaf->blockId();
   }
 
-  void EXPECT_DATA_READS_AS(const Data &expected, const DataLeafNode &leaf, off_t offset, size_t count) {
+  void EXPECT_DATA_READS_AS(const Data &expected, const DataLeafNode &leaf, uint64_t offset, uint64_t count) {
     Data read(count);
     leaf.read(read.data(), offset, count);
     EXPECT_EQ(expected, read);
   }
 
-  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataLeafNode &leaf, off_t start, size_t count) {
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const Data &expected, const DataLeafNode &leaf, uint64_t start, uint64_t count) {
     Data begin(start);
     Data end(GetParam().leafsize - count - start);
 
@@ -299,7 +299,7 @@ public:
     EXPECT_DATA_READS_AS(end, leaf, start + count, end.size());
   }
 
-  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const DataLeafNode &leaf, off_t start, size_t count) {
+  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const DataLeafNode &leaf, uint64_t start, uint64_t count) {
     Data ZEROES(GetParam().leafsize);
     ZEROES.FillWithZeroes();
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, leaf, start, count);

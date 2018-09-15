@@ -11,20 +11,20 @@ public:
 
   struct ReadError {
     int error;
-    size_t read_bytes;
+    fspp::num_bytes_t read_bytes;
   };
 
-  void ReadFile(const char *filename, void *buf, size_t count, off_t offset);
-  ReadError ReadFileReturnError(const char *filename, void *buf, size_t count, off_t offset);
+  void ReadFile(const char *filename, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset);
+  ReadError ReadFileReturnError(const char *filename, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset);
 
-  ::testing::Action<size_t(int, void*, size_t, off_t)> ReturnSuccessfulRead =
-    ::testing::Invoke([](int, void *, size_t count, off_t) {
+  ::testing::Action<fspp::num_bytes_t(int, void*, fspp::num_bytes_t, fspp::num_bytes_t)> ReturnSuccessfulRead =
+    ::testing::Invoke([](int, void *, fspp::num_bytes_t count, fspp::num_bytes_t) {
       return count;
     });
 
-  ::testing::Action<size_t(int, void*, size_t, off_t)> ReturnSuccessfulReadRegardingSize(size_t filesize) {
-    return ::testing::Invoke([filesize](int, void *, size_t count, off_t offset) {
-      size_t ableToReadCount = std::min(count, static_cast<size_t>(filesize - offset));
+  ::testing::Action<fspp::num_bytes_t(int, void*, fspp::num_bytes_t, fspp::num_bytes_t)> ReturnSuccessfulReadRegardingSize(fspp::num_bytes_t filesize) {
+    return ::testing::Invoke([filesize](int, void *, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
+      fspp::num_bytes_t ableToReadCount = std::min(count, filesize - offset);
       return ableToReadCount;
     });
   }

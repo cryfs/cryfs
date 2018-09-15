@@ -15,7 +15,7 @@ public:
   ~CryFile();
 
   cpputils::unique_ref<fspp::OpenFile> open(int flags) override;
-  void truncate(off_t size) override;
+  void truncate(fspp::num_bytes_t size) override;
   fspp::Dir::EntryType getType() const override;
   void remove() override;
 

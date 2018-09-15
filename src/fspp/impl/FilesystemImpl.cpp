@@ -144,7 +144,7 @@ void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *outpu
     output->st_mode = input.mode.value();
     output->st_uid = input.uid.value();
     output->st_gid = input.gid.value();
-    output->st_size = input.size;
+    output->st_size = input.size.value();
     output->st_blocks = input.blocks;
     output->st_atim = input.atime;
     output->st_mtim = input.mtime;
@@ -189,22 +189,22 @@ void FilesystemImpl::chown(const boost::filesystem::path &path, ::uid_t uid, ::g
   }
 }
 
-void FilesystemImpl::truncate(const bf::path &path, off_t size) {
+void FilesystemImpl::truncate(const bf::path &path, fspp::num_bytes_t size) {
   PROFILE(_truncateNanosec);
   LoadFile(path)->truncate(size);
 }
 
-void FilesystemImpl::ftruncate(int descriptor, off_t size) {
+void FilesystemImpl::ftruncate(int descriptor, fspp::num_bytes_t size) {
   PROFILE(_ftruncateNanosec);
   _open_files.get(descriptor)->truncate(size);
 }
 
-size_t FilesystemImpl::read(int descriptor, void *buf, size_t count, off_t offset) {
+fspp::num_bytes_t FilesystemImpl::read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   PROFILE(_readNanosec);
   return _open_files.get(descriptor)->read(buf, count, offset);
 }
 
-void FilesystemImpl::write(int descriptor, const void *buf, size_t count, off_t offset) {
+void FilesystemImpl::write(int descriptor, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   PROFILE(_writeNanosec);
   _open_files.get(descriptor)->write(buf, count, offset);
 }
@@ -317,10 +317,10 @@ void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, ::u
   parent->createSymlink(from.filename().string(), to, fspp::uid_t(uid), fspp::gid_t(gid));
 }
 
-void FilesystemImpl::readSymlink(const bf::path &path, char *buf, size_t size) {
+void FilesystemImpl::readSymlink(const bf::path &path, char *buf, fspp::num_bytes_t size) {
   PROFILE(_readSymlinkNanosec);
   string target = LoadSymlink(path)->target().string();
   PROFILE(_readSymlinkNanosec_withoutLoading);
-  std::memcpy(buf, target.c_str(), std::min(target.size()+1, size));
-  buf[size-1] = '\0';
+  std::memcpy(buf, target.c_str(), std::min(static_cast<int64_t>(target.size()+1), size.value()));
+  buf[size.value()-1] = '\0';
 }

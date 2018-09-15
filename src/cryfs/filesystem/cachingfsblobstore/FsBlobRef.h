@@ -13,7 +13,7 @@ class FsBlobRef {
 public:
     virtual ~FsBlobRef();
     virtual const blockstore::BlockId &blockId() const = 0;
-    virtual off_t lstat_size() const = 0;
+    virtual fspp::num_bytes_t lstat_size() const = 0;
 
     const blockstore::BlockId &parentPointer() const {
         return _baseBlob->parentPointer();

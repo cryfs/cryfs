@@ -5,9 +5,9 @@
 // This file is meant to be included by BlockStoreTest.h only
 
 struct DataRange {
-  size_t blocksize;
-  off_t offset;
-  size_t count;
+  uint64_t blocksize;
+  uint64_t offset;
+  uint64_t count;
 };
 
 class BlockStoreDataParametrizedTest {
@@ -116,13 +116,13 @@ private:
     return newblock->blockId();
   }
 
-  void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, off_t offset, size_t count) {
+  void EXPECT_DATA_READS_AS(const cpputils::Data &expected, const blockstore::Block &block, uint64_t offset, uint64_t count) {
     cpputils::Data read(count);
     std::memcpy(read.data(), static_cast<const uint8_t*>(block.data()) + offset, count);
     EXPECT_EQ(expected, read);
   }
 
-  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const cpputils::Data &expected, const blockstore::Block &block, off_t start, size_t count) {
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const cpputils::Data &expected, const blockstore::Block &block, uint64_t start, uint64_t count) {
     cpputils::Data begin(start);
     cpputils::Data end(testData.blocksize - count - start);
 
@@ -133,7 +133,7 @@ private:
     EXPECT_DATA_READS_AS(end, block, start + count, end.size());
   }
 
-  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const blockstore::Block &block, off_t start, size_t count) {
+  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const blockstore::Block &block, uint64_t start, uint64_t count) {
     cpputils::Data ZEROES(testData.blocksize);
     ZEROES.FillWithZeroes();
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, block, start, count);

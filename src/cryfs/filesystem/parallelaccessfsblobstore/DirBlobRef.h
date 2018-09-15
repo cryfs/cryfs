@@ -54,7 +54,7 @@ public:
         return _base->statChild(blockId);
     }
 
-    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, uint64_t size) const {
+    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const {
         return _base->statChildWithKnownSize(blockId, size);
     }
 
@@ -98,7 +98,7 @@ public:
         return _base->blockId();
     }
 
-    off_t lstat_size() const override {
+    fspp::num_bytes_t lstat_size() const override {
         return _base->lstat_size();
     }
 

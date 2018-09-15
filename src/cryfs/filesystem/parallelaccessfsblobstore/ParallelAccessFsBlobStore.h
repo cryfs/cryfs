@@ -35,7 +35,7 @@ namespace cryfs {
             cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> _baseBlobStore;
             parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::BlockId> _parallelAccessStore;
 
-            std::function<off_t (const blockstore::BlockId &)> _getLstatSize();
+            std::function<fspp::num_bytes_t (const blockstore::BlockId &)> _getLstatSize();
 
             DISALLOW_COPY_AND_ASSIGN(ParallelAccessFsBlobStore);
         };
@@ -50,7 +50,7 @@ namespace cryfs {
             return _parallelAccessStore.remove(blockId, std::move(blob));
         }
 
-        inline std::function<off_t (const blockstore::BlockId &blockId)> ParallelAccessFsBlobStore::_getLstatSize() {
+        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &blockId)> ParallelAccessFsBlobStore::_getLstatSize() {
             return [this] (const blockstore::BlockId &blockId) {
                 auto blob = load(blockId);
                 ASSERT(blob != boost::none, "Blob not found");

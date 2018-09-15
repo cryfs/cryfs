@@ -28,7 +28,7 @@ public:
   void resize(uint32_t size);
 
 private:
-  void fillDataWithZeroesFromTo(off_t begin, off_t end);
+  void fillDataWithZeroesFromTo(uint64_t begin, uint64_t end);
 
   DISALLOW_COPY_AND_ASSIGN(DataLeafNode);
 };

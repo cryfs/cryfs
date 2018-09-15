@@ -38,7 +38,7 @@ namespace cryfs {
             void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId);
 #endif
 
-            std::function<off_t(const blockstore::BlockId &)> _getLstatSize();
+            std::function<fspp::num_bytes_t(const blockstore::BlockId &)> _getLstatSize();
 
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
 
@@ -80,7 +80,7 @@ namespace cryfs {
             _baseBlobStore->remove(blockId);
         }
 
-        inline std::function<off_t (const blockstore::BlockId &)> FsBlobStore::_getLstatSize() {
+        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &)> FsBlobStore::_getLstatSize() {
             return [this] (const blockstore::BlockId &blockId) {
                 auto blob = load(blockId);
                 ASSERT(blob != boost::none, "Blob not found");

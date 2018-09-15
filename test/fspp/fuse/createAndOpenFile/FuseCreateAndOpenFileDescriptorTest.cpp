@@ -36,9 +36,9 @@ TEST_P(FuseCreateAndOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnDoesntExistOnLstat(FILENAME);
   EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(FILENAME), _, _, _))
     .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(1));
+  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(fspp::num_bytes_t(1)));
   //For the syscall to succeed, we also need to give an fstat implementation.
-  ReturnIsFileOnFstatWithSize(GetParam(), 1);
+  ReturnIsFileOnFstatWithSize(GetParam(), fspp::num_bytes_t(1));
 
   CreateAndOpenAndReadFile(FILENAME);
 }

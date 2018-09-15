@@ -17,7 +17,7 @@ namespace cryfs {
 
             const boost::filesystem::path &target() const;
 
-            off_t lstat_size() const override;
+            fspp::num_bytes_t lstat_size() const override;
 
         private:
             boost::filesystem::path _target;

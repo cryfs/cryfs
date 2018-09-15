@@ -80,11 +80,11 @@ int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid) {
   return FUSE_OBJ->chown(bf::path(path), uid, gid);
 }
 
-int fusepp_truncate(const char *path, off_t size) {
+int fusepp_truncate(const char *path, int64_t size) {
   return FUSE_OBJ->truncate(bf::path(path), size);
 }
 
-int fusepp_ftruncate(const char *path, off_t size, fuse_file_info *fileinfo) {
+int fusepp_ftruncate(const char *path, int64_t size, fuse_file_info *fileinfo) {
   return FUSE_OBJ->ftruncate(bf::path(path), size, fileinfo);
 }
 
@@ -100,11 +100,11 @@ int fusepp_release(const char *path, fuse_file_info *fileinfo) {
   return FUSE_OBJ->release(bf::path(path), fileinfo);
 }
 
-int fusepp_read(const char *path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+int fusepp_read(const char *path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
   return FUSE_OBJ->read(bf::path(path), buf, size, offset, fileinfo);
 }
 
-int fusepp_write(const char *path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+int fusepp_write(const char *path, const char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
   return FUSE_OBJ->write(bf::path(path), buf, size, offset, fileinfo);
 }
 
@@ -129,7 +129,7 @@ int fusepp_opendir(const char *path, fuse_file_info *fileinfo) {
   return FUSE_OBJ->opendir(bf::path(path), fileinfo);
 }
 
-int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
+int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
   return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo);
 }
 
@@ -166,10 +166,10 @@ int fusepp_create(const char *path, ::mode_t mode, fuse_file_info *fileinfo) {
 int fusepp_bmap(const char*, size_t blocksize, uint64_t *idx)
 int fusepp_ioctl(const char*, int cmd, void *arg, fuse_file_info*, unsigned int flags, void *data)
 int fusepp_poll(const char*, fuse_file_info*, fuse_pollhandle *ph, unsigned *reventsp)
-int fusepp_write_buf(const char*, fuse_bufvec *buf, off_t off, fuse_file_info*)
-int fusepp_read_buf(const chas*, struct fuse_bufvec **bufp, size_t size, off_T off, fuse_file_info*)
+int fusepp_write_buf(const char*, fuse_bufvec *buf, int64_t off, fuse_file_info*)
+int fusepp_read_buf(const chas*, struct fuse_bufvec **bufp, size_t size, int64_t off, fuse_file_info*)
 int fusepp_flock(const char*, fuse_file_info*, int op)
-int fusepp_fallocate(const char*, int, off_t, off_t, fuse_file_info*)*/
+int fusepp_fallocate(const char*, int, int64_t, int64_t, fuse_file_info*)*/
 
 fuse_operations *operations() {
   static std::unique_ptr<fuse_operations> singleton(nullptr);
@@ -369,7 +369,7 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->readSymlink(path, buf, size);
+    _fs->readSymlink(path, buf, fspp::num_bytes_t(size));
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::readlink: {}", e.what());
@@ -560,13 +560,13 @@ int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
   }
 }
 
-int Fuse::truncate(const bf::path &path, off_t size) {
+int Fuse::truncate(const bf::path &path, int64_t size) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "truncate({}, {})", path, size);
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->truncate(path, size);
+    _fs->truncate(path, fspp::num_bytes_t(size));
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::truncate: {}", e.what());
@@ -582,13 +582,13 @@ int Fuse::truncate(const bf::path &path, off_t size) {
   }
 }
 
-int Fuse::ftruncate(const bf::path &path, off_t size, fuse_file_info *fileinfo) {
+int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "ftruncate({}, {})", path, size);
 #endif
   UNUSED(path);
   try {
-    _fs->ftruncate(fileinfo->fh, size);
+    _fs->ftruncate(fileinfo->fh, fspp::num_bytes_t(size));
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::ftruncate: {}", e.what());
@@ -670,13 +670,13 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
   }
 }
 
-int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+int Fuse::read(const bf::path &path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "read({}, _, {}, {}, _)", path, size, offset);
 #endif
   UNUSED(path);
   try {
-    return _fs->read(fileinfo->fh, buf, size, offset);
+    return _fs->read(fileinfo->fh, buf, fspp::num_bytes_t(size), fspp::num_bytes_t(offset)).value();
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::read: {}", e.what());
     return -EIO;
@@ -691,13 +691,13 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, off_t offset, fuse_
   }
 }
 
-int Fuse::write(const bf::path &path, const char *buf, size_t size, off_t offset, fuse_file_info *fileinfo) {
+int Fuse::write(const bf::path &path, const char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "write({}, _, {}, {}, _)", path, size, offsset);
 #endif
   UNUSED(path);
   try {
-    _fs->write(fileinfo->fh, buf, size, offset);
+    _fs->write(fileinfo->fh, buf, fspp::num_bytes_t(size), fspp::num_bytes_t(offset));
     return size;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::write: {}", e.what());
@@ -792,7 +792,7 @@ int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
   return 0;
 }
 
-int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, off_t offset, fuse_file_info *fileinfo) {
+int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "readdir({}, _, _, {}, _)", path, offest);
 #endif

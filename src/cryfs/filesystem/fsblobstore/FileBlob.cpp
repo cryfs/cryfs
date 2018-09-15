@@ -21,28 +21,28 @@ unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const 
   return make_unique_ref<FileBlob>(std::move(blob));
 }
 
-size_t FileBlob::read(void *target, uint64_t offset, uint64_t count) const {
-  return baseBlob().tryRead(target, offset, count);
+fspp::num_bytes_t FileBlob::read(void *target, fspp::num_bytes_t offset, fspp::num_bytes_t count) const {
+  return fspp::num_bytes_t(baseBlob().tryRead(target, offset.value(), count.value()));
 }
 
-void FileBlob::write(const void *source, uint64_t offset, uint64_t count) {
-  baseBlob().write(source, offset, count);
+void FileBlob::write(const void *source, fspp::num_bytes_t offset, fspp::num_bytes_t count) {
+  baseBlob().write(source, offset.value(), count.value());
 }
 
 void FileBlob::flush() {
   baseBlob().flush();
 }
 
-void FileBlob::resize(off_t size) {
-  baseBlob().resize(size);
+void FileBlob::resize(fspp::num_bytes_t size) {
+  baseBlob().resize(size.value());
 }
 
-off_t FileBlob::lstat_size() const {
+fspp::num_bytes_t FileBlob::lstat_size() const {
   return size();
 }
 
-off_t FileBlob::size() const {
-  return baseBlob().size();
+fspp::num_bytes_t FileBlob::size() const {
+  return fspp::num_bytes_t(baseBlob().size());
 }
 
 }

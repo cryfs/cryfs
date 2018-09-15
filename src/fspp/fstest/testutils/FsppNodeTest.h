@@ -14,9 +14,9 @@ public:
     callback(st);
   }
 
-  void EXPECT_SIZE(uint64_t expectedSize, fspp::Node *node) {
+  void EXPECT_SIZE(fspp::num_bytes_t expectedSize, fspp::Node *node) {
     IN_STAT(node, [expectedSize] (const fspp::Node::stat_info& st) {
-      EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.size));
+      EXPECT_EQ(expectedSize, st.size);
     });
   }
 };

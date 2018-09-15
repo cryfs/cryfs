@@ -40,7 +40,7 @@ unique_ref<fspp::OpenFile> CryFile::open(int flags) {
   return make_unique_ref<CryOpenFile>(device(), parent(), std::move(blob));
 }
 
-void CryFile::truncate(off_t size) {
+void CryFile::truncate(fspp::num_bytes_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   blob->resize(size);

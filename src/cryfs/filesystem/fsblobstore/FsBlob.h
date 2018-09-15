@@ -5,6 +5,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <blobstore/interface/Blob.h>
 #include "FsBlobView.h"
+#include <fspp/fs_interface/Types.h>
 
 namespace cryfs {
     namespace fsblobstore {
@@ -12,7 +13,7 @@ namespace cryfs {
         public:
             virtual ~FsBlob();
 
-            virtual off_t lstat_size() const = 0;
+            virtual fspp::num_bytes_t lstat_size() const = 0;
             const blockstore::BlockId &blockId() const;
             const blockstore::BlockId &parentPointer() const;
             void setParentPointer(const blockstore::BlockId &parentId);

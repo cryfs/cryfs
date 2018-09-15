@@ -16,19 +16,19 @@ public:
         ASSERT(_base != nullptr, "We just initialized this with a pointer to FileBlob. Can't be something else now.");
     }
 
-    void resize(off_t size) {
+    void resize(fspp::num_bytes_t size) {
         return _base->resize(size);
     }
 
-    off_t size() const {
+    fspp::num_bytes_t size() const {
         return _base->size();
     }
 
-    ssize_t read(void *target, uint64_t offset, uint64_t count) const {
+    fspp::num_bytes_t read(void *target, fspp::num_bytes_t offset, fspp::num_bytes_t count) const {
         return _base->read(target, offset, count);
     }
 
-    void write(const void *source, uint64_t offset, uint64_t count) {
+    void write(const void *source, fspp::num_bytes_t offset, fspp::num_bytes_t count) {
         return _base->write(source, offset, count);
     }
 
@@ -40,7 +40,7 @@ public:
         return _base->blockId();
     }
 
-    off_t lstat_size() const {
+    fspp::num_bytes_t lstat_size() const {
         return _base->lstat_size();
     }
 

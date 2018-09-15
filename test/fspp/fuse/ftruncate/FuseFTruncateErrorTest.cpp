@@ -21,6 +21,6 @@ TEST_P(FuseFTruncateErrorTest, ReturnedErrorIsCorrect) {
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(0);
 
-  int error = FTruncateFileReturnError(FILENAME, 0);
+  int error = FTruncateFileReturnError(FILENAME, fspp::num_bytes_t(0));
   EXPECT_EQ(GetParam(), error);
 }

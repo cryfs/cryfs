@@ -11,11 +11,11 @@ public:
 
   struct WriteError {
     int error;
-    size_t written_bytes;
+    fspp::num_bytes_t written_bytes;
   };
 
-  void WriteFile(const char *filename, const void *buf, size_t count, off_t offset);
-  WriteError WriteFileReturnError(const char *filename, const void *buf, size_t count, off_t offset);
+  void WriteFile(const char *filename, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset);
+  WriteError WriteFileReturnError(const char *filename, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset);
 
 private:
   cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);

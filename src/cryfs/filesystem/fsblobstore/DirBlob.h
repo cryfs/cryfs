@@ -16,17 +16,17 @@ namespace cryfs {
 
         class DirBlob final : public FsBlob {
         public:
-            constexpr static off_t DIR_LSTAT_SIZE = 4096;
+            constexpr static fspp::num_bytes_t DIR_LSTAT_SIZE = fspp::num_bytes_t(4096);
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob,
                                                                     const blockstore::BlockId &parent,
-                                                                    std::function<off_t (const blockstore::BlockId&)> getLstatSize);
+                                                                    std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize);
 
-            DirBlob(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob, std::function<off_t (const blockstore::BlockId&)> getLstatSize);
+            DirBlob(FsBlobStore *fsBlobStore, cpputils::unique_ref<blobstore::Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize);
 
             ~DirBlob();
 
-            off_t lstat_size() const override;
+            fspp::num_bytes_t lstat_size() const override;
 
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
 
@@ -59,7 +59,7 @@ namespace cryfs {
 
             fspp::Node::stat_info statChild(const blockstore::BlockId &blockId) const;
 
-            fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, uint64_t size) const;
+            fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const;
 
             void updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior);
 
@@ -71,7 +71,7 @@ namespace cryfs {
 
             void utimensChild(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
 
-            void setLstatSizeGetter(std::function<off_t(const blockstore::BlockId&)> getLstatSize);
+            void setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize);
 
         private:
 
@@ -83,7 +83,7 @@ namespace cryfs {
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
 
             FsBlobStore *_fsBlobStore;
-            std::function<off_t (const blockstore::BlockId&)> _getLstatSize;
+            std::function<fspp::num_bytes_t (const blockstore::BlockId&)> _getLstatSize;
             DirEntryList _entries;
             mutable std::mutex _mutex;
             bool _changed;

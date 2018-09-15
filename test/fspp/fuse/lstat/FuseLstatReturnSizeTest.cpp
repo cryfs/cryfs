@@ -3,25 +3,25 @@
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-class FuseLstatReturnSizeTest: public FuseLstatReturnTest<off_t>, public WithParamInterface<off_t> {
+class FuseLstatReturnSizeTest: public FuseLstatReturnTest<fspp::num_bytes_t>, public WithParamInterface<fspp::num_bytes_t> {
 private:
-  void set(struct stat *stat, off_t value) override {
-    stat->st_size = value;
+  void set(struct stat *stat, fspp::num_bytes_t value) override {
+    stat->st_size = value.value();
   }
 };
 INSTANTIATE_TEST_CASE_P(FuseLstatReturnSizeTest, FuseLstatReturnSizeTest, Values(
-    0,
-    1,
-    4096,
-    1024*1024*1024
+  fspp::num_bytes_t(0),
+  fspp::num_bytes_t(1),
+  fspp::num_bytes_t(4096),
+  fspp::num_bytes_t(1024*1024*1024)
 ));
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect) {
   struct ::stat result = CallDirLstatWithValue(GetParam());
-  EXPECT_EQ(GetParam(), result.st_size);
+  EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect) {
   struct ::stat result = CallDirLstatWithValue(GetParam());
-  EXPECT_EQ(GetParam(), result.st_size);
+  EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }

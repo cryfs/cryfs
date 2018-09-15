@@ -24,7 +24,7 @@ public:
         return _base->blockId();
     }
 
-    off_t lstat_size() const {
+    fspp::num_bytes_t lstat_size() const {
         return _base->lstat_size();
     }
 

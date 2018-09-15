@@ -38,8 +38,8 @@ const bf::path &SymlinkBlob::target() const {
   return _target;
 }
 
-off_t SymlinkBlob::lstat_size() const {
-  return target().string().size();
+fspp::num_bytes_t SymlinkBlob::lstat_size() const {
+  return fspp::num_bytes_t(target().string().size());
 }
 
 }

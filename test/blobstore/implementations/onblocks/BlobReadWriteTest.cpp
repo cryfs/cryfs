@@ -64,9 +64,9 @@ TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
 }
 
 struct DataRange {
-  size_t blobsize;
-  off_t offset;
-  size_t count;
+  uint64_t blobsize;
+  uint64_t offset;
+  uint64_t count;
 };
 class BlobReadWriteDataTest: public BlobReadWriteTest, public WithParamInterface<DataRange> {
 public:
@@ -79,7 +79,7 @@ public:
   }
 
   template<class DataClass>
-  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const DataClass &expected, const Blob &blob, off_t start, size_t count) {
+  void EXPECT_DATA_READS_AS_OUTSIDE_OF(const DataClass &expected, const Blob &blob, uint64_t start, uint64_t count) {
     Data begin(start);
     Data end(GetParam().blobsize - count - start);
 
@@ -90,7 +90,7 @@ public:
     EXPECT_DATA_READS_AS(end, blob, start + count, end.size());
   }
 
-  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const Blob &blob, off_t start, size_t count) {
+  void EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(const Blob &blob, uint64_t start, uint64_t count) {
     Data ZEROES(GetParam().blobsize);
     ZEROES.FillWithZeroes();
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, blob, start, count);

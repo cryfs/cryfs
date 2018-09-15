@@ -58,7 +58,7 @@ public:
         return _base->statChild(blockId);
     }
 
-    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, uint64_t size) const {
+    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const {
         return _base->statChildWithKnownSize(blockId, size);
     }
 
@@ -102,11 +102,11 @@ public:
         return _base->blockId();
     }
 
-    off_t lstat_size() const {
+    fspp::num_bytes_t lstat_size() const {
         return _base->lstat_size();
     }
 
-    void setLstatSizeGetter(std::function<off_t(const blockstore::BlockId&)> getLstatSize) {
+    void setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
         return _base->setLstatSizeGetter(getLstatSize);
     }
 

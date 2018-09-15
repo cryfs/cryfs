@@ -3,16 +3,16 @@
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
-void FuseFTruncateTest::FTruncateFile(const char *filename, off_t size) {
+void FuseFTruncateTest::FTruncateFile(const char *filename, fspp::num_bytes_t size) {
   int error = FTruncateFileReturnError(filename, size);
   EXPECT_EQ(0, error);
 }
 
-int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, off_t size) {
+int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, fspp::num_bytes_t size) {
   auto fs = TestFS();
 
   auto fd = OpenFile(fs.get(), filename);
-  int retval = ::ftruncate(fd->fd(), size);
+  int retval = ::ftruncate(fd->fd(), size.value());
   if (0 == retval) {
     return 0;
   } else {

@@ -26,7 +26,7 @@ TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly);
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, CreatedFileIsEmpty) {
     this->CreateFile("/myfile");
     auto node = this->Load("/myfile");
-    this->EXPECT_SIZE(0, node.get());
+    this->EXPECT_SIZE(fspp::num_bytes_t(0), node.get());
 }
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {

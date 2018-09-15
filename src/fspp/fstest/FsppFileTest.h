@@ -24,36 +24,36 @@ public:
   }
 
   void Test_Truncate_DontChange1(fspp::File *file, fspp::Node *node) {
-	file->truncate(0);
-	this->EXPECT_SIZE(0, file, node);
+	file->truncate(fspp::num_bytes_t(0));
+	this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
   }
 
   void Test_Truncate_GrowTo1(fspp::File *file, fspp::Node *node) {
-	file->truncate(1);
-	this->EXPECT_SIZE(1, file, node);
+	file->truncate(fspp::num_bytes_t(1));
+	this->EXPECT_SIZE(fspp::num_bytes_t(1), file, node);
   }
 
   void Test_Truncate_Grow(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, file, node);
+	file->truncate(fspp::num_bytes_t(10*1024*1024));
+	this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
   }
 
   void Test_Truncate_DontChange2(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	file->truncate(10*1024*1024);
-	this->EXPECT_SIZE(10*1024*1024, file, node);
+	file->truncate(fspp::num_bytes_t(10*1024*1024));
+	file->truncate(fspp::num_bytes_t(10*1024*1024));
+	this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
   }
 
   void Test_Truncate_Shrink(fspp::File *file, fspp::Node *node) {
-    file->truncate(10*1024*1024);
-    file->truncate(5*1024*1024);
-    this->EXPECT_SIZE(5*1024*1024, file, node);
+    file->truncate(fspp::num_bytes_t(10*1024*1024));
+    file->truncate(fspp::num_bytes_t(5*1024*1024));
+    this->EXPECT_SIZE(fspp::num_bytes_t(5*1024*1024), file, node);
   }
 
   void Test_Truncate_ShrinkTo0(fspp::File *file, fspp::Node *node) {
-	file->truncate(10*1024*1024);
-	file->truncate(0);
-	this->EXPECT_SIZE(0, file, node);
+	file->truncate(fspp::num_bytes_t(10*1024*1024));
+	file->truncate(fspp::num_bytes_t(0));
+	this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
   }
 
   void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {

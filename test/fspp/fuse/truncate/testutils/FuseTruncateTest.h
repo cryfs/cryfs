@@ -8,8 +8,8 @@ class FuseTruncateTest: public FuseTest {
 public:
   const char *FILENAME = "/myfile";
 
-  void TruncateFile(const char *filename, off_t size);
-  int TruncateFileReturnError(const char *filename, off_t size);
+  void TruncateFile(const char *filename, fspp::num_bytes_t size);
+  int TruncateFileReturnError(const char *filename, fspp::num_bytes_t size);
 };
 
 #endif

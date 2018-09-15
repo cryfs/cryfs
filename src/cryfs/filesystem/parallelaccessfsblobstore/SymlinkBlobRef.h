@@ -20,7 +20,7 @@ public:
         return _base->blockId();
     }
 
-    off_t lstat_size() const override {
+    fspp::num_bytes_t lstat_size() const override {
         return _base->lstat_size();
     }
 

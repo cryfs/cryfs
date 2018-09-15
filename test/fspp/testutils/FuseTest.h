@@ -48,10 +48,10 @@ public:
   MOCK_METHOD1(closeFile, void(int));
   MOCK_PATH_METHOD2(lstat, void, struct ::stat*);
   MOCK_METHOD2(fstat, void(int, struct ::stat*));
-  MOCK_PATH_METHOD2(truncate, void, off_t);
-  MOCK_METHOD2(ftruncate, void(int, off_t));
-  MOCK_METHOD4(read, size_t(int, void*, size_t, off_t));
-  MOCK_METHOD4(write, void(int, const void*, size_t, off_t));
+  MOCK_PATH_METHOD2(truncate, void, fspp::num_bytes_t);
+  MOCK_METHOD2(ftruncate, void(int, fspp::num_bytes_t));
+  MOCK_METHOD4(read, fspp::num_bytes_t(int, void*, fspp::num_bytes_t, fspp::num_bytes_t));
+  MOCK_METHOD4(write, void(int, const void*, fspp::num_bytes_t, fspp::num_bytes_t));
   MOCK_METHOD1(flush, void(int));
   MOCK_METHOD1(fsync, void(int));
   MOCK_METHOD1(fdatasync, void(int));
@@ -79,7 +79,7 @@ public:
   MOCK_PATH_METHOD2(chmod, void, mode_t);
   MOCK_PATH_METHOD3(chown, void, uid_t, gid_t);
   MOCK_METHOD4(createSymlink, void(const char*, const char*, uid_t, gid_t));
-  MOCK_PATH_METHOD3(readSymlink, void, char*, size_t);
+  MOCK_PATH_METHOD3(readSymlink, void, char*, fspp::num_bytes_t);
 };
 
 class FuseTest: public ::testing::Test {
@@ -107,19 +107,19 @@ public:
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile;
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(size_t size);
+  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(fspp::num_bytes_t size);
   static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat;
-  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstatWithSize(size_t size);
+  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size);
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir;
   static ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist;
 
   void ReturnIsFileOnLstat(const boost::filesystem::path &path);
-  void ReturnIsFileOnLstatWithSize(const boost::filesystem::path &path, const size_t size);
+  void ReturnIsFileOnLstatWithSize(const boost::filesystem::path &path, fspp::num_bytes_t size);
   void ReturnIsDirOnLstat(const boost::filesystem::path &path);
   void ReturnDoesntExistOnLstat(const boost::filesystem::path &path);
   void OnOpenReturnFileDescriptor(const char *filename, int descriptor);
   void ReturnIsFileOnFstat(int descriptor);
-  void ReturnIsFileOnFstatWithSize(int descriptor, const size_t size);
+  void ReturnIsFileOnFstatWithSize(int descriptor, fspp::num_bytes_t size);
 };
 
 #endif

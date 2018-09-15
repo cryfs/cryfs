@@ -9,8 +9,8 @@ class FuseFTruncateTest: public FuseTest {
 public:
   const char *FILENAME = "/myfile";
 
-  void FTruncateFile(const char *filename, off_t size);
-  int FTruncateFileReturnError(const char *filename, off_t size);
+  void FTruncateFile(const char *filename, fspp::num_bytes_t size);
+  int FTruncateFileReturnError(const char *filename, fspp::num_bytes_t size);
 
 private:
   cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const char *filename);

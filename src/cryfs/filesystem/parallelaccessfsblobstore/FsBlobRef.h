@@ -12,7 +12,7 @@ class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobst
 public:
     virtual ~FsBlobRef() {}
     virtual const blockstore::BlockId &blockId() const = 0;
-    virtual off_t lstat_size() const = 0;
+    virtual fspp::num_bytes_t lstat_size() const = 0;
     virtual const blockstore::BlockId &parentPointer() const = 0;
     virtual void setParentPointer(const blockstore::BlockId &parentId) = 0;
 

@@ -15,9 +15,9 @@ public:
   ~CryOpenFile();
 
   stat_info stat() const override;
-  void truncate(off_t size) const override;
-  size_t read(void *buf, size_t count, off_t offset) const override;
-  void write(const void *buf, size_t count, off_t offset) override;
+  void truncate(fspp::num_bytes_t size) const override;
+  fspp::num_bytes_t read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const override;
+  void write(const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) override;
   void flush() override;
   void fsync() override;
   void fdatasync() override;

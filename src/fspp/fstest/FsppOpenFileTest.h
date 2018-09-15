@@ -12,20 +12,20 @@ public:
         callback(st);
     }
 
-    void EXPECT_SIZE(uint64_t expectedSize, fspp::OpenFile *openFile) {
+    void EXPECT_SIZE(fspp::num_bytes_t expectedSize, fspp::OpenFile *openFile) {
         IN_STAT(openFile, [expectedSize] (const fspp::OpenFile::stat_info& st) {
-            EXPECT_EQ(expectedSize, static_cast<uint64_t>(st.size));
+            EXPECT_EQ(expectedSize, st.size);
         });
 
         EXPECT_NUMBYTES_READABLE(expectedSize, openFile);
     }
 
-    void EXPECT_NUMBYTES_READABLE(uint64_t expectedSize, fspp::OpenFile *openFile) {
-        cpputils::Data data(expectedSize);
+    void EXPECT_NUMBYTES_READABLE(fspp::num_bytes_t expectedSize, fspp::OpenFile *openFile) {
+        cpputils::Data data(expectedSize.value());
         //Try to read one byte more than the expected size
-        ssize_t readBytes = openFile->read(data.data(), expectedSize+1, 0);
+        fspp::num_bytes_t readBytes = openFile->read(data.data(), expectedSize+fspp::num_bytes_t(1), fspp::num_bytes_t(0));
         //and check that it only read the expected size (but also not less)
-        EXPECT_EQ(expectedSize, static_cast<uint64_t>(readBytes));
+        EXPECT_EQ(expectedSize, readBytes);
     }
 };
 
@@ -34,7 +34,7 @@ TYPED_TEST_CASE_P(FsppOpenFileTest);
 TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
     auto file = this->CreateFile("/myfile");
     auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
-    this->EXPECT_SIZE(0, openFile.get());
+    this->EXPECT_SIZE(fspp::num_bytes_t(0), openFile.get());
 }
 
 TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {

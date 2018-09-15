@@ -12,7 +12,7 @@ TEST_F(FuseTruncateFilenameTest, TruncateFile) {
   EXPECT_CALL(fsimpl, truncate(StrEq("/myfile"), _))
     .Times(1).WillOnce(Return());
 
-  TruncateFile("/myfile", 0);
+  TruncateFile("/myfile", fspp::num_bytes_t(0));
 }
 
 TEST_F(FuseTruncateFilenameTest, TruncateFileNested) {
@@ -21,7 +21,7 @@ TEST_F(FuseTruncateFilenameTest, TruncateFileNested) {
   EXPECT_CALL(fsimpl, truncate(StrEq("/mydir/myfile"), _))
     .Times(1).WillOnce(Return());
 
-  TruncateFile("/mydir/myfile", 0);
+  TruncateFile("/mydir/myfile", fspp::num_bytes_t(0));
 }
 
 TEST_F(FuseTruncateFilenameTest, TruncateFileNested2) {
@@ -31,5 +31,5 @@ TEST_F(FuseTruncateFilenameTest, TruncateFileNested2) {
   EXPECT_CALL(fsimpl, truncate(StrEq("/mydir/mydir2/myfile"), _))
     .Times(1).WillOnce(Return());
 
-  TruncateFile("/mydir/mydir2/myfile", 0);
+  TruncateFile("/mydir/mydir2/myfile", fspp::num_bytes_t(0));
 }

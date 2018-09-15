@@ -22,5 +22,5 @@ TEST_P(FuseWriteFileDescriptorTest, FileDescriptorIsCorrect) {
     .Times(1).WillOnce(Return());
 
   char buf[1];
-  WriteFile(FILENAME, buf, 1, 0);
+  WriteFile(FILENAME, buf, fspp::num_bytes_t(1), fspp::num_bytes_t(0));
 }

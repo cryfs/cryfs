@@ -113,12 +113,23 @@ struct mode_t final : cpputils::value_type::FlagsValueType<mode_t, uint32_t> {
     }
 };
 
+struct num_bytes_t final : cpputils::value_type::QuantityValueType<num_bytes_t, int64_t> {
+    // TODO Remove default constructor
+    constexpr num_bytes_t() noexcept: QuantityValueType(0) {}
+
+    constexpr explicit num_bytes_t(int64_t id) noexcept: QuantityValueType(id) {}
+
+    constexpr int64_t value() const noexcept {
+        return value_;
+    }
+};
+
 struct stat_info final {
     uint32_t nlink;
     fspp::mode_t mode;
     fspp::uid_t uid;
     fspp::gid_t gid;
-    uint64_t size;
+    fspp::num_bytes_t size;
     uint64_t blocks;
     struct timespec atime;
     struct timespec mtime;

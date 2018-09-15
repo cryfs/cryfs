@@ -59,7 +59,7 @@ void DataLeafNode::resize(uint32_t new_size) {
   node().setSize(new_size);
 }
 
-void DataLeafNode::fillDataWithZeroesFromTo(off_t begin, off_t end) {
+void DataLeafNode::fillDataWithZeroesFromTo(uint64_t begin, uint64_t end) {
   Data ZEROES(end-begin);
   ZEROES.FillWithZeroes();
   node().write(ZEROES.data(), begin, end-begin);

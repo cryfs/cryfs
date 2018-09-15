@@ -33,10 +33,10 @@ private:
 INSTANTIATE_TEST_CASE_P(FuseOpenFileDescriptorTest, FuseOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseOpenFileDescriptorTest, TestReturnedFileDescriptor) {
-  ReturnIsFileOnLstatWithSize(FILENAME, 1);
+  ReturnIsFileOnLstatWithSize(FILENAME, fspp::num_bytes_t(1));
   EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _))
     .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(1));
+  EXPECT_CALL(fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(fspp::num_bytes_t(1)));
 
   OpenAndReadFile(FILENAME);
 }
