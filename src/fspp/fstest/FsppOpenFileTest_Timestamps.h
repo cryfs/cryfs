@@ -8,12 +8,12 @@ template<class ConcreteFileSystemTestFixture>
 class FsppOpenFileTest_Timestamps: public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
     cpputils::unique_ref<fspp::OpenFile> CreateAndOpenFile(const boost::filesystem::path &path) {
-        return this->CreateFile(path)->open(O_RDWR);
+        return this->CreateFile(path)->open(fspp::openflags_t::RDWR());
     }
     cpputils::unique_ref<fspp::OpenFile> CreateAndOpenFileWithSize(const boost::filesystem::path &path, fspp::num_bytes_t size) {
         auto file = this->CreateFile(path);
         file->truncate(size);
-        auto openFile = file->open(O_RDWR);
+        auto openFile = file->open(fspp::openflags_t::RDWR());
         assert(this->stat(*openFile).size == size);
         assert(this->stat(*this->Load(path)).size == size);
         return openFile;

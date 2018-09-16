@@ -33,13 +33,13 @@ TYPED_TEST_CASE_P(FsppOpenFileTest);
 
 TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
     auto file = this->CreateFile("/myfile");
-    auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
+    auto openFile = this->LoadFile("/myfile")->open(fspp::openflags_t::RDONLY());
     this->EXPECT_SIZE(fspp::num_bytes_t(0), openFile.get());
 }
 
 TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
     auto file = this->CreateFile("/myfile");
-    auto openFile = this->LoadFile("/myfile")->open(O_RDONLY);
+    auto openFile = this->LoadFile("/myfile")->open(fspp::openflags_t::RDONLY());
     this->IN_STAT(openFile.get(), [] (const fspp::OpenFile::stat_info& st) {
         EXPECT_TRUE(st.mode.hasFileFlag());
     });

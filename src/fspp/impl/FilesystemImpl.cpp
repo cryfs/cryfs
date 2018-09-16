@@ -125,7 +125,7 @@ int FilesystemImpl::openFile(const bf::path &path, int flags) {
 
 int FilesystemImpl::openFile(File *file, int flags) {
   PROFILE(_openFileNanosec);
-  return _open_files.open(file->open(flags));
+  return _open_files.open(file->open(fspp::openflags_t(flags)));
 }
 
 void FilesystemImpl::flush(int descriptor) {

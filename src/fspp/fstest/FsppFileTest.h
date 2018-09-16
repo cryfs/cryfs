@@ -12,15 +12,15 @@ template<class ConcreteFileSystemTestFixture>
 class FsppFileTest: public FileTest<ConcreteFileSystemTestFixture> {
 public:
   void Test_Open_RDONLY(fspp::File *file) {
-    file->open(O_RDONLY);
+    file->open(fspp::openflags_t::RDONLY());
   }
 
   void Test_Open_WRONLY(fspp::File *file) {
-    file->open(O_WRONLY);
+    file->open(fspp::openflags_t::WRONLY());
   }
 
   void Test_Open_RDWR(fspp::File *file) {
-    file->open(O_RDONLY);
+    file->open(fspp::openflags_t::RDONLY());
   }
 
   void Test_Truncate_DontChange1(fspp::File *file, fspp::Node *node) {

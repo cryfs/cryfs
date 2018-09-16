@@ -130,6 +130,21 @@ public:
     }
 };
 
+struct openflags_t final : cpputils::value_type::FlagsValueType<openflags_t, int> {
+	// TODO Remove default constructor
+	constexpr openflags_t() noexcept: FlagsValueType(0) {}
+
+	constexpr explicit openflags_t(int id) noexcept : FlagsValueType(id) {}
+
+	constexpr int value() const noexcept {
+		return value_;
+	}
+
+	static constexpr openflags_t RDONLY() { return openflags_t(0x0000); };
+	static constexpr openflags_t WRONLY() { return openflags_t(0x0001); };
+	static constexpr openflags_t RDWR() { return openflags_t(0x0002); };
+};
+
 struct num_bytes_t final : cpputils::value_type::QuantityValueType<num_bytes_t, int64_t> {
     // TODO Remove default constructor
     constexpr num_bytes_t() noexcept: QuantityValueType(0) {}

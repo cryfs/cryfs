@@ -32,7 +32,7 @@ unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
   return std::move(*file_blob);
 }
 
-unique_ref<fspp::OpenFile> CryFile::open(int flags) {
+unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
   // TODO Should we honor open flags?
   UNUSED(flags);
   device()->callFsActionCallbacks();

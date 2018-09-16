@@ -19,7 +19,7 @@ TYPED_TEST_CASE_P(FsppFileTest_Timestamps);
 TYPED_TEST_P(FsppFileTest_Timestamps, open_nomode) {
     auto file = this->CreateFile("/myfile");
     auto operation = [&file] () {
-        file->open(0);
+        file->open(fspp::openflags_t(0));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
@@ -27,7 +27,7 @@ TYPED_TEST_P(FsppFileTest_Timestamps, open_nomode) {
 TYPED_TEST_P(FsppFileTest_Timestamps, open_rdonly) {
     auto file = this->CreateFile("/myfile");
     auto operation = [&file] () {
-        file->open(O_RDONLY);
+        file->open(fspp::openflags_t::RDONLY());
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
@@ -35,15 +35,15 @@ TYPED_TEST_P(FsppFileTest_Timestamps, open_rdonly) {
 TYPED_TEST_P(FsppFileTest_Timestamps, open_wronly) {
     auto file = this->CreateFile("/myfile");
     auto operation = [&file] () {
-        file->open(O_WRONLY);
+        file->open(fspp::openflags_t::WRONLY());
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
-
+	
 TYPED_TEST_P(FsppFileTest_Timestamps, open_rdwr) {
     auto file = this->CreateFile("/myfile");
     auto operation = [&file] () {
-        file->open(O_RDWR);
+        file->open(fspp::openflags_t::RDWR());
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }

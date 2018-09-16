@@ -31,7 +31,7 @@ public:
   void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (const fspp::Node::stat_info&)> callback) {
 	  auto st1 = node->stat();
 	  callback(st1);
-	  auto st2 = file->open(O_RDONLY)->stat();
+	  auto st2 = file->open(fspp::openflags_t::RDONLY())->stat();
 	  callback(st2);
   }
 
@@ -44,7 +44,7 @@ public:
   }
 
   void EXPECT_NUMBYTES_READABLE(fspp::num_bytes_t expectedSize, fspp::File *file) {
-	auto openFile = file->open(O_RDONLY);
+	auto openFile = file->open(fspp::openflags_t::RDONLY());
 	cpputils::Data data(expectedSize.value());
 	//Try to read one byte more than the expected size
     fspp::num_bytes_t readBytes = openFile->read(data.data(), expectedSize+fspp::num_bytes_t(1), fspp::num_bytes_t(0));

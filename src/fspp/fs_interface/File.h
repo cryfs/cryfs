@@ -13,7 +13,7 @@ class File {
 public:
   virtual ~File() {}
 
-  virtual cpputils::unique_ref<OpenFile> open(int flags) = 0;
+  virtual cpputils::unique_ref<OpenFile> open(fspp::openflags_t flags) = 0;
   virtual void truncate(fspp::num_bytes_t size) = 0;
 };
 
