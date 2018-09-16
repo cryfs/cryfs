@@ -21,12 +21,12 @@ private:
 };
 
 template<typename Property>
-struct ::statvfs FuseStatfsReturnTest<Property>::CallStatfsWithValue(Property value) {
+inline struct ::statvfs FuseStatfsReturnTest<Property>::CallStatfsWithValue(Property value) {
   return CallStatfsWithImpl(SetPropertyImpl(value));
 }
 
 template<typename Property>
-std::function<void(struct ::statvfs*)> FuseStatfsReturnTest<Property>::SetPropertyImpl(Property value) {
+inline std::function<void(struct ::statvfs*)> FuseStatfsReturnTest<Property>::SetPropertyImpl(Property value) {
   return [this, value] (struct ::statvfs *stat) {
     set(stat, value);
   };
