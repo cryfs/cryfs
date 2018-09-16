@@ -11,6 +11,7 @@
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
 #include <atomic>
+#include "stat_compatibility.h"
 
 namespace fspp {
 class Device;
@@ -27,8 +28,8 @@ public:
   bool running() const;
   void stop();
 
-  int getattr(const boost::filesystem::path &path, struct stat *stbuf);
-  int fgetattr(const boost::filesystem::path &path, struct stat *stbuf, fuse_file_info *fileinfo);
+  int getattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf);
+  int fgetattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo);
   int readlink(const boost::filesystem::path &path, char *buf, size_t size);
   int mknod(const boost::filesystem::path &path, ::mode_t mode, dev_t rdev);
   int mkdir(const boost::filesystem::path &path, ::mode_t mode);

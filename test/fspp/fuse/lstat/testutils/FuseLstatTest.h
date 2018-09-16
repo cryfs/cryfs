@@ -17,27 +17,27 @@ protected:
   // and call the lstat syscall on the given (filesystem-relative) path.
   void LstatPath(const std::string &path);
   // Same as LstatPath above, but also return the result of the lstat syscall.
-  void LstatPath(const std::string &path, struct stat *result);
+  void LstatPath(const std::string &path, fspp::fuse::STAT *result);
 
   // These two functions are the same as LstatPath above, but they don't fail the test when the lstat syscall
   // crashes. Instead, they return the value of errno after calling ::lstat.
   int LstatPathReturnError(const std::string &path);
-  int LstatPathReturnError(const std::string &path, struct stat *result);
+  int LstatPathReturnError(const std::string &path, fspp::fuse::STAT *result);
 
-  // You can specify an implementation, which can modify the (struct stat *) result,
+  // You can specify an implementation, which can modify the (fspp::fuse::STAT *) result,
   // our fuse mock filesystem implementation will then return this to fuse on an lstat call.
   // This functions then set up a temporary filesystem with this mock, call lstat on a filesystem node
-  // and return the (struct stat) returned from an lstat syscall to this filesystem.
-  struct stat CallLstatWithImpl(std::function<void(struct stat*)> implementation);
+  // and return the (fspp::fuse::STAT) returned from an lstat syscall to this filesystem.
+  fspp::fuse::STAT CallLstatWithImpl(std::function<void(fspp::fuse::STAT*)> implementation);
 
-  // These two functions are like CallLstatWithImpl, but they also modify the (struct stat).st_mode
+  // These two functions are like CallLstatWithImpl, but they also modify the (fspp::fuse::STAT).st_mode
   // field, so the node accessed is specified to be a file/directory.
-  struct stat CallFileLstatWithImpl(std::function<void(struct stat*)> implementation);
-  struct stat CallDirLstatWithImpl(std::function<void(struct stat*)> implementation);
+  fspp::fuse::STAT CallFileLstatWithImpl(std::function<void(fspp::fuse::STAT*)> implementation);
+  fspp::fuse::STAT CallDirLstatWithImpl(std::function<void(fspp::fuse::STAT*)> implementation);
 
 private:
 
-  struct stat CallLstatWithModeAndImpl(mode_t mode, std::function<void(struct stat*)> implementation);
+  fspp::fuse::STAT CallLstatWithModeAndImpl(mode_t mode, std::function<void(fspp::fuse::STAT*)> implementation);
 };
 
 #endif

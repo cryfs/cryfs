@@ -31,12 +31,12 @@ bool is_valid_fspp_path(const bf::path& path) {
 //#define FSPP_LOG 1
 
 namespace {
-int fusepp_getattr(const char *path, struct stat *stbuf) {
+int fusepp_getattr(const char *path, fspp::fuse::STAT *stbuf) {
   int rs = FUSE_OBJ->getattr(bf::path(path), stbuf);
   return rs;
 }
 
-int fusepp_fgetattr(const char *path, struct stat *stbuf, fuse_file_info *fileinfo) {
+int fusepp_fgetattr(const char *path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
   return FUSE_OBJ->fgetattr(bf::path(path), stbuf, fileinfo);
 }
 
@@ -309,7 +309,7 @@ void Fuse::stop() {
   }
 }
 
-int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
+int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "getattr({}, _, _)", path);
 #endif
@@ -331,7 +331,7 @@ int Fuse::getattr(const bf::path &path, struct stat *stbuf) {
   }
 }
 
-int Fuse::fgetattr(const bf::path &path, struct stat *stbuf, fuse_file_info *fileinfo) {
+int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "fgetattr({}, _, _)\n", path);
 #endif
@@ -801,7 +801,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto entries = _fs->readDir(path);
-    struct stat stbuf{};
+    fspp::fuse::STAT stbuf{};
     for (const auto &entry : *entries) {
       //We could pass more file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse ignores everything in stbuf

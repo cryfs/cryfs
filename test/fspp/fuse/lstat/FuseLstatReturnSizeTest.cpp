@@ -5,7 +5,7 @@ using ::testing::Values;
 
 class FuseLstatReturnSizeTest: public FuseLstatReturnTest<fspp::num_bytes_t>, public WithParamInterface<fspp::num_bytes_t> {
 private:
-  void set(struct stat *stat, fspp::num_bytes_t value) override {
+  void set(fspp::fuse::STAT *stat, fspp::num_bytes_t value) override {
     stat->st_size = value.value();
   }
 };
@@ -17,11 +17,11 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnSizeTest, FuseLstatReturnSizeTest, Values
 ));
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect) {
-  struct ::stat result = CallDirLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect) {
-  struct ::stat result = CallDirLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }

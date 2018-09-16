@@ -5,7 +5,7 @@ using ::testing::Values;
 
 class FuseLstatReturnUidTest: public FuseLstatReturnTest<uid_t>, public WithParamInterface<uid_t> {
 private:
-  void set(struct stat *stat, uid_t value) override {
+  void set(fspp::fuse::STAT *stat, uid_t value) override {
     stat->st_uid = value;
   }
 };
@@ -15,11 +15,11 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnUidTest, FuseLstatReturnUidTest, Values(
 ));
 
 TEST_P(FuseLstatReturnUidTest, ReturnedFileUidIsCorrect) {
-  struct ::stat result = CallFileLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_uid);
 }
 
 TEST_P(FuseLstatReturnUidTest, ReturnedDirUidIsCorrect) {
-  struct ::stat result = CallDirLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_uid);
 }

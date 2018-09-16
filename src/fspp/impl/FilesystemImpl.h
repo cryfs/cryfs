@@ -27,8 +27,8 @@ public:
 	int openFile(const boost::filesystem::path &path, int flags) override;
 	void flush(int descriptor) override;
 	void closeFile(int descriptor) override;
-	void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) override;
-	void fstat(int descriptor, struct ::stat *stbuf) override;
+	void lstat(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf) override;
+	void fstat(int descriptor, fspp::fuse::STAT *stbuf) override;
 	void chmod(const boost::filesystem::path &path, ::mode_t mode) override;
 	void chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid) override;
 	void truncate(const boost::filesystem::path &path, fspp::num_bytes_t size) override;

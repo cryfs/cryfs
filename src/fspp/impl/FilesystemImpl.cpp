@@ -139,7 +139,7 @@ void FilesystemImpl::closeFile(int descriptor) {
 }
 
 namespace {
-void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *output) {
+void convert_stat_info_(const fspp::Node::stat_info& input, fspp::fuse::STAT *output) {
     output->st_nlink = input.nlink;
     output->st_mode = input.mode.value();
     output->st_uid = input.uid.value();
@@ -152,7 +152,7 @@ void convert_stat_info_(const fspp::Node::stat_info& input, struct ::stat *outpu
 }
 }
 
-void FilesystemImpl::lstat(const bf::path &path, struct ::stat *stbuf) {
+void FilesystemImpl::lstat(const bf::path &path, fspp::fuse::STAT *stbuf) {
   PROFILE(_lstatNanosec);
   auto node = _device->Load(path);
   if(node == none) {
@@ -163,7 +163,7 @@ void FilesystemImpl::lstat(const bf::path &path, struct ::stat *stbuf) {
   }
 }
 
-void FilesystemImpl::fstat(int descriptor, struct ::stat *stbuf) {
+void FilesystemImpl::fstat(int descriptor, fspp::fuse::STAT *stbuf) {
   PROFILE(_fstatNanosec);
   auto stat_info = _open_files.get(descriptor)->stat();
   convert_stat_info_(stat_info, stbuf);

@@ -46,8 +46,8 @@ public:
 
   MOCK_PATH_METHOD2(openFile, int, int);
   MOCK_METHOD1(closeFile, void(int));
-  MOCK_PATH_METHOD2(lstat, void, struct ::stat*);
-  MOCK_METHOD2(fstat, void(int, struct ::stat*));
+  MOCK_PATH_METHOD2(lstat, void, fspp::fuse::STAT*);
+  MOCK_METHOD2(fstat, void(int, fspp::fuse::STAT*));
   MOCK_PATH_METHOD2(truncate, void, fspp::num_bytes_t);
   MOCK_METHOD2(ftruncate, void(int, fspp::num_bytes_t));
   MOCK_METHOD4(read, fspp::num_bytes_t(int, void*, fspp::num_bytes_t, fspp::num_bytes_t));
@@ -106,12 +106,12 @@ public:
 
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFile;
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsFileWithSize(fspp::num_bytes_t size);
-  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstat;
-  static ::testing::Action<void(int, struct ::stat*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size);
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnIsDir;
-  static ::testing::Action<void(const char*, struct ::stat*)> ReturnDoesntExist;
+  static ::testing::Action<void(const char*, fspp::fuse::STAT*)> ReturnIsFile;
+  static ::testing::Action<void(const char*, fspp::fuse::STAT*)> ReturnIsFileWithSize(fspp::num_bytes_t size);
+  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstat;
+  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size);
+  static ::testing::Action<void(const char*, fspp::fuse::STAT*)> ReturnIsDir;
+  static ::testing::Action<void(const char*, fspp::fuse::STAT*)> ReturnDoesntExist;
 
   void ReturnIsFileOnLstat(const boost::filesystem::path &path);
   void ReturnIsFileOnLstatWithSize(const boost::filesystem::path &path, fspp::num_bytes_t size);

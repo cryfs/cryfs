@@ -11,6 +11,7 @@
 #else
 #include <sys/statvfs.h>
 #endif
+#include "stat_compatibility.h"
 
 namespace fspp {
 namespace fuse {
@@ -23,8 +24,8 @@ public:
   virtual int openFile(const boost::filesystem::path &path, int flags) = 0;
   virtual void flush(int descriptor) = 0;
   virtual void closeFile(int descriptor) = 0;
-  virtual void lstat(const boost::filesystem::path &path, struct ::stat *stbuf) = 0;
-  virtual void fstat(int descriptor, struct ::stat *stbuf) = 0;
+  virtual void lstat(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf) = 0;
+  virtual void fstat(int descriptor, fspp::fuse::STAT *stbuf) = 0;
   //TODO Test chmod
   virtual void chmod(const boost::filesystem::path &path, ::mode_t mode) = 0;
   //TODO Test chown

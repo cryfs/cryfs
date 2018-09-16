@@ -6,7 +6,7 @@ using ::testing::Values;
 
 class FuseLstatReturnCtimeTest: public FuseLstatReturnTest<time_t>, public WithParamInterface<time_t> {
 private:
-  void set(struct stat *stat, time_t value) override {
+  void set(fspp::fuse::STAT *stat, time_t value) override {
     stat->st_ctim.tv_sec = value;
 	stat->st_ctim.tv_nsec = 0;
   }
@@ -19,13 +19,13 @@ INSTANTIATE_TEST_CASE_P(FuseLstatReturnCtimeTest, FuseLstatReturnCtimeTest, Valu
 ));
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedFileCtimeIsCorrect) {
-  struct ::stat result = CallFileLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
   EXPECT_EQ(0, result.st_ctim.tv_nsec);
 }
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedDirCtimeIsCorrect) {
-  struct ::stat result = CallDirLstatWithValue(GetParam());
+  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
   EXPECT_EQ(0, result.st_ctim.tv_nsec);
 }

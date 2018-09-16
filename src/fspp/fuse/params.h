@@ -7,6 +7,8 @@
 #include <fuse.h>
 #elif __APPLE__
 #include <osxfuse/fuse.h>
+#elif defined(_MSC_VER)
+#include <fuse.h> // Dokany fuse
 #else
 #error System not supported
 #endif
