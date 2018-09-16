@@ -3,7 +3,10 @@ if (BUILD_TESTING)
 
   add_subdirectory(gitversion)
   add_subdirectory(cpp-utils)
-  add_subdirectory(fspp)
+  if (NOT MSVC)
+	# TODO Make this build on Windows
+	add_subdirectory(fspp)
+  endif()
   add_subdirectory(parallelaccessstore)
   add_subdirectory(blockstore)
   add_subdirectory(blobstore)
