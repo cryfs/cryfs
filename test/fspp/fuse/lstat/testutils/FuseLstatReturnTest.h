@@ -23,12 +23,12 @@ private:
 };
 
 template<typename Property>
-FUSE_STAT FuseLstatReturnTest<Property>::CallFileLstatWithValue(Property value) {
+fspp::fuse::STAT FuseLstatReturnTest<Property>::CallFileLstatWithValue(Property value) {
   return CallFileLstatWithImpl(SetPropertyImpl(value));
 }
 
 template<typename Property>
-FUSE_STAT FuseLstatReturnTest<Property>::CallDirLstatWithValue(Property value) {
+fspp::fuse::STAT FuseLstatReturnTest<Property>::CallDirLstatWithValue(Property value) {
   return CallDirLstatWithImpl(SetPropertyImpl(value));
 }
 
