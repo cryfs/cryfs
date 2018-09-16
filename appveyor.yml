@@ -28,5 +28,5 @@ build_script:
   - cmd: .\test\parallelaccessstore\%CONFIGURATION%\parallelaccessstore-test.exe
   - cmd: .\test\blockstore\%CONFIGURATION%\blockstore-test.exe
   - cmd: .\test\blobstore\%CONFIGURATION%\blobstore-test.exe
-  #- cmd: .\test\cryfs\%CONFIGURATION%\cryfs-test.exe
+  - cmd: .\test\cryfs\%CONFIGURATION%\cryfs-test.exe
   #- cmd: .\test\cryfs-cli\%CONFIGURATION%\cryfs-cli-test.exe
