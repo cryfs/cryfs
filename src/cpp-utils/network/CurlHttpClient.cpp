@@ -3,14 +3,34 @@
 #include "CurlHttpClient.h"
 #include <sstream>
 #include <iostream>
-#include <curl/easy.h>
 
 using boost::none;
 using boost::optional;
 using std::string;
 using std::ostringstream;
+using std::mutex;
+using std::unique_lock;
 
 namespace cpputils {
+
+	mutex CurlHttpClient::CurlInitializerRAII::_mutex;
+	uint32_t CurlHttpClient::CurlInitializerRAII::_refcount = 0;
+
+	CurlHttpClient::CurlInitializerRAII::CurlInitializerRAII() {
+		unique_lock<mutex> lock(_mutex);
+		if (0 == _refcount) {
+			curl_global_init(CURL_GLOBAL_ALL);
+		}
+		_refcount += 1;
+	}
+
+	CurlHttpClient::CurlInitializerRAII::~CurlInitializerRAII() {
+		unique_lock<mutex> lock(_mutex);
+		_refcount -= 1;
+		if (0 == _refcount) {
+			curl_global_cleanup();
+		}
+	}
 
     size_t CurlHttpClient::write_data(void *ptr, size_t size, size_t nmemb, ostringstream *stream) {
         stream->write(static_cast<const char *>(ptr), size * nmemb);
