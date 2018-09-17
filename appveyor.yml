@@ -1,15 +1,30 @@
-image: Visual Studio 2017
-version: '{branch}-{build}'
+image:
+#- Visual Studio 2013
+#- Visual Studio 2015
+- Visual Studio 2017
+- Visual Studio 2017 Preview
 
 platform:
-  - x64
-#  TODO: For x86, we also need to change the cmake generator below and possibly the dokan installation
-#  - x86
-#  - Any CPU
+- x64
+# TODO - x86
+# TODO - Any CPU
 
 configuration:
   - Debug
   - RelWithDebInfo
+
+version: '{branch}-{build}'
+
+init:
+- echo %PLATFORM%
+- echo %APPVEYOR_BUILD_WORKER_IMAGE%
+- set arch=
+- if "%PLATFORM%"=="x64" ( set arch= Win64)
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2013" (set generator=Visual Studio 12 2013%arch%)
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" (set generator=Visual Studio 14 2015%arch%)
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" (set generator=Visual Studio 15 2017%arch%)
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017 Preview" (set generator=Visual Studio 15 2017%arch%)
+- echo %generator%
 
 install:
   - choco install -y curl
@@ -19,7 +34,7 @@ install:
 build_script:
   - cmd: mkdir build
   - cmd: cd build
-  - cmake .. -G "Visual Studio 15 2017 Win64" -DBUILD_TESTING=on -DBOOST_ROOT=C:\Libraries\boost_1_65_1 -DCURL_LIBRARY=C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\lib\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\include -DDOKAN_LIB_PATH="C:\Program Files\Dokan\DokanLibrary-1.1.0"
+  - cmake .. -G "%generator%" -DBUILD_TESTING=on -DBOOST_ROOT=C:\Libraries\boost_1_65_1 -DCURL_LIBRARY=C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\lib\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\include -DDOKAN_LIB_PATH="C:\Program Files\Dokan\DokanLibrary-1.1.0"
   # TODO Make build parallel
   - cmd: cmake --build . --config %CONFIGURATION%
   - cmd: .\test\gitversion\%CONFIGURATION%\gitversion-test.exe
