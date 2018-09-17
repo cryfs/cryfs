@@ -1,5 +1,7 @@
 // Base version taken from https://techoverflow.net/blog/2013/03/15/c-simple-http-download-using-libcurl-easy-api/
 
+#if !defined(_MSC_VER)
+
 #include "CurlHttpClient.h"
 #include <sstream>
 #include <iostream>
@@ -67,3 +69,5 @@ namespace cpputils {
     }
 
 }
+
+#endif
