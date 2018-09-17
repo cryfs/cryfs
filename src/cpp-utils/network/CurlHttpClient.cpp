@@ -45,7 +45,7 @@ namespace cpputils {
         curl_easy_cleanup(curl);
     }
 
-    optional <string> CurlHttpClient::get(const string &url, optional<long> timeoutMsec) {
+    string CurlHttpClient::get(const string &url, optional<long> timeoutMsec) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         // example.com is redirected, so we tell libcurl to follow redirection
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -61,7 +61,7 @@ namespace cpputils {
         CURLcode res = curl_easy_perform(curl);
         // Check for errors
         if (res != CURLE_OK) {
-            return none;
+			throw std::runtime_error("Curl Error " + std::to_string(res) + ": " + curl_easy_strerror(res));
         }
         return out.str();
     }

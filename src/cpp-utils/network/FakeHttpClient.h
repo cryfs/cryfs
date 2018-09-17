@@ -13,7 +13,7 @@ namespace cpputils {
 
         void addWebsite(const std::string &url, const std::string &content);
 
-        boost::optional<std::string> get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
+        std::string get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
     private:
         std::map<std::string, std::string> _sites;

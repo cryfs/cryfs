@@ -15,7 +15,7 @@ namespace cpputils {
 
         ~CurlHttpClient();
 
-        boost::optional <std::string> get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
+        std::string get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
     private:
 		// When the first object of this class is created, it will initialize curl using curl_global_init().
