@@ -16,8 +16,7 @@ using namespace cpputils::logging;
 namespace cryfs {
 
     VersionChecker::VersionChecker(HttpClient* httpClient)
-            : _versionInfo(_getVersionInfo(httpClient)) {
-    }
+            : _versionInfo(_getVersionInfo(httpClient)) {}
 
     optional<string> VersionChecker::newestVersion() const {
         if (_versionInfo == none) {
@@ -48,11 +47,15 @@ namespace cryfs {
 
     optional<ptree> VersionChecker::_getVersionInfo(HttpClient* httpClient) {
         long timeoutMsec = 2000;
-        optional<string> response = httpClient->get("https://www.cryfs.org/version_info.json", timeoutMsec);
-        if (response == none) {
-            return none;
-        }
-        return _parseJson(*response);
+		string response;
+		try {
+			response = httpClient->get("https://www.cryfs.org/version_info.json", timeoutMsec);
+		}
+		catch (const std::exception& e) {
+			LOG(WARN, "HTTP Error: {}", e.what());
+			return none;
+		}
+        return _parseJson(response);
     }
 
     optional<ptree> VersionChecker::_parseJson(const string &json) {

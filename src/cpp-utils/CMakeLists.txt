@@ -15,7 +15,7 @@ set(SOURCES
         tempfile/TempDir.cpp
         network/HttpClient.cpp
         network/CurlHttpClient.cpp
-        network/CurlInitializerRAII.cpp
+		network/WinHttpClient.cpp
         network/FakeHttpClient.cpp
         io/Console.cpp
         io/DontEchoStdinToStdoutRAII.cpp
@@ -55,9 +55,6 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-find_package(CURL REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})
 
 if(NOT MSVC)
   find_package(Backtrace REQUIRED)
@@ -65,6 +62,14 @@ if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
 else()
   target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+endif()
+
+if (NOT MSVC)
+  find_package(CURL REQUIRED)
+  target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})
+else()
+  target_link_libraries(${PROJECT_NAME} PUBLIC WinHttp)
 endif()
 
 find_package(Threads REQUIRED)

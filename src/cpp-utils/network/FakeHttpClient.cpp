@@ -12,11 +12,11 @@ namespace cpputils {
         _sites[url] = content;
     }
 
-    optional<string> FakeHttpClient::get(const string &url, optional<long> timeoutMsec) {
+    string FakeHttpClient::get(const string &url, optional<long> timeoutMsec) {
         UNUSED(timeoutMsec);
         auto found = _sites.find(url);
         if (found == _sites.end()) {
-            return none;
+			throw std::runtime_error("Website doesn't exist in FakeHttpClient.");
         }
         return found->second;
     }

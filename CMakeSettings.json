@@ -1,19 +1,14 @@
 {
-  "environments": [
-    {
-      "BuildDir": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build"
-    }
-  ],
-
   "configurations": [
     {
       "name": "x86-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x86" ],
-      "buildRoot": "${env.BuildDir}\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\" -DCURL_LIBRARY=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\lib\\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\include",
-      "buildCommandArgs": "",
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     },
     {
@@ -21,30 +16,32 @@
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
       "inheritEnvironments": [ "msvc_x86" ],
-      "buildRoot": "${env.BuildDir}\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\" -DCURL_LIBRARY=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\lib\\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\include",
-      "buildCommandArgs": "",
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
-
     },
     {
       "name": "x64-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64" ],
-      "buildRoot": "${env.BuildDir}\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\Boost -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\" -DCURL_LIBRARY=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\lib\\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\include",
-      "buildCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     },
     {
       "name": "x64-Release",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
-      "inheritEnvironments": [ "msvc_x64" ],
-      "buildRoot": "${env.BuildDir}\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\" -DCURL_LIBRARY=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\lib\\libcurl.dll.a -DCURL_INCLUDE_DIR=C:\\ProgramData\\chocolatey\\lib\\curl\\tools\\curl-7.61.0-win64-mingw\\include",
-      "buildCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DDOKAN_LIB_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     }
   ]

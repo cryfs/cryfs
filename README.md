@@ -77,8 +77,6 @@ Building on Windows (experimental)
 Build with Visual Studio 2017 and pass in the following flags to CMake:
 
   -DDOKAN_LIB_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
-  -DCURL_LIBRARY=[path to libcurl.dll.a, e.g. "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\lib\libcurl.dll.a"]
-  -DCURL_INCLUDE_DIR=[path to libcurl include files, e.g. "C:\ProgramData\chocolatey\lib\curl\tools\curl-7.61.1-win64-mingw\include"]
   -DBOOST_ROOT=[path to root of boost installation]
 
 Troubleshooting

@@ -1,10 +1,13 @@
 #pragma once
-#ifndef MESSMER_CPPUTILS_NETWORK_HTTPCLIENT_HPP
-#define MESSMER_CPPUTILS_NETWORK_HTTPCLIENT_HPP
+#ifndef MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
+#define MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
+
+#if !defined(_MSC_VER)
 
 #include "HttpClient.h"
 #include "../macros.h"
-#include "CurlInitializerRAII.h"
+#include <mutex>
+#include <curl/curl.h>
 
 namespace cpputils {
 
@@ -14,9 +17,22 @@ namespace cpputils {
 
         ~CurlHttpClient();
 
-        boost::optional <std::string> get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
+        std::string get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
     private:
+		// When the first object of this class is created, it will initialize curl using curl_global_init().
+		// When the last object is destroyed, it will deinitialize curl using curl_global_cleanup().
+		class CurlInitializerRAII final {
+		public:
+			CurlInitializerRAII();
+			~CurlInitializerRAII();
+		private:
+			static std::mutex _mutex;
+			static uint32_t _refcount;
+
+			DISALLOW_COPY_AND_ASSIGN(CurlInitializerRAII);
+		};
+
         CurlInitializerRAII curlInitializer;
         CURL *curl;
 
@@ -26,5 +42,7 @@ namespace cpputils {
     };
 
 }
+
+#endif
 
 #endif
