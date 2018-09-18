@@ -16,6 +16,7 @@ configuration:
 version: '{branch}-{build}'
 
 init:
+- echo %NUMBER_OF_PROCESSORS%
 - echo %PLATFORM%
 - echo %APPVEYOR_BUILD_WORKER_IMAGE%
 - set arch=
