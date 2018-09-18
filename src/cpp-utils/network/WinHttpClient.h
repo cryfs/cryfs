@@ -6,6 +6,7 @@
 
 #include "HttpClient.h"
 #include "../macros.h"
+#include "../pointer/unique_ref.h"
 
 namespace cpputils {
 
@@ -19,7 +20,7 @@ namespace cpputils {
 		std::string get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 
 	private:
-		std::unique_ptr<WinHttpSession> session_;
+		unique_ref<WinHttpSession> session_;
 
 		DISALLOW_COPY_AND_ASSIGN(WinHttpClient);
 	};

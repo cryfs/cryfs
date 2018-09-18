@@ -211,13 +211,13 @@ namespace cpputils {
 	};
 
 	namespace {
-		std::unique_ptr<WinHttpSession> create_session() {
+		cpputils::unique_ref<WinHttpSession> create_session() {
 			HttpHandleRAII session_handle = WinHttpOpen(L"cpputils::HttpClient", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 			if(nullptr == session_handle.handle) {
 				throw std::runtime_error("Error calling WinHttpOpen. Error code: " + std::to_string(GetLastError()));
 			}
 
-			return std::make_unique<WinHttpSession>(std::move(session_handle));
+			return cpputils::make_unique<_refWinHttpSession>(std::move(session_handle));
 		}
 	}
 
