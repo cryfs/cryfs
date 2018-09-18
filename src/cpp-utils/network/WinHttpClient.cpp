@@ -217,7 +217,7 @@ namespace cpputils {
 				throw std::runtime_error("Error calling WinHttpOpen. Error code: " + std::to_string(GetLastError()));
 			}
 
-			return cpputils::make_unique<_refWinHttpSession>(std::move(session_handle));
+			return cpputils::make_unique_ref<WinHttpSession>(std::move(session_handle));
 		}
 	}
 
