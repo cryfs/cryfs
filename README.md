@@ -76,7 +76,7 @@ Building on Windows (experimental)
 
 Build with Visual Studio 2017 and pass in the following flags to CMake:
 
-  -DDOKAN_LIB_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
+  -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
   -DBOOST_ROOT=[path to root of boost installation]
 
 Troubleshooting
