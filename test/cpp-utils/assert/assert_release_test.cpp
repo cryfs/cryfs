@@ -42,7 +42,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
     EXPECT_THAT(e.what(), HasSubstr(
-            "cpputils::backtrace"
+            "cpputils::"
     ));
   }
 }

@@ -32,6 +32,6 @@ constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_
 TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
     EXPECT_DEATH(
         ASSERT(2==5, "my message"),
-        "cpputils::backtrace"
+        "cpputils::"
     );
 }

@@ -136,7 +136,7 @@ TEST(BacktraceTest, ShowBacktraceOnUnhandledException_ShowsCorrectExceptionMessa
 
 #if defined(_MSC_VER)
 TEST(BacktraceTest, UnknownCode_ShowsCorrectSignalName) {
-	auto output = call_process_exiting_with_code(0x12345678);
-	EXPECT_THAT(output, HasSubstr("UNKNOWN_CODE(0x12345678)"));
+	auto output = call_process_exiting_with_code(0x1234567);
+	EXPECT_THAT(output, HasSubstr("UNKNOWN_CODE(0x1234567)"));
 }
 #endif
