@@ -17,6 +17,7 @@ target_activate_cpp14(${PROJECT_NAME})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   get_target_architecture(TARGET_ARCH)
+  message(STATUS "Linking to Dokan ${TARGET_ARCH}")
   if ("${TARGET_ARCH}" STREQUAL "x86_64")
 	set(DOKAN_LIB_PATH "${DOKAN_PATH}\\lib")
   elseif("${TARGET_ARCH}" STREQUAL "i386")
