@@ -6,8 +6,8 @@ image:
 
 platform:
 - x64
-# TODO - x86
-# TODO - Any CPU
+- x86
+- Any CPU
 
 configuration:
   - Debug
