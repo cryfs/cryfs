@@ -26,8 +26,8 @@ namespace fsblobstore {
 
 constexpr fspp::num_bytes_t DirBlob::DIR_LSTAT_SIZE;
 
-DirBlob::DirBlob(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize) :
-    FsBlob(std::move(blob)), _fsBlobStore(fsBlobStore), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
+DirBlob::DirBlob(unique_ref<Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize) :
+    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _entries(), _mutex(), _changed(false) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -43,9 +43,9 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(FsBlobStore *fsBlobStore, unique_ref<Blob> blob, const blockstore::BlockId &parent, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, const blockstore::BlockId &parent, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::DIR, parent);
-  return make_unique_ref<DirBlob>(fsBlobStore, std::move(blob), getLstatSize);
+  return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
 }
 
 void DirBlob::_writeEntriesToBlob() {

@@ -56,7 +56,7 @@ namespace cryfs {
 
         inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(this, std::move(blob), parent, _getLstatSize());
+            return DirBlob::InitializeEmptyDir(std::move(blob), parent, _getLstatSize());
         }
 
         inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent) {
