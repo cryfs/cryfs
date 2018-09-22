@@ -149,7 +149,7 @@ function(find_library_with_path OUTPUT_VARIABLE LIBRARY_NAME PATH_VARIABLE)
     endif(${PATH_VARIABLE})
 endfunction(find_library_with_path)
 
-include(TargetArch.cmake)
+include(cmake-utils/TargetArch.cmake)
 function(get_target_architecture output_var)
 	target_architecture(local_output_var)
 	set(${output_var} ${local_output_var} PARENT_SCOPE)

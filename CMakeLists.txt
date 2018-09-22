@@ -9,7 +9,7 @@ cmake_policy(SET CMP0054 NEW)
 
 project(cryfs)
 
-include(utils.cmake)
+include(cmake-utils/utils.cmake)
 
 require_gcc_version(5.0)
 require_clang_version(4.0)
