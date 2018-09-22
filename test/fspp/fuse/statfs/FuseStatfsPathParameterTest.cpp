@@ -7,6 +7,10 @@ using ::testing::Return;
 class FuseStatfsPathParameterTest: public FuseStatfsTest {
 };
 
+// osxfuse doesn't handle path parameters correctly
+// see https://github.com/osxfuse/osxfuse/issues/538
+#if !defined(__APPLE__)
+
 TEST_F(FuseStatfsPathParameterTest, PathParameterIsCorrectRoot) {
   EXPECT_CALL(fsimpl, statfs(StrEq("/"), _)).Times(1).WillOnce(Return());
   Statfs("/");
@@ -39,3 +43,5 @@ TEST_F(FuseStatfsPathParameterTest, PathParameterIsCorrectNestedDir) {
   EXPECT_CALL(fsimpl, statfs(StrEq("/mydir/mydir2/mydir3"), _)).Times(1).WillOnce(Return());
   Statfs("/mydir/mydir2/mydir3");
 }
+
+#endif
