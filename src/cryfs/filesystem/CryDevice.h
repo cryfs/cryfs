@@ -21,7 +21,7 @@ class CryDevice final: public fspp::Device {
 public:
   CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
 
-  statvfs statfs(const boost::filesystem::path &path) override;
+  statvfs statfs() override;
 
   cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::BlockId &parent);
   cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::BlockId &parent);

@@ -72,7 +72,7 @@ public:
     return utimens(path.string().c_str(), lastAccessTime, lastModificationTime);
   }
   MOCK_METHOD3(utimens, void(const char*, timespec, timespec));
-  MOCK_PATH_METHOD2(statfs, void, struct statvfs*);
+  MOCK_METHOD1(statfs, void(struct statvfs*));
   void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, uid_t uid, gid_t gid) override {
     return createSymlink(to.string().c_str(), from.string().c_str(), uid, gid);
   }

@@ -293,9 +293,9 @@ void FilesystemImpl::utimens(const bf::path &path, timespec lastAccessTime, time
   }
 }
 
-void FilesystemImpl::statfs(const bf::path &path, struct ::statvfs *fsstat) {
+void FilesystemImpl::statfs(struct ::statvfs *fsstat) {
   PROFILE(_statfsNanosec);
-  Device::statvfs stat = _device->statfs(path);
+  Device::statvfs stat = _device->statfs();
 
   fsstat->f_bsize = stat.blocksize;
   fsstat->f_blocks = stat.num_total_blocks;

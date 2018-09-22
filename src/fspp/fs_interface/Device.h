@@ -18,7 +18,7 @@ public:
 
 	using statvfs = fspp::statvfs;
 
-	virtual statvfs statfs(const boost::filesystem::path &path) = 0;
+	virtual statvfs statfs() = 0;
 	virtual boost::optional<cpputils::unique_ref<Node>> Load(const boost::filesystem::path &path) = 0;
 
 	//TODO Test default implementation (Device.cpp)

@@ -718,9 +718,10 @@ int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "statfs({}, _)", path);
 #endif
+  UNUSED(path);
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->statfs(path, fsstat);
+    _fs->statfs(fsstat);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::statfs: {}", e.what());

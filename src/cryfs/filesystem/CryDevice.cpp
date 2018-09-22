@@ -235,9 +235,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   //     Possible reason: Many parallel changes to a directory blob are a race condition. Need something like ParallelAccessStore!
 }
 
-CryDevice::statvfs CryDevice::statfs(const bf::path &path) {
-  // TODO Do we need path for something? What does it represent from fuse side?
-  UNUSED(path);
+CryDevice::statvfs CryDevice::statfs() {
   callFsActionCallbacks();
 
   uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
