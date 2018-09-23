@@ -24,10 +24,15 @@ make -j$NUMCORES
 ./test/parallelaccessstore/parallelaccessstore-test
 ./test/blockstore/blockstore-test
 ./test/blobstore/blobstore-test
-./test/cryfs/cryfs-test
+./test/cryfs/lib_link_test/cryfs-lib-link-test
+./test/cryfs/impl/cryfs-impl-test
 
 # TODO Also run on osx once fixed
 if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
   ./test/fspp/fspp-test
   ./test/cryfs-cli/cryfs-cli-test
+
+  # TODO Check if these maybe already work on osx
+  ./test/cryfs/lib_usage_test/cryfs-lib-usage-test
+  ./test/cryfs/lib_usage_test_cpp/cryfs-lib-usage-test-cpp
 fi

@@ -40,3 +40,5 @@ else() # Linux
   target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
 endif()
 
+# Needed so it can be linked in to the shared cryfs library
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE on)

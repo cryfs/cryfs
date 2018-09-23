@@ -41,7 +41,7 @@ fspp::fuse::STAT FuseLstatTest::CallDirLstatWithImpl(function<void(fspp::fuse::S
 }
 
 fspp::fuse::STAT FuseLstatTest::CallLstatWithImpl(function<void(fspp::fuse::STAT*)> implementation) {
-  EXPECT_CALL(fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, fspp::fuse::STAT *stat) {
+  EXPECT_CALL(*fsimpl, lstat(StrEq(FILENAME), _)).WillRepeatedly(Invoke([implementation](const char*, fspp::fuse::STAT *stat) {
     implementation(stat);
   }));
 

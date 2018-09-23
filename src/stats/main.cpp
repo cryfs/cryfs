@@ -1,6 +1,6 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <cryfs/config/CryConfigFile.h>
+#include <cryfs/impl/config/CryConfigFile.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
@@ -8,9 +8,9 @@
 #include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
-#include <cryfs/filesystem/fsblobstore/FsBlobStore.h>
-#include <cryfs/filesystem/fsblobstore/DirBlob.h>
-#include <cryfs/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/fsblobstore/FsBlobStore.h>
+#include <cryfs/impl/filesystem/fsblobstore/DirBlob.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
 
 #include <set>
 
@@ -117,9 +117,13 @@ int main() {
     getline(cin, password);
     cout << "Loading config" << endl;
     auto config = CryConfigFile::load("/home/heinzi/basedir/cryfs.config", password);
-    set<BlockId> unaccountedBlocks = _getBlockstoreUnaccountedBlocks(*config->config());
+    if (config.is_left()) {
+        // TODO Show more info about error
+        throw std::runtime_error("Error loading config file.");
+    }
+    set<BlockId> unaccountedBlocks = _getBlockstoreUnaccountedBlocks(*config.right()->config());
     //Remove all blocks that are referenced by a directory entry from unaccountedBlocks
-    set<BlockId> blocksReferencedByDirEntries = _getBlocksReferencedByDirEntries(*config->config());
+    set<BlockId> blocksReferencedByDirEntries = _getBlocksReferencedByDirEntries(*config.right()->config());
     for (const auto &blockId : blocksReferencedByDirEntries) {
         unaccountedBlocks.erase(blockId);
     }
@@ -127,9 +131,9 @@ int main() {
     cout << "\nCalculate statistics" << endl;
 
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>("/home/heinzi/basedir");
-    auto encryptedBlockStore = CryCiphers::find(config->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config->config()->EncryptionKey());
+    auto encryptedBlockStore = CryCiphers::find(config.right()->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.right()->config()->EncryptionKey());
     auto highLevelBlockStore = make_unique_ref<LowToHighLevelBlockStore>(std::move(encryptedBlockStore));
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(highLevelBlockStore), config->config()->BlocksizeBytes());
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(highLevelBlockStore), config.right()->config()->BlocksizeBytes());
 
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;

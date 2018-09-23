@@ -2,7 +2,7 @@
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/io/IOStreamConsole.h>
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/CryfsException.h>
 
 #if defined(_MSC_VER)
 #include <cpp-utils/network/WinHttpClient.h>

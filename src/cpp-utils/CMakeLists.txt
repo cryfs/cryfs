@@ -9,7 +9,16 @@ set(SOURCES
         crypto/RandomPadding.cpp
         crypto/symmetric/EncryptionKey.cpp
         crypto/hash/Hash.cpp
-        process/daemonize.cpp
+        process/pipe/PipeBuilder.cpp
+        process/pipe/PipeDescriptor.cpp
+        process/pipe/PipeNotReadableError.cpp
+        process/pipe/PipeReader.cpp
+        process/pipe/PipeStreamEndpoint.cpp
+        process/pipe/PipeWriter.cpp
+        process/daemon/daemonize.cpp
+        process/daemon/Messages.cpp
+        process/daemon/PipeFromChild.cpp
+        process/daemon/PipeToParent.cpp
         process/subprocess.cpp
         tempfile/TempFile.cpp
         tempfile/TempDir.cpp
@@ -82,3 +91,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp)
 target_add_boost(${PROJECT_NAME} filesystem system thread)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+
+# Needed so it can be linked in to the shared cryfs library
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE on)

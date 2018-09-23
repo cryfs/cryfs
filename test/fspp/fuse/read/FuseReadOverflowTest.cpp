@@ -16,7 +16,7 @@ public:
   void SetUp() override {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
-    EXPECT_CALL(fsimpl, read(0, _, _, _)).WillRepeatedly(ReturnSuccessfulReadRegardingSize(FILESIZE));
+    EXPECT_CALL(*fsimpl, read(0, _, _, _)).WillRepeatedly(ReturnSuccessfulReadRegardingSize(FILESIZE));
   }
 };
 

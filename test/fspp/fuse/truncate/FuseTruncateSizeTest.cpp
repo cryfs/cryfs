@@ -18,7 +18,7 @@ INSTANTIATE_TEST_CASE_P(FuseTruncateSizeTest, FuseTruncateSizeTest, Values(
 
 TEST_P(FuseTruncateSizeTest, TruncateFile) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, truncate(StrEq(FILENAME), Eq(GetParam())))
+  EXPECT_CALL(*fsimpl, truncate(StrEq(FILENAME), Eq(GetParam())))
     .Times(1).WillOnce(Return());
 
   TruncateFile(FILENAME, GetParam());

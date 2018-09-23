@@ -12,6 +12,8 @@
 #include <cpp-utils/macros.h>
 #include <atomic>
 #include "stat_compatibility.h"
+#include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/process/daemon/daemonize.h>
 
 namespace fspp {
 class Device;
@@ -21,10 +23,11 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname);
+  explicit Fuse(std::function<std::shared_ptr<Filesystem> (Fuse *fuse)> init, std::string fstype, boost::optional<std::string> fsname);
   ~Fuse();
 
-  void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  void runInBackground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
+  void runInForeground(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   bool running() const;
   void stop();
 
@@ -63,17 +66,21 @@ private:
   static void _logException(const std::exception &e);
   static void _logUnknownException();
   static char *_create_c_string(const std::string &str);
+  static void _removeAndWarnIfExists(std::vector<std::string> *fuseOptions, const std::string &option);
+  void _run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   static bool _has_option(const std::vector<char *> &vec, const std::string &key);
   static bool _has_entry_with_prefix(const std::string &prefix, const std::vector<char *> &vec);
   std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   void _add_fuse_option_if_not_exists(std::vector<char *> *argv, const std::string &key, const std::string &value);
 
-  Filesystem *_fs;
+  std::function<std::shared_ptr<Filesystem> (Fuse *fuse)> _init;
+  std::shared_ptr<Filesystem> _fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
   std::atomic<bool> _running;
   std::string _fstype;
   boost::optional<std::string> _fsname;
+  cpputils::process::PipeToParent *_pipeToParent;
 
   DISALLOW_COPY_AND_ASSIGN(Fuse);
 };

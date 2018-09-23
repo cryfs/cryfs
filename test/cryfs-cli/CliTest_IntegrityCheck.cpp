@@ -1,6 +1,6 @@
 #include "testutils/CliTest.h"
-#include <cryfs/config/CryConfigFile.h>
-#include <cryfs/ErrorCodes.h>
+#include <cryfs/impl/config/CryConfigFile.h>
+#include <cryfs/impl/ErrorCodes.h>
 
 using std::vector;
 using std::string;
@@ -11,15 +11,15 @@ using cryfs::ErrorCode;
 class CliTest_IntegrityCheck: public CliTest {
 public:
   void modifyFilesystemId() {
-    auto configFile = CryConfigFile::load(basedir / "cryfs.config", "pass").value();
-    configFile.config()->SetFilesystemId(CryConfig::FilesystemID::FromString("0123456789ABCDEF0123456789ABCDEF"));
-    configFile.save();
+    auto configFile = CryConfigFile::load(basedir / "cryfs.config", "pass").right_opt().value();
+    configFile->config()->SetFilesystemId(CryConfig::FilesystemID::FromString("0123456789ABCDEF0123456789ABCDEF"));
+    configFile->save();
   }
 
   void modifyFilesystemKey() {
-    auto configFile = CryConfigFile::load(basedir / "cryfs.config", "pass").value();
-    configFile.config()->SetEncryptionKey("0123456789ABCDEF0123456789ABCDEF");
-    configFile.save();
+    auto configFile = CryConfigFile::load(basedir / "cryfs.config", "pass").right_opt().value();
+    configFile->config()->SetEncryptionKey("0123456789ABCDEF0123456789ABCDEF");
+    configFile->save();
   }
 };
 

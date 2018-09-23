@@ -15,6 +15,8 @@ public:
   const boost::filesystem::path &path() const;
   //TODO Test exists()
   bool exists() const;
+  //TODO Test remove()
+  void remove();
 
 private:
   const boost::filesystem::path _path;

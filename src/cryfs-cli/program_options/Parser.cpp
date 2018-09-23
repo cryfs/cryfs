@@ -2,8 +2,8 @@
 #include "utils.h"
 #include <iostream>
 #include <boost/optional.hpp>
-#include <cryfs/config/CryConfigConsole.h>
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/config/CryConfigConsole.h>
+#include <cryfs/impl/CryfsException.h>
 #include <cryfs-cli/Environment.h>
 
 namespace po = boost::program_options;
@@ -58,9 +58,6 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         configfile = bf::absolute(vm["config"].as<string>());
     }
     bool foreground = vm.count("foreground");
-    if (foreground) {
-        fuseOptions.push_back(const_cast<char*>("-f"));
-    }
     bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     bool allowReplacedFilesystem = vm.count("allow-replaced-filesystem");
     optional<double> unmountAfterIdleMinutes = none;

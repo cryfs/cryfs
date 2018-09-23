@@ -3,16 +3,16 @@
 #define MESSMER_CRYFS_CLI_H
 
 #include "program_options/ProgramOptions.h"
-#include <cryfs/config/CryConfigFile.h>
+#include <cryfs/impl/config/CryConfigFile.h>
 #include <boost/filesystem/path.hpp>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/io/Console.h>
 #include <cpp-utils/random/RandomGenerator.h>
 #include <cpp-utils/network/HttpClient.h>
-#include <cryfs/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
 #include "CallAfterTimeout.h"
-#include <cryfs/config/CryConfigLoader.h>
-#include <cryfs/ErrorCodes.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/ErrorCodes.h>
 
 namespace cryfs {
     class Cli final {
@@ -48,6 +48,8 @@ namespace cryfs {
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
         bool _noninteractive;
+        boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idleUnmounter;
+        boost::optional<cpputils::unique_ref<CryDevice>> _device;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

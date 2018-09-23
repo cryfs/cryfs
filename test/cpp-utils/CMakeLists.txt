@@ -16,6 +16,12 @@ set(SOURCES
     process/daemonize_include_test.cpp
     process/subprocess_include_test.cpp
     process/SubprocessTest.cpp
+    process/pipe/PipeDescriptorTest.cpp
+    process/pipe/PipeStreamEndpointTest.cpp
+    process/pipe/PipeReadWriteTest.cpp
+    process/pipe/PipeBuilderTest.cpp
+    process/daemon/DaemonPipeReadWriteTest.cpp
+    process/daemon/DaemonizeTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp
