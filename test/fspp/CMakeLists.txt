@@ -53,7 +53,6 @@ set(SOURCES
     fuse/statfs/FuseStatfsReturnBsizeTest.cpp
     fuse/statfs/FuseStatfsErrorTest.cpp
     fuse/statfs/FuseStatfsReturnBfreeTest.cpp
-    fuse/statfs/FuseStatfsPathParameterTest.cpp
     fuse/statfs/FuseStatfsReturnBlocksTest.cpp
     fuse/statfs/FuseStatfsReturnBavailTest.cpp
     fuse/closeFile/FuseCloseTest.cpp
