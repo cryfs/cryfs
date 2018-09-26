@@ -5,7 +5,8 @@ add_library(cryptopp dummy.cpp)
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(cryptopp PUBLIC -DCRYPTOPP_DEBUG)
+    target_compile_definitions(cryptopp PUBLIC -DCRYPTOPP_DEBUG) # add to all targets depending on this
+    add_compile_options(-DCRYPTOPP_DEBUG) # add to stuff built in subdirectories (like the actual library)
 endif()
 
 if(NOT DISABLE_OPENMP)
@@ -14,6 +15,7 @@ if(NOT DISABLE_OPENMP)
         # Workaround because older cmake on apple doesn't support FindOpenMP
         message(STATUS "Applying workaround for OSX OpenMP")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp")
+        target_compile_options(cryptopp PUBLIC -Xclang -fopenmp) # also add these flags to all libraries depending on this
         target_link_libraries(cryptopp PRIVATE -lomp)
     elseif(MSVC)
         message(WARNING "MSVC does not support the OpenMP 4.0 standard used by Crypto++. Disabling OpenMP. This can cause degraded performance.")
@@ -29,6 +31,9 @@ if(NOT DISABLE_OPENMP)
             message(STATUS "Using OpenMP library: ${OpenMP_CXX_LIBRARIES}")
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
             target_link_libraries(cryptopp PRIVATE ${OpenMP_CXX_LIBRARIES})
+            # also add these flags to all libraries depending on this
+            string(REPLACE " " ";" REPLACED_FLAGS ${OpenMP_CXX_FLAGS})
+            target_compile_options(cryptopp PUBLIC ${REPLACED_FLAGS})
         else(OPENMP_FOUND)
             message(FATAL_ERROR "Did not find OpenMP. Build with -DDISABLE_OPENMP=ON if you want to allow this and are willing to take the performance hit.")
         endif(OPENMP_FOUND)
