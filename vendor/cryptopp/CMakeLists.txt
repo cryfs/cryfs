@@ -4,10 +4,9 @@ add_library(cryptopp dummy.cpp)
 # note: include directory is called vendor_cryptopp instead of cryptopp to avoid include clashes with system headers
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(cryptopp PUBLIC -DCRYPTOPP_DEBUG) # add to all targets depending on this
-    add_compile_options(-DCRYPTOPP_DEBUG) # add to stuff built in subdirectories (like the actual library)
-endif()
+# Forward debug build info (i.e. set CRYPTOPP_DEBUG variable if building in debug mode)
+target_compile_definitions(cryptopp PUBLIC $<$<CONFIG:Debug>:CRYPTOPP_DEBUG>) # add to all targets depending on this
+add_compile_options($<$<CONFIG:Debug>:-DCRYPTOPP_DEBUG>) # add to stuff built in subdirectories (like the actual library)
 
 if(NOT DISABLE_OPENMP)
     if((APPLE AND ((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
