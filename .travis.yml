@@ -2,7 +2,7 @@ language: cpp
 sudo: required
 dist: trusty
 compiler:
-- gcc
+# - gcc
 - clang
 os:
 #- linux
@@ -21,3 +21,4 @@ install:
 - .travisci/install.sh
 script:
 - .travisci/build_and_test.sh
+cache: ccache
