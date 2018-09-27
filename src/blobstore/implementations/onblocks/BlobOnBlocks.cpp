@@ -131,7 +131,7 @@ void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
         std::memcpy(leafData.data(), static_cast<const uint8_t*>(source) + indexOfFirstLeafByte - offset, leafDataSize);
         leaf.nodeStore()->overwriteLeaf(leaf.blockId(), std::move(leafData));
       } else {
-            //TODO Simplify formula, make it easier to understand
+        //TODO Simplify formula, make it easier to understand
         leaf.node()->write(static_cast<const uint8_t*>(source) + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset,
                            leafDataSize);
       }
