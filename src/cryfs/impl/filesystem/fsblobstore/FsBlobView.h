@@ -23,7 +23,7 @@ namespace cryfs {
         }
 
         static void InitializeBlob(blobstore::Blob *baseBlob, BlobType blobType, const blockstore::BlockId &parent) {
-            baseBlob->resize(sizeof(FORMAT_VERSION_HEADER) + 1);
+            baseBlob->resize(HEADER_SIZE);
             baseBlob->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
             uint8_t blobTypeInt = static_cast<uint8_t>(blobType);
             baseBlob->write(&blobTypeInt, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
