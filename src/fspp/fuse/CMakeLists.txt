@@ -19,17 +19,21 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   get_target_architecture(TARGET_ARCH)
   message(STATUS "Linking to Dokan ${TARGET_ARCH}")
   if ("${TARGET_ARCH}" STREQUAL "x86_64")
-	set(DOKAN_LIB_PATH "${DOKAN_PATH}\\lib")
+	set(DOKAN_LIB_PATH "${DOKAN_PATH}")
   elseif("${TARGET_ARCH}" STREQUAL "i386")
-    set(DOKAN_LIB_PATH "${DOKAN_PATH}\\x86\\lib")
+    set(DOKAN_LIB_PATH "${DOKAN_PATH}\\x86")
   else()
     message(FATAL_ERROR "Unsupported architecture: ${TARGET_ARCH}")
   endif()
 
   target_include_directories(${PROJECT_NAME} PUBLIC "${DOKAN_PATH}\\include")
-  target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\dokan1.lib")
-  #target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\dokannp1.lib")
-  target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\dokanfuse1.lib")
+  target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\lib\\dokan1.lib")
+  #target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\lib\\dokannp1.lib")
+  target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}\\lib\\dokanfuse1.lib")
+
+  install(FILES ${DOKAN_LIB_PATH}\\dokan1.dll ${DOKAN_LIB_PATH}\\dokanfuse1.dll
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
 
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_FIND_FRAMEWORK LAST)
