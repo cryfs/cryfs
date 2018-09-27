@@ -1,3 +1,3 @@
 #include "MinimalValueType.h"
 
-int MinimalValueType::instances = 0;
+std::atomic<int> MinimalValueType::instances(0);
