@@ -14,7 +14,7 @@ brew cask install osxfuse
 brew install libomp
 
 # By default, travis only fetches the newest 50 commits. We need more in case we're further from the last version tag, so the build doesn't fail because it can't generate the version number.
-git fetch --unshallow
+git fetch --unshallow --tags
 
 # Setup ccache
 brew install ccache
