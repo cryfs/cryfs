@@ -1,9 +1,13 @@
 language: cpp
 sudo: required
+os: osx
 compiler:
 # - gcc
 - clang
-os: osx
+env:
+  - BUILD_TARGET=Debug
+  - BUILD_TARGET=Release
+  - BUILD_TARGET=RelWithDebInfo
 install:
 - .travisci/install.sh
 script:

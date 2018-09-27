@@ -31,7 +31,8 @@ cd cmake
 cmake --version
 
 # Build
-cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=Debug
+echo Build target: ${BUILD_TARGET}
+cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TARGET}
 make -j$NUMCORES
 
 ccache --show-stats
