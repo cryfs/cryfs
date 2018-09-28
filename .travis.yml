@@ -1,23 +1,15 @@
 language: cpp
 sudo: required
-dist: trusty
+os: osx
 compiler:
-- gcc
+# - gcc
 - clang
-os:
-#- linux
-- osx
-addons:
-  apt:
-    sources:
-      # Both needed for clang 3.7
-      - llvm-toolchain-precise-3.7
-      - ubuntu-toolchain-r-test
-    packages:
-    - clang-3.7
-    - libcrypto++-dev
-    - libfuse-dev
+env:
+  - BUILD_TARGET=Debug
+  - BUILD_TARGET=Release
+  - BUILD_TARGET=RelWithDebInfo
 install:
 - .travisci/install.sh
 script:
 - .travisci/build_and_test.sh
+cache: ccache

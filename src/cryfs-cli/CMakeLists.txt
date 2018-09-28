@@ -28,5 +28,5 @@ target_activate_cpp14(${PROJECT_NAME}_bin)
 
 install(TARGETS ${PROJECT_NAME}_bin
         DESTINATION ${CMAKE_INSTALL_BINDIR}
-        CONFIGURATIONS Release
+        CONFIGURATIONS Release RelWithDebInfo
 )
