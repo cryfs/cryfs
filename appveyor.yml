@@ -46,7 +46,7 @@ build_script:
   - cmd: .\test\blobstore\%CONFIGURATION%\blobstore-test.exe
   - cmd: .\test\cryfs\%CONFIGURATION%\cryfs-test.exe
   #- cmd: .\test\cryfs-cli\%CONFIGURATION%\cryfs-cli-test.exe
-  - cmd: cpack --verbose -G WIX
+  #- cmd: cpack --verbose -G WIX
 
 on_failure:
   - cmd: type C:\projects\cryfs\build\_CPack_Packages\win64\WIX\wix.log
