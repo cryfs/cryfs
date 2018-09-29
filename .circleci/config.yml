@@ -369,7 +369,7 @@ jobs:
       CXX: clang++-4.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-4.0
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -393,7 +393,7 @@ jobs:
       CXX: clang++-5.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-5.0
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -417,7 +417,7 @@ jobs:
       CXX: clang++-6.0
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-6.0
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -441,7 +441,7 @@ jobs:
       CXX: clang++-7
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-7
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -465,7 +465,7 @@ jobs:
       CXX: clang++-8
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-8
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -489,7 +489,7 @@ jobs:
       CXX: clang++-9
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-9
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
@@ -513,7 +513,7 @@ jobs:
       CXX: clang++-10
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-10
-      CXXFLAGS: ""
+      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
