@@ -160,7 +160,7 @@ references:
         # Build
         mkdir cmake
         cd cmake
-        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS}
+        cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS} ${CMAKE_FLAGS}
         make -j$NUMCORES
 
         ccache --show-stats
@@ -208,6 +208,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-5"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   gcc_5_release:
     <<: *job_definition
     environment:
@@ -217,6 +218,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-5"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   gcc_6_debug:
     <<: *job_definition
     environment:
@@ -226,6 +228,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-6"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   gcc_6_release:
     <<: *job_definition
     environment:
@@ -235,6 +238,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-6"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   gcc_7_debug:
     <<: *job_definition
     environment:
@@ -244,6 +248,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-7"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   gcc_7_release:
     <<: *job_definition
     environment:
@@ -253,6 +258,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-7"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   gcc_8_debug:
     <<: *job_definition
     environment:
@@ -262,6 +268,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   gcc_8_release:
     <<: *job_definition
     environment:
@@ -271,6 +278,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   clang_4_debug:
     <<: *job_definition
     environment:
@@ -280,6 +288,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-4.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   clang_4_release:
     <<: *job_definition
     environment:
@@ -289,6 +298,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-4.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   clang_5_debug:
     <<: *job_definition
     environment:
@@ -298,6 +308,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   clang_5_release:
     <<: *job_definition
     environment:
@@ -307,6 +318,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   clang_6_debug:
     <<: *job_definition
     environment:
@@ -316,6 +328,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-6.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   clang_6_release:
     <<: *job_definition
     environment:
@@ -325,6 +338,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-6.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   clang_7_debug:
     <<: *job_definition
     environment:
@@ -334,6 +348,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   clang_7_release:
     <<: *job_definition
     environment:
@@ -343,6 +358,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
   no_compatibility:
     <<: *job_definition
     environment:
@@ -352,6 +368,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
+      CMAKE_FLAGS: ""
   address_sanitizer:
     <<: *job_definition
     environment:
@@ -363,6 +380,7 @@ jobs:
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
       DISABLE_BROKEN_ASAN_TESTS: true
+      CMAKE_FLAGS: ""
   ub_sanitizer:
     <<: *job_definition
     environment:
@@ -373,6 +391,7 @@ jobs:
       CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_ASAN_TESTS: true
+      CMAKE_FLAGS: ""
   thread_sanitizer:
     <<: *job_definition
     environment:
@@ -383,6 +402,7 @@ jobs:
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_TSAN_TESTS: true
+      CMAKE_FLAGS: ""
 
 workflows:
   version: 2
