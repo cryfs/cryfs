@@ -363,6 +363,16 @@ jobs:
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
       DISABLE_BROKEN_ASAN_TESTS: true
+  ub_sanitizer:
+    <<: *job_definition
+    environment:
+      CC: clang-7
+      CXX: clang++-7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-7
+      CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
+      BUILD_TYPE: "Debug"
+      DISABLE_BROKEN_ASAN_TESTS: true
   thread_sanitizer:
     <<: *job_definition
     environment:
@@ -414,6 +424,8 @@ workflows:
     - no_compatibility:
         <<: *enable_for_tags
     - address_sanitizer:
+        <<: *enable_for_tags
+    - ub_sanitizer:
         <<: *enable_for_tags
     - thread_sanitizer:
         <<: *enable_for_tags
