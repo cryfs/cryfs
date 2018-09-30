@@ -18,6 +18,8 @@ require_clang_version(4.0)
 option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
 option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
+option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
+option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
 if (MSVC)
     option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-1.1.0" "")

@@ -32,16 +32,22 @@ function(target_activate_cpp14 TARGET)
 endfunction(target_activate_cpp14)
 
 # Find clang-tidy executable (for use in target_enable_style_warnings)
-find_program(
-  CLANG_TIDY_EXE
-  NAMES "clang-tidy"
-  DOC "Path to clang-tidy executable"
-)
-if(NOT CLANG_TIDY_EXE)
-  message(WARNING "clang-tidy not found. Checks are disabled")
-else()
-  message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-  set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-system-headers=0")
+if (USE_CLANG_TIDY)
+    find_program(
+      CLANG_TIDY_EXE
+      NAMES "clang-tidy"
+      DOC "Path to clang-tidy executable"
+    )
+    if(NOT CLANG_TIDY_EXE)
+      message(FATAL_ERROR "clang-tidy not found. Please install clang-tidy or run without -DUSE_CLANG_TIDY=on.")
+    else()
+      set(CLANG_TIDY_OPTIONS "-system-headers=0")
+      if (CLANG_TIDY_WARNINGS_AS_ERRORS)
+          set(CLANG_TIDY_OPTIONS "${CLANG_TIDY_OPTIONS}" "-warnings-as-errors=*")
+      endif()
+      message(STATUS "Clang-tidy is enabled. Executable: ${CLANG_TIDY_EXE} Arguments: ${CLANG_TIDY_OPTIONS}")
+      set(CLANG_TIDY_CLI "${CLANG_TIDY_EXE}" "${CLANG_TIDY_OPTIONS}")
+    endif()
 endif()
 
 #################################################
@@ -57,10 +63,12 @@ function(target_enable_style_warnings TARGET)
     endif()
 
     # Enable clang-tidy
-    #set_target_properties(
-    #  ${TARGET} PROPERTIES
-    #  CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-    #)
+    if(USE_CLANG_TIDY)
+        set_target_properties(
+          ${TARGET} PROPERTIES
+          CXX_CLANG_TIDY "${CLANG_TIDY_CLI}"
+        )
+    endif()
 endfunction(target_enable_style_warnings)
 
 ##################################################
