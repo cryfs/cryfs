@@ -39,6 +39,7 @@ if(NOT DISABLE_OPENMP)
             target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS} ${Additional_OpenMP_Libraries_Workaround})
         endif()
 
+        target_link_libraries(cryptopp PUBLIC ${OpenMP_CXX_FLAGS}) # Workaround for Ubuntu 18.04 that otherwise doesn't set -fopenmp for linking
         target_link_libraries(cryptopp PUBLIC OpenMP::OpenMP_CXX)
 
         # also add these flags to the third party Crypto++ build setup that is built in a subdirectory
