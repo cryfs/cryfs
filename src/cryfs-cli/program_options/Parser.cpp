@@ -63,7 +63,8 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     }
     bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     bool allowReplacedFilesystem = vm.count("allow-replaced-filesystem");
-    optional<double> unmountAfterIdleMinutes = none;
+    optional<double> unmountAfterIdleMinutes = 0.0;  // first setting to 0 and then to none is somehow needed to silence a GCC warning from -Wmaybe-uninitialized
+    unmountAfterIdleMinutes = none;
     if (vm.count("unmount-idle")) {
         unmountAfterIdleMinutes = vm["unmount-idle"].as<double>();
     }

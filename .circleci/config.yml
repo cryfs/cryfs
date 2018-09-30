@@ -169,15 +169,17 @@ references:
       name: Test
       no_output_timeout: 120m
       command: |
-        cd cmake
-        ./test/gitversion/gitversion-test
-        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
-        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
-        ./test/parallelaccessstore/parallelaccessstore-test
-        ./test/blockstore/blockstore-test
-        ./test/blobstore/blobstore-test
-        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs/cryfs-test ; fi
-        if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
+        if "${RUN_TESTS}"; then
+          cd cmake
+          ./test/gitversion/gitversion-test
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
+          ./test/parallelaccessstore/parallelaccessstore-test
+          ./test/blockstore/blockstore-test
+          ./test/blobstore/blobstore-test
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs/cryfs-test ; fi
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
+        fi
   job_definition: &job_definition
     <<: *container_config
     steps:
@@ -209,6 +211,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_5_release:
     <<: *job_definition
     environment:
@@ -219,6 +222,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_6_debug:
     <<: *job_definition
     environment:
@@ -229,6 +233,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_6_release:
     <<: *job_definition
     environment:
@@ -239,6 +244,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_7_debug:
     <<: *job_definition
     environment:
@@ -249,6 +255,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_7_release:
     <<: *job_definition
     environment:
@@ -259,6 +266,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_8_debug:
     <<: *job_definition
     environment:
@@ -269,6 +277,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   gcc_8_release:
     <<: *job_definition
     environment:
@@ -279,6 +288,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_4_debug:
     <<: *job_definition
     environment:
@@ -289,6 +299,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_4_release:
     <<: *job_definition
     environment:
@@ -299,6 +310,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_5_debug:
     <<: *job_definition
     environment:
@@ -309,6 +321,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_5_release:
     <<: *job_definition
     environment:
@@ -319,6 +332,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_6_debug:
     <<: *job_definition
     environment:
@@ -329,6 +343,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_6_release:
     <<: *job_definition
     environment:
@@ -339,6 +354,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_7_debug:
     <<: *job_definition
     environment:
@@ -349,6 +365,7 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_7_release:
     <<: *job_definition
     environment:
@@ -359,6 +376,29 @@ jobs:
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
+#  clang_werror:
+#    <<: *job_definition
+#    environment:
+#      CC: clang-7
+#      CXX: clang++-7
+#      BUILD_TOOLSET: clang
+#      APT_COMPILER_PACKAGE: clang-7
+#      CXXFLAGS: "-Werror"
+#      BUILD_TYPE: "Release"
+#      CMAKE_FLAGS: ""
+#      RUN_TESTS: false
+  gcc_werror:
+    <<: *job_definition
+    environment:
+      CC: gcc-8
+      CXX: g++-8
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-8"
+      CXXFLAGS: "-Werror"
+      BUILD_TYPE: "Release"
+      CMAKE_FLAGS: ""
+      RUN_TESTS: false
   no_compatibility:
     <<: *job_definition
     environment:
@@ -369,6 +409,7 @@ jobs:
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   address_sanitizer:
     <<: *job_definition
     environment:
@@ -381,6 +422,7 @@ jobs:
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
       DISABLE_BROKEN_ASAN_TESTS: true
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   ub_sanitizer:
     <<: *job_definition
     environment:
@@ -392,6 +434,7 @@ jobs:
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_ASAN_TESTS: true
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
   thread_sanitizer:
     <<: *job_definition
     environment:
@@ -403,6 +446,7 @@ jobs:
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_TSAN_TESTS: true
       CMAKE_FLAGS: ""
+      RUN_TESTS: true
 
 workflows:
   version: 2
@@ -440,6 +484,10 @@ workflows:
     - clang_7_debug:
         <<: *enable_for_tags
     - clang_7_release:
+        <<: *enable_for_tags
+#    - clang_werror:
+#        <<: *enable_for_tags
+    - gcc_werror:
         <<: *enable_for_tags
     - no_compatibility:
         <<: *enable_for_tags
