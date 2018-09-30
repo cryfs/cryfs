@@ -432,7 +432,6 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
       BUILD_TYPE: "Debug"
-      DISABLE_BROKEN_ASAN_TESTS: true
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   thread_sanitizer:
