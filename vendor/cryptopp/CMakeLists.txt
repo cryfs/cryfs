@@ -14,7 +14,7 @@ if(NOT DISABLE_OPENMP)
     else()
         find_package(OpenMP)
 
-        if(NOT OPENMP_FOUND)
+        if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND)) # older cmake uses OPENMP_FOUND, newer cmake also sets OPENMP_CXX_FOUND, homebrew installations seem only to get the latter set.
             if((APPLE AND ((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
                     AND ((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0") AND (CMAKE_VERSION VERSION_LESS "3.12.0")))
                 # Workaround because older cmake on apple doesn't support FindOpenMP
