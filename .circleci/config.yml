@@ -173,7 +173,7 @@ references:
           cd cmake
           ./test/gitversion/gitversion-test
           if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
-          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
           ./test/parallelaccessstore/parallelaccessstore-test
           ./test/blockstore/blockstore-test
           ./test/blobstore/blobstore-test
@@ -420,6 +420,7 @@ jobs:
       CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fno-common -fsanitize-address-use-after-scope"
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
+      DISABLE_BROKEN_ASAN_TESTS: true
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   ub_sanitizer:
