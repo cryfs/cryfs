@@ -97,9 +97,12 @@ namespace {
     }
     void set_handler(int signum, void(*handler)(int)) {
         auto result = signal(signum, handler);
+#pragma GCC diagnostic push // SIG_ERR uses old style casts
+#pragma GCC diagnostic ignored "-Wold-style-cast"
         if (SIG_ERR == result) {
             LOG(ERR, "Failed to set signal {} handler. Errno: {}", signum, errno);
         }
+#pragma GCC diagnostic pop
     }
 }
 

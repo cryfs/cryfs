@@ -377,17 +377,28 @@ jobs:
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: ""
       RUN_TESTS: true
-#  clang_werror:
-#    <<: *job_definition
-#    environment:
-#      CC: clang-7
-#      CXX: clang++-7
-#      BUILD_TOOLSET: clang
-#      APT_COMPILER_PACKAGE: clang-7
-#      CXXFLAGS: "-Werror"
-#      BUILD_TYPE: "Release"
-#      CMAKE_FLAGS: ""
-#      RUN_TESTS: false
+  clang_werror:
+    <<: *job_definition
+    environment:
+      CC: clang-7
+      CXX: clang++-7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-7
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      CMAKE_FLAGS: "-DUSE_WERROR=on"
+      RUN_TESTS: false
+  gcc_werror:
+    <<: *job_definition
+    environment:
+      CC: gcc-8
+      CXX: g++-8
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-8"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      CMAKE_FLAGS: "-DUSE_WERROR=on"
+      RUN_TESTS: false
   gcc_werror:
     <<: *job_definition
     environment:
@@ -484,8 +495,8 @@ workflows:
         <<: *enable_for_tags
     - clang_7_release:
         <<: *enable_for_tags
-#    - clang_werror:
-#        <<: *enable_for_tags
+    - clang_werror:
+        <<: *enable_for_tags
     - gcc_werror:
         <<: *enable_for_tags
     - no_compatibility:

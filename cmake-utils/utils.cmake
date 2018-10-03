@@ -56,10 +56,16 @@ endif()
 #  Uses: target_enable_style_warnings(buildtarget)
 #################################################
 function(target_enable_style_warnings TARGET)
-    # Enable compiler options
-    if (NOT MSVC)
-        # TODO Add compiler warnings on MSVC
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        # TODO
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align -Wno-unused-command-line-argument) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
+    endif()
+
+    if (USE_WERROR)
+        target_compile_options(${TARGET} PRIVATE -Werror)
     endif()
 
     # Enable clang-tidy

@@ -57,11 +57,14 @@ namespace cpputils {
 			if (returncode == -1) {
 				throw std::runtime_error("Error calling pclose. Errno: " + std::to_string(errno));
 			}
+#pragma GCC diagnostic push // WIFEXITSTATUS / WEXITSTATUS use old style casts
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			if (!WIFEXITED(returncode)) {
 				// WEXITSTATUS is only valid if WIFEXITED is 0.
 				throw std::runtime_error("WIFEXITED returned " + std::to_string(WIFEXITED(returncode)));
 			}
 			return WEXITSTATUS(returncode);
+#pragma GCC diagnostic pop
 		}
 
 	private:
