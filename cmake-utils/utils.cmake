@@ -32,16 +32,22 @@ function(target_activate_cpp14 TARGET)
 endfunction(target_activate_cpp14)
 
 # Find clang-tidy executable (for use in target_enable_style_warnings)
-find_program(
-  CLANG_TIDY_EXE
-  NAMES "clang-tidy"
-  DOC "Path to clang-tidy executable"
-)
-if(NOT CLANG_TIDY_EXE)
-  message(WARNING "clang-tidy not found. Checks are disabled")
-else()
-  message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-  set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-system-headers=0")
+if (USE_CLANG_TIDY)
+    find_program(
+      CLANG_TIDY_EXE
+      NAMES "clang-tidy"
+      DOC "Path to clang-tidy executable"
+    )
+    if(NOT CLANG_TIDY_EXE)
+      message(FATAL_ERROR "clang-tidy not found. Please install clang-tidy or run without -DUSE_CLANG_TIDY=on.")
+    else()
+      set(CLANG_TIDY_OPTIONS "-system-headers=0")
+      if (CLANG_TIDY_WARNINGS_AS_ERRORS)
+          set(CLANG_TIDY_OPTIONS "${CLANG_TIDY_OPTIONS}" "-warnings-as-errors=*")
+      endif()
+      message(STATUS "Clang-tidy is enabled. Executable: ${CLANG_TIDY_EXE} Arguments: ${CLANG_TIDY_OPTIONS}")
+      set(CLANG_TIDY_CLI "${CLANG_TIDY_EXE}" "${CLANG_TIDY_OPTIONS}")
+    endif()
 endif()
 
 #################################################
@@ -50,17 +56,25 @@ endif()
 #  Uses: target_enable_style_warnings(buildtarget)
 #################################################
 function(target_enable_style_warnings TARGET)
-    # Enable compiler options
-    if (NOT MSVC)
-        # TODO Add compiler warnings on MSVC
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        # TODO
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align -Wno-unused-command-line-argument) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wold-style-cast -Wcast-align) # TODO consider -Wpedantic -Wchkp -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -Wconversion and others?
     endif()
 
+    if (USE_WERROR)
+        target_compile_options(${TARGET} PRIVATE -Werror)
+    endif()
+
     # Enable clang-tidy
-    #set_target_properties(
-    #  ${TARGET} PROPERTIES
-    #  CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-    #)
+    if(USE_CLANG_TIDY)
+        set_target_properties(
+          ${TARGET} PROPERTIES
+          CXX_CLANG_TIDY "${CLANG_TIDY_CLI}"
+        )
+    endif()
 endfunction(target_enable_style_warnings)
 
 ##################################################

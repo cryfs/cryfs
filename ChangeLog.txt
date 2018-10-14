@@ -1,15 +1,16 @@
 Version 0.10.0 (unreleased)
 ---------------
 New Features & Improvements:
+* Experimental Windows support
 * Integrity checks ensure you notice when someone modifies your file system.
 * File system nodes (files, directories, symlinks) store a parent pointer to the directory that contains them. This information can be used in later versions to resolve some synchronization conflicts.
 * Allow mounting using system mount tool and /etc/fstab (e.g. mount -t fuse.cryfs basedir mountdir)
 * Performance improvements
 * Use relatime instead of strictatime (further performance improvement)
 * Pass fuse options directly to cryfs (i.e. 'cryfs basedir mountdir -o allow_other' instead of 'cryfs basedir mountdir -- -o allow_other')
-* CryFS tells the operating system to not swap the encryption key to the disk (note: this is best-effort and cannot be guaranteed. Hibernation, for example, will still write the encryption key to the disk)
+* CryFS tells the operating system to lock the encryption key to memory, i.e. not swap it to the disk (note: this is best-effort and cannot be guaranteed. Hibernation, for example, will still write the encryption key to the disk).
 * New block size options: 4KB and 16KB
-* New default block size: 16KB
+* New default block size: 16KB. This should decrease the size of the ciphertext directory for most users.
 * Increased scrypt hardness to (N=1048576, r=4, p=8) to make it harder to crack the key while allowing cryfs to take advantage of multicore machines.
 
 Fixed bugs:
@@ -17,6 +18,7 @@ Fixed bugs:
 
 
 Version 0.9.9
+--------------
 Improvements:
 * Add --allow-filesystem-upgrade option which will upgrade old file systems without asking the user. This will be especially helpful for GUI tools.
 * Add --version option that shows the CryFS version and exits.

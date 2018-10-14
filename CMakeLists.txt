@@ -19,6 +19,12 @@ option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
 option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
 
+# The following options are helpful for development and/or CI
+option(USE_WERROR "build with -Werror flag")
+option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
+option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
+
+
 if (MSVC)
     option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-1.1.0" "")
 endif()

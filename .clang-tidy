@@ -23,6 +23,7 @@ Checks: |
   -cppcoreguidelines-pro-type-vararg,
   -misc-macro-parentheses,
   -misc-unused-raii
+#WarningsAsErrors: '*'
 WarningsAsErrors: ''
 HeaderFilterRegex: '/src/|/test/'
 CheckOptions:
