@@ -12,6 +12,9 @@ Checks: |
   boost-use-to-string,
   -cert-env33-c,
   -cert-err58-cpp,
+  -cert-err60-cpp,
+  -bugprone-macro-parentheses,
+  -bugprone-exception-escape,
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-no-malloc,
   -cppcoreguidelines-pro-type-const-cast,
@@ -21,10 +24,11 @@ Checks: |
   -cppcoreguidelines-pro-type-cstyle-cast,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-avoid-goto,
+  -clang-analyzer-optin.cplusplus.VirtualCall,
   -misc-macro-parentheses,
   -misc-unused-raii
-#WarningsAsErrors: '*'
-WarningsAsErrors: ''
+WarningsAsErrors: '*'
 HeaderFilterRegex: '/src/|/test/'
 CheckOptions:
   - key:             google-readability-braces-around-statements.ShortStatementLines
