@@ -12,7 +12,7 @@ platform:
 configuration:
  - Debug
  - RelWithDebInfo
- - Release
+# - Release
 
 version: '{branch}-{build}'
 
