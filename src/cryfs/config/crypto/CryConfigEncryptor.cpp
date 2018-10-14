@@ -5,7 +5,6 @@ using std::string;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::Data;
-using cpputils::FixedSizeData;
 using boost::optional;
 using boost::none;
 using namespace cpputils::logging;

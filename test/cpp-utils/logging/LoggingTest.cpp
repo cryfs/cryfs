@@ -8,7 +8,6 @@
 
 using namespace cpputils::logging;
 using std::string;
-using testing::MatchesRegex;
 
 TEST_F(LoggingTest, DefaultLoggerIsStderr) {
     string output = captureStderr([]{

@@ -108,7 +108,7 @@ private:
     explicit unique_ref(std::unique_ptr<T, D> target) noexcept
     : _target(std::move(target)) {}
 
-    void _invariant() const {
+    void _invariant() const noexcept {
         // TODO Test performance impact of this
         ASSERT(_target.get() != nullptr, "Member was moved out to another unique_ref. This instance is invalid.");
     }

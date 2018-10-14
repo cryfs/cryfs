@@ -20,7 +20,6 @@ using cpputils::AES256_GCM;
 using cpputils::AES256_CFB;
 using cpputils::FakeAuthenticatedCipher;
 
-using cpputils::Data;
 using cpputils::DataFixture;
 using cpputils::make_unique_ref;
 using cpputils::unique_ref;

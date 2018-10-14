@@ -59,11 +59,13 @@ template<size_t SIZE>
 FixedSizeData<SIZE> FixedSizeData<SIZE>::FromString(const std::string &data) {
   ASSERT(data.size() == STRING_LENGTH, "Wrong string size for parsing FixedSizeData");
   FixedSizeData<SIZE> result;
-  CryptoPP::StringSource(data, true,
-    new CryptoPP::HexDecoder(
-      new CryptoPP::ArraySink(result._data, BINARY_LENGTH)
-    )
-  );
+  {
+    CryptoPP::StringSource _1(data, true,
+      new CryptoPP::HexDecoder(
+        new CryptoPP::ArraySink(result._data, BINARY_LENGTH)
+      )
+    );
+  }
   return result;
 }
 

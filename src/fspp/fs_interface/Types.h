@@ -157,15 +157,15 @@ struct num_bytes_t final : cpputils::value_type::QuantityValueType<num_bytes_t, 
 };
 
 struct stat_info final {
-    uint32_t nlink;
+    uint32_t nlink{};
     fspp::mode_t mode;
     fspp::uid_t uid;
     fspp::gid_t gid;
     fspp::num_bytes_t size;
-    uint64_t blocks;
-    struct timespec atime;
-    struct timespec mtime;
-    struct timespec ctime;
+    uint64_t blocks{};
+    struct timespec atime{};
+    struct timespec mtime{};
+    struct timespec ctime{};
 };
 
 struct statvfs final {
