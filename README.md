@@ -112,6 +112,19 @@ On most systems, CMake should find the libraries automatically. However, that do
 
         cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
 
+5. **OpenMP not found (osx)**
+
+    Either build it without OpenMP
+
+        cmake .. -DDISABLE_OPENMP=on
+
+    but that will cause slower file system mount times (performance after mounting will be unaffected).
+    If you installed OpenMP with homebrew or macports, it should be autodetected.
+    If that doesn't work for some reason (or you want to use a different installation than the autodetected one),
+    pass in these flags:
+
+        cmake .. -DOpenMP_CXX_FLAGS='-Xpreprocessor -fopenmp -I/path/to/openmp/include' -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=/path/to/libomp.dylib
+
 
 Creating .deb and .rpm packages
 -------------------------------
