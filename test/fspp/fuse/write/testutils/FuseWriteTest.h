@@ -10,7 +10,7 @@ public:
   const char *FILENAME = "/myfile";
 
   struct WriteError {
-    int error;
+    int error{};
     fspp::num_bytes_t written_bytes;
   };
 

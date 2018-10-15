@@ -10,7 +10,7 @@ public:
   const char *FILENAME = "/myfile";
 
   struct ReadError {
-    int error;
+    int error{};
     fspp::num_bytes_t read_bytes;
   };
 

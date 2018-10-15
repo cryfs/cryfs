@@ -1,7 +1,6 @@
 #include "FuseStatfsTest.h"
 
 using std::function;
-using ::testing::StrEq;
 using ::testing::_;
 using ::testing::Invoke;
 

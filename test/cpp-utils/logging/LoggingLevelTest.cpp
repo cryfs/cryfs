@@ -3,7 +3,6 @@
 
 using namespace cpputils::logging;
 using std::string;
-using testing::MatchesRegex;
 
 class LoggingLevelTest: public LoggingTest {
 public:

@@ -15,7 +15,7 @@ inline std::unique_ptr<DST> dynamic_pointer_move(std::unique_ptr<SRC> &source) {
   //TODO Deleter
   DST *casted = dynamic_cast<DST*>(source.get());
   if (casted != nullptr) {
-    source.release();
+    std::ignore = source.release();
   }
   return std::unique_ptr<DST>(casted);
 }

@@ -13,8 +13,8 @@ TEST(FiletimeTest, SetAndGetTime_ReturnsCorrectTime) {
 	int retval = set_filetime(file.path().string().c_str(), accessTime, modificationTime);
 	EXPECT_EQ(0, retval);
 
-	struct timespec readAccessTime;
-	struct timespec readModificationTime;
+	struct timespec readAccessTime{};
+	struct timespec readModificationTime{};
 	retval = get_filetime(file.path().string().c_str(), &readAccessTime, &readModificationTime);
 	EXPECT_EQ(0, retval);
 

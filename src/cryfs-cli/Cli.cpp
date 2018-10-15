@@ -44,8 +44,6 @@ using cpputils::unique_ref;
 using cpputils::SCryptSettings;
 using cpputils::Console;
 using cpputils::HttpClient;
-using cpputils::DontEchoStdinToStdoutRAII;
-using std::cin;
 using std::cout;
 using std::string;
 using std::endl;
@@ -272,7 +270,7 @@ namespace cryfs {
         if (minutes == none) {
             return none;
         }
-        uint64_t millis = std::round(60000 * (*minutes));
+        uint64_t millis = std::llround(60000 * (*minutes));
         return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback);
     }
 

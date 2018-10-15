@@ -231,7 +231,9 @@ TEST_F(KnownBlockVersionsTest, checkAndUpdate_doesntAllowRollbackToOldClientWith
 
 TEST_F(KnownBlockVersionsTest, saveAndLoad_empty) {
     TempFile stateFile(false);
-    KnownBlockVersions(stateFile.path(), myClientId);
+    {
+      KnownBlockVersions _1(stateFile.path(), myClientId);
+    }
 
     EXPECT_TRUE(KnownBlockVersions(stateFile.path(), myClientId).checkAndUpdateVersion(clientId, blockId, 1));
 }

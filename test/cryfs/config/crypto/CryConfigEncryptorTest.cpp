@@ -9,7 +9,6 @@ using cpputils::make_unique_ref;
 using cpputils::DataFixture;
 using cpputils::Data;
 using cpputils::EncryptionKey;
-using cpputils::FixedSizeData;
 using cpputils::AES128_CFB;
 using cpputils::AES256_GCM;
 using cpputils::Twofish256_GCM;

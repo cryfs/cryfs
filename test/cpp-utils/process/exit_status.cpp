@@ -11,6 +11,6 @@ int main(int argc, char* argv[]) {
 
 	std::cout << argv[1];
 
-	int exit_status = std::atoi(argv[2]);
+	int exit_status = std::strtol(argv[2], nullptr, 10);
 	return exit_status;
 }

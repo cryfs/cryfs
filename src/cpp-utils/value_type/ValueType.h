@@ -139,7 +139,7 @@ public:
         return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType operator++(int) noexcept(noexcept(++std::declval<ConcreteType>())) {
+    constexpr const ConcreteType operator++(int) noexcept(noexcept(++std::declval<ConcreteType>())) {
         ConcreteType tmp = *static_cast<ConcreteType*>(this);
         ++(*this);
         return tmp;
@@ -150,7 +150,7 @@ public:
         return *static_cast<ConcreteType*>(this);
     }
 
-    constexpr ConcreteType operator--(int) noexcept(noexcept(--std::declval<ConcreteType>())) {
+    constexpr const ConcreteType operator--(int) noexcept(noexcept(--std::declval<ConcreteType>())) {
         ConcreteType tmp = *static_cast<ConcreteType*>(this);
         --(*this);
         return tmp;

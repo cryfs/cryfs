@@ -2,7 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::StrEq;
 using ::testing::_;
 using ::testing::Throw;
 using ::testing::Return;

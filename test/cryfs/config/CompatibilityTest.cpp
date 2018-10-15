@@ -35,11 +35,13 @@ private:
     Data hexToBinary(const string &hex) {
         ASSERT(hex.size()%2 == 0, "Hex codes need to have two characters per byte");
         Data result(hex.size()/2);
-        CryptoPP::StringSource(hex, true,
-             new CryptoPP::HexDecoder(
-                   new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result.data()), result.size())
-             )
-        );
+        {
+            CryptoPP::StringSource _1(hex, true,
+                 new CryptoPP::HexDecoder(
+                       new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result.data()), result.size())
+                 )
+            );
+        }
         return result;
     }
 
