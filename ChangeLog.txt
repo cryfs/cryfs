@@ -15,6 +15,7 @@ New Features & Improvements:
 
 Fixed bugs:
 * `du` shows correct file system size on Mac OS X.
+* On Mac OS X, Finder shows the correct name for the mount directory
 
 
 Version 0.9.9
