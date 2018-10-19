@@ -23,7 +23,7 @@ class TestWithMockConsole {
 public:
     // Return a console that chooses a valid cryfs setting
     static std::shared_ptr<MockConsole> mockConsole() {
-        auto console = std::make_shared<MockConsole>();
+        auto console = std::make_shared<::testing::NiceMock<MockConsole>>();
         EXPECT_CALL(*console, ask(::testing::_, ::testing::_)).WillRepeatedly(ChooseCipher("aes-256-gcm"));
         EXPECT_CALL(*console, askYesNo(::testing::_, ::testing::_)).WillRepeatedly(::testing::Return(true));
         return console;

@@ -15,6 +15,7 @@ using std::string;
 using std::shared_ptr;
 using std::make_shared;
 using ::testing::_;
+using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ValuesIn;
 using ::testing::HasSubstr;
@@ -24,11 +25,11 @@ using ::testing::WithParamInterface;
 class CryConfigConsoleTest: public ::testing::Test {
 public:
     CryConfigConsoleTest()
-            : console(make_shared<MockConsole>()),
+            : console(make_shared<NiceMock<MockConsole>>()),
               cryconsole(console),
               noninteractiveCryconsole(make_shared<NoninteractiveConsole>(console)) {
     }
-    shared_ptr<MockConsole> console;
+    shared_ptr<NiceMock<MockConsole>> console;
     CryConfigConsole cryconsole;
     CryConfigConsole noninteractiveCryconsole;
 };

@@ -20,6 +20,7 @@ using ::testing::_;
 using ::testing::Return;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAreArray;
+using ::testing::NiceMock;
 
 #define EXPECT_ASK_TO_USE_DEFAULT_SETTINGS()                                                                           \
   EXPECT_CALL(*console, askYesNo("Use default settings?", true)).Times(1)
@@ -43,14 +44,14 @@ using ::testing::UnorderedElementsAreArray;
 class CryConfigCreatorTest: public ::testing::Test, TestWithFakeHomeDirectory {
 public:
     CryConfigCreatorTest()
-            : console(make_shared<MockConsole>()),
+            : console(make_shared<NiceMock<MockConsole>>()),
               tempLocalStateDir(), localStateDir(tempLocalStateDir.path()),
               creator(console, cpputils::Random::PseudoRandom(), localStateDir),
               noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir) {
         EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).WillRepeatedly(ChooseAnyCipher());
         EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).WillRepeatedly(Return(0));
     }
-    shared_ptr<MockConsole> console;
+    shared_ptr<NiceMock<MockConsole>> console;
     cpputils::TempDir tempLocalStateDir;
     LocalStateDir localStateDir;
     CryConfigCreator creator;
