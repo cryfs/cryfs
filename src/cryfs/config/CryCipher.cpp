@@ -25,7 +25,7 @@ class CryCipherInstance: public CryCipher {
 public:
     BOOST_CONCEPT_ASSERT((CipherConcept<Cipher>));
 
-    static_assert(Cipher::EncryptionKey::BINARY_LENGTH <= CryCiphers::MAX_KEY_SIZE, "The key size for this cipher is too large. Please modify CryCiphers::MAX_KEY_SIZE");
+    static_assert(Cipher::KEYSIZE <= CryCiphers::MAX_KEY_SIZE, "The key size for this cipher is too large. Please modify CryCiphers::MAX_KEY_SIZE");
 
     CryCipherInstance(const optional<string> warning = none): _warning(warning) {
     }
@@ -43,11 +43,12 @@ public:
     }
 
     string createKey(cpputils::RandomGenerator &randomGenerator) const override {
-        return Cipher::EncryptionKey::CreateKey(randomGenerator).ToString();
+        return Cipher::EncryptionKey::CreateKey(randomGenerator, Cipher::KEYSIZE).ToString();
     }
 
-    unique_ref<InnerEncryptor> createInnerConfigEncryptor(const EncryptionKey<CryCiphers::MAX_KEY_SIZE>& key) const override {
-        return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key.take<Cipher::EncryptionKey::BINARY_LENGTH>());
+    unique_ref<InnerEncryptor> createInnerConfigEncryptor(const EncryptionKey& key) const override {
+        ASSERT(key.binaryLength() == CryCiphers::MAX_KEY_SIZE, "Wrong key size");
+        return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key.take(Cipher::KEYSIZE));
     }
 
 private:

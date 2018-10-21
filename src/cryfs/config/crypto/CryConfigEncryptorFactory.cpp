@@ -33,7 +33,7 @@ namespace cryfs {
         //     (once we know which inner cipher was used) only generate as many key bytes as we need for the inner cipher.
         //     This would need a change in the scrypt interface though, because right now we can't continue past key computations.
         //TODO I might be able to know the actual key size here (at runtime) and switch the SCrypt deriveKey() interface to getting a dynamic size.
-        auto key = kdf->deriveKey<CryConfigEncryptor::MaxTotalKeySize>(password);
+        auto key = kdf->deriveKey(CryConfigEncryptor::MaxTotalKeySize, password);
         return make_unique_ref<CryConfigEncryptor>(key, kdf->kdfParameters().copy());
     }
 }

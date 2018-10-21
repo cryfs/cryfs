@@ -32,8 +32,7 @@ namespace cpputils {
 
         SCrypt(SCryptParameters config);
 
-    protected:
-        void derive(void *destination, size_t size, const std::string &password) override;
+        EncryptionKey deriveKey(size_t keySize, const std::string &password) override;
 
     private:
         void _checkCallOnlyOnce();

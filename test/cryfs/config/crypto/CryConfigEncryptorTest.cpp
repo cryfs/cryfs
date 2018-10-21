@@ -40,8 +40,8 @@ public:
     }
 
 private:
-    EncryptionKey<CryConfigEncryptor::MaxTotalKeySize> _derivedKey() {
-        return EncryptionKey<CryConfigEncryptor::MaxTotalKeySize>::FromString(
+    EncryptionKey _derivedKey() {
+        return EncryptionKey::FromString(
             DataFixture::generateFixedSize<CryConfigEncryptor::MaxTotalKeySize>(3).ToString()
         );
     }
@@ -51,7 +51,7 @@ private:
     }
 
     unique_ref<OuterEncryptor> _outerEncryptor() {
-        auto outerKey = _derivedKey().take<CryConfigEncryptor::OuterKeySize>();
+        auto outerKey = _derivedKey().take(CryConfigEncryptor::OuterKeySize);
         return make_unique_ref<OuterEncryptor>(outerKey, _kdfParameters());
     }
 

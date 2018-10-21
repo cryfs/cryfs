@@ -22,11 +22,13 @@ namespace cpputils {
             :_config(std::move(config)), _serializedConfig(_config.serialize()), _wasGeneratedBefore(false) {
     }
 
-    void SCrypt::derive(void *destination, size_t size, const string &password) {
+    EncryptionKey SCrypt::deriveKey(size_t keySize, const std::string &password) {
         _checkCallOnlyOnce();
 
+        auto result = EncryptionKey::Null(keySize);
+
         size_t status = CryptoPP::Scrypt().DeriveKey(
-            static_cast<uint8_t*>(destination), size,
+            static_cast<uint8_t*>(result.data()), result.binaryLength(),
             reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
             static_cast<const uint8_t*>(_config.salt().data()), _config.salt().size(),
             _config.N(), _config.r(), _config.p()
@@ -34,6 +36,8 @@ namespace cpputils {
         if (status != 1) {
             throw std::runtime_error("Error running scrypt key derivation. Error code: "+std::to_string(status));
         }
+
+        return result;
     }
 
     const Data &SCrypt::kdfParameters() const {

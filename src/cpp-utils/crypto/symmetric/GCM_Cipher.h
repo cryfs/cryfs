@@ -15,7 +15,10 @@ namespace cpputils {
 template<typename BlockCipher, unsigned int KeySize>
 class GCM_Cipher {
 public:
-    using EncryptionKey = cpputils::EncryptionKey<KeySize>;
+    using EncryptionKey = cpputils::EncryptionKey;
+
+    static constexpr unsigned int KEYSIZE = KeySize;
+    static constexpr unsigned int STRING_KEYSIZE = 2 * KEYSIZE;
 
     static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
         return plaintextBlockSize + IV_SIZE + TAG_SIZE;
@@ -33,11 +36,18 @@ private:
     static constexpr unsigned int TAG_SIZE = 16;
 };
 
+template<class BlockCipher, unsigned int KeySize>
+constexpr unsigned int GCM_Cipher<BlockCipher, KeySize>::KEYSIZE;
+template<class BlockCipher, unsigned int KeySize>
+constexpr unsigned int GCM_Cipher<BlockCipher, KeySize>::STRING_KEYSIZE;
+
 template<typename BlockCipher, unsigned int KeySize>
 Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
+    ASSERT(encKey.binaryLength() == KeySize, "Wrong key size");
+
     FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Encryption encryption;
-    encryption.SetKeyWithIV(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.BINARY_LENGTH, iv.data(), IV_SIZE);
+    encryption.SetKeyWithIV(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.binaryLength(), iv.data(), IV_SIZE);
     Data ciphertext(ciphertextSize(plaintextSize));
 
     iv.ToBinary(ciphertext.data());
@@ -52,6 +62,8 @@ Data GCM_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, 
 
 template<typename BlockCipher, unsigned int KeySize>
 boost::optional<Data> GCM_Cipher<BlockCipher, KeySize>::decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
+    ASSERT(encKey.binaryLength() == KeySize, "Wrong key size");
+
     if (ciphertextSize < IV_SIZE + TAG_SIZE) {
       return boost::none;
     }
@@ -59,7 +71,7 @@ boost::optional<Data> GCM_Cipher<BlockCipher, KeySize>::decrypt(const CryptoPP::
     const CryptoPP::byte *ciphertextIV = ciphertext;
     const CryptoPP::byte *ciphertextData = ciphertext + IV_SIZE;
     typename CryptoPP::GCM<BlockCipher, CryptoPP::GCM_64K_Tables>::Decryption decryption;
-    decryption.SetKeyWithIV(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.BINARY_LENGTH, ciphertextIV, IV_SIZE);
+    decryption.SetKeyWithIV(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.binaryLength(), ciphertextIV, IV_SIZE);
     Data plaintext(plaintextSize(ciphertextSize));
 
     try {

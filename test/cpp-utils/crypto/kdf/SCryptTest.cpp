@@ -14,39 +14,39 @@ public:
         return result;
     }
 
-    template<size_t SIZE>
-    bool keyEquals(const EncryptionKey<SIZE>& lhs, const EncryptionKey<SIZE>& rhs) {
-        return 0 == std::memcmp(lhs.data(), rhs.data(), SIZE);
+    bool keyEquals(const EncryptionKey& lhs, const EncryptionKey& rhs) {
+        ASSERT(lhs.binaryLength() == rhs.binaryLength(), "Keys must have equal size to be comparable");
+        return 0 == std::memcmp(lhs.data(), rhs.data(), lhs.binaryLength());
     }
 };
 
 TEST_F(SCryptTest, GeneratedKeyIsReproductible_448) {
-    auto derivedKey = scryptForNewKey->deriveKey<56>("mypassword");
-    auto rederivedKey = scryptForExistingKey->deriveKey<56>("mypassword");
+    auto derivedKey = scryptForNewKey->deriveKey(56, "mypassword");
+    auto rederivedKey = scryptForExistingKey->deriveKey(56, "mypassword");
     EXPECT_TRUE(keyEquals(derivedKey, rederivedKey));
 }
 
 TEST_F(SCryptTest, GeneratedKeyIsReproductible_256) {
-    auto derivedKey = scryptForNewKey->deriveKey<32>("mypassword");
-    auto rederivedKey = scryptForExistingKey->deriveKey<32>("mypassword");
+    auto derivedKey = scryptForNewKey->deriveKey(32, "mypassword");
+    auto rederivedKey = scryptForExistingKey->deriveKey(32, "mypassword");
     EXPECT_TRUE(keyEquals(derivedKey, rederivedKey));
 }
 
 TEST_F(SCryptTest, GeneratedKeyIsReproductible_128) {
-    auto derivedKey = scryptForNewKey->deriveKey<16>("mypassword");
-    auto rederivedKey = scryptForExistingKey->deriveKey<16>("mypassword");
+    auto derivedKey = scryptForNewKey->deriveKey(16, "mypassword");
+    auto rederivedKey = scryptForExistingKey->deriveKey(16, "mypassword");
     EXPECT_TRUE(keyEquals(derivedKey, rederivedKey));
 }
 
 TEST_F(SCryptTest, GeneratedKeyIsReproductible_DefaultSettings) {
-    auto derivedKey = scryptForNewKey->deriveKey<16>("mypassword");
-    auto rederivedKey = scryptForExistingKey->deriveKey<16>("mypassword");
+    auto derivedKey = scryptForNewKey->deriveKey(16, "mypassword");
+    auto rederivedKey = scryptForExistingKey->deriveKey(16, "mypassword");
     EXPECT_TRUE(keyEquals(derivedKey, rederivedKey));
 }
 
 TEST_F(SCryptTest, DifferentPasswordResultsInDifferentKey) {
-    auto derivedKey = scryptForNewKey->deriveKey<16>("mypassword");
-    auto rederivedKey = scryptForExistingKey->deriveKey<16>("mypassword2");
+    auto derivedKey = scryptForNewKey->deriveKey(16, "mypassword");
+    auto rederivedKey = scryptForExistingKey->deriveKey(16, "mypassword2");
     EXPECT_FALSE(keyEquals(derivedKey, rederivedKey));
 }
 

@@ -17,7 +17,9 @@ public:
   BOOST_CONCEPT_USAGE(CipherConcept) {
     same_type(UINT32_C(0), X::ciphertextSize(UINT32_C(5)));
     same_type(UINT32_C(0), X::plaintextSize(UINT32_C(5)));
-    typename X::EncryptionKey key = X::EncryptionKey::CreateKey(Random::OSRandom());
+    same_type(UINT32_C(0), X::KEYSIZE);
+    same_type(UINT32_C(0), X::STRING_KEYSIZE);
+    typename X::EncryptionKey key = X::EncryptionKey::CreateKey(Random::OSRandom(), X::KEYSIZE);
     same_type(Data(0), X::encrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
     same_type(boost::optional<Data>(Data(0)), X::decrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
     string name = X::NAME;
