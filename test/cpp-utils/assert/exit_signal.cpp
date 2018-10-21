@@ -12,20 +12,20 @@ void handle_exit_signal(char* argv[]) {
 		throw std::logic_error(argv[2]);
 	} else if (kind == "nullptr") {
 		int* ptr = nullptr;
-		*ptr = 5;
+		*ptr = 5; // NOLINT
 	} else if (kind == "signal") {
 #if defined(_MSC_VER)
 		DWORD code = std::atoll(argv[2]);
 		::RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, NULL);
 #else
-		int code = std::atoi(argv[2]);
+		int code = std::strtol(argv[2], nullptr, 10);
 		::raise(code);
 #endif
 	}
 }
 
 
-int main(int argc, char* argv[]) {
+int main(int  /*argc*/, char* argv[]) {
 	cpputils::showBacktraceOnCrash();
 #if defined(_MSC_VER)
     // don't show windows error box

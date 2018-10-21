@@ -8,7 +8,6 @@
 #endif
 #include "cpp-utils/assert/assert.h"
 
-using testing::MatchesRegex;
 using testing::HasSubstr;
 
 TEST(AssertTest_ReleaseBuild, DoesntThrowIfTrue) {
@@ -32,7 +31,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
 	  /*EXPECT_THAT(e.what(), MatchesRegex(
 		  R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)"
 	  ));*/
-	  EXPECT_TRUE(std::regex_search(e.what(), std::regex(R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)")));
+	  EXPECT_TRUE(std::regex_search(e.what(), std::regex(R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:26: my message)")));
   }
 }
 

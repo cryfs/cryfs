@@ -57,9 +57,11 @@ references:
           # They aren't set automatically unfortunately
           sudo ln -s /usr/bin/$CC /usr/bin/clang
           sudo ln -s /usr/bin/$CXX /usr/bin/clang++
+          sudo ln -s /usr/bin/clang-tidy-7 /usr/bin/clang-tidy
+          sudo ln -s /usr/bin/run-clang-tidy-7.py /usr/bin/run-clang-tidy.py
 
           # Need a c++14 compliant STL for clang
-          sudo apt-get install g++-5
+          sudo apt-get install -y g++-5
           sudo apt-get remove g++-4.8 gcc-4.8
         fi
 
@@ -457,6 +459,36 @@ jobs:
       DISABLE_BROKEN_TSAN_TESTS: true
       CMAKE_FLAGS: ""
       RUN_TESTS: true
+  clang_tidy:
+    <<: *container_config
+    steps:
+    - <<: *cache_init
+    - <<: *container_setup_pre
+    - <<: *container_setup
+    - <<: *container_setup_post
+    - <<: *upgrade_boost_pre
+    - <<: *upgrade_boost
+    - <<: *upgrade_boost_post
+    - checkout
+    - run:
+        name: clang-tidy
+        command: |
+                # realpath, jq are needed for run-clang-tidy.sh, g++ is needed for pyyaml
+                sudo apt-get install realpath g++ jq
+                pip install pyyaml
+                mkdir cmake
+                cd cmake
+                if ! ../run-clang-tidy.sh -fix ; then
+                  git diff > /tmp/clang-tidy-fixes
+                  exit 1
+                fi
+    - store_artifacts:
+        path: /tmp/clang-tidy-fixes
+    environment:
+      CC: clang-7
+      CXX: clang++-7
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: "clang-7 clang-tidy-7"
 
 workflows:
   version: 2
@@ -506,4 +538,6 @@ workflows:
     - ub_sanitizer:
         <<: *enable_for_tags
     - thread_sanitizer:
+        <<: *enable_for_tags
+    - clang_tidy:
         <<: *enable_for_tags

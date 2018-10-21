@@ -22,7 +22,7 @@ int set_filetime(const char *filepath, timespec lastAccessTime, timespec lastMod
 }
 
 int get_filetime(const char *filepath, timespec* lastAccessTime, timespec* lastModificationTime) {
-	struct ::stat attrib;
+	struct ::stat attrib{};
 	int retval = ::stat(filepath, &attrib);
 	if (retval != 0) {
 		return errno;

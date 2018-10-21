@@ -8,7 +8,6 @@ using std::vector;
 using std::string;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using cpputils::FixedSizeData;
 using blockstore::BlockStore2;
 using std::shared_ptr;
 using std::make_shared;

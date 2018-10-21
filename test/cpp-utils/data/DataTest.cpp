@@ -197,7 +197,7 @@ TEST_F(DataTest, Inequality_DifferentLastByte) {
 #ifdef __x86_64__
 TEST_F(DataTest, LargesizeSize) {
   //Needs 64bit for representation. This value isn't in the size param list, because the list is also used for read/write checks.
-  uint64_t size = 4.5L*1024*1024*1024;
+  uint64_t size = static_cast<uint64_t>(4.5L*1024*1024*1024);
   Data data(size);
   EXPECT_EQ(size, data.size());
 }
@@ -235,7 +235,7 @@ struct MockAllocator final : public Allocator {
 
 class DataTestWithMockAllocator: public DataTest {
 public:
-    char ptr_target;
+    char ptr_target{};
 
     unique_ref<MockAllocator> allocator = make_unique_ref<MockAllocator>();
     MockAllocator* allocator_ptr = allocator.get();

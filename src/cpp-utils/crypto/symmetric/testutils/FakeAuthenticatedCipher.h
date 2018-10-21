@@ -14,7 +14,7 @@ namespace cpputils {
 
     struct FakeKey {
         static FakeKey FromString(const std::string& keyData) {
-          return FakeKey{static_cast<uint64_t>(std::atoi(keyData.c_str()))};
+          return FakeKey{static_cast<uint64_t>(std::strtol(keyData.c_str(), nullptr, 10))};
         }
 
         static constexpr unsigned int BINARY_LENGTH = sizeof(uint64_t);
