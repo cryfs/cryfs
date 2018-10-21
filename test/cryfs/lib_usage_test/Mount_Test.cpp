@@ -299,7 +299,7 @@ TEST_F(Mount_Test, basedir_is_correct) {
     create_file(mountdir.path() / "myfile");
     unmount();
     // TODO It would be better if unmount() blocked until it's actually unmounted, so that we don't need to wait here.
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     auto newNumBasedirEntries = std::distance(bf::recursive_directory_iterator(basedir.path()), bf::recursive_directory_iterator());
     EXPECT_GT(newNumBasedirEntries, numBasedirEntries);
 }
