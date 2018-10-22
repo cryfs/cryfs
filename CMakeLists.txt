@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 cmake_policy(SET CMP0054 NEW)
 
-# note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
-
 # TODO Perf test:
 #  - try if setting CRYPTOPP_NATIVE_ARCH=ON and adding -march=native to the compile commands for cryfs source files makes a difference
 #    -> if yes, offer a cmake option to enable both of these
@@ -22,7 +20,17 @@ option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause 
 # The following options are helpful for development and/or CI
 option(USE_WERROR "build with -Werror flag")
 option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
+option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
+
+if(USE_IWYU)
+    # note: for iwyu, we need cmake 3.3
+    cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+endif()
+if(USE_CLANG_TIDY)
+    # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
+    cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+endif()
 
 
 if (MSVC)

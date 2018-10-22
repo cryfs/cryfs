@@ -50,6 +50,21 @@ if (USE_CLANG_TIDY)
     endif()
 endif()
 
+# Find iwyu (for use in target_enable_style_warnings)
+if (USE_IWYU)
+    find_program(
+      IWYU_EXE NAMES
+      include-what-you-use
+      iwyu
+    )
+    if(NOT IWYU_EXE)
+        message(FATAL_ERROR "include-what-you-use not found. Please install iwyu or run without -DUSE_IWYU=on.")
+    else()
+        message(STATUS "iwyu found: ${IWYU_EXE}")
+        set(DO_IWYU "${IWYU_EXE}")
+    endif()
+endif()
+
 #################################################
 # Enable style compiler warnings
 #
@@ -73,6 +88,12 @@ function(target_enable_style_warnings TARGET)
         set_target_properties(
           ${TARGET} PROPERTIES
           CXX_CLANG_TIDY "${CLANG_TIDY_CLI}"
+        )
+    endif()
+    if(USE_IWYU)
+        set_target_properties(
+          ${TARGET} PROPERTIES
+          CXX_INCLUDE_WHAT_YOU_USE "${DO_IWYU}"
         )
     endif()
 endfunction(target_enable_style_warnings)
