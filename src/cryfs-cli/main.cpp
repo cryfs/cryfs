@@ -1,6 +1,5 @@
 #include "Cli.h"
 #include <cpp-utils/random/Random.h>
-#include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/io/IOStreamConsole.h>
 #include <cryfs/CryfsException.h>
 
@@ -22,9 +21,9 @@ int main(int argc, const char *argv[]) {
     try {
         auto &keyGenerator = Random::OSRandom();
 #if defined(_MSC_VER)
-		auto httpClient = make_unique_ref<cpputils::WinHttpClient>();
+		    auto httpClient = make_unique_ref<cpputils::WinHttpClient>();
 #else
-		auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
+		    auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
 #endif
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient));

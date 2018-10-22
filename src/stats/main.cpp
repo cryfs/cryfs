@@ -1,6 +1,7 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <cryfs/config/CryConfigFile.h>
+#include <cryfs/config/CryPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
@@ -11,6 +12,7 @@
 #include <cryfs/filesystem/fsblobstore/FsBlobStore.h>
 #include <cryfs/filesystem/fsblobstore/DirBlob.h>
 #include <cryfs/filesystem/CryDevice.h>
+#include <cpp-utils/io/IOStreamConsole.h>
 
 #include <set>
 
@@ -112,11 +114,19 @@ set<BlockId> _getBlocksReferencedByDirEntries(const CryConfig &config) {
 
 
 int main() {
-    cout << "Password: ";
-    string password;
-    getline(cin, password);
-    cout << "Loading config" << endl;
-    auto config = CryConfigFile::load("/home/heinzi/basedir/cryfs.config", password);
+    auto console = std::make_shared<cpputils::IOStreamConsole>();
+
+    console->print("Loading config\n");
+    auto askPassword = [console] () {
+        return console->askPassword("Password: ");
+    };
+    auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(
+        console,
+        askPassword,
+        askPassword,
+        make_unique_ref<SCrypt>(SCrypt::DefaultSettings)
+    );
+    auto config = CryConfigFile::load("/home/heinzi/basedir/cryfs.config", keyProvider.get());
     set<BlockId> unaccountedBlocks = _getBlockstoreUnaccountedBlocks(*config->config());
     //Remove all blocks that are referenced by a directory entry from unaccountedBlocks
     set<BlockId> blocksReferencedByDirEntries = _getBlocksReferencedByDirEntries(*config->config());
@@ -124,7 +134,7 @@ int main() {
         unaccountedBlocks.erase(blockId);
     }
 
-    cout << "\nCalculate statistics" << endl;
+    console->print("Calculate statistics\n");
 
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>("/home/heinzi/basedir");
     auto encryptedBlockStore = CryCiphers::find(config->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config->config()->EncryptionKey());
@@ -134,9 +144,9 @@ int main() {
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;
     uint32_t numInner = 0;
-    cout << "\nUnaccounted blocks: " << unaccountedBlocks.size() << endl;
+    console->print("Unaccounted blocks: " + std::to_string(unaccountedBlocks.size()) + "\n");
     for (const auto &blockId : unaccountedBlocks) {
-        std::cout << "\r" << (numLeaves+numInner) << "/" << numUnaccountedBlocks << flush;
+        console->print("\r" + std::to_string(numLeaves+numInner) + "/" + std::to_string(numUnaccountedBlocks));
         auto node = nodeStore->load(blockId);
         auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
         if (innerNode != none) {
@@ -149,5 +159,5 @@ int main() {
             printNode(std::move(*leafNode));
         }
     }
-    cout << "\n" << numLeaves << " leaves and " << numInner << " inner nodes" << endl;
+    console->print("\n" + std::to_string(numLeaves) + " leaves and " + std::to_string(numInner) + " inner nodes\n");
 }

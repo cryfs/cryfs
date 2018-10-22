@@ -11,8 +11,13 @@ namespace cpputils {
     public:
         virtual ~PasswordBasedKDF() = default;
 
-        virtual EncryptionKey deriveKey(size_t keySize, const std::string &password) = 0;
-        virtual const Data &kdfParameters() const = 0;
+        struct KeyResult final {
+          cpputils::EncryptionKey key;
+          cpputils::Data kdfParameters;
+        };
+
+        virtual EncryptionKey deriveExistingKey(size_t keySize, const std::string& password, const Data& kdfParameters) = 0;
+        virtual KeyResult deriveNewKey(size_t keySize, const std::string& password) = 0;
     };
 
 }

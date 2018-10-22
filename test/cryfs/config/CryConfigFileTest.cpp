@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 #include <cryfs/config/CryConfigFile.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include "../testutils/FakeCryKeyProvider.h"
 
 using namespace cryfs;
 using cpputils::TempFile;
 using std::string;
 using boost::optional;
 using boost::none;
-using cpputils::SCrypt;
 using cpputils::Data;
 namespace bf = boost::filesystem;
 
@@ -33,17 +33,19 @@ public:
         return result;
     }
 
-    CryConfigFile CreateAndLoadEmpty(const string &password = "mypassword") {
-        Create(Config(), password);
+    CryConfigFile CreateAndLoadEmpty(unsigned char keySeed = 0) {
+        Create(Config(), keySeed);
         return Load().value();
     }
 
-    void Create(CryConfig cfg, const string &password = "mypassword") {
-        CryConfigFile::create(file.path(), std::move(cfg), password, SCrypt::TestSettings);
+    void Create(CryConfig cfg, unsigned int keySeed = 0) {
+        FakeCryKeyProvider keyProvider(keySeed);
+        CryConfigFile::create(file.path(), std::move(cfg), &keyProvider);
     }
 
-    optional<CryConfigFile> Load(const string &password = "mypassword") {
-        return CryConfigFile::load(file.path(), password);
+    optional<CryConfigFile> Load(unsigned int keySeed = 0) {
+        FakeCryKeyProvider keyProvider(keySeed);
+        return CryConfigFile::load(file.path(), &keyProvider);
     }
 
     void CreateWithCipher(const string &cipher) {
@@ -53,13 +55,16 @@ public:
     void CreateWithCipher(const string &cipher, const TempFile &tempFile) {
         CryConfig cfg;
         cfg.SetCipher(cipher);
-        CryConfigFile::create(tempFile.path(), std::move(cfg), "mypassword", SCrypt::TestSettings);
+        FakeCryKeyProvider keyProvider(0);
+        CryConfigFile::create(tempFile.path(), std::move(cfg), &keyProvider);
     }
 };
 
 TEST_F(CryConfigFileTest, DoesntLoadIfWrongPassword) {
-    Create(Config(), "mypassword");
-    auto loaded = Load("mypassword2");
+    const unsigned char pw1 = 0;
+    const unsigned char pw2 = 1;
+    Create(Config(), pw1);
+    auto loaded = Load(pw2);
     EXPECT_EQ(none, loaded);
 }
 
@@ -190,11 +195,13 @@ TEST_F(CryConfigFileTest, CanSaveAndLoadModififedCipher) {
 }
 
 TEST_F(CryConfigFileTest, FailsIfConfigFileIsEncryptedWithACipherDifferentToTheOneSpecifiedByTheUser) {
-    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+    constexpr unsigned char keySeed = 0;
+    FakeCryKeyProvider keyProvider(keySeed);
+    auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider);
     auto config = Config();
     config.SetCipher("aes-256-gcm");
     Data encrypted = encryptor->encrypt(config.save(), "aes-256-cfb");
     encrypted.StoreToFile(file.path());
-    auto loaded = Load("mypassword");
+    auto loaded = Load(keySeed);
     EXPECT_EQ(none, loaded);
 }
