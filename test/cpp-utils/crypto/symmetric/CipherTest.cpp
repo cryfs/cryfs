@@ -18,7 +18,7 @@ public:
   typename Cipher::EncryptionKey encKey = createKeyFixture();
 
   static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
-    Data data = DataFixture::generate(Cipher::EncryptionKey::BINARY_LENGTH, seed);
+    Data data = DataFixture::generate(Cipher::KEYSIZE, seed);
     return Cipher::EncryptionKey::FromString(data.ToString());
   }
 

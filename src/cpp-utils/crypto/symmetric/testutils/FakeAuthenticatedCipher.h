@@ -17,9 +17,12 @@ namespace cpputils {
           return FakeKey{static_cast<uint64_t>(std::strtol(keyData.c_str(), nullptr, 10))};
         }
 
-        static constexpr unsigned int BINARY_LENGTH = sizeof(uint64_t);
+        size_t binaryLength() const {
+          return sizeof(uint64_t);
+        }
 
-        static FakeKey CreateKey(RandomGenerator &randomGenerator) {
+        static FakeKey CreateKey(RandomGenerator &randomGenerator, size_t keySize) {
+            ASSERT(keySize == sizeof(uint64_t), "Wrong key size");
             auto data = randomGenerator.getFixedSize<sizeof(uint64_t)>();
             return FakeKey {*reinterpret_cast<uint64_t*>(data.data())};
         }
@@ -33,6 +36,9 @@ namespace cpputils {
         BOOST_CONCEPT_ASSERT((CipherConcept<FakeAuthenticatedCipher>));
 
         using EncryptionKey = FakeKey;
+
+        static constexpr unsigned int KEYSIZE = sizeof(uint64_t);
+        static constexpr unsigned int STRING_KEYSIZE = 2 * KEYSIZE;
 
         static EncryptionKey Key1() {
           return FakeKey{5};

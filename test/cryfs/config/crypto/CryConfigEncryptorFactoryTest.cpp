@@ -2,8 +2,8 @@
 #include <cryfs/config/crypto/CryConfigEncryptorFactory.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
+#include "../../testutils/FakeCryKeyProvider.h"
 
-using cpputils::SCrypt;
 using cpputils::AES256_GCM;
 using cpputils::Data;
 using cpputils::DataFixture;
@@ -24,40 +24,48 @@ public:
 };
 
 TEST_F(CryConfigEncryptorFactoryTest, EncryptAndDecrypt_SameEncryptor) {
-    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+    FakeCryKeyProvider keyProvider;
+    auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider);
     Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(400), decrypted.data);
 }
 
 TEST_F(CryConfigEncryptorFactoryTest, EncryptAndDecrypt_NewEncryptor) {
-    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+    FakeCryKeyProvider keyProvider1(1);
+    auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider1);
     Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
 
-    auto loadedEncryptor = CryConfigEncryptorFactory::loadKey(encrypted, "mypassword").value();
+    FakeCryKeyProvider keyProvider2(1);
+    auto loadedEncryptor = CryConfigEncryptorFactory::loadExistingKey(encrypted, &keyProvider2).value();
     auto decrypted = loadedEncryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(400), decrypted.data);
 }
 
-TEST_F(CryConfigEncryptorFactoryTest, DoesntDecryptWithWrongPassword) {
-    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+TEST_F(CryConfigEncryptorFactoryTest, DoesntDecryptWithWrongKey) {
+    FakeCryKeyProvider keyProvider1(1);
+    auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider1);
     Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
 
-    auto loadedEncryptor = CryConfigEncryptorFactory::loadKey(encrypted, "wrongpassword").value();
+    FakeCryKeyProvider keyProvider2(2);
+    auto loadedEncryptor = CryConfigEncryptorFactory::loadExistingKey(encrypted, &keyProvider2).value();
     auto decrypted = loadedEncryptor->decrypt(encrypted);
     EXPECT_EQ(none, decrypted);
 }
 
-TEST_F(CryConfigEncryptorFactoryTest, DoesntDecryptWithWrongPassword_EmptyData) {
-    auto encryptor = CryConfigEncryptorFactory::deriveKey("mypassword", SCrypt::TestSettings);
+TEST_F(CryConfigEncryptorFactoryTest, DoesntDecryptWithWrongKey_EmptyData) {
+    FakeCryKeyProvider keyProvider1(1);
+    auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider1);
     Data encrypted = encryptor->encrypt(Data(0), AES256_GCM::NAME);
 
-    auto loadedEncryptor = CryConfigEncryptorFactory::loadKey(encrypted, "wrongpassword").value();
+    FakeCryKeyProvider keyProvider2(2);
+    auto loadedEncryptor = CryConfigEncryptorFactory::loadExistingKey(encrypted, &keyProvider2).value();
     auto decrypted = loadedEncryptor->decrypt(encrypted);
     EXPECT_EQ(none, decrypted);
 }
 
 TEST_F(CryConfigEncryptorFactoryTest, DoesntDecryptInvalidData) {
-    auto loadedEncryptor = CryConfigEncryptorFactory::loadKey(Data(0), "mypassword");
+    FakeCryKeyProvider keyProvider;
+    auto loadedEncryptor = CryConfigEncryptorFactory::loadExistingKey(Data(0), &keyProvider);
     EXPECT_EQ(none, loadedEncryptor);
 }

@@ -73,7 +73,7 @@ namespace cryfs {
     }
 
     string CryConfigCreator::_generateEncKey(const std::string &cipher) {
-        _console->print("\nGenerating secure encryption key. This might take some time..");
+        _console->print("\nGenerating secure encryption key. This can take some time...");
         auto key = CryCiphers::find(cipher).createKey(_encryptionKeyGenerator);
         _console->print("done\n");
         return key;

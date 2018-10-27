@@ -12,6 +12,7 @@
 #include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
 #include <cryfs/filesystem/CryDevice.h>
 #include <cryfs/config/CryConfigLoader.h>
+#include <cryfs/config/CryPasswordBasedKeyProvider.h>
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 
@@ -41,6 +42,7 @@ using cpputils::NoninteractiveConsole;
 using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
+using cpputils::SCrypt;
 using cpputils::SCryptSettings;
 using cpputils::Console;
 using cpputils::HttpClient;
@@ -65,7 +67,7 @@ using gitversion::VersionCompare;
 
 namespace cryfs {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings& scryptSettings, shared_ptr<Console> console):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
@@ -133,6 +135,7 @@ namespace cryfs {
     };
 
     function<string()> Cli::_askPasswordForNewFilesystem(std::shared_ptr<cpputils::Console> console) {
+        //TODO Ask confirmation if using insecure password (<8 characters)
         return [console] () {
             string password;
             bool again = false;
@@ -204,17 +207,16 @@ namespace cryfs {
     }
 
     optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
-        if (_noninteractive) {
-            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
-                                   Cli::_askPasswordNoninteractive(_console),
-                                   Cli::_askPasswordNoninteractive(_console),
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
-        } else {
-            return CryConfigLoader(_console, _keyGenerator, std::move(localStateDir), _scryptSettings,
-                                   Cli::_askPasswordForExistingFilesystem(_console),
-                                   Cli::_askPasswordForNewFilesystem(_console),
-                                   cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
-        }
+        // TODO Instead of passing in _askPasswordXXX functions to KeyProvider, only pass in console and move logic to the key provider,
+        //      for example by having a separate CryPasswordBasedKeyProvider / CryNoninteractivePasswordBasedKeyProvider.
+        auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(
+          _console,
+          _noninteractive ? Cli::_askPasswordNoninteractive(_console) : Cli::_askPasswordForExistingFilesystem(_console),
+          _noninteractive ? Cli::_askPasswordNoninteractive(_console) : Cli::_askPasswordForNewFilesystem(_console),
+          make_unique_ref<SCrypt>(_scryptSettings)
+        );
+        return CryConfigLoader(_console, _keyGenerator, std::move(keyProvider), std::move(localStateDir),
+                               cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
     }
 
     void Cli::_runFilesystem(const ProgramOptions &options) {

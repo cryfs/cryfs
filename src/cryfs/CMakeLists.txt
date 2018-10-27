@@ -16,6 +16,8 @@ set(LIB_SOURCES
         config/CryConfigFile.cpp
         config/CryCipher.cpp
         config/CryConfigCreator.cpp
+        config/CryKeyProvider.cpp
+        config/CryPasswordBasedKeyProvider.cpp
         filesystem/CryOpenFile.cpp
         filesystem/fsblobstore/utils/DirEntry.cpp
         filesystem/fsblobstore/utils/DirEntryList.cpp

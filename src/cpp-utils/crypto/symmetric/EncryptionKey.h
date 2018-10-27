@@ -19,14 +19,11 @@ namespace cpputils {
  * that there aren't any copies made to different memory regions. However, these other memory regions should be short-lived
  * and therefore much less likely to swap.
  */
-template<size_t KeySize>
 class EncryptionKey final {
 private:
     explicit EncryptionKey(std::shared_ptr<Data> keyData)
         : _keyData(std::move(keyData)) {
-        ASSERT(_keyData->size() == KeySize, "Wrong key data size");
     }
-    template<size_t OtherKeySize> friend class EncryptionKey;
 
 public:
     EncryptionKey(const EncryptionKey& rhs) = default;
@@ -34,12 +31,17 @@ public:
     EncryptionKey& operator=(const EncryptionKey& rhs) = default;
     EncryptionKey& operator=(EncryptionKey&& rhs) = default;
 
-    static constexpr size_t BINARY_LENGTH = KeySize;
-    static constexpr size_t STRING_LENGTH = 2 * BINARY_LENGTH;
+    size_t binaryLength() const {
+      return _keyData->size();
+    }
 
-    static EncryptionKey Null() {
+    size_t stringLength() const {
+      return 2 * binaryLength();
+    }
+
+    static EncryptionKey Null(size_t keySize) {
         auto data = std::make_shared<Data>(
-            KeySize,
+            keySize,
             make_unique_ref<UnswappableAllocator>()
         );
         data->FillWithZeroes();
@@ -47,28 +49,27 @@ public:
     }
 
     static EncryptionKey FromString(const std::string& keyData) {
-        ASSERT(keyData.size() == STRING_LENGTH, "Wrong input size or EncryptionKey::FromString()");
-
         auto data = std::make_shared<Data>(
             Data::FromString(keyData, make_unique_ref<UnswappableAllocator>())
         );
-        ASSERT(data->size() == KeySize, "Wrong input size for EncryptionKey::FromString()");
+        EncryptionKey key(std::move(data));
+        ASSERT(key.stringLength() == keyData.size(), "Wrong input size for EncryptionKey::FromString()");
 
-        return EncryptionKey(std::move(data));
+        return key;
     }
 
     std::string ToString() const {
         auto result = _keyData->ToString();
-        ASSERT(result.size() == STRING_LENGTH, "Wrong string length");
+        ASSERT(result.size() == stringLength(), "Wrong string length");
         return result;
     }
 
-    static EncryptionKey CreateKey(RandomGenerator &randomGenerator) {
+    static EncryptionKey CreateKey(RandomGenerator &randomGenerator, size_t keySize) {
         EncryptionKey result(std::make_shared<Data>(
-            KeySize,
+            keySize,
             make_unique_ref<UnswappableAllocator>() // the allocator makes sure key data is never swapped to disk
         ));
-        randomGenerator.write(result._keyData->data(), KeySize);
+        randomGenerator.write(result._keyData->data(), keySize);
         return result;
     }
 
@@ -82,28 +83,24 @@ public:
 
     // TODO Test take/drop
 
-    template<size_t NumTaken>
-    EncryptionKey<NumTaken> take() const {
-        static_assert(NumTaken <= KeySize, "Out of bounds");
-        auto result = std::make_shared<Data>(NumTaken, make_unique_ref<UnswappableAllocator>());
-        std::memcpy(result->data(), _keyData->data(), NumTaken);
-        return EncryptionKey<NumTaken>(std::move(result));
+    EncryptionKey take(size_t numTaken) const {
+        ASSERT(numTaken <= _keyData->size(), "Out of bounds");
+        auto result = std::make_shared<Data>(numTaken, make_unique_ref<UnswappableAllocator>());
+        std::memcpy(result->data(), _keyData->data(), numTaken);
+        return EncryptionKey(std::move(result));
     }
 
-    template<size_t NumDropped>
-    EncryptionKey<KeySize - NumDropped> drop() const {
-        static_assert(NumDropped <= KeySize, "Out of bounds");
-        auto result = std::make_shared<Data>(KeySize - NumDropped, make_unique_ref<UnswappableAllocator>());
-        std::memcpy(result->data(), _keyData->dataOffset(NumDropped), KeySize - NumDropped);
-        return EncryptionKey<KeySize - NumDropped>(std::move(result));
+    EncryptionKey drop(size_t numDropped) const {
+        ASSERT(numDropped <= _keyData->size(), "Out of bounds");
+        const size_t resultSize = _keyData->size() - numDropped;
+        auto result = std::make_shared<Data>(resultSize, make_unique_ref<UnswappableAllocator>());
+        std::memcpy(result->data(), _keyData->dataOffset(numDropped), resultSize);
+        return EncryptionKey(std::move(result));
     }
 
 private:
     std::shared_ptr<Data> _keyData;
 };
-
-template<size_t KeySize> constexpr size_t EncryptionKey<KeySize>::BINARY_LENGTH;
-template<size_t KeySize> constexpr size_t EncryptionKey<KeySize>::STRING_LENGTH;
 
 }
 
