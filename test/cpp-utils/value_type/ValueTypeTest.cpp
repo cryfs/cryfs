@@ -5,7 +5,6 @@
 #include <set>
 
 // TODO Test with MovableOnly underlying type
-// TODO Test that move constructing/assigning actually moves the underlying
 // TODO Test that noexcept flags are set correctly
 
 using cpputils::value_type::IdValueType;
@@ -32,7 +31,6 @@ struct MyQuantityValueType : QuantityValueType<MyQuantityValueType, int64_t> {
 struct MyFlagsValueType : FlagsValueType<MyFlagsValueType, int64_t> {
     constexpr explicit MyFlagsValueType(int64_t val): FlagsValueType(val) {}
 };
-
 }
 DEFINE_HASH_FOR_VALUE_TYPE(MyIdValueType);
 DEFINE_HASH_FOR_VALUE_TYPE(MyOrderedIdValueType);
@@ -476,6 +474,96 @@ TYPED_TEST(FlagsValueTypeTest, Xor) {
 
     EXPECT_EQ(c, b ^= a);
     EXPECT_EQ(c, b);
+}
+
+}
+
+namespace IsMovingCorrectlyTest {
+
+struct IntLike final {
+    int value;
+    unsigned int copy_counter;
+    unsigned int move_counter;
+
+    constexpr IntLike(int v): value(v), copy_counter(0), move_counter(0) {}
+    constexpr IntLike(const IntLike& rhs) : value(rhs.value), copy_counter(rhs.copy_counter + 1), move_counter(rhs.move_counter) {}
+    constexpr IntLike(IntLike&& rhs) : value(rhs.value), copy_counter(rhs.copy_counter), move_counter(rhs.move_counter + 1) {}
+    constexpr IntLike& operator=(const IntLike& rhs) {
+        value = rhs.value;
+        copy_counter = rhs.copy_counter + 1;
+        move_counter = rhs.move_counter;
+        return *this;
+    }
+    constexpr IntLike& operator=(IntLike&& rhs) {
+        value = std::move(rhs.value);
+        copy_counter = rhs.copy_counter;
+        move_counter = rhs.move_counter + 1;
+        return *this;
+    }
+};
+struct MyIntLikeIdValueType : IdValueType<MyIntLikeIdValueType, IntLike> {
+    constexpr explicit MyIntLikeIdValueType(int v): IdValueType(v) {}
+    constexpr const IntLike& value() const {
+        return value_;
+    }
+};
+struct MyIntLikeOrderedIdValueType : OrderedIdValueType<MyIntLikeOrderedIdValueType, IntLike> {
+    constexpr explicit MyIntLikeOrderedIdValueType(int v): OrderedIdValueType(v) {}
+    constexpr const IntLike& value() const {
+        return value_;
+    }
+};
+struct MyIntLikeQuantityValueType : QuantityValueType<MyIntLikeQuantityValueType, IntLike> {
+    constexpr explicit MyIntLikeQuantityValueType(int v): QuantityValueType(v) {}
+    constexpr const IntLike& value() const {
+        return value_;
+    }
+};
+struct MyIntLikeFlagsValueType : FlagsValueType<MyIntLikeFlagsValueType, IntLike> {
+    constexpr explicit MyIntLikeFlagsValueType(int v): FlagsValueType(v) {}
+    constexpr const IntLike& value() const {
+        return value_;
+    }
+};
+
+template<class Type> class CopyMoveValueTypeTest : public testing::Test {};
+using CopyMoveValueType_types = testing::Types<MyIntLikeIdValueType, MyIntLikeOrderedIdValueType, MyIntLikeQuantityValueType, MyIntLikeFlagsValueType>;
+TYPED_TEST_CASE(CopyMoveValueTypeTest, CopyMoveValueType_types);
+
+TYPED_TEST(CopyMoveValueTypeTest, ConstructionIsInplace) {
+    TypeParam a(4);
+    EXPECT_EQ(0, a.value().copy_counter);
+    EXPECT_EQ(0, a.value().move_counter);
+}
+
+TYPED_TEST(CopyMoveValueTypeTest, CopyConstructorCopiesUnderlying) {
+    TypeParam a(4);
+    TypeParam b(a);
+    EXPECT_EQ(1, b.value().copy_counter);
+    EXPECT_EQ(0, b.value().move_counter);
+}
+
+TYPED_TEST(CopyMoveValueTypeTest, CopyAssignmentCopiesUnderlying) {
+    TypeParam a(4);
+    TypeParam b(3);
+    b = a;
+    EXPECT_EQ(1, b.value().copy_counter);
+    EXPECT_EQ(0, b.value().move_counter);
+}
+
+TYPED_TEST(CopyMoveValueTypeTest, MoveConstructorMovesUnderlying) {
+    TypeParam a(4);
+    TypeParam b(std::move(a));
+    EXPECT_EQ(0, b.value().copy_counter);
+    EXPECT_EQ(1, b.value().move_counter);
+}
+
+TYPED_TEST(CopyMoveValueTypeTest, MoveAssignmentMovesUnderlying) {
+    TypeParam a(4);
+    TypeParam b(3);
+    b = std::move(a);
+    EXPECT_EQ(0, b.value().copy_counter);
+    EXPECT_EQ(1, b.value().move_counter);
 }
 
 }
