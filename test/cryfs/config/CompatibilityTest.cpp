@@ -7,7 +7,7 @@
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/config/CryConfigFile.h>
-#include <cryfs/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/config/CryPresetPasswordBasedKeyProvider.h>
 #include "../testutils/MockConsole.h"
 
 using cpputils::Data;
@@ -16,7 +16,6 @@ using cpputils::Serpent128_CFB;
 using cpputils::TempFile;
 using cpputils::make_unique_ref;
 using cpputils::SCrypt;
-using std::make_shared;
 using namespace cryfs;
 
 // Test that config files created with (old) versions of cryfs are still loadable.
@@ -28,12 +27,7 @@ public:
 
     CryConfigFile loadConfigFromHex(const string &configFileContentHex) {
         storeHexToFile(configFileContentHex);
-        CryPasswordBasedKeyProvider keyProvider(
-            make_shared<MockConsole>(),
-            [] () {return "mypassword"; },
-            [] () {return "mypassword"; },
-            make_unique_ref<SCrypt>(SCrypt::DefaultSettings)
-        );
+        CryPresetPasswordBasedKeyProvider keyProvider("mypassword", make_unique_ref<SCrypt>(SCrypt::DefaultSettings));
         return CryConfigFile::load(file.path(), &keyProvider).value();
     }
 
