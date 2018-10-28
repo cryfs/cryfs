@@ -9,6 +9,8 @@ using cpputils::value_type::OrderedIdValueType;
 using cpputils::value_type::QuantityValueType;
 using cpputils::value_type::FlagsValueType;
 
+// TODO Test that noexcept flags are set correctly
+
 namespace {
 
 struct MyIdValueType : IdValueType<MyIdValueType, int64_t> {
