@@ -7,13 +7,14 @@
 #include "CryConfigFile.h"
 #include "CryCipher.h"
 #include "CryConfigCreator.h"
-#include <cpp-utils/crypto/kdf/Scrypt.h>
+#include "CryKeyProvider.h"
 
 namespace cryfs {
 
 class CryConfigLoader final {
 public:
-  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, LocalStateDir localStateDir, const cpputils::SCryptSettings &scryptSettings, std::function<std::string()> askPasswordForExistingFilesystem, std::function<std::string()> askPasswordForNewFilesystem, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine);
+  // note: keyGenerator generates the inner (i.e. file system) key. keyProvider asks for the password and generates the outer (i.e. config file) key.
+  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, cpputils::unique_ref<CryKeyProvider> keyProvider, LocalStateDir localStateDir, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   struct ConfigLoadResult {
@@ -32,9 +33,7 @@ private:
 
     std::shared_ptr<cpputils::Console> _console;
     CryConfigCreator _creator;
-    cpputils::SCryptSettings _scryptSettings;
-    std::function<std::string()> _askPasswordForExistingFilesystem;
-    std::function<std::string()> _askPasswordForNewFilesystem;
+    cpputils::unique_ref<CryKeyProvider> _keyProvider;
     boost::optional<std::string> _cipherFromCommandLine;
     boost::optional<uint32_t> _blocksizeBytesFromCommandLine;
     boost::optional<bool> _missingBlockIsIntegrityViolationFromCommandLine;

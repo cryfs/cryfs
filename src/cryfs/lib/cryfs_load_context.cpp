@@ -1,10 +1,12 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/system/homedir.h>
+#include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <gitversion/gitversion.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include "../impl/config/CryConfigLoader.h"
+#include "../impl/config/CryPresetPasswordBasedKeyProvider.h"
 #include "../impl/filesystem/CryDir.h"
 #include "cryfs_load_context.h"
 #include "cryfs_api_context.h"
@@ -31,6 +33,8 @@ using cryfs::CryConfig;
 using cryfs::CryConfigFile;
 using cryfs::CryConfigLoader;
 using cryfs::LocalStateDir;
+using cryfs::CryPresetPasswordBasedKeyProvider;
+using cpputils::SCrypt;
 using blockstore::ondisk::OnDiskBlockStore2;
 
 
@@ -138,7 +142,8 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
 either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> cryfs_load_context::_load_configfile() const {
     bf::path configfilePath = _determine_configfile_path();
     ASSERT(_password != none, "password not set");
-    return CryConfigFile::load(configfilePath, *_password);
+    CryPresetPasswordBasedKeyProvider keyProvider(*_password, make_unique_ref<SCrypt>(SCrypt::DefaultSettings));
+    return CryConfigFile::load(configfilePath, &keyProvider);
 }
 
 bf::path cryfs_load_context::_determine_configfile_path() const {

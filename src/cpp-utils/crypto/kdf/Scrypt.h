@@ -25,22 +25,13 @@ namespace cpputils {
         static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 1048576, 4, 8};
         static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 1};
 
-        static unique_ref<SCrypt> forNewKey(const SCryptSettings &settings);
-        static unique_ref<SCrypt> forExistingKey(const Data &parameters);
+        explicit SCrypt(const SCryptSettings& settingsForNewKeys);
 
-        const Data &kdfParameters() const override;
-
-        SCrypt(SCryptParameters config);
-
-    protected:
-        void derive(void *destination, size_t size, const std::string &password) override;
+        EncryptionKey deriveExistingKey(size_t keySize, const std::string& password, const Data& kdfParameters) override;
+        KeyResult deriveNewKey(size_t keySize, const std::string& password) override;
 
     private:
-        void _checkCallOnlyOnce();
-
-        SCryptParameters _config;
-        Data _serializedConfig;
-        bool _wasGeneratedBefore;
+        SCryptSettings _settingsForNewKeys;
 
         DISALLOW_COPY_AND_ASSIGN(SCrypt);
     };

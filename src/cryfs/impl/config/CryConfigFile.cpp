@@ -27,12 +27,12 @@ CryConfigFile::~CryConfigFile() {
     //We do not call save() here, because we do not want the config file to be re-encrypted on each filesystem run
 }
 
-either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(bf::path path, const string &password) {
+either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(bf::path path, CryKeyProvider* keyProvider) {
     auto encryptedConfigData = Data::LoadFromFile(path);
     if (encryptedConfigData == none) {
         return LoadError::ConfigFileNotFound;
     }
-    auto encryptor = CryConfigEncryptorFactory::loadKey(*encryptedConfigData, password);
+    auto encryptor = CryConfigEncryptorFactory::loadExistingKey(*encryptedConfigData, keyProvider);
     if (encryptor == none) {
         return LoadError::DecryptionFailed;
     }
@@ -54,11 +54,11 @@ either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(
     return std::move(configFile);
 }
 
-unique_ref<CryConfigFile> CryConfigFile::create(bf::path path, CryConfig config, const string &password, const SCryptSettings &scryptSettings) {
+unique_ref<CryConfigFile> CryConfigFile::create(bf::path path, CryConfig config, CryKeyProvider* keyProvider) {
     if (bf::exists(path)) {
         throw std::runtime_error("Config file exists already.");
     }
-    auto result = make_unique_ref<CryConfigFile>(std::move(path), std::move(config), CryConfigEncryptorFactory::deriveKey(password, scryptSettings));
+    auto result = make_unique_ref<CryConfigFile>(std::move(path), std::move(config), CryConfigEncryptorFactory::deriveNewKey(keyProvider));
     result->save();
     return result;
 }

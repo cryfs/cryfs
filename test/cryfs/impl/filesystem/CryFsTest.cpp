@@ -9,6 +9,7 @@
 #include <cryfs/impl/filesystem/CryOpenFile.h>
 #include "../testutils/MockConsole.h"
 #include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include <cpp-utils/system/homedir.h>
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
@@ -28,6 +29,7 @@ using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;
 using std::shared_ptr;
+using cryfs::CryPasswordBasedKeyProvider;
 
 namespace bf = boost::filesystem;
 using namespace cryfs;
@@ -39,7 +41,13 @@ public:
 
   shared_ptr<CryConfigFile> loadOrCreateConfig() {
     auto askPassword = [] {return "mypassword";};
-    return CryConfigLoader(mockConsole(), Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword, askPassword, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
+    auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(
+        mockConsole(),
+        askPassword,
+        askPassword,
+        make_unique_ref<SCrypt>(SCrypt::TestSettings)
+    );
+    return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
   }
 
   unique_ref<OnDiskBlockStore2> blockStore() {

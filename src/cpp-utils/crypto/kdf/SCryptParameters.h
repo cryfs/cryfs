@@ -52,7 +52,6 @@ namespace cpputils {
         }
 
         cpputils::Data serialize() const;
-
         static SCryptParameters deserialize(const cpputils::Data &data);
 
 #ifndef CRYFS_NO_COMPATIBILITY

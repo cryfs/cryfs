@@ -29,7 +29,7 @@ public:
     template<class Cipher>
     unique_ref<InnerEncryptor> makeInnerEncryptor() {
         auto key = Cipher::EncryptionKey::FromString(
-            DataFixture::generateFixedSize<Cipher::EncryptionKey::BINARY_LENGTH>().ToString()
+            DataFixture::generateFixedSize<Cipher::KEYSIZE>().ToString()
         );
         return make_unique_ref<ConcreteInnerEncryptor<Cipher>>(key);
     }

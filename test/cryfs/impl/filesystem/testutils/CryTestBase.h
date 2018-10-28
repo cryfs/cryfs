@@ -2,10 +2,12 @@
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
 #include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include "../../testutils/TestWithFakeHomeDirectory.h"
+#include "../../testutils/MockConsole.h"
 
 class CryTestBase : public TestWithFakeHomeDirectory {
 public:
@@ -17,10 +19,15 @@ public:
     std::shared_ptr<cryfs::CryConfigFile> configFile() {
         cryfs::CryConfig config;
         config.SetCipher("aes-256-gcm");
-        config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom()).ToString());
+        config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom(), cpputils::AES256_GCM::KEYSIZE).ToString());
         config.SetBlocksizeBytes(10240);
-        auto configFile = cryfs::CryConfigFile::create(_configFile.path(), std::move(config), "mypassword", cpputils::SCrypt::TestSettings);
-        return std::move(configFile); // TODO Without std::move possible?
+        cryfs::CryPasswordBasedKeyProvider keyProvider(
+            std::make_shared<MockConsole>(),
+            [] () {return "mypassword";},
+            [] () {return "mypassword";},
+            cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings)
+        );
+        return cryfs::CryConfigFile::create(_configFile.path(), std::move(config), &keyProvider);
     }
 
     cryfs::CryDevice &device() {

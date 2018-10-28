@@ -9,16 +9,14 @@
 #include "../CryCipher.h"
 
 namespace cryfs {
+    class CryKeyProvider;
+
     class CryConfigEncryptorFactory final {
     public:
-        static cpputils::unique_ref<CryConfigEncryptor> deriveKey(const std::string &password, const cpputils::SCryptSettings &scryptSettings);
+        static cpputils::unique_ref<CryConfigEncryptor> deriveNewKey(CryKeyProvider *keyProvider);
 
-        static boost::optional<cpputils::unique_ref<CryConfigEncryptor>> loadKey(const cpputils::Data &ciphertext,
-                                                                                 const std::string &password);
-
-    private:
-
-        static cpputils::unique_ref<CryConfigEncryptor> _deriveKey(cpputils::unique_ref<cpputils::SCrypt> kdf, const std::string &password);
+        static boost::optional<cpputils::unique_ref<CryConfigEncryptor>> loadExistingKey(const cpputils::Data &ciphertext,
+                                                                                         CryKeyProvider *keyProvider);
     };
 }
 

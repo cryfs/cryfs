@@ -13,34 +13,29 @@
 namespace bf = boost::filesystem;
 using cpputils::Console;
 using cpputils::RandomGenerator;
-using cpputils::SCryptSettings;
+using cpputils::unique_ref;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
 using std::string;
-using std::function;
 using std::shared_ptr;
 using gitversion::VersionCompare;
 using namespace cpputils::logging;
 
 namespace cryfs {
 
-CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, LocalStateDir localStateDir, const SCryptSettings &scryptSettings, function<string()> askPasswordForExistingFilesystem, function<string()> askPasswordForNewFilesystem, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
-    : _console(console), _creator(std::move(console), keyGenerator, localStateDir), _scryptSettings(scryptSettings),
-      _askPasswordForExistingFilesystem(askPasswordForExistingFilesystem), _askPasswordForNewFilesystem(askPasswordForNewFilesystem),
+CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &keyGenerator, unique_ref<CryKeyProvider> keyProvider, LocalStateDir localStateDir, const optional<string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine)
+    : _console(console), _creator(std::move(console), keyGenerator, localStateDir), _keyProvider(std::move(keyProvider)),
       _cipherFromCommandLine(cipherFromCommandLine), _blocksizeBytesFromCommandLine(blocksizeBytesFromCommandLine),
       _missingBlockIsIntegrityViolationFromCommandLine(missingBlockIsIntegrityViolationFromCommandLine),
       _localStateDir(std::move(localStateDir)) {
 }
 
 optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
-  string password = _askPasswordForExistingFilesystem();
-  std::cout << "Loading config file (this can take some time)..." << std::flush;
-  auto config = CryConfigFile::load(std::move(filename), password);
+  auto config = CryConfigFile::load(std::move(filename), _keyProvider.get());
   if (config.is_left()) {
     return none;
   }
-  std::cout << "done" << std::endl;
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.7 and 0.9.8 set their own version to cryfs.version instead of the filesystem format version (which is 0.9.6), overwrite it
   if (config.right()->config()->Version() == "0.9.7" || config.right()->config()->Version() == "0.9.8") {
@@ -117,11 +112,7 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::pa
 
 CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(bf::path filename, bool allowReplacedFilesystem) {
   auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine, _missingBlockIsIntegrityViolationFromCommandLine, allowReplacedFilesystem);
-  //TODO Ask confirmation if using insecure password (<8 characters)
-  string password = _askPasswordForNewFilesystem();
-  std::cout << "Creating config file (this can take some time)..." << std::flush;
-  auto result = CryConfigFile::create(std::move(filename), std::move(config.config), password, _scryptSettings);
-  std::cout << "done" << std::endl;
+  auto result = CryConfigFile::create(std::move(filename), std::move(config.config), _keyProvider.get());
   return ConfigLoadResult {std::move(result), config.myClientId};
 }
 

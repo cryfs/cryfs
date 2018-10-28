@@ -6,6 +6,7 @@
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/config/CryConfig.h>
 #include <cryfs/impl/config/CryConfigFile.h>
+#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 
 const std::string PASSWORD = "mypassword";
 
@@ -18,18 +19,20 @@ inline std::shared_ptr<cryfs::CryConfigFile> create_configfile(const boost::file
     config.SetVersion(cryfs::CryConfig::FilesystemFormatVersion);
     config.SetCreatedWithVersion(gitversion::VersionString());
     config.SetLastOpenedWithVersion(gitversion::VersionString());
-    return cryfs::CryConfigFile::create(configfile_path, std::move(config), PASSWORD, cpputils::SCrypt::TestSettings);
+    cryfs::CryPresetPasswordBasedKeyProvider keyProvider(PASSWORD, cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings));
+    return cryfs::CryConfigFile::create(configfile_path, std::move(config), &keyProvider);
 }
 
 inline std::shared_ptr<cryfs::CryConfigFile> create_configfile_for_incompatible_cryfs_version(const boost::filesystem::path &configfile_path) {
     cryfs::CryConfig config;
     config.SetCipher("aes-256-gcm");
-    config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom()).ToString());
+    config.SetEncryptionKey(cpputils::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom(), cpputils::AES256_GCM::KEYSIZE).ToString());
     config.SetRootBlob("");
     config.SetVersion("0.8.0");
     config.SetCreatedWithVersion("0.8.0");
     config.SetLastOpenedWithVersion("0.8.0");
-    return cryfs::CryConfigFile::create(configfile_path, std::move(config), PASSWORD, cpputils::SCrypt::TestSettings);
+    cryfs::CryPresetPasswordBasedKeyProvider keyProvider(PASSWORD, cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings));
+    return cryfs::CryConfigFile::create(configfile_path, std::move(config), &keyProvider);
 }
 
 inline void create_filesystem(const boost::filesystem::path &basedir, const boost::optional<boost::filesystem::path> &configfile_path = boost::none, const std::string &cipher = "aes-256-gcm") {
@@ -54,3 +57,4 @@ inline void create_filesystem(const boost::filesystem::path &basedir, const boos
 }
 
 #endif
+

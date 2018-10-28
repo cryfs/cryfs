@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include "../testutils/MockConsole.h"
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/tempfile/TempFile.h>
@@ -18,10 +19,15 @@ using cpputils::DataFixture;
 using cpputils::Data;
 using cpputils::NoninteractiveConsole;
 using cpputils::unique_ref;
+using cpputils::make_unique_ref;
+using cpputils::Console;
+using cpputils::unique_ref;
+using cryfs::CryPasswordBasedKeyProvider;
 using boost::optional;
 using boost::none;
 using std::string;
 using std::ostream;
+using std::shared_ptr;
 using std::make_shared;
 using ::testing::Return;
 using ::testing::HasSubstr;
@@ -58,19 +64,23 @@ private:
 
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
+    unique_ref<CryKeyProvider> keyProvider(const string& password) {
+      auto askPassword = [password] { return password;};
+      return make_unique_ref<CryPasswordBasedKeyProvider>(
+          console,
+          askPassword,
+          askPassword,
+          make_unique_ref<SCrypt>(SCrypt::TestSettings)
+      );
+    }
+
     CryConfigLoaderTest(): file(false), tempLocalStateDir(), localStateDir(tempLocalStateDir.path()) {
         console = mockConsole();
     }
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
-        auto askPassword = [password] { return password;};
-        if(noninteractive) {
-            return CryConfigLoader(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword,
-                                   askPassword, cipher, none, none);
-        } else {
-            return CryConfigLoader(console, cpputils::Random::PseudoRandom(), localStateDir, SCrypt::TestSettings, askPassword,
-                                   askPassword, cipher, none, none);
-        }
+        auto _console = noninteractive ? shared_ptr<Console>(make_shared<NoninteractiveConsole>(console)) : shared_ptr<Console>(console);
+        return CryConfigLoader(_console, cpputils::Random::PseudoRandom(), keyProvider(password), localStateDir, cipher, none, none);
     }
 
     unique_ref<CryConfigFile> Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {
@@ -100,15 +110,13 @@ public:
     }
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
-        auto askPassword = [password] { return password;};
         FakeRandomGenerator generator(Data::FromString(encKey));
-        auto loader = CryConfigLoader(console, generator, localStateDir, SCrypt::TestSettings, askPassword,
-                                      askPassword, none, none, none);
+        auto loader = CryConfigLoader(console, generator, keyProvider(password), localStateDir, none, none, none);
         ASSERT_NE(boost::none, loader.loadOrCreate(file.path(), false, false));
     }
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
-        auto cfg = CryConfigFile::load(file.path(), password).right_opt().value();
+        auto cfg = CryConfigFile::load(file.path(), keyProvider(password).get()).right_opt().value();
         cfg->config()->SetEncryptionKey(encKey);
         cfg->save();
     }
@@ -128,7 +136,7 @@ public:
     }
 
     void ChangeFilesystemID(const CryConfig::FilesystemID &filesystemId, const string& password = "mypassword") {
-      auto cfg = CryConfigFile::load(file.path(), password).right_opt().value();
+      auto cfg = CryConfigFile::load(file.path(), keyProvider(password).get()).right_opt().value();
       cfg->config()->SetFilesystemId(filesystemId);
       cfg->save();
     }
@@ -260,7 +268,7 @@ TEST_F(CryConfigLoaderTest, Version_Load) {
 TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOnLoad) {
     CreateWithVersion("0.9.2", "0.9.2", "mypassword");
     Load().value();
-    auto configFile = CryConfigFile::load(file.path(), "mypassword").right_opt().value();
+    auto configFile = CryConfigFile::load(file.path(), keyProvider("mypassword").get()).right_opt().value();
     EXPECT_EQ(CryConfig::FilesystemFormatVersion, configFile->config()->Version());
     EXPECT_EQ(gitversion::VersionString(), configFile->config()->LastOpenedWithVersion());
     EXPECT_EQ("0.9.2", configFile->config()->CreatedWithVersion());
