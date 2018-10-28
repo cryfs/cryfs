@@ -6,6 +6,7 @@
 #include <thread>
 #include <functional>
 #include <fcntl.h>
+#include <boost/optional/optional_io.hpp>
 
 using namespace cpputils::process;
 using boost::none;
