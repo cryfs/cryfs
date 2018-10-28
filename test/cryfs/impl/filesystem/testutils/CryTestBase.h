@@ -2,7 +2,7 @@
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
 #include <cryfs/impl/filesystem/CryDevice.h>
-#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
@@ -21,12 +21,7 @@ public:
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom(), cpputils::AES256_GCM::KEYSIZE).ToString());
         config.SetBlocksizeBytes(10240);
-        cryfs::CryPasswordBasedKeyProvider keyProvider(
-            std::make_shared<MockConsole>(),
-            [] () {return "mypassword";},
-            [] () {return "mypassword";},
-            cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings)
-        );
+        cryfs::CryPresetPasswordBasedKeyProvider keyProvider("mypassword", cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings));
         return cryfs::CryConfigFile::create(_configFile.path(), std::move(config), &keyProvider);
     }
 

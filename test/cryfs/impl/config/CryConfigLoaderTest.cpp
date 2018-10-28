@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
-#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include "../testutils/MockConsole.h"
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/tempfile/TempFile.h>
@@ -22,7 +22,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::Console;
 using cpputils::unique_ref;
-using cryfs::CryPasswordBasedKeyProvider;
+using cryfs::CryPresetPasswordBasedKeyProvider;
 using boost::optional;
 using boost::none;
 using std::string;
@@ -65,13 +65,7 @@ private:
 class CryConfigLoaderTest: public ::testing::Test, public TestWithMockConsole, TestWithFakeHomeDirectory {
 public:
     unique_ref<CryKeyProvider> keyProvider(const string& password) {
-      auto askPassword = [password] { return password;};
-      return make_unique_ref<CryPasswordBasedKeyProvider>(
-          console,
-          askPassword,
-          askPassword,
-          make_unique_ref<SCrypt>(SCrypt::TestSettings)
-      );
+      return make_unique_ref<CryPresetPasswordBasedKeyProvider>(password, make_unique_ref<SCrypt>(SCrypt::TestSettings));
     }
 
     CryConfigLoaderTest(): file(false), tempLocalStateDir(), localStateDir(tempLocalStateDir.path()) {

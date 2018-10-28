@@ -4,7 +4,7 @@
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
-#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include "../testutils/MockConsole.h"
 #include "../testutils/TestWithFakeHomeDirectory.h"
 
@@ -17,7 +17,7 @@ using fspp::Device;
 using boost::none;
 using std::make_shared;
 using blockstore::inmemory::InMemoryBlockStore2;
-using cryfs::CryPasswordBasedKeyProvider;
+using cryfs::CryPresetPasswordBasedKeyProvider;
 
 using namespace cryfs;
 
@@ -29,14 +29,8 @@ public:
 
   unique_ref<Device> createDevice() override {
     auto blockStore = cpputils::make_unique_ref<InMemoryBlockStore2>();
-    auto askPassword = [] {return "mypassword";};
     auto _console = make_shared<NoninteractiveConsole>(mockConsole());
-    auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(
-        _console,
-        askPassword,
-        askPassword,
-        make_unique_ref<SCrypt>(SCrypt::TestSettings)
-    );
+    auto keyProvider = make_unique_ref<CryPresetPasswordBasedKeyProvider>("mypassword", make_unique_ref<SCrypt>(SCrypt::TestSettings));
     auto config = CryConfigLoader(_console, Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none)
             .loadOrCreate(configFile.path(), false, false).value();
     return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false);
