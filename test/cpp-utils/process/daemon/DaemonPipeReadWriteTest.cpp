@@ -5,6 +5,7 @@
 #include <cpp-utils/process/daemon/PipeFromChild.h>
 #include <cpp-utils/process/daemon/PipeToParent.h>
 #include <thread>
+#include <boost/optional/optional_io.hpp>
 
 using namespace cpputils::process;
 using boost::none;

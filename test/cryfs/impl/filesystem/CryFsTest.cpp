@@ -18,6 +18,7 @@
 
 using ::testing::Test;
 using std::make_shared;
+using std::shared_ptr;
 using cpputils::TempDir;
 using cpputils::TempFile;
 using cpputils::make_unique_ref;
