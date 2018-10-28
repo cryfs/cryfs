@@ -28,7 +28,6 @@ using cpputils::Data;
 using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;
-using std::shared_ptr;
 using cryfs::CryPresetPasswordBasedKeyProvider;
 
 namespace bf = boost::filesystem;

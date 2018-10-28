@@ -17,7 +17,6 @@ using cpputils::TempFile;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::SCrypt;
-using std::make_shared;
 
 using namespace cryfs;
 
