@@ -18,7 +18,7 @@ DataInnerNode::DataInnerNode(DataNodeView view)
 : DataNode(std::move(view)) {
   ASSERT(depth() > 0, "Inner node can't have depth 0. Is this a leaf maybe?");
   if (node().FormatVersion() != FORMAT_VERSION_HEADER) {
-    throw std::runtime_error("This node format is not supported. Was it created with a newer version of CryFS?");
+    throw std::runtime_error("This node format (" + std::to_string(node().FormatVersion()) + ") is not supported. Was it created with a newer version of CryFS?");
   }
 }
 

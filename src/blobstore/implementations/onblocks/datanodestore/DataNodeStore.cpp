@@ -137,6 +137,10 @@ DataNodeLayout DataNodeStore::layout() const {
   return _layout;
 }
 
+void DataNodeStore::forEachNode(std::function<void (const BlockId& nodeId)> callback) const {
+  _blockstore->forEachBlock(std::move(callback));
+}
+
 }
 }
 }

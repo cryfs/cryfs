@@ -23,6 +23,7 @@ public:
   };
 
   boost::optional<ConfigLoadResult> loadOrCreate(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
+  boost::optional<ConfigLoadResult> load(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
 
 private:
     boost::optional<ConfigLoadResult> _loadConfig(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
