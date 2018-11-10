@@ -37,9 +37,9 @@ if (MSVC)
     option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-1.1.0" "")
 endif()
 
-# Default value is to build in release mode
+# Default value is to build in release mode but with debug symbols
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "CMAKE_BUILD_TYPE")
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
 # The MSVC version on AppVeyor CI needs this
