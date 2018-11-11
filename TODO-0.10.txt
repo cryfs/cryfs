@@ -2,3 +2,6 @@ Change homebrew recipe to "brew install libomp" but not "brew install cryptopp"
 Change AppVeyor Badge to master branch
 
 Add coverity and PVR Studio?
+
+- Fix integrity violation reporting. Just crashing is not a good UX.
+- Max time for items in cache to reduce conflicts?
