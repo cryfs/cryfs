@@ -1,0 +1,7 @@
+#foreach($operation in $serviceModel.operations)
+#if($operation.request)
+    typedef std::function<void(const ${className}*, const Model::${operation.request.shape.name}&, const Model::${operation.name}Outcome&, const std::shared_ptr<const Aws::Client::AsyncCallerContext>&) > ${operation.name}ResponseReceivedHandler;
+#else
+    typedef std::function<void(const ${className}*, const Model::${operation.name}Outcome&, const std::shared_ptr<const Aws::Client::AsyncCallerContext>&) > ${operation.name}ResponseReceivedHandler;
+#end
+#end

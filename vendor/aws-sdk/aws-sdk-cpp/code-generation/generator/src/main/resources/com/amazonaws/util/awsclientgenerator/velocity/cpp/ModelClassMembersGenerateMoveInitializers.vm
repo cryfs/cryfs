@@ -1,0 +1,34 @@
+##All this does is set the move initializer list
+#set($moveInitializers = "")
+#set($initializerCount = 0)
+#foreach($entry in $shape.members.entrySet())
+#set($initializerCount = $initializerCount + 1)
+#if((!$entry.value.required || $entry.value.idempotencyToken) && $useRequiredField)
+#set($initializerCount = $initializerCount + 1)
+#end
+#end
+#if($initializerCount > 0)
+#set($moveInitializers = "${moveInitializers} : ")
+#end
+#set($index = 1)
+#foreach($entry in $shape.members.entrySet())
+#set($memberShape = $entry.value.shape)
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($entry.key))
+#if($memberShape.primitive || $memberShape.enum)
+#set($moveInitializers = "${moveInitializers}${nl}    ${memberVarName}(${container}.${memberVarName})")
+#else
+#set($moveInitializers = "${moveInitializers}${nl}    ${memberVarName}(std::move(${container}.${memberVarName}))")
+#end
+#if($index < $initializerCount)
+#set($moveInitializers = "${moveInitializers},")
+#end
+#set($index = $index + 1)
+#if((!$entry.value.required || $entry.value.idempotencyToken) && $useRequiredField)
+#set($varHasBeenSetName =  $CppViewHelper.computeVariableHasBeenSetName($entry.key))
+#set($moveInitializers = "${moveInitializers}${nl}    $varHasBeenSetName(${container}.varHasBeenSetName)")
+#if($index < $initializerCount)
+#set($moveInitializers = "${moveInitializers},")
+#end
+#set($index = $index + 1)
+#end
+#end

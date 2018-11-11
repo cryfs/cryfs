@@ -1,0 +1,58 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+#pragma once
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/core/AmazonSerializableWebServiceRequest.h>
+\#include <aws/core/utils/UnreferencedParam.h>
+\#include <aws/core/http/HttpRequest.h>
+#if($serviceModel.hasStreamingRequestShapes())
+\#include <aws/core/AmazonStreamingWebServiceRequest.h>
+#end
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+  class ${CppViewHelper.computeExportValue($metadata.classNamePrefix)} ${metadata.classNamePrefix}Request : public Aws::AmazonSerializableWebServiceRequest
+  {
+  public:
+    virtual ~${metadata.classNamePrefix}Request () {}
+    virtual Aws::String SerializePayload() const override = 0;
+
+    void AddParametersToRequest(Aws::Http::HttpRequest& httpRequest) const { AWS_UNREFERENCED_PARAM(httpRequest); }
+
+    inline Aws::Http::HeaderValueCollection GetHeaders() const override
+    {
+      auto headers = GetRequestSpecificHeaders();
+
+      if(headers.size() == 0 || (headers.size() > 0 && headers.count(Aws::Http::CONTENT_TYPE_HEADER) == 0))
+      {
+        headers.insert(Aws::Http::HeaderValuePair(Aws::Http::CONTENT_TYPE_HEADER, ${CppViewHelper.computeRequestContentType($metadata)} ));
+#if($metadata.acceptHeader)
+        headers.insert(Aws::Http::HeaderValuePair(Aws::Http::ACCEPT_HEADER, "${metadata.acceptHeader}"));
+#end
+      }
+
+#if($metadata.additionalHeaders)
+#foreach($headerEntry in $metadata.additionalHeaders.entrySet())
+      headers.insert(Aws::Http::HeaderValuePair("${headerEntry.key}", "${headerEntry.value}"));
+#end
+
+#end
+      return headers;
+    }
+
+  protected:
+    virtual Aws::Http::HeaderValueCollection GetRequestSpecificHeaders() const { return Aws::Http::HeaderValueCollection(); }
+
+  };
+
+#if($serviceModel.hasStreamingRequestShapes())
+  typedef Aws::AmazonStreamingWebServiceRequest Streaming${metadata.classNamePrefix}Request;
+#end
+
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

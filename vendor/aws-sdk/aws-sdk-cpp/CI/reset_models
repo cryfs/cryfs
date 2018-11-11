@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [ -f ./models/pending_releases ] && [ -s ./models/pending_releases ];
+then
+    aws s3 cp s3://aws-sdk-cpp-pipeline-sdks-team/modelsSnapshot.zip modelsLatest.zip --region us-east-1
+    unzip modelsLatest.zip -d modelsLatest
+    rm modelsLatest.zip
+
+    grep -vf ./models/pending_releases ./modelsLatest/models/pending_releases | xargs | tee ./modelsLatest/models/pending_releases
+    grep -vf ./models/release_notes ./modelsLatest/models/release_notes | xargs | tee ./modelsLatest/models/release_notes
+    touch ./not_a_release
+    aws s3 cp not_a_release s3://aws-sdk-cpp-pipeline-sdks-team/not_a_release --region us-east-1
+    rm -rf ./models 
+    mkdir ./models
+    cp -r ./modelsLatest/models/* ./models
+    zip -r modelsSnapshot.zip ./models
+    aws s3 cp modelsSnapshot.zip s3://aws-sdk-cpp-pipeline-sdks-team/modelsSnapshot.zip --region us-east-1
+fi

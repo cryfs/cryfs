@@ -1,0 +1,54 @@
+#set($first = 0)
+#foreach($entry in $shape.members.entrySet())
+#if($entry.value.usedForHeader)
+#if($first == 0)
+  Aws::StringStream ss;
+#set($first = 1)
+#end
+#set($spaces = '')
+#set($memberName = $entry.key)
+#set($member = $entry.value)
+#set($locationName = $member.locationName)
+#if($member.usedForHeader)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($memberName))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberName))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($memberName))
+#if(!$member.required && $useRequiredField)
+#set($spaces = '  ')
+  if($varNameHasBeenSet)
+  {
+#end
+#if($member.shape.enum)
+  ${spaces}headers.emplace("${locationName}", ${member.shape.name}Mapper::GetNameFor${member.shape.name}($memberVarName));
+#elseif($member.shape.blob)
+  ${spaces}ss << HashingUtils::Base64Encode(m_${lowerCaseVarName});
+  ${spaces}headers.emplace("${locationName}", ss.str());
+  ${spaces}ss.str("");
+#elseif($member.shape.timeStamp)
+  ${spaces}headers.emplace("${locationName}", m_${lowerCaseVarName}.ToGmtString(DateFormat::RFC822));
+#elseif($member.shape.map)
+  ${spaces}for(const auto& item : $memberVarName)
+  ${spaces}{
+  ${spaces}  ss << "${locationName}" << item.first;
+  ${spaces}  headers.emplace(ss.str(), item.second);
+  ${spaces}  ss.str("");
+  ${spaces}}
+#elseif($member.shape.list)
+  ${spaces}for(const auto& item : $memberVarName)
+  ${spaces}{
+  ${spaces}  ss << item;
+  ${spaces}  headers.emplace("${locationName}", ss.str());
+  ${spaces}  ss.str("");
+  ${spaces}}
+#else
+  ${spaces}ss << m_${lowerCaseVarName};
+  ${spaces}headers.emplace("${locationName}", #if($member.requiresHeaderEncoding())URI::URLEncodePath(ss.str())#else ss.str()#end);
+  ${spaces}ss.str("");
+#end
+#if(!$member.required && $useRequiredField)
+  }
+
+#end
+#end
+#end
+#end

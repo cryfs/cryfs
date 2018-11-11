@@ -1,0 +1,106 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+#pragma once
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}Errors.h>
+\#include <aws/core/client/AWSError.h>
+\#include <aws/core/client/ClientConfiguration.h>
+\#include <aws/core/AmazonSerializableWebServiceRequest.h>
+\#include <aws/core/client/AWSClient.h>
+\#include <aws/core/utils/memory/stl/AWSString.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderModelIncludes.vm")
+\#include <aws/core/client/AsyncCallerContext.h>
+\#include <aws/core/http/HttpTypes.h>
+\#include <future>
+\#include <functional>
+
+namespace Aws
+{
+
+namespace Http
+{
+  class HttpClient;
+  class HttpClientFactory;
+} // namespace Http
+
+namespace Utils
+{
+  template< typename R, typename E> class Outcome;
+
+namespace Threading
+{
+  class Executor;
+} // namespace Threading
+
+namespace Xml
+{
+  class XmlDocument;
+} // namespace Xml
+} // namespace Utils
+
+namespace Auth
+{
+  class AWSCredentials;
+  class AWSCredentialsProvider;
+} // namespace Auth
+
+namespace Client
+{
+  class RetryStrategy;
+} // namespace Client
+
+#if ($rootNamespace != "Aws")
+} // namespace Aws
+namespace ${rootNamespace}
+{
+#end
+namespace ${serviceNamespace}
+{
+
+namespace Model
+{
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderModelDeclarations.vm")
+} // namespace Model
+
+#set($className = "${metadata.classNamePrefix}Client")
+  class ${className};
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderEventTypeDeclarations.vm")
+
+#if($serviceModel.documentation)
+  /**
+   * ${serviceModel.documentation}
+   */
+#end
+  class ${CppViewHelper.computeExportValue($metadata.classNamePrefix)} ${className} : public Aws::Client::AWSXMLClient
+  {
+    public:
+      typedef Aws::Client::AWSXMLClient BASECLASS;
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderConstructors.vm")
+
+#if($metadata.protocol == "query")
+
+       /**
+        * Converts any request object to a presigned URL with the GET method, using region for the signer and a timeout of 15 minutes.
+        */
+        Aws::String ConvertRequestToPresignedUrl(const Aws::AmazonSerializableWebServiceRequest& requestToConvert, const char* region) const;
+
+#end
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderOperations.vm")
+
+  private:
+    void init(const Aws::Client::ClientConfiguration& clientConfiguration);
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderAsyncHelpers.vm")
+
+    Aws::String m_uri;
+    std::shared_ptr<Aws::Utils::Threading::Executor> m_executor;
+  };
+
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+IFS=$'\n' read -d '' -r -a releases < $1/pending_releases
+for i in "${releases[@]}"
+do
+    aws sqs send-message --debug --message-group-id "needlessField" --queue-url  "$4"  --message-body "{ \"releaseId\": \"$i\", \"language\": \"CPP\", \"releaseState\":\"$2\", \"statusMessage\":\"$3\" }" --region us-west-2
+done
+

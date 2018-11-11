@@ -1,0 +1,92 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${typeInfo.className}.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+\#include <aws/core/AmazonWebServiceResult.h>
+\#include <aws/core/utils/StringUtils.h>
+#foreach($header in $typeInfo.sourceIncludes)
+\#include $header
+#end
+
+\#include <utility>
+
+using namespace ${rootNamespace}::${serviceNamespace}::Model;
+using namespace Aws::Utils::Xml;
+using namespace Aws::Utils;
+using namespace Aws;
+
+#set($useRequiredField = false)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersGenerateInitializers.vm")
+${typeInfo.className}::${typeInfo.className}()$initializers
+{
+}
+
+${typeInfo.className}::${typeInfo.className}(const AmazonWebServiceResult<XmlDocument>& result)$initializers
+{
+  *this = result;
+}
+
+${typeInfo.className}& ${typeInfo.className}::operator =(const AmazonWebServiceResult<XmlDocument>& result)
+{
+  const XmlDocument& xmlDocument = result.GetPayload();
+  XmlNode resultNode = xmlDocument.GetRootElement();
+
+  if(!resultNode.IsNull())
+  {
+#foreach($memberEntry in $shape.members.entrySet())
+#if($memberEntry.value.usedForPayload)
+    $CppViewHelper.computeMemberVariableName($memberEntry.key) = resultNode;
+#end
+#end
+  }
+
+#if($shape.hasHeaderMembers())
+  const auto& headers = result.GetHeaderValueCollection();
+#foreach($memberEntry in $shape.members.entrySet())
+#set($varName = $CppViewHelper.computeVariableName($memberEntry.key))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberEntry.key))
+#if($memberEntry.value.usedForHeader)
+#if($memberEntry.value.shape.map)
+  std::size_t prefixSize = sizeof("${memberEntry.value.locationName}") - 1; //subtract the NULL terminator out
+  for(const auto& item : headers)
+  {
+    std::size_t foundPrefix = item.first.find("${memberEntry.value.locationName}");
+
+    if(foundPrefix != std::string::npos)
+    {
+      ${memberVarName}[item.first.substr(prefixSize)] = item.second;
+    }
+  }
+
+#else
+  const auto& ${varName}Iter = headers.find("${memberEntry.value.locationName}");
+  if(${varName}Iter != headers.end())
+  {
+#if($memberEntry.value.shape.string)
+    ${memberVarName} = ${varName}Iter->second;
+#elseif($memberEntry.value.shape.timeStamp)
+    ${memberVarName} = DateTime(${varName}Iter->second, DateFormat::RFC822);
+#elseif($memberEntry.value.shape.enum)
+    ${memberVarName} = ${memberEntry.value.shape.name}Mapper::Get${memberEntry.value.shape.name}ForName(${varName}Iter->second);
+#elseif($memberEntry.value.shape.primitive)
+     ${memberVarName} = ${CppViewHelper.computeXmlConversionMethodName($memberEntry.value.shape)}(${varName}Iter->second.c_str());
+#end
+  }
+
+#end
+#end
+#end
+#end
+#if($shape.hasStatusCodeMembers())
+#foreach($memberEntry in $shape.members.entrySet())
+#if($memberEntry.value.usedForHttpStatusCode)
+  ${CppViewHelper.computeMemberVariableName($memberEntry.key)} = static_cast<int>(result.GetResponseCode());
+
+#end
+#end
+#end
+  return *this;
+}

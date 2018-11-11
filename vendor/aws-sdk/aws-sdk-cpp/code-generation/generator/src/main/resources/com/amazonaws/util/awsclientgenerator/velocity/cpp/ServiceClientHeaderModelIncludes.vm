@@ -1,0 +1,11 @@
+#set($hasNoResult = false)
+#foreach($operation in $serviceModel.operations)
+#if($operation.result)
+\#include <aws/${metadata.projectName}/model/${operation.result.shape.name}.h>
+#else
+    #set($hasNoResult = true)
+#end
+#end
+#if($hasNoResult)
+\#include <aws/core/NoResult.h>
+#end

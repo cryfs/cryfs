@@ -1,0 +1,28 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#if($rootNamespace == "Aws")
+#set($serviceNamespace = "Client")
+#else
+#set($serviceNamespace = $metadata.namespace)
+#end
+#pragma once
+
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/core/client/AWSErrorMarshaller.h>
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+
+#set($className = "${metadata.classNamePrefix}ErrorMarshaller")
+class ${CppViewHelper.computeExportValue($metadata.classNamePrefix)} $className : public Aws::Client::JsonErrorMarshaller
+{
+public:
+  Aws::Client::AWSError<Aws::Client::CoreErrors> FindErrorByName(const char* exceptionName) const override;
+};
+
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

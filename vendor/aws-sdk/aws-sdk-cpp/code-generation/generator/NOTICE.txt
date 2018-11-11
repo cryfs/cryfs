@@ -1,0 +1,19 @@
+AWS SDK for C++
+Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+This product includes software developed by
+Amazon Technologies, Inc (http://www.amazon.com/).
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+- Maven for building the Client Generator - APACHE LICENSE, VERSION 2.0
+- Velocity for templating in the Client Generator - APACHE LICENSE, VERSION 2.0
+- Gson for json parsing in the Client Generator - Google
+- Guava for general Java utilities for the Client Generator- Doug Lea
+- Lombok general Java utilities for the Client Generator- Reinier Zwitserloot
+- Mockito unit test mocking framework for testing the Client Generator- Szczepan Faber, Brice Dutheil
+- Junit - Eclipse License
+
+The licenses for these third party components are included in LICENSE.txt

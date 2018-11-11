@@ -1,0 +1,8 @@
+\#include <aws/${metadata.projectName}/${className}.h>
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}Endpoint.h>
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}ErrorMarshaller.h>
+#foreach($operation in $serviceModel.operations)
+#if($operation.request)
+\#include <aws/${metadata.projectName}/model/${operation.request.shape.name}.h>
+#end
+#end

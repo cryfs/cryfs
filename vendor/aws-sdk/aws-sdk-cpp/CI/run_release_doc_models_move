@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+aws s3 cp s3://aws-sdk-cpp-pipeline-sdks-team/modelsSnapshot.zip models.zip --region us-east-1
+unzip models.zip
+rm models.zip
+cp $1 $1_cpy
+python $DIR/move_release_doc_to_models.py --modelsDir="./models" --releaseDoc="$1"
+rm models.zip
+zip -r modelsSnapshot.zip ./models
+aws s3 cp modelsSnapshot.zip s3://aws-sdk-cpp-pipeline-sdks-team/modelsSnapshot.zip --region us-east-1
+zip -r pending-releases.zip -j $1
+aws s3 cp pending-releases.zip s3://aws-sdk-cpp-pipeline-sdks-team/pending-releases.zip --region us-east-1

@@ -1,0 +1,55 @@
+#foreach($entry in $shape.members.entrySet())
+#set($spaces = '')
+#if($entry.value.locationName)
+#set($memberName = $entry.value.locationName)
+#else
+#set($memberName = $entry.key)
+#end
+#set($member = $entry.value)
+#if($member.usedForPayload)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($entry.key))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($entry.key))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($entry.key))
+#if($memberName == $shape.payload)##member is the whole payload (not wrapped)
+#set($memberIsWholePayload = true)  
+#end
+#if(!$member.required && !$memberIsWholePayload)
+  if(jsonValue.ValueExists("${memberName}"))
+  {
+#set($spaces = '  ')
+#end
+#if($member.shape.enum)
+  ${spaces}${memberVarName} = ${member.shape.name}Mapper::Get${member.shape.name}ForName(jsonValue.GetString("${memberName}"));
+
+#elseif($member.shape.list || $member.shape.map)
+#set($currentSpaces = $spaces)
+#set($currentShape = $member.shape)
+#set($memberKey = ${memberName})
+#set($containerVar = ${memberVarName})
+#set($jsonValue = "jsonValue")
+#set($recursionDepth = 1)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/json/ModelInternalMapOrListJsonDeserializer.vm")
+#elseif($member.shape.blob)
+  ${spaces}${memberVarName} = HashingUtils::Base64Decode(jsonValue.GetString("${memberName}"));
+#else
+#if($member.shape.getName() == $shape.getName())
+#set($singleElementVector = '[0]')
+#else
+#set($singleElementVector = '')
+#end
+#if($memberIsWholePayload)
+  ${spaces}${memberVarName} = jsonValue;
+#else
+  ${spaces}${memberVarName}${singleElementVector} = jsonValue.Get${CppViewHelper.computeJsonCppType($member.shape)}("${memberName}");
+
+#end
+#end
+#if(!$member.required && !$memberIsWholePayload)
+#if($useRequiredField)
+    $varNameHasBeenSet = true;
+#end
+  }
+
+#end
+#end
+#end

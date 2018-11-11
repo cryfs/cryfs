@@ -1,0 +1,109 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${typeInfo.className}.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+\#include <aws/core/AmazonWebServiceResult.h>
+\#include <aws/core/utils/StringUtils.h>
+\#include <aws/core/utils/logging/LogMacros.h>
+#foreach($header in $typeInfo.sourceIncludes)
+\#include $header
+#end
+
+\#include <utility>
+
+using namespace ${rootNamespace}::${serviceNamespace}::Model;
+using namespace Aws::Utils::Xml;
+using namespace Aws::Utils::Logging;
+using namespace Aws::Utils;
+using namespace Aws;
+
+#set($useRequiredField = false)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersGenerateInitializers.vm")
+${typeInfo.className}::${typeInfo.className}()$initializers
+{
+}
+
+${typeInfo.className}::${typeInfo.className}(const Aws::AmazonWebServiceResult<XmlDocument>& result)$initializers
+{
+  *this = result;
+}
+
+${typeInfo.className}& ${typeInfo.className}::operator =(const Aws::AmazonWebServiceResult<XmlDocument>& result)
+{
+  const XmlDocument& xmlDocument = result.GetPayload();
+  XmlNode rootNode = xmlDocument.GetRootElement();
+  XmlNode resultNode = rootNode;
+  if (!rootNode.IsNull() && (rootNode.GetName() != "${typeInfo.shape.name}"))
+  {
+    resultNode = rootNode.FirstChild("${typeInfo.shape.name}");
+  }
+
+  if(!resultNode.IsNull())
+  {
+#set($useRequiredField = false)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/xml/ModelClassMembersDeserializeXml.vm")
+  }
+
+  if (!rootNode.IsNull()) {
+#if ($metadata.protocol == "ec2" )
+    XmlNode requestIdNode = rootNode.FirstChild("requestId");
+    if (!requestIdNode.IsNull())
+    {
+      m_responseMetadata.SetRequestId(StringUtils::Trim(requestIdNode.GetText().c_str()));
+    }
+#else
+    XmlNode responseMetadataNode = rootNode.FirstChild("ResponseMetadata");
+    m_responseMetadata = responseMetadataNode;
+#end
+    AWS_LOGSTREAM_DEBUG("Aws::${metadata.namespace}::Model::${typeInfo.className}", "x-amzn-request-id: " << m_responseMetadata.GetRequestId() );
+  }
+#if($shape.hasHeaderMembers())
+  const auto& headers = result.GetHeaderValueCollection();
+#foreach($memberEntry in $shape.members.entrySet())
+#set($varName = $CppViewHelper.computeVariableName($memberEntry.key))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberEntry.key))
+#if($memberEntry.value.usedForHeader)
+#if($memberEntry.value.shape.map)
+  std::size_t prefixSize = sizeof("${memberEntry.value.locationName}") - 1; //subtract the NULL terminator out
+  for(const auto& item : headers)
+  {
+    std::size_t foundPrefix = item.first.find("${memberEntry.value.locationName}");
+
+    if(foundPrefix != std::string::npos)
+    {
+      ${memberVarName}[item.first.substr(prefixSize)] = item.second;
+    }
+  }
+
+#else
+  const auto& ${varName}Iter = headers.find("${memberEntry.value.locationName}");
+  if(${varName}Iter != headers.end())
+  {
+#if($memberEntry.value.shape.string)
+    ${memberVarName} = ${varName}Iter->second;
+#elseif($memberEntry.value.shape.timeStamp)
+    ${memberVarName} = DateTime(${varName}Iter->second.c_str(), DateFormat::RFC822);
+#elseif($memberEntry.value.shape.enum)
+    ${memberVarName} = ${memberEntry.value.shape.name}Mapper::Get${memberEntry.value.shape.name}ForName(${varName}Iter->second);
+#elseif($memberEntry.value.shape.primitive)
+     ${memberVarName} = ${CppViewHelper.computeXmlConversionMethodName($memberEntry.value.shape)}(${varName}Iter->second.c_str());
+#end
+  }
+
+#end
+#end
+#end
+#end
+#if($shape.hasStatusCodeMembers())
+#foreach($memberEntry in $shape.members.entrySet())
+#if($memberEntry.value.usedForHttpStatusCode)
+  ${CppViewHelper.computeMemberVariableName($memberEntry.key)} = static_cast<int>(result.GetResponseCode());
+
+#end
+#end
+#end
+  return *this;
+}

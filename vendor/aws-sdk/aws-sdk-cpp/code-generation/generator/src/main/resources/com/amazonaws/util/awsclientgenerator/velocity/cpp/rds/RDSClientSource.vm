@@ -1,0 +1,13 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/xml/rest/RestXmlServiceClientSource.vm")
+Aws::String RDSClient::GenerateConnectAuthToken(const char* dbHostName, const char* dbRegion, unsigned port, const char* dbUserName) const
+{
+    Aws::StringStream ss;
+    ss << "http://" << dbHostName << ":" << port;
+    URI uri(ss.str());
+    uri.AddQueryStringParameter("Action", "connect");
+    uri.AddQueryStringParameter("DBUser", dbUserName);
+    auto url = GeneratePresignedUrl(uri, HttpMethod::HTTP_GET, dbRegion, "rds-db", 900/*15 minutes*/);
+    Aws::Utils::StringUtils::Replace(url, "http://", "");
+
+    return url;
+}

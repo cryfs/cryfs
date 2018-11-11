@@ -1,0 +1,160 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#pragma once
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}Errors.h>
+\#include <aws/core/client/AWSError.h>
+\#include <aws/core/client/ClientConfiguration.h>
+\#include <aws/core/client/AWSClient.h>
+\#include <aws/core/auth/AWSAuthSigner.h>
+\#include <aws/core/utils/memory/stl/AWSString.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+\#include <aws/core/utils/DNS.h>
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderModelIncludes.vm")
+\#include <aws/core/client/AsyncCallerContext.h>
+\#include <aws/core/http/HttpTypes.h>
+\#include <future>
+\#include <functional>
+#set($signPayloadsOptional = true)
+#set($virtualAddressingSupported = true)
+namespace Aws
+{
+
+  namespace Http
+  {
+    class HttpClient;
+    class HttpClientFactory;
+  } // namespace Http
+
+  namespace Utils
+  {
+    template< typename R, typename E> class Outcome;
+
+    namespace Threading
+    {
+      class Executor;
+    } // namespace Threading
+
+    namespace Xml
+    {
+      class XmlDocument;
+    } // namespace Xml
+  } // namespace Utils
+
+  namespace Auth
+  {
+    class AWSCredentials;
+    class AWSCredentialsProvider;
+  } // namespace Auth
+
+  namespace Client
+  {
+    class RetryStrategy;
+  } // namespace Client
+
+  namespace ${metadata.namespace}
+  {
+    namespace Model
+    {
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderModelDeclarations.vm")
+    } // namespace Model
+
+    namespace SSEHeaders
+    {
+        static const char SERVER_SIDE_ENCRYPTION[] = "x-amz-server-side-encryption";
+        static const char SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID[] = "x-amz-server-side-encryption-aws-kms-key-id";
+        static const char SERVER_SIDE_ENCRYPTION_CUSTOMER_ALGORITHM[] = "x-amz-server-side-encryption-customer-algorithm";
+        static const char SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY[] = "x-amz-server-side-encryption-customer-key";
+        static const char SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY_MD5[] = "x-amz-server-side-encryption-customer-key-MD5";
+    } // SS3Headers
+
+#set($className = "${metadata.classNamePrefix}Client")
+    class ${className};
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderEventTypeDeclarations.vm")
+
+    //max expiration for presigned urls in s3 is 7 days.
+    static const unsigned MAX_EXPIRATION_SECONDS = 7 * 24 * 60 * 60;
+
+#if($serviceModel.documentation)
+    /**
+     * ${serviceModel.documentation}
+     */
+#end
+    class ${CppViewHelper.computeExportValue($metadata.classNamePrefix)} ${className} : public Aws::Client::AWSXMLClient
+    {
+    public:
+        typedef Aws::Client::AWSXMLClient BASECLASS;
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderConstructors.vm")
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderOperations.vm")
+
+        Aws::String GeneratePresignedUrl(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+
+        Aws::String GeneratePresignedUrl(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Http::HeaderValueCollection& customizedHeaders, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+
+        /**
+         * Server Side Encryption Headers and Algorithm
+         * Method    Algorithm    Required Headers
+         * SSE-S3    AES256       x-amz-server-side-encryption:AES256
+         * SSE-KMS   aws:kms      x-amz-server-side--encryption:aws:kms, x-amz-server-side-encryption-aws-kms-key-id:<kmsMasterKeyId>
+         * SS3-C     AES256       x-amz-server-side-encryption-customer-algorithm:AES256, x-amz-server-side-encryption-customer-key:<base64EncodedKey>, x-amz-server-side-encryption-customer-key-MD5:<Base64EncodedMD5ofNonBase64EncodedKey>
+         */
+        /**
+         * Generate presigned URL with Sever Side Encryption(SSE) and with S3 managed keys.
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: AES256)
+         */
+        Aws::String GeneratePresignedUrlWithSSES3(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+        /**
+         * Generate presigned URL with Sever Side Encryption(SSE) and with S3 managed keys.
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: AES256)
+         * Header: "x-amz-server-side-encryption" will be added internally, don't customize it.
+         */
+        Aws::String GeneratePresignedUrlWithSSES3(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+
+        /**
+         * Generate presigned URL with Server Side Encryption(SSE) and with KMS master key id.
+         * if kmsMasterKeyId is empty, we will end up use the default one generated by KMS for you. You can find it via AWS IAM console, it's the one aliased as "aws/s3".
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: aws:kms)
+         */
+        Aws::String GeneratePresignedUrlWithSSEKMS(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Aws::String& kmsMasterKeyId = "", long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+        /**
+         * Generate presigned URL with Server Side Encryption(SSE) and with KMS master key id.
+         * if kmsMasterKeyId is empty, we will end up use the default one generated by KMS for you. You can find it via AWS IAM console, it's the one aliased as "aws/s3".
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: aws:kms)
+         * Headers: "x-amz-server-side-encryption" and "x-amz-server-side-encryption-aws-kms-key-id" will be added internally, don't customize them.
+         */
+        Aws::String GeneratePresignedUrlWithSSEKMS(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, const Aws::String& kmsMasterKeyId = "", long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+
+        /**
+         * Generate presigned URL with Sever Side Encryption(SSE) and with customer supplied Key.
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: AES256)
+         */
+        Aws::String GeneratePresignedUrlWithSSEC(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Aws::String& base64EncodedAES256Key, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+        /**
+         * Generate presigned URL with Sever Side Encryption(SSE) and with customer supplied Key.
+         * https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html (algo: AES256)
+         * Headers: "x-amz-server-side-encryption-customer-algorithm","x-amz-server-side-encryption-customer-key" and "x-amz-server-side-encryption-customer-key-MD5" will be added internally, don't customize them.
+         */
+        Aws::String GeneratePresignedUrlWithSSEC(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, const Aws::String& base64EncodedAES256Key, long long expirationInSeconds = MAX_EXPIRATION_SECONDS);
+
+
+        virtual bool MultipartUploadSupported() const;
+
+    private:
+        void init(const Client::ClientConfiguration& clientConfiguration);
+        Aws::String ComputeEndpointString(const Aws::String& bucket) const;
+        Aws::String ComputeEndpointString() const;
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientHeaderAsyncHelpers.vm")
+
+        Aws::String m_baseUri;
+        Aws::String m_scheme;
+        std::shared_ptr<Utils::Threading::Executor> m_executor;
+        bool m_useVirtualAdressing;
+    };
+
+  } // namespace ${metadata.namespace}
+} // namespace Aws

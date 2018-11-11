@@ -1,0 +1,56 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${typeInfo.className}.h>
+\#include <aws/core/utils/json/JsonSerializer.h>
+#foreach($header in $typeInfo.sourceIncludes)
+\#include $header
+#end
+
+\#include <utility>
+
+using namespace Aws::Utils::Json;
+using namespace Aws::Utils;
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+namespace Model
+{
+
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersGenerateInitializers.vm")
+${typeInfo.className}::${typeInfo.className}()$initializers
+{
+}
+
+${typeInfo.className}::${typeInfo.className}(JsonView jsonValue)$initializers
+{
+  *this = jsonValue;
+}
+
+${typeInfo.className}& ${typeInfo.className}::operator =(JsonView jsonValue)
+{
+#if($shape.members.size() == 0)
+  AWS_UNREFERENCED_PARAM(jsonValue);
+#end
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/json/ModelClassMembersDeserializeJson.vm")
+  return *this;
+}
+
+JsonValue ${typeInfo.className}::Jsonize() const
+{
+  JsonValue payload;
+
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/json/ModelClassMembersJsonizeSource.vm")
+  return payload;
+}
+
+} // namespace Model
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

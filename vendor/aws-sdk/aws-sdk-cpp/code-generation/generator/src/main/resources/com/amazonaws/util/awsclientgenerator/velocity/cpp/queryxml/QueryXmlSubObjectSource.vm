@@ -1,0 +1,323 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${typeInfo.className}.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+\#include <aws/core/utils/StringUtils.h>
+\#include <aws/core/utils/memory/stl/AWSStringStream.h>
+#foreach($header in $typeInfo.sourceIncludes)
+\#include $header
+#end
+
+\#include <utility>
+
+using namespace Aws::Utils::Xml;
+using namespace Aws::Utils;
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+namespace Model
+{
+
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersGenerateInitializers.vm")
+${typeInfo.className}::${typeInfo.className}()$initializers
+{
+}
+
+${typeInfo.className}::${typeInfo.className}(const XmlNode& xmlNode)$initializers
+{
+  *this = xmlNode;
+}
+
+${typeInfo.className}& ${typeInfo.className}::operator =(const XmlNode& xmlNode)
+{
+  XmlNode resultNode = xmlNode;
+
+  if(!resultNode.IsNull())
+  {
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/xml/ModelClassMembersDeserializeXml.vm")
+  }
+
+  return *this;
+}
+
+void ${typeInfo.className}::OutputToStream(Aws::OStream& oStream, const char* location, unsigned index, const char* locationValue) const
+{
+#foreach($entry in $shape.members.entrySet())
+#set($memberName = $entry.key)
+#set($member = $entry.value)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($memberName))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberName))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($memberName))
+#set($spaces = "")
+#if(!$member.required)
+  if($varNameHasBeenSet)
+  {
+#set($spaces = "    ")
+#end
+#if($member.shape.structure)
+  ${spaces}Aws::StringStream ${lowerCaseVarName}LocationAndMemberSs;
+  ${spaces}${lowerCaseVarName}LocationAndMemberSs << location << index << locationValue << ".${memberName}";
+  ${spaces}${memberVarName}.OutputToStream(oStream, ${lowerCaseVarName}LocationAndMemberSs.str().c_str());
+#elseif($member.shape.string)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}.c_str()) << "&";
+#elseif($member.shape.timeStamp)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.blob)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << StringUtils::URLEncode(HashingUtils::Base64Encode(${memberVarName}).c_str()) << "&";
+#elseif($member.shape.double)
+    ${spaces}oStream << location << index << locationValue << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}) << "&";
+#elseif($member.shape.boolean)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << std::boolalpha << ${memberVarName} << "&";
+#elseif($member.shape.primitive)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << ${memberVarName} << "&";
+#elseif($member.shape.enum)
+  ${spaces}oStream << location << index << locationValue << ".${memberName}=" << ${member.shape.name}Mapper::GetNameFor${member.shape.name}(${memberVarName}) << "&";
+#elseif($member.shape.list)
+  ${spaces}unsigned ${lowerCaseVarName}Idx = 1;
+  ${spaces}for(auto& item : ${memberVarName})
+  ${spaces}{
+#if($metadata.protocol == "ec2")
+#if($member.queryName)
+#set($location = $member.queryName)
+#elseif($member.locationName)
+#set($location = $CppViewHelper.capitalizeFirstChar($member.locationName))
+#else
+#set($location = $memberName)
+#end
+#else
+#if($member.shape.listMember.locationName)
+#set($location = $member.shape.listMember.locationName)
+#else
+#set($location = $memberName + ".member")
+#end
+#end
+#if($member.shape.listMember.shape.structure)
+  ${spaces}  Aws::StringStream ${lowerCaseVarName}Ss;
+  ${spaces}  ${lowerCaseVarName}Ss << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++;
+  ${spaces}  item.OutputToStream(oStream, ${lowerCaseVarName}Ss.str().c_str());
+#elseif($member.shape.listMember.shape.string)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item.c_str()) << "&";
+#elseif($member.shape.listMember.shape.timeStamp)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.listMember.shape.blob)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(HashingUtils::Base64Encode(item).c_str()) << "&";
+#elseif($member.shape.listMember.shape.double)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item) << "&";
+#elseif($member.shape.listMember.shape.boolean)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << std::boolalpha << item << "&";
+#elseif($member.shape.listMember.shape.primitive)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << item << "&";
+#elseif($member.shape.listMember.shape.enum)
+  ${spaces}  oStream << location << index << locationValue << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << ${member.shape.listMember.shape.name}Mapper::GetNameFor${member.shape.listMember.shape.name}(item) << "&";
+#end
+  ${spaces}}
+#elseif($member.shape.map)
+#if($member.locationName)
+#set($mapLocationName = $member.locationName)
+#else
+#set($mapLocationName = $memberName + ".entry")
+#end
+#if($member.shape.mapKey.locationName)
+#set($mapKeyLocationName = $member.shape.mapKey.locationName)
+#else
+#set($mapKeyLocationName = "key")
+#end
+#if($member.shape.mapValue.locationName)
+#set($mapValueLocationName = $member.shape.mapValue.locationName)
+#else
+#set($mapValueLocationName = "value")
+#end
+  ${spaces}unsigned ${lowerCaseVarName}Idx = 1;
+  ${spaces}for(auto& item : ${memberVarName})
+  ${spaces}{
+  ${spaces}  oStream << location << index << locationValue << ".${mapLocationName}." << ${lowerCaseVarName}Idx << ".${mapKeyLocationName}="
+#if($member.shape.mapKey.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.first.c_str()) << "&";
+#elseif($member.shape.mapKey.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.first.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.mapKey.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.shape.mapKey.shape.name}Mapper::GetNameFor${member.shape.mapKey.shape.name}(item.first).c_str()) << "&";
+#elseif($member.shape.mapKey.shape.structure)
+  ${spaces}  item.first.OutputToStream(oStream, "${mapLocationName}.", ${lowerCaseVarName}Idx, ".${mapKeyLocationName}");
+#elseif($member.shape.mapKey.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item.first) << "&";
+#elseif($member.shape.mapKey.shape.boolean)
+  ${spaces}      << std::boolalpha << item.first << "&";
+#else
+  ${spaces}      << item.first << "&";
+#end
+#if(!$member.shape.mapValue.shape.structure)
+  ${spaces}  oStream << location << index << locationValue << ".${mapLocationName}." << ${lowerCaseVarName}Idx << ".${mapValueLocationName}="
+#end
+#if($member.shape.mapValue.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.second.c_str()) << "&";
+#elseif($member.shape.mapValue.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.second.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.mapValue.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.shape.mapValue.shape.name}Mapper::GetNameFor${member.shape.mapValue.shape.name}(item.second).c_str()) << "&";
+#elseif($member.shape.mapValue.shape.structure)
+  ${spaces}  Aws::StringStream ${lowerCaseVarName}Ss;
+  ${spaces}  ${lowerCaseVarName}Ss << location << index << locationValue << ".${mapLocationName}." << ${lowerCaseVarName}Idx << ".${mapValueLocationName}";
+  ${spaces}  item.second.OutputToStream(oStream, ${lowerCaseVarName}Ss.str().c_str());
+#elseif($member.shape.mapValue.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item.second) << "&";
+#elseif($member.shape.mapValue.shape.boolean)
+  ${spaces}      << std::boolalpha << item.second << "&";
+#else
+  ${spaces}      << item.second << "&";
+#end
+  ${spaces}  ${lowerCaseVarName}Idx++;
+  ${spaces}}
+#end
+#if(!$member.required)
+  }
+
+#end
+#end
+}
+
+void ${typeInfo.className}::OutputToStream(Aws::OStream& oStream, const char* location) const
+{
+#foreach($entry in $shape.members.entrySet())
+#set($memberName = $entry.key)
+#set($member = $entry.value)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($memberName))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberName))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($memberName))
+#set($spaces = "")
+#if(!$member.required)
+  if($varNameHasBeenSet)
+  {
+#set($spaces = "    ")
+#end
+#if($member.shape.structure)
+  ${spaces}Aws::String ${lowerCaseVarName}LocationAndMember(location);
+  ${spaces}${lowerCaseVarName}LocationAndMember += ".${memberName}";
+  ${spaces}${memberVarName}.OutputToStream(oStream, ${lowerCaseVarName}LocationAndMember.c_str());
+#elseif($member.shape.string)
+  ${spaces}oStream << location << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}.c_str()) << "&";
+#elseif($member.shape.timeStamp)
+  ${spaces}oStream << location << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.blob)
+  ${spaces}oStream << location << ".${memberName}=" << StringUtils::URLEncode(HashingUtils::Base64Encode(${memberVarName}).c_str()) << "&";
+#elseif($member.shape.double)
+    ${spaces}oStream << location << ".${memberName}=" << StringUtils::URLEncode(${memberVarName}) << "&";
+#elseif($member.shape.boolean)
+  ${spaces}oStream << location << ".${memberName}=" << std::boolalpha << ${memberVarName} << "&";
+#elseif($member.shape.primitive)
+  ${spaces}oStream << location << ".${memberName}=" << ${memberVarName} << "&";
+#elseif($member.shape.enum)
+  ${spaces}oStream << location << ".${memberName}=" << ${member.shape.name}Mapper::GetNameFor${member.shape.name}(${memberVarName}) << "&";
+#elseif($member.shape.list)
+  ${spaces}unsigned ${lowerCaseVarName}Idx = 1;
+  ${spaces}for(auto& item : ${memberVarName})
+  ${spaces}{
+#if($member.queryName)
+#set($location = $member.queryName)
+#elseif($member.locationName)
+#set($location = $CppViewHelper.capitalizeFirstChar($member.locationName))
+#elseif($member.shape.listMember.queryName)
+#set($location = $member.shape.listMember.queryName)
+#elseif($member.shape.listMember.locationName)
+#set($location = $member.shape.listMember.locationName)
+#if($metadata.protocol == "ec2")
+#set($location = $CppViewHelper.capitalizeFirstChar($location))
+#end
+#elseif($metadata.protocol == "ec2")
+#set($location = $memberName)
+#else
+#set($location = $memberName + ".member")
+#end
+#if($member.shape.listMember.shape.structure)
+  ${spaces}  Aws::StringStream ${lowerCaseVarName}Ss;
+  ${spaces}  ${lowerCaseVarName}Ss << location <<  ".${location}." << ${lowerCaseVarName}Idx++;
+  ${spaces}  item.OutputToStream(oStream, ${lowerCaseVarName}Ss.str().c_str());
+#elseif($member.shape.listMember.shape.string)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item.c_str()) << "&";
+#elseif($member.shape.listMember.shape.timeStamp)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.listMember.shape.blob)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(HashingUtils::Base64Encode(item).c_str()) << "&";
+#elseif($member.shape.listMember.shape.double)
+    ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << StringUtils::URLEncode(item) << "&";
+#elseif($member.shape.listMember.shape.boolean)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << std::boolalpha << item << "&";
+#elseif($member.shape.listMember.shape.primitive)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << item << "&";
+#elseif($member.shape.listMember.shape.enum)
+  ${spaces}  oStream << location << ".${location}." << ${lowerCaseVarName}Idx++ << "=" << ${member.shape.listMember.shape.name}Mapper::GetNameFor${member.shape.listMember.shape.name}(item) << "&";
+#end
+  ${spaces}}
+#elseif($member.shape.map)
+#if($member.locationName)
+#set($mapLocationName = $member.locationName)
+#else
+#set($mapLocationName = $memberName + ".entry")
+#end
+#if($member.shape.mapKey.locationName)
+#set($mapKeyLocationName = $member.shape.mapKey.locationName)
+#else
+#set($mapKeyLocationName = "key")
+#end
+#if($member.shape.mapValue.locationName)
+#set($mapValueLocationName = $member.shape.mapValue.locationName)
+#else
+#set($mapValueLocationName = "value")
+#end
+  ${spaces}unsigned ${lowerCaseVarName}Idx = 1;
+  ${spaces}for(auto& item : ${memberVarName})
+  ${spaces}{
+  ${spaces}  oStream << location << ".${mapLocationName}."  << ${lowerCaseVarName}Idx << ".${mapKeyLocationName}="
+#if($member.shape.mapKey.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.first.c_str()) << "&";
+#elseif($member.shape.mapKey.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.first.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.mapKey.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.shape.mapKey.shape.name}Mapper::GetNameFor${member.shape.mapKey.shape.name}(item.first).c_str()) << "&";
+#elseif($member.shape.mapKey.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item.first) << "&";
+#elseif($member.shape.mapKey.shape.boolean)
+  ${spaces}      << std::boolalpha << item.first << "&";
+#else
+  ${spaces}      << item.first << "&";
+#end
+#if(!$member.shape.mapValue.shape.structure)
+  ${spaces}  oStream << location <<  ".${mapLocationName}." << ${lowerCaseVarName}Idx << ".${mapValueLocationName}="
+#end
+#if($member.shape.mapValue.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.second.c_str()) << "&";
+#elseif($member.shape.mapValue.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.second.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.shape.mapValue.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.shape.mapValue.shape.name}Mapper::GetNameFor${member.shape.mapValue.shape.name}(item.second).c_str()) << "&";
+#elseif($member.shape.mapValue.shape.structure)
+  ${spaces}  Aws::StringStream ${lowerCaseVarName}Ss;
+  ${spaces}  ${lowerCaseVarName}Ss << location << ".${mapLocationName}." << ${lowerCaseVarName}Idx << ".${mapValueLocationName}";
+  ${spaces}  item.second.OutputToStream(oStream, ${lowerCaseVarName}Ss.str().c_str());
+#elseif($member.shape.mapValue.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item.second) << "&";
+#elseif($member.shape.mapValue.shape.boolean)
+  ${spaces}      << std::boolalpha << item.second << "&";
+#else
+  ${spaces}      << item.second << "&";
+#end
+  ${spaces}  ${lowerCaseVarName}Idx++;
+  ${spaces}}
+
+#end
+#if(!$member.required)
+  }
+#end
+#end
+}
+
+} // namespace Model
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

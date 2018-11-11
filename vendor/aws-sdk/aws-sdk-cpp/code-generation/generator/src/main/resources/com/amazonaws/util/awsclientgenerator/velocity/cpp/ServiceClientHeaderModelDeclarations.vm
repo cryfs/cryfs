@@ -1,0 +1,17 @@
+#foreach($operation in $serviceModel.operations)
+#if($operation.request)
+        class ${operation.request.shape.name};
+#end
+#end
+
+#foreach($operation in $serviceModel.operations)
+#if($operation.result)
+        typedef Aws::Utils::Outcome<${operation.result.shape.name}, Aws::Client::AWSError<${metadata.classNamePrefix}Errors>> ${operation.name}Outcome;
+#else
+        typedef Aws::Utils::Outcome<Aws::NoResult, Aws::Client::AWSError<${metadata.classNamePrefix}Errors>> ${operation.name}Outcome;
+#end
+#end
+
+#foreach($operation in $serviceModel.operations)
+        typedef std::future<${operation.name}Outcome> ${operation.name}OutcomeCallable;
+#end

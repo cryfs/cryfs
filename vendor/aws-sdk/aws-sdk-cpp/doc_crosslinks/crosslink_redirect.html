@@ -1,0 +1,112 @@
+<DOCTYPE HTML>
+<html lang="en-US">
+    <head>
+        <meta charset="UTF-8">
+        <script type="text/javascript">
+        
+            var uidServiceData = '${UID_SERVICE_MAPPING}';
+            
+            var uidToServiceName = JSON.parse(uidServiceData);            
+            
+            var baseUri = "LATEST/";
+            
+            function getQueryStringParameter(name, url) {
+                
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+                name = name.replace(/[\[\]]/g, "\\$&");
+                
+                results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+            }
+            
+            function escapeCharacters(toEscape) {
+                var escapedString = "";
+                
+                for(var i = 0; i < toEscape.length; ++i) {
+                    var character = toEscape.charAt(i);
+                    if(character != character.toLowerCase()) {
+                        escapedString += '_' + character.toLowerCase();
+                    }
+                    else if(character == ':') {
+                        escapadString += "_1";
+                    }
+                    else {
+                        escapedString += character;
+                    }
+                }
+                
+                return escapedString;
+            }
+            
+            function transformRequestToDoxygenLink(url, typeName, operation) {                
+                var uid = getQueryStringParameter("uid", url);                
+                
+                var serviceName = uidToServiceName[uid];
+                
+                if(serviceName == null) {
+                    return baseUri;
+                }
+                
+                var dirtyName = "class_aws_1_1_";
+                dirtyName += serviceName.charAt(0).toLowerCase() + serviceName.substring(1);
+                
+                if(typeName != null) {                    
+                    dirtyName += "_1_1_model_1_1_";
+                    var firstCharLowered = typeName.charAt(0).toLowerCase() + typeName.substring(1);
+                    var operationCanonicalizedStr = firstCharLowered.replace("Input", "Request").replace("Output", "Result");
+                    
+                    dirtyName += operationCanonicalizedStr;
+                }
+                else if(operation != null) {
+                    dirtyName += "_1_1_";
+                    var firstCharLowered = serviceName.charAt(0).toLowerCase() + serviceName.substring(1);
+                    dirtyName += firstCharLowered;
+                    dirtyName += "_client";
+                    //once we figure out the operation link, add the #stuff here:
+                    //dirtyName += "#operationName";
+                }
+                
+                dirtyName += ".html";
+                return baseUri + escapeCharacters(dirtyName);
+            }
+            
+            function checkResourceExists(url) {  
+                try {
+                    var xmlHttp = new XMLHttpRequest();
+                    xmlHttp.open( "GET", url, false );
+                    xmlHttp.send( null );
+                    return xmlHttp.status == 200;
+                }
+                catch(err) {
+                    return false;
+                }
+            }
+            
+            var url = window.location.href;
+            var typeName = getQueryStringParameter("type", url);
+            var operation = getQueryStringParameter("operation", url);
+            var firstAttempt = transformRequestToDoxygenLink(url, typeName, operation);
+            
+            //if the first one exists, load that one.
+            if(checkResourceExists(firstAttempt)){
+                window.location.href = firstAttempt;
+            } 
+            //otherwise, try and swap operation and typename.
+            else {
+                var secondAttempt = transformRequestToDoxygenLink(url, operation, typeName)
+                //if that fails, fall back to the default page.
+                if(checkResourceExists(secondAttempt)){
+                    window.location.href = secondAttempt;
+                }
+                else {
+                    window.location.href = baseUri + "index.html";
+                }
+            }
+            
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

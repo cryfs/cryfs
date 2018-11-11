@@ -1,0 +1,87 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($className = "${metadata.classNamePrefix}Client")
+\#include <aws/core/utils/Outcome.h>
+\#include <aws/core/auth/AWSAuthSigner.h>
+\#include <aws/core/client/CoreErrors.h>
+\#include <aws/core/client/RetryStrategy.h>
+\#include <aws/core/http/HttpClient.h>
+\#include <aws/core/http/HttpResponse.h>
+\#include <aws/core/http/HttpClientFactory.h>
+\#include <aws/core/auth/AWSCredentialsProviderChain.h>
+\#include <aws/core/utils/xml/XmlSerializer.h>
+\#include <aws/core/utils/memory/stl/AWSStringStream.h>
+\#include <aws/core/utils/threading/Executor.h>
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientSourceHeaders.vm")
+
+using namespace Aws;
+using namespace Aws::Auth;
+using namespace Aws::Client;
+using namespace Aws::${metadata.namespace};
+using namespace Aws::${metadata.namespace}::Model;
+using namespace Aws::Http;
+using namespace Aws::Utils::Xml;
+
+
+static const char* SERVICE_NAME = "${metadata.signingName}";
+static const char* ALLOCATION_TAG = "${className}";
+
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ServiceClientSourceInit.vm")
+
+#foreach($operation in $serviceModel.operations)
+${operation.name}Outcome ${className}::${operation.name}(const ${operation.request.shape.name}& request) const
+{
+#if($operation.name == "CreateQueue" || $operation.name == "ListQueues" || $operation.name == "GetQueueUrl")
+
+  Aws::StringStream ss;
+#set($uriParts = $operation.http.requestUriParts)
+#set($uriVars = $operation.http.requestParameters)
+#set($partIndex = 1)
+  ss << m_uri << "${uriParts.get(0)}";
+#foreach($var in $uriVars)
+#set($varIndex = $partIndex - 1)
+  ss << request.Get${CppViewHelper.convertToUpperCamel($uriVars.get($varIndex))}();
+#if($uriParts.size() > $partIndex)
+  ss << "${uriParts.get($partIndex)}";
+#end
+#set($partIndex = $partIndex + 1)
+#end
+
+  XmlOutcome outcome = MakeRequest(ss.str(), request, HttpMethod::HTTP_${operation.http.method});
+#else
+  XmlOutcome outcome = MakeRequest(request.GetQueueUrl(), request, HttpMethod::HTTP_${operation.http.method});
+#end
+  if(outcome.IsSuccess())
+  {
+#if(${operation.result})
+    return ${operation.name}Outcome(${operation.result.shape.name}(outcome.GetResult()));
+#else
+    return ${operation.name}Outcome(NoResult());
+#end
+  }
+  else
+  {
+    return ${operation.name}Outcome(outcome.GetError());
+  }
+}
+
+${operation.name}OutcomeCallable ${className}::${operation.name}Callable(const ${operation.request.shape.name}& request) const
+{
+  auto task = Aws::MakeShared< std::packaged_task< ${operation.name}Outcome() > >(ALLOCATION_TAG, [this, request](){ return this->${operation.name}(request); } );
+  auto packagedFunction = [task]() { (*task)(); };
+  m_executor->Submit(packagedFunction);
+  return task->get_future();
+}
+
+void ${className}::${operation.name}Async(const ${operation.request.shape.name}& request, const ${operation.name}ResponseReceivedHandler& handler, const std::shared_ptr<const Aws::Client::AsyncCallerContext>& context) const
+{
+  m_executor->Submit( [this, request, handler, context](){ this->${operation.name}AsyncHelper(request, handler, context); } );
+}
+
+void ${className}::${operation.name}AsyncHelper(const ${operation.request.shape.name}& request, const ${operation.name}ResponseReceivedHandler& handler, const std::shared_ptr<const Aws::Client::AsyncCallerContext>& context) const
+{
+  handler(this, request, ${operation.name}(request), context);
+}
+
+#end

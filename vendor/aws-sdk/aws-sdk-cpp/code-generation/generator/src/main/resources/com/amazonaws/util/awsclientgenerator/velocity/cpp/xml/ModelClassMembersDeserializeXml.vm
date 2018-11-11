@@ -1,0 +1,170 @@
+#foreach($entry in $shape.members.entrySet())##loop over member in this shape
+#set($listVarName = false)
+#set($listMemberName = false)
+#set($mapVarName = false)
+#if($entry.value.usedForPayload)##is the member something that actually goes into the xml payload
+#if($entry.key != "ResponseMetadata")##don't include responsemetadata member here.
+#set($spaces = '')
+#set($memberName = $entry.key)
+#set($member = $entry.value)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($memberName))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberName))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($memberName))
+#if($memberName == $shape.payload)##member is the whole payload (not wrapped)
+#if($member.shape.structure)
+    $memberVarName = resultNode;
+#break
+#end
+#set($memberIsWholePayload = true)
+#end
+#if($member.shape.list)##member is list
+#if($memberIsWholePayload)
+#set($listVarName = $CppViewHelper.computeVariableName($memberName) + "Member")
+    XmlNode ${listVarName} = resultNode;
+#else
+#if($member.shape.flattened || $member.flattened)##list member uses flattened serialization
+#if($member.locationName)
+#set($listVarName = $CppViewHelper.computeVariableName($member.locationName) + "Member")
+#set($listMemberName = $member.locationName)
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${listMemberName}");
+#elseif($member.shape.listMember.locationName)##a location is specified for the serilization member
+#set($listVarName = $CppViewHelper.computeVariableName($member.shape.listMember.locationName) + "Member")
+#set($listMemberName = $member.shape.listMember.locationName)
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${listMemberName}");
+#else##no location specified.
+#set($listVarName = $CppViewHelper.computeVariableName($memberName) + "Member")
+#set($listMemberName = $memberName)
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${listMemberName}");
+#end##a location is specified for the serilization member
+#else##list member does not use flattened serialization
+#if($member.shape.listMember.locationName)##location specified in model
+#set($listVarName = $lowerCaseVarName + "Member")
+#set($listMemberName = $member.shape.listMember.locationName)
+#else##no location specified
+#set($listVarName = $CppViewHelper.computeVariableName($memberName) + "Member")
+#set($listMemberName = "member")
+#end##location specified in model
+#if($member.locationName)##location specified
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${member.locationName}");
+#else##no location specified
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${memberName}");
+#end##
+#end##list member uses flattened serialization
+#end##member is whole payload
+#elseif($member.shape.map)##member is a map
+#if($member.locationName)##member uses location for serialization
+#set($mapVarName = $CppViewHelper.computeVariableName($member.locationName) + "Entry")
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${member.locationName}");
+#else##no location specified
+#set($mapVarName = $CppViewHelper.computeVariableName($memberName) + "Entry")
+#if($memberIsWholePayload)##member is whole payload
+    XmlNode ${lowerCaseVarName}Node = resultNode;
+#else
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${memberName}");
+#end##member is whole payload
+
+#end##member uses location for serialization
+#else##this is not a map or a list
+#if($member.locationName)##location specified
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${member.locationName}");
+#else##no location specified
+    XmlNode ${lowerCaseVarName}Node = resultNode.FirstChild("${memberName}");
+#end##this is not a map or a list
+#end##member is list
+#set($spaces = '  ')
+    if(!${lowerCaseVarName}Node.IsNull())
+    {
+#if($listVarName && !$memberIsWholePayload)
+#if($member.shape.flattened || $member.flattened)
+    ${spaces}XmlNode ${listVarName} = ${lowerCaseVarName}Node;
+#else
+    ${spaces}XmlNode ${listVarName} = ${lowerCaseVarName}Node.FirstChild("${listMemberName}");
+#end
+#elseif($mapVarName)
+#if($member.locationName)
+    ${spaces}XmlNode ${mapVarName} = ${lowerCaseVarName}Node;
+#else
+    ${spaces}XmlNode ${mapVarName} = ${lowerCaseVarName}Node.FirstChild("entry");
+#end
+#end
+#if($member.shape.enum)
+    ${spaces}${memberVarName} = ${member.shape.name}Mapper::Get${member.shape.name}ForName(StringUtils::Trim(${lowerCaseVarName}Node.GetText().c_str()).c_str());
+#elseif($member.shape.map)
+    ${spaces}while(!${mapVarName}.IsNull())
+    ${spaces}{
+#if($member.locationName)
+    ${spaces}  XmlNode keyNode = ${mapVarName}.FirstChild("${member.shape.mapKey.locationName}");
+    ${spaces}  XmlNode valueNode = ${mapVarName}.FirstChild("${member.shape.mapValue.locationName}");
+#else
+    ${spaces}  XmlNode keyNode = ${mapVarName}.FirstChild("key");
+    ${spaces}  XmlNode valueNode = ${mapVarName}.FirstChild("value");
+#end
+#if($member.shape.mapKey.shape.enum)
+    ${spaces}  ${memberVarName}[${member.shape.mapKey.shape.name}Mapper::Get${member.shape.mapKey.shape.name}ForName(StringUtils::Trim(keyNode.GetText().c_str()))] =
+#else
+    ${spaces}  ${memberVarName}[StringUtils::Trim(keyNode.GetText().c_str())] =
+#end
+#if($member.shape.mapValue.shape.structure)
+    ${spaces}      valueNode;
+#elseif($member.shape.mapValue.shape.string)
+    ${spaces}      StringUtils::Trim(valueNode.GetText().c_str());
+#elseif($member.shape.mapValue.shape.timeStamp)
+    ${spaces}      DateTime(StringUtils::Trim(valueNode.GetText().c_str()).c_str(), DateFormat::ISO_8601);
+#elseif($member.shape.mapValue.shape.enum)
+    ${spaces}      ${member.shape.mapValue.shape.name}Mapper::Get${member.shape.mapValue.shape.name}ForName(StringUtils::Trim(valueNode.GetText().c_str()));
+#elseif($member.shape.mapValue.shape.primitive)
+    ${spaces}     ${CppViewHelper.computeXmlConversionMethodName($member.shape.mapValue.shape)}(StringUtils::Trim(valueNode.GetText().c_str()).c_str());
+#end
+#if($member.locationName)
+    ${spaces}  ${mapVarName} = ${mapVarName}.NextNode("${member.locationName}");
+#else
+    ${spaces}  ${mapVarName} = ${mapVarName}.NextNode("entry");
+#end
+    ${spaces}}
+
+#elseif($member.shape.list)
+    ${spaces}while(!${listVarName}.IsNull())
+    ${spaces}{
+#if($member.shape.listMember.shape.enum)
+    ${spaces}  ${memberVarName}.push_back(${member.shape.listMember.shape.name}Mapper::Get${member.shape.listMember.shape.name}ForName(StringUtils::Trim(${listVarName}.GetText().c_str())));
+#elseif($member.shape.listMember.shape.structure)
+    ${spaces}  ${memberVarName}.push_back(${listVarName});
+#elseif($member.shape.listMember.shape.string)
+    ${spaces}  ${memberVarName}.push_back(StringUtils::Trim(${listVarName}.GetText().c_str()));
+#elseif($member.shape.listMember.shape.timeStamp)
+    ${spaces}  ${memberVarName}.push_back(DateTime(StringUtils::Trim(${listVarName}.GetText().c_str()).c_str(), DateFormat::ISO_8601));
+#elseif($member.shape.listMember.shape.primitive)
+    ${spaces}   ${memberVarName}.push_back(${CppViewHelper.computeXmlConversionMethodName($member.shape.listMember.shape)}(StringUtils::Trim(${listVarName}.GetText().c_str()).c_str()));
+#end
+#if($member.shape.listMember.locationName)
+#set($listMemberName = $member.shape.listMember.locationName)
+#elseif(!($member.shape.flattened || $member.flattened))
+#set($listMemberName = "member")
+#else
+#if($member.locationName)
+#set($listMemberName = $member.locationName)
+#else
+#set($listMemberName = $memberName)
+#end
+#end
+    ${spaces}  ${listVarName} = ${listVarName}.NextNode("${listMemberName}");
+    ${spaces}}
+
+#elseif($member.shape.blob)
+    ${spaces}${memberVarName} = HashingUtils::Base64Decode(StringUtils::Trim(${lowerCaseVarName}Node.GetText().c_str()));
+#elseif($member.shape.primitive)
+    ${spaces}${memberVarName} = ${CppViewHelper.computeXmlConversionMethodName($member.shape)}(StringUtils::Trim(${lowerCaseVarName}Node.GetText().c_str()).c_str());
+#elseif($member.shape.structure)
+    ${spaces}${memberVarName} = ${lowerCaseVarName}Node;
+#elseif($member.shape.string)
+    ${spaces}${memberVarName} = StringUtils::Trim(${lowerCaseVarName}Node.GetText().c_str());
+#elseif($member.shape.timeStamp)
+    ${spaces}${memberVarName} = DateTime(StringUtils::Trim(${lowerCaseVarName}Node.GetText().c_str()).c_str(), DateFormat::ISO_8601);
+#end
+#if(!$member.required && $useRequiredField)
+      $varNameHasBeenSet = true;
+#end
+    }
+#end##don't include responsemetadata member here.
+#end##is the member something that actually goes into the xml payload
+#end##loop over member in this shape

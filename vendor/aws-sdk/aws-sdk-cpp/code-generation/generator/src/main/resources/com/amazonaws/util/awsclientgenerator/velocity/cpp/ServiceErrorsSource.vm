@@ -1,0 +1,94 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/core/client/AWSError.h>
+\#include <aws/core/utils/HashingUtils.h>
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}Errors.h>
+#if($serviceModel.serviceErrors.size() == 0)
+\#include <aws/core/utils/UnreferencedParam.h>
+#end
+
+using namespace Aws::Client;
+using namespace ${rootNamespace}::${serviceNamespace};
+using namespace Aws::Utils;
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+namespace ${metadata.classNamePrefix}ErrorMapper
+{
+
+#foreach($error in $serviceModel.serviceErrors)
+#set($constName = ${ErrorFormatter.formatErrorConstName($error.name)})
+static const int ${constName}_HASH = HashingUtils::HashString("${error.text}");
+#end
+
+#if ($serviceModel.serviceErrors.size() > 121)
+
+/*
+The if-else chains in this file are converted into a jump table by the compiler,
+which allows constant time lookup. The chain has been broken into helper functions
+because MSVC has a maximum of 122 chained if-else blocks.
+*/
+#set ($errorCounter = 0)
+#foreach($error in $serviceModel.serviceErrors)
+#if ($errorCounter % 122 == 0)
+#set($elseText = "")
+#set ($helperIndex =  $errorCounter / 122)
+
+static bool GetErrorForNameHelper${helperIndex}(int hashCode, AWSError<CoreErrors>& error)
+{
+#end
+#set($constName = ${ErrorFormatter.formatErrorConstName($error.name)})
+  ${elseText}if (hashCode == ${constName}_HASH)
+  {
+    error = AWSError<CoreErrors>(static_cast<CoreErrors>(${metadata.classNamePrefix}Errors::$constName), ${error.retryable});
+    return true;
+  }
+#set($elseText = "else ")
+#set ($errorCounter = $errorCounter + 1)
+#if ($errorCounter % 122 == 0 || $errorCounter == $serviceModel.serviceErrors.size())
+  return false;
+}
+#end
+#end
+#end
+
+#set($elseText = "")
+AWSError<CoreErrors> GetErrorForName(const char* errorName)
+{
+#if($serviceModel.serviceErrors.size() > 0 && $serviceModel.serviceErrors.size() < 122)
+  int hashCode = HashingUtils::HashString(errorName);
+
+#foreach($error in $serviceModel.serviceErrors)
+#set($constName = ${ErrorFormatter.formatErrorConstName($error.name)})
+  ${elseText}if (hashCode == ${constName}_HASH)
+  {
+    return AWSError<CoreErrors>(static_cast<CoreErrors>(${metadata.classNamePrefix}Errors::$constName), ${error.retryable});
+  }
+#set($elseText = "else ")
+#end
+#elseif ($serviceModel.serviceErrors.size() > 121)
+#set($elseText = "")
+  int hashCode = HashingUtils::HashString(errorName);
+  AWSError<CoreErrors> error;
+#set($maxHelperIndex = $serviceModel.serviceErrors.size() / 122)
+#foreach($helperIndex in [0..$maxHelperIndex])
+  ${elseText}if (GetErrorForNameHelper${helperIndex}(hashCode, error))
+  {
+    return error;
+  }
+#set($elseText = "else ")
+#end
+#else
+  AWS_UNREFERENCED_PARAM(errorName);
+#end
+  return AWSError<CoreErrors>(CoreErrors::UNKNOWN, false);
+}
+
+} // namespace ${metadata.classNamePrefix}ErrorMapper
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

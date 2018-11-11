@@ -1,0 +1,51 @@
+##All this does is set the initializer list
+#set($initializers = "")
+#set($initializerCount = 0)
+#foreach($entry in $shape.members.entrySet())
+#set($memberShape = $entry.value.shape)
+#if($memberShape.primitive || $memberShape.enum || $entry.value.idempotencyToken)
+#set($initializerCount = $initializerCount + 1)
+#end
+#set($isStreamingMember = ($shape.payload && ($shape.payload == $entry.key && !$entry.value.shape.structure)))
+#if(!$entry.value.required && $useRequiredField && !$isStreamingMember)
+#set($initializerCount = $initializerCount + 1)
+#end
+#end
+#if($initializerCount > 0)
+#set($initializers = "${initializers} : ")
+#end
+#set($index = 1)
+#foreach($entry in $shape.members.entrySet())
+#set($memberShape = $entry.value.shape)
+#if($memberShape.getName() == $shape.getName())
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeMemberVariableName($entry.key)}(1)")
+#if($index < $initializerCount)
+#set($initializers = "${initializers},")
+#end
+#end
+#if($memberShape.primitive || $memberShape.enum || $entry.value.idempotencyToken)
+#if($memberShape.primitive)
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeMemberVariableName($entry.key)}(${CppViewHelper.computeDefaultValue($memberShape)})")
+#elseif($memberShape.enum)
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeMemberVariableName($entry.key)}(${memberShape.name}::NOT_SET)")
+#elseif($entry.value.idempotencyToken)
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeMemberVariableName($entry.key)}(Aws::Utils::UUID::RandomUUID())")
+#end
+#if($index < $initializerCount)
+#set($initializers = "${initializers},")
+#end
+#set($index = $index + 1)
+#end
+#set($isStreamingMember = ($shape.payload && ($shape.payload == $entry.key && !$entry.value.shape.structure)))
+#if($useRequiredField && ((!$entry.value.required && $useRequiredField && !$isStreamingMember) || $entry.value.idempotencyToken))
+#if(!$entry.value.idempotencyToken)
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeVariableHasBeenSetName($entry.key)}(false)")
+#else
+#set($initializers = "${initializers}${nl}    ${CppViewHelper.computeVariableHasBeenSetName($entry.key)}(true)")
+#end
+#if($index < $initializerCount)
+#set($initializers = "${initializers},")
+#end
+#set($index = $index + 1)
+#end
+#end

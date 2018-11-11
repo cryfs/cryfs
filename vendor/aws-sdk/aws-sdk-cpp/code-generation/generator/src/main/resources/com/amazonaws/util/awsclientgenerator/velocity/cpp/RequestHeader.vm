@@ -1,0 +1,81 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#pragma once
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}Request.h>
+#foreach($header in $typeInfo.headerIncludes)
+\#include $header
+#end
+
+namespace Aws
+{
+#if($shape.hasQueryStringMembers())
+namespace Http
+{
+    class URI;
+} //namespace Http
+#end
+#if ($rootNamespace != "Aws")
+} // namespace Aws
+namespace ${rootNamespace}
+{
+#end
+namespace ${serviceNamespace}
+{
+namespace Model
+{
+#set($jsonRef = "${typeInfo.jsonType}&")
+#set($classNameRef = "${typeInfo.className}&")
+
+  /**
+#if($shape.documentation)
+   * $shape.documentation
+#end
+   */
+  class ${typeInfo.exportValue} ${typeInfo.className} : public ${typeInfo.baseClass}
+  {
+  public:
+    ${typeInfo.className}();
+    
+    // Service request name is the Operation name which will send this request out,
+    // each operation should has unique request name, so that we can get operation's name from this request.
+    // Note: this is not true for response, multiple operations may have the same response name,
+    // so we can not get operation's name from response.
+    inline virtual const char* GetServiceRequestName() const override { return "${operationName}"; }
+
+#if(!$shape.hasStreamMembers())
+    Aws::String SerializePayload() const override;
+
+#end
+#if($shape.hasQueryStringMembers())
+    void AddQueryStringParameters(Aws::Http::URI& uri) const override;
+
+#end
+#if($shape.hasHeaderMembers() || $metadata.targetPrefix)
+    Aws::Http::HeaderValueCollection GetRequestSpecificHeaders() const override;
+
+#end
+#if($shape.computeContentMd5)
+    inline bool ShouldComputeContentMd5() const override { return true; }
+
+#end
+#if(!$shape.signBody && $shape.members.size() > 0)
+    bool SignBody() const override { return false; }
+
+#end
+#if($shape.supportsPresigning)
+  protected:
+    void DumpBodyToUrl(Aws::Http::URI& uri ) const override;
+
+  public:
+#end
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersAndInlines.vm")
+  };
+
+} // namespace Model
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

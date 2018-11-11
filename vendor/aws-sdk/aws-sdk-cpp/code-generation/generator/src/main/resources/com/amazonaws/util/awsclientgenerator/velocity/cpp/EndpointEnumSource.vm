@@ -1,0 +1,65 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+#set($endpointPrefix = $metadata.endpointPrefix)
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}Endpoint.h>
+\#include <aws/core/utils/memory/stl/AWSStringStream.h>
+\#include <aws/core/utils/HashingUtils.h>
+
+using namespace Aws;
+using namespace ${rootNamespace}::${serviceNamespace};
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+namespace ${metadata.classNamePrefix}Endpoint
+{
+  static const int CN_NORTH_HASH = Aws::Utils::HashingUtils::HashString("cn-north-1");
+  static const int CN_NORTHWEST_1_HASH = Aws::Utils::HashingUtils::HashString("cn-northwest-1");
+  
+#foreach($regionEndpointPair in $endpointMapping.entrySet())
+  static const int ${regionEndpointPair.key.toUpperCase().replace("-", "_")}_HASH = Aws::Utils::HashingUtils::HashString("${regionEndpointPair.key}");
+#end
+
+  Aws::String ForRegion(const Aws::String& regionName, bool useDualStack)
+  {
+    auto hash = Aws::Utils::HashingUtils::HashString(regionName.c_str());
+    
+#if($endpointMapping.size() > 0)
+    if(!useDualStack)
+    {      
+#set($elseText = "")
+#foreach($regionEndpointPair in $endpointMapping.entrySet())
+      ${elseText}if(hash == ${regionEndpointPair.key.toUpperCase().replace("-", "_")}_HASH)
+      {
+        return "${regionEndpointPair.value}";
+      }
+#set($elseText = "else ")
+#end
+    }
+#end
+    Aws::StringStream ss;
+    ss << "${endpointPrefix}" << ".";
+
+    if(useDualStack)
+    {
+      ss << "dualstack.";
+    }
+
+    ss << regionName << ".amazonaws.com";
+    
+    if (hash == CN_NORTH_HASH || hash == CN_NORTHWEST_1_HASH)
+    {
+      ss << ".cn"; 
+    }
+    
+    return ss.str();
+  }
+
+} // namespace ${metadata.classNamePrefix}Endpoint
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}
+

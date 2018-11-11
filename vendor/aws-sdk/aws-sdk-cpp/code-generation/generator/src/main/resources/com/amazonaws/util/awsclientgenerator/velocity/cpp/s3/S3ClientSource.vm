@@ -1,0 +1,116 @@
+#set($signPayloadsOptional = true)
+#set($doNotDoubleUrlEncode = true)
+#set($virtualAddressingSupported = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/xml/rest/RestXmlServiceClientSource.vm")
+\#include<aws/core/utils/HashingUtils.h>
+Aws::String ${className}::GeneratePresignedUrl(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    return AWSClient::GeneratePresignedUrl(uri, method, expirationInSeconds);
+}
+
+Aws::String ${className}::GeneratePresignedUrl(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Http::HeaderValueCollection& customizedHeaders, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    return AWSClient::GeneratePresignedUrl(uri, method, customizedHeaders, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSES3(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    Aws::Http::HeaderValueCollection headers;
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::AES256));
+    return AWSClient::GeneratePresignedUrl(uri, method, headers, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSES3(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::AES256));
+    return AWSClient::GeneratePresignedUrl(uri, method, customizedHeaders, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSEKMS(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Aws::String& kmsMasterKeyId, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    Aws::Http::HeaderValueCollection headers;
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::aws_kms));
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID, kmsMasterKeyId);
+    return AWSClient::GeneratePresignedUrl(uri, method, headers, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSEKMS(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, const Aws::String& kmsMasterKeyId, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::aws_kms));
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID, kmsMasterKeyId);
+    return AWSClient::GeneratePresignedUrl(uri, method, customizedHeaders, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSEC(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, const Aws::String& base64EncodedAES256Key, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    Aws::Http::HeaderValueCollection headers;
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_ALGORITHM, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::AES256));
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY, base64EncodedAES256Key);
+    Aws::Utils::ByteBuffer buffer = Aws::Utils::HashingUtils::Base64Decode(base64EncodedAES256Key);
+    Aws::String strBuffer(reinterpret_cast<char*>(buffer.GetUnderlyingData()), buffer.GetLength());
+    headers.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY_MD5, Aws::Utils::HashingUtils::Base64Encode(Aws::Utils::HashingUtils::CalculateMD5(strBuffer)));
+    return AWSClient::GeneratePresignedUrl(uri, method, headers, expirationInSeconds);
+}
+
+Aws::String S3Client::GeneratePresignedUrlWithSSEC(const Aws::String& bucketName, const Aws::String& key, Http::HttpMethod method, Http::HeaderValueCollection customizedHeaders, const Aws::String& base64EncodedAES256Key, long long expirationInSeconds)
+{
+    Aws::StringStream ss;
+    ss << ComputeEndpointString(bucketName) << "/" << key;
+    URI uri(ss.str());
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_ALGORITHM, Aws::S3::Model::ServerSideEncryptionMapper::GetNameForServerSideEncryption(Aws::S3::Model::ServerSideEncryption::AES256));
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY, base64EncodedAES256Key);
+    Aws::Utils::ByteBuffer buffer = Aws::Utils::HashingUtils::Base64Decode(base64EncodedAES256Key);
+    Aws::String strBuffer(reinterpret_cast<char*>(buffer.GetUnderlyingData()), buffer.GetLength());
+    customizedHeaders.emplace(Aws::S3::SSEHeaders::SERVER_SIDE_ENCRYPTION_CUSTOMER_KEY_MD5, Aws::Utils::HashingUtils::Base64Encode(Aws::Utils::HashingUtils::CalculateMD5(strBuffer)));
+    return AWSClient::GeneratePresignedUrl(uri, method, customizedHeaders, expirationInSeconds);
+}
+Aws::String ${className}::ComputeEndpointString(const Aws::String& bucket) const
+{
+    Aws::StringStream ss;
+    // when using virtual hosting of buckets, the bucket name has to follow some rules.
+    // Mainly, it has to be a valid DNS label, and it must be lowercase.
+    // For more information see http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html#VirtualHostingSpecifyBucket
+    if(m_useVirtualAdressing && Aws::Utils::IsValidDnsLabel(bucket) && 
+            bucket == Aws::Utils::StringUtils::ToLower(bucket.c_str())) 
+    {
+        ss << m_scheme << "://" << bucket << "." << m_baseUri;
+    }
+    else
+    {
+        ss << m_scheme << "://" << m_baseUri << "/" << bucket;
+    }
+    return ss.str();
+}
+
+Aws::String ${className}::ComputeEndpointString() const
+{
+    Aws::StringStream ss;
+    ss << m_scheme << "://" << m_baseUri;
+    return ss.str();
+}
+
+bool ${className}::MultipartUploadSupported() const
+{
+    return true;
+}

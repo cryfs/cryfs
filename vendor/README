@@ -1,4 +1,5 @@
 This directory contains external projects, taken from the following locations:
+
 googletest: https://github.com/google/googletest/tree/release-1.10.0
  - changed: https://github.com/google/googletest/pull/2514
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
@@ -6,3 +7,6 @@ cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
  - changed: In CMakeLists.txt, rename BUILD_TESTING to CRYPTOPP_BUILD_TESTING so it doesn't clash with our BUILD_TESTING
  - changed: Fix Android compilation using patch file https://github.com/termux/termux-root-packages/files/4664745/config.h.patch.txt from https://github.com/cryfs/cryfs/issues/345
+aws-sdk: https://github.com/aws/aws-sdk-cpp/tree/1.6.49
+ - changed: removed all aws-cpp-sdk-* directories except aws-cpp-sdk-core and aws-cpp-sdk-s3. They're too large and not needed.
+ - comment out "find_package(Git)" in root CMakeLists.txt because the .git directory isn't present. It doesn't need it anyways but would print a warning in the build otherwise.

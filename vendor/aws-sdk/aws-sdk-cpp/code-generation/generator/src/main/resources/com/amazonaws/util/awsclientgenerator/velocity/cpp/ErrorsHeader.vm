@@ -1,0 +1,66 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+#pragma once
+
+\#include <aws/core/client/CoreErrors.h>
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}_EXPORTS.h>
+
+namespace ${rootNamespace}
+{
+namespace ${serviceNamespace}
+{
+#set($className = "${metadata.classNamePrefix}Errors")
+enum class $className
+{
+  //From Core//
+  //////////////////////////////////////////////////////////////////////////////////////////
+  INCOMPLETE_SIGNATURE = 0,
+  INTERNAL_FAILURE = 1,
+  INVALID_ACTION = 2,
+  INVALID_CLIENT_TOKEN_ID = 3,
+  INVALID_PARAMETER_COMBINATION = 4,
+  INVALID_QUERY_PARAMETER = 5,
+  INVALID_PARAMETER_VALUE = 6,
+  MISSING_ACTION = 7, // SDK should never allow
+  MISSING_AUTHENTICATION_TOKEN = 8, // SDK should never allow
+  MISSING_PARAMETER = 9, // SDK should never allow
+  OPT_IN_REQUIRED = 10,
+  REQUEST_EXPIRED = 11,
+  SERVICE_UNAVAILABLE = 12,
+  THROTTLING = 13,
+  VALIDATION = 14,
+  ACCESS_DENIED = 15,
+  RESOURCE_NOT_FOUND = 16,
+  UNRECOGNIZED_CLIENT = 17,
+  MALFORMED_QUERY_STRING = 18,
+  SLOW_DOWN = 19,
+  REQUEST_TIME_TOO_SKEWED = 20,
+  INVALID_SIGNATURE = 21,
+  SIGNATURE_DOES_NOT_MATCH = 22,
+  INVALID_ACCESS_KEY_ID = 23,
+  NETWORK_CONNECTION = 99,
+  
+  UNKNOWN = 100,
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
+#set($enum_size = 0)
+#foreach($error in $errorConstNames)
+#set($enum_size = $enum_size + 1)
+#end
+#set($enum_counter = 1)
+#foreach($errorConstName in $errorConstNames)
+  $errorConstName#if($enum_counter == 1)= static_cast<int>(Aws::Client::CoreErrors::SERVICE_EXTENSION_START_RANGE) + 1#end#if($enum_counter < $enum_size),${nl}#end
+#set($enum_counter = $enum_counter + 1)
+#end
+
+};
+namespace ${metadata.classNamePrefix}ErrorMapper
+{
+  ${CppViewHelper.computeExportValue($metadata.classNamePrefix)} Aws::Client::AWSError<Aws::Client::CoreErrors> GetErrorForName(const char* errorName);
+}
+
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

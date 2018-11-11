@@ -1,0 +1,56 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#pragma once
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/core/utils/stream/ResponseStream.h>
+#foreach($header in $typeInfo.headerIncludes)
+\#include $header
+#end
+
+namespace Aws
+{
+template<typename RESULT_TYPE>
+class AmazonWebServiceResult;
+
+#if ($rootNamespace != "Aws")
+} // namespace Aws
+namespace ${rootNamespace}
+{
+#end
+namespace ${serviceNamespace}
+{
+namespace Model
+{
+#set($classNameRef = "${typeInfo.className}&")
+#if($shape.documentation)
+  /**
+   * $shape.documentation
+   */
+#end
+  class $typeInfo.exportValue $typeInfo.className
+  {
+  public:
+    ${typeInfo.className}();
+    //We have to define these because Microsoft doesn't auto generate them
+    ${typeInfo.className}(${typeInfo.className}&&);
+    ${classNameRef} operator=(${typeInfo.className}&&);
+    //we delete these because Microsoft doesn't handle move generation correctly
+    //and we therefore don't trust them to get it right here either.
+    ${typeInfo.className}(const ${typeInfo.className}&) = delete;
+    ${classNameRef} operator=(const ${typeInfo.className}&) = delete;
+
+
+    ${typeInfo.className}(Aws::AmazonWebServiceResult<Aws::Utils::Stream::ResponseStream>&& result);
+    ${classNameRef} operator=(Aws::AmazonWebServiceResult<Aws::Utils::Stream::ResponseStream>&& result);
+
+
+#set($useRequiredField = false)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersAndInlines.vm")
+  };
+
+} // namespace Model
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

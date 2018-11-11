@@ -1,0 +1,86 @@
+  Aws::StringStream ss;
+#if($shape.members.entrySet().size() == 0)
+  AWS_UNREFERENCED_PARAM(parentNode);
+#end
+#foreach($entry in $shape.members.entrySet())
+#if($entry.value.usedForPayload)
+#set($spaces = '')
+#set($memberName = $entry.key)
+#set($serializationName = $memberName)
+#set($member = $entry.value)
+#if($member.locationName)
+#set($serializationName = $member.locationName)
+#end
+#if($member.usedForPayload)
+#set($lowerCaseVarName = $CppViewHelper.computeVariableName($memberName))
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($memberName))
+#set($varNameHasBeenSet = $CppViewHelper.computeVariableHasBeenSetName($memberName))
+#if(!$member.required && $useRequiredField)
+#set($spaces = ' ')
+  if($varNameHasBeenSet)
+  {
+#end
+#if($member.shape.enum)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}${lowerCaseVarName}Node.SetText(${member.shape.name}Mapper::GetNameFor${member.shape.name}(${memberVarName}));
+#elseif($member.shape.boolean)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}ss << std::boolalpha << ${memberVarName};
+  ${spaces}${lowerCaseVarName}Node.SetText(ss.str());
+  ${spaces}ss.str("");
+#elseif($member.shape.primitive)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}ss << ${memberVarName};
+  ${spaces}${lowerCaseVarName}Node.SetText(ss.str());
+  ${spaces}ss.str("");
+#elseif($member.shape.string)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}${lowerCaseVarName}Node.SetText(${memberVarName});
+#elseif($member.shape.timeStamp)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}${lowerCaseVarName}Node.SetText(${memberVarName}.ToGmtString(DateFormat::ISO_8601));
+#elseif($member.shape.blob)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}${lowerCaseVarName}Node.SetText(HashingUtils::Base64Encode(${memberVarName}));
+#elseif($member.shape.structure)
+  ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${serializationName}");
+  ${spaces}${memberVarName}.AddToNode(${lowerCaseVarName}Node);
+#elseif($member.shape.list)
+#if(!$member.shape.flattened)
+  ${spaces}XmlNode ${lowerCaseVarName}ParentNode = parentNode.CreateChildElement("${memberName}");
+#end
+  ${spaces}for(const auto& item : $memberVarName)
+  ${spaces}{
+#if($member.locationName && $member.shape.flattened)
+    ${spaces}XmlNode ${lowerCaseVarName}Node = parentNode.CreateChildElement("${member.locationName}");
+#else
+    ${spaces}XmlNode ${lowerCaseVarName}Node = ${lowerCaseVarName}ParentNode.CreateChildElement("${member.shape.listMember.shape.name}");
+#end
+#if($member.shape.listMember.shape.enum)
+    ${spaces}${lowerCaseVarName}Node.SetText(${member.shape.listMember.shape.name}Mapper::GetNameFor${member.shape.listMember.shape.name}(item));
+#elseif($member.shape.listMember.shape.boolean)
+    ${spaces}ss << std::boolalpha << item;
+    ${spaces}${lowerCaseVarName}Node.SetText(ss.str());
+    ${spaces}ss.str("");
+#elseif($member.shape.listMember.shape.primitive)
+    ${spaces}ss << item;
+    ${spaces}${lowerCaseVarName}Node.SetText(ss.str());
+    ${spaces}ss.str("");
+#elseif($member.shape.listMember.shape.string)
+    ${spaces}${lowerCaseVarName}Node.SetText(item);
+#elseif($member.shape.listMember.shape.timeStamp)
+    ${spaces}${lowerCaseVarName}Node.SetText(item.ToGmtString(DateFormat::ISO_8601);
+#elseif($member.shape.listMember.shape.blob)
+    ${spaces}${lowerCaseVarName}Node.SetText(HashingUtils::Base64Encode(item));
+#elseif($member.shape.listMember.shape.structure)
+    ${spaces}item.AddToNode(${lowerCaseVarName}Node);
+#end
+  ${spaces}}
+#end
+#if(!$member.required && $useRequiredField)
+  }
+
+#end
+#end
+#end
+#end

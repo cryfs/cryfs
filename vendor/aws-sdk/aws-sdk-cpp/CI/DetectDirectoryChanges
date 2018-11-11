@@ -1,0 +1,20 @@
+#!/bin/bash
+
+FILES_CHANGED_STR=`git diff --name-only $1@{1} $1`
+FILES_CHANGED=${FILES_CHANGED_STR}
+
+declare -A DIRS_SET 
+
+for FILE in $FILES_CHANGED ; do
+DIR=`echo $FILE | cut -d "/" -f1`
+
+if test "${DIRS_SET[${DIR}]+isset}" 
+    then
+        continue
+    else
+        echo $DIR
+fi
+    DIRS_SET[${DIR}]=""
+done
+
+

@@ -27,6 +27,7 @@ set(SOURCES
   implementations/integrity/IntegrityBlockStore2.cpp
   implementations/integrity/KnownBlockVersions.cpp
   implementations/integrity/ClientIdAndBlockId.cpp
+  implementations/s3/S3BlockStore2.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
 )
@@ -38,3 +39,5 @@ target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils)
 target_add_boost(${PROJECT_NAME} filesystem system thread)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+
+target_link_libraries(${PROJECT_NAME} PUBLIC aws-sdk)

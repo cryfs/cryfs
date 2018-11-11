@@ -1,0 +1,21 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+#pragma once
+\#include <aws/${metadata.projectName}/${metadata.classNamePrefix}_EXPORTS.h>
+\#include <aws/core/Region.h>
+\#include <aws/core/utils/memory/stl/AWSString.h>
+
+namespace ${rootNamespace}
+{
+
+namespace ${serviceNamespace}
+{
+namespace ${metadata.classNamePrefix}Endpoint
+{
+${exportValue} Aws::String ForRegion(const Aws::String& regionName, bool useDualStack = false);
+} // namespace ${metadata.classNamePrefix}Endpoint
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

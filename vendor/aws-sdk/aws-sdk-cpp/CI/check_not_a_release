@@ -1,0 +1,12 @@
+#!/bin/bash
+
+rm -f ./not_a_release
+aws s3 cp --quiet s3://aws-sdk-cpp-pipeline-sdks-team/not_a_release ./not_a_release
+
+if [ -f ./not_a_release ]; then
+    aws s3 rm s3://aws-sdk-cpp-pipeline-sdks-team/not_a_release
+    exit 1
+fi
+
+exit 0
+

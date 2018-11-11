@@ -1,0 +1,151 @@
+#set($metadata = $serviceModel.metadata)
+#if($metadata.standalone)
+cmake_minimum_required (VERSION 2.8.12)
+
+find_package(AWSSDK)
+find_package(aws-cpp-sdk-core)
+add_project(aws-cpp-sdk-${metadata.projectName} "C++ SDK for the ${metadata.projectName} service" aws-cpp-sdk-core)
+#else
+add_project(aws-cpp-sdk-${metadata.projectName} "C++ SDK for the AWS ${metadata.projectName} service" aws-cpp-sdk-core)
+#end
+
+#set($projectNameCaps = $metadata.projectName.toUpperCase())
+file(GLOB AWS_${projectNameCaps}_HEADERS
+    "include/aws/${metadata.projectName}/*.h"
+)
+
+file(GLOB AWS_${projectNameCaps}_MODEL_HEADERS
+    "include/aws/${metadata.projectName}/model/*.h"
+)
+
+file(GLOB AWS_${projectNameCaps}_SOURCE
+    "source/*.cpp"
+)
+
+file(GLOB AWS_${projectNameCaps}_MODEL_SOURCE
+    "source/model/*.cpp"
+)
+
+#set($cmakeVarStart = "${")
+file(GLOB ${projectNameCaps}_UNIFIED_HEADERS
+    ${cmakeVarStart}AWS_${projectNameCaps}_HEADERS}
+    ${cmakeVarStart}AWS_${projectNameCaps}_MODEL_HEADERS}
+)
+
+file(GLOB ${projectNameCaps}_UNITY_SRC
+    ${cmakeVarStart}AWS_${projectNameCaps}_SOURCE}
+    ${cmakeVarStart}AWS_${projectNameCaps}_MODEL_SOURCE}
+)
+
+if(ENABLE_UNITY_BUILD)
+    enable_unity_build("${projectNameCaps}" ${projectNameCaps}_UNITY_SRC)
+endif()
+
+file(GLOB ${projectNameCaps}_SRC
+    ${cmakeVarStart}${projectNameCaps}_UNIFIED_HEADERS}
+    ${cmakeVarStart}${projectNameCaps}_UNITY_SRC}
+)
+
+#set($dirDelim = "\\")
+if(WIN32)
+    \#if we are compiling for visual studio, create a sane directory tree.
+    if(MSVC)
+        source_group("Header Files${dirDelim}aws${dirDelim}${metadata.projectName}" FILES ${cmakeVarStart}AWS_${projectNameCaps}_HEADERS})
+        source_group("Header Files${dirDelim}aws${dirDelim}${metadata.projectName}${dirDelim}model" FILES ${cmakeVarStart}AWS_${projectNameCaps}_MODEL_HEADERS})
+        source_group("Source Files" FILES ${cmakeVarStart}AWS_${projectNameCaps}_SOURCE})
+        source_group("Source Files${dirDelim}model" FILES ${cmakeVarStart}AWS_${projectNameCaps}_MODEL_SOURCE})
+    endif(MSVC)
+endif()
+
+set(${projectNameCaps}_INCLUDES
+    "${cmakeVarStart}CMAKE_CURRENT_SOURCE_DIR}/include/"
+)
+
+add_library(${PROJECT_NAME} ${cmakeVarStart}LIBTYPE} ${cmakeVarStart}${projectNameCaps}_SRC})
+add_library(AWS::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+set_compiler_flags(${PROJECT_NAME})
+set_compiler_warnings(${PROJECT_NAME})
+
+if(USE_WINDOWS_DLL_SEMANTICS AND BUILD_SHARED_LIBS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE "AWS_${metadata.classNamePrefix.toUpperCase()}_EXPORTS")
+endif()
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+
+#if($metadata.standalone)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${AWSSDK_PLATFORM_DEPS} ${PROJECT_LIBS})
+
+if(USE_WINDOWS_DLL_SEMANTICS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC "USE_WINDOWS_DLL_SEMANTICS")
+
+    if(BUILD_SHARED_LIBS)
+        target_compile_definitions(${PROJECT_NAME} PUBLIC "USE_IMPORT_EXPORT=1")
+    endif()
+endif()
+
+if(USE_GCC_FLAGS)
+    target_compile_options(${PROJECT_NAME} PUBLIC -std=c++${CPP_STANDARD})
+
+    if(NOT ENABLE_RTTI)
+        target_compile_options(${PROJECT_NAME} PUBLIC -fno-rtti)
+    endif()
+else()
+    if(NOT ENABLE_RTTI)
+        target_compile_options(${PROJECT_NAME} PUBLIC /GR-)
+    endif()
+endif()
+
+install(TARGETS ${PROJECT_NAME}
+    EXPORT "${PROJECT_NAME}-config"
+    ARCHIVE DESTINATION ${ARCHIVE_DIRECTORY}
+    LIBRARY DESTINATION ${LIBRARY_DIRECTORY}
+    RUNTIME DESTINATION ${BINARY_DIRECTORY} )
+#else
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PLATFORM_DEP_LIBS} ${PROJECT_LIBS})
+
+
+setup_install()
+#end
+
+install (FILES ${cmakeVarStart}AWS_${projectNameCaps}_HEADERS} DESTINATION ${INCLUDE_DIRECTORY}/aws/${metadata.projectName})
+install (FILES ${cmakeVarStart}AWS_${projectNameCaps}_MODEL_HEADERS} DESTINATION ${INCLUDE_DIRECTORY}/aws/${metadata.projectName}/model)
+
+if(PLATFORM_WINDOWS AND MSVC)
+    file(GLOB NUGET_FILES "nuget/${PROJECT_NAME}.*.autopkg")
+    install (FILES ${NUGET_FILES} DESTINATION nuget)
+endif()
+
+#if($metadata.standalone)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+export(EXPORT "${PROJECT_NAME}-config"
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+)
+    
+set(ConfigPackageLocation "${LIBRARY_DIRECTORY}/cmake/${PROJECT_NAME}")
+install(EXPORT "${PROJECT_NAME}-config"
+    FILE "${PROJECT_NAME}-config.cmake"
+    DESTINATION ${ConfigPackageLocation}
+)
+
+install(
+    FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+    DESTINATION
+    ${ConfigPackageLocation}
+    COMPONENT
+    Devel
+)
+#else
+do_packaging()
+#end
+
+

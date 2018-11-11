@@ -1,0 +1,177 @@
+#foreach($member in $shape.members.entrySet())
+#set($moveType = '')
+#set($moveValueType = '')
+#set($keyMoveType = '')
+#set($keyValueType = '')
+#if($member.value.shape.getName() == $shape.getName())
+#set($singleElementVector = '[0]')
+#else
+#set($singleElementVector = '')
+#end
+#if(!((($shape.payload && ($shape.payload == $member.key && !$member.value.shape.structure && !$member.value.shape.list)) || $member.value.streaming) && $shape.request))
+#set($memberDocumentation = '')
+#if($member.value.documentation)
+#set($memberDocumentation ="/**${nl}     * ${member.value.documentation}${nl}     */")
+#end
+
+#if((($shape.payload && ($shape.payload == $member.key && !$member.value.shape.structure && !$member.value.shape.list)) || $member.value.streaming) && $shape.result)
+#set($cppType = "Aws::Utils::Stream::ResponseStream")
+#set($isStream = true)
+#else
+#set($cppType = $CppViewHelper.computeCppType($member.value.shape))
+#set($isStream = false)
+#end
+#set($subShape = $member.value.shape)
+#if(!$subShape.primitive)
+#set($rawCppType = ${cppType})
+#set($cppType = "const ${rawCppType}&")
+#set($moveType = "${rawCppType}&&")
+#end
+#set($memberVariableName = $CppViewHelper.computeMemberVariableName($member.key))
+#set($memberKeyWithFirstLetterCapitalized = $CppViewHelper.capitalizeFirstChar($member.key))
+#if($isStream)
+    $memberDocumentation
+    inline Aws::IOStream& Get${memberKeyWithFirstLetterCapitalized}() { return ${memberVariableName}.GetUnderlyingStream(); }
+
+    $memberDocumentation
+    inline void ReplaceBody(Aws::IOStream* body) { ${memberVariableName} = Aws::Utils::Stream::ResponseStream(body); }
+    
+#else
+#set($override = "")
+#if($memberKeyWithFirstLetterCapitalized == "ContentType" && $shape.hasStreamMembers() && $shape.request)
+#set($override = " override ")
+#end
+    $memberDocumentation
+    inline ${cppType} Get${memberKeyWithFirstLetterCapitalized}() const$override{ return ${memberVariableName}${singleElementVector}; }
+
+#end
+#if(!$isStream)
+#set ($required = '')
+#if(!$member.value.required && $useRequiredField)
+#set ($required = "${CppViewHelper.computeVariableHasBeenSetName($member.key)} = true; ")
+#end
+    $memberDocumentation
+    inline void Set${memberKeyWithFirstLetterCapitalized}(${cppType} value) { ${required}${memberVariableName}${singleElementVector} = value; }
+
+#if(!$subShape.primitive)
+    $memberDocumentation
+    inline void Set${memberKeyWithFirstLetterCapitalized}(${moveType} value) { ${required}${memberVariableName}${singleElementVector} = std::move(value); }
+
+#end
+#if($member.value.shape.string)
+    $memberDocumentation
+    inline void Set${memberKeyWithFirstLetterCapitalized}(const char* value) { ${required}${memberVariableName}.assign(value); }
+
+#end
+    $memberDocumentation
+    inline ${classNameRef} With${memberKeyWithFirstLetterCapitalized}(${cppType} value) { Set${memberKeyWithFirstLetterCapitalized}(value); return *this;}
+
+#if(!$subShape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} With${memberKeyWithFirstLetterCapitalized}(${moveType} value) { Set${memberKeyWithFirstLetterCapitalized}(std::move(value)); return *this;}
+
+#end
+#if($member.value.shape.string)
+    $memberDocumentation
+    inline ${classNameRef} With${memberKeyWithFirstLetterCapitalized}(const char* value) { Set${memberKeyWithFirstLetterCapitalized}(value); return *this;}
+
+#end
+#end
+#if($member.value.shape.map)
+#set($mapMember = $member.value.shape)
+#set($keyType = $CppViewHelper.computeCppType($mapMember.mapKey.shape))
+#set($valueType = $CppViewHelper.computeCppType($mapMember.mapValue.shape))
+#if(!$mapMember.mapKey.shape.primitive)
+#set($rawKeyType = $keyType)
+#set($keyType = "const ${rawKeyType}&")
+#set($keyMoveType = "${rawKeyType}&&")
+#end
+#if(!$mapMember.mapValue.shape.primitive)
+#set($rawValueType = $valueType)
+#set($valueType = "const ${rawValueType}&")
+#set($valueMoveType = "${rawValueType}&&")
+#end
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyType} key, ${valueType} value) { ${required}${memberVariableName}.emplace(key, value); return *this; }
+
+#if(!$mapMember.mapKey.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyMoveType} key, ${valueType} value) { ${required}${memberVariableName}.emplace(std::move(key), value); return *this; }
+
+#end
+#if(!$mapMember.mapValue.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyType} key, ${valueMoveType} value) { ${required}${memberVariableName}.emplace(key, std::move(value)); return *this; }
+
+#end
+#if(!$mapMember.mapKey.shape.primitive && !$mapMember.mapValue.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyMoveType} key, ${valueMoveType} value) { ${required}${memberVariableName}.emplace(std::move(key), std::move(value)); return *this; }
+
+#end
+#if($mapMember.mapKey.shape.string || $mapMember.mapValue.shape.string)
+#if($mapMember.mapKey.shape.string)
+#set($keyType = 'const char*')
+#if(!$mapMember.mapValue.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyType} key, ${valueMoveType} value) { ${required}${memberVariableName}.emplace(key, std::move(value)); return *this; }
+
+#end
+#end
+#if($mapMember.mapValue.shape.string)
+#set($valueType = 'const char*')
+#if(!$mapMember.mapKey.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyMoveType} key, ${valueType} value) { ${required}${memberVariableName}.emplace(std::move(key), value); return *this; }
+
+#end
+#end
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${keyType} key, ${valueType} value) { ${required}${memberVariableName}.emplace(key, value); return *this; }
+
+#end
+#end
+#if($member.value.shape.list)
+#set($listMember = $member.value.shape)
+#set($valueType = $CppViewHelper.computeCppType($listMember.listMember.shape))
+#if(!$listMember.listMember.shape.primitive)
+#set($rawValueType = "${valueType}")
+#set($valueType = "const ${rawValueType}&")
+#set($moveValueType = "${rawValueType}&&")
+#end
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${valueType} value) { ${required}${memberVariableName}.push_back(value); return *this; }
+
+#if(!$listMember.listMember.shape.primitive)
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${moveValueType} value) { ${required}${memberVariableName}.push_back(std::move(value)); return *this; }
+
+#end
+#if($listMember.listMember.shape.string)
+#set($valueType = 'const char*')
+    $memberDocumentation
+    inline ${classNameRef} Add${memberKeyWithFirstLetterCapitalized}(${valueType} value) { ${required}${memberVariableName}.push_back(value); return *this; }
+
+#end
+#end
+#end
+#end
+#if($shape.members.size() > 0)
+  private:
+#foreach($member in $shape.members.entrySet())
+
+#if((($shape.payload && ($shape.payload == $member.key && !$member.value.shape.structure && !$member.value.shape.list)) || $member.value.streaming) && $shape.result)
+  Aws::Utils::Stream::ResponseStream $CppViewHelper.computeMemberVariableName($member.key);
+#elseif(($shape.payload && ($shape.payload == $member.key && !$member.value.shape.structure && !$member.value.shape.list)) && $shape.request)
+#else
+#if($member.value.shape.getName() == $shape.getName())
+    Aws::Vector<$CppViewHelper.computeCppType($member.value.shape)> $CppViewHelper.computeMemberVariableName($member.key);
+#else
+    $CppViewHelper.computeCppType($member.value.shape) $CppViewHelper.computeMemberVariableName($member.key);
+#end
+#if(!$member.value.required && $useRequiredField)
+    bool ${CppViewHelper.computeVariableHasBeenSetName($member.key)};
+#end
+#end
+#end
+#end

@@ -1,0 +1,195 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${typeInfo.className}.h>
+\#include <aws/core/utils/StringUtils.h>
+\#include <aws/core/utils/memory/stl/AWSStringStream.h>
+#if($shape.hasQueryStringMembers())
+\#include <aws/core/http/URI.h>
+#end
+#if($shape.hasBlobMembers())
+\#include <aws/core/utils/HashingUtils.h>
+#end
+
+using namespace ${rootNamespace}::${serviceNamespace}::Model;
+using namespace Aws::Utils;
+#if($shape.hasQueryStringMembers())
+using namespace Aws::Http;
+#end
+
+#set($useRequiredField = true)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersGenerateInitializers.vm")
+${typeInfo.className}::${typeInfo.className}()$initializers
+{
+}
+
+Aws::String ${typeInfo.className}::SerializePayload() const
+{
+  Aws::StringStream ss;
+  ss << "Action=${CppViewHelper.computeOperationNameFromInputOutputShape($typeInfo.className)}&";
+#foreach($member in $shape.members.entrySet())
+#set($memberVarName = $CppViewHelper.computeMemberVariableName($member.key))
+#set($varName = $CppViewHelper.computeVariableName($member.key))
+#set($spaces = '')
+#if($member.value.usedForPayload)
+#if(!$member.value.required)
+  if(${memberVarName}HasBeenSet)
+  {
+#set($spaces = "  ")
+#end
+#if($member.value.shape.list)
+  ${spaces}unsigned ${varName}Count = 1;
+  ${spaces}for(auto& item : $memberVarName)
+  ${spaces}{
+#if($member.value.shape.flattened)
+#if($member.value.shape.listMember.queryName)
+#set($location = $member.value.shape.listMember.queryName)
+#elseif($member.value.shape.listMember.locationName)
+#set($location = $member.value.shape.listMember.locationName)
+#if($metadata.protocol == "ec2")
+#set($location = $CppViewHelper.capitalizeFirstChar($location))
+#end
+#else
+#set($location = $member.key)
+#end
+#else
+#if($member.value.queryName)
+#set($location = $member.value.queryName)
+#elseif($member.value.locationName)
+#set($location = $member.value.locationName)
+#if($metadata.protocol == "ec2")
+#set($location = $CppViewHelper.capitalizeFirstChar($location))
+#end
+#elseif($metadata.protocol == "ec2")
+#set($location = $member.key)
+#else
+#set($location = $member.key + ".member")
+#end
+#end
+#if($member.value.shape.listMember.shape.structure)
+  ${spaces}  item.OutputToStream(ss, "${location}.", ${varName}Count, "");
+#else
+  ${spaces}  ss << "${location}." << ${varName}Count << "="
+#if($member.value.shape.listMember.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.c_str()) << "&";
+#elseif($member.value.shape.listMember.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.value.shape.listMember.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.value.shape.listMember.shape.name}Mapper::GetNameFor${member.value.shape.listMember.shape.name}(item).c_str()) << "&";
+#elseif($member.value.shape.listMember.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item) << "&";
+#elseif($member.value.shape.listMember.shape.boolean)
+ ${spaces}       << std::boolalpha << item << "&";
+#else
+ ${spaces}       << item << "&";
+#end
+#end
+  ${spaces}  ${varName}Count++;
+  ${spaces}}
+#elseif($member.value.shape.map)
+#if($member.value.locationName)
+#set($mapLocationName = $member.value.locationName)
+#else
+#set($mapLocationName = $member.key + ".entry")
+#end
+#if($member.value.shape.mapKey.locationName)
+#set($keyLocationName = $member.value.shape.mapKey.locationName)
+#else
+#set($keyLocationName = "key")
+#end
+#if($member.value.shape.mapValue.locationName)
+#set($valueLocationName = $member.value.shape.mapValue.locationName)
+#else
+#set($valueLocationName = "value")
+#end
+  ${spaces}unsigned ${varName}Count = 1;
+  ${spaces}for(auto& item : $memberVarName)
+  ${spaces}{
+  ${spaces}  ss << "${mapLocationName}." << ${varName}Count << ".${keyLocationName}="
+#if($member.value.shape.mapKey.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.first.c_str()) << "&";
+#elseif($member.value.shape.mapKey.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.first.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.value.shape.mapKey.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.value.shape.mapKey.shape.name}Mapper::GetNameFor${member.value.shape.mapKey.shape.name}(item.first).c_str()) << "&";
+#elseif($member.value.shape.mapKey.shape.structure)
+  ${spaces}  item.first.OutputToStream(ss, "${mapLocationName}.", ${varName}Count, ".${keyLocationName}");
+#elseif($member.value.shape.mapKey.shape.double)
+    ${spaces}    << StringUtils::URLEncode(item.first) << "&";
+#elseif($member.value.shape.mapKey.shape.boolean)
+  ${spaces}      << std::boolalpha << item.first << "&";
+#else
+  ${spaces}      << item.first << "&";
+#end
+#if(!$member.value.shape.mapValue.shape.structure)
+  ${spaces}  ss << "${mapLocationName}." << ${varName}Count << ".${valueLocationName}="
+#end
+#if($member.value.shape.mapValue.shape.string)
+  ${spaces}      << StringUtils::URLEncode(item.second.c_str()) << "&";
+#elseif($member.value.shape.mapValue.shape.timeStamp)
+  ${spaces}      << StringUtils::URLEncode(item.second.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.value.shape.mapValue.shape.enum)
+  ${spaces}      << StringUtils::URLEncode(${member.value.shape.mapValue.shape.name}Mapper::GetNameFor${member.value.shape.mapValue.shape.name}(item.second).c_str()) << "&";
+#elseif($member.value.shape.mapValue.shape.structure)
+  ${spaces}  item.second.OutputToStream(ss, "${mapLocationName}.", ${varName}Count, ".${valueLocationName}");
+#elseif($member.value.shape.mapValue.shape.double)
+  ${spaces}      << StringUtils::URLEncode(item.second) << "&";
+#elseif($member.value.shape.mapValue.shape.boolean)
+  ${spaces}      << std::boolalpha << item.second << "&";
+#else
+  ${spaces}      << item.second << "&";
+#end
+  ${spaces}  ${varName}Count++;
+  ${spaces}}
+#else
+#if($member.value.queryName)
+#set($location = $member.value.queryName)
+#elseif($member.value.locationName)
+#set($location = $member.value.locationName)
+#if($metadata.protocol == "ec2")
+#set($location = $CppViewHelper.capitalizeFirstChar($location))
+#end
+#else
+#set($location = $member.key)
+#end
+#if($member.value.shape.blob)
+  ${spaces}ss << "${location}=" << HashingUtils::Base64Encode(${memberVarName}) << "&";
+#elseif($member.value.shape.timeStamp)
+  ${spaces}ss << "${location}=" << StringUtils::URLEncode(${memberVarName}.ToGmtString(DateFormat::ISO_8601).c_str()) << "&";
+#elseif($member.value.shape.string)
+  ${spaces}ss << "${location}=" << StringUtils::URLEncode(${memberVarName}.c_str()) << "&";
+#elseif($member.value.shape.enum)
+  ${spaces}ss << "${location}=" << ${member.value.shape.name}Mapper::GetNameFor${member.value.shape.name}(${memberVarName}) << "&";
+#elseif($member.value.shape.structure)
+  ${spaces}${memberVarName}.OutputToStream(ss, "${location}");
+#elseif($member.value.shape.double)
+  ${spaces}ss << "${location}=" << StringUtils::URLEncode(${memberVarName}) << "&";
+#elseif($member.value.shape.boolean)
+  ${spaces}ss << "${location}=" << std::boolalpha << ${memberVarName} << "&";
+#else
+  ${spaces}ss << "${location}=" << ${memberVarName} << "&";
+#end
+#end
+#if(!$member.value.required)
+  }
+
+#end
+#end
+#end
+  ss << "Version=${metadata.apiVersion}";
+  return ss.str();
+}
+
+#if($shape.hasQueryStringMembers())
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/AddQueryStringParametersToRequest.vm")
+
+#end
+
+#if($shape.supportsPresigning)
+void  ${typeInfo.className}::DumpBodyToUrl(Aws::Http::URI& uri ) const
+{
+  uri.SetQueryString(SerializePayload());
+}
+#end

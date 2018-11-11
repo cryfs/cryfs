@@ -1,0 +1,18 @@
+#set($enumSize = $enumModel.members.size())
+#set($count = 1)
+  enum class ${enumModel.name}
+  {
+    NOT_SET,
+#foreach($enumMember in $enumModel.members)
+    ${enumMember.memberName}#if($count < $enumSize),${nl}#end
+#set($count = $count + 1)
+#end
+
+  };
+
+namespace ${enumModel.name}Mapper
+{
+${typeInfo.exportValue} ${enumModel.name} Get${enumModel.name}ForName(const Aws::String& name);
+
+${typeInfo.exportValue} Aws::String GetNameFor${enumModel.name}(${enumModel.name} value);
+} // namespace ${enumModel.name}Mapper

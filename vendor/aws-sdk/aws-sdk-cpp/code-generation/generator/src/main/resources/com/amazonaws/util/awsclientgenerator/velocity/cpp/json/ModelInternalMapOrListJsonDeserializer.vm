@@ -1,0 +1,97 @@
+#set($template.currentSpaces = $currentSpaces)
+#set($template.currentShape = $currentShape)
+#set($template.jsonValue = $jsonValue)
+#set($template.memberKey = $memberKey)
+#set($template.lowerCaseVarName = $CppViewHelper.computeVariableName($template.memberKey))
+#set($template.containerVar = $containerVar)
+#set($template.recursionDepth = $recursionDepth)
+#set($template.atBottom = false)
+#if($template.currentShape.map)
+#if($template.recursionDepth > 1 || $memberIsWholePayload)
+  ${template.currentSpaces}Aws::Map<Aws::String, JsonView> ${template.lowerCaseVarName}JsonMap = ${template.jsonValue}.GetAllObjects();
+#else
+  ${template.currentSpaces}Aws::Map<Aws::String, JsonView> ${template.lowerCaseVarName}JsonMap = ${template.jsonValue}.GetObject("${template.memberKey}").GetAllObjects();
+#end
+#if($template.recursionDepth > 1)
+#set($template.containerVar = ${template.lowerCaseVarName} + "Map")
+  ${template.currentSpaces}Aws::Map<Aws::String, ${CppViewHelper.computeCppType($template.currentShape.mapValue.shape)}> ${template.lowerCaseVarName}Map;
+#end
+  ${template.currentSpaces}for(auto& ${template.lowerCaseVarName}Item : ${template.lowerCaseVarName}JsonMap)
+  ${template.currentSpaces}{
+#if(!$template.currentShape.mapValue.shape.map && !$template.currentShape.mapValue.shape.list)
+#set($lvalue = "${template.containerVar}[${template.lowerCaseVarName}Item.first]")
+#set($rvalue = "${template.lowerCaseVarName}Item.second.As${CppViewHelper.computeJsonCppType($template.currentShape.mapValue.shape)}()")
+#if($template.currentShape.mapKey.shape.enum)
+#set($enumName = $template.currentShape.mapKey.shape.name)
+#set($lvalue = "${template.containerVar}[${enumName}Mapper::Get${enumName}ForName(${template.lowerCaseVarName}Item.first)]")
+#end
+#if($template.currentShape.mapValue.shape.enum)
+#set($enumName = $template.currentShape.mapValue.shape.name)
+#set($rvalue = "${enumName}Mapper::Get${enumName}ForName(${template.lowerCaseVarName}Item.second.AsString())")
+#end
+  ${template.currentSpaces}  ${lvalue} = ${rvalue};
+#set($template.atBottom = true)
+#else
+#set($currentSpaces = $template.currentSpaces + "  ")
+#set($currentShape = $template.currentShape.mapValue.shape)
+#set($memberKey = $template.currentShape.mapValue.shape.name)
+#set($containerVar = ${template.containerVar})
+#set($recursionDepth = $template.recursionDepth + 1)
+#set($jsonValue = ${template.lowerCaseVarName} + "Item.second")
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/json/ModelInternalMapOrListJsonDeserializer.vm")
+#end
+#if($template.currentShape.mapValue.shape.map)
+#set($template.internalCollectionName = $CppViewHelper.computeVariableName($template.currentShape.mapValue.shape.name) + "Map")
+#elseif($template.currentShape.mapValue.shape.list)
+#set($template.internalCollectionName = $CppViewHelper.computeVariableName($template.currentShape.mapValue.shape.name) + "List")
+#end
+#if(!$template.atBottom)
+#if($template.currentShape.mapKey.shape.enum)
+  ${template.currentSpaces}  ${template.containerVar}[${template.currentShape.mapKey.shape.name}Mapper::Get${template.currentShape.mapKey.shape.name}ForName(${template.lowerCaseVarName}Item.first)] = std::move(${template.internalCollectionName});
+#else
+  ${template.currentSpaces}  ${template.containerVar}[${template.lowerCaseVarName}Item.first] = std::move(${template.internalCollectionName});
+#end
+#end
+  ${template.currentSpaces}}
+#elseif($template.currentShape.list)
+#if($template.recursionDepth > 1 || $memberIsWholePayload)
+  ${template.currentSpaces}Array<JsonView> ${template.lowerCaseVarName}JsonList = ${template.jsonValue}.AsArray();
+#else
+  ${template.currentSpaces}Array<JsonView> ${template.lowerCaseVarName}JsonList = ${template.jsonValue}.GetArray("${template.memberKey}");
+#end
+#if($template.recursionDepth > 1)
+#set($template.containerVar = ${template.lowerCaseVarName} + "List")
+  ${template.currentSpaces}Aws::Vector<${CppViewHelper.computeCppType($template.currentShape.listMember.shape)}> ${template.lowerCaseVarName}List;
+  ${template.currentSpaces}${template.lowerCaseVarName}List.reserve((size_t)${template.lowerCaseVarName}JsonList.GetLength());
+#end
+  ${template.currentSpaces}for(unsigned ${template.lowerCaseVarName}Index = 0; ${template.lowerCaseVarName}Index < ${template.lowerCaseVarName}JsonList.GetLength(); ++${template.lowerCaseVarName}Index)
+  ${template.currentSpaces}{
+#if(!$template.currentShape.listMember.shape.map && !$template.currentShape.listMember.shape.list)
+#set($template.atBottom = true)
+#if($template.currentShape.listMember.shape.enum)
+#set($enumName = $template.currentShape.listMember.shape.name)
+  ${template.currentSpaces}  ${template.containerVar}.push_back(${enumName}Mapper::Get${enumName}ForName(${template.lowerCaseVarName}JsonList[${template.lowerCaseVarName}Index].AsString()));
+#elseif($template.currentShape.listMember.shape.blob)
+  ${template.currentSpaces}  ${template.containerVar}.push_back(HashingUtils::Base64Decode(${template.lowerCaseVarName}JsonList[${template.lowerCaseVarName}Index].As${CppViewHelper.computeJsonCppType($template.currentShape.listMember.shape)}()));
+#else
+  ${template.currentSpaces}  ${template.containerVar}.push_back(${template.lowerCaseVarName}JsonList[${template.lowerCaseVarName}Index].As${CppViewHelper.computeJsonCppType($template.currentShape.listMember.shape)}());
+#end
+#else
+#set($currentSpaces = $template.currentSpaces + "  ")
+#set($currentShape = $template.currentShape.listMember.shape)
+#set($memberKey = $template.currentShape.listMember.shape.name)
+#set($jsonValue = ${template.lowerCaseVarName} + "JsonList[" + ${template.lowerCaseVarName} + "Index]")
+#set($containerVar = $template.containerVar + "[" + ${template.lowerCaseVarName} + "Index]")
+#set($recursionDepth = $template.recursionDepth + 1)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/json/ModelInternalMapOrListJsonDeserializer.vm")
+#end
+#if($template.currentShape.listMember.shape.map)
+#set($template.internalCollectionName = $CppViewHelper.computeVariableName($template.currentShape.listMember.shape.name) + "Map")
+#elseif($template.currentShape.mapValue.shape.list || $template.currentShape.listMember.shape.list)
+#set($template.internalCollectionName = $CppViewHelper.computeVariableName($template.currentShape.listMember.shape.name) + "List")
+#end
+#if(!$template.atBottom)
+  ${template.currentSpaces}  ${template.containerVar}.push_back(std::move(${template.internalCollectionName}));
+#end
+  ${template.currentSpaces}}
+#end

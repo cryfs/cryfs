@@ -1,0 +1,232 @@
+{
+  "metadata" : {
+    "apiVersion" : "2017-11-03T00:20:44Z",
+    "endpointPrefix" : "z2z37qum61",
+    "serviceFullName" : "PetStore",
+    "serviceId" : "PetStore",
+    "protocol" : "api-gateway",
+    "uid" : "z2z37qum61-2017-11-03T00:20:44Z"
+  },
+  "operations" : {
+    "CreatePet" : {
+      "name" : "CreatePet",
+      "http" : {
+        "method" : "POST",
+        "requestUri" : "/test/pets",
+        "responseCode" : 200
+      },
+      "input" : {
+        "shape" : "CreatePetRequest"
+      },
+      "output" : {
+        "shape" : "CreatePetResponse"
+      },
+      "errors" : [ ],
+      "authtype" : "none"
+    },
+    "GetApiRoot" : {
+      "name" : "GetApiRoot",
+      "http" : {
+        "method" : "GET",
+        "requestUri" : "/test/",
+        "responseCode" : 200
+      },
+      "input" : {
+        "shape" : "GetApiRootRequest"
+      },
+      "output" : {
+        "shape" : "GetApiRootResponse"
+      },
+      "errors" : [ ],
+      "authtype" : "none"
+    },
+    "GetPet" : {
+      "name" : "GetPet",
+      "http" : {
+        "method" : "GET",
+        "requestUri" : "/test/pets/{petId}",
+        "responseCode" : 200
+      },
+      "input" : {
+        "shape" : "GetPetRequest"
+      },
+      "output" : {
+        "shape" : "GetPetResponse"
+      },
+      "errors" : [ ],
+      "authtype" : "none"
+    },
+    "GetPets" : {
+      "name" : "GetPets",
+      "http" : {
+        "method" : "GET",
+        "requestUri" : "/test/pets",
+        "responseCode" : 200
+      },
+      "input" : {
+        "shape" : "GetPetsRequest"
+      },
+      "output" : {
+        "shape" : "GetPetsResponse"
+      },
+      "errors" : [ ],
+      "authtype" : "none"
+    }
+  },
+  "shapes" : {
+    "CreatePetRequest" : {
+      "type" : "structure",
+      "members" : {
+        "NewPet" : {
+          "shape" : "NewPet"
+        }
+      },
+      "required" : [ "NewPet" ],
+      "payload" : "NewPet"
+    },
+    "CreatePetResponse" : {
+      "type" : "structure",
+      "members" : {
+        "NewPetResponse" : {
+          "shape" : "NewPetResponse"
+        }
+      },
+      "required" : [ "NewPetResponse" ],
+      "payload" : "NewPetResponse"
+    },
+    "Empty" : {
+      "type" : "structure",
+      "members" : { }
+    },
+    "GetApiRootRequest" : {
+      "type" : "structure",
+      "members" : { }
+    },
+    "GetApiRootResponse" : {
+      "type" : "structure",
+      "members" : { }
+    },
+    "GetPetRequest" : {
+      "type" : "structure",
+      "members" : {
+        "PetId" : {
+          "shape" : "__double",
+          "location" : "uri",
+          "locationName" : "petId"
+        }
+      },
+      "required" : [ "PetId" ]
+    },
+    "GetPetResponse" : {
+      "type" : "structure",
+      "members" : {
+        "Pet" : {
+          "shape" : "Pet"
+        }
+      },
+      "required" : [ "Pet" ],
+      "payload" : "Pet"
+    },
+    "GetPetsRequest" : {
+      "type" : "structure",
+      "members" : {
+        "Page" : {
+          "shape" : "__string",
+          "location" : "querystring",
+          "locationName" : "page"
+        },
+        "Type" : {
+          "shape" : "__string",
+          "location" : "querystring",
+          "locationName" : "type"
+        }
+      }
+    },
+    "GetPetsResponse" : {
+      "type" : "structure",
+      "members" : {
+        "Pets" : {
+          "shape" : "Pets"
+        }
+      },
+      "required" : [ "Pets" ],
+      "payload" : "Pets"
+    },
+    "NewPet" : {
+      "type" : "structure",
+      "members" : {
+        "Price" : {
+          "shape" : "__double",
+          "locationName" : "price"
+        },
+        "Type" : {
+          "shape" : "PetType",
+          "locationName" : "type"
+        }
+      }
+    },
+    "NewPetResponse" : {
+      "type" : "structure",
+      "members" : {
+        "Message" : {
+          "shape" : "__string",
+          "locationName" : "message"
+        },
+        "Pet" : {
+          "shape" : "Pet",
+          "locationName" : "pet"
+        }
+      }
+    },
+    "Pet" : {
+      "type" : "structure",
+      "members" : {
+        "Id" : {
+          "shape" : "__double",
+          "locationName" : "id"
+        },
+        "Price" : {
+          "shape" : "__double",
+          "locationName" : "price"
+        },
+        "Type" : {
+          "shape" : "__string",
+          "locationName" : "type"
+        }
+      }
+    },
+    "PetType" : {
+      "type" : "string",
+      "enum" : [ "dog", "cat", "fish", "bird", "gecko" ]
+    },
+    "Pets" : {
+      "type" : "list",
+      "member" : {
+        "shape" : "Pet"
+      }
+    },
+    "__boolean" : {
+      "type" : "boolean"
+    },
+    "__double" : {
+      "type" : "double"
+    },
+    "__integer" : {
+      "type" : "integer"
+    },
+    "__long" : {
+      "type" : "long"
+    },
+    "__string" : {
+      "type" : "string"
+    },
+    "__timestampIso8601" : {
+      "type" : "timestamp",
+      "timestampFormat" : "iso8601"
+    },
+    "__timestampUnix" : {
+      "type" : "timestamp",
+      "timestampFormat" : "unixTimestamp"
+    }
+  }
+}

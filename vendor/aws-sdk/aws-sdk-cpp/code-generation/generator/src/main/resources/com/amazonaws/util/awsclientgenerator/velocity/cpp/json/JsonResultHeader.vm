@@ -1,0 +1,53 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#pragma once
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/$metadata.projectName/${metadata.classNamePrefix}_EXPORTS.h>
+#foreach($header in $typeInfo.headerIncludes)
+\#include $header
+#end
+
+namespace Aws
+{
+template<typename RESULT_TYPE>
+class AmazonWebServiceResult;
+
+namespace Utils
+{
+namespace Json
+{
+  class JsonValue;
+} // namespace Json
+} // namespace Utils
+#if($rootNamespace != "Aws")
+}
+namespace ${rootNamespace}
+{
+#end
+namespace ${serviceNamespace}
+{
+namespace Model
+{
+#set($jsonRef = "${typeInfo.jsonType}")
+#set($classNameRef = "${typeInfo.className}&")
+#if($shape.documentation)
+  /**
+   * ${shape.documentation}
+   */
+#end
+  class $typeInfo.exportValue $typeInfo.className
+  {
+  public:
+    ${typeInfo.className}();
+    ${typeInfo.className}(const Aws::AmazonWebServiceResult<${jsonRef}>& result);
+    ${classNameRef} operator=(const Aws::AmazonWebServiceResult<${jsonRef}>& result);
+
+#set($useRequiredField = false)
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cpp/ModelClassMembersAndInlines.vm")
+  };
+
+} // namespace Model
+} // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}

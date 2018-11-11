@@ -1,0 +1,21 @@
+#!/bin/bash
+
+CURDIR="$(dirname "$(readlink -f "$0")")"
+CHANGED_DIRS=`$CURDIR/DetectDirectoryChanges $1`
+
+case $CHANGED_DIRS in 
+    *"aws-cpp-sdk-core"*)
+    ;&
+    *"CMakeLists.txt"*)
+    ;&
+    *"cmake"*)
+    ;&
+    *"code-generation"*)
+	echo "-DBUILD_ONLY=\"\""
+        exit 0
+     ;;
+*)
+esac
+
+BUILD_ONLY_OUT="-DBUILD_ONLY=\"${CHANGED_DIRS//$'\n'/';'}\""
+echo ${BUILD_ONLY_OUT//$'aws-cpp-sdk-'/''}

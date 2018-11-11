@@ -1,0 +1,161 @@
+#parse("com/amazonaws/util/awsclientgenerator/velocity/cfamily/Attribution.vm")
+
+#set($metadata = $serviceModel.metadata)
+#set($rootNamespace = $serviceModel.namespace)
+#set($serviceNamespace = $metadata.namespace)
+\#include <aws/${metadata.projectName}/model/${enumModel.name}.h>
+\#include <aws/core/utils/HashingUtils.h>
+\#include <aws/core/Globals.h>
+\#include <aws/core/utils/EnumParseOverflowContainer.h>
+
+using namespace Aws::Utils;
+
+
+namespace ${rootNamespace}
+{
+  namespace ${serviceNamespace}
+  {
+    namespace Model
+    {
+      namespace ${enumModel.name}Mapper
+      {
+
+#foreach($enumMember in $enumModel.members)
+        static const int ${enumMember.memberName}_HASH = HashingUtils::HashString("${enumMember.memberStringValue}");
+#end
+
+#if ($enumModel.members.size() > 121)
+        /*
+        The if-else chains in this file are converted into a jump table by the compiler,
+        which allows constant time lookup. The chain has been broken into helper functions
+        because MSVC has a maximum of 122 chained if-else blocks.
+        */
+#set ($enumCounter = 0)
+#foreach($enum in $enumModel.members)
+#if ($enumCounter % 122 == 0)
+#set($elseText = "")
+#set ($helperIndex =  $enumCounter / 122)
+        static bool GetEnumForNameHelper${helperIndex}(int hashCode, ${enumModel.name}& enumValue)
+        {
+#end
+          ${elseText}if (hashCode == ${enum.memberName}_HASH)
+          {
+            enumValue = ${enumModel.name}::${enum.memberName};
+            return true;
+          }
+#set($elseText = "else ")
+#set ($enumCounter = $enumCounter + 1)
+#if ($enumCounter % 122 == 0 || $enumCounter == $enumModel.members.size())
+          return false;
+        }
+#end
+#end
+
+#set ($enumCounter = 0)
+#foreach($enum in $enumModel.members)
+#if ($enumCounter % 122 == 0)
+#set($elseText = "")
+#set ($helperIndex =  $enumCounter / 122)
+        static bool GetNameForEnumHelper${helperIndex}(${enumModel.name} enumValue, Aws::String& value)
+        {
+          switch(enumValue)
+          {
+#end
+          case ${enumModel.name}::${enum.memberName}:
+            value = "${enum.memberStringValue}";
+            return true;
+#set ($enumCounter = $enumCounter + 1)
+#if ($enumCounter % 122 == 0 || $enumCounter == $enumModel.members.size())
+          default:
+            return false;
+          }
+        }
+#end
+#end
+#end
+
+        ${enumModel.name} Get${enumModel.name}ForName(const Aws::String& name)
+        {
+          int hashCode = HashingUtils::HashString(name.c_str());
+#if($enumModel.members.size() > 0 && $enumModel.members.size() < 122)
+#set($elseText = "")
+#foreach($enumMember in $enumModel.members)
+          ${elseText}if (hashCode == ${enumMember.memberName}_HASH)
+          {
+            return ${enumModel.name}::${enumMember.memberName};
+          }
+#set($elseText = "else ")
+#end
+          EnumParseOverflowContainer* overflowContainer = Aws::GetEnumOverflowContainer();
+          if(overflowContainer)
+          {
+            overflowContainer->StoreOverflow(hashCode, name);
+            return static_cast<${enumModel.name}>(hashCode);
+          }
+
+          return ${enumModel.name}::NOT_SET;
+#else
+#set($elseText = "")
+#set($maxHelperIndex = $enumModel.members.size() / 122)
+          ${enumModel.name} enumValue;
+#foreach($helperIndex in [0..$maxHelperIndex])
+          ${elseText}if (GetEnumForNameHelper${helperIndex}(hashCode, enumValue))
+          {
+             return enumValue;
+          }
+#set($elseText = "else ")
+#end
+          EnumParseOverflowContainer* overflowContainer = Aws::GetEnumOverflowContainer();
+          if(overflowContainer)
+          {
+            overflowContainer->StoreOverflow(hashCode, name);
+            return static_cast<${enumModel.name}>(hashCode);
+          }
+
+          return ${enumModel.name}::NOT_SET;
+#end
+        }
+
+        Aws::String GetNameFor${enumModel.name}(${enumModel.name} enumValue)
+        {
+#if($enumModel.members.size() > 0 && $enumModel.members.size() < 122)
+          switch(enumValue)
+          {
+#foreach($enumMember in $enumModel.members)
+          case ${enumModel.name}::${enumMember.memberName}:
+            return "${enumMember.memberStringValue}";
+#end
+          default:
+            EnumParseOverflowContainer* overflowContainer = Aws::GetEnumOverflowContainer();
+            if(overflowContainer)
+            {
+              return overflowContainer->RetrieveOverflow(static_cast<int>(enumValue));
+            }
+
+            return "";
+          }
+#else
+#set($maxHelperIndex = $enumModel.members.size() / 122)
+          Aws::String value;
+#set($elseText = "")
+#foreach($helperIndex in [0..$maxHelperIndex])
+          ${elseText}if (GetNameForEnumHelper${helperIndex}(enumValue, value))
+          {
+            return value;
+          }
+#set($elseText = "else ")
+#end
+          EnumParseOverflowContainer* overflowContainer = Aws::GetEnumOverflowContainer();
+          if(overflowContainer)
+          {
+            return overflowContainer->RetrieveOverflow(static_cast<int>(enumValue));
+          }
+
+          return "";
+#end
+        }
+
+      } // namespace ${enumModel.name}Mapper
+    } // namespace Model
+  } // namespace ${serviceNamespace}
+} // namespace ${rootNamespace}
