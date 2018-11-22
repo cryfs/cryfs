@@ -29,7 +29,7 @@ init:
 - echo %generator%
 
 install:
-  - choco install -y dokany --installargs ADDLOCAL=DokanDevFeature,DokanLibBFeature,DokanPDBFeature
+  - choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1
   - cmake --version
 
 build_script:
