@@ -102,6 +102,10 @@ void CryConfigLoader::_checkMissingBlocksAreIntegrityViolations(CryConfigFile *c
   }
 }
 
+optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::load(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
+  return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem);
+}
+
 optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
   if (bf::exists(filename)) {
     return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem);

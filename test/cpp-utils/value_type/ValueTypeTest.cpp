@@ -4,6 +4,10 @@
 #include <unordered_set>
 #include <set>
 
+// TODO Test with MovableOnly underlying type
+// TODO Test that move constructing/assigning actually moves the underlying
+// TODO Test that noexcept flags are set correctly
+
 using cpputils::value_type::IdValueType;
 using cpputils::value_type::OrderedIdValueType;
 using cpputils::value_type::QuantityValueType;

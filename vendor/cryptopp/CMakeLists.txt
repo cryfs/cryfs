@@ -84,10 +84,10 @@ else()
 endif()
 
 
-set(BUILD_TESTING OFF)
-set(BUILD_DOCUMENTATION OFF)
-set(BUILD_SHARED OFF)
-set(BUILD_STATIC ON)
+set(BUILD_TESTING OFF CACHE BOOL "")
+set(BUILD_DOCUMENTATION OFF CACHE BOOL "")
+set(BUILD_SHARED OFF CACHE BOOL "")
+set(BUILD_STATIC ON CACHE BOOL "")
 add_subdirectory(vendor_cryptopp EXCLUDE_FROM_ALL)
 
 target_link_libraries(cryptopp PRIVATE cryptopp-static)
