@@ -224,9 +224,9 @@ namespace cryfs {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
-            shared_ptr<CryConfigFile> configFile = std::move(config.configFile);
-            _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(configFile, std::move(blockStore), std::move(localStateDir), config.myClientId,
-                                                                                 options.allowIntegrityViolations(), configFile->config()->missingBlockIsIntegrityViolation()));
+            const bool missingBlockIsIntegrityViolation = config.configFile.config()->missingBlockIsIntegrityViolation();
+            _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
+                                                                                 options.allowIntegrityViolations(), missingBlockIsIntegrityViolation));
             _sanityCheckFilesystem(_device->get());
 
             auto initFilesystem = [this, &options] (fspp::fuse::Fuse *fuse){

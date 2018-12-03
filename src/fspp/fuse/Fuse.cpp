@@ -235,7 +235,7 @@ Fuse::~Fuse() {
 }
 
 Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, std::string fstype, boost::optional<std::string> fsname)
-  :_init(init), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)), _pipeToParent(nullptr) {
+  :_init(std::move(init)), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)), _pipeToParent(nullptr) {
 }
 
 void Fuse::_logException(const std::exception &e) {
