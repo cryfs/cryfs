@@ -48,6 +48,8 @@ namespace cryfs {
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
         bool _noninteractive;
+        boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idleUnmounter;
+        boost::optional<cpputils::unique_ref<CryDevice>> _device;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

@@ -17,7 +17,7 @@ INSTANTIATE_TEST_CASE_P(FuseOpenErrorTest, FuseOpenErrorTest, Values(EACCES, EDQ
 
 TEST_F(FuseOpenErrorTest, ReturnNoError) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).Times(1).WillOnce(Return(1));
+  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).Times(1).WillOnce(Return(1));
   errno = 0;
   int error = OpenFileReturnError(FILENAME, O_RDONLY);
   EXPECT_EQ(0, error);
@@ -25,7 +25,7 @@ TEST_F(FuseOpenErrorTest, ReturnNoError) {
 
 TEST_P(FuseOpenErrorTest, ReturnError) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
+  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
   int error = OpenFileReturnError(FILENAME, O_RDONLY);
   EXPECT_EQ(GetParam(), error);
 }

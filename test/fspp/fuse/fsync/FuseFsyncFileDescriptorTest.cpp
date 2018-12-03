@@ -17,7 +17,7 @@ INSTANTIATE_TEST_CASE_P(FuseFsyncFileDescriptorTest, FuseFsyncFileDescriptorTest
 TEST_P(FuseFsyncFileDescriptorTest, FileDescriptorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
-  EXPECT_CALL(fsimpl, fsync(Eq(GetParam())))
+  EXPECT_CALL(*fsimpl, fsync(Eq(GetParam())))
     .Times(1).WillOnce(Return());
 
   FsyncFile(FILENAME);

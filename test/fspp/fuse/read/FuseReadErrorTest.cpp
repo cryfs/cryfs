@@ -27,7 +27,7 @@ INSTANTIATE_TEST_CASE_P(FuseReadErrorTest, FuseReadErrorTest, Values(EAGAIN, EBA
 
 
 TEST_P(FuseReadErrorTest, ReturnErrorOnFirstReadCall) {
-  EXPECT_CALL(fsimpl, read(0, _, _, _))
+  EXPECT_CALL(*fsimpl, read(0, _, _, _))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[READCOUNT.value()];
@@ -41,14 +41,14 @@ TEST_P(FuseReadErrorTest, ReturnErrorOnSecondReadCall) {
   // We store the number of bytes the first call could successfully read and check later that our
   // read syscall returns exactly this number of bytes
   fspp::num_bytes_t successfullyReadBytes = fspp::num_bytes_t(-1);
-  EXPECT_CALL(fsimpl, read(0, _, _, Eq(fspp::num_bytes_t(0))))
+  EXPECT_CALL(*fsimpl, read(0, _, _, Eq(fspp::num_bytes_t(0))))
     .Times(1)
     .WillOnce(Invoke([&successfullyReadBytes](int, void*, fspp::num_bytes_t count, fspp::num_bytes_t) {
       // Store the number of successfully read bytes
       successfullyReadBytes = count;
       return count;
     }));
-  EXPECT_CALL(fsimpl, read(0, _, _, Ne(fspp::num_bytes_t(0))))
+  EXPECT_CALL(*fsimpl, read(0, _, _, Ne(fspp::num_bytes_t(0))))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[READCOUNT.value()];

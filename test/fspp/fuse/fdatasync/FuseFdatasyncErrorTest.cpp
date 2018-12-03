@@ -15,7 +15,7 @@ INSTANTIATE_TEST_CASE_P(FuseFdatasyncErrorTest, FuseFdatasyncErrorTest, Values(E
 TEST_P(FuseFdatasyncErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, 0);
-  EXPECT_CALL(fsimpl, fdatasync(0))
+  EXPECT_CALL(*fsimpl, fdatasync(0))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = FdatasyncFileReturnError(FILENAME);

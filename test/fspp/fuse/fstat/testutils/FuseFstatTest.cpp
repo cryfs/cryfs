@@ -25,5 +25,5 @@ unique_ref<OpenFileHandle> FuseFstatTest::CreateFileAllowErrors(const TempTestFS
 }
 
 void FuseFstatTest::OnCreateAndOpenReturnFileDescriptor(const char *filename, int descriptor) {
-  EXPECT_CALL(fsimpl, createAndOpenFile(StrEq(filename), _, _, _)).Times(1).WillOnce(Return(descriptor));
+  EXPECT_CALL(*fsimpl, createAndOpenFile(StrEq(filename), _, _, _)).Times(1).WillOnce(Return(descriptor));
 }

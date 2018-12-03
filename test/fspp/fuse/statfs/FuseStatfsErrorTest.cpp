@@ -17,14 +17,14 @@ INSTANTIATE_TEST_CASE_P(FuseStatfsErrorTest, FuseStatfsErrorTest, Values(EACCES,
 
 TEST_F(FuseStatfsErrorTest, ReturnNoError) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, statfs(_)).Times(1).WillOnce(Return());
+  EXPECT_CALL(*fsimpl, statfs(_)).Times(1).WillOnce(Return());
   int error = StatfsReturnError(FILENAME);
   EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseStatfsErrorTest, ReturnError) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, statfs( _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
+  EXPECT_CALL(*fsimpl, statfs( _)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
   int error = StatfsReturnError(FILENAME);
   EXPECT_EQ(GetParam(), error);
 }
