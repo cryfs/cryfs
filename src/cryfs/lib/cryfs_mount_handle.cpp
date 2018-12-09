@@ -92,7 +92,8 @@ cryfs_status cryfs_mount_handle::mount() {
         return cryfs_error_MOUNTDIR_NOT_SET;
     }
 
-    fspp::fuse::Fuse fuse(std::bind(&cryfs_mount_handle::_init_filesystem, this, std::placeholders::_1), "cryfs", "cryfs@"+_basedir.native());
+    // TODO Offer onMounted callback through the API
+    fspp::fuse::Fuse fuse(std::bind(&cryfs_mount_handle::_init_filesystem, this, std::placeholders::_1), [] {}, "cryfs", "cryfs@"+_basedir.native());
 
     if (_run_in_foreground) {
         fuse.runInForeground(*_mountdir, _fuse_arguments);

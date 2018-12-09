@@ -234,8 +234,10 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, std::string fstype, boost::optional<std::string> fsname)
-  :_init(std::move(init)), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)), _pipeToParent(nullptr) {
+Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, std::function<void()> onMounted, std::string fstype, boost::optional<std::string> fsname)
+  :_init(std::move(init)), _onMounted(std::move(onMounted)), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)), _pipeToParent(nullptr) {
+  ASSERT(static_cast<bool>(_init), "Invalid init given");
+  ASSERT(static_cast<bool>(_onMounted), "Invalid onMounted given");
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -913,6 +915,7 @@ void Fuse::init(fuse_conn_info *conn) {
     LOG(INFO, "Filesystem started.");
 
     _running = true;
+    _onMounted();
 
 #ifdef FSPP_LOG
     cpputils::logging::setLevel(DEBUG);

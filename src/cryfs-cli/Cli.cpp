@@ -51,8 +51,8 @@ using std::string;
 using std::endl;
 using std::shared_ptr;
 using std::make_shared;
+using std::make_unique;
 using std::function;
-using std::make_shared;
 using boost::optional;
 using boost::none;
 using boost::chrono::minutes;
@@ -219,21 +219,21 @@ namespace cryfs {
                                cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
     }
 
-    void Cli::_runFilesystem(const ProgramOptions &options) {
+    void Cli::_runFilesystem(const ProgramOptions &options, std::function<void()> onMounted) {
         try {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
-            const bool missingBlockIsIntegrityViolation = config.configFile.config()->missingBlockIsIntegrityViolation();
+            const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
                                                                                  options.allowIntegrityViolations(), missingBlockIsIntegrityViolation));
             _sanityCheckFilesystem(_device->get());
 
-            auto initFilesystem = [this, &options] (fspp::fuse::Fuse *fuse){
+            auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
                 ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
 
                 //TODO Test auto unmounting after idle timeout
-                _idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [fuse] {fuse->stop();});
+                _idleUnmounter = _createIdleCallback(options.unmountAfterIdleMinutes(), [fs] {fs->stop();});
                 if (_idleUnmounter != none) {
                     (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
                 }
@@ -241,7 +241,7 @@ namespace cryfs {
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));
             };
 
-            auto fuse = make_unique_ref<fspp::fuse::Fuse>(initFilesystem, "cryfs", "cryfs@" + options.baseDir().string());
+            auto fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
 
             _initLogfile(options);
 
@@ -373,14 +373,14 @@ namespace cryfs {
         return false;
     }
 
-    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient) {
+    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
         cpputils::showBacktraceOnCrash();
 
         try {
             _showVersion(std::move(httpClient));
             ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
-            _runFilesystem(options);
+            _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {
             if (e.errorCode() != ErrorCode::Success) {
               std::cerr << "Error: " << e.what() << std::endl;
