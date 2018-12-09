@@ -26,7 +26,7 @@ int main(int argc, const char *argv[]) {
 		    auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
 #endif
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
-            .main(argc, argv, std::move(httpClient));
+            .main(argc, argv, std::move(httpClient), []{});
     } catch (const CryfsException &e) {
         if (e.errorCode() != ErrorCode::Success) {
             std::cerr << "Error: " << e.what() << std::endl;
