@@ -16,6 +16,8 @@ using std::mutex;
 namespace blockstore {
 namespace caching {
 
+constexpr double CachingBlockStore2::MAX_LIFETIME_SEC;
+
 CachingBlockStore2::CachedBlock::CachedBlock(const CachingBlockStore2* blockStore, const BlockId &blockId, cpputils::Data data, bool isDirty)
     : _blockStore(blockStore), _blockId(blockId), _data(std::move(data)), _dirty(isDirty) {
 }

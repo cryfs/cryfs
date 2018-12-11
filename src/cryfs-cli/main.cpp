@@ -28,7 +28,7 @@ int main(int argc, const char *argv[]) {
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient), []{});
     } catch (const CryfsException &e) {
-        if (e.errorCode() != ErrorCode::Success) {
+        if (e.what() != string()) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
         return exitCode(e.errorCode());

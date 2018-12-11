@@ -51,6 +51,7 @@ using std::string;
 using std::endl;
 using std::shared_ptr;
 using std::make_shared;
+using std::unique_ptr;
 using std::make_unique;
 using std::function;
 using boost::optional;
@@ -224,9 +225,24 @@ namespace cryfs {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
+            unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
+            auto onIntegrityViolation = [&fuse] () {
+              if (fuse.get() != nullptr) {
+                LOG(ERR, "Integrity violation detected. Unmounting.");
+                fuse->stop();
+              } else {
+                // the file system isn't initialized yet, i.e. we failed in the initial steps when
+                // setting up _device before running initFilesystem.
+                // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
+                // Error code is "success" because that's also what is returned if this happens while
+                // the file system is already mounted - it gets unmounted cleanly.
+                // TODO Should we reconsider this?
+                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::Success);
+              }
+            };
             const bool missingBlockIsIntegrityViolation = config.configFile.config()->missingBlockIsIntegrityViolation();
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
-                                                                                 options.allowIntegrityViolations(), missingBlockIsIntegrityViolation));
+                                                                                 options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
             _sanityCheckFilesystem(_device->get());
 
             auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
@@ -241,7 +257,7 @@ namespace cryfs {
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));
             };
 
-            auto fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
+            fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
 
             _initLogfile(options);
 
@@ -378,7 +394,7 @@ namespace cryfs {
             _sanityChecks(options);
             _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {
-            if (e.errorCode() != ErrorCode::Success) {
+            if (e.what() != string()) {
               std::cerr << "Error: " << e.what() << std::endl;
             }
             return exitCode(e.errorCode());

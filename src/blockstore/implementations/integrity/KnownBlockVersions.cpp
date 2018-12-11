@@ -17,20 +17,22 @@ using cpputils::Deserializer;
 namespace blockstore {
 namespace integrity {
 
-const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;0";
+const string KnownBlockVersions::OLD_HEADER = "cryfs.integritydata.knownblockversions;0";
+const string KnownBlockVersions::HEADER = "cryfs.integritydata.knownblockversions;1";
 constexpr uint32_t KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK;
 
 KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath, uint32_t myClientId)
-        :_knownVersions(), _lastUpdateClientId(), _stateFilePath(stateFilePath), _myClientId(myClientId), _mutex(), _valid(true) {
+        :_integrityViolationOnPreviousRun(false), _knownVersions(), _lastUpdateClientId(), _stateFilePath(stateFilePath), _myClientId(myClientId), _mutex(), _valid(true) {
     unique_lock<mutex> lock(_mutex);
     ASSERT(_myClientId != CLIENT_ID_FOR_DELETED_BLOCK, "This is not a valid client id");
     _loadStateFile();
 }
 
 KnownBlockVersions::KnownBlockVersions(KnownBlockVersions &&rhs) // NOLINT (intentionally not noexcept)
-        : _knownVersions(), _lastUpdateClientId(), _stateFilePath(), _myClientId(0), _mutex(), _valid(true) {
+        : _integrityViolationOnPreviousRun(false), _knownVersions(), _lastUpdateClientId(), _stateFilePath(), _myClientId(0), _mutex(), _valid(true) {
     unique_lock<mutex> rhsLock(rhs._mutex);
     unique_lock<mutex> lock(_mutex);
+    _integrityViolationOnPreviousRun = rhs._integrityViolationOnPreviousRun;
     _knownVersions = std::move(rhs._knownVersions);
     _lastUpdateClientId = std::move(rhs._lastUpdateClientId);
     _stateFilePath = std::move(rhs._stateFilePath);
@@ -43,6 +45,14 @@ KnownBlockVersions::~KnownBlockVersions() {
     if (_valid) {
         _saveStateFile();
     }
+}
+
+void KnownBlockVersions::setIntegrityViolationOnPreviousRun(bool value) {
+    _integrityViolationOnPreviousRun = value;
+}
+
+bool KnownBlockVersions::integrityViolationOnPreviousRun() const {
+    return _integrityViolationOnPreviousRun;
 }
 
 bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const BlockId &blockId, uint64_t version) {
@@ -89,13 +99,25 @@ void KnownBlockVersions::_loadStateFile() {
         // File doesn't exist means we loaded empty state.
         return;
     }
-
     Deserializer deserializer(&*file);
-    if (HEADER != deserializer.readString()) {
+    const string loaded_header = deserializer.readString();
+
+#ifndef CRYFS_NO_COMPATIBILITY
+    if (OLD_HEADER == loaded_header) {
+        _knownVersions = _deserializeKnownVersions(&deserializer);
+        _lastUpdateClientId = _deserializeLastUpdateClientIds(&deserializer);
+
+        deserializer.finished();
+        _saveStateFile();
+        return;
+    }
+#endif
+    if (HEADER != loaded_header) {
         throw std::runtime_error("Invalid local state: Invalid integrity file header.");
     }
-    _deserializeKnownVersions(&deserializer);
-    _deserializeLastUpdateClientIds(&deserializer);
+    _integrityViolationOnPreviousRun = deserializer.readBool();
+    _knownVersions = _deserializeKnownVersions(&deserializer);
+    _lastUpdateClientId = _deserializeLastUpdateClientIds(&deserializer);
 
     deserializer.finished();
 };
@@ -104,30 +126,34 @@ void KnownBlockVersions::_loadStateFile() {
 void KnownBlockVersions::_saveStateFile() const {
     Serializer serializer(
             Serializer::StringSize(HEADER) +
+            Serializer::BoolSize() +
             sizeof(uint64_t) + _knownVersions.size() * (sizeof(uint32_t) + BlockId::BINARY_LENGTH + sizeof(uint64_t)) +
             sizeof(uint64_t) + _lastUpdateClientId.size() * (BlockId::BINARY_LENGTH + sizeof(uint32_t)));
     serializer.writeString(HEADER);
-    _serializeKnownVersions(&serializer);
-    _serializeLastUpdateClientIds(&serializer);
+    serializer.writeBool(_integrityViolationOnPreviousRun);
+    _serializeKnownVersions(&serializer, _knownVersions);
+    _serializeLastUpdateClientIds(&serializer, _lastUpdateClientId);
 
     serializer.finished().StoreToFile(_stateFilePath);
 }
 
-void KnownBlockVersions::_deserializeKnownVersions(Deserializer *deserializer) {
+std::unordered_map<ClientIdAndBlockId, uint64_t> KnownBlockVersions::_deserializeKnownVersions(Deserializer *deserializer) {
     uint64_t numEntries = deserializer->readUint64();
-    _knownVersions.clear();
-    _knownVersions.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
+    std::unordered_map<ClientIdAndBlockId, uint64_t> result;
+    result.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
     for (uint64_t i = 0 ; i < numEntries; ++i) {
         auto entry = _deserializeKnownVersionsEntry(deserializer);
-        _knownVersions.insert(entry);
+        result.insert(entry);
     }
+
+    return result;
 }
 
-void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer) const {
-    uint64_t numEntries = _knownVersions.size();
+void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer, const std::unordered_map<ClientIdAndBlockId, uint64_t>& knownVersions) {
+    uint64_t numEntries = knownVersions.size();
     serializer->writeUint64(numEntries);
 
-    for (const auto &entry : _knownVersions) {
+    for (const auto &entry : knownVersions) {
         _serializeKnownVersionsEntry(serializer, entry);
     }
 }
@@ -146,21 +172,22 @@ void KnownBlockVersions::_serializeKnownVersionsEntry(Serializer *serializer, co
     serializer->writeUint64(entry.second);
 }
 
-void KnownBlockVersions::_deserializeLastUpdateClientIds(Deserializer *deserializer) {
+std::unordered_map<BlockId, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIds(Deserializer *deserializer) {
     uint64_t numEntries = deserializer->readUint64();
-    _lastUpdateClientId.clear();
-    _lastUpdateClientId.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
+    std::unordered_map<BlockId, uint32_t> result;
+    result.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
     for (uint64_t i = 0 ; i < numEntries; ++i) {
         auto entry = _deserializeLastUpdateClientIdEntry(deserializer);
-        _lastUpdateClientId.insert(entry);
+        result.insert(entry);
     }
+    return result;
 }
 
-void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer) const {
-    uint64_t numEntries = _lastUpdateClientId.size();
+void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer, const std::unordered_map<BlockId, uint32_t>& lastUpdateClientId) {
+    uint64_t numEntries = lastUpdateClientId.size();
     serializer->writeUint64(numEntries);
 
-    for (const auto &entry : _lastUpdateClientId) {
+    for (const auto &entry : lastUpdateClientId) {
         _serializeLastUpdateClientIdEntry(serializer, entry);
     }
 }

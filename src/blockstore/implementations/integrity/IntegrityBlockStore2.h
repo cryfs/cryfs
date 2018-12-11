@@ -5,10 +5,26 @@
 #include "../../interface/BlockStore2.h"
 #include <cpp-utils/macros.h>
 #include "KnownBlockVersions.h"
-#include "IntegrityViolationError.h"
 
 namespace blockstore {
 namespace integrity {
+
+// This exception is thrown if the filesystem can't be loaded because an integrity violation happened
+// in one of its earlier runs.
+// TODO Use block store factory with expected<> result instead of exception throwing.
+class IntegrityViolationOnPreviousRun final : public std::exception {
+public:
+  IntegrityViolationOnPreviousRun(boost::filesystem::path stateFile)
+  : _stateFile(std::move(stateFile)) {}
+
+  const boost::filesystem::path& stateFile() const {
+    return _stateFile;
+  }
+
+private:
+  // The state file/directory that has to be deleted so the file system works again
+  boost::filesystem::path _stateFile;
+};
 
 //TODO Format version headers
 
@@ -16,7 +32,7 @@ namespace integrity {
 // It depends on being used on top of an encrypted block store that protects integrity of the block contents (i.e. uses an authenticated cipher).
 class IntegrityBlockStore2 final: public BlockStore2 {
 public:
-  IntegrityBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation);
+  IntegrityBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation);
 
   bool tryCreate(const BlockId &blockId, const cpputils::Data &data) override;
   bool remove(const BlockId &blockId) override;
@@ -49,10 +65,10 @@ public:
 private:
 
   static cpputils::Data _prependHeaderToData(const BlockId &blockId, uint32_t myClientId, uint64_t version, const cpputils::Data &data);
-  void _checkHeader(const BlockId &blockId, const cpputils::Data &data) const;
+  WARN_UNUSED_RESULT bool _checkHeader(const BlockId &blockId, const cpputils::Data &data) const;
   void _checkFormatHeader(const cpputils::Data &data) const;
-  void _checkIdHeader(const BlockId &expectedBlockId, const cpputils::Data &data) const;
-  void _checkVersionHeader(const BlockId &blockId, const cpputils::Data &data) const;
+  WARN_UNUSED_RESULT bool _checkIdHeader(const BlockId &expectedBlockId, const cpputils::Data &data) const;
+  WARN_UNUSED_RESULT bool _checkVersionHeader(const BlockId &blockId, const cpputils::Data &data) const;
   static uint16_t _readFormatHeader(const cpputils::Data &data);
   static uint32_t _readClientId(const cpputils::Data &data);
   static BlockId _readBlockId(const cpputils::Data &data);
@@ -61,14 +77,13 @@ private:
   static cpputils::Data _migrateBlock(const BlockId &blockId, const cpputils::Data &data);
 #endif
   static cpputils::Data _removeHeader(const cpputils::Data &data);
-  void _checkNoPastIntegrityViolations() const;
   void integrityViolationDetected(const std::string &reason) const;
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
   mutable KnownBlockVersions _knownBlockVersions;
   const bool _allowIntegrityViolations;
   const bool _missingBlockIsIntegrityViolation;
-  mutable bool _integrityViolationDetected;
+  std::function<void ()> _onIntegrityViolation;
 
   DISALLOW_COPY_AND_ASSIGN(IntegrityBlockStore2);
 };
