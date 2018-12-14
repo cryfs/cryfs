@@ -5,6 +5,7 @@
 
 #if defined(_MSC_VER)
 #include <cpp-utils/network/WinHttpClient.h>
+#include <VersionHelpers.h>
 #else
 #include <cpp-utils/network/CurlHttpClient.h>
 #endif
@@ -18,12 +19,18 @@ using std::make_shared;
 using std::cerr;
 
 int main(int argc, const char *argv[]) {
+#if defined(_MSC_VER)
+    if (!IsWindows10OrGreater()) {
+       std::cerr << "CryFS is currently only supported on Windows 10 (or later)." << std::endl;
+    }
+#endif
+
     try {
         auto &keyGenerator = Random::OSRandom();
 #if defined(_MSC_VER)
-		    auto httpClient = make_unique_ref<cpputils::WinHttpClient>();
+        auto httpClient = make_unique_ref<cpputils::WinHttpClient>();
 #else
-		    auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
+        auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
 #endif
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient), []{});
