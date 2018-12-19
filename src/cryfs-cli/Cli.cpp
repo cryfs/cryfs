@@ -395,7 +395,7 @@ namespace cryfs {
             _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {
             if (e.what() != string()) {
-              std::cerr << "Error: " << e.what() << std::endl;
+              std::cerr << "Error " << static_cast<int>(e.errorCode()) << ": " << e.what() << std::endl;
             }
             return exitCode(e.errorCode());
         } catch (const std::runtime_error &e) {
