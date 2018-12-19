@@ -89,7 +89,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
   modifyFilesystemId();
   EXPECT_RUN_ERROR(
       args,
-      "Error: The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.",
+      "Error 20: The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir.",
       ErrorCode::FilesystemIdChanged
   );
 }
@@ -101,7 +101,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
   modifyFilesystemKey();
   EXPECT_RUN_ERROR(
       args,
-      "Error: The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?",
+      "Error 21: The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?",
       ErrorCode::EncryptionKeyChanged
   );
 }
@@ -130,7 +130,7 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
   recursive_copy(backup.path() / "basedir", basedir);
 
   // error code is success because it unmounts normally
-  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::Success, [&] {
+  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     EXPECT_FALSE(readingFileIsSuccessful(mountdir / "myfile"));
   });
 
@@ -151,8 +151,7 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
   TempDir backup;
   recursive_copy(basedir, backup.path() / "basedir");
 
-  // error code is success because it unmounts normally
-  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::Success, [&] {
+  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     // modify the file system contents
     writeFile(mountdir / "myfile", "hello world 2");
     ASSERT(readingFileIsSuccessful(mountdir / "myfile"), ""); // just to make sure reading usually works
