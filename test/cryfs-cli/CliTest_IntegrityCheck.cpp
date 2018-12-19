@@ -130,7 +130,7 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
   recursive_copy(backup.path() / "basedir", basedir);
 
   // error code is success because it unmounts normally
-  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::Success, [&] {
+  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     EXPECT_FALSE(readingFileIsSuccessful(mountdir / "myfile"));
   });
 
@@ -151,8 +151,7 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
   TempDir backup;
   recursive_copy(basedir, backup.path() / "basedir");
 
-  // error code is success because it unmounts normally
-  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::Success, [&] {
+  EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     // modify the file system contents
     writeFile(mountdir / "myfile", "hello world 2");
     ASSERT(readingFileIsSuccessful(mountdir / "myfile"), ""); // just to make sure reading usually works

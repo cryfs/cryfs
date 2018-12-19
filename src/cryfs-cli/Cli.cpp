@@ -226,18 +226,19 @@ namespace cryfs {
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
             unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
-            auto onIntegrityViolation = [&fuse] () {
+            bool stoppedBecauseOfIntegrityViolation = false;
+
+            auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
               if (fuse.get() != nullptr) {
                 LOG(ERR, "Integrity violation detected. Unmounting.");
+                stoppedBecauseOfIntegrityViolation = true;
                 fuse->stop();
               } else {
-                // the file system isn't initialized yet, i.e. we failed in the initial steps when
+                // Usually on an integrity violation, the file system is unmounted.
+                // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
                 // setting up _device before running initFilesystem.
                 // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
-                // Error code is "success" because that's also what is returned if this happens while
-                // the file system is already mounted - it gets unmounted cleanly.
-                // TODO Should we reconsider this?
-                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::Success);
+                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
               }
             };
             const bool missingBlockIsIntegrityViolation = config.configFile.config()->missingBlockIsIntegrityViolation();
@@ -268,6 +269,10 @@ namespace cryfs {
                     << std::endl;
 #endif
           fuse->run(options.mountDir(), options.fuseOptions());
+
+          if (stoppedBecauseOfIntegrityViolation) {
+              throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
+          }
         } catch (const CryfsException &e) {
             throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
