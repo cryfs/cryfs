@@ -51,6 +51,7 @@ using std::string;
 using std::endl;
 using std::shared_ptr;
 using std::make_shared;
+using std::unique_ptr;
 using std::make_unique;
 using std::function;
 using boost::optional;
@@ -224,9 +225,25 @@ namespace cryfs {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
+            unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
+            bool stoppedBecauseOfIntegrityViolation = false;
+
+            auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
+              if (fuse.get() != nullptr) {
+                LOG(ERR, "Integrity violation detected. Unmounting.");
+                stoppedBecauseOfIntegrityViolation = true;
+                fuse->stop();
+              } else {
+                // Usually on an integrity violation, the file system is unmounted.
+                // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
+                // setting up _device before running initFilesystem.
+                // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
+                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
+              }
+            };
             const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
-                                                                                 options.allowIntegrityViolations(), missingBlockIsIntegrityViolation));
+                                                                                 options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
             _sanityCheckFilesystem(_device->get());
 
             auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
@@ -241,7 +258,7 @@ namespace cryfs {
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));
             };
 
-            auto fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
+            fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
 
             _initLogfile(options);
 
@@ -255,6 +272,10 @@ namespace cryfs {
                 fuse->runInForeground(options.mountDir(), options.fuseOptions());
             } else {
                 fuse->runInBackground(options.mountDir(), options.fuseOptions());
+            }
+
+            if (stoppedBecauseOfIntegrityViolation) {
+              throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
             }
         } catch (const CryfsException &e) {
             throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
@@ -382,8 +403,8 @@ namespace cryfs {
             _sanityChecks(options);
             _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {
-            if (e.errorCode() != ErrorCode::Success) {
-              std::cerr << "Error: " << e.what() << std::endl;
+            if (e.what() != string()) {
+              std::cerr << "Error " << static_cast<int>(e.errorCode()) << ": " << e.what() << std::endl;
             }
             return exitCode(e.errorCode());
         } catch (const std::runtime_error &e) {

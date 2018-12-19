@@ -27,7 +27,6 @@ set(SOURCES
   implementations/integrity/IntegrityBlockStore2.cpp
   implementations/integrity/KnownBlockVersions.cpp
   implementations/integrity/ClientIdAndBlockId.cpp
-  implementations/integrity/IntegrityViolationError.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
 )

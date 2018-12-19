@@ -83,7 +83,10 @@ unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader
     auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.configFile->config()->EncryptionKey());
     auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
     auto integrityFilePath = statePath / "integritydata";
-    auto integrityBlockStore = make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, config.myClientId, false, true);
+    auto onIntegrityViolation = [] () {
+        std::cerr << "Warning: Integrity violation encountered" << std::endl;
+    };
+    auto integrityBlockStore = make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, config.myClientId, false, true, onIntegrityViolation);
     return make_unique_ref<LowToHighLevelBlockStore>(std::move(integrityBlockStore));
 }
 

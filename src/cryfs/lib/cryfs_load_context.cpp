@@ -123,7 +123,8 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
 
     unique_ptr<CryDevice> crydevice;
     try {
-        crydevice = make_unique<CryDevice>(configfile, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation);
+        auto onIntegrityViolation = [] {}; // TODO Make this configurable
+        crydevice = make_unique<CryDevice>(configfile, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
     } catch (const std::runtime_error& e) {
         // this might be thrown if the file system tries to migrate to a newer version and the root block doesn't exist
         return cryfs_error_FILESYSTEM_INVALID;

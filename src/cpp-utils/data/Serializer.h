@@ -16,6 +16,7 @@ namespace cpputils {
     public:
         Serializer(size_t size);
 
+        void writeBool(bool value);
         void writeUint8(uint8_t value);
         void writeInt8(int8_t value);
         void writeUint16(uint16_t value);
@@ -32,6 +33,7 @@ namespace cpputils {
         // It does not store a data size but limits the size by the size of the serialization result
         void writeTailData(const Data &value);
 
+        static size_t BoolSize();
         static size_t DataSize(const Data &value);
         static size_t StringSize(const std::string &value);
 
@@ -48,6 +50,14 @@ namespace cpputils {
     };
 
     inline Serializer::Serializer(size_t size): _pos(0), _result(size) {
+    }
+
+    inline size_t Serializer::BoolSize() {
+        return sizeof(uint8_t);
+    }
+
+    inline void Serializer::writeBool(bool value) {
+        writeUint8(value ? 1 : 0);
     }
 
     inline void Serializer::writeUint8(uint8_t value) {
@@ -117,6 +127,7 @@ namespace cpputils {
         std::memcpy(static_cast<char*>(_result.dataOffset(_pos)), static_cast<const char*>(data), count);
         _pos += count;
     }
+
 
     inline void Serializer::writeString(const std::string &value) {
         _writeData(value.c_str(), value.size() + 1); // +1 for the nullbyte

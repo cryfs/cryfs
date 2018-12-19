@@ -60,21 +60,27 @@ public:
         EXPECT_RUN_ERROR(args, "Usage:[^\\x00]*"+message, errorCode);
     }
 
-    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const std::string& message, cryfs::ErrorCode errorCode) {
-        FilesystemOutput filesystem_output = _run_filesystem(args, boost::none, []{});
+    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const std::string& message, cryfs::ErrorCode errorCode, std::function<void ()> onMounted = [] {}) {
+        FilesystemOutput filesystem_output = run_filesystem(args, boost::none, std::move(onMounted));
 
         EXPECT_EQ(exitCode(errorCode), filesystem_output.exit_code);
-        EXPECT_TRUE(std::regex_search(filesystem_output.stderr_, std::regex(message)));
+        if (!std::regex_search(filesystem_output.stderr_, std::regex(message))) {
+            std::cerr << filesystem_output.stderr_ << std::endl;
+            EXPECT_TRUE(false);
+        }
     }
 
-    void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::filesystem::path &mountDir) {
+    void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::optional<boost::filesystem::path> &mountDir, std::function<void ()> onMounted = [] {}) {
         //TODO Make this work when run in background
         ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
 
-        FilesystemOutput filesystem_output = _run_filesystem(args, mountDir, []{});
+        FilesystemOutput filesystem_output = run_filesystem(args, mountDir, std::move(onMounted));
 
         EXPECT_EQ(0, filesystem_output.exit_code);
-        EXPECT_TRUE(std::regex_search(filesystem_output.stdout_, std::regex("Mounting filesystem")));
+        if (!std::regex_search(filesystem_output.stdout_, std::regex("Mounting filesystem"))) {
+          std::cerr << filesystem_output.stdout_ << std::endl;
+          EXPECT_TRUE(false);
+        }
     }
 
     struct FilesystemOutput final {
@@ -95,10 +101,10 @@ public:
         returncode = cpputils::Subprocess::call(
         std::string("fusermount -u ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
 #endif
-        ASSERT(returncode == 0, "Unmount failed");
+        EXPECT_EQ(0, returncode);
     }
 
-    FilesystemOutput _run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
+    FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         testing::internal::CaptureStdout();
         testing::internal::CaptureStderr();
 
@@ -131,29 +137,29 @@ public:
             return true;
         });
 
-        if(std::future_status::ready != on_mounted_success.wait_for(std::chrono::seconds(10))) {
+        if(std::future_status::ready != on_mounted_success.wait_for(std::chrono::seconds(1000))) {
             testing::internal::GetCapturedStdout(); // stop capturing stdout
             testing::internal::GetCapturedStderr(); // stop capturing stderr
 
-            std::cerr << "onMounted thread (e.g. used for unmount) didn't finish";
+            std::cerr << "onMounted thread (e.g. used for unmount) didn't finish" << std::endl;
             // The std::future destructor of a future created with std::async blocks until the future is ready.
             // so, instead of causing a deadlock, rather abort
             exit(EXIT_FAILURE);
         }
         EXPECT_TRUE(on_mounted_success.get()); // this also re-throws any potential exceptions
 
-        if(std::future_status::ready != exit_code.wait_for(std::chrono::seconds(10))) {
+        if(std::future_status::ready != exit_code.wait_for(std::chrono::seconds(1000))) {
             testing::internal::GetCapturedStdout(); // stop capturing stdout
             testing::internal::GetCapturedStderr(); // stop capturing stderr
 
-            std::cerr << "Filesystem thread didn't finish";
+            std::cerr << "Filesystem thread didn't finish" << std::endl;
             // The std::future destructor of a future created with std::async blocks until the future is ready.
             // so, instead of causing a deadlock, rather abort
             exit(EXIT_FAILURE);
         }
 
         return {
-          exit_code.get(),
+          exit_code.get(), // this also re-throws any potential exceptions
           testing::internal::GetCapturedStdout(),
           testing::internal::GetCapturedStderr()
         };

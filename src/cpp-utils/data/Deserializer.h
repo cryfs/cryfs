@@ -13,6 +13,7 @@ namespace cpputils {
     public:
         Deserializer(const Data *source);
 
+        bool readBool();
         uint8_t readUint8();
         int8_t readInt8();
         uint16_t readUint16();
@@ -40,6 +41,17 @@ namespace cpputils {
     };
 
     inline Deserializer::Deserializer(const Data *source): _pos(0), _source(source) {
+    }
+
+    inline bool Deserializer::readBool() {
+        uint8_t read = readUint8();
+        if (read == 1) {
+            return true;
+        } else if (read == 0) {
+            return false;
+        } else {
+            throw std::runtime_error("Read invalid bool value");
+        }
     }
 
     inline uint8_t Deserializer::readUint8() {

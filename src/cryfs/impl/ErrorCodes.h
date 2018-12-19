@@ -51,6 +51,12 @@ enum class ErrorCode : int {
 
   // File system is in single-client mode and can only be used from the client that created it.
   SingleClientFileSystem = 23,
+
+  // A previous run of the file system detected an integrity violation. Preventing access to make sure the user notices. The file system will be accessible again after the user deletes the integrity state file.
+  IntegrityViolationOnPreviousRun = 24,
+
+  // An integrity violation was detected and the file system unmounted to make sure the user notices.
+  IntegrityViolation = 25
 };
 
 inline int exitCode(ErrorCode code) {

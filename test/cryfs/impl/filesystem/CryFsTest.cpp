@@ -34,6 +34,8 @@ using cryfs::CryPresetPasswordBasedKeyProvider;
 namespace bf = boost::filesystem;
 using namespace cryfs;
 
+namespace {
+
 class CryFsTest: public Test, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
   CryFsTest(): tempLocalStateDir(), localStateDir(tempLocalStateDir.path()), rootdir(), config(false) {
@@ -54,23 +56,31 @@ public:
   TempFile config;
 };
 
+auto failOnIntegrityViolation() {
+  return [] {
+    EXPECT_TRUE(false);
+  };
+}
+
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);
+}
+
 }

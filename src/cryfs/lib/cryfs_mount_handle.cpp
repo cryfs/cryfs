@@ -113,8 +113,8 @@ shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem(fspp::fuse
     uint32_t myClientId = 0x12345678; // TODO Get the correct client id instead, use pattern like in CryConfigLoader for Cli.cpp.
     bool allowIntegrityViolation = false; // TODO Make this configurable
     bool missingBlockIsIntegrityViolation = false; // TODO Make this configurable
-
-    auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation);
+    auto onIntegrityViolation = [] {}; // TODO Make this configurable
+    auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
 
     _create_idle_unmounter(fuse, crydevice.get());
 

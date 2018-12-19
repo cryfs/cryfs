@@ -54,6 +54,11 @@ private:
   mutable std::unordered_set<BlockId> _cachedBlocksNotInBaseStore;
   mutable Cache<BlockId, cpputils::unique_ref<CachedBlock>, 1000> _cache;
 
+public:
+  static constexpr double MAX_LIFETIME_SEC = decltype(_cache)::MAX_LIFETIME_SEC;
+
+private:
+
   DISALLOW_COPY_AND_ASSIGN(CachingBlockStore2);
 };
 

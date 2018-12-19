@@ -21,6 +21,14 @@ using cryfs::CryPresetPasswordBasedKeyProvider;
 
 using namespace cryfs;
 
+namespace {
+
+auto failOnIntegrityViolation() {
+  return [] {
+    EXPECT_TRUE(false);
+  };
+}
+
 class CryFsTestFixture: public FileSystemTestFixture, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
   CryFsTestFixture()
@@ -33,7 +41,7 @@ public:
     auto keyProvider = make_unique_ref<CryPresetPasswordBasedKeyProvider>("mypassword", make_unique_ref<SCrypt>(SCrypt::TestSettings));
     auto config = CryConfigLoader(_console, Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none)
             .loadOrCreate(configFile.path(), false, false).value();
-    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false);
+    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false, failOnIntegrityViolation());
   }
 
   cpputils::TempDir tempLocalStateDir;
@@ -42,3 +50,4 @@ public:
 };
 
 FSPP_ADD_FILESYTEM_TESTS(CryFS, CryFsTestFixture);
+}

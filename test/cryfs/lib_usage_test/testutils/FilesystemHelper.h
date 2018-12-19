@@ -52,8 +52,10 @@ inline void create_filesystem(const boost::filesystem::path &basedir, const boos
     uint32_t myClientId = 0x12345678;
     bool allowIntegrityViolation = false;
     bool missingBlockIsIntegrityViolation = false;
-
-    cryfs::CryDevice device(std::move(configfile), std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation);
+    auto onIntegrityViolation = [] {
+      throw std::runtime_error("Integrity violation");
+    };
+    cryfs::CryDevice device(std::move(configfile), std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
 }
 
 #endif
