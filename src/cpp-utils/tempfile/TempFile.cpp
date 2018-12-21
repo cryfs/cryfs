@@ -25,11 +25,15 @@ TempFile::TempFile(bool create)
 TempFile::~TempFile() {
   try {
     if (exists()) {
-      bf::remove(_path);
+      remove();
     }
   } catch (const boost::filesystem::filesystem_error &e) {
     LOG(ERR, "Could not delete tempfile.");
   }
+}
+
+void TempFile::remove() {
+  bf::remove(_path);
 }
 
 bool TempFile::exists() const {
