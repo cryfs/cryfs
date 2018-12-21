@@ -1,7 +1,7 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <cryfs/config/CryConfigLoader.h>
-#include <cryfs/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
@@ -10,9 +10,9 @@
 #include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
-#include <cryfs/filesystem/fsblobstore/FsBlobStore.h>
-#include <cryfs/filesystem/fsblobstore/DirBlob.h>
-#include <cryfs/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/fsblobstore/FsBlobStore.h>
+#include <cryfs/impl/filesystem/fsblobstore/DirBlob.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
 #include <cpp-utils/io/IOStreamConsole.h>
 #include <cpp-utils/system/homedir.h>
 
