@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 #include <cryfs/config/CryConfigFile.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include "../testutils/FakeCryKeyProvider.h"
 
 using namespace cryfs;
 using cpputils::TempFile;
+using cpputils::unique_ref;
 using std::string;
 using boost::optional;
 using boost::none;
@@ -33,7 +35,7 @@ public:
         return result;
     }
 
-    CryConfigFile CreateAndLoadEmpty(unsigned char keySeed = 0) {
+    unique_ref<CryConfigFile> CreateAndLoadEmpty(unsigned char keySeed = 0) {
         Create(Config(), keySeed);
         return Load().value();
     }
@@ -43,9 +45,9 @@ public:
         CryConfigFile::create(file.path(), std::move(cfg), &keyProvider);
     }
 
-    optional<CryConfigFile> Load(unsigned int keySeed = 0) {
+    optional<unique_ref<CryConfigFile>> Load(unsigned char keySeed = 0) {
         FakeCryKeyProvider keyProvider(keySeed);
-        return CryConfigFile::load(file.path(), &keyProvider);
+        return CryConfigFile::load(file.path(), &keyProvider).right_opt();
     }
 
     void CreateWithCipher(const string &cipher) {
@@ -69,108 +71,108 @@ TEST_F(CryConfigFileTest, DoesntLoadIfWrongPassword) {
 }
 
 TEST_F(CryConfigFileTest, RootBlob_Init) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created.config()->RootBlob());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created->config()->RootBlob());
 }
 
 TEST_F(CryConfigFileTest, RootBlob_CreateAndLoad) {
     CryConfig cfg = Config();
     cfg.SetRootBlob("rootblobid");
     Create(std::move(cfg));
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("rootblobid", loaded.config()->RootBlob());
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("rootblobid", loaded->config()->RootBlob());
 }
 
 TEST_F(CryConfigFileTest, RootBlob_SaveAndLoad) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetRootBlob("rootblobid");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("rootblobid", loaded.config()->RootBlob());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    created->config()->SetRootBlob("rootblobid");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("rootblobid", loaded->config()->RootBlob());
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_Init) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created.config()->EncryptionKey());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created->config()->EncryptionKey());
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_CreateAndLoad) {
     CryConfig cfg = Config();
     cfg.SetEncryptionKey("encryptionkey");
     Create(std::move(cfg));
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("encryptionkey", loaded.config()->EncryptionKey());
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("encryptionkey", loaded->config()->EncryptionKey());
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_SaveAndLoad) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetEncryptionKey("encryptionkey");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("encryptionkey", loaded.config()->EncryptionKey());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    created->config()->SetEncryptionKey("encryptionkey");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("encryptionkey", loaded->config()->EncryptionKey());
 }
 
 TEST_F(CryConfigFileTest, Cipher_Init) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("aes-256-gcm", created.config()->Cipher());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    EXPECT_EQ("aes-256-gcm", created->config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, Cipher_CreateAndLoad) {
     CryConfig cfg = Config();
     cfg.SetCipher("twofish-128-cfb");
     Create(std::move(cfg));
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("twofish-128-cfb", loaded->config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, Cipher_SaveAndLoad) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetCipher("twofish-128-cfb");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    created->config()->SetCipher("twofish-128-cfb");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("twofish-128-cfb", loaded->config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, Version_Init) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created.config()->Version());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created->config()->Version());
 }
 
 TEST_F(CryConfigFileTest, Version_CreateAndLoad) {
     CryConfig cfg = Config();
     cfg.SetVersion("0.9.2");
     Create(std::move(cfg));
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("0.9.2", loaded.config()->Version());
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("0.9.2", loaded->config()->Version());
 }
 
 TEST_F(CryConfigFileTest, Version_SaveAndLoad) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetVersion("0.9.2");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("0.9.2", loaded.config()->Version());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    created->config()->SetVersion("0.9.2");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("0.9.2", loaded->config()->Version());
 }
 
 TEST_F(CryConfigFileTest, CreatedWithVersion_Init) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created.config()->Version());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    EXPECT_EQ("", created->config()->Version());
 }
 
 TEST_F(CryConfigFileTest, CreatedWithVersion_CreateAndLoad) {
     CryConfig cfg = Config();
     cfg.SetCreatedWithVersion("0.9.2");
     Create(std::move(cfg));
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("0.9.2", loaded->config()->CreatedWithVersion());
 }
 
 TEST_F(CryConfigFileTest, CreatedWithVersion_SaveAndLoad) {
-    CryConfigFile created = CreateAndLoadEmpty();
-    created.config()->SetCreatedWithVersion("0.9.2");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("0.9.2", loaded.config()->CreatedWithVersion());
+    unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
+    created->config()->SetCreatedWithVersion("0.9.2");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("0.9.2", loaded->config()->CreatedWithVersion());
 }
 
 //Test that the encrypted config file has the same size, no matter how big the plaintext config data.
@@ -186,12 +188,12 @@ TEST_F(CryConfigFileTest, ConfigFileHasFixedSize) {
 
 TEST_F(CryConfigFileTest, CanSaveAndLoadModififedCipher) {
     CreateWithCipher("aes-256-gcm");
-    CryConfigFile created = Load().value();
-    EXPECT_EQ("aes-256-gcm", created.config()->Cipher());
-    created.config()->SetCipher("twofish-128-cfb");
-    created.save();
-    CryConfigFile loaded = Load().value();
-    EXPECT_EQ("twofish-128-cfb", loaded.config()->Cipher());
+    unique_ref<CryConfigFile> created = Load().value();
+    EXPECT_EQ("aes-256-gcm", created->config()->Cipher());
+    created->config()->SetCipher("twofish-128-cfb");
+    created->save();
+    unique_ref<CryConfigFile> loaded = std::move(Load().value());
+    EXPECT_EQ("twofish-128-cfb", loaded->config()->Cipher());
 }
 
 TEST_F(CryConfigFileTest, FailsIfConfigFileIsEncryptedWithACipherDifferentToTheOneSpecifiedByTheUser) {

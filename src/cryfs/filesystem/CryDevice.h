@@ -4,22 +4,22 @@
 
 #include <blockstore/interface/BlockStore.h>
 #include <blockstore/interface/BlockStore2.h>
-#include "../config/CryConfigFile.h"
+#include "cryfs/config/CryConfigFile.h"
 
 #include <boost/filesystem.hpp>
 #include <fspp/fs_interface/Device.h>
 #include <cryfs/localstate/LocalStateDir.h>
 
-#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
 
 namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(CryConfigFile config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation);
+  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation);
 
   statvfs statfs() override;
 
@@ -41,6 +41,7 @@ public:
   boost::optional<cpputils::unique_ref<fspp::Dir>> LoadDir(const boost::filesystem::path &path) override;
   boost::optional<cpputils::unique_ref<fspp::Symlink>> LoadSymlink(const boost::filesystem::path &path) override;
 
+  const CryConfig &config() const;
   void callFsActionCallbacks() const;
 
   uint64_t numBlocks() const;
@@ -50,6 +51,7 @@ private:
   cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> _fsBlobStore;
 
   blockstore::BlockId _rootBlobId;
+  std::shared_ptr<CryConfigFile> _configFile;
   std::vector<std::function<void()>> _onFsAction;
 
   blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);

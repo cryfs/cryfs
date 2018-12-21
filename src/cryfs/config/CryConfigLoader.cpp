@@ -6,9 +6,9 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
-#include "../localstate/LocalStateDir.h"
-#include "../localstate/LocalStateMetadata.h"
-#include "../CryfsException.h"
+#include "cryfs/localstate/LocalStateDir.h"
+#include "cryfs/localstate/LocalStateMetadata.h"
+#include "cryfs/CryfsException.h"
 
 namespace bf = boost::filesystem;
 using cpputils::Console;
@@ -33,35 +33,35 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
 
 optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
   auto config = CryConfigFile::load(std::move(filename), _keyProvider.get());
-  if (config == none) {
+  if (config.is_left()) {
     return none;
   }
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.7 and 0.9.8 set their own version to cryfs.version instead of the filesystem format version (which is 0.9.6), overwrite it
-  if (config->config()->Version() == "0.9.7" || config->config()->Version() == "0.9.8") {
-    config->config()->SetVersion("0.9.6");
+  if (config.right()->config()->Version() == "0.9.7" || config.right()->config()->Version() == "0.9.8") {
+    config.right()->config()->SetVersion("0.9.6");
   }
 #endif
-  _checkVersion(*config->config(), allowFilesystemUpgrade);
+  _checkVersion(*config.right()->config(), allowFilesystemUpgrade);
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
-  if (config->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config->config()->Version(), "0.9.3-rc1")) {
-    config->config()->SetBlocksizeBytes(32832);
+  if (config.right()->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config.right()->config()->Version(), "0.9.3-rc1")) {
+    config.right()->config()->SetBlocksizeBytes(32832);
   }
 #endif
-  if (config->config()->Version() != CryConfig::FilesystemFormatVersion) {
-    config->config()->SetVersion(CryConfig::FilesystemFormatVersion);
-    config->save();
+  if (config.right()->config()->Version() != CryConfig::FilesystemFormatVersion) {
+    config.right()->config()->SetVersion(CryConfig::FilesystemFormatVersion);
+    config.right()->save();
   }
-  if (config->config()->LastOpenedWithVersion() != gitversion::VersionString()) {
-    config->config()->SetLastOpenedWithVersion(gitversion::VersionString());
-    config->save();
+  if (config.right()->config()->LastOpenedWithVersion() != gitversion::VersionString()) {
+    config.right()->config()->SetLastOpenedWithVersion(gitversion::VersionString());
+    config.right()->save();
   }
-  _checkCipher(*config->config());
-  auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config->config()->FilesystemId()), cpputils::Data::FromString(config->config()->EncryptionKey()), allowReplacedFilesystem);
+  _checkCipher(*config.right()->config());
+  auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.right()->config()->FilesystemId()), cpputils::Data::FromString(config.right()->config()->EncryptionKey()), allowReplacedFilesystem);
   uint32_t myClientId = localState.myClientId();
-  _checkMissingBlocksAreIntegrityViolations(&*config, myClientId);
-  return ConfigLoadResult {std::move(*config), myClientId};
+  _checkMissingBlocksAreIntegrityViolations(config.right().get(), myClientId);
+  return ConfigLoadResult {std::move(config.right()), myClientId};
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {

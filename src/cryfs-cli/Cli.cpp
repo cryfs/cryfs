@@ -203,7 +203,7 @@ namespace cryfs {
         if (config == none) {
           throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
         }
-        _checkConfigIntegrity(options.baseDir(), localStateDir, config->configFile, options.allowReplacedFilesystem());
+        _checkConfigIntegrity(options.baseDir(), localStateDir, *config->configFile, options.allowReplacedFilesystem());
         return std::move(*config);
     }
 
@@ -241,7 +241,7 @@ namespace cryfs {
                 throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
               }
             };
-            const bool missingBlockIsIntegrityViolation = config.configFile.config()->missingBlockIsIntegrityViolation();
+            const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId,
                                                                                  options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
             _sanityCheckFilesystem(_device->get());

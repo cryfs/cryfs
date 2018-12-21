@@ -18,7 +18,7 @@ public:
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   struct ConfigLoadResult {
-      CryConfigFile configFile;
+      cpputils::unique_ref<CryConfigFile> configFile;
       uint32_t myClientId;
   };
 

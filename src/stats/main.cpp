@@ -80,8 +80,8 @@ void _forEachBlockInBlob(DataNodeStore* nodeStore, const BlockId& rootId, std::f
 
 unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>(basedir);
-    auto encryptedBlockStore = CryCiphers::find(config.configFile.config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.configFile.config()->EncryptionKey());
-    auto statePath = localStateDir.forFilesystemId(config.configFile.config()->FilesystemId());
+    auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.configFile->config()->EncryptionKey());
+    auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
     auto integrityFilePath = statePath / "integritydata";
     auto onIntegrityViolation = [] () {
         std::cerr << "Warning: Integrity violation encountered" << std::endl;
@@ -92,11 +92,11 @@ unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader
 
 std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
-    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile.config()->BlocksizeBytes()));
+    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
 
     std::vector<BlockId> result;
     cout << "Listing all file system entities (i.e. blobs)..." << flush;
-    auto rootId = BlockId::FromString(config.configFile.config()->RootBlob());
+    auto rootId = BlockId::FromString(config.configFile->config()->RootBlob());
     _forEachBlob(fsBlobStore.get(), rootId, [&result] (const BlockId& blockId) {
         result.push_back(blockId);
     });
@@ -108,7 +108,7 @@ std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoade
     auto knownBlobIds = _getKnownBlobIds(basedir, config, localStateDir);
 
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.configFile.config()->BlocksizeBytes());
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.configFile->config()->BlocksizeBytes());
     std::vector<BlockId> result;
     const uint32_t numNodes = nodeStore->numNodes();
     result.reserve(numNodes);
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
     console->print("Calculate statistics\n");
 
     auto blockStore = makeBlockStore(basedir, *config, localStateDir);
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config->configFile.config()->BlocksizeBytes());
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config->configFile->config()->BlocksizeBytes());
 
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;

@@ -1,6 +1,6 @@
 #include <blockstore/implementations/caching/CachingBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
 
 #include "CryDir.h"
@@ -13,9 +13,9 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
-#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
-#include "cachingfsblobstore/CachingFsBlobStore.h"
-#include "../config/CryCipher.h"
+#include "cryfs/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "cryfs/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
+#include "cryfs/config/CryCipher.h"
 #include <cpp-utils/system/homedir.h>
 #include <gitversion/VersionCompare.h>
 #include <blockstore/interface/BlockStore2.h>
@@ -52,9 +52,9 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(CryConfigFile configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
-: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), &configFile, localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation))),
-  _rootBlobId(GetOrCreateRootBlobId(&configFile)),
+CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
+: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), configFile.get(), localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation))),
+  _rootBlobId(GetOrCreateRootBlobId(configFile.get())), _configFile(std::move(configFile)),
   _onFsAction() {
 }
 
@@ -130,6 +130,10 @@ BlockId CryDevice::CreateRootBlobAndReturnId() {
   auto rootBlob =  _fsBlobStore->createDirBlob(blockstore::BlockId::Null());
   rootBlob->flush(); // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
   return rootBlob->blockId();
+}
+
+const CryConfig &CryDevice::config() const {
+  return *_configFile->config();
 }
 
 optional<unique_ref<fspp::File>> CryDevice::LoadFile(const bf::path &path) {

@@ -33,7 +33,9 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
 #ifndef CRYFS_NO_COMPATIBILITY
     unique_ref<FsBlobStore> FsBlobStore::migrateIfNeeded(unique_ref<BlobStore> blobStore, const blockstore::BlockId &rootBlobId) {
         auto rootBlob = blobStore->load(rootBlobId);
-        ASSERT(rootBlob != none, "Could not load root blob");
+        if (rootBlob == none) {
+            throw std::runtime_error("Could not load root blob");
+        }
         uint16_t format = FsBlobView::getFormatVersionHeader(**rootBlob);
 
         auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));

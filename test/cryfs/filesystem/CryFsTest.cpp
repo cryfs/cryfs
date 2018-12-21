@@ -18,6 +18,7 @@
 
 using ::testing::Test;
 using std::make_shared;
+using std::shared_ptr;
 using cpputils::TempDir;
 using cpputils::TempFile;
 using cpputils::make_unique_ref;
@@ -40,7 +41,7 @@ public:
   CryFsTest(): tempLocalStateDir(), localStateDir(tempLocalStateDir.path()), rootdir(), config(false) {
   }
 
-  CryConfigFile loadOrCreateConfig() {
+  shared_ptr<CryConfigFile> loadOrCreateConfig() {
     auto keyProvider = make_unique_ref<CryPresetPasswordBasedKeyProvider>("mypassword", make_unique_ref<SCrypt>(SCrypt::TestSettings));
     return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
   }

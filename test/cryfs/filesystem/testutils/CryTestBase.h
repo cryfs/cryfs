@@ -22,7 +22,7 @@ public:
         _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     }
 
-    cryfs::CryConfigFile configFile() {
+    std::shared_ptr<cryfs::CryConfigFile> configFile() {
         cryfs::CryConfig config;
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom(), cpputils::AES256_GCM::KEYSIZE).ToString());
