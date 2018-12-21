@@ -10,22 +10,22 @@
 #include <fspp/impl/FilesystemImpl.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
-#include <cryfs/filesystem/CryDevice.h>
-#include <cryfs/config/CryConfigLoader.h>
-#include <cryfs/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 
-#include <cryfs/filesystem/CryDir.h>
+#include <cryfs/impl/filesystem/CryDir.h>
 #include <gitversion/gitversion.h>
 
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
-#include <cryfs/localstate/LocalStateDir.h>
-#include <cryfs/localstate/BasedirMetadata.h>
+#include <cryfs/impl/localstate/LocalStateDir.h>
+#include <cryfs/impl/localstate/BasedirMetadata.h>
 #include "Environment.h"
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/CryfsException.h>
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword

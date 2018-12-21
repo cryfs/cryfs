@@ -1,11 +1,11 @@
 #include "testutils/CliTest.h"
-#include <cryfs/config/CryConfigFile.h>
-#include <cryfs/ErrorCodes.h>
+#include <cryfs/impl/config/CryConfigFile.h>
+#include <cryfs/impl/ErrorCodes.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempDir.h>
 #include <blockstore/implementations/caching/CachingBlockStore2.h>
-#include <cryfs/filesystem/cachingfsblobstore/CachingFsBlobStore.h>
+#include <cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h>
 
 using std::vector;
 using std::string;
