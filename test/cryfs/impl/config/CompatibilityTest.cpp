@@ -8,7 +8,7 @@
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
-#include "../testutils/MockConsole.h"
+#include "../../impl/testutils/MockConsole.h"
 
 using cpputils::Data;
 using cpputils::AES256_GCM;

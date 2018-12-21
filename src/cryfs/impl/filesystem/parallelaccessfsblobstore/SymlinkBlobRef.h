@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_SYMLINKBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../cachingfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/SymlinkBlobRef.h"
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {

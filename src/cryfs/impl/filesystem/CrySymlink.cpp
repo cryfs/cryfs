@@ -3,8 +3,8 @@
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CrySymlink.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
-#include "fsblobstore/utils/TimestampUpdateBehavior.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 

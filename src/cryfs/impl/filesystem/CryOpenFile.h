@@ -3,8 +3,8 @@
 #define MESSMER_CRYFS_FILESYSTEM_CRYOPENFILE_H_
 
 #include <fspp/fs_interface/OpenFile.h>
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 
 namespace cryfs {
 class CryDevice;

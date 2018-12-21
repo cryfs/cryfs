@@ -1,6 +1,6 @@
 #include "CryConfigEncryptorFactory.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "outer/OuterConfig.h"
+#include "cryfs/impl/config/crypto/outer/OuterConfig.h"
 #include "cryfs/impl/config/CryKeyProvider.h"
 
 using namespace cpputils::logging;

@@ -2,7 +2,7 @@
 
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
-#include "crypto/inner/ConcreteInnerEncryptor.h"
+#include "cryfs/impl/config/crypto/inner/ConcreteInnerEncryptor.h"
 
 using std::vector;
 using std::string;

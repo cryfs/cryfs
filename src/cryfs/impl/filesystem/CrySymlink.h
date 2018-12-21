@@ -4,8 +4,8 @@
 
 #include <fspp/fs_interface/Symlink.h>
 #include "CryNode.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 
 namespace cryfs {
 

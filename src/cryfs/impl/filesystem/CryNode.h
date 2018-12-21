@@ -5,7 +5,7 @@
 #include <fspp/fs_interface/Node.h>
 #include <cpp-utils/macros.h>
 #include <fspp/fs_interface/Dir.h>
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
 
 namespace cryfs {

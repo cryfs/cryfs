@@ -1,6 +1,6 @@
 #include <blockstore/implementations/caching/CachingBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
 
 #include "CryDir.h"
@@ -13,13 +13,13 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
-#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
-#include "cachingfsblobstore/CachingFsBlobStore.h"
-#include "../config/CryCipher.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
+#include "cryfs/impl/config/CryCipher.h"
 #include <cpp-utils/system/homedir.h>
 #include <gitversion/VersionCompare.h>
 #include <blockstore/interface/BlockStore2.h>
-#include <cryfs/impl/localstate/LocalStateDir.h>
+#include "cryfs/impl/localstate/LocalStateDir.h"
 #include <cryfs/impl/CryfsException.h>
 
 using std::string;

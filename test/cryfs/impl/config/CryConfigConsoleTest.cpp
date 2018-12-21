@@ -4,7 +4,7 @@
 #include <cryfs/impl/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
-#include "../testutils/MockConsole.h"
+#include "../../impl/testutils/MockConsole.h"
 
 using namespace cryfs;
 

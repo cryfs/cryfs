@@ -6,7 +6,7 @@
 
 #include <blobstore/implementations/onblocks/utils/Math.h>
 #include <cpp-utils/data/Data.h>
-#include "../CryDevice.h"
+#include "cryfs/impl/filesystem/CryDevice.h"
 #include "FileBlob.h"
 #include "SymlinkBlob.h"
 #include <cpp-utils/system/stat.h>

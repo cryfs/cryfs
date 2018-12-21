@@ -2,7 +2,7 @@
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
-#include "../../testutils/FakeCryKeyProvider.h"
+#include "../../impl/testutils/FakeCryKeyProvider.h"
 
 using namespace cryfs;
 using cpputils::TempFile;

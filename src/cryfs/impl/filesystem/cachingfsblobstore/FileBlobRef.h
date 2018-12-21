@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_FILEBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../fsblobstore/FileBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FileBlob.h"
 
 namespace cryfs {
 namespace cachingfsblobstore {

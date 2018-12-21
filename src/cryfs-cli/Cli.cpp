@@ -16,8 +16,8 @@
 #include "program_options/Parser.h"
 #include <boost/filesystem.hpp>
 
-#include <gitversion/gitversion.h>
 #include <cryfs/impl/filesystem/CryDir.h>
+#include <gitversion/gitversion.h>
 
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>

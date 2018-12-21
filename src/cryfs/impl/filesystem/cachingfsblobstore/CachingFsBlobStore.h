@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_CACHINGFSBLOBSTORE_H
 
 #include <cpp-utils/pointer/unique_ref.h>
-#include "../fsblobstore/FsBlobStore.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
 #include <blockstore/implementations/caching/cache/Cache.h>
 #include "FileBlobRef.h"
 #include "DirBlobRef.h"

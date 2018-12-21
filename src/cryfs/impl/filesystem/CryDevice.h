@@ -4,16 +4,16 @@
 
 #include <blockstore/interface/BlockStore.h>
 #include <blockstore/interface/BlockStore2.h>
-#include "../config/CryConfigFile.h"
+#include "cryfs/impl/config/CryConfigFile.h"
 
 #include <boost/filesystem.hpp>
 #include <fspp/fs_interface/Device.h>
 #include <cryfs/impl/localstate/LocalStateDir.h>
 
-#include "parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
 
 namespace cryfs {
 

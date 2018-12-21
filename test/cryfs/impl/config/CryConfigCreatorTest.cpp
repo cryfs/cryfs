@@ -3,8 +3,8 @@
 #include <cryfs/impl/config/CryConfigCreator.h>
 #include <cryfs/impl/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "../testutils/MockConsole.h"
-#include "../testutils/TestWithFakeHomeDirectory.h"
+#include "../../impl/testutils/MockConsole.h"
+#include "../../impl/testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
 #include <gitversion/gitversion.h>
 #include <cryfs/impl/localstate/LocalStateDir.h>

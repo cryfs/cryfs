@@ -2,8 +2,8 @@
 #ifndef MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
 #define MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
 
-#include "parallelaccessfsblobstore/FileBlobRef.h"
-#include "parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include <fspp/fs_interface/File.h>
 #include "CryNode.h"
 

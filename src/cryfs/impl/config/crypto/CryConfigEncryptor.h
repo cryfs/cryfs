@@ -6,9 +6,9 @@
 #include <cpp-utils/data/Deserializer.h>
 #include <cpp-utils/data/Serializer.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "inner/InnerEncryptor.h"
-#include "outer/OuterEncryptor.h"
-#include "../CryCipher.h"
+#include "cryfs/impl/config/crypto/inner/InnerEncryptor.h"
+#include "cryfs/impl/config/crypto/outer/OuterEncryptor.h"
+#include "cryfs/impl/config/CryCipher.h"
 
 namespace cryfs {
     //TODO Use own exception for cpputils::Serializer/cpputils::Deserializer errors and only catch them

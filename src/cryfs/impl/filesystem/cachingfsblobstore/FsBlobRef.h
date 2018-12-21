@@ -2,7 +2,7 @@
 #ifndef MESSMER_CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_FSBLOBREF_H
 #define MESSMER_CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_FSBLOBREF_H
 
-#include "../fsblobstore/FsBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
 
 namespace cryfs {
 namespace cachingfsblobstore {

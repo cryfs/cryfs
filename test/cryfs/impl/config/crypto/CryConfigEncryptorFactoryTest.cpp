@@ -2,7 +2,7 @@
 #include <cryfs/impl/config/crypto/CryConfigEncryptorFactory.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
-#include "../../../testutils/FakeCryKeyProvider.h"
+#include "../../../impl/testutils/FakeCryKeyProvider.h"
 
 using cpputils::AES256_GCM;
 using cpputils::Data;

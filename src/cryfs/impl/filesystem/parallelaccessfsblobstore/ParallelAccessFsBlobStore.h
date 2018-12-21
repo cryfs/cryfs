@@ -6,7 +6,7 @@
 #include "FileBlobRef.h"
 #include "DirBlobRef.h"
 #include "SymlinkBlobRef.h"
-#include "../cachingfsblobstore/CachingFsBlobStore.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
 #include "ParallelAccessFsBlobStoreAdapter.h"
 
 namespace cryfs {

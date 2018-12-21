@@ -7,7 +7,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <blockstore/interface/BlockStore2.h>
 #include <cpp-utils/random/RandomGenerator.h>
-#include "crypto/inner/InnerEncryptor.h"
+#include "cryfs/impl/config/crypto/inner/InnerEncryptor.h"
 #include <cpp-utils/crypto/symmetric/EncryptionKey.h>
 
 namespace cryfs {

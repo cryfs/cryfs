@@ -9,7 +9,7 @@
 #include "CryFile.h"
 #include "CryOpenFile.h"
 #include <cpp-utils/system/time.h>
-#include "fsblobstore/utils/TimestampUpdateBehavior.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::FuseErrnoException;

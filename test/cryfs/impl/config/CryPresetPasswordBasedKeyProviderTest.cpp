@@ -1,6 +1,6 @@
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include <gmock/gmock.h>
-#include "../testutils/MockConsole.h"
+#include "../../impl/testutils/MockConsole.h"
 #include <cpp-utils/data/DataFixture.h>
 
 using cpputils::unique_ref;

@@ -4,7 +4,7 @@
 
 #include <cpp-utils/macros.h>
 #include <parallelaccessstore/ParallelAccessStore.h>
-#include "../cachingfsblobstore/CachingFsBlobStore.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {

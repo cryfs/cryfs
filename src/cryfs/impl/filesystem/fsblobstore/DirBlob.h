@@ -7,7 +7,7 @@
 #include <fspp/fs_interface/Dir.h>
 #include <fspp/fs_interface/Node.h>
 #include "FsBlob.h"
-#include "utils/DirEntryList.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntryList.h"
 #include <mutex>
 
 namespace cryfs {

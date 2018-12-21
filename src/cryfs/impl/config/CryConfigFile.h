@@ -6,8 +6,8 @@
 #include <boost/filesystem.hpp>
 #include "CryConfig.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
-#include "crypto/CryConfigEncryptorFactory.h"
 #include <cpp-utils/either.h>
+#include "cryfs/impl/config/crypto/CryConfigEncryptorFactory.h"
 
 namespace cryfs {
     class CryConfigFile final {

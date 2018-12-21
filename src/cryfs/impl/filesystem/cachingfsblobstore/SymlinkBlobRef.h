@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_CACHINGFSBLOBSTORE_SYMLINKBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../fsblobstore/SymlinkBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/SymlinkBlob.h"
 
 namespace cryfs {
 namespace cachingfsblobstore {

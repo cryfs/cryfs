@@ -3,8 +3,8 @@
 #define MESSMER_CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_DIRBLOBREF_H
 
 #include "FsBlobRef.h"
-#include "../cachingfsblobstore/DirBlobRef.h"
-#include "../fsblobstore/utils/TimestampUpdateBehavior.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 #include <fspp/fs_interface/Node.h>
 
 namespace cryfs {

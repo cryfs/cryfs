@@ -6,9 +6,9 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <gitversion/gitversion.h>
 #include <gitversion/VersionCompare.h>
-#include "../localstate/LocalStateDir.h"
-#include "../localstate/LocalStateMetadata.h"
-#include "../CryfsException.h"
+#include "cryfs/impl/localstate/LocalStateDir.h"
+#include "cryfs/impl/localstate/LocalStateMetadata.h"
+#include "cryfs/impl/CryfsException.h"
 
 namespace bf = boost::filesystem;
 using cpputils::Console;

@@ -1,6 +1,6 @@
 #include "ParallelAccessFsBlobStore.h"
 #include "ParallelAccessFsBlobStoreAdapter.h"
-#include "../fsblobstore/FsBlobStore.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;

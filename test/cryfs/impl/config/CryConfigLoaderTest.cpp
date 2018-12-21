@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
-#include "../testutils/MockConsole.h"
-#include "../testutils/TestWithFakeHomeDirectory.h"
+#include "../../impl/testutils/MockConsole.h"
+#include "../../impl/testutils/TestWithFakeHomeDirectory.h"
+
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>

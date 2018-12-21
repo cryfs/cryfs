@@ -1,5 +1,5 @@
 #include "CachingFsBlobStore.h"
-#include "../fsblobstore/FsBlobStore.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

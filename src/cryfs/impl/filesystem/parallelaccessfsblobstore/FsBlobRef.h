@@ -3,7 +3,7 @@
 #define MESSMER_CRYFS_FILESYSTEM_PARALLELACCESSFSBLOBSTORE_FSBLOBREF_H
 
 #include <parallelaccessstore/ParallelAccessStore.h>
-#include "../cachingfsblobstore/FsBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/FsBlobRef.h"
 
 namespace cryfs {
 namespace parallelaccessfsblobstore {
