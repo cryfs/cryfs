@@ -268,11 +268,15 @@ namespace cryfs {
           std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n"
                     << std::endl;
 #endif
-          fuse->run(options.mountDir(), options.fuseOptions());
+            if (options.foreground()) {
+                fuse->runInForeground(options.mountDir(), options.fuseOptions());
+            } else {
+                fuse->runInBackground(options.mountDir(), options.fuseOptions());
+            }
 
-          if (stoppedBecauseOfIntegrityViolation) {
+            if (stoppedBecauseOfIntegrityViolation) {
               throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
-          }
+            }
         } catch (const CryfsException &e) {
             throw; // CryfsException is only thrown if setup goes wrong. Throw it through so that we get the correct process exit code.
         } catch (const std::exception &e) {
