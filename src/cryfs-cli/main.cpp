@@ -22,6 +22,7 @@ int main(int argc, const char *argv[]) {
 #if defined(_MSC_VER)
     if (!IsWindows10OrGreater()) {
        std::cerr << "CryFS is currently only supported on Windows 10 (or later)." << std::endl;
+       exit(1);
     }
 #endif
 
