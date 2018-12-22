@@ -243,7 +243,33 @@ void Fuse::_logUnknownException() {
   LOG(ERR, "Unknown exception thrown");
 }
 
-void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
+void Fuse::runInForeground(const bf::path &mountdir, const vector<string> &fuseOptions) {
+  vector<string> realFuseOptions = fuseOptions;
+  if (std::find(realFuseOptions.begin(), realFuseOptions.end(), "-f") == realFuseOptions.end()) {
+    realFuseOptions.push_back("-f");
+  }
+  _run(mountdir, realFuseOptions);
+}
+
+void Fuse::runInBackground(const bf::path &mountdir, const vector<string> &fuseOptions) {
+  vector<string> realFuseOptions = fuseOptions;
+  _removeAndWarnIfExists(&realFuseOptions, "-f");
+  _removeAndWarnIfExists(&realFuseOptions, "-d");
+  _run(mountdir, realFuseOptions);
+}
+
+void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {
+  auto found = std::find(fuseOptions->begin(), fuseOptions->end(), option);
+  if (found != fuseOptions->end()) {
+    LOG(WARN, "The fuse option {} only works when running in foreground. Removing fuse option.", option);
+    do {
+      fuseOptions->erase(found);
+      found = std::find(fuseOptions->begin(), fuseOptions->end(), option);
+    } while (found != fuseOptions->end());
+  }
+}
+
+void Fuse::_run(const bf::path &mountdir, const vector<string> &fuseOptions) {
   _mountdir = mountdir;
 
   ASSERT(_argv.size() == 0, "Filesystem already started");

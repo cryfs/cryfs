@@ -56,9 +56,6 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         configfile = bf::absolute(vm["config"].as<string>());
     }
     bool foreground = vm.count("foreground");
-    if (foreground) {
-        fuseOptions.push_back(const_cast<char*>("-f"));
-    }
     bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     bool allowReplacedFilesystem = vm.count("allow-replaced-filesystem");
     optional<double> unmountAfterIdleMinutes = 0.0;  // first setting to 0 and then to none is somehow needed to silence a GCC warning from -Wmaybe-uninitialized
