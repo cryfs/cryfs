@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include "../../impl/testutils/MockConsole.h"
