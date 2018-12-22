@@ -154,14 +154,15 @@ int main(int argc, char* argv[]) {
         askPassword,
         make_unique_ref<SCrypt>(SCrypt::DefaultSettings)
     );
+
     auto config_path = basedir / "cryfs.config";
     LocalStateDir localStateDir(cpputils::system::HomeDirectory::getXDGDataDir() / "cryfs");
     CryConfigLoader config_loader(console, Random::OSRandom(), std::move(keyProvider), localStateDir, boost::none, boost::none, boost::none);
 
     auto config = config_loader.load(config_path, false, true);
     if (config == boost::none) {
-        std::cerr << "Error loading config file" << std::endl;
-        exit(1);
+        // TODO Show more info about error
+        throw std::runtime_error("Error loading config file.");
     }
 
     cout << "Listing all blocks..." << flush;
