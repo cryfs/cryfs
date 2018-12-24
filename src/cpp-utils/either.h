@@ -11,25 +11,16 @@ namespace cpputils {
     template<class Left, class Right>
     class either final {
     public:
-        //TODO Try allowing construction with any type that std::is_convertible to Left or Right.
-        either(const Left &left) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(left)))
+        template<class Head, class... Tail, std::enable_if_t<std::is_constructible<Left, Head, Tail...>::value && !std::is_constructible<Right, Head, Tail...>::value>* = nullptr>
+        either(Head&& construct_left_head_arg, Tail&&... construct_left_tail_args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...))) */
                 : _side(Side::left) {
-            _construct_left(left);
+            _construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...);
         }
 
-        either(Left &&left) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(left))))
-                : _side(Side::left) {
-            _construct_left(std::move(left));
-        }
-
-        either(const Right &right) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(right)))
-                : _side(Side::right) {
-            _construct_right(right);
-        }
-
-        either(Right &&right) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(right))))
-                : _side(Side::right) {
-            _construct_right(std::move(right));
+        template<class Head, class... Tail, std::enable_if_t<!std::is_constructible<Left, Head, Tail...>::value && std::is_constructible<Right, Head, Tail...>::value>* = nullptr>
+        either(Head&& construct_right_head_arg, Tail&&... construct_right_tail_args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Head>(construct_right_head_arg), std::forward<Tail>(construct_right_tail_args)...))) */
+            : _side(Side::right) {
+          _construct_right(std::forward<Head>(construct_right_head_arg), std::forward<Tail>(construct_right_tail_args)...);
         }
 
         //TODO Try allowing copy-construction when Left/Right types are std::is_convertible
@@ -42,7 +33,7 @@ namespace cpputils {
             }
         }
 
-        either(either<Left, Right> &&rhs) noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right))))
+        either(either<Left, Right> &&rhs) /* TODO noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) */
                 : _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(std::move(rhs._left));
@@ -56,7 +47,7 @@ namespace cpputils {
         }
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
-        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(_construct_left(rhs._left)) && noexcept(_construct_right(rhs._right))) {
+        either<Left, Right> &operator=(const either<Left, Right> &rhs) /* TODO noexcept(noexcept(_construct_left(rhs._left)) && noexcept(_construct_right(rhs._right))) */ {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -67,7 +58,7 @@ namespace cpputils {
             return *this;
         }
 
-        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) {
+        either<Left, Right> &operator=(either<Left, Right> &&rhs) /* TODO noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) */ {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -124,13 +115,7 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        boost::optional<Left> left_opt() && noexcept {
-            if (_side == Side::left) {
-                return std::move(_left);
-            } else {
-                return boost::none;
-            }
-        }
+        // left_opt()&& not offered because optional<Left&&> doesn't work
 
         boost::optional<const Right&> right_opt() const& noexcept {
             if (_side == Side::right) {
@@ -146,13 +131,7 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        boost::optional<Right> right_opt() && noexcept {
-            if (_side == Side::right) {
-                return std::move(_right);
-            } else {
-                return boost::none;
-            }
-        }
+        // right_opt()&& not offered because optional<Right&&> doesn't work
 
     private:
         union {
@@ -179,19 +158,15 @@ namespace cpputils {
             }
         }
 
-        template<class... Args> static constexpr bool left_noexcept_constructible(Args&&... args) {
-            return noexcept(_construct_left(std::forward<Args>(args)...));
-        }
+        template<typename Left_, typename Right_, typename... Args>
+        friend either<Left_, Right_> make_left(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...)))*/;
 
         template<typename Left_, typename Right_, typename... Args>
-        friend either<Left_, Right_> make_left(Args&&... args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...)));
-
-        template<typename Left_, typename Right_, typename... Args>
-        friend either<Left_, Right_> make_right(Args&&... args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...)));
+        friend either<Left_, Right_> make_right(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...)))*/;
     };
 
     template<class Left, class Right>
-    bool operator==(const either<Left, Right> &lhs, const either<Left, Right> &rhs) noexcept(noexcept(std::declval<Left>() == std::declval<Left>()) && noexcept(std::declval<Right>() == std::declval<Right>())) {
+    inline bool operator==(const either<Left, Right> &lhs, const either<Left, Right> &rhs) noexcept(noexcept(std::declval<Left>() == std::declval<Left>()) && noexcept(std::declval<Right>() == std::declval<Right>())) {
         if (lhs.is_left() != rhs.is_left()) {
             return false;
         }
@@ -203,12 +178,12 @@ namespace cpputils {
     }
 
     template<class Left, class Right>
-    bool operator!=(const either<Left, Right> &lhs, const either<Left, Right> &rhs) noexcept(noexcept(operator==(lhs, rhs))) {
+    inline bool operator!=(const either<Left, Right> &lhs, const either<Left, Right> &rhs) noexcept(noexcept(operator==(lhs, rhs))) {
         return !operator==(lhs, rhs);
     }
 
     template<class Left, class Right>
-    std::ostream &operator<<(std::ostream &stream, const either<Left, Right> &value) {
+    inline std::ostream &operator<<(std::ostream &stream, const either<Left, Right> &value) {
         if (value.is_left()) {
             stream << "Left(" << value.left() << ")";
         } else {
@@ -218,14 +193,14 @@ namespace cpputils {
     }
 
     template<typename Left, typename Right, typename... Args>
-    either<Left, Right> make_left(Args&&... args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...))) {
+    inline either<Left, Right> make_left(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...))) */ {
         either<Left, Right> result(either<Left, Right>::Side::left);
         result._construct_left(std::forward<Args>(args)...);
         return result;
     }
 
     template<typename Left, typename Right, typename... Args>
-    either<Left, Right> make_right(Args&&... args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...))) {
+    inline either<Left, Right> make_right(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...))) */ {
         either<Left, Right> result(either<Left, Right>::Side::right);
         result._construct_right(std::forward<Args>(args)...);
         return result;
