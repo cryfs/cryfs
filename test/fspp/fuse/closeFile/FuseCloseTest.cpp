@@ -79,11 +79,11 @@ INSTANTIATE_TEST_CASE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024*
   Barrier barrier;
 
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
   {
     //InSequence fileCloseSequence;
-    EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1);
-    EXPECT_CALL(fsimpl, closeFile(Eq(GetParam()))).Times(1).WillOnce(Invoke([&barrier] (int) {
+    EXPECT_CALL(*fsimpl, flush(Eq(GetParam()))).Times(1);
+    EXPECT_CALL(*fsimpl, closeFile(Eq(GetParam()))).Times(1).WillOnce(Invoke([&barrier] (int) {
       // Release the waiting lock at the end of this test case, because the fuse release() came in now.
       barrier.Release();
     }));

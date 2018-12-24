@@ -25,7 +25,7 @@ public:
   TempFile stateFile;
   unique_ref<BlockStore> createBlockStore() override {
     return make_unique_ref<LowToHighLevelBlockStore>(
-        make_unique_ref<IntegrityBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, AllowIntegrityViolations, MissingBlockIsIntegrityViolation)
+        make_unique_ref<IntegrityBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, AllowIntegrityViolations, MissingBlockIsIntegrityViolation, [] {})
     );
   }
 };
@@ -47,7 +47,7 @@ public:
 
   TempFile stateFile;
   unique_ref<BlockStore2> createBlockStore() override {
-    return make_unique_ref<IntegrityBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, AllowIntegrityViolations, MissingBlockIsIntegrityViolation);
+    return make_unique_ref<IntegrityBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, AllowIntegrityViolations, MissingBlockIsIntegrityViolation, [] {});
   }
 };
 

@@ -18,7 +18,7 @@ INSTANTIATE_TEST_CASE_P(FuseFTruncateFileDescriptorTest, FuseFTruncateFileDescri
 TEST_P(FuseFTruncateFileDescriptorTest, FileDescriptorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
-  EXPECT_CALL(fsimpl, ftruncate(Eq(GetParam()), _))
+  EXPECT_CALL(*fsimpl, ftruncate(Eq(GetParam()), _))
     .Times(1).WillOnce(Return());
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(GetParam());

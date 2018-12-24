@@ -8,12 +8,15 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <csignal>
+#include "InvalidFilesystem.h"
 
 using std::vector;
 using std::string;
 
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
+using std::make_shared;
+using std::shared_ptr;
 using namespace fspp::fuse;
 
 namespace {
@@ -226,8 +229,10 @@ Fuse::~Fuse() {
   _argv.clear();
 }
 
-Fuse::Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname)
-  :_fs(fs), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)) {
+Fuse::Fuse(std::function<shared_ptr<Filesystem> (Fuse *fuse)> init, std::function<void()> onMounted, std::string fstype, boost::optional<std::string> fsname)
+  :_init(std::move(init)), _onMounted(std::move(onMounted)), _fs(make_shared<InvalidFilesystem>()), _mountdir(), _running(false), _fstype(std::move(fstype)), _fsname(std::move(fsname)) {
+  ASSERT(static_cast<bool>(_init), "Invalid init given");
+  ASSERT(static_cast<bool>(_onMounted), "Invalid onMounted given");
 }
 
 void Fuse::_logException(const std::exception &e) {
@@ -717,7 +722,6 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, int64_t offs
   }
 }
 
-//TODO
 int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
 #ifdef FSPP_LOG
   LOG(DEBUG, "statfs({}, _)", path);
@@ -859,9 +863,12 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
 
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
+  _fs = _init(this);
+
   LOG(INFO, "Filesystem started.");
 
   _running = true;
+  _onMounted();
 
 #ifdef FSPP_LOG
   cpputils::logging::setLevel(DEBUG);
@@ -869,8 +876,10 @@ void Fuse::init(fuse_conn_info *conn) {
 }
 
 void Fuse::destroy() {
+  _fs = make_shared<InvalidFilesystem>();
   LOG(INFO, "Filesystem stopped.");
   _running = false;
+  cpputils::logging::logger()->flush();
 }
 
 int Fuse::access(const bf::path &path, int mask) {

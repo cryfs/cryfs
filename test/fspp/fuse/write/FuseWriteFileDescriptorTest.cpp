@@ -18,7 +18,7 @@ INSTANTIATE_TEST_CASE_P(FuseWriteFileDescriptorTest, FuseWriteFileDescriptorTest
 TEST_P(FuseWriteFileDescriptorTest, FileDescriptorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
-  EXPECT_CALL(fsimpl, write(Eq(GetParam()), _, _, _))
+  EXPECT_CALL(*fsimpl, write(Eq(GetParam()), _, _, _))
     .Times(1).WillOnce(Return());
 
   char buf[1];

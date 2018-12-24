@@ -12,7 +12,7 @@ INSTANTIATE_TEST_CASE_P(FuseAccessModeTest, FuseAccessModeTest, Values(0, F_OK, 
 
 TEST_P(FuseAccessModeTest, AccessFile) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, access(StrEq(FILENAME), GetParam()))
+  EXPECT_CALL(*fsimpl, access(StrEq(FILENAME), GetParam()))
     .Times(1).WillOnce(Return());
 
   AccessFile(FILENAME, GetParam());

@@ -2,18 +2,24 @@
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
 #include <cryfs/filesystem/CryDevice.h>
-#include <cryfs/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/config/CryPresetPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include "../../testutils/TestWithFakeHomeDirectory.h"
 #include "../../testutils/MockConsole.h"
 
+inline auto failOnIntegrityViolation() {
+  return [] {
+    EXPECT_TRUE(false);
+  };
+}
+
 class CryTestBase : public TestWithFakeHomeDirectory {
 public:
     CryTestBase(): _tempLocalStateDir(), _localStateDir(_tempLocalStateDir.path()), _configFile(false), _device(nullptr) {
         auto fakeBlockStore = cpputils::make_unique_ref<blockstore::inmemory::InMemoryBlockStore2>();
-        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false);
+        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     }
 
     cryfs::CryConfigFile configFile() {
@@ -21,12 +27,7 @@ public:
         config.SetCipher("aes-256-gcm");
         config.SetEncryptionKey(cpputils::AES256_GCM::EncryptionKey::CreateKey(cpputils::Random::PseudoRandom(), cpputils::AES256_GCM::KEYSIZE).ToString());
         config.SetBlocksizeBytes(10240);
-        cryfs::CryPasswordBasedKeyProvider keyProvider(
-            std::make_shared<MockConsole>(),
-            [] () {return "mypassword";},
-            [] () {return "mypassword";},
-            cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings)
-        );
+        cryfs::CryPresetPasswordBasedKeyProvider keyProvider("mypassword", cpputils::make_unique_ref<cpputils::SCrypt>(cpputils::SCrypt::TestSettings));
         return cryfs::CryConfigFile::create(_configFile.path(), std::move(config), &keyProvider);
     }
 

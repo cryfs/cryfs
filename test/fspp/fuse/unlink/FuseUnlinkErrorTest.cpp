@@ -14,7 +14,7 @@ INSTANTIATE_TEST_CASE_P(FuseUnlinkErrorTest, FuseUnlinkErrorTest, Values(EACCES,
 
 TEST_P(FuseUnlinkErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, unlink(StrEq(FILENAME)))
+  EXPECT_CALL(*fsimpl, unlink(StrEq(FILENAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = UnlinkReturnError(FILENAME);

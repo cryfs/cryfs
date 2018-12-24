@@ -19,8 +19,8 @@ INSTANTIATE_TEST_CASE_P(FuseFlushErrorTest, FuseFlushErrorTest, Values(EBADF, EI
 TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   ReturnIsFileOnLstat(FILENAME);
 
-  EXPECT_CALL(fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
-  EXPECT_CALL(fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
+  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(*fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   auto fs = TestFS();
   auto fd = OpenFile(fs.get(), FILENAME);

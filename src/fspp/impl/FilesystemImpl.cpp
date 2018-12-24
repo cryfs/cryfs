@@ -32,7 +32,7 @@ using namespace cpputils::logging;
 #define PROFILE(name)
 #endif
 
-FilesystemImpl::FilesystemImpl(Device *device)
+FilesystemImpl::FilesystemImpl(cpputils::unique_ref<Device> device)
   :
 #ifdef FSPP_PROFILE
    _loadFileNanosec(0), _loadDirNanosec(0), _loadSymlinkNanosec(0), _openFileNanosec(0), _flushNanosec(0),
@@ -44,7 +44,7 @@ FilesystemImpl::FilesystemImpl(Device *device)
    _utimensNanosec(0), _statfsNanosec(0), _createSymlinkNanosec(0), _createSymlinkNanosec_withoutLoading(0),
    _readSymlinkNanosec(0), _readSymlinkNanosec_withoutLoading(0),
 #endif
-   _device(device), _open_files()
+   _device(std::move(device)), _open_files()
 {
 }
 

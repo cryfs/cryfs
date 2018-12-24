@@ -51,6 +51,8 @@ public:
   uint64_t estimateSpaceForNumNodesLeft() const;
   //TODO Test overwriteNodeWith(), createNodeAsCopyFrom(), removeSubtree()
 
+  void forEachNode(std::function<void (const blockstore::BlockId& nodeId)> callback) const;
+
 private:
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;

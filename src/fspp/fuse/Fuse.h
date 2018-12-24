@@ -21,7 +21,7 @@ class Filesystem;
 
 class Fuse final {
 public:
-  explicit Fuse(Filesystem *fs, std::string fstype, boost::optional<std::string> fsname);
+  explicit Fuse(std::function<std::shared_ptr<Filesystem> (Fuse *fuse)> init, std::function<void()> onMounted, std::string fstype, boost::optional<std::string> fsname);
   ~Fuse();
 
   void run(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
@@ -68,7 +68,9 @@ private:
   std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);
   void _add_fuse_option_if_not_exists(std::vector<char *> *argv, const std::string &key, const std::string &value);
 
-  Filesystem *_fs;
+  std::function<std::shared_ptr<Filesystem> (Fuse *fuse)> _init;
+  std::function<void()> _onMounted;
+  std::shared_ptr<Filesystem> _fs;
   boost::filesystem::path _mountdir;
   std::vector<char*> _argv;
   std::atomic<bool> _running;

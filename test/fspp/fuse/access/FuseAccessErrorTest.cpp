@@ -17,7 +17,7 @@ INSTANTIATE_TEST_CASE_P(FuseAccessErrorTest, FuseAccessErrorTest, Values(EACCES,
 
 TEST_P(FuseAccessErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(fsimpl, access(StrEq(FILENAME), _))
+  EXPECT_CALL(*fsimpl, access(StrEq(FILENAME), _))
     .Times(AtLeast(1)).WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   int error = AccessFileReturnError(FILENAME, 0);

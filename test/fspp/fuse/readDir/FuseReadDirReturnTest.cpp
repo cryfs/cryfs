@@ -26,7 +26,7 @@ class FuseReadDirReturnTest: public FuseReadDirTest, public WithParamInterface<v
 public:
   void testDirEntriesAreCorrect(const vector<string> &direntries) {
     ReturnIsDirOnLstat(DIRNAME);
-    EXPECT_CALL(fsimpl, readDir(StrEq(DIRNAME)))
+    EXPECT_CALL(*fsimpl, readDir(StrEq(DIRNAME)))
       .Times(1).WillOnce(ReturnDirEntries(direntries));
 
     auto returned_dir_entries = ReadDir(DIRNAME);

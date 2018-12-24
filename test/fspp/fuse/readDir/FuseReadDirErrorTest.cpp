@@ -19,7 +19,7 @@ INSTANTIATE_TEST_CASE_P(FuseReadDirErrorTest, FuseReadDirErrorTest, Values(EACCE
 
 TEST_F(FuseReadDirErrorTest, NoError) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, readDir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, readDir(StrEq(DIRNAME)))
     .Times(1).WillOnce(ReturnDirEntries({}));
 
   int error = ReadDirReturnError(DIRNAME);
@@ -28,7 +28,7 @@ TEST_F(FuseReadDirErrorTest, NoError) {
 
 TEST_P(FuseReadDirErrorTest, ReturnedErrorCodeIsCorrect) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(fsimpl, readDir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, readDir(StrEq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = ReadDirReturnError(DIRNAME);

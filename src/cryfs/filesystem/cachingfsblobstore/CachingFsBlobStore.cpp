@@ -15,6 +15,8 @@ using cryfs::fsblobstore::SymlinkBlob;
 namespace cryfs {
 namespace cachingfsblobstore {
 
+    constexpr double CachingFsBlobStore::MAX_LIFETIME_SEC;
+
     optional<unique_ref<FsBlobRef>> CachingFsBlobStore::load(const BlockId &blockId) {
         auto fromCache = _cache.pop(blockId);
         if (fromCache != none) {

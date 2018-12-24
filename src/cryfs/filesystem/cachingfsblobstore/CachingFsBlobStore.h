@@ -40,6 +40,11 @@ namespace cryfs {
             //TODO Use other cache config (i.e. smaller max number of entries) here than in blockstore
             blockstore::caching::Cache<blockstore::BlockId, cpputils::unique_ref<fsblobstore::FsBlob>, 50> _cache;
 
+        public:
+            static constexpr double MAX_LIFETIME_SEC = decltype(_cache)::MAX_LIFETIME_SEC;
+
+        private:
+
             DISALLOW_COPY_AND_ASSIGN(CachingFsBlobStore);
         };
 

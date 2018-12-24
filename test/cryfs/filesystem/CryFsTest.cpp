@@ -9,7 +9,7 @@
 #include <cryfs/filesystem/CryOpenFile.h>
 #include "../testutils/MockConsole.h"
 #include <cryfs/config/CryConfigLoader.h>
-#include <cryfs/config/CryPasswordBasedKeyProvider.h>
+#include <cryfs/config/CryPresetPasswordBasedKeyProvider.h>
 #include <cpp-utils/system/homedir.h>
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
@@ -28,10 +28,12 @@ using cpputils::Data;
 using cpputils::NoninteractiveConsole;
 using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;
-using cryfs::CryPasswordBasedKeyProvider;
+using cryfs::CryPresetPasswordBasedKeyProvider;
 
 namespace bf = boost::filesystem;
 using namespace cryfs;
+
+namespace {
 
 class CryFsTest: public Test, public TestWithMockConsole, public TestWithFakeHomeDirectory {
 public:
@@ -39,13 +41,7 @@ public:
   }
 
   CryConfigFile loadOrCreateConfig() {
-    auto askPassword = [] {return "mypassword";};
-    auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(
-        make_shared<MockConsole>(),
-        askPassword,
-        askPassword,
-        make_unique_ref<SCrypt>(SCrypt::TestSettings)
-    );
+    auto keyProvider = make_unique_ref<CryPresetPasswordBasedKeyProvider>("mypassword", make_unique_ref<SCrypt>(SCrypt::TestSettings));
     return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none).loadOrCreate(config.path(), false, false).value().configFile;
   }
 
@@ -59,23 +55,31 @@ public:
   TempFile config;
 };
 
+auto failOnIntegrityViolation() {
+  return [] {
+    EXPECT_TRUE(false);
+  };
+}
+
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
 }
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false);
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);
+}
+
 }
