@@ -98,9 +98,11 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_RIGHT(const Rig
       }, [&] (auto& obj) {
         EXPECT_ANY_THROW(std::move(obj).left());
       }, [&] (auto& obj) {
-        EXPECT_EQ(expected, obj.right_opt().value());
+        auto a = obj.right_opt();
+        EXPECT_EQ(expected, a.value());
       }, [&] (auto& obj) {
-        EXPECT_EQ(expected, std::move(obj).right_opt().value());
+        auto a = std::move(obj).right_opt();
+        EXPECT_EQ(expected, a.value());
       }, [&] (auto& obj) {
         EXPECT_EQ(boost::none, obj.left_opt());
       }, [&] (auto& obj) {
