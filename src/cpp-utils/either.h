@@ -80,7 +80,9 @@ namespace cpputils {
         }
 
         const Left &left() const& {
-            ASSERT(is_left(), "Tried to get left side of an either which is right.");
+            if (!is_left()) {
+              throw std::logic_error("Tried to get left side of an either which is right.");
+            }
             return _left;
         }
         Left &left() & {
@@ -91,7 +93,9 @@ namespace cpputils {
         }
 
         const Right &right() const& {
-            ASSERT(is_right(), "Tried to get right side of an either which is left.");
+            if (!is_right()) {
+              throw std::logic_error("Tried to get right side of an either which is left.");
+            }
             return _right;
         }
         Right &right() & {
