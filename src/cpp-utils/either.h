@@ -119,7 +119,15 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        // left_opt()&& not offered because optional<Left&&> doesn't work
+        // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
+        boost::optional<Left> left_opt() && noexcept(noexcept(boost::optional<Left>(std::move(_left)))) {
+            if (_side == Side::left) {
+                return std::move(_left);
+            } else {
+                return boost::none;
+            }
+        }
+
 
         boost::optional<const Right&> right_opt() const& noexcept {
             if (_side == Side::right) {
@@ -135,7 +143,16 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        // right_opt()&& not offered because optional<Right&&> doesn't work
+        // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
+        boost::optional<Right> right_opt() && noexcept(noexcept(boost::optional<Right>(std::move(_right)))) {
+            if (_side == Side::right) {
+                return std::move(_right);
+            } else {
+              return boost::none;
+            }
+        }
+
+
 
     private:
         union {
