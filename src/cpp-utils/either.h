@@ -27,18 +27,18 @@ namespace cpputils {
         either(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right)))
                 : _side(rhs._side) {
             if(_side == Side::left) {
-                _construct_left(rhs._left);
+                _construct_left(rhs._left);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
-                _construct_right(rhs._right);
+                _construct_right(rhs._right);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             }
         }
 
         either(either<Left, Right> &&rhs) /* TODO noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) */
                 : _side(rhs._side) {
             if(_side == Side::left) {
-                _construct_left(std::move(rhs._left));
+                _construct_left(std::move(rhs._left));  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
-                _construct_right(std::move(rhs._right));
+                _construct_right(std::move(rhs._right));  // NOLINT(cppcoreguidelines-pro-type-union-access)
             }
         }
 
@@ -51,9 +51,9 @@ namespace cpputils {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
-                _construct_left(rhs._left);
+                _construct_left(rhs._left);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
-                _construct_right(rhs._right);
+                _construct_right(rhs._right);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             }
             return *this;
         }
@@ -62,9 +62,9 @@ namespace cpputils {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
-                _construct_left(std::move(rhs._left));
+                _construct_left(std::move(rhs._left));  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
-                _construct_right(std::move(rhs._right));
+                _construct_right(std::move(rhs._right));  // NOLINT(cppcoreguidelines-pro-type-union-access)
             }
             return *this;
         }
@@ -83,7 +83,7 @@ namespace cpputils {
             if (!is_left()) {
               throw std::logic_error("Tried to get left side of an either which is right.");
             }
-            return _left;
+            return _left;  // NOLINT(cppcoreguidelines-pro-type-union-access)
         }
         Left &left() & {
             return const_cast<Left&>(const_cast<const either<Left, Right>*>(this)->left());
@@ -96,7 +96,7 @@ namespace cpputils {
             if (!is_right()) {
               throw std::logic_error("Tried to get right side of an either which is left.");
             }
-            return _right;
+            return _right;  // NOLINT(cppcoreguidelines-pro-type-union-access)
         }
         Right &right() & {
             return const_cast<Right&>(const_cast<const either<Left, Right>*>(this)->right());
@@ -107,14 +107,14 @@ namespace cpputils {
 
         boost::optional<const Left&> left_opt() const& noexcept {
             if (_side == Side::left) {
-                return _left;
+                return _left;  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
                 return boost::none;
             }
         }
         boost::optional<Left&> left_opt() & noexcept {
             if (_side == Side::left) {
-                return _left;
+                return _left;  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
                 return boost::none;
             }
@@ -123,14 +123,14 @@ namespace cpputils {
 
         boost::optional<const Right&> right_opt() const& noexcept {
             if (_side == Side::right) {
-                return _right;
+                return _right;  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
                 return boost::none;
             }
         }
         boost::optional<Right&> right_opt() & noexcept {
             if (_side == Side::right) {
-                return _right;
+                return _right;  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
                 return boost::none;
             }
@@ -148,17 +148,17 @@ namespace cpputils {
 
         template<typename... Args>
         void _construct_left(Args&&... args) noexcept(noexcept(new Left(std::forward<Args>(args)...))) {
-            new(&_left)Left(std::forward<Args>(args)...);
+            new(&_left)Left(std::forward<Args>(args)...);  // NOLINT(cppcoreguidelines-pro-type-union-access)
         }
         template<typename... Args>
         void _construct_right(Args&&... args) noexcept(noexcept(new Right(std::forward<Args>(args)...))) {
-            new(&_right)Right(std::forward<Args>(args)...);
+            new(&_right)Right(std::forward<Args>(args)...);  // NOLINT(cppcoreguidelines-pro-type-union-access)
         }
         void _destruct() noexcept {
             if (_side == Side::left) {
-                _left.~Left();
+                _left.~Left();  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
-                _right.~Right();
+                _right.~Right();  // NOLINT(cppcoreguidelines-pro-type-union-access)
             }
         }
 

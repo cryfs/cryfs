@@ -345,7 +345,7 @@ TEST(EitherTest, givenLeftMoveConstructedFromValue_thenOldIsCorrect) {
       [] (const auto& test) {
         MovableOnly a(3);
         either<MovableOnly, int> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS<MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -369,7 +369,7 @@ TEST(EitherTest, givenRightMoveConstructedFromValue_thenOldIsCorrect) {
       [] (const auto& test) {
         MovableOnly a(3);
         either<int, MovableOnly> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS<MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -472,12 +472,12 @@ TEST(EitherTest, givenLeftMoveAssignedFromValue_thenOldIsCorrect) {
         MovableOnly a(3);
         either<MovableOnly, string> b("2");
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         MovableOnly a(3);
         either<MovableOnly, string> b(MovableOnly(0));
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS<MovableOnly>(MovableOnly(0))
@@ -508,12 +508,12 @@ TEST(EitherTest, givenRightMoveAssignedFromValue_thenOldIsCorrect) {
         MovableOnly a(3);
         either<string, MovableOnly> b("2");
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         MovableOnly a(3);
         either<string, MovableOnly> b(MovableOnly(2));
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS<MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -635,7 +635,7 @@ TEST(EitherTest, givenLeftMoveConstructed_thenOldIsCorrect) {
       [] (const auto& test) {
         either<MovableOnly, int> a(MovableOnly(3));
         either<MovableOnly, int> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_LEFT<MovableOnly, int>(MovableOnly(0))  // 0 is moved-from value
@@ -659,7 +659,7 @@ TEST(EitherTest, givenLeftMoveConstructed_withSameType_thenOldIsCorrect) {
       [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_left<MovableOnly, MovableOnly>(MovableOnly(3));
         either<MovableOnly, MovableOnly> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_LEFT<MovableOnly, MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -683,7 +683,7 @@ TEST(EitherTest, givenRightMoveConstructed_thenOldIsCorrect) {
       [] (const auto& test) {
         either<int, MovableOnly> a(MovableOnly(3));
         either<int, MovableOnly> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_RIGHT<int, MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -707,7 +707,7 @@ TEST(EitherTest, givenRightMoveConstructed_withSameType_thenOldIsCorrect) {
       [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_right<MovableOnly, MovableOnly>(MovableOnly(3));
         either<MovableOnly, MovableOnly> b(std::move(a));
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_RIGHT<MovableOnly, MovableOnly>(MovableOnly(0))  // 0 is moved-from value
@@ -882,12 +882,12 @@ TEST(EitherTest, givenLeftMoveAssigned_thenOldIsCorrect) {
         either<MovableOnly, string> a(MovableOnly(3));
         either<MovableOnly, string> b(2);
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         either<MovableOnly, string> a(MovableOnly(3));
         either<MovableOnly, string> b(MovableOnly(2));
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_LEFT<MovableOnly, string>(MovableOnly(0)) // 0 is moved-from value
@@ -918,12 +918,12 @@ TEST(EitherTest, givenLeftMoveAssigned_withSameType_thenOldIsCorrect) {
         either<MovableOnly, MovableOnly> a = make_left<MovableOnly, MovableOnly>(3);
         either<MovableOnly, MovableOnly> b = make_right<MovableOnly, MovableOnly>(2);
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_left<MovableOnly, MovableOnly>(3);
         either<MovableOnly, MovableOnly> b = make_left<MovableOnly, MovableOnly>(2);
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_LEFT<MovableOnly, MovableOnly>(MovableOnly(0)) // 0 is moved-from value
@@ -954,12 +954,12 @@ TEST(EitherTest, givenRightMoveAssigned_thenOldIsCorrect) {
         either<string, MovableOnly> a(MovableOnly(3));
         either<string, MovableOnly> b("2");
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         either<string, MovableOnly> a(MovableOnly(3));
         either<string, MovableOnly> b(MovableOnly(2));
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_RIGHT<string, MovableOnly>(MovableOnly(0)) // 0 is moved-from value
@@ -990,12 +990,12 @@ TEST(EitherTest, givenRightMoveAssigned_withSameType_thenOldIsCorrect) {
         either<MovableOnly, MovableOnly> a = make_right<MovableOnly, MovableOnly>(3);
         either<MovableOnly, MovableOnly> b = make_left<MovableOnly, MovableOnly>(2);
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }, [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_right<MovableOnly, MovableOnly>(3);
         either<MovableOnly, MovableOnly> b = make_right<MovableOnly, MovableOnly>(2);
         b = std::move(a);
-        test(a);
+        test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
     EXPECT_IS_RIGHT<MovableOnly, MovableOnly>(MovableOnly(0)) // 0 is moved-from value
