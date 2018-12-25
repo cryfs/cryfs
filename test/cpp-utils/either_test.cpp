@@ -69,11 +69,9 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_LEFT(const Left
     }, [&] (auto& obj) {
       EXPECT_ANY_THROW(std::move(obj).right());
     }, [&] (auto& obj) {
-      auto a = obj.left_opt();
-      EXPECT_EQ(expected, a.value());
+      EXPECT_EQ(expected, obj.left_opt().value());
     }, [&] (auto& obj) {
-      auto a = std::move(obj).left_opt();
-      EXPECT_EQ(expected, a.value());
+      EXPECT_EQ(expected, std::move(obj).left_opt().value());
     }, [&] (auto& obj) {
       EXPECT_EQ(boost::none, obj.right_opt());
     }, [&] (auto& obj) {
@@ -98,11 +96,9 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_RIGHT(const Rig
       }, [&] (auto& obj) {
         EXPECT_ANY_THROW(std::move(obj).left());
       }, [&] (auto& obj) {
-        auto a = obj.right_opt();
-        EXPECT_EQ(expected, a.value());
+        EXPECT_EQ(expected, obj.right_opt().value());
       }, [&] (auto& obj) {
-        auto a = std::move(obj).right_opt();
-        EXPECT_EQ(expected, a.value());
+        EXPECT_EQ(expected, std::move(obj).right_opt().value());
       }, [&] (auto& obj) {
         EXPECT_EQ(boost::none, obj.left_opt());
       }, [&] (auto& obj) {
