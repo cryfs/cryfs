@@ -8,6 +8,7 @@
 #include <codecvt>
 #include <Windows.h>
 #include <Winhttp.h>
+#include <VersionHelpers.h>
 
 using boost::none;
 using boost::optional;
@@ -212,7 +213,8 @@ namespace cpputils {
 
 	namespace {
 		cpputils::unique_ref<WinHttpSession> create_session() {
-			HttpHandleRAII session_handle = WinHttpOpen(L"cpputils::HttpClient", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+      const DWORD dwAccessType = IsWindows8Point1OrGreater() ? WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY : WINHTTP_ACCESS_TYPE_DEFAULT_PROXY;
+			HttpHandleRAII session_handle = WinHttpOpen(L"cpputils::HttpClient", dwAccessType, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 			if(nullptr == session_handle.handle) {
 				throw std::runtime_error("Error calling WinHttpOpen. Error code: " + std::to_string(GetLastError()));
 			}

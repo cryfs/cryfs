@@ -60,6 +60,7 @@ set(SOURCES
     system/HomedirTest.cpp
 	system/EnvTest.cpp
     value_type/ValueTypeTest.cpp
+	either_test.cpp
 )
 
 add_executable(${PROJECT_NAME}_exit_status process/exit_status.cpp)
