@@ -1037,22 +1037,22 @@ TEST(EitherTest, givenRight_whenModified_thenValueIsChanged) {
 TEST(EitherTest, canEmplaceConstructLeft) {
   test_with_matrix({
       [] (const auto& test) {
-        either<tuple<int, int>, tuple<int, int, int>> a(2, 3);
+        either<tuple<int, int>, tuple<int, string, int>> a(2, 3);
         test(a);
       }
     },
-    EXPECT_IS_LEFT<tuple<int, int>, tuple<int, int, int>>(tuple<int, int>(2, 3))
+    EXPECT_IS_LEFT<tuple<int, int>, tuple<int, string, int>>(tuple<int, int>(2, 3))
   );
 }
 
 TEST(EitherTest, canEmplaceConstructRight) {
   test_with_matrix({
       [] (const auto& test) {
-        either<tuple<int, int>, tuple<int, int, int>> a(2, 3, 4);
+        either<tuple<int, int>, tuple<int, string, int>> a(2, "3", 4);
         test(a);
       }
     },
-    EXPECT_IS_RIGHT<tuple<int, int>, tuple<int, int, int>>(tuple<int, int, int>(2, 3, 4))
+    EXPECT_IS_RIGHT<tuple<int, int>, tuple<int, string, int>>(tuple<int, string, int>(2, "3", 4))
   );
 }
 
