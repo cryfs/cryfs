@@ -69,7 +69,8 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_LEFT(const Left
     }, [&] (auto& obj) {
       EXPECT_ANY_THROW(std::move(obj).right());
     }, [&] (auto& obj) {
-      EXPECT_EQ(expected, obj.left_opt().value());
+      auto a = obj.left_opt();
+      EXPECT_EQ(expected, a.value());
     }, [&] (auto& obj) {
       auto a = std::move(obj).left_opt();
       EXPECT_EQ(expected, a.value());
