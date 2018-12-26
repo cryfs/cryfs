@@ -454,6 +454,7 @@ jobs:
       CXX: clang++-7
       BUILD_TOOLSET: clang
       APT_COMPILER_PACKAGE: clang-7
+      OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_TSAN_TESTS: true
