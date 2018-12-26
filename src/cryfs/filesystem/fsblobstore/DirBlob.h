@@ -82,8 +82,9 @@ namespace cryfs {
 
             FsBlobStore *_fsBlobStore;
             std::function<off_t (const blockstore::Key&)> _getLstatSize;
+            mutable std::mutex _getLstatSizeMutex;
             DirEntryList _entries;
-            mutable std::mutex _mutex;
+            mutable std::mutex _entriesAndChangedMutex;
             bool _changed;
 
             DISALLOW_COPY_AND_ASSIGN(DirBlob);
