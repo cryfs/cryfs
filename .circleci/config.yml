@@ -175,11 +175,11 @@ references:
           cd cmake
           ./test/gitversion/gitversion-test
           if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
-          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] && [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
+          if [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
           ./test/parallelaccessstore/parallelaccessstore-test
           ./test/blockstore/blockstore-test
           ./test/blobstore/blobstore-test
-          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs/cryfs-test ; fi
+          ./test/cryfs/cryfs-test
           if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
         fi
   job_definition: &job_definition
