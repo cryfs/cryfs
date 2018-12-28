@@ -83,8 +83,9 @@ namespace cryfs {
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
 
             std::function<fspp::num_bytes_t (const blockstore::BlockId&)> _getLstatSize;
+            mutable std::mutex _getLstatSizeMutex;
             DirEntryList _entries;
-            mutable std::mutex _mutex;
+            mutable std::mutex _entriesAndChangedMutex;
             bool _changed;
 
             DISALLOW_COPY_AND_ASSIGN(DirBlob);
