@@ -33,7 +33,7 @@ namespace cpputils {
             }
         }
 
-        either(either<Left, Right> &&rhs) noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right))))
+        either(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right))))
                 : _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(std::move(rhs._left));  // NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -47,7 +47,7 @@ namespace cpputils {
         }
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
-        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(_construct_left(rhs._left)) && noexcept(_construct_right(rhs._right))) {
+        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right))) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -58,7 +58,7 @@ namespace cpputils {
             return *this;
         }
 
-        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) {
+        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
