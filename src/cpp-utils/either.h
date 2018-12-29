@@ -12,13 +12,13 @@ namespace cpputils {
     class either final {
     public:
         template<class Head, class... Tail, std::enable_if_t<std::is_constructible<Left, Head, Tail...>::value && !std::is_constructible<Right, Head, Tail...>::value>* = nullptr>
-        either(Head&& construct_left_head_arg, Tail&&... construct_left_tail_args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...))) */
+        either(Head&& construct_left_head_arg, Tail&&... construct_left_tail_args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...)))
                 : _side(Side::left) {
             _construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...);
         }
 
         template<class Head, class... Tail, std::enable_if_t<!std::is_constructible<Left, Head, Tail...>::value && std::is_constructible<Right, Head, Tail...>::value>* = nullptr>
-        either(Head&& construct_right_head_arg, Tail&&... construct_right_tail_args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Head>(construct_right_head_arg), std::forward<Tail>(construct_right_tail_args)...))) */
+        either(Head&& construct_right_head_arg, Tail&&... construct_right_tail_args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Head>(construct_right_head_arg), std::forward<Tail>(construct_right_tail_args)...)))
             : _side(Side::right) {
           _construct_right(std::forward<Head>(construct_right_head_arg), std::forward<Tail>(construct_right_tail_args)...);
         }
@@ -33,7 +33,7 @@ namespace cpputils {
             }
         }
 
-        either(either<Left, Right> &&rhs) /* TODO noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) */
+        either(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right))))
                 : _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(std::move(rhs._left));  // NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -47,7 +47,7 @@ namespace cpputils {
         }
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
-        either<Left, Right> &operator=(const either<Left, Right> &rhs) /* TODO noexcept(noexcept(_construct_left(rhs._left)) && noexcept(_construct_right(rhs._right))) */ {
+        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right))) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -58,7 +58,7 @@ namespace cpputils {
             return *this;
         }
 
-        either<Left, Right> &operator=(either<Left, Right> &&rhs) /* TODO noexcept(noexcept(_construct_left(std::move(rhs._left))) && noexcept(_construct_right(std::move(rhs._right)))) */ {
+        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -119,7 +119,15 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        // left_opt()&& not offered because optional<Left&&> doesn't work
+        // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
+        boost::optional<Left> left_opt() && noexcept(noexcept(boost::optional<Left>(std::move(std::declval<either<Left, Right>>()._left)))) {
+            if (_side == Side::left) {
+                return std::move(_left);  // NOLINT(cppcoreguidelines-pro-type-union-access)
+            } else {
+                return boost::none;
+            }
+        }
+
 
         boost::optional<const Right&> right_opt() const& noexcept {
             if (_side == Side::right) {
@@ -135,7 +143,16 @@ namespace cpputils {
                 return boost::none;
             }
         }
-        // right_opt()&& not offered because optional<Right&&> doesn't work
+        // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
+        boost::optional<Right> right_opt() && noexcept(noexcept(boost::optional<Right>(std::move(std::declval<either<Left, Right>>()._right)))) {
+            if (_side == Side::right) {
+                return std::move(_right);  // NOLINT(cppcoreguidelines-pro-type-union-access)
+            } else {
+              return boost::none;
+            }
+        }
+
+
 
     private:
         union {
@@ -163,10 +180,10 @@ namespace cpputils {
         }
 
         template<typename Left_, typename Right_, typename... Args>
-        friend either<Left_, Right_> make_left(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...)))*/;
+        friend either<Left_, Right_> make_left(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Args>(args)...))) */;
 
         template<typename Left_, typename Right_, typename... Args>
-        friend either<Left_, Right_> make_right(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...)))*/;
+        friend either<Left_, Right_> make_right(Args&&... args) /* TODO noexcept(noexcept(std::declval<either<Left, Right>>()._construct_right(std::forward<Args>(args)...))) */;
     };
 
     template<class Left, class Right>
