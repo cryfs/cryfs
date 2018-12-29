@@ -122,7 +122,7 @@ namespace cpputils {
         // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
         boost::optional<Left> left_opt() && noexcept(noexcept(boost::optional<Left>(std::move(std::declval<either<Left, Right>>()._left)))) {
             if (_side == Side::left) {
-                return std::move(_left);
+                return std::move(_left);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
                 return boost::none;
             }
@@ -146,7 +146,7 @@ namespace cpputils {
         // warning: opposed to the other left_opt variants, this one already moves the content and returns by value.
         boost::optional<Right> right_opt() && noexcept(noexcept(boost::optional<Right>(std::move(std::declval<either<Left, Right>>()._right)))) {
             if (_side == Side::right) {
-                return std::move(_right);
+                return std::move(_right);  // NOLINT(cppcoreguidelines-pro-type-union-access)
             } else {
               return boost::none;
             }
