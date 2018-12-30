@@ -7,7 +7,8 @@ pool:
   vmImage: 'VS2017-Win2016'
 
 steps:
-- task: ManualIntervention@8
+- bash: choco install -y wget
+  displayName: 'Install wget'
 - bash: |
     # Detect number of CPU cores
     export NUMCORES=`nproc`
