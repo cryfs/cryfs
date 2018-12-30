@@ -17,4 +17,4 @@ steps:
 
 - task: CMake@1
   inputs:
-    cmakeArgs: -DBUILD_TESTING=on
+    cmakeArgs: .. -DBUILD_TESTING=on
