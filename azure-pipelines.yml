@@ -14,10 +14,10 @@ steps:
     export NUMCORES=`nproc`
     echo Using $NUMCORES cores
     # Download and prepare boost (only if not already present from cache)
-    if [ ! -d "/tmp/boost_1_58_0" ]; then
+    if [ ! -d "/tmp/boost_1_69_0" ]; then
       echo "Didn't find boost in cache. Downloading and building."
-      wget -O /tmp/boost.zip http://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.zip
-      if [ $(sha512sum /tmp/boost.zip | awk '{print $1;}') == "e27b4b4687743b40ce1c45c262f64ac64bb0e122411b186e9e49d9e23bbfcf271f92ca9ca8b97abeb897f22e17e82e6744cc7433fccf904eb6d6f8ce204bcc4f" ]; then
+      wget -O /tmp/boost.zip https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.zip
+      if [ $(sha256sum /tmp/boost.zip | awk '{print $1;}') == "d074bcbcc0501c4917b965fc890e303ee70d8b01ff5712bae4a6c54f2b6b4e52" ]; then
         echo Correct sha512sum
       else
         echo Wrong sha512sum
@@ -27,15 +27,15 @@ steps:
       echo Extracting...
       unzip /tmp/boost.zip -d /tmp
       rm -rf boost.zip
-      cd /tmp/boost_1_58_0
-      ./bootstrap.sh --with-libraries=filesystem,thread,chrono,program_options
+      cd /tmp/boost_1_69_0
+      ./bootstrap.sh --toolset=msvc --with-libraries=filesystem,thread,chrono,program_options
       cat bootstrap.log
       cd ..
     else
       echo Found boost in cache. Use cache and build.
     fi
     # Compile and install boost (if cached, this should be fast)
-    cd /tmp/boost_1_58_0
+    cd /tmp/boost_1_69_0
     ./b2 toolset=msvc link=static cxxflags=-fPIC -d0 -j$NUMCORES install
   displayName: 'Install Boost'
 
