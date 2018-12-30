@@ -16,3 +16,5 @@ steps:
   displayName: 'Run a multi-line script'
 
 - task: CMake@1
+  inputs:
+  
