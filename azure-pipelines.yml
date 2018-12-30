@@ -25,7 +25,7 @@ steps:
         exit 1
       fi
       echo Extracting...
-      tar -xf /tmp/boost.zip -C /tmp
+      unzip /tmp/boost.zip -d /tmp
       rm -rf boost.zip
       cd /tmp/boost_1_58_0
       ./bootstrap.sh --with-toolset=msvc --with-libraries=filesystem,thread,chrono,program_options
