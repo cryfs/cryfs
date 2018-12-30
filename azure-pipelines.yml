@@ -7,16 +7,14 @@ pool:
   vmImage: 'VS2017-Win2016'
 
 steps:
-- bash: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1 || exit 0
-  displayName: 'Install DokanY'
-
+- ManualIntervention@8
 - bash: |
     # Detect number of CPU cores
     export NUMCORES=`nproc`
     echo Using $NUMCORES cores
     # Download and prepare boost (only if not already present from cache)
-    if [ ! -d "/tmp/boost_1_58_0" ]; then
-      echo "Didn't find boost in cache. Downloading and building."
+    #if [ ! -d "/tmp/boost_1_58_0" ]; then
+    #  echo "Didn't find boost in cache. Downloading and building."
       wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2/download
       if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "7480ec713b0aa13f0ec990603e87e3b5c8d53f4411329b10fae37fc963b90aad12dbd9290a33c3669ae801e9012a68683eadff057591e9ca2ebcd22b1a67b5d1" ]; then
         echo Correct sha512sum
@@ -31,13 +29,16 @@ steps:
       cd /tmp/boost_1_58_0
       ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
       cd ..
-    else
-      echo Found boost in cache. Use cache and build.
-    fi
+    #else
+    #  echo Found boost in cache. Use cache and build.
+    #fi
     # Compile and install boost (if cached, this should be fast)
-    cd /tmp/boost_1_58_0
+    #cd C:/tmp/boost_1_58_0
     sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
   displayName: 'Install Boost'
+
+- bash: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1 || exit 0
+  displayName: 'Install DokanY'
 
 - task: CMake@1
   inputs:
