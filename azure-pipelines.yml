@@ -7,11 +7,10 @@ pool:
   vmImage: 'VS2017-Win2016'
 
 steps:
-- displayName: 'Install DokanY'
-  script: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1
+- script: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1
+  displayName: 'Install DokanY'
 
-- displayName: 'Install Boost'
-  script: |
+- script: |
     # Detect number of CPU cores
     export NUMCORES=`nproc`
     echo Using $NUMCORES cores
@@ -38,6 +37,7 @@ steps:
     # Compile and install boost (if cached, this should be fast)
     cd /tmp/boost_1_58_0
     sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
+  displayName: 'Install Boost'
 
 - task: CMake@1
   inputs:
