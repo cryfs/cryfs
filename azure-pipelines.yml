@@ -7,10 +7,10 @@ pool:
   vmImage: 'VS2017-Win2016'
 
 steps:
-- script: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1
+- bash: choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1 || exit 0
   displayName: 'Install DokanY'
 
-- script: |
+- bash: |
     # Detect number of CPU cores
     export NUMCORES=`nproc`
     echo Using $NUMCORES cores
