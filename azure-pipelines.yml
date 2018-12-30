@@ -29,6 +29,7 @@ steps:
       rm -rf boost.tar.bz2
       cd /tmp/boost_1_58_0
       ./bootstrap.sh --with-toolset=msvc --with-libraries=filesystem,thread,chrono,program_options
+      cat bootstrap.log
       cd ..
     else
       echo Found boost in cache. Use cache and build.
