@@ -173,14 +173,14 @@ references:
       command: |
         if "${RUN_TESTS}"; then
           cd cmake
-          ./test/gitversion/gitversion-test
-          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cpp-utils/cpp-utils-test ; fi
-          if [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ; fi
-          ./test/parallelaccessstore/parallelaccessstore-test
-          ./test/blockstore/blockstore-test
-          ./test/blobstore/blobstore-test
-          ./test/cryfs/cryfs-test
-          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ; fi
+          ./test/gitversion/gitversion-test ${GTEST_ARGS}
+          ./test/cpp-utils/cpp-utils-test ${GTEST_ARGS}
+          if [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ${GTEST_ARGS} ; fi
+          ./test/parallelaccessstore/parallelaccessstore-test ${GTEST_ARGS}
+          ./test/blockstore/blockstore-test ${GTEST_ARGS}
+          ./test/blobstore/blobstore-test ${GTEST_ARGS}
+          ./test/cryfs/cryfs-test ${GTEST_ARGS}
+          if [ ! "$DISABLE_BROKEN_TSAN_TESTS" = true ] ; then ./test/cryfs-cli/cryfs-cli-test ${GTEST_ARGS} ; fi
         fi
   job_definition: &job_definition
     <<: *container_config
@@ -212,6 +212,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-5"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_5_release:
@@ -223,6 +224,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-5"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_6_debug:
@@ -234,6 +236,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-6"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_6_release:
@@ -245,6 +248,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-6"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_7_debug:
@@ -256,6 +260,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-7"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_7_release:
@@ -267,6 +272,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-7"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_8_debug:
@@ -278,6 +284,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   gcc_8_release:
@@ -289,6 +296,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_4_debug:
@@ -300,6 +308,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-4.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_4_release:
@@ -311,6 +320,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-4.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_5_debug:
@@ -322,6 +332,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_5_release:
@@ -333,6 +344,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-5.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_6_debug:
@@ -344,6 +356,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-6.0
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_6_release:
@@ -355,6 +368,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-6.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_7_debug:
@@ -366,6 +380,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: ""
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_7_release:
@@ -377,6 +392,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_werror:
@@ -388,6 +404,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: "-DUSE_WERROR=on"
       RUN_TESTS: false
   gcc_werror:
@@ -399,6 +416,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: "-DUSE_WERROR=on"
       RUN_TESTS: false
   gcc_werror:
@@ -410,6 +428,7 @@ jobs:
       APT_COMPILER_PACKAGE: "g++-8"
       CXXFLAGS: "-Werror"
       BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: false
   no_compatibility:
@@ -421,6 +440,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   address_sanitizer:
@@ -434,6 +454,7 @@ jobs:
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
       DISABLE_BROKEN_ASAN_TESTS: true
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   ub_sanitizer:
@@ -445,6 +466,7 @@ jobs:
       APT_COMPILER_PACKAGE: clang-7
       CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
       BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   thread_sanitizer:
@@ -458,6 +480,7 @@ jobs:
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
       DISABLE_BROKEN_TSAN_TESTS: true
+      GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_DebugBuild.*"
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_tidy:
