@@ -479,7 +479,6 @@ jobs:
       OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
-      DISABLE_BROKEN_TSAN_TESTS: true
       GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_DebugBuild.*:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*"
       CMAKE_FLAGS: ""
       RUN_TESTS: true
