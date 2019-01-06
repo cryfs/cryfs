@@ -108,7 +108,7 @@ void DataTree::_traverseLeaves(uint32_t beginIndex, uint32_t endIndex,
     function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
     function<Data (uint32_t index)> onCreateLeaf,
     function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
-  _rootNode = LeafTraverser(_nodeStore).traverseAndReturnRoot(std::move(_rootNode), beginIndex, endIndex, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
+  LeafTraverser(_nodeStore).traverseAndUpdateRoot(&_rootNode, beginIndex, endIndex, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
 }
 
 uint32_t DataTree::leavesPerFullChild(const DataInnerNode &root) const {

@@ -27,8 +27,8 @@ namespace blobstore {
             public:
                 LeafTraverser(datanodestore::DataNodeStore *nodeStore);
 
-                cpputils::unique_ref<datanodestore::DataNode> traverseAndReturnRoot(
-                      cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex,
+                void traverseAndUpdateRoot(
+                      cpputils::unique_ref<datanodestore::DataNode>* root, uint32_t beginIndex, uint32_t endIndex,
                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
                       std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                       std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
@@ -36,8 +36,8 @@ namespace blobstore {
             private:
                 datanodestore::DataNodeStore *_nodeStore;
 
-                cpputils::unique_ref<datanodestore::DataNode> _traverseAndReturnRoot(
-                      cpputils::unique_ref<datanodestore::DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,
+                void _traverseAndUpdateRoot(
+                      cpputils::unique_ref<datanodestore::DataNode>* root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,
                       std::function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf,
                       std::function<cpputils::Data (uint32_t index)> onCreateLeaf,
                       std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
@@ -55,7 +55,7 @@ namespace blobstore {
                                                                                 std::function<void (datanodestore::DataInnerNode *node)> onBacktrackFromSubtree);
                 uint32_t _maxLeavesForTreeDepth(uint8_t depth) const;
                 std::function<cpputils::Data (uint32_t index)> _createMaxSizeLeaf() const;
-                cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode> root);
+                void _whileRootHasOnlyOneChildReplaceRootWithItsChild(cpputils::unique_ref<datanodestore::DataNode>* root);
                 cpputils::unique_ref<datanodestore::DataNode> _whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::BlockId &blockId);
 
                 DISALLOW_COPY_AND_ASSIGN(LeafTraverser);
