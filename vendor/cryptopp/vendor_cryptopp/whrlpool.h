@@ -13,6 +13,12 @@
 #include "config.h"
 #include "iterhash.h"
 
+// Clang 3.3 integrated assembler crash on Linux. Clang 3.4 due to compiler
+// error with .intel_syntax, http://llvm.org/bugs/show_bug.cgi?id=24232
+#if CRYPTOPP_BOOL_X32 || defined(CRYPTOPP_DISABLE_MIXED_ASM)
+# define CRYPTOPP_DISABLE_WHIRLPOOL_ASM 1
+#endif
+
 NAMESPACE_BEGIN(CryptoPP)
 
 /// \brief Whirlpool message digest
@@ -23,10 +29,12 @@ NAMESPACE_BEGIN(CryptoPP)
 class Whirlpool : public IteratedHashWithStaticTransform<word64, BigEndian, 64, 64, Whirlpool>
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "Whirlpool";}
+	std::string AlgorithmProvider() const;
+
 	static void InitState(HashWordType *state);
 	static void Transform(word64 *digest, const word64 *data);
 	void TruncatedFinal(byte *hash, size_t size);
-	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "Whirlpool";}
 };
 
 NAMESPACE_END

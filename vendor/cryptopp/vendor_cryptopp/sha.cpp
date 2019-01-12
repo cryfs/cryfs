@@ -6,7 +6,7 @@
 //    code from Johannes Schneiders, Skip Hovsmith and Barry O'Rourke.
 //    All code is in the public domain.
 
-// In August 2017 Walton reworked the internals to align all the implementations.
+//     In August 2017 JW reworked the internals to align all the implementations.
 //    Formerly all hashes were software based, IterHashBase handled endian conversions,
 //    and IterHashBase dispatched a single to block SHA{N}::Transform. SHA{N}::Transform
 //    then performed the single block hashing. It was repeated for multiple blocks.
@@ -16,11 +16,12 @@
 //    SHA{N}::HashMultipleBlocks (class), and the function calls SHA{N}_HashMultipleBlocks
 //    (free standing) or SHA{N}_HashBlock (free standing) as a fallback.
 //
-//    An added wrinkle is hardware is little endian, C++ is big endian, and callers use big endian,
-//    so SHA{N}_HashMultipleBlock accepts a ByteOrder for the incoming data arrangement. Hardware
-//    based SHA{N}_HashMultipleBlock can often perform the endian swap much easier by setting
-//    an EPI mask. Endian swap incurs no penalty on Intel SHA, and 4-instruction penaly on ARM SHA.
-//    Under C++ the full software based swap penalty is incurred due to use of ReverseBytes().
+//    An added wrinkle is hardware is little endian, C++ is big endian, and callers use
+//    big endian, so SHA{N}_HashMultipleBlock accepts a ByteOrder for the incoming data
+//    arrangement. Hardware based SHA{N}_HashMultipleBlock can often perform the endian
+//    swap much easier by setting an EPI mask. Endian swap incurs no penalty on Intel SHA,
+//    and 4-instruction penalty on ARM SHA. Under C++ the full software based swap penalty
+//    is incurred due to use of ReverseBytes().
 //
 //    The rework also removed the hacked-in pointers to implementations.
 
@@ -41,13 +42,6 @@
 #include "misc.h"
 #include "cpu.h"
 
-// Clang 3.3 integrated assembler crash on Linux
-//  http://github.com/weidai11/cryptopp/issues/264
-// Clang 3.4.1 (x86) crash on FreeBSD 10.3. Clang 3.4.1 (x64) works fine.
-#if defined(CRYPTOPP_LLVM_CLANG_VERSION) && (CRYPTOPP_LLVM_CLANG_VERSION < 30500)
-# define CRYPTOPP_DISABLE_SHA_ASM
-#endif
-
 #if defined(CRYPTOPP_DISABLE_SHA_ASM)
 # undef CRYPTOPP_X86_ASM_AVAILABLE
 # undef CRYPTOPP_X32_ASM_AVAILABLE
@@ -62,15 +56,92 @@ extern void SHA1_HashMultipleBlocks_SHANI(word32 *state, const word32 *data, siz
 extern void SHA256_HashMultipleBlocks_SHANI(word32 *state, const word32 *data, size_t length, ByteOrder order);
 #endif
 
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA1_AVAILABLE
 extern void SHA1_HashMultipleBlocks_ARMV8(word32 *state, const word32 *data, size_t length, ByteOrder order);
+#endif
+
+#if CRYPTOPP_ARM_SHA2_AVAILABLE
 extern void SHA256_HashMultipleBlocks_ARMV8(word32 *state, const word32 *data, size_t length, ByteOrder order);
+#endif
+
+#if CRYPTOPP_ARM_SHA512_AVAILABLE
+extern void SHA512_HashMultipleBlocks_ARMV8(word32 *state, const word32 *data, size_t length, ByteOrder order);
 #endif
 
 #if CRYPTOPP_POWER8_SHA_AVAILABLE
 extern void SHA256_HashMultipleBlocks_POWER8(word32 *state, const word32 *data, size_t length, ByteOrder order);
 extern void SHA512_HashMultipleBlocks_POWER8(word64 *state, const word64 *data, size_t length, ByteOrder order);
 #endif
+
+// We add extern to export table to sha_simd.cpp, but it
+//  cleared http://github.com/weidai11/cryptopp/issues/502
+extern const word32 SHA256_K[64];
+extern const word64 SHA512_K[80];
+
+CRYPTOPP_ALIGN_DATA(16)
+const word64 SHA512_K[80] = {
+    W64LIT(0x428a2f98d728ae22), W64LIT(0x7137449123ef65cd),
+    W64LIT(0xb5c0fbcfec4d3b2f), W64LIT(0xe9b5dba58189dbbc),
+    W64LIT(0x3956c25bf348b538), W64LIT(0x59f111f1b605d019),
+    W64LIT(0x923f82a4af194f9b), W64LIT(0xab1c5ed5da6d8118),
+    W64LIT(0xd807aa98a3030242), W64LIT(0x12835b0145706fbe),
+    W64LIT(0x243185be4ee4b28c), W64LIT(0x550c7dc3d5ffb4e2),
+    W64LIT(0x72be5d74f27b896f), W64LIT(0x80deb1fe3b1696b1),
+    W64LIT(0x9bdc06a725c71235), W64LIT(0xc19bf174cf692694),
+    W64LIT(0xe49b69c19ef14ad2), W64LIT(0xefbe4786384f25e3),
+    W64LIT(0x0fc19dc68b8cd5b5), W64LIT(0x240ca1cc77ac9c65),
+    W64LIT(0x2de92c6f592b0275), W64LIT(0x4a7484aa6ea6e483),
+    W64LIT(0x5cb0a9dcbd41fbd4), W64LIT(0x76f988da831153b5),
+    W64LIT(0x983e5152ee66dfab), W64LIT(0xa831c66d2db43210),
+    W64LIT(0xb00327c898fb213f), W64LIT(0xbf597fc7beef0ee4),
+    W64LIT(0xc6e00bf33da88fc2), W64LIT(0xd5a79147930aa725),
+    W64LIT(0x06ca6351e003826f), W64LIT(0x142929670a0e6e70),
+    W64LIT(0x27b70a8546d22ffc), W64LIT(0x2e1b21385c26c926),
+    W64LIT(0x4d2c6dfc5ac42aed), W64LIT(0x53380d139d95b3df),
+    W64LIT(0x650a73548baf63de), W64LIT(0x766a0abb3c77b2a8),
+    W64LIT(0x81c2c92e47edaee6), W64LIT(0x92722c851482353b),
+    W64LIT(0xa2bfe8a14cf10364), W64LIT(0xa81a664bbc423001),
+    W64LIT(0xc24b8b70d0f89791), W64LIT(0xc76c51a30654be30),
+    W64LIT(0xd192e819d6ef5218), W64LIT(0xd69906245565a910),
+    W64LIT(0xf40e35855771202a), W64LIT(0x106aa07032bbd1b8),
+    W64LIT(0x19a4c116b8d2d0c8), W64LIT(0x1e376c085141ab53),
+    W64LIT(0x2748774cdf8eeb99), W64LIT(0x34b0bcb5e19b48a8),
+    W64LIT(0x391c0cb3c5c95a63), W64LIT(0x4ed8aa4ae3418acb),
+    W64LIT(0x5b9cca4f7763e373), W64LIT(0x682e6ff3d6b2b8a3),
+    W64LIT(0x748f82ee5defb2fc), W64LIT(0x78a5636f43172f60),
+    W64LIT(0x84c87814a1f0ab72), W64LIT(0x8cc702081a6439ec),
+    W64LIT(0x90befffa23631e28), W64LIT(0xa4506cebde82bde9),
+    W64LIT(0xbef9a3f7b2c67915), W64LIT(0xc67178f2e372532b),
+    W64LIT(0xca273eceea26619c), W64LIT(0xd186b8c721c0c207),
+    W64LIT(0xeada7dd6cde0eb1e), W64LIT(0xf57d4f7fee6ed178),
+    W64LIT(0x06f067aa72176fba), W64LIT(0x0a637dc5a2c898a6),
+    W64LIT(0x113f9804bef90dae), W64LIT(0x1b710b35131c471b),
+    W64LIT(0x28db77f523047d84), W64LIT(0x32caab7b40c72493),
+    W64LIT(0x3c9ebe0a15c9bebc), W64LIT(0x431d67c49c100d4c),
+    W64LIT(0x4cc5d4becb3e42b6), W64LIT(0x597f299cfc657e2a),
+    W64LIT(0x5fcb6fab3ad6faec), W64LIT(0x6c44198c4a475817)
+};
+
+CRYPTOPP_ALIGN_DATA(16)
+const word32 SHA256_K[64] = {
+
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
+    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
+    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
+    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
+    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+};
 
 ////////////////////////////////
 // start of Steve Reid's code //
@@ -151,6 +222,23 @@ ANONYMOUS_NAMESPACE_END
 // end of Steve Reid's code //
 //////////////////////////////
 
+std::string SHA1::AlgorithmProvider() const
+{
+#if CRYPTOPP_SHANI_AVAILABLE
+    if (HasSHA())
+        return "SHANI";
+#endif
+#if CRYPTOPP_SSE2_ASM_AVAILABLE
+    if (HasSSE2())
+        return "SSE2";
+#endif
+#if CRYPTOPP_ARM_SHA1_AVAILABLE
+    if (HasSHA1())
+        return "ARMv8";
+#endif
+    return "C++";
+}
+
 void SHA1::InitState(HashWordType *state)
 {
     state[0] = 0x67452301;
@@ -172,7 +260,7 @@ void SHA1::Transform(word32 *state, const word32 *data)
         return;
     }
 #endif
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA1_AVAILABLE
     if (HasSHA1())
     {
         SHA1_HashMultipleBlocks_ARMV8(state, data, SHA1::BLOCKSIZE, LITTLE_ENDIAN_ORDER);
@@ -195,7 +283,7 @@ size_t SHA1::HashMultipleBlocks(const word32 *input, size_t length)
         return length & (SHA1::BLOCKSIZE - 1);
     }
 #endif
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA1_AVAILABLE
     if (HasSHA1())
     {
         SHA1_HashMultipleBlocks_ARMV8(m_state, input, length, BIG_ENDIAN_ORDER);
@@ -225,28 +313,6 @@ size_t SHA1::HashMultipleBlocks(const word32 *input, size_t length)
 }
 
 // *************************************************************
-
-CRYPTOPP_ALIGN_DATA(16)
-CRYPTOPP_TABLE
-const word32 SHA256_K[64] = {
-
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-};
 
 ANONYMOUS_NAMESPACE_BEGIN
 
@@ -320,20 +386,50 @@ void SHA256_HashBlock_CXX(word32 *state, const word32 *data)
 
 ANONYMOUS_NAMESPACE_END
 
+std::string SHA256_AlgorithmProvider()
+{
+#if CRYPTOPP_SHANI_AVAILABLE
+    if (HasSHA())
+        return "SHANI";
+#endif
+#if CRYPTOPP_SSE2_ASM_AVAILABLE
+    if (HasSSE2())
+        return "SSE2";
+#endif
+#if CRYPTOPP_ARM_SHA2_AVAILABLE
+    if (HasSHA2())
+        return "ARMv8";
+#endif
+#if (CRYPTOPP_POWER8_SHA_AVAILABLE)
+    if (HasSHA256())
+        return "Power8";
+#endif
+    return "C++";
+}
+
+std::string SHA224::AlgorithmProvider() const
+{
+    return SHA256_AlgorithmProvider();
+}
+
 void SHA224::InitState(HashWordType *state)
 {
-    static const word32 s[8] = {0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4};
+    static const word32 s[8] = {
+        0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
+        0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4};
     memcpy(state, s, sizeof(s));
 }
 
 void SHA256::InitState(HashWordType *state)
 {
-    static const word32 s[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+    static const word32 s[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
     memcpy(state, s, sizeof(s));
 }
 #endif // Not CRYPTOPP_GENERATE_X64_MASM
 
-#if (defined(CRYPTOPP_X86_ASM_AVAILABLE) || defined(CRYPTOPP_X32_ASM_AVAILABLE) || defined(CRYPTOPP_GENERATE_X64_MASM))
+#if defined(CRYPTOPP_X86_ASM_AVAILABLE)
 
 ANONYMOUS_NAMESPACE_BEGIN
 
@@ -357,9 +453,7 @@ void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word3
     #define DATA_SAVE    [BASE+8*4+16*4+2*WORD_SZ]
     #define DATA_END     [BASE+8*4+16*4+3*WORD_SZ]
     #define Kt(i)        WORD_REG(si)+(i)*4
-#if CRYPTOPP_BOOL_X32
-    #define BASE         esp+8
-#elif CRYPTOPP_BOOL_X86
+#if CRYPTOPP_BOOL_X86
     #define BASE         esp+4
 #elif defined(__GNUC__)
     #define BASE         r8
@@ -470,7 +564,7 @@ void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word3
         lea rsi, [?SHA256_K@CryptoPP@@3QBIB + 48*4]
 #endif
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
     #ifndef __GNUC__
         AS2(    mov        edi, [len])
         AS2(    lea        WORD_REG(si), [SHA256_K+48*4])
@@ -492,7 +586,7 @@ void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word3
     AS2(    mov        K_END, WORD_REG(si))
 
 #if CRYPTOPP_SSE2_ASM_AVAILABLE
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
     AS2(    test    edi, 1)
     ASJ(    jnz,    2, f)
     AS1(    dec        DWORD PTR K_END)
@@ -501,7 +595,7 @@ void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word3
     AS2(    movdqu    xmm1, XMMWORD_PTR [WORD_REG(cx)+1*16])
 #endif
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 #if CRYPTOPP_SSE2_ASM_AVAILABLE
     ASJ(    jmp,    0, f)
 #endif
@@ -521,13 +615,13 @@ INTEL_NOPREFIX
     AS2(    movdqu    E(0), xmm1)
     AS2(    movdqu    A(0), xmm0)
 #endif
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
     ASL(3)
 #endif
     AS2(    sub        WORD_REG(si), 48*4)
     SWAP_COPY(0)    SWAP_COPY(1)    SWAP_COPY(2)    SWAP_COPY(3)
     SWAP_COPY(4)    SWAP_COPY(5)    SWAP_COPY(6)    SWAP_COPY(7)
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
     SWAP_COPY(8)    SWAP_COPY(9)    SWAP_COPY(10)    SWAP_COPY(11)
     SWAP_COPY(12)    SWAP_COPY(13)    SWAP_COPY(14)    SWAP_COPY(15)
 #endif
@@ -582,7 +676,7 @@ INTEL_NOPREFIX
     AS2(    mov        DATA_SAVE, WORD_REG(dx))
 
 #if CRYPTOPP_SSE2_ASM_AVAILABLE
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
     AS2(    test    DWORD PTR K_END, 1)
     ASJ(    jz,        4, f)
 #endif
@@ -598,7 +692,7 @@ INTEL_NOPREFIX
     INTEL_NOPREFIX
 #endif
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 #if CRYPTOPP_SSE2_ASM_AVAILABLE
     ASJ(    jmp,    5, f)
     ASL(4)    // non-SSE2
@@ -658,7 +752,7 @@ INTEL_NOPREFIX
 
 ANONYMOUS_NAMESPACE_END
 
-#endif    // CRYPTOPP_X86_ASM_AVAILABLE or CRYPTOPP_GENERATE_X64_MASM
+#endif    // CRYPTOPP_X86_ASM_AVAILABLE
 
 #ifndef CRYPTOPP_GENERATE_X64_MASM
 
@@ -667,6 +761,11 @@ extern "C" {
 void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word32 *data, size_t len);
 }
 #endif
+
+std::string SHA256::AlgorithmProvider() const
+{
+    return SHA256_AlgorithmProvider();
+}
 
 void SHA256::Transform(word32 *state, const word32 *data)
 {
@@ -680,7 +779,7 @@ void SHA256::Transform(word32 *state, const word32 *data)
         return;
     }
 #endif
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA2_AVAILABLE
     if (HasSHA2())
     {
         SHA256_HashMultipleBlocks_ARMV8(state, data, SHA256::BLOCKSIZE, LITTLE_ENDIAN_ORDER);
@@ -710,7 +809,7 @@ size_t SHA256::HashMultipleBlocks(const word32 *input, size_t length)
         return length & (SHA256::BLOCKSIZE - 1);
     }
 #endif
-#if CRYPTOPP_SSE2_ASM_AVAILABLE
+#if CRYPTOPP_SSE2_ASM_AVAILABLE || CRYPTOPP_X64_MASM_AVAILABLE
     if (HasSSE2())
     {
         const size_t res = length & (SHA256::BLOCKSIZE - 1);
@@ -718,7 +817,7 @@ size_t SHA256::HashMultipleBlocks(const word32 *input, size_t length)
         return res;
     }
 #endif
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA2_AVAILABLE
     if (HasSHA2())
     {
         SHA256_HashMultipleBlocks_ARMV8(m_state, input, length, BIG_ENDIAN_ORDER);
@@ -766,7 +865,7 @@ size_t SHA224::HashMultipleBlocks(const word32 *input, size_t length)
         return length & (SHA256::BLOCKSIZE - 1);
     }
 #endif
-#if CRYPTOPP_SSE2_ASM_AVAILABLE
+#if CRYPTOPP_SSE2_ASM_AVAILABLE || CRYPTOPP_X64_MASM_AVAILABLE
     if (HasSSE2())
     {
         const size_t res = length & (SHA256::BLOCKSIZE - 1);
@@ -774,7 +873,7 @@ size_t SHA224::HashMultipleBlocks(const word32 *input, size_t length)
         return res;
     }
 #endif
-#if CRYPTOPP_ARM_SHA_AVAILABLE
+#if CRYPTOPP_ARM_SHA2_AVAILABLE
     if (HasSHA2())
     {
         SHA256_HashMultipleBlocks_ARMV8(m_state, input, length, BIG_ENDIAN_ORDER);
@@ -812,6 +911,29 @@ size_t SHA224::HashMultipleBlocks(const word32 *input, size_t length)
 
 // *************************************************************
 
+std::string SHA512_AlgorithmProvider()
+{
+#if CRYPTOPP_SSE2_ASM_AVAILABLE
+    if (HasSSE2())
+        return "SSE2";
+#endif
+#if (CRYPTOPP_POWER8_SHA_AVAILABLE)
+    if (HasSHA512())
+        return "Power8";
+#endif
+    return "C++";
+}
+
+std::string SHA384::AlgorithmProvider() const
+{
+    return SHA512_AlgorithmProvider();
+}
+
+std::string SHA512::AlgorithmProvider() const
+{
+    return SHA512_AlgorithmProvider();
+}
+
 void SHA384::InitState(HashWordType *state)
 {
     const word64 s[8] = {
@@ -832,56 +954,15 @@ void SHA512::InitState(HashWordType *state)
     memcpy(state, s, sizeof(s));
 }
 
-// We add extern to export table to sha-simd.cpp, but it
-//  cleared http://github.com/weidai11/cryptopp/issues/502
-CRYPTOPP_ALIGN_DATA(16)
-CRYPTOPP_TABLE
-const word64 SHA512_K[80] = {
-    W64LIT(0x428a2f98d728ae22), W64LIT(0x7137449123ef65cd),
-    W64LIT(0xb5c0fbcfec4d3b2f), W64LIT(0xe9b5dba58189dbbc),
-    W64LIT(0x3956c25bf348b538), W64LIT(0x59f111f1b605d019),
-    W64LIT(0x923f82a4af194f9b), W64LIT(0xab1c5ed5da6d8118),
-    W64LIT(0xd807aa98a3030242), W64LIT(0x12835b0145706fbe),
-    W64LIT(0x243185be4ee4b28c), W64LIT(0x550c7dc3d5ffb4e2),
-    W64LIT(0x72be5d74f27b896f), W64LIT(0x80deb1fe3b1696b1),
-    W64LIT(0x9bdc06a725c71235), W64LIT(0xc19bf174cf692694),
-    W64LIT(0xe49b69c19ef14ad2), W64LIT(0xefbe4786384f25e3),
-    W64LIT(0x0fc19dc68b8cd5b5), W64LIT(0x240ca1cc77ac9c65),
-    W64LIT(0x2de92c6f592b0275), W64LIT(0x4a7484aa6ea6e483),
-    W64LIT(0x5cb0a9dcbd41fbd4), W64LIT(0x76f988da831153b5),
-    W64LIT(0x983e5152ee66dfab), W64LIT(0xa831c66d2db43210),
-    W64LIT(0xb00327c898fb213f), W64LIT(0xbf597fc7beef0ee4),
-    W64LIT(0xc6e00bf33da88fc2), W64LIT(0xd5a79147930aa725),
-    W64LIT(0x06ca6351e003826f), W64LIT(0x142929670a0e6e70),
-    W64LIT(0x27b70a8546d22ffc), W64LIT(0x2e1b21385c26c926),
-    W64LIT(0x4d2c6dfc5ac42aed), W64LIT(0x53380d139d95b3df),
-    W64LIT(0x650a73548baf63de), W64LIT(0x766a0abb3c77b2a8),
-    W64LIT(0x81c2c92e47edaee6), W64LIT(0x92722c851482353b),
-    W64LIT(0xa2bfe8a14cf10364), W64LIT(0xa81a664bbc423001),
-    W64LIT(0xc24b8b70d0f89791), W64LIT(0xc76c51a30654be30),
-    W64LIT(0xd192e819d6ef5218), W64LIT(0xd69906245565a910),
-    W64LIT(0xf40e35855771202a), W64LIT(0x106aa07032bbd1b8),
-    W64LIT(0x19a4c116b8d2d0c8), W64LIT(0x1e376c085141ab53),
-    W64LIT(0x2748774cdf8eeb99), W64LIT(0x34b0bcb5e19b48a8),
-    W64LIT(0x391c0cb3c5c95a63), W64LIT(0x4ed8aa4ae3418acb),
-    W64LIT(0x5b9cca4f7763e373), W64LIT(0x682e6ff3d6b2b8a3),
-    W64LIT(0x748f82ee5defb2fc), W64LIT(0x78a5636f43172f60),
-    W64LIT(0x84c87814a1f0ab72), W64LIT(0x8cc702081a6439ec),
-    W64LIT(0x90befffa23631e28), W64LIT(0xa4506cebde82bde9),
-    W64LIT(0xbef9a3f7b2c67915), W64LIT(0xc67178f2e372532b),
-    W64LIT(0xca273eceea26619c), W64LIT(0xd186b8c721c0c207),
-    W64LIT(0xeada7dd6cde0eb1e), W64LIT(0xf57d4f7fee6ed178),
-    W64LIT(0x06f067aa72176fba), W64LIT(0x0a637dc5a2c898a6),
-    W64LIT(0x113f9804bef90dae), W64LIT(0x1b710b35131c471b),
-    W64LIT(0x28db77f523047d84), W64LIT(0x32caab7b40c72493),
-    W64LIT(0x3c9ebe0a15c9bebc), W64LIT(0x431d67c49c100d4c),
-    W64LIT(0x4cc5d4becb3e42b6), W64LIT(0x597f299cfc657e2a),
-    W64LIT(0x5fcb6fab3ad6faec), W64LIT(0x6c44198c4a475817)
-};
+#if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86)
 
-#if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32)
+// Anonymous namespace removed due to a new compile error.
+//   g++ -DNDEBUG -g2 -O3 -pthread -pipe -c sha.cpp
+//   sha.cpp: Assembler messages:
+//   sha.cpp:1155: Error: symbol `SHA512_Round' is already defined
+//   sha.cpp:1155: Error: symbol `SHA512_Round' is already defined
 
-ANONYMOUS_NAMESPACE_BEGIN
+// ANONYMOUS_NAMESPACE_BEGIN
 
 CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const word64 *data)
 {
@@ -904,13 +985,8 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const
     AS_PUSH_IF86(    ax)
     AS2(    xor      eax, eax)
 
-#if CRYPTOPP_BOOL_X32
-    AS2(    lea      edi, [esp+8+8*8])        // start at middle of state buffer. will decrement pointer each round to avoid copying
-    AS2(    lea      esi, [esp+8+20*8+8])    // 16-byte alignment, then add 8
-#else
     AS2(    lea      edi, [esp+4+8*8])        // start at middle of state buffer. will decrement pointer each round to avoid copying
     AS2(    lea      esi, [esp+4+20*8+8])    // 16-byte alignment, then add 8
-#endif
 
     AS2(    movdqu   xmm0, [ecx+0*16])
     AS2(    movdq2q  mm4, xmm0)
@@ -964,29 +1040,29 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const
     AS2(    pxor     xmm7, xmm6)\
     AS2(    psrlq    r, c-b)\
     AS2(    pxor     r, xmm7)
-
     ASL(SHA512_Round)
+
     // k + w is in mm0, a is in mm4, e is in mm5
-    AS2(    paddq    mm0, [edi+7*8])        // h
-    AS2(    movq     mm2, [edi+5*8])        // f
-    AS2(    movq     mm3, [edi+6*8])        // g
+    AS2(    paddq    mm0, [edi+7*8])      // h
+    AS2(    movq     mm2, [edi+5*8])      // f
+    AS2(    movq     mm3, [edi+6*8])      // g
     AS2(    pxor     mm2, mm3)
     AS2(    pand     mm2, mm5)
     SSE2_S0_S1(mm5,14,18,41)
     AS2(    pxor     mm2, mm3)
     AS2(    paddq    mm0, mm2)            // h += Ch(e,f,g)
     AS2(    paddq    mm5, mm0)            // h += S1(e)
-    AS2(    movq     mm2, [edi+1*8])        // b
+    AS2(    movq     mm2, [edi+1*8])      // b
     AS2(    movq     mm1, mm2)
     AS2(    por      mm2, mm4)
-    AS2(    pand     mm2, [edi+2*8])        // c
+    AS2(    pand     mm2, [edi+2*8])      // c
     AS2(    pand     mm1, mm4)
     AS2(    por      mm1, mm2)
     AS2(    paddq    mm1, mm5)            // temp = h + Maj(a,b,c)
-    AS2(    paddq    mm5, [edi+3*8])        // e = d + h
+    AS2(    paddq    mm5, [edi+3*8])      // e = d + h
     AS2(    movq     [edi+3*8], mm5)
     AS2(    movq     [edi+11*8], mm5)
-    SSE2_S0_S1(mm4,28,34,39)            // S0(a)
+    SSE2_S0_S1(mm4,28,34,39)              // S0(a)
     AS2(    paddq    mm4, mm1)            // a = temp + S0(a)
     AS2(    movq     [edi-8], mm4)
     AS2(    movq     [edi+7*8], mm4)
@@ -999,6 +1075,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const
     AS2(    movq     [esi+eax*8+16*8], mm0)
     AS2(    paddq    mm0, [ebx+eax*8])
     ASC(    call,    SHA512_Round)
+
     AS1(    inc      eax)
     AS2(    sub      edi, 8)
     AS2(    test     eax, 7)
@@ -1040,11 +1117,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const
     // do housekeeping every 8 rounds
     AS2(    mov      esi, 0xf)
     AS2(    and      esi, eax)
-#if CRYPTOPP_BOOL_X32
-    AS2(    lea      esi, [esp+8+20*8+8+esi*8])
-#else
     AS2(    lea      esi, [esp+4+20*8+8+esi*8])
-#endif
     AS2(    add      edi, 8*8)
     AS2(    cmp      eax, 80)
     ASJ(    jne,     1, b)
@@ -1077,7 +1150,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const
 #endif
 }
 
-ANONYMOUS_NAMESPACE_END
+// ANONYMOUS_NAMESPACE_END
 
 #endif    // CRYPTOPP_SSE2_ASM_AVAILABLE
 
@@ -1112,8 +1185,10 @@ void SHA512_HashBlock_CXX(word64 *state, const word64 *data)
     CRYPTOPP_ASSERT(data);
 
     word64 W[16]={0}, T[8];
+
     /* Copy context->state[] to working vars */
-    memcpy(T, state, sizeof(T));
+    std::memcpy(T, state, sizeof(T));
+
     /* 80 operations, partially loop unrolled */
     for (unsigned int j=0; j<80; j+=16)
     {
@@ -1122,7 +1197,7 @@ void SHA512_HashBlock_CXX(word64 *state, const word64 *data)
         R( 8); R( 9); R(10); R(11);
         R(12); R(13); R(14); R(15);
     }
-    /* Add the working vars back into context.state[] */
+
     state[0] += a(0);
     state[1] += b(0);
     state[2] += c(0);
@@ -1131,6 +1206,31 @@ void SHA512_HashBlock_CXX(word64 *state, const word64 *data)
     state[5] += f(0);
     state[6] += g(0);
     state[7] += h(0);
+}
+
+ANONYMOUS_NAMESPACE_END
+
+void SHA512::Transform(word64 *state, const word64 *data)
+{
+    CRYPTOPP_ASSERT(state);
+    CRYPTOPP_ASSERT(data);
+
+#if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86)
+    if (HasSSE2())
+    {
+        SHA512_HashBlock_SSE2(state, data);
+        return;
+    }
+#endif
+#if CRYPTOPP_POWER8_SHA_AVAILABLE
+    if (HasSHA512())
+    {
+        SHA512_HashMultipleBlocks_POWER8(state, data, SHA512::BLOCKSIZE, BIG_ENDIAN_ORDER);
+        return;
+    }
+#endif
+
+    SHA512_HashBlock_CXX(state, data);
 }
 
 #undef Ch
@@ -1155,31 +1255,6 @@ void SHA512_HashBlock_CXX(word64 *state, const word64 *data)
 #undef f
 #undef g
 #undef h
-
-ANONYMOUS_NAMESPACE_END
-
-void SHA512::Transform(word64 *state, const word64 *data)
-{
-    CRYPTOPP_ASSERT(state);
-    CRYPTOPP_ASSERT(data);
-
-#if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32)
-    if (HasSSE2())
-    {
-        SHA512_HashBlock_SSE2(state, data);
-        return;
-    }
-#endif
-#if CRYPTOPP_POWER8_SHA_AVAILABLE
-    if (HasSHA512())
-    {
-        SHA512_HashMultipleBlocks_POWER8(state, data, SHA512::BLOCKSIZE, BIG_ENDIAN_ORDER);
-        return;
-    }
-#endif
-
-    SHA512_HashBlock_CXX(state, data);
-}
 
 NAMESPACE_END
 

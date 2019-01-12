@@ -12,35 +12,28 @@
 #ifndef CRYPTOPP_IMPORTS
 #ifndef CRYPTOPP_GENERATE_X64_MASM
 
-// Clang 3.3 integrated assembler crash on Linux. Other versions produce incorrect results.
-//   Clang has never handled Intel ASM very well. I wish LLVM would fix it.
-#if defined(__clang__)
+// Visual Studio .Net 2003 compiler crash
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# pragma optimize("", off)
+#endif
+
+#include "gcm.h"
+#include "cpu.h"
+
+#if defined(CRYPTOPP_DISABLE_GCM_ASM)
 # undef CRYPTOPP_X86_ASM_AVAILABLE
 # undef CRYPTOPP_X32_ASM_AVAILABLE
 # undef CRYPTOPP_X64_ASM_AVAILABLE
 # undef CRYPTOPP_SSE2_ASM_AVAILABLE
 #endif
 
-// SunCC 12.3 - 12.5 crash in GCM_Reduce_CLMUL
-//   http://github.com/weidai11/cryptopp/issues/226
-#if defined(__SUNPRO_CC) && (__SUNPRO_CC <= 0x5140)
-# undef CRYPTOPP_CLMUL_AVAILABLE
-#endif
-
-#if (CRYPTOPP_SSE2_INTRIN_AVAILABLE)
-# include <emmintrin.h>
-#endif
-
-#include "gcm.h"
-#include "cpu.h"
-
 NAMESPACE_BEGIN(CryptoPP)
 
 #if (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
 // Different assemblers accept different mnemonics: 'movd eax, xmm0' vs
 //   'movd rax, xmm0' vs 'mov eax, xmm0' vs 'mov rax, xmm0'
-#if (CRYPTOPP_LLVM_CLANG_VERSION >= 30600) || (CRYPTOPP_APPLE_CLANG_VERSION >= 70000) || defined(CRYPTOPP_CLANG_INTEGRATED_ASSEMBLER)
-// 'movd eax, xmm0' only. REG_WORD() macro not used.
+#if defined(CRYPTOPP_DISABLE_MIXED_ASM)
+// 'movd eax, xmm0' only. REG_WORD() macro not used. Clang path.
 # define USE_MOVD_REG32 1
 #elif defined(__GNUC__) || defined(_MSC_VER)
 // 'movd eax, xmm0' or 'movd rax, xmm0'. REG_WORD() macro supplies REG32 or REG64.
@@ -54,10 +47,6 @@ NAMESPACE_BEGIN(CryptoPP)
 // Clang __m128i casts, http://bugs.llvm.org/show_bug.cgi?id=20670
 #define M128_CAST(x) ((__m128i *)(void *)(x))
 #define CONST_M128_CAST(x) ((const __m128i *)(const void *)(x))
-
-#if CRYPTOPP_ARM_NEON_AVAILABLE
-extern void GCM_Xor16_NEON(byte *a, const byte *b, const byte *c);
-#endif
 
 word16 GCM_Base::s_reductionTable[256];
 volatile bool GCM_Base::s_reductionTableInitialized = false;
@@ -82,6 +71,14 @@ static inline void Xor16(byte *a, const byte *b, const byte *c)
 extern void GCM_Xor16_SSE2(byte *a, const byte *b, const byte *c);
 #endif  // SSE2
 
+#if CRYPTOPP_ARM_NEON_AVAILABLE
+extern void GCM_Xor16_NEON(byte *a, const byte *b, const byte *c);
+#endif
+
+#if CRYPTOPP_POWER7_AVAILABLE
+extern void GCM_Xor16_POWER7(byte *a, const byte *b, const byte *c);
+#endif
+
 #if CRYPTOPP_CLMUL_AVAILABLE
 extern void GCM_SetKeyWithoutResync_CLMUL(const byte *hashKey, byte *mulTable, unsigned int tableSize);
 extern size_t GCM_AuthenticateBlocks_CLMUL(const byte *data, size_t len, const byte *mtable, byte *hbuffer);
@@ -95,6 +92,13 @@ extern size_t GCM_AuthenticateBlocks_PMULL(const byte *data, size_t len, const b
 const unsigned int s_cltableSizeInBlocks = 8;
 extern void GCM_ReverseHashBufferIfNeeded_PMULL(byte *hashBuffer);
 #endif  // CRYPTOPP_ARM_PMULL_AVAILABLE
+
+#if CRYPTOPP_POWER8_VMULL_AVAILABLE
+extern void GCM_SetKeyWithoutResync_VMULL(const byte *hashKey, byte *mulTable, unsigned int tableSize);
+extern size_t GCM_AuthenticateBlocks_VMULL(const byte *data, size_t len, const byte *mtable, byte *hbuffer);
+const unsigned int s_cltableSizeInBlocks = 8;
+extern void GCM_ReverseHashBufferIfNeeded_VMULL(byte *hashBuffer);
+#endif  // CRYPTOPP_POWER8_VMULL_AVAILABLE
 
 void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const NameValuePairs &params)
 {
@@ -122,6 +126,15 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
     }
     else
 #elif CRYPTOPP_ARM_PMULL_AVAILABLE
+    if (HasPMULL())
+    {
+        // Avoid "parameter not used" error and suppress Coverity finding
+        (void)params.GetIntValue(Name::TableSize(), tableSize);
+        tableSize = s_cltableSizeInBlocks * blockSize;
+        CRYPTOPP_ASSERT(tableSize > static_cast<int>(blockSize));
+    }
+    else
+#elif CRYPTOPP_POWER8_VMULL_AVAILABLE
     if (HasPMULL())
     {
         // Avoid "parameter not used" error and suppress Coverity finding
@@ -161,6 +174,12 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
         GCM_SetKeyWithoutResync_PMULL(hashKey, mulTable, tableSize);
         return;
     }
+#elif CRYPTOPP_POWER8_VMULL_AVAILABLE
+    if (HasPMULL())
+    {
+        GCM_SetKeyWithoutResync_VMULL(hashKey, mulTable, tableSize);
+        return;
+    }
 #endif
 
     word64 V0, V1;
@@ -193,6 +212,12 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
                 for (j=2; j<=0x80; j*=2)
                     for (k=1; k<j; k++)
                         GCM_Xor16_NEON(mulTable+i*256*16+(j+k)*16, mulTable+i*256*16+j*16, mulTable+i*256*16+k*16);
+            else
+#elif CRYPTOPP_POWER7_AVAILABLE
+            if (HasPower7())
+                for (j=2; j<=0x80; j*=2)
+                    for (k=1; k<j; k++)
+                        GCM_Xor16_POWER7(mulTable+i*256*16+(j+k)*16, mulTable+i*256*16+j*16, mulTable+i*256*16+k*16);
             else
 #endif
                 for (j=2; j<=0x80; j*=2)
@@ -252,6 +277,15 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
                         GCM_Xor16_NEON(mulTable+1024+i*256+(j+k)*16, mulTable+1024+i*256+j*16, mulTable+1024+i*256+k*16);
                     }
             else
+#elif CRYPTOPP_POWER7_AVAILABLE
+            if (HasPower7())
+                for (j=2; j<=8; j*=2)
+                    for (k=1; k<j; k++)
+                    {
+                        GCM_Xor16_POWER7(mulTable+i*256+(j+k)*16, mulTable+i*256+j*16, mulTable+i*256+k*16);
+                        GCM_Xor16_POWER7(mulTable+1024+i*256+(j+k)*16, mulTable+1024+i*256+j*16, mulTable+1024+i*256+k*16);
+                    }
+            else
 #endif
                 for (j=2; j<=8; j*=2)
                     for (k=1; k<j; k++)
@@ -274,6 +308,11 @@ inline void GCM_Base::ReverseHashBufferIfNeeded()
     if (HasPMULL())
     {
         GCM_ReverseHashBufferIfNeeded_PMULL(HashBuffer());
+    }
+#elif CRYPTOPP_POWER8_VMULL_AVAILABLE
+    if (HasPMULL())
+    {
+        GCM_ReverseHashBufferIfNeeded_VMULL(HashBuffer());
     }
 #endif
 }
@@ -330,6 +369,8 @@ unsigned int GCM_Base::OptimalDataAlignment() const
         HasSSE2() ? 16 :
 #elif CRYPTOPP_ARM_NEON_AVAILABLE
         HasNEON() ? 4 :
+#elif CRYPTOPP_POWER7_AVAILABLE
+        HasPower7() ? 16 :
 #endif
         GetBlockCipher().OptimalDataAlignment();
 }
@@ -338,12 +379,12 @@ unsigned int GCM_Base::OptimalDataAlignment() const
 # pragma warning(disable: 4731)    // frame pointer register 'ebp' modified by inline assembly code
 #endif
 
-#endif    // #ifndef CRYPTOPP_GENERATE_X64_MASM
+#endif    // Not CRYPTOPP_GENERATE_X64_MASM
 
 #ifdef CRYPTOPP_X64_MASM_AVAILABLE
 extern "C" {
-void GCM_AuthenticateBlocks_2K(const byte *data, size_t blocks, word64 *hashBuffer, const word16 *reductionTable);
-void GCM_AuthenticateBlocks_64K(const byte *data, size_t blocks, word64 *hashBuffer);
+void GCM_AuthenticateBlocks_2K_SSE2(const byte *data, size_t blocks, word64 *hashBuffer, const word16 *reductionTable);
+void GCM_AuthenticateBlocks_64K_SSE2(const byte *data, size_t blocks, word64 *hashBuffer);
 }
 #endif
 
@@ -360,6 +401,11 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
     if (HasPMULL())
     {
         return GCM_AuthenticateBlocks_PMULL(data, len, MulTable(), HashBuffer());
+    }
+#elif CRYPTOPP_POWER8_VMULL_AVAILABLE
+    if (HasPMULL())
+    {
+        return GCM_AuthenticateBlocks_VMULL(data, len, MulTable(), HashBuffer());
     }
 #endif
 
@@ -392,7 +438,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 
             #define READ_TABLE_WORD64_COMMON(a, b, c, d)    *(word64 *)(void *)(mulTable+(a*1024)+(b*256)+c+d*8)
 
-            #ifdef CRYPTOPP_LITTLE_ENDIAN
+            #if (CRYPTOPP_LITTLE_ENDIAN)
                 #if CRYPTOPP_BOOL_SLOW_WORD64
                     word32 z0 = (word32)x0;
                     word32 z1 = (word32)(x0>>32);
@@ -463,7 +509,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 
             #define READ_TABLE_WORD64_COMMON(a, c, d)    *(word64 *)(void *)(mulTable+(a)*256*16+(c)+(d)*8)
 
-            #ifdef CRYPTOPP_LITTLE_ENDIAN
+            #if (CRYPTOPP_LITTLE_ENDIAN)
                 #if CRYPTOPP_BOOL_SLOW_WORD64
                     word32 z0 = (word32)x0;
                     word32 z1 = (word32)(x0>>32);
@@ -509,10 +555,10 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 
 #ifdef CRYPTOPP_X64_MASM_AVAILABLE
     case 1:        // SSE2 and 2K tables
-        GCM_AuthenticateBlocks_2K(data, len/16, hashBuffer, s_reductionTable);
+        GCM_AuthenticateBlocks_2K_SSE2(data, len/16, hashBuffer, s_reductionTable);
         return len % 16;
     case 3:        // SSE2 and 64K tables
-        GCM_AuthenticateBlocks_64K(data, len/16, hashBuffer);
+        GCM_AuthenticateBlocks_64K_SSE2(data, len/16, hashBuffer);
         return len % 16;
 #endif
 
@@ -525,7 +571,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
             INTEL_NOPREFIX
         #elif defined(CRYPTOPP_GENERATE_X64_MASM)
             ALIGN   8
-            GCM_AuthenticateBlocks_2K    PROC FRAME
+            GCM_AuthenticateBlocks_2K_SSE2    PROC FRAME
             rex_push_reg rsi
             push_reg rdi
             push_reg rbx
@@ -666,7 +712,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 
         AS2(    add     WORD_REG(cx), 16           )
         AS2(    sub     WORD_REG(dx), 1            )
-        ATT_NOPREFIX
+        // ATT_NOPREFIX
         ASJ(    jnz,    0, b                       )
         INTEL_NOPREFIX
         AS2(    movdqa  [WORD_REG(si)], xmm0       )
@@ -693,7 +739,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
             pop rdi
             pop rsi
             ret
-            GCM_AuthenticateBlocks_2K ENDP
+            GCM_AuthenticateBlocks_2K_SSE2 ENDP
         #endif
 
         return len%16;
@@ -706,7 +752,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
             INTEL_NOPREFIX
         #elif defined(CRYPTOPP_GENERATE_X64_MASM)
             ALIGN   8
-            GCM_AuthenticateBlocks_64K    PROC FRAME
+            GCM_AuthenticateBlocks_64K_SSE2    PROC FRAME
             rex_push_reg rsi
             push_reg rdi
             .endprolog
@@ -753,7 +799,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 
         AS2(    add     WORD_REG(cx), 16      )
         AS2(    sub     WORD_REG(dx), 1       )
-        ATT_NOPREFIX
+        // ATT_NOPREFIX
         ASJ(    jnz,    1, b                  )
         INTEL_NOPREFIX
         AS2(    movdqa  [WORD_REG(si)], xmm0  )
@@ -768,7 +814,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
             pop rdi
             pop rsi
             ret
-            GCM_AuthenticateBlocks_64K ENDP
+            GCM_AuthenticateBlocks_64K_SSE2 ENDP
         #endif
 
         return len%16;
@@ -806,5 +852,5 @@ void GCM_Base::AuthenticateLastFooterBlock(byte *mac, size_t macSize)
 
 NAMESPACE_END
 
-#endif    // #ifndef CRYPTOPP_GENERATE_X64_MASM
+#endif    // Not CRYPTOPP_GENERATE_X64_MASM
 #endif

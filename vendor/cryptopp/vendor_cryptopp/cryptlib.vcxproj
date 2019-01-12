@@ -95,6 +95,7 @@
       <DisableSpecificWarnings>4231; 4251; 4275; 4355; 4505</DisableSpecificWarnings>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Lib>
       <ErrorReporting>NoErrorReport</ErrorReporting>
@@ -172,7 +173,7 @@
     <ClCompile Include="algparam.cpp" />
     <ClCompile Include="arc4.cpp" />
     <ClCompile Include="aria.cpp" />
-    <ClCompile Include="aria-simd.cpp" />
+    <ClCompile Include="aria_simd.cpp" />
     <ClCompile Include="ariatab.cpp" />
     <ClCompile Include="asn.cpp" />
     <ClCompile Include="authenc.cpp" />
@@ -181,7 +182,8 @@
     <ClCompile Include="basecode.cpp" />
     <ClCompile Include="bfinit.cpp" />
     <ClCompile Include="blake2.cpp" />
-    <ClCompile Include="blake2-simd.cpp" />
+    <ClCompile Include="blake2s_simd.cpp" />
+    <ClCompile Include="blake2b_simd.cpp" />
     <ClCompile Include="blowfish.cpp" />
     <ClCompile Include="blumshub.cpp" />
     <ClCompile Include="camellia.cpp" />
@@ -190,10 +192,19 @@
     <ClCompile Include="cbcmac.cpp" />
     <ClCompile Include="ccm.cpp" />
     <ClCompile Include="chacha.cpp" />
+    <ClCompile Include="chacha_simd.cpp" />
+    <ClCompile Include="chacha_avx.cpp">
+      <!-- Requires Visual Studio 2013 and above -->
+      <ExcludedFromBuild Condition=" '$(PlatformToolset)' == 'v100' Or '$(PlatformToolset)' == 'v110' ">true</ExcludedFromBuild>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <ClCompile Include="cham.cpp" />
+    <ClCompile Include="cham_simd.cpp" />
     <ClCompile Include="channels.cpp" />
     <ClCompile Include="cmac.cpp" />
     <ClCompile Include="crc.cpp" />
-    <ClCompile Include="crc-simd.cpp" />
+    <ClCompile Include="crc_simd.cpp" />
+    <ClCompile Include="darn.cpp" />
     <ClCompile Include="default.cpp" />
     <ClCompile Include="des.cpp" />
     <ClCompile Include="dessp.cpp" />
@@ -202,6 +213,9 @@
     <ClCompile Include="dll.cpp">
       <PrecompiledHeader />
     </ClCompile>
+    <ClCompile Include="donna_32.cpp" />
+    <ClCompile Include="donna_64.cpp" />
+    <ClCompile Include="donna_sse.cpp" />
     <ClCompile Include="dsa.cpp" />
     <ClCompile Include="eax.cpp" />
     <ClCompile Include="ec2n.cpp" />
@@ -220,14 +234,17 @@
     <ClCompile Include="fips140.cpp" />
     <ClCompile Include="fipstest.cpp" />
     <ClCompile Include="gcm.cpp" />
-    <ClCompile Include="gcm-simd.cpp" />
+    <ClCompile Include="gcm_simd.cpp" />
     <ClCompile Include="gf256.cpp" />
     <ClCompile Include="gf2_32.cpp" />
     <ClCompile Include="gf2n.cpp" />
     <ClCompile Include="gfpcrypt.cpp" />
     <ClCompile Include="gost.cpp" />
     <ClCompile Include="gzip.cpp" />
+    <ClCompile Include="hc128.cpp" />
+    <ClCompile Include="hc256.cpp" />
     <ClCompile Include="hex.cpp" />
+    <ClCompile Include="hight.cpp" />
     <ClCompile Include="hmac.cpp" />
     <ClCompile Include="hrtimer.cpp" />
     <ClCompile Include="ida.cpp" />
@@ -238,6 +255,9 @@
     <ClCompile Include="kalyna.cpp" />
     <ClCompile Include="kalynatab.cpp" />
     <ClCompile Include="keccak.cpp" />
+    <ClCompile Include="keccakc.cpp" />
+    <ClCompile Include="lea.cpp" />
+    <ClCompile Include="lea_simd.cpp" />
     <ClCompile Include="luc.cpp" />
     <ClCompile Include="mars.cpp" />
     <ClCompile Include="marss.cpp" />
@@ -249,7 +269,6 @@
     <ClCompile Include="mqueue.cpp" />
     <ClCompile Include="mqv.cpp" />
     <ClCompile Include="nbtheory.cpp" />
-    <ClCompile Include="network.cpp" />
     <ClCompile Include="oaep.cpp" />
     <ClCompile Include="osrng.cpp" />
     <ClCompile Include="padlkrng.cpp" />
@@ -265,13 +284,14 @@
     <ClCompile Include="queue.cpp" />
     <ClCompile Include="rabin.cpp" />
     <ClCompile Include="randpool.cpp" />
+    <ClCompile Include="rabbit.cpp" />
     <ClCompile Include="rc2.cpp" />
     <ClCompile Include="rc5.cpp" />
     <ClCompile Include="rc6.cpp" />
     <ClCompile Include="rdrand.cpp" />
     <ClCompile Include="rdtables.cpp" />
     <ClCompile Include="rijndael.cpp" />
-    <ClCompile Include="rijndael-simd.cpp" />
+    <ClCompile Include="rijndael_simd.cpp" />
     <ClCompile Include="ripemd.cpp" />
     <ClCompile Include="rng.cpp" />
     <ClCompile Include="rsa.cpp" />
@@ -283,40 +303,42 @@
     <ClCompile Include="seed.cpp" />
     <ClCompile Include="serpent.cpp" />
     <ClCompile Include="sha.cpp" />
-    <ClCompile Include="sha-simd.cpp" />
+    <ClCompile Include="sha_simd.cpp" />
     <ClCompile Include="sha3.cpp" />
     <ClCompile Include="shacal2.cpp" />
-    <ClCompile Include="shacal2-simd.cpp" />
+    <ClCompile Include="shacal2_simd.cpp" />
     <ClCompile Include="shark.cpp" />
     <ClCompile Include="sharkbox.cpp" />
+    <ClCompile Include="simeck.cpp" />
+    <ClCompile Include="simeck_simd.cpp" />
     <ClCompile Include="simon.cpp" />
-    <ClCompile Include="simon-simd.cpp" />
+    <ClCompile Include="simon64_simd.cpp" />
+    <ClCompile Include="simon128_simd.cpp" />
     <ClCompile Include="simple.cpp" />
     <ClCompile Include="skipjack.cpp" />
     <ClCompile Include="sm3.cpp" />
     <ClCompile Include="sm4.cpp" />
-    <ClCompile Include="socketft.cpp" />
+    <ClCompile Include="sm4_simd.cpp" />
     <ClCompile Include="sosemanuk.cpp" />
     <ClCompile Include="speck.cpp" />
-    <ClCompile Include="speck-simd.cpp" />
+    <ClCompile Include="speck64_simd.cpp" />
+    <ClCompile Include="speck128_simd.cpp" />
     <ClCompile Include="square.cpp" />
     <ClCompile Include="squaretb.cpp" />
-    <ClCompile Include="sse-simd.cpp" />
+    <ClCompile Include="sse_simd.cpp" />
     <ClCompile Include="strciphr.cpp" />
     <ClCompile Include="tea.cpp" />
     <ClCompile Include="tftables.cpp" />
     <ClCompile Include="threefish.cpp" />
     <ClCompile Include="tiger.cpp" />
     <ClCompile Include="tigertab.cpp" />
-    <ClCompile Include="trdlocal.cpp" />
     <ClCompile Include="ttmac.cpp" />
     <ClCompile Include="tweetnacl.cpp" />
     <ClCompile Include="twofish.cpp" />
     <ClCompile Include="vmac.cpp" />
-    <ClCompile Include="wait.cpp" />
     <ClCompile Include="wake.cpp" />
     <ClCompile Include="whrlpool.cpp" />
-    <ClCompile Include="winpipes.cpp" />
+    <ClCompile Include="xed25519.cpp" />
     <ClCompile Include="xtr.cpp" />
     <ClCompile Include="xtrcrypt.cpp" />
     <ClCompile Include="zdeflate.cpp" />
@@ -361,7 +383,7 @@
   <ItemGroup>
     <ClInclude Include="3way.h" />
     <ClInclude Include="adler32.h" />
-    <ClInclude Include="adv-simd.h" />
+    <ClInclude Include="adv_simd.h" />
     <ClInclude Include="aes.h" />
     <ClInclude Include="algebra.h" />
     <ClInclude Include="algparam.h" />
@@ -381,18 +403,24 @@
     <ClInclude Include="cbcmac.h" />
     <ClInclude Include="ccm.h" />
     <ClInclude Include="chacha.h" />
+    <ClInclude Include="cham.h" />
     <ClInclude Include="channels.h" />
     <ClInclude Include="cmac.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="crc.h" />
     <ClInclude Include="cryptlib.h" />
+    <ClInclude Include="darn.h" />
     <ClInclude Include="default.h" />
     <ClInclude Include="des.h" />
     <ClInclude Include="dh.h" />
     <ClInclude Include="dh2.h" />
     <ClInclude Include="dmac.h" />
     <ClInclude Include="drbg.h" />
+    <ClInclude Include="donna.h" />
+    <ClInclude Include="donna_32.h" />
+    <ClInclude Include="donna_64.h" />
+    <ClInclude Include="donna_sse.h" />
     <ClInclude Include="dsa.h" />
     <ClInclude Include="eax.h" />
     <ClInclude Include="ec2n.h" />
@@ -415,7 +443,10 @@
     <ClInclude Include="gfpcrypt.h" />
     <ClInclude Include="gost.h" />
     <ClInclude Include="gzip.h" />
+    <ClInclude Include="hc128.h" />
+    <ClInclude Include="hc256.h" />
     <ClInclude Include="hex.h" />
+    <ClInclude Include="hight.h" />
     <ClInclude Include="hkdf.h" />
     <ClInclude Include="hmac.h" />
     <ClInclude Include="hmqv.h" />
@@ -426,7 +457,9 @@
     <ClInclude Include="iterhash.h" />
     <ClInclude Include="kalyna.h" />
     <ClInclude Include="keccak.h" />
+    <ClInclude Include="keccakc.h" />
     <ClInclude Include="lubyrack.h" />
+    <ClInclude Include="lea.h" />
     <ClInclude Include="luc.h" />
     <ClInclude Include="mars.h" />
     <ClInclude Include="md2.h" />
@@ -441,7 +474,6 @@
     <ClInclude Include="mqv.h" />
     <ClInclude Include="naclite.h" />
     <ClInclude Include="nbtheory.h" />
-    <ClInclude Include="network.h" />
     <ClInclude Include="nr.h" />
     <ClInclude Include="oaep.h" />
     <ClInclude Include="oids.h" />
@@ -458,6 +490,7 @@
     <ClInclude Include="queue.h" />
     <ClInclude Include="rabin.h" />
     <ClInclude Include="randpool.h" />
+    <ClInclude Include="rabbit.h" />
     <ClInclude Include="rc2.h" />
     <ClInclude Include="rc5.h" />
     <ClInclude Include="rc6.h" />
@@ -480,13 +513,13 @@
     <ClInclude Include="shacal2.h" />
     <ClInclude Include="shark.h" />
     <ClInclude Include="simple.h" />
+    <ClInclude Include="simeck.h" />
     <ClInclude Include="simon.h" />
     <ClInclude Include="siphash.h" />
     <ClInclude Include="skipjack.h" />
     <ClInclude Include="sm3.h" />
     <ClInclude Include="sm4.h" />
     <ClInclude Include="smartptr.h" />
-    <ClInclude Include="socketft.h" />
     <ClInclude Include="sosemanuk.h" />
     <ClInclude Include="speck.h" />
     <ClInclude Include="square.h" />
@@ -496,17 +529,15 @@
     <ClInclude Include="threefish.h" />
     <ClInclude Include="tiger.h" />
     <ClInclude Include="trap.h" />
-    <ClInclude Include="trdlocal.h" />
     <ClInclude Include="trunhash.h" />
     <ClInclude Include="ttmac.h" />
     <ClInclude Include="tweetnacl.h" />
     <ClInclude Include="twofish.h" />
     <ClInclude Include="vmac.h" />
-    <ClInclude Include="wait.h" />
     <ClInclude Include="wake.h" />
     <ClInclude Include="whrlpool.h" />
-    <ClInclude Include="winpipes.h" />
     <ClInclude Include="words.h" />
+    <ClInclude Include="xed25519.h" />
     <ClInclude Include="xtr.h" />
     <ClInclude Include="xtrcrypt.h" />
     <ClInclude Include="zdeflate.h" />

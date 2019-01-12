@@ -32,7 +32,7 @@
     <ClCompile Include="aria.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="aria-simd.cpp">
+    <ClCompile Include="aria_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ariatab.cpp">
@@ -59,7 +59,10 @@
     <ClCompile Include="blake2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="blake2-simd.cpp">
+    <ClCompile Include="blake2s_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="blake2b_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="blowfish.cpp">
@@ -86,6 +89,18 @@
     <ClCompile Include="chacha.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="chacha_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chacha_avx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cham.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cham_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="channels.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -98,10 +113,13 @@
     <ClCompile Include="crc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crc-simd.cpp">
+    <ClCompile Include="crc_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cryptlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="darn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="default.cpp">
@@ -120,6 +138,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="donna_32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="donna_64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="donna_sse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dsa.cpp">
@@ -164,7 +191,7 @@
     <ClCompile Include="gcm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gcm-simd.cpp">
+    <ClCompile Include="gcm_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gf256.cpp">
@@ -185,7 +212,16 @@
     <ClCompile Include="gzip.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="hc128.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hc256.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="hex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="hmac.cpp">
@@ -213,6 +249,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="keccak.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="keccakc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lea.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lea_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="luc.cpp">
@@ -246,9 +291,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="nbtheory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="network.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="oaep.cpp">
@@ -290,6 +332,9 @@
     <ClCompile Include="randpool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rabbit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="rc2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -308,7 +353,7 @@
     <ClCompile Include="rijndael.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rijndael-simd.cpp">
+    <ClCompile Include="rijndael_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ripemd.cpp">
@@ -344,7 +389,7 @@
     <ClCompile Include="sha.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sha-simd.cpp">
+    <ClCompile Include="sha_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sha3.cpp">
@@ -353,7 +398,7 @@
     <ClCompile Include="shacal2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="shacal2-simd.cpp">
+    <ClCompile Include="shacal2_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="shark.cpp">
@@ -362,10 +407,19 @@
     <ClCompile Include="sharkbox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="simeck.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="simeck_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="simon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="simon-simd.cpp">
+    <ClCompile Include="simon64_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="simon128_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="simple.cpp">
@@ -380,13 +434,16 @@
     <ClCompile Include="sm4.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sm4_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="speck.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="speck-simd.cpp">
+    <ClCompile Include="speck64_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="socketft.cpp">
+    <ClCompile Include="speck128_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sosemanuk.cpp">
@@ -398,7 +455,7 @@
     <ClCompile Include="squaretb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sse-simd.cpp">
+    <ClCompile Include="sse_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="strciphr.cpp">
@@ -419,9 +476,6 @@
     <ClCompile Include="tigertab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="trdlocal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ttmac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -434,16 +488,13 @@
     <ClCompile Include="vmac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wait.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="wake.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="whrlpool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="winpipes.cpp">
+    <ClCompile Include="xed25519.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="xtr.cpp">
@@ -483,7 +534,7 @@
     <ClInclude Include="adler32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="adv-simd.h">
+    <ClInclude Include="adv_simd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aes.h">
@@ -540,6 +591,9 @@
     <ClInclude Include="ccm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cham.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="channels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -556,6 +610,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cryptlib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="darn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="default.h">
@@ -577,6 +634,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dsa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="donna.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="donna_32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="donna_64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="donna_sse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="eax.h">
@@ -642,7 +711,16 @@
     <ClInclude Include="gzip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="hc128.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hc256.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="hex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hight.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="hkdf.h">
@@ -675,7 +753,13 @@
     <ClInclude Include="keccak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="keccakc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="lubyrack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lea.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="luc.h">
@@ -718,9 +802,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="naclite.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="network.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nr.h">
@@ -769,6 +850,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="randpool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rabbit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rc2.h">
@@ -834,6 +918,9 @@
     <ClInclude Include="shark.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="simeck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="simon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -856,9 +943,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="speck.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="socketft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="sosemanuk.h">
@@ -885,9 +969,6 @@
     <ClInclude Include="trap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="trdlocal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="trunhash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -903,19 +984,16 @@
     <ClInclude Include="vmac.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wait.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="wake.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="whrlpool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="winpipes.h">
+    <ClInclude Include="words.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="words.h">
+    <ClInclude Include="xed25519.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="xtr.h">
