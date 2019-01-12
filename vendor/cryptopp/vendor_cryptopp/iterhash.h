@@ -16,10 +16,6 @@
 # endif
 #endif
 
-// GCC cast warning
-#define HashWordPtr(x) ((HashWordType*)(void*)(x))
-#define ConstHashWordPtr(x) ((const HashWordType*)(const void*)(x))
-
 NAMESPACE_BEGIN(CryptoPP)
 
 /// \brief Exception thrown when trying to hash more data than is allowed by a hash function
@@ -40,6 +36,8 @@ class CRYPTOPP_NO_VTABLE IteratedHashBase : public BASE
 {
 public:
 	typedef T HashWordType;
+
+	virtual ~IteratedHashBase() {}
 
 	/// \brief Construct an IteratedHashBase
 	IteratedHashBase() : m_countLo(0), m_countHi(0) {}
@@ -82,9 +80,21 @@ public:
 	///   The hash is restarted the hash for the next message.
 	void TruncatedFinal(byte *digest, size_t digestSize);
 
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///    "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///    usually indicate a specialized implementation using instructions from a higher
+	///    instruction set architecture (ISA). Future labels may include external hardware
+	///    like a hardware security module (HSM).
+	/// \note  Provider is not universally implemented yet.
+	virtual std::string AlgorithmProvider() const { return "C++"; }
+
 protected:
-	inline T GetBitCountHi() const {return (m_countLo >> (8*sizeof(T)-3)) + (m_countHi << 3);}
-	inline T GetBitCountLo() const {return m_countLo << 3;}
+	inline T GetBitCountHi() const
+		{return (m_countLo >> (8*sizeof(T)-3)) + (m_countHi << 3);}
+	inline T GetBitCountLo() const
+		{return m_countLo << 3;}
 
 	void PadLastBlock(unsigned int lastBlockSize, byte padFirst=0x80);
 	virtual void Init() =0;
@@ -92,7 +102,8 @@ protected:
 	virtual ByteOrder GetByteOrder() const =0;
 	virtual void HashEndianCorrectedBlock(const HashWordType *data) =0;
 	virtual size_t HashMultipleBlocks(const T *input, size_t length);
-	void HashBlock(const HashWordType *input) {HashMultipleBlocks(input, this->BlockSize());}
+	void HashBlock(const HashWordType *input)
+		{HashMultipleBlocks(input, this->BlockSize());}
 
 	virtual T* DataBuf() =0;
 	virtual T* StateBuf() =0;
@@ -139,6 +150,11 @@ public:
 	/// \details CorrectEndianess() calls ConditionalByteReverse() using <tt>T_Endianness</tt>.
 	inline void CorrectEndianess(HashWordType *out, const HashWordType *in, size_t byteCount)
 	{
+		CRYPTOPP_ASSERT(in != NULLPTR);
+		CRYPTOPP_ASSERT(out != NULLPTR);
+		CRYPTOPP_ASSERT(IsAligned<T_HashWordType>(in));
+		CRYPTOPP_ASSERT(IsAligned<T_HashWordType>(out));
+
 		ConditionalByteReverse(T_Endianness::ToEnum(), out, in, byteCount);
 	}
 
@@ -168,7 +184,7 @@ public:
 	/// \brief Provides the digest size of the hash
 	/// \return the digest size of the hash, in bytes
 	/// \details DigestSize() returns <tt>DIGESTSIZE</tt>.
-	unsigned int DigestSize() const {return DIGESTSIZE;};
+	unsigned int DigestSize() const {return DIGESTSIZE;}
 
 protected:
 	IteratedHashWithStaticTransform() {this->Init();}

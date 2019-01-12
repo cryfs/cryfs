@@ -5,7 +5,16 @@
 // use "cl /EP /P /DCRYPTOPP_GENERATE_X64_MASM rijndael.cpp" to generate MASM code
 
 /*
-July 2017: Added support for ARM AES instructions via compiler intrinsics.
+July 2018: Added support for ARMv7 AES instructions via Cryptogams ASM.
+           See the head notes in aes_armv4.S for copyright and license.
+*/
+
+/*
+September 2017: Added support for Power8 AES instructions via compiler intrinsics.
+*/
+
+/*
+July 2017: Added support for ARMv8 AES instructions via compiler intrinsics.
 */
 
 /*
@@ -21,8 +30,9 @@ x86 assembly code, doing an 8-bit register move to minimize the number of
 register spills. Also switched to compressed tables and copying round keys to
 the stack.
 
-The C++ implementation now uses compressed tables if
-CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS is defined.
+The C++ implementation uses compressed tables if
+CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS is defined.
+It is defined on x86 platforms by default but no others.
 */
 
 /*
@@ -78,15 +88,20 @@ being unloaded from L1 cache, until that round is finished.
 #include "misc.h"
 #include "cpu.h"
 
-NAMESPACE_BEGIN(CryptoPP)
-
-// Clang 3.3 integrated assembler crash on Linux
-#if CRYPTOPP_BOOL_X32 || (defined(CRYPTOPP_LLVM_CLANG_VERSION) && (CRYPTOPP_LLVM_CLANG_VERSION < 30400))
-# define CRYPTOPP_DISABLE_RIJNDAEL_ASM
+// VS2017 and global optimization bug. TODO, figure out when
+// we can re-enable full optimizations for VS2017. Also see
+// https://github.com/weidai11/cryptopp/issues/649
+#if (_MSC_VER >= 1910)
+# ifndef CRYPTOPP_DEBUG
+#  pragma optimize("", off)
+#  pragma optimize("ts", on)
+# endif
 #endif
 
+NAMESPACE_BEGIN(CryptoPP)
+
 // Hack for http://github.com/weidai11/cryptopp/issues/42 and http://github.com/weidai11/cryptopp/issues/132
-#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS)
+#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
 # define CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS 1
 #endif
 
@@ -94,7 +109,7 @@ NAMESPACE_BEGIN(CryptoPP)
 #define M128I_CAST(x) ((__m128i *)(void *)(x))
 #define CONST_M128I_CAST(x) ((const __m128i *)(const void *)(x))
 
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 # if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
 namespace rdtable {CRYPTOPP_ALIGN_DATA(16) word64 Te[256+2];}
 using namespace rdtable;
@@ -102,27 +117,18 @@ using namespace rdtable;
 static word64 Te[256];
 # endif
 static word64 Td[256];
-#else // Not CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
+#else // Not CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS
 # if defined(CRYPTOPP_X64_MASM_AVAILABLE)
 // Unused; avoids linker error on Microsoft X64 non-AESNI platforms
 namespace rdtable {CRYPTOPP_ALIGN_DATA(16) word64 Te[256+2];}
 # endif
 CRYPTOPP_ALIGN_DATA(16) static word32 Te[256*4];
 CRYPTOPP_ALIGN_DATA(16) static word32 Td[256*4];
-#endif // CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
+#endif // CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS
 
 static volatile bool s_TeFilled = false, s_TdFilled = false;
 
 ANONYMOUS_NAMESPACE_BEGIN
-
-CRYPTOPP_ALIGN_DATA(16)
-const word32 s_one[] = {0, 0, 0, 1<<24};
-
-/* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
-CRYPTOPP_ALIGN_DATA(16)
-const word32 s_rconLE[] = {
-	0x01, 0x02, 0x04, 0x08,	0x10, 0x20, 0x40, 0x80,	0x1B, 0x36
-};
 
 #if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86
 
@@ -190,7 +196,7 @@ ANONYMOUS_NAMESPACE_END
 	tempBlock[c] = ((byte *)(Te+byte(t)))[1]; t >>= 8;\
 	tempBlock[d] = ((byte *)(Te+t))[1];
 
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 	#define QUARTER_ROUND_LD(t, a, b, c, d)	\
 		tempBlock[a] = ((byte *)(Td+byte(t)))[GetNativeByteOrder()*7]; t >>= 8;\
 		tempBlock[b] = ((byte *)(Td+byte(t)))[GetNativeByteOrder()*7]; t >>= 8;\
@@ -207,10 +213,10 @@ ANONYMOUS_NAMESPACE_END
 #define QUARTER_ROUND_E(t, a, b, c, d)		QUARTER_ROUND(TL_M, Te, t, a, b, c, d)
 #define QUARTER_ROUND_D(t, a, b, c, d)		QUARTER_ROUND(TL_M, Td, t, a, b, c, d)
 
-#ifdef CRYPTOPP_LITTLE_ENDIAN
+#if (CRYPTOPP_LITTLE_ENDIAN)
 	#define QUARTER_ROUND_FE(t, a, b, c, d)		QUARTER_ROUND(TL_F, Te, t, d, c, b, a)
 	#define QUARTER_ROUND_FD(t, a, b, c, d)		QUARTER_ROUND(TL_F, Td, t, d, c, b, a)
-	#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+	#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 		#define TL_F(T, i, x)	(*(word32 *)(void *)((byte *)T + x*8 + (6-i)%4+1))
 		#define TL_M(T, i, x)	(*(word32 *)(void *)((byte *)T + x*8 + (i+3)%4+1))
 	#else
@@ -220,7 +226,7 @@ ANONYMOUS_NAMESPACE_END
 #else
 	#define QUARTER_ROUND_FE(t, a, b, c, d)		QUARTER_ROUND(TL_F, Te, t, a, b, c, d)
 	#define QUARTER_ROUND_FD(t, a, b, c, d)		QUARTER_ROUND(TL_F, Td, t, a, b, c, d)
-	#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+	#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 		#define TL_F(T, i, x)	(*(word32 *)(void *)((byte *)T + x*8 + (4-i)%4))
 		#define TL_M			TL_F
 	#else
@@ -240,12 +246,33 @@ ANONYMOUS_NAMESPACE_END
 #define fd(x)   (f8(x) ^ f4(x) ^ x)
 #define fe(x)   (f8(x) ^ f4(x) ^ f2(x))
 
+unsigned int Rijndael::Base::OptimalDataAlignment() const
+{
+#if (CRYPTOPP_AESNI_AVAILABLE)
+	if (HasAESNI())
+		return 1;
+#endif
+#if (CRYPTOPP_ARM_AES_AVAILABLE)
+	if (HasAES())
+		return 1;
+#endif
+#if (CRYPTOGAMS_ARM_AES)
+	if (HasARMv7())
+		return 1;
+#endif
+#if (CRYPTOPP_POWER8_AES_AVAILABLE)
+	if (HasAES())
+		return 1;
+#endif
+	return BlockTransformation::OptimalDataAlignment();
+}
+
 void Rijndael::Base::FillEncTable()
 {
 	for (int i=0; i<256; i++)
 	{
 		byte x = Se[i];
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 		word32 y = word32(x)<<8 | word32(x)<<16 | word32(f2(x))<<24;
 		Te[i] = word64(y | f3(x))<<32 | y;
 #else
@@ -268,7 +295,7 @@ void Rijndael::Base::FillDecTable()
 	for (int i=0; i<256; i++)
 	{
 		byte x = Sd[i];
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 		word32 y = word32(fd(x))<<8 | word32(f9(x))<<16 | word32(fe(x))<<24;
 		Td[i] = word64(y | fb(x))<<32 | y | x;
 #else
@@ -300,6 +327,13 @@ extern size_t Rijndael_Dec_AdvancedProcessBlocks_ARMV8(const word32 *subkeys, si
         const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags);
 #endif
 
+#if (CRYPTOGAMS_ARM_AES)
+extern "C" int AES_set_encrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
+extern "C" int AES_set_decrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
+extern "C" void AES_encrypt(const unsigned char in[16], unsigned char out[16], const word32 *rkey);
+extern "C" void AES_decrypt(const unsigned char in[16], unsigned char out[16], const word32 *rkey);
+#endif
+
 #if (CRYPTOPP_POWER8_AES_AVAILABLE)
 extern void Rijndael_UncheckedSetKey_POWER8(const byte* userKey, size_t keyLen,
         word32* rk, const byte* Se);
@@ -310,9 +344,71 @@ extern size_t Rijndael_Dec_AdvancedProcessBlocks128_6x1_ALTIVEC(const word32 *su
         const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags);
 #endif
 
+#if (CRYPTOGAMS_ARM_AES)
+int CRYPTOGAMS_set_encrypt_key(const byte *userKey, const int bitLen, word32 *rkey)
+{
+	return AES_set_encrypt_key(userKey, bitLen, rkey);
+}
+int CRYPTOGAMS_set_decrypt_key(const byte *userKey, const int bitLen, word32 *rkey)
+{
+	return AES_set_decrypt_key(userKey, bitLen, rkey);
+}
+void CRYPTOGAMS_encrypt(const byte *inBlock, const byte *xorBlock, byte *outBlock, const word32 *rkey)
+{
+	AES_encrypt(inBlock, outBlock, rkey);
+	if (xorBlock)
+		xorbuf (outBlock, xorBlock, 16);
+}
+void CRYPTOGAMS_decrypt(const byte *inBlock, const byte *xorBlock, byte *outBlock, const word32 *rkey)
+{
+	AES_decrypt(inBlock, outBlock, rkey);
+	if (xorBlock)
+		xorbuf (outBlock, xorBlock, 16);
+}
+#endif
+
+std::string Rijndael::Base::AlgorithmProvider() const
+{
+#if (CRYPTOPP_AESNI_AVAILABLE)
+	if (HasAESNI())
+		return "AESNI";
+#endif
+#if CRYPTOPP_SSE2_ASM_AVAILABLE && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
+	if (HasSSE2())
+		return "SSE2";
+#endif
+#if (CRYPTOPP_ARM_AES_AVAILABLE)
+	if (HasAES())
+		return "ARMv8";
+#endif
+#if (CRYPTOGAMS_ARM_AES)
+	if (HasARMv7())
+		return "ARMv7";
+#endif
+#if (CRYPTOPP_POWER8_AES_AVAILABLE)
+	if (HasAES())
+		return "Power8";
+#endif
+	return "C++";
+}
+
 void Rijndael::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLen, const NameValuePairs &)
 {
 	AssertValidKeyLength(keyLen);
+
+#if (CRYPTOGAMS_ARM_AES)
+	if (HasARMv7())
+	{
+		m_rounds = keyLen/4 + 6;
+		m_key.New(4*(15+1)+4);
+
+		if (IsForwardTransformation())
+			CRYPTOGAMS_set_encrypt_key(userKey, keyLen*8, m_key.begin());
+		else
+			CRYPTOGAMS_set_decrypt_key(userKey, keyLen*8, m_key.begin());
+		return;
+	}
+#endif
 
 #if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86
 	m_aliasBlock.New(s_sizeToAllocate);
@@ -453,6 +549,14 @@ void Rijndael::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	}
 #endif
 
+#if (CRYPTOGAMS_ARM_AES)
+	if (HasARMv7())
+	{
+		CRYPTOGAMS_encrypt(inBlock, xorBlock, outBlock, m_key.begin());
+		return;
+	}
+#endif
+
 #if (CRYPTOPP_POWER8_AES_AVAILABLE)
 	if (HasAES())
 	{
@@ -483,7 +587,7 @@ void Rijndael::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	unsigned int i;
 	volatile word32 _u = 0;
 	word32 u = _u;
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 	for (i=0; i<2048; i+=cacheLineSize)
 #else
 	for (i=0; i<1024; i+=cacheLineSize)
@@ -498,8 +602,8 @@ void Rijndael::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	QUARTER_ROUND_FE(s0, t1, t2, t3, t0)
 
 	// Nr - 2 full rounds:
-    unsigned int r = m_rounds/2 - 1;
-    do
+	unsigned int r = m_rounds/2 - 1;
+	do
 	{
 		s0 = rk[0]; s1 = rk[1]; s2 = rk[2]; s3 = rk[3];
 
@@ -515,8 +619,8 @@ void Rijndael::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 		QUARTER_ROUND_E(s1, t2, t3, t0, t1)
 		QUARTER_ROUND_E(s0, t1, t2, t3, t0)
 
-        rk += 8;
-    } while (--r);
+		rk += 8;
+	} while (--r);
 
 	word32 tbw[4];
 	byte *const tempBlock = (byte *)tbw;
@@ -543,6 +647,14 @@ void Rijndael::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	if (HasAES())
 	{
 		(void)Rijndael::Dec::AdvancedProcessBlocks(inBlock, xorBlock, outBlock, 16, 0);
+		return;
+	}
+#endif
+
+#if (CRYPTOGAMS_ARM_AES)
+	if (HasARMv7())
+	{
+		CRYPTOGAMS_decrypt(inBlock, xorBlock, outBlock, m_key.begin());
 		return;
 	}
 #endif
@@ -577,7 +689,7 @@ void Rijndael::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	unsigned int i;
 	volatile word32 _u = 0;
 	word32 u = _u;
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+#if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
 	for (i=0; i<2048; i+=cacheLineSize)
 #else
 	for (i=0; i<1024; i+=cacheLineSize)
@@ -592,8 +704,8 @@ void Rijndael::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 	QUARTER_ROUND_FD(s0, t3, t2, t1, t0)
 
 	// Nr - 2 full rounds:
-    unsigned int r = m_rounds/2 - 1;
-    do
+	unsigned int r = m_rounds/2 - 1;
+	do
 	{
 		s0 = rk[0]; s1 = rk[1]; s2 = rk[2]; s3 = rk[3];
 
@@ -609,12 +721,12 @@ void Rijndael::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 		QUARTER_ROUND_D(s1, t0, t3, t2, t1)
 		QUARTER_ROUND_D(s0, t3, t2, t1, t0)
 
-        rk += 8;
-    } while (--r);
+		rk += 8;
+	} while (--r);
 
-#if !(defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS) || defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS))
+#if !(defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS))
 	// timing attack countermeasure. see comments at top for more details
-	// If CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS is defined,
+	// If CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS is defined,
 	// QUARTER_ROUND_LD will use Td, which is already preloaded.
 	u = _u;
 	for (i=0; i<256; i+=cacheLineSize)
@@ -644,11 +756,11 @@ void Rijndael::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock
 
 #if CRYPTOPP_SSE2_ASM_AVAILABLE && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
 
-CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *locals, const word32 *k)
+CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks_SSE2(void *locals, const word32 *k)
 {
 	CRYPTOPP_UNUSED(locals); CRYPTOPP_UNUSED(k);
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 
 #define L_REG			esp
 #define L_INDEX(i)		(L_REG+768+i)
@@ -748,7 +860,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 	AS2(	mov		edi, [g_cacheLineSize])
 #endif
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 	AS2(	mov		[ecx+16*12+16*4], esp)	// save esp to L_SP
 	AS2(	lea		esp, [ecx-768])
 #endif
@@ -808,7 +920,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 	AS2(	movd	eax, xmm1)
 	AS2(	mov		al, BYTE PTR [WORD_REG(si)+15])
 	AS2(	MOVD	MM(2), eax)
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 	AS2(	mov		eax, 1)
 	AS2(	movd	mm3, eax)
 #endif
@@ -936,7 +1048,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 	AS2(	xor		cl, ch)
 	AS2(	and		WORD_REG(cx), 255)
 	ASL(5)
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 	AS2(	paddb	MM(2), mm3)
 #else
 	AS2(	add		MM(2), 1)
@@ -1037,7 +1149,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 	AS2(	movdqu	xmm2, [WORD_REG(ax)])
 	AS2(	pxor	xmm2, xmm4)
 
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 	AS2(	movdqa	xmm0, [L_INCREMENTS])
 	AS2(	paddd	xmm0, [L_INBLOCKS])
 	AS2(	movdqa	[L_INBLOCKS], xmm0)
@@ -1085,7 +1197,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 	AS2(	movaps	[WORD_REG(ax)+4*16], xmm0)
 	AS2(	movaps	[WORD_REG(ax)+5*16], xmm0)
 	AS2(	movaps	[WORD_REG(ax)+6*16], xmm0)
-#if CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32
+#if CRYPTOPP_BOOL_X86
 	AS2(	mov		esp, [L_SP])
 	AS1(	emms)
 #endif
@@ -1122,7 +1234,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks(void *l
 
 #ifdef CRYPTOPP_X64_MASM_AVAILABLE
 extern "C" {
-void Rijndael_Enc_AdvancedProcessBlocks(void *locals, const word32 *k);
+void Rijndael_Enc_AdvancedProcessBlocks_SSE2(void *locals, const word32 *k);
 }
 #endif
 
@@ -1186,7 +1298,7 @@ size_t Rijndael::Enc::AdvancedProcessBlocks(const byte *inBlocks, const byte *xo
 		int keysToCopy = m_rounds - (flags & BT_InBlockIsCounter ? 3 : 2);
 		locals.keysBegin = (12-keysToCopy)*16;
 
-		Rijndael_Enc_AdvancedProcessBlocks(&locals, m_key);
+		Rijndael_Enc_AdvancedProcessBlocks_SSE2(&locals, m_key);
 
 		return length % BLOCKSIZE;
 	}
