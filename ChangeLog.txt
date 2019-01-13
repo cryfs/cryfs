@@ -3,7 +3,7 @@ Version 0.9.10 (unreleased)
 Fixed bugs:
 * Fixed occasional deadlock (https://github.com/cryfs/cryfs/issues/64)
 * Fix for reading empty files out of bounds
-* Fixed race condition (https://github.com/cryfs/cryfs/issues/224)
+* Fixed race condition (https://github.com/cryfs/cryfs/issues/224 and https://github.com/cryfs/cryfs/issues/243)
 
 Version 0.9.9
 --------------
