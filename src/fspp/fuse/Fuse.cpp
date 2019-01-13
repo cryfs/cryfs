@@ -469,14 +469,14 @@ int Fuse::rmdir(const bf::path &path) {
   }
 }
 
-int Fuse::symlink(const bf::path &from, const bf::path &to) {
+int Fuse::symlink(const bf::path &to, const bf::path &from) {
 #ifdef FSPP_LOG
-  LOG(DEBUG, "symlink({}, {})", from, to);
+  LOG(DEBUG, "symlink({}, {})", to, from);
 #endif
   try {
     ASSERT(is_valid_fspp_path(from), "has to be an absolute path");
 	auto context = fuse_get_context();
-    _fs->createSymlink(from, to, context->uid, context->gid);
+    _fs->createSymlink(to, from, context->uid, context->gid);
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::symlink: {}", e.what());
