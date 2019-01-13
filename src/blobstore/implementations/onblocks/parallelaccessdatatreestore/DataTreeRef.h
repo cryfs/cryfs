@@ -41,6 +41,12 @@ public:
     return _baseTree->flush();
   }
 
+  // This is a hack to fix a race condition. This is only done in the 0.9 release branch to workaround the issue,
+  // the develop branch and 0.10 release series have a proper fix.
+  std::mutex& mutex() const {
+    return _baseTree->mutex();
+  }
+
 private:
 
   datatreestore::DataTree *_baseTree;

@@ -38,7 +38,14 @@ public:
 
   void flush() const;
 
+  // This is a hack to fix a race condition. This is only done in the 0.9 release branch to workaround the issue,
+  // the develop branch and 0.10 release series have a proper fix.
+  std::mutex& mutex() const {
+      return _outerMutex;
+  }
+
 private:
+  mutable std::mutex _outerMutex;
   mutable boost::shared_mutex _mutex;
   datanodestore::DataNodeStore *_nodeStore;
   cpputils::unique_ref<datanodestore::DataNode> _rootNode;

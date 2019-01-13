@@ -26,6 +26,11 @@ BlobOnBlocks::~BlobOnBlocks() {
 }
 
 uint64_t BlobOnBlocks::size() const {
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+  return _size();
+}
+
+uint64_t BlobOnBlocks::_size() const {
   if (_sizeCache == boost::none) {
     _sizeCache = _datatree->numStoredBytes();
   }
@@ -33,15 +38,17 @@ uint64_t BlobOnBlocks::size() const {
 }
 
 void BlobOnBlocks::resize(uint64_t numBytes) {
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
   _datatree->resizeNumBytes(numBytes);
   _sizeCache = numBytes;
 }
 
-void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, DataLeafNode *leaf, uint32_t, uint32_t)> func) const {
+void BlobOnBlocks::_traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, function<void (uint64_t, DataLeafNode *leaf, uint32_t, uint32_t)> func) const {
   uint64_t endByte = beginByte + sizeBytes;
   uint32_t firstLeaf = beginByte / _datatree->maxBytesPerLeaf();
   uint32_t endLeaf = utils::ceilDivision(endByte, _datatree->maxBytesPerLeaf());
-  bool writingOutside = size() < endByte; // TODO Calling size() is slow because it has to traverse the tree
+  bool writingOutside = _size() < endByte; // TODO Calling size() is slow because it has to traverse the tree
   _datatree->traverseLeaves(firstLeaf, endLeaf, [&func, beginByte, endByte, endLeaf, writingOutside](DataLeafNode *leaf, uint32_t leafIndex) {
     uint64_t indexOfFirstLeafByte = leafIndex * leaf->maxStoreableBytes();
     uint32_t dataBegin = utils::maxZeroSubtraction(beginByte, indexOfFirstLeafByte);
@@ -59,41 +66,70 @@ void BlobOnBlocks::traverseLeaves(uint64_t beginByte, uint64_t sizeBytes, functi
 }
 
 Data BlobOnBlocks::readAll() const {
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
   //TODO Querying size is inefficient. Is this possible without a call to size()?
-  uint64_t count = size();
+  uint64_t count = _size();
   Data result(count);
   _read(result.data(), 0, count);
   return result;
 }
 
 void BlobOnBlocks::read(void *target, uint64_t offset, uint64_t count) const {
-  ASSERT(offset <= size() && offset + count <= size(), "BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
-  uint64_t read = tryRead(target, offset, count);
-  ASSERT(read == count, "BlobOnBlocks::read() couldn't read all requested bytes. Use BlobOnBlocks::tryRead() if this should be allowed.");
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
+  if(offset > _size() || offset + count > _size()) {
+      throw std::runtime_error("BlobOnBlocks::read() read outside blob. Use BlobOnBlocks::tryRead() if this should be allowed.");
+  }
+  uint64_t read = _tryRead(target, offset, count);
+  if(read != count) {
+      throw std::runtime_error("BlobOnBlocks::read() couldn't read all requested bytes. Use BlobOnBlocks::tryRead() if this should be allowed.");
+  }
 }
 
 uint64_t BlobOnBlocks::tryRead(void *target, uint64_t offset, uint64_t count) const {
+    std::unique_lock<std::mutex> lock(_datatree->mutex());
+    return _tryRead(target, offset, count);
+}
+
+uint64_t BlobOnBlocks::_tryRead(void *target, uint64_t offset, uint64_t count) const {
+  if (_size() <= offset) {
+    return 0;
+  }
+
   //TODO Quite inefficient to call size() here, because that has to traverse the tree
-  uint64_t realCount = std::max(UINT64_C(0), std::min(count, size()-offset));
+  uint64_t realCount = std::max(INT64_C(0), std::min(static_cast<int64_t>(count), static_cast<int64_t>(_size())-static_cast<int64_t>(offset)));
   _read(target, offset, realCount);
   return realCount;
 }
 
 void BlobOnBlocks::_read(void *target, uint64_t offset, uint64_t count) const {
-  traverseLeaves(offset, count, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  if (count == 0) {
+    return;
+  }
+
+  _traverseLeaves(offset, count, [target, offset] (uint64_t indexOfFirstLeafByte, const DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
       //TODO Simplify formula, make it easier to understand
       leaf->read((uint8_t*)target + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 
 void BlobOnBlocks::write(const void *source, uint64_t offset, uint64_t count) {
-  traverseLeaves(offset, count, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
+  if (count == 0) {
+    return;
+  }
+
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
+  _traverseLeaves(offset, count, [source, offset] (uint64_t indexOfFirstLeafByte, DataLeafNode *leaf, uint32_t leafDataOffset, uint32_t leafDataSize) {
     //TODO Simplify formula, make it easier to understand
     leaf->write((uint8_t*)source + indexOfFirstLeafByte - offset + leafDataOffset, leafDataOffset, leafDataSize);
   });
 }
 
 void BlobOnBlocks::flush() {
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
   _datatree->flush();
 }
 
@@ -102,6 +138,8 @@ const Key &BlobOnBlocks::key() const {
 }
 
 unique_ref<DataTreeRef> BlobOnBlocks::releaseTree() {
+  std::unique_lock<std::mutex> lock(_datatree->mutex());
+
   return std::move(_datatree);
 }
 

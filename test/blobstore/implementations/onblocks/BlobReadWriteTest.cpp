@@ -63,6 +63,92 @@ TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
   EXPECT_EQ(32780u, blob->size());
 }
 
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenTryReadInFirstLeaf_thenFails) {
+  Data data(5);
+  size_t read = blob->tryRead(data.data(), 3, 5);
+  EXPECT_EQ(0, read);
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenTryReadInLaterLeaf_thenFails) {
+  Data data(5);
+  size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
+  EXPECT_EQ(0, read);
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenReadInFirstLeaf_thenFails) {
+  Data data(5);
+  EXPECT_ANY_THROW(
+          blob->read(data.data(), 3, 5)
+  );
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenReadInLaterLeaf_thenFails) {
+  Data data(5);
+  EXPECT_ANY_THROW(
+          blob->read(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5)
+  );
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenReadAll_thenReturnsZeroSizedData) {
+  Data data = blob->readAll();
+  EXPECT_EQ(0, data.size());
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenWrite_thenGrows) {
+  Data data(5);
+  blob->write(data.data(), 4, 5);
+  EXPECT_EQ(9, blob->size());
+}
+
+TEST_F(BlobReadWriteTest, givenEmptyBlob_whenWriteZeroBytes_thenDoesntGrow) {
+  Data data(5);
+  blob->write(data.data(), 4, 0);
+  EXPECT_EQ(0, blob->size());;
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenTryReadInFirstLeaf_thenFails) {
+  Data data(5);
+  size_t read = blob->tryRead(data.data(), 3, 5);
+  EXPECT_EQ(0, read);
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenTryReadInLaterLeaf_thenFails) {
+  Data data(5);
+  size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
+  EXPECT_EQ(0, read);
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenReadInFirstLeaf_thenFails) {
+  Data data(5);
+  EXPECT_ANY_THROW(
+          blob->read(data.data(), 3, 5)
+  );
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenReadInLaterLeaf_thenFails) {
+  Data data(5);
+  EXPECT_ANY_THROW(
+          blob->read(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5)
+  );
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenReadAll_thenReturnsZeroSizedData) {
+  Data data = blob->readAll();
+  EXPECT_EQ(0, data.size());
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenWrite_thenGrows) {
+  Data data(5);
+  blob->write(data.data(), 4, 5);
+  EXPECT_EQ(9, blob->size());
+}
+
+TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenWriteZeroBytes_thenDoesntGrow) {
+  Data data(5);
+  blob->write(data.data(), 4, 0);
+  EXPECT_EQ(0, blob->size());
+}
+
 struct DataRange {
   size_t blobsize;
   off_t offset;
