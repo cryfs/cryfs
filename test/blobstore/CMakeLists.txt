@@ -19,7 +19,7 @@ set(SOURCES
     implementations/onblocks/datatreestore/DataTreeTest_NumStoredBytes.cpp
     implementations/onblocks/datatreestore/DataTreeTest_ResizeNumBytes.cpp
     implementations/onblocks/datatreestore/DataTreeStoreTest.cpp
-    implementations/onblocks/datatreestore/DataTreeTest_TraverseLeaves.cpp
+    implementations/onblocks/datatreestore/LeafTraverserTest.cpp
     implementations/onblocks/BlobSizeTest.cpp
     implementations/onblocks/BlobReadWriteTest.cpp
     implementations/onblocks/BigBlobsTest.cpp
