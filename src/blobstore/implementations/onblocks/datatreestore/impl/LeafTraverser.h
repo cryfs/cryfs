@@ -25,7 +25,7 @@ namespace blobstore {
              */
             class LeafTraverser final {
             public:
-                LeafTraverser(datanodestore::DataNodeStore *nodeStore);
+                LeafTraverser(datanodestore::DataNodeStore *nodeStore, bool readOnlyTraversal);
 
                 void traverseAndUpdateRoot(
                       cpputils::unique_ref<datanodestore::DataNode>* root, uint32_t beginIndex, uint32_t endIndex,
@@ -35,6 +35,7 @@ namespace blobstore {
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
+                const bool _readOnlyTraversal;
 
                 void _traverseAndUpdateRoot(
                       cpputils::unique_ref<datanodestore::DataNode>* root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,

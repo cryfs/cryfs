@@ -19,7 +19,6 @@ using blobstore::onblocks::datanodestore::DataInnerNode;
 using blobstore::onblocks::datanodestore::DataNode;
 using blobstore::onblocks::datanodestore::DataNodeLayout;
 using blobstore::onblocks::datatreestore::DataTree;
-using blobstore::onblocks::datatreestore::LeafHandle;
 using blobstore::onblocks::utils::ceilDivision;
 using blockstore::BlockId;
 using cpputils::Data;
@@ -109,9 +108,13 @@ public:
     GrowTree(tree.get().get());
   }
 
-  void GrowTree(DataTree *tree, std::function<void (int32_t)> traverse = [] (uint32_t){}) {
+  void GrowTree(DataTree *tree) {
     uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    tree->traverseLeaves(traversalBeginIndex, newNumberOfLeaves, [&traverse] (uint32_t index, bool, LeafHandle){traverse(index);}, [maxBytesPerLeaf, &traverse] (uint32_t index) -> Data { traverse(index); return Data(maxBytesPerLeaf).FillWithZeroes();});
+    uint64_t offset = traversalBeginIndex * maxBytesPerLeaf;
+    uint64_t count = newNumberOfLeaves * maxBytesPerLeaf - offset;
+    Data data(count);
+    data.FillWithZeroes();
+    tree->writeBytes(data.data(), offset, count);
     tree->flush();
   }
 
@@ -163,7 +166,6 @@ INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeBy
     ),
     //Decide the traversal begin index
     Values(
-      [] (uint32_t /*oldNumberOfLeaves*/, uint32_t newNumberOfLeaves)     {return newNumberOfLeaves;}, // Don't traverse any leaves, just resize (begin==end)
       [] (uint32_t /*oldNumberOfLeaves*/, uint32_t newNumberOfLeaves)     {return newNumberOfLeaves-1;}, // Traverse last leaf (begin==end-1)
       [] (uint32_t oldNumberOfLeaves,     uint32_t newNumberOfLeaves)     {return (oldNumberOfLeaves+newNumberOfLeaves)/2;}, // Start traversal in middle of new leaves
       [] (uint32_t oldNumberOfLeaves,     uint32_t /*newNumberOfLeaves*/) {return oldNumberOfLeaves-1;}, // Start traversal with last old leaf
@@ -189,9 +191,9 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect_FromCache) {
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect) {
   GrowTree(tree.get());
-  // tree->_forceComputeNumLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // tree->forceComputeNumLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
-  EXPECT_EQ(newNumberOfLeaves, tree->_forceComputeNumLeaves());
+  EXPECT_EQ(newNumberOfLeaves, tree->forceComputeNumLeaves());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DepthFlagsAreCorrect) {
@@ -208,7 +210,8 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, KeyDoesntChange) {
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
+  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
+
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
@@ -216,15 +219,13 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
 
   GrowTree(blockId);
 
-  data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), oldNumberOfLeaves, oldLastLeafSize);
-}
-
-TEST_P(DataTreeTest_ResizeByTraversing_P, AllLeavesAreTraversed) {
-  std::vector<uint32_t> traversedLeaves;
-  GrowTree(tree.get(), [&traversedLeaves] (uint32_t index) {traversedLeaves.push_back(index);});
-
-  EXPECT_EQ(newNumberOfLeaves-traversalBeginIndex, traversedLeaves.size());
-  for (uint32_t i = traversalBeginIndex; i < newNumberOfLeaves; ++i) {
-    EXPECT_NE(traversedLeaves.end(), std::find(traversedLeaves.begin(), traversedLeaves.end(), i));
+  if (traversalBeginIndex < oldNumberOfLeaves) {
+      // Traversal wrote over part of the pre-existing data, we can only check the data before it.
+      if (traversalBeginIndex != 0) {
+          data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), traversalBeginIndex - 1);
+      }
+  } else {
+      // Here, traversal was entirely outside the preexisting data, we can check all preexisting data.
+      data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), oldNumberOfLeaves, oldLastLeafSize);
   }
 }
