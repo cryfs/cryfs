@@ -18,11 +18,26 @@
 
 #include <iostream>
 
-// Issue 340
-#if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
-# pragma GCC diagnostic ignored "-Wconversion"
-# pragma GCC diagnostic ignored "-Wsign-conversion"
+ANONYMOUS_NAMESPACE_BEGIN
+
+using CryptoPP::PolynomialMod2;
+
+#if defined(HAVE_GCC_INIT_PRIORITY)
+  const PolynomialMod2 g_zero __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 60))) = PolynomialMod2();
+  const PolynomialMod2 g_one __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 61))) = PolynomialMod2(1);
+#elif defined(HAVE_MSC_INIT_PRIORITY)
+  #pragma warning(disable: 4075)
+  #pragma init_seg(".CRT$XCU")
+  const PolynomialMod2 g_zero;
+  const PolynomialMod2 g_one(1);
+  #pragma warning(default: 4075)
+#elif defined(HAVE_XLC_INIT_PRIORITY)
+  #pragma priority(290)
+  const PolynomialMod2 g_zero;
+  const PolynomialMod2 g_one(1);
 #endif
+
+ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -133,12 +148,26 @@ struct NewPolynomialMod2
 
 const PolynomialMod2 &PolynomialMod2::Zero()
 {
+#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
+	return g_zero;
+#elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
+	static const PolynomialMod2 g_zero;
+	return g_zero;
+#else
 	return Singleton<PolynomialMod2>().Ref();
+#endif
 }
 
 const PolynomialMod2 &PolynomialMod2::One()
 {
+#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
+	return g_one;
+#elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
+	static const PolynomialMod2 g_one(1);
+	return g_one;
+#else
 	return Singleton<PolynomialMod2, NewPolynomialMod2<1> >().Ref();
+#endif
 }
 
 void PolynomialMod2::Decode(const byte *input, size_t inputLen)
@@ -336,7 +365,7 @@ PolynomialMod2 PolynomialMod2::Modulo(const PolynomialMod2 &b) const
 PolynomialMod2& PolynomialMod2::operator<<=(unsigned int n)
 {
 #if defined(CRYPTOPP_DEBUG)
-	int x; CRYPTOPP_UNUSED(x);
+	int x=0; CRYPTOPP_UNUSED(x);
 	CRYPTOPP_ASSERT(SafeConvert(n,x));
 #endif
 

@@ -8,20 +8,20 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-// crc-simd.cpp
+// crc_simd.cpp
 #if (CRYPTOPP_ARM_CRC32_AVAILABLE)
 extern void CRC32_Update_ARMV8(const byte *s, size_t n, word32& c);
 extern void CRC32C_Update_ARMV8(const byte *s, size_t n, word32& c);
 #endif
 
-// crc-simd.cpp
+// crc_simd.cpp
 #if (CRYPTOPP_SSE42_AVAILABLE)
 extern void CRC32C_Update_SSE42(const byte *s, size_t n, word32& c);
 #endif
 
 /* Table of CRC-32's of all single byte values (made by makecrc.c) */
 const word32 CRC32::m_tab[] = {
-#ifdef CRYPTOPP_LITTLE_ENDIAN
+#if (CRYPTOPP_LITTLE_ENDIAN)
 	0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
 	0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,
 	0xe0d5e91eL, 0x97d2d988L, 0x09b64c2bL, 0x7eb17cbdL, 0xe7b82d07L,
@@ -130,6 +130,15 @@ const word32 CRC32::m_tab[] = {
 #endif
 };
 
+std::string CRC32::AlgorithmProvider() const
+{
+#if (CRYPTOPP_ARM_CRC32_AVAILABLE)
+	if (HasCRC32())
+		return "ARMv8";
+#endif
+	return "C++";
+}
+
 CRC32::CRC32()
 {
 	Reset();
@@ -180,7 +189,7 @@ void CRC32::TruncatedFinal(byte *hash, size_t size)
 // Castagnoli CRC32C (iSCSI)
 
 const word32 CRC32C::m_tab[] = {
-#ifdef CRYPTOPP_LITTLE_ENDIAN
+#if (CRYPTOPP_LITTLE_ENDIAN)
     0x00000000L, 0xf26b8303L, 0xe13b70f7L, 0x1350f3f4L, 0xc79a971fL,
     0x35f1141cL, 0x26a1e7e8L, 0xd4ca64ebL, 0x8ad958cfL, 0x78b2dbccL,
     0x6be22838L, 0x9989ab3bL, 0x4d43cfd0L, 0xbf284cd3L, 0xac78bf27L,
@@ -288,6 +297,19 @@ const word32 CRC32C::m_tab[] = {
     0x51537dadL
 #endif
 };
+
+std::string CRC32C::AlgorithmProvider() const
+{
+#if (CRYPTOPP_ARM_CRC32_AVAILABLE)
+	if (HasCRC32())
+		return "ARMv8";
+#endif
+#if (CRYPTOPP_SSE42_AVAILABLE)
+	if (HasSSE42())
+		return "SSE4.2";
+#endif
+	return "C++";
+}
 
 CRC32C::CRC32C()
 {

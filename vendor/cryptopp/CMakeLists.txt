@@ -88,6 +88,7 @@ set(BUILD_TESTING OFF CACHE BOOL "")
 set(BUILD_DOCUMENTATION OFF CACHE BOOL "")
 set(BUILD_SHARED OFF CACHE BOOL "")
 set(BUILD_STATIC ON CACHE BOOL "")
+set(cryptocpp_DISPLAY_CMAKE_SUPPORT_WARNING OFF CACHE BOOL "")
 add_subdirectory(vendor_cryptopp EXCLUDE_FROM_ALL)
 
 target_link_libraries(cryptopp PRIVATE cryptopp-static)

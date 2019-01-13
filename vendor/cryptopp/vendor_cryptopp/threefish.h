@@ -67,7 +67,7 @@ struct CRYPTOPP_NO_VTABLE Threefish_Base
 /// \brief Threefish 256-bit block cipher
 /// \details Threefish256 provides 256-bit block size. The valid key size is 256-bit.
 /// \note Crypto++ provides a byte oriented implementation
-/// \sa Threefish256, Threefish512, Threefish1024, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
+/// \sa Threefish512, Threefish1024, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
 /// \since Crypto++ 6.0
 class CRYPTOPP_NO_VTABLE Threefish256 : public Threefish_Info<32>, public BlockCipherDocumentation
 {
@@ -81,7 +81,7 @@ public:
         void UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params);
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Enc provides implementation for encryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0
@@ -91,7 +91,7 @@ public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Dec provides implementation for decryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0
@@ -111,9 +111,9 @@ typedef Threefish256::Decryption Threefish256Decryption;
 /// \brief Threefish 512-bit block cipher
 /// \details Threefish512 provides 512-bit block size. The valid key size is 512-bit.
 /// \note Crypto++ provides a byte oriented implementation
-/// \sa Threefish256, Threefish512, Threefish1024, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
+/// \sa Threefish256, Threefish1024, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
 /// \since Crypto++ 6.0
-class CRYPTOPP_NO_VTABLE Threefish512 : public Threefish_Base<32>, public BlockCipherDocumentation
+class CRYPTOPP_NO_VTABLE Threefish512 : public Threefish_Info<64>, public BlockCipherDocumentation
 {
 public:
     /// \brief Threefish block cipher transformation functions
@@ -125,7 +125,7 @@ public:
         void UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params);
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Enc provides implementation for encryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0
@@ -135,7 +135,7 @@ public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Dec provides implementation for decryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0
@@ -155,9 +155,9 @@ typedef Threefish512::Decryption Threefish512Decryption;
 /// \brief Threefish 1024-bit block cipher
 /// \details Threefish1024 provides 1024-bit block size. The valid key size is 1024-bit.
 /// \note Crypto++ provides a byte oriented implementation
-/// \sa Threefish256, Threefish512, Threefish1024, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
+/// \sa Threefish256, Threefish512, <a href="http://www.cryptopp.com/wiki/Threefish">Threefish</a>
 /// \since Crypto++ 6.0
-class CRYPTOPP_NO_VTABLE Threefish1024 : public Threefish_Base<32>, public BlockCipherDocumentation
+class CRYPTOPP_NO_VTABLE Threefish1024 : public Threefish_Info<128>, public BlockCipherDocumentation
 {
 public:
     /// \brief Threefish block cipher transformation functions
@@ -169,7 +169,7 @@ public:
         void UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params);
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Enc provides implementation for encryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0
@@ -179,7 +179,7 @@ public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Dec provides implementation for decryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 6.0

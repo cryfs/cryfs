@@ -58,7 +58,7 @@ $1@Baseline_Sub:
 Baseline_Sub ENDP
 
 ALIGN   8
-Rijndael_Enc_AdvancedProcessBlocks	PROC FRAME
+Rijndael_Enc_AdvancedProcessBlocks_SSE2	PROC FRAME
 rex_push_reg rsi
 push_reg rdi
 push_reg rbx
@@ -454,10 +454,10 @@ pop rbx
 pop rdi
 pop rsi
 ret
-Rijndael_Enc_AdvancedProcessBlocks ENDP
+Rijndael_Enc_AdvancedProcessBlocks_SSE2 ENDP
 
 ALIGN   8
-GCM_AuthenticateBlocks_2K	PROC FRAME
+GCM_AuthenticateBlocks_2K_SSE2	PROC FRAME
 rex_push_reg rsi
 push_reg rdi
 push_reg rbx
@@ -593,10 +593,10 @@ pop rbx
 pop rdi
 pop rsi
 ret
-GCM_AuthenticateBlocks_2K ENDP
+GCM_AuthenticateBlocks_2K_SSE2 ENDP
 
 ALIGN   8
-GCM_AuthenticateBlocks_64K	PROC FRAME
+GCM_AuthenticateBlocks_64K_SSE2	PROC FRAME
 rex_push_reg rsi
 push_reg rdi
 .endprolog
@@ -673,10 +673,10 @@ movdqa [rsi], xmm0
 pop rdi
 pop rsi
 ret
-GCM_AuthenticateBlocks_64K ENDP
+GCM_AuthenticateBlocks_64K_SSE2 ENDP
 
 ALIGN   8
-SHA256_SSE_HashMultipleBlocks	PROC FRAME
+SHA256_HashMultipleBlocks_SSE2	PROC FRAME
 rex_push_reg rsi
 push_reg rdi
 push_reg rbx
@@ -1962,7 +1962,19 @@ pop		rbx
 pop		rdi
 pop		rsi
 ret
-SHA256_SSE_HashMultipleBlocks ENDP
+SHA256_HashMultipleBlocks_SSE2 ENDP
+
+    ALIGN   8
+ExtendedControlRegister	PROC
+;; First paramter is RCX, and xgetbv expects the CTRL in ECX
+;; http://www.agner.org/optimize/vectorclass/read.php?i=65
+DB  	0fh, 01h, 0d0h
+;; xcr = (EDX << 32) | EAX
+and 	rax, 0ffffffffh
+shl 	rdx, 32
+or  	rax, rdx
+ret
+ExtendedControlRegister	ENDP
 
 _TEXT ENDS
 END
