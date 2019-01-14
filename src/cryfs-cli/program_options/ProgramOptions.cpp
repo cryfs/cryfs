@@ -15,9 +15,19 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
                                bool allowIntegrityViolations,
                                boost::optional<bool> missingBlockIsIntegrityViolation,
                                vector<string> fuseOptions)
-    :_baseDir(std::move(baseDir)), _mountDir(std::move(mountDir)), _configFile(std::move(configFile)), _foreground(foreground), _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
-     _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
-     _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)), _fuseOptions(std::move(fuseOptions)) {
+    : _configFile(std::move(configFile)), _baseDir(bf::absolute(std::move(baseDir))), _mountDir(std::move(mountDir)),
+#if defined(_MSC_VER)
+	  _mountDirIsDriveLetter(_mountDir.has_root_path() && !_mountDir.has_root_directory() && !_mountDir.has_parent_path()),
+#else
+	  _mountDirIsDriveLetter(false),
+#endif
+	  _foreground(foreground),
+	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
+      _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
+      _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)), _fuseOptions(std::move(fuseOptions)) {
+	if (!_mountDirIsDriveLetter) {
+		_mountDir = bf::absolute(std::move(_mountDir));
+	}
 }
 
 const bf::path &ProgramOptions::baseDir() const {
@@ -26,6 +36,10 @@ const bf::path &ProgramOptions::baseDir() const {
 
 const bf::path &ProgramOptions::mountDir() const {
     return _mountDir;
+}
+
+bool ProgramOptions::mountDirIsDriveLetter() const {
+	return _mountDirIsDriveLetter;
 }
 
 const optional<bf::path> &ProgramOptions::configFile() const {
