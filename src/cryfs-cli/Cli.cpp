@@ -316,10 +316,17 @@ namespace cryfs {
         }
     }
 
-    void Cli::_sanityChecks(const ProgramOptions &options) {
-        _checkDirAccessible(options.baseDir(), "base directory", ErrorCode::InaccessibleBaseDir);
-        _checkDirAccessible(options.mountDir(), "mount directory", ErrorCode::InaccessibleMountDir);
-        _checkMountdirDoesntContainBasedir(options);
+	void Cli::_sanityChecks(const ProgramOptions &options) {
+		_checkDirAccessible(bf::absolute(options.baseDir()), "base directory", ErrorCode::InaccessibleBaseDir);
+
+		if (!options.mountDirIsDriveLetter()) {
+			_checkDirAccessible(options.mountDir(), "mount directory", ErrorCode::InaccessibleMountDir);
+			_checkMountdirDoesntContainBasedir(options);
+		} else {
+			if (bf::exists(options.mountDir())) {
+				throw CryfsException("Drive " + options.mountDir().string() + " already exists.", ErrorCode::InaccessibleMountDir);
+			}
+		}
     }
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name, ErrorCode errorCode) {
