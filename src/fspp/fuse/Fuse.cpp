@@ -7,8 +7,14 @@
 #include <iostream>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
+#include <cpp-utils/process/subprocess.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
+
+#if defined(_MSC_VER)
+#include <codecvt>
+#include <dokan/dokan.h>
+#endif
 
 using std::vector;
 using std::string;
@@ -307,14 +313,24 @@ bool Fuse::running() const {
 }
 
 void Fuse::stop() {
+  unmount(_mountdir, false);
+}
+
+void Fuse::unmount(const bf::path& mountdir, bool force) {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
-#ifdef __APPLE__
-  int ret = system(("umount " + _mountdir.string()).c_str());
+#if defined(__APPLE__)
+  int returncode = cpputils::Subprocess::call(std::string("umount ") + mountdir.string()).exitcode;
+#elif defined(_MSC_VER)
+  std::wstring mountdir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountdir.string());
+  BOOL success = DokanRemoveMountPoint(mountdir_.c_str());
+  int returncode = success ? 0 : -1;
 #else
-  int ret = system(("fusermount -z -u " + _mountdir.string()).c_str()); // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
+  std::string command = force ? "fusermount -u" : "fusermount -z -u";  // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
+  int returncode = cpputils::Subprocess::call(
+	  command + " " + mountdir.string()).exitcode;
 #endif
-  if (ret != 0) {
-    LOG(ERR, "Could not unmount filesystem");
+  if (returncode != 0) {
+    throw std::runtime_error("Could not unmount filesystem");
   }
 }
 

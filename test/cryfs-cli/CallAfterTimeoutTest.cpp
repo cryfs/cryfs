@@ -8,7 +8,7 @@ using cpputils::make_unique_ref;
 using boost::chrono::milliseconds;
 using boost::chrono::minutes;
 using boost::this_thread::sleep_for;
-using namespace cryfs;
+using namespace cryfs_cli;
 
 class CallAfterTimeoutTest : public ::testing::Test {
 public:

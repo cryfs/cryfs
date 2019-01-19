@@ -13,7 +13,7 @@ using boost::property_tree::ptree;
 using boost::property_tree::json_parser_error;
 using namespace cpputils::logging;
 
-namespace cryfs {
+namespace cryfs_cli {
 
     VersionChecker::VersionChecker(HttpClient* httpClient)
             : _versionInfo(_getVersionInfo(httpClient)) {}

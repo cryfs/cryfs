@@ -49,6 +49,7 @@ set(SOURCES
     assert/assert_debug_test.cpp
     system/GetTotalMemoryTest.cpp
     system/TimeTest.cpp
+	system/PathTest.cpp
 	system/FiletimeTest.cpp
     system/MemoryTest.cpp
     system/HomedirTest.cpp

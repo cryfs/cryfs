@@ -28,6 +28,8 @@ public:
   bool running() const;
   void stop();
 
+  static void unmount(const boost::filesystem::path &mountdir, bool force = false);
+
   int getattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf);
   int fgetattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo);
   int readlink(const boost::filesystem::path &path, char *buf, size_t size);

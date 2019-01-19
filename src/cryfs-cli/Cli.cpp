@@ -30,6 +30,7 @@
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
 
+using namespace cryfs_cli;
 using namespace cryfs;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
@@ -66,7 +67,7 @@ using gitversion::VersionCompare;
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO Can we improve performance by setting compiler parameter -maes for scrypt?
 
-namespace cryfs {
+namespace cryfs_cli {
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false), _idleUnmounter(none), _device(none) {
@@ -262,12 +263,8 @@ namespace cryfs {
 
             _initLogfile(options);
 
-#ifdef __APPLE__
-          std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
-#else
-          std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n"
+          std::cout << "\nMounting filesystem. To unmount, call:\n$ cryfs-unmount " << options.mountDir() << "\n"
                     << std::endl;
-#endif
           fuse->run(options.mountDir(), options.fuseOptions());
 
           if (stoppedBecauseOfIntegrityViolation) {

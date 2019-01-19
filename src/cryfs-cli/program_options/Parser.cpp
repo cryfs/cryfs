@@ -8,7 +8,7 @@
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
-using namespace cryfs::program_options;
+using namespace cryfs_cli::program_options;
 using cryfs::CryConfigConsole;
 using cryfs::CryfsException;
 using cryfs::ErrorCode;
