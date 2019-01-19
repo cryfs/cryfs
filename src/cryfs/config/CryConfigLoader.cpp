@@ -71,7 +71,7 @@ void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesyste
     }
   }
   if (!allowFilesystemUpgrade && gitversion::VersionCompare::isOlderThan(config.Version(), CryConfig::FilesystemFormatVersion)) {
-    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). You're running a CryFS version using storage format " + CryConfig::FilesystemFormatVersion + ". It can be migrated, but afterwards couldn't be opened anymore with older versions. Do you want to migrate it?", false)) {
+    if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). You're running a CryFS version using storage format " + CryConfig::FilesystemFormatVersion + ". It can be migrated, but afterwards couldn't be opened anymore with older versions. Please make a backup of your data before attempting a migration. Do you want to migrate it now?", false)) {
       throw CryfsException("This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). It has to be migrated.", ErrorCode::TooOldFilesystemFormat);
     }
   }
