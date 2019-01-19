@@ -8,7 +8,7 @@ using cpputils::FakeHttpClient;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::none;
-using namespace cryfs;
+using namespace cryfs_cli;
 
 class VersionCheckerTest: public ::testing::Test {
 public:

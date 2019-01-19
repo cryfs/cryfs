@@ -1,12 +1,12 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CLI_CALLAFTERTIMEOUT_H
-#define MESSMER_CRYFS_SRC_CLI_CALLAFTERTIMEOUT_H
+#ifndef MESSMER_CRYFSCLI_CALLAFTERTIMEOUT_H
+#define MESSMER_CRYFSCLI_CALLAFTERTIMEOUT_H
 
 #include <functional>
 #include <mutex>
 #include <cpp-utils/thread/LoopThread.h>
 
-namespace cryfs {
+namespace cryfs_cli {
     class CallAfterTimeout final {
     public:
         CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback);

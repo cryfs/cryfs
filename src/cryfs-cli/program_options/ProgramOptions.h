@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_PROGRAMOPTIONS_PROGRAMOPTIONS_H
-#define MESSMER_CRYFS_PROGRAMOPTIONS_PROGRAMOPTIONS_H
+#ifndef MESSMER_CRYFSCLI_PROGRAMOPTIONS_PROGRAMOPTIONS_H
+#define MESSMER_CRYFSCLI_PROGRAMOPTIONS_PROGRAMOPTIONS_H
 
 #include <vector>
 #include <string>
@@ -8,7 +8,7 @@
 #include <cpp-utils/macros.h>
 #include <boost/filesystem.hpp>
 
-namespace cryfs {
+namespace cryfs_cli {
     namespace program_options {
         class ProgramOptions final {
         public:

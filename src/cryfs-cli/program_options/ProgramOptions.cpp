@@ -1,8 +1,9 @@
 #include "ProgramOptions.h"
 #include <cstring>
 #include <cpp-utils/assert/assert.h>
+#include <cpp-utils/system/path.h>
 
-using namespace cryfs::program_options;
+using namespace cryfs_cli::program_options;
 using std::string;
 using std::vector;
 using boost::optional;
@@ -16,11 +17,7 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
                                boost::optional<bool> missingBlockIsIntegrityViolation,
                                vector<string> fuseOptions)
     : _configFile(std::move(configFile)), _baseDir(bf::absolute(std::move(baseDir))), _mountDir(std::move(mountDir)),
-#if defined(_MSC_VER)
-	  _mountDirIsDriveLetter(_mountDir.has_root_path() && !_mountDir.has_root_directory() && !_mountDir.has_parent_path()),
-#else
-	  _mountDirIsDriveLetter(false),
-#endif
+      _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)),
 	  _foreground(foreground),
 	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
       _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
