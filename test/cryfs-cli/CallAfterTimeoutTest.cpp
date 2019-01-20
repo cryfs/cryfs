@@ -15,7 +15,7 @@ public:
     CallAfterTimeoutTest(): called(false) {}
 
     unique_ref<CallAfterTimeout> callAfterTimeout(milliseconds timeout) {
-        return make_unique_ref<CallAfterTimeout>(timeout, [this] {called = true;});
+        return make_unique_ref<CallAfterTimeout>(timeout, [this] {called = true;}, "test");
     }
 
     std::atomic<bool> called;

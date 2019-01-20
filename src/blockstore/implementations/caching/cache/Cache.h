@@ -24,7 +24,7 @@ public:
   static constexpr double PURGE_INTERVAL = 0.5; // With this interval, we check for entries to purge
   static constexpr double MAX_LIFETIME_SEC = PURGE_LIFETIME_SEC + PURGE_INTERVAL; // This is the oldest age an entry can reach (given purging works in an ideal world, i.e. with the ideal interval and in zero time)
 
-  Cache();
+  Cache(const std::string& cacheName);
   ~Cache();
 
   uint32_t size() const;
@@ -56,10 +56,10 @@ template<class Key, class Value, uint32_t MAX_ENTRIES> constexpr double Cache<Ke
 template<class Key, class Value, uint32_t MAX_ENTRIES> constexpr double Cache<Key, Value, MAX_ENTRIES>::MAX_LIFETIME_SEC;
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
-Cache<Key, Value, MAX_ENTRIES>::Cache(): _mutex(), _currentlyFlushingEntries(), _cachedBlocks(), _timeoutFlusher(nullptr) {
+Cache<Key, Value, MAX_ENTRIES>::Cache(const std::string& cacheName): _mutex(), _currentlyFlushingEntries(), _cachedBlocks(), _timeoutFlusher(nullptr) {
   //Don't initialize timeoutFlusher in the initializer list,
   //because it then might already call Cache::popOldEntries() before Cache is done constructing.
-  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_deleteOldEntriesParallel, this), PURGE_INTERVAL);
+  _timeoutFlusher = std::make_unique<PeriodicTask>(std::bind(&Cache::_deleteOldEntriesParallel, this), PURGE_INTERVAL, "flush_" + cacheName);
 }
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
