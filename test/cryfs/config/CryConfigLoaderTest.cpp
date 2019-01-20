@@ -307,7 +307,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
 }
 
 TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it now?"), false)).Times(1).WillOnce(Return(true));
 
     string version = olderVersion();
     CreateWithVersion(version, version);
@@ -315,14 +315,14 @@ TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it now?"), _)).Times(0);
 
     CreateWithVersion(gitversion::VersionString(), CryConfig::FilesystemFormatVersion);
     EXPECT_NE(boost::none, Load());
 }
 
 TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it?"), false)).Times(1).WillOnce(Return(false));
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to migrate it now?"), false)).Times(1).WillOnce(Return(false));
 
     string version = olderVersion();
     CreateWithVersion(version, version);
