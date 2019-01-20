@@ -24,6 +24,8 @@ set(SOURCES
         io/pipestream.cpp
         thread/LoopThread.cpp
         thread/ThreadSystem.cpp
+        thread/debugging_nonwindows.cpp
+        thread/debugging_windows.cpp
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp
