@@ -1,4 +1,3 @@
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <gtest/gtest.h>
 #include <vector>
 #include <boost/filesystem.hpp>
