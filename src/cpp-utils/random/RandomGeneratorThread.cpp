@@ -8,7 +8,7 @@ namespace cpputils {
               _buffer(buffer),
               _minSize(minSize),
               _maxSize(maxSize),
-              _thread(std::bind(&RandomGeneratorThread::_loopIteration, this)) {
+              _thread(std::bind(&RandomGeneratorThread::_loopIteration, this), "RandomGeneratorThread") {
         ASSERT(_maxSize >= _minSize, "Invalid parameters");
     }
 
