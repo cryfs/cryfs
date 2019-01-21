@@ -22,16 +22,10 @@
 #include "fips140.h"
 #include "argnames.h"
 #include "fltrimpl.h"
-#include "trdlocal.h"
 #include "osrng.h"
 #include "secblock.h"
 #include "smartptr.h"
 #include "stdcpp.h"
-
-// http://www.cygwin.com/faq.html#faq.api.winsock
-#if (defined(__CYGWIN__) || defined(__CYGWIN32__)) && defined(PREFER_WINDOWS_STYLE_SOCKETS)
-# error Cygwin does not support Windows style sockets. See http://www.cygwin.com/faq.html#faq.api.winsock
-#endif
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -150,16 +144,16 @@ size_t BlockTransformation::AdvancedProcessBlocks(const byte *inBlocks, const by
 	CRYPTOPP_ASSERT(outBlocks);
 	CRYPTOPP_ASSERT(length);
 
-	const size_t blockSize = BlockSize();
-	ptrdiff_t inIncrement = (flags & (BT_InBlockIsCounter|BT_DontIncrementInOutPointers)) ? 0 : blockSize;
-	ptrdiff_t xorIncrement = xorBlocks ? blockSize : 0;
-	ptrdiff_t outIncrement = (flags & BT_DontIncrementInOutPointers) ? 0 : blockSize;
+	const unsigned int blockSize = BlockSize();
+	size_t inIncrement = (flags & (BT_InBlockIsCounter|BT_DontIncrementInOutPointers)) ? 0 : blockSize;
+	size_t xorIncrement = xorBlocks ? blockSize : 0;
+	size_t outIncrement = (flags & BT_DontIncrementInOutPointers) ? 0 : blockSize;
 
 	if (flags & BT_ReverseDirection)
 	{
-		inBlocks += static_cast<ptrdiff_t>(length) - blockSize;
-		xorBlocks += static_cast<ptrdiff_t>(length) - blockSize;
-		outBlocks += static_cast<ptrdiff_t>(length) - blockSize;
+		inBlocks = PtrAdd(inBlocks, length - blockSize);
+		xorBlocks = PtrAdd(xorBlocks, length - blockSize);
+		outBlocks = PtrAdd(outBlocks, length - blockSize);
 		inIncrement = 0-inIncrement;
 		xorIncrement = 0-xorIncrement;
 		outIncrement = 0-outIncrement;
@@ -184,9 +178,9 @@ size_t BlockTransformation::AdvancedProcessBlocks(const byte *inBlocks, const by
 		if (flags & BT_InBlockIsCounter)
 			const_cast<byte *>(inBlocks)[blockSize-1]++;
 
-		inBlocks += inIncrement;
-		outBlocks += outIncrement;
-		xorBlocks += xorIncrement;
+		inBlocks = PtrAdd(inBlocks, inIncrement);
+		outBlocks = PtrAdd(outBlocks, outIncrement);
+		xorBlocks = PtrAdd(xorBlocks, xorIncrement);
 		length -= blockSize;
 	}
 
@@ -991,6 +985,40 @@ int LibraryVersion(CRYPTOPP_NOINLINE_DOTDOTDOT)
 {
 	return CRYPTOPP_BUILD_VERSION;
 }
+
+class NullNameValuePairs : public NameValuePairs
+{
+public:
+	NullNameValuePairs() {}    //  Clang complains a default ctor must be avilable
+	bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const
+		{CRYPTOPP_UNUSED(name); CRYPTOPP_UNUSED(valueType); CRYPTOPP_UNUSED(pValue); return false;}
+};
+
+#if HAVE_GCC_INIT_PRIORITY
+  const std::string DEFAULT_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 25))) = "";
+  const std::string AAD_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 26))) = "AAD";
+  const NullNameValuePairs s_nullNameValuePairs __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 27)));
+  const NameValuePairs& g_nullNameValuePairs = s_nullNameValuePairs;
+#elif HAVE_MSC_INIT_PRIORITY
+  #pragma warning(disable: 4073)
+  #pragma init_seg(lib)
+  const std::string DEFAULT_CHANNEL = "";
+  const std::string AAD_CHANNEL = "AAD";
+  const NullNameValuePairs s_nullNameValuePairs;
+  const NameValuePairs& g_nullNameValuePairs = s_nullNameValuePairs;
+  #pragma warning(default: 4073)
+#elif HAVE_XLC_INIT_PRIORITY
+  #pragma priority(260)
+  const std::string DEFAULT_CHANNEL = "";
+  const std::string AAD_CHANNEL = "AAD";
+  const NullNameValuePairs s_nullNameValuePairs;
+  const NameValuePairs& g_nullNameValuePairs = s_nullNameValuePairs;
+#else
+  const std::string DEFAULT_CHANNEL = "";
+  const std::string AAD_CHANNEL = "AAD";
+  const simple_ptr<NullNameValuePairs> s_pNullNameValuePairs(new NullNameValuePairs);
+  const NameValuePairs &g_nullNameValuePairs = *s_pNullNameValuePairs.m_p;
+#endif
 
 NAMESPACE_END  // CryptoPP
 

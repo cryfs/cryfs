@@ -11,7 +11,7 @@ namespace caching {
 
 class PeriodicTask final {
 public:
-	PeriodicTask(std::function<void ()> task, double intervalSec);
+	PeriodicTask(std::function<void ()> task, double intervalSec, std::string threadName);
 
 private:
   bool _loopIteration();

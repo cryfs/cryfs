@@ -95,6 +95,15 @@ void Salsa20_Core(word32* data, unsigned int rounds)
 		data[i] += x[i];
 }
 
+std::string Salsa20_Policy::AlgorithmProvider() const
+{
+#if CRYPTOPP_SSE2_ASM_AVAILABLE && !defined(CRYPTOPP_DISABLE_SALSA_ASM)
+	if (HasSSE2())
+		return "SSE2";
+#endif
+	return "C++";
+}
+
 void Salsa20_Policy::CipherSetKey(const NameValuePairs &params, const byte *key, size_t length)
 {
 	m_rounds = params.GetIntValueWithDefault(Name::Rounds(), 20);
@@ -293,6 +302,13 @@ void Salsa20_Policy::OperateKeystream(KeystreamOperation operation, byte *output
 		AS2(	mov		dword ptr [REG_state + 8*4], REG_roundsLeft)
 		AS2(	mov		dword ptr [REG_state + 5*4], REG_temp32)
 
+#ifdef __XOP__
+#define SSE2_QUARTER_ROUND(a, b, d, i)		\
+	AS2(	movdqa	xmm4, xmm##d)			\
+	AS2(	paddd	xmm4, xmm##a)			\
+	AS3(	vprotd	xmm4, xmm4, i)			\
+	AS2(	pxor	xmm##b, xmm4)
+#else
 #define SSE2_QUARTER_ROUND(a, b, d, i)		\
 	AS2(	movdqa	xmm4, xmm##d)			\
 	AS2(	paddd	xmm4, xmm##a)			\
@@ -301,38 +317,79 @@ void Salsa20_Policy::OperateKeystream(KeystreamOperation operation, byte *output
 	AS2(	psrld	xmm5, 32-i)				\
 	AS2(	pxor	xmm##b, xmm4)			\
 	AS2(	pxor	xmm##b, xmm5)
+#endif
 
 #define L01(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##A, [SSE2_WORKSPACE + d*16 + i*256])	/* y3 */
 #define L02(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##C, [SSE2_WORKSPACE + a*16 + i*256])	/* y0 */
 #define L03(A,B,C,D,a,b,c,d,i)		AS2(	paddd	xmm##A, xmm##C)		/* y0+y3 */
+
+#ifdef __XOP__
+#define L04(A,B,C,D,a,b,c,d,i)
+#define L05(A,B,C,D,a,b,c,d,i)		AS3(	vprotd	xmm##A, xmm##A, 7)
+#define L06(A,B,C,D,a,b,c,d,i)
+#define L07(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + b*16 + i*256])
+#define L08(A,B,C,D,a,b,c,d,i)
+#else
 #define L04(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##B, xmm##A)
 #define L05(A,B,C,D,a,b,c,d,i)		AS2(	pslld	xmm##A, 7)
 #define L06(A,B,C,D,a,b,c,d,i)		AS2(	psrld	xmm##B, 32-7)
 #define L07(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + b*16 + i*256])
 #define L08(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##B)		/* z1 */
+#endif
+
 #define L09(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	[SSE2_WORKSPACE + b*16], xmm##A)
 #define L10(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##B, xmm##A)
 #define L11(A,B,C,D,a,b,c,d,i)		AS2(	paddd	xmm##A, xmm##C)		/* z1+y0 */
+
+#ifdef __XOP__
+#define L12(A,B,C,D,a,b,c,d,i)
+#define L13(A,B,C,D,a,b,c,d,i)		AS3(	vprotd	xmm##A, xmm##A, 9)
+#define L14(A,B,C,D,a,b,c,d,i)
+#define L15(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + c*16 + i*256])
+#define L16(A,B,C,D,a,b,c,d,i)
+#else
 #define L12(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##D, xmm##A)
 #define L13(A,B,C,D,a,b,c,d,i)		AS2(	pslld	xmm##A, 9)
 #define L14(A,B,C,D,a,b,c,d,i)		AS2(	psrld	xmm##D, 32-9)
 #define L15(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + c*16 + i*256])
 #define L16(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##D)		/* z2 */
+#endif
+
 #define L17(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	[SSE2_WORKSPACE + c*16], xmm##A)
 #define L18(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##D, xmm##A)
 #define L19(A,B,C,D,a,b,c,d,i)		AS2(	paddd	xmm##A, xmm##B)		/* z2+z1 */
+
+#ifdef __XOP__
+#define L20(A,B,C,D,a,b,c,d,i)
+#define L21(A,B,C,D,a,b,c,d,i)		AS3(	vprotd	xmm##A, xmm##A, 13)
+#define L22(A,B,C,D,a,b,c,d,i)
+#define L23(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + d*16 + i*256])
+#define L24(A,B,C,D,a,b,c,d,i)
+#else
 #define L20(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##B, xmm##A)
 #define L21(A,B,C,D,a,b,c,d,i)		AS2(	pslld	xmm##A, 13)
 #define L22(A,B,C,D,a,b,c,d,i)		AS2(	psrld	xmm##B, 32-13)
 #define L23(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, [SSE2_WORKSPACE + d*16 + i*256])
 #define L24(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##B)		/* z3 */
+#endif
+
 #define L25(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	[SSE2_WORKSPACE + d*16], xmm##A)
 #define L26(A,B,C,D,a,b,c,d,i)		AS2(	paddd	xmm##A, xmm##D)		/* z3+z2 */
+
+#ifdef __XOP__
+#define L27(A,B,C,D,a,b,c,d,i)
+#define L28(A,B,C,D,a,b,c,d,i)		AS3(	vprotd	xmm##A, xmm##A, 18)
+#define L29(A,B,C,D,a,b,c,d,i)
+#define L30(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##C)		/* xor y0 */
+#define L31(A,B,C,D,a,b,c,d,i)
+#else
 #define L27(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	xmm##D, xmm##A)
 #define L28(A,B,C,D,a,b,c,d,i)		AS2(	pslld	xmm##A, 18)
 #define L29(A,B,C,D,a,b,c,d,i)		AS2(	psrld	xmm##D, 32-18)
 #define L30(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##C)		/* xor y0 */
 #define L31(A,B,C,D,a,b,c,d,i)		AS2(	pxor	xmm##A, xmm##D)		/* z0 */
+#endif
+
 #define L32(A,B,C,D,a,b,c,d,i)		AS2(	movdqa	[SSE2_WORKSPACE + a*16], xmm##A)
 
 #define SSE2_QUARTER_ROUND_X8(i, a, b, c, d, e, f, g, h)	\
@@ -598,6 +655,7 @@ Salsa20_OperateKeystream ENDP
 				QUARTER_ROUND(x3, x12, x9, x6)
 			}
 
+#ifndef CRYPTOPP_DOXYGEN_PROCESSING
 			#define SALSA_OUTPUT(x)	{\
 				CRYPTOPP_KEYSTREAM_OUTPUT_WORD(x, LITTLE_ENDIAN_ORDER, 0, x0 + m_state[0]);\
 				CRYPTOPP_KEYSTREAM_OUTPUT_WORD(x, LITTLE_ENDIAN_ORDER, 1, x13 + m_state[13]);\
@@ -616,8 +674,8 @@ Salsa20_OperateKeystream ENDP
 				CRYPTOPP_KEYSTREAM_OUTPUT_WORD(x, LITTLE_ENDIAN_ORDER, 14, x6 + m_state[6]);\
 				CRYPTOPP_KEYSTREAM_OUTPUT_WORD(x, LITTLE_ENDIAN_ORDER, 15, x3 + m_state[3]);}
 
-#ifndef CRYPTOPP_DOXYGEN_PROCESSING
 			CRYPTOPP_KEYSTREAM_OUTPUT_SWITCH(SALSA_OUTPUT, BYTES_PER_ITERATION);
+			#undef SALSA_OUTPUT
 #endif
 
 			if (++m_state[8] == 0)

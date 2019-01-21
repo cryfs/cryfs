@@ -171,9 +171,9 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, StructureIsValid) {
 TEST_P(DataTreeTest_ResizeNumBytes_P, NumBytesIsCorrect) {
   tree->resizeNumBytes(newSize);
   tree->flush();
-  // tree->numStoredBytes() only goes down the right border nodes and expects the tree to be a left max data tree.
+  // tree->numBytes() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
-  EXPECT_EQ(newSize, tree->numStoredBytes());
+  EXPECT_EQ(newSize, tree->numBytes());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect) {
@@ -181,7 +181,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect) {
   tree->flush();
   // tree->numLeaves() only goes down the right border nodes and expects the tree to be a left max data tree.
   // This is what the StructureIsValid test case is for.
-  EXPECT_EQ(newNumberOfLeaves, tree->_forceComputeNumLeaves());
+  EXPECT_EQ(newNumberOfLeaves, tree->forceComputeNumLeaves());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect_FromCache) {
@@ -208,7 +208,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numStoredBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
+  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
   BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));

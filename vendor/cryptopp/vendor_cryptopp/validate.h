@@ -5,8 +5,11 @@
 #define CRYPTOPP_VALIDATE_H
 
 #include "cryptlib.h"
-#include "integer.h"
 #include "misc.h"
+#include "files.h"
+#include "argnames.h"
+#include "algparam.h"
+#include "hex.h"
 
 #include <iostream>
 #include <sstream>
@@ -29,6 +32,9 @@ bool TestAutoSeededX917();
 bool TestRDRAND();
 bool TestRDSEED();
 bool TestPadlockRNG();
+#endif
+#if (CRYPTOPP_BOOL_PPC32 || CRYPTOPP_BOOL_PPC64)
+bool TestDARN();
 #endif
 bool ValidateBaseCode();
 bool ValidateEncoder();
@@ -81,9 +87,21 @@ bool ValidateTwofish();
 bool ValidateSerpent();
 bool ValidateSHACAL2();
 bool ValidateARIA();
+bool ValidateSIMECK();
+bool ValidateCHAM();
+bool ValidateHIGHT();
+bool ValidateLEA();
+bool ValidateSIMON();
+bool ValidateSPECK();
 bool ValidateCamellia();
+
+bool ValidateHC128();
+bool ValidateHC256();
+bool ValidateRabbit();
 bool ValidateSalsa();
+bool ValidateChaCha();
 bool ValidateSosemanuk();
+
 bool ValidateVMAC();
 bool ValidateCCM();
 bool ValidateGCM();
@@ -115,6 +133,10 @@ bool ValidateESIGN();
 bool ValidateHashDRBG();
 bool ValidateHmacDRBG();
 
+bool TestX25519();
+bool TestEd25519();
+bool ValidateX25519();
+bool ValidateEd25519();
 bool ValidateNaCl();
 
 // If CRYPTOPP_DEBUG or CRYPTOPP_COVERAGE is in effect, then perform additional tests
@@ -137,60 +159,31 @@ bool TestRounding();
 bool TestHuffmanCodes();
 // http://github.com/weidai11/cryptopp/issues/346
 bool TestASN1Parse();
+// https://github.com/weidai11/cryptopp/pull/334
+bool TestStringSink();
 // Additional tests due to no coverage
 bool TestCompressors();
 bool TestEncryptors();
 bool TestMersenne();
 bool TestSharing();
+# if defined(CRYPTOPP_ALTIVEC_AVAILABLE)
+bool TestAltivecOps();
+# endif
 #endif
 
-#if 1
-// Coverity findings in benchmark and validation routines
-class StreamState
+class FixedRNG : public RandomNumberGenerator
 {
 public:
-	StreamState(std::ostream& out)
-		: m_out(out), m_prec(out.precision()), m_width(out.width()), m_fmt(out.flags()), m_fill(out.fill())
-	{
-	}
+	FixedRNG(BufferedTransformation &source) : m_source(source) {}
 
-	~StreamState()
+	void GenerateBlock(byte *output, size_t size)
 	{
-		m_out.fill(m_fill);
-		m_out.flags(m_fmt);
-		m_out.width(m_width);
-		m_out.precision(m_prec);
+		m_source.Get(output, size);
 	}
 
 private:
-	std::ostream& m_out;
-	std::streamsize m_prec;
-	std::streamsize m_width;
-	std::ios_base::fmtflags m_fmt;
-	std::ostream::char_type m_fill;
+	BufferedTransformation &m_source;
 };
-#endif
-
-#if 0
-class StreamState
-{
-public:
-	StreamState(std::ostream& out)
-		: m_out(out), m_state(NULLPTR)
-	{
-		m_state.copyfmt(m_out);
-	}
-
-	~StreamState()
-	{
-		m_out.copyfmt(m_state);
-	}
-
-private:
-	std::ostream& m_out;
-	std::ios m_state;
-};
-#endif
 
 // Safer functions on Windows for C&A, http://github.com/weidai11/cryptopp/issues/55
 inline std::string TimeToString(const time_t& t)
@@ -234,7 +227,7 @@ inline T StringToValue(const std::string& str)
 	iss >> std::noskipws >> value;
 
 	// Use fail(), not bad()
-	if (iss.fail() || !iss.eof())
+	if (iss.fail())
 		throw InvalidArgument(str + "' is not a value");
 
 	if (NON_NEGATIVE && value < 0)
@@ -257,10 +250,86 @@ inline int StringToValue<int, true>(const std::string& str)
 	return r;
 }
 
-// Functions that need a RNG; uses AES inf CFB mode with Seed.
-CryptoPP::RandomNumberGenerator & GlobalRNG();
+inline std::string AddSeparator(std::string str)
+{
+	const char last = (str.empty() ? '\0' : *str.end()-1);
+	if (last != '/' && last != '\\')
+		return str + "/";
+	return str;
+}
 
-bool RunTestDataFile(const char *filename, const CryptoPP::NameValuePairs &overrideParameters=CryptoPP::g_nullNameValuePairs, bool thorough=true);
+// Ideally we would cache the directory and just add the prefix
+// to subsequent calls, but ... Static Initialization Order Fiasco
+inline std::string DataDir(const std::string& filename)
+{
+	std::string name;
+	std::ifstream file;
+#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
+	// Data files in PWD are probably the newest. This is probably a build directory.
+	name = std::string("./") + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return name;
+#endif
+#ifdef CRYPTOPP_DATA_DIR
+	// Honor the user's setting next. This is likely an install directory if it is not "./".
+	name = AddSeparator(CRYPTOPP_DATA_DIR) + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return name;
+#endif
+#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
+	// Finally look in $ORIGIN/../share/. This is likely a Linux install directory for users.
+	name = std::string("../share/cryptopp/") + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return name;
+#endif
+	// This will cause the expected exception in the caller
+	return filename;
+}
+
+// Definition in test.cpp
+RandomNumberGenerator& GlobalRNG();
+
+// Definition in datatest.cpp
+bool RunTestDataFile(const char *filename, const NameValuePairs &overrideParameters=g_nullNameValuePairs, bool thorough=true);
+
+// Definitions in validat6.cpp
+bool CryptoSystemValidate(PK_Decryptor &priv, PK_Encryptor &pub, bool thorough = false);
+bool SimpleKeyAgreementValidate(SimpleKeyAgreementDomain &d);
+bool AuthenticatedKeyAgreementValidate(AuthenticatedKeyAgreementDomain &d);
+bool SignatureValidate(PK_Signer &priv, PK_Verifier &pub, bool thorough = false);
+
+// Miscellaneous PK definitions in validat6.cpp
+// Key Agreement definitions in validat7.cpp
+// Encryption and Decryption definitions in validat8.cpp
+// Sign and Verify definitions in validat9.cpp
+
+bool ValidateECP();
+bool ValidateEC2N();
+
+bool ValidateRSA_Encrypt();
+bool ValidateRSA_Sign();
+
+bool ValidateLUC_Encrypt();
+bool ValidateLUC_Sign();
+
+bool ValidateLUC_DL_Encrypt();
+bool ValidateLUC_DL_Sign();
+
+bool ValidateRabin_Encrypt();
+bool ValidateRabin_Sign();
+
+bool ValidateECP();
+bool ValidateECP_Agreement();
+bool ValidateECP_Encrypt();
+bool ValidateECP_Sign();
+
+bool ValidateEC2N();
+bool ValidateEC2N_Agreement();
+bool ValidateEC2N_Encrypt();
+bool ValidateEC2N_Sign();
 
 NAMESPACE_END  // Test
 NAMESPACE_END  // CryptoPP

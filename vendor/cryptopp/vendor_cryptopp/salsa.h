@@ -9,9 +9,10 @@
 #include "strciphr.h"
 #include "secblock.h"
 
-// "Inline assembly operands don't work with .intel_syntax", http://llvm.org/bugs/show_bug.cgi?id=24232
-#if CRYPTOPP_BOOL_X32 || defined(CRYPTOPP_DISABLE_INTEL_ASM)
-# define CRYPTOPP_DISABLE_SALSA_ASM
+// Clang 3.3 integrated assembler crash on Linux. Clang 3.4 due to compiler
+// error with .intel_syntax, http://llvm.org/bugs/show_bug.cgi?id=24232
+#if CRYPTOPP_BOOL_X32 || defined(CRYPTOPP_DISABLE_MIXED_ASM)
+# define CRYPTOPP_DISABLE_SALSA_ASM 1
 #endif
 
 NAMESPACE_BEGIN(CryptoPP)
@@ -40,10 +41,13 @@ protected:
 	void CipherResynchronize(byte *keystreamBuffer, const byte *IV, size_t length);
 	bool CipherIsRandomAccess() const {return true;}
 	void SeekToIteration(lword iterationCount);
+
 #if (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
 	unsigned int GetAlignment() const;
 	unsigned int GetOptimalBlockSize() const;
 #endif
+
+	std::string AlgorithmProvider() const;
 
 	FixedSizeAlignedSecBlock<word32, 16> m_state;
 	int m_rounds;

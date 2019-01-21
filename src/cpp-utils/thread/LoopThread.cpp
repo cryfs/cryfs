@@ -6,7 +6,8 @@ using boost::none;
 
 namespace cpputils {
 
-    LoopThread::LoopThread(function<bool()> loopIteration): _loopIteration(std::move(loopIteration)), _runningHandle(none) {
+    LoopThread::LoopThread(function<bool()> loopIteration, std::string threadName)
+    : _loopIteration(std::move(loopIteration)), _runningHandle(none), _threadName(std::move(threadName)) {
     }
 
     LoopThread::~LoopThread() {
@@ -16,7 +17,7 @@ namespace cpputils {
     }
 
     void LoopThread::start() {
-        _runningHandle = ThreadSystem::singleton().start(_loopIteration);
+        _runningHandle = ThreadSystem::singleton().start(_loopIteration, _threadName);
     }
 
     void LoopThread::stop() {

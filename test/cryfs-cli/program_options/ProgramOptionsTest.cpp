@@ -2,7 +2,7 @@
 #include <cryfs-cli/program_options/ProgramOptions.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
-using namespace cryfs::program_options;
+using namespace cryfs_cli::program_options;
 using boost::none;
 using boost::optional;
 using std::ostream;

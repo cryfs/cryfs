@@ -7,8 +7,8 @@
 #define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 
 #include "dll.h"
-#include "aes.h"
 #include "cryptlib.h"
+#include "aes.h"
 #include "filters.h"
 #include "md5.h"
 #include "ripemd.h"
@@ -18,14 +18,13 @@
 #include "randpool.h"
 #include "ida.h"
 #include "base64.h"
-#include "socketft.h"
-#include "wait.h"
 #include "factory.h"
 #include "whrlpool.h"
 #include "tiger.h"
 #include "smartptr.h"
 #include "pkcspad.h"
 #include "stdcpp.h"
+#include "osrng.h"
 #include "ossig.h"
 #include "trap.h"
 
@@ -42,11 +41,6 @@
 #include <windows.h>
 #endif
 
-#if defined(USE_BERKELEY_STYLE_SOCKETS) && !defined(macintosh)
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#endif
-
 #if (_MSC_VER >= 1000)
 #include <crtdbg.h>		// for the debug heap
 #endif
@@ -61,13 +55,16 @@
 
 #ifdef __BORLANDC__
 #pragma comment(lib, "cryptlib_bds.lib")
-#pragma comment(lib, "ws2_32.lib")
 #endif
 
 // Aggressive stack checking with VS2005 SP1 and above.
 #if (_MSC_FULL_VER >= 140050727)
 # pragma strict_gs_check (on)
 #endif
+
+// If CRYPTOPP_USE_AES_GENERATOR is 1 then AES/OFB based is used.
+// Otherwise the OS random number generator is used.
+#define CRYPTOPP_USE_AES_GENERATOR 1
 
 // Global namespace, provided by other source files
 void FIPS140_SampleApplication();
@@ -78,8 +75,6 @@ NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
 const int MAX_PHRASE_LENGTH=250;
-
-void PrintSeedAndThreads(const std::string& seed);
 
 void GenerateRSAKey(unsigned int keyLength, const char *privFilename, const char *pubFilename, const char *seed);
 std::string RSAEncryptString(const char *pubFilename, const char *seed, const char *message);
@@ -112,21 +107,26 @@ void Base64Decode(const char *infile, const char *outfile);
 void HexEncode(const char *infile, const char *outfile);
 void HexDecode(const char *infile, const char *outfile);
 
-void ForwardTcpPort(const char *sourcePort, const char *destinationHost, const char *destinationPort);
-
 void FIPS140_GenerateRandomFiles();
 
 bool Validate(int, bool, const char *);
-void PrintSeedAndThreads(const std::string& seed);
 
 ANONYMOUS_NAMESPACE_BEGIN
+#if (CRYPTOPP_USE_AES_GENERATOR)
 OFB_Mode<AES>::Encryption s_globalRNG;
+#else
+NonblockingRng s_globalRNG;
+#endif
 NAMESPACE_END
 
 RandomNumberGenerator & GlobalRNG()
 {
 	return dynamic_cast<RandomNumberGenerator&>(s_globalRNG);
 }
+
+// Global seed used for the self tests
+std::string s_globalSeed;
+void PrintSeedAndThreads();
 
 // See misc.h and trap.h for comments and usage
 #if defined(CRYPTOPP_DEBUG) && defined(UNIX_SIGNALS_AVAILABLE)
@@ -143,17 +143,27 @@ int scoped_main(int argc, char *argv[])
 	_CrtSetDbgFlag( tempflag );
 #endif
 
+#ifdef _SUNPRO_CC
+	// No need for thread safety for the test program
+	cout.set_safe_flag(stream_MT::unsafe_object);
+	cin.set_safe_flag(stream_MT::unsafe_object);
+#endif
+
 	try
 	{
 		RegisterFactories(All);
 
 		// Some editors have problems with the '\0' character when redirecting output.
-		std::string seed = IntToString(time(NULLPTR));
-		seed.resize(16, ' ');
+		s_globalSeed = IntToString(time(NULLPTR));
+		s_globalSeed.resize(16, ' ');
 
-		// Fetch the SymmetricCipher interface, not the RandomNumberGenerator interface, to key the underlying cipher
-		OFB_Mode<AES>::Encryption& aesg = dynamic_cast<OFB_Mode<AES>::Encryption&>(GlobalRNG());
-		aesg.SetKeyWithIV((byte *)seed.data(), 16, (byte *)seed.data());
+#if (CRYPTOPP_USE_AES_GENERATOR)
+		// Fetch the SymmetricCipher interface, not the RandomNumberGenerator
+		//  interface, to key the underlying cipher. If CRYPTOPP_USE_AES_GENERATOR is 1
+		//  then AES/OFB based is used. Otherwise the OS random number generator is used.
+		SymmetricCipher& cipher = dynamic_cast<SymmetricCipher&>(GlobalRNG());
+		cipher.SetKeyWithIV((byte *)s_globalSeed.data(), 16, (byte *)s_globalSeed.data());
+#endif
 
 		std::string command, executableName, macFilename;
 
@@ -304,9 +314,11 @@ int scoped_main(int argc, char *argv[])
 			// TestDataFile() adds CRYPTOPP_DATA_DIR as required
 			std::string fname = (argv[2] ? argv[2] : "all");
 			if (fname.find(".txt") == std::string::npos)
-				fname = "TestVectors/" + fname + ".txt";
+				fname += ".txt";
+			if (fname.find("TestVectors") == std::string::npos)
+				fname = "TestVectors/" + fname;
 
-			PrintSeedAndThreads(seed);
+			PrintSeedAndThreads();
 			return !RunTestDataFile(fname.c_str());
 		}
 		else if (command == "t")
@@ -318,7 +330,7 @@ int scoped_main(int argc, char *argv[])
 			std::cin.getline(passPhrase, MAX_PHRASE_LENGTH);
 
 			std::cout << "\nPlaintext: ";
-			std::cin.getline(plaintext, 1024);
+			std::cin.getline(plaintext, sizeof(plaintext));
 
 			std::string ciphertext = EncryptString(plaintext, passPhrase);
 			std::cout << "\nCiphertext: " << ciphertext << std::endl;
@@ -351,7 +363,7 @@ int scoped_main(int argc, char *argv[])
 			char thisSeed[1024];
 			std::cout << "\nRandom Seed: ";
 			std::ws(std::cin);
-			std::cin.getline(thisSeed, 1024);
+			std::cin.getline(thisSeed, sizeof(thisSeed));
 			SecretShareFile(StringToValue<int, true>(argv[2]), StringToValue<int, true>(argv[3]), argv[4], thisSeed);
 		}
 		else if (command == "sr")
@@ -372,8 +384,6 @@ int scoped_main(int argc, char *argv[])
 			FIPS140_SampleApplication();
 		else if (command == "fips-rand")
 			FIPS140_GenerateRandomFiles();
-		else if (command == "ft")
-			ForwardTcpPort(argv[2], argv[3], argv[4]);
 		else if (command == "a")
 		{
 			if (AdhocTest)
@@ -390,7 +400,7 @@ int scoped_main(int argc, char *argv[])
 			AES_CTR_Encrypt(argv[2], argv[3], argv[4], argv[5]);
 		else if (command == "h")
 		{
-			FileSource usage(CRYPTOPP_DATA_DIR "TestData/usage.dat", true, new FileSink(std::cout));
+			FileSource usage(DataDir("TestData/usage.dat").c_str(), true, new FileSink(std::cout));
 			return 1;
 		}
 		else if (command == "V")
@@ -430,9 +440,9 @@ void FIPS140_GenerateRandomFiles()
 #endif
 }
 
-void PrintSeedAndThreads(const std::string& seed)
+void PrintSeedAndThreads()
 {
-	std::cout << "Using seed: " << seed << std::endl;
+	std::cout << "Using seed: " << s_globalSeed << std::endl;
 
 #ifdef _OPENMP
 	int tc = 0;
@@ -779,90 +789,28 @@ void HexDecode(const char *in, const char *out)
 	FileSource(in, true, new HexDecoder(new FileSink(out)));
 }
 
-void ForwardTcpPort(const char *sourcePortName, const char *destinationHost, const char *destinationPortName)
-{
-	// Quiet warnings for Windows Phone and Windows Store builds
-	CRYPTOPP_UNUSED(sourcePortName), CRYPTOPP_UNUSED(destinationHost), CRYPTOPP_UNUSED(destinationPortName);
-
-#ifdef SOCKETS_AVAILABLE
-	SocketsInitializer sockInit;
-
-	Socket sockListen, sockSource, sockDestination;
-
-	int sourcePort = Socket::PortNameToNumber(sourcePortName);
-	int destinationPort = Socket::PortNameToNumber(destinationPortName);
-
-	sockListen.Create();
-	sockListen.Bind(sourcePort);
-
-	const int flag = 1;
-	int err = setsockopt(sockListen, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
-	CRYPTOPP_ASSERT(err == 0);
-	if(err != 0)
-		throw Socket::Err(sockListen, "setsockopt", sockListen.GetLastError());
-
-	std::cout << "Listing on port " << sourcePort << ".\n";
-	sockListen.Listen();
-
-	sockListen.Accept(sockSource);
-	std::cout << "Connection accepted on port " << sourcePort << ".\n";
-	sockListen.CloseSocket();
-
-	std::cout << "Making connection to " << destinationHost << ", port " << destinationPort << ".\n";
-	sockDestination.Create();
-	sockDestination.Connect(destinationHost, destinationPort);
-
-	std::cout << "Connection made to " << destinationHost << ", starting to forward.\n";
-
-	SocketSource out(sockSource, false, new SocketSink(sockDestination));
-	SocketSource in(sockDestination, false, new SocketSink(sockSource));
-
-	WaitObjectContainer waitObjects;
-
-	while (!(in.SourceExhausted() && out.SourceExhausted()))
-	{
-		waitObjects.Clear();
-
-		out.GetWaitObjects(waitObjects, CallStack("ForwardTcpPort - out", NULLPTR));
-		in.GetWaitObjects(waitObjects, CallStack("ForwardTcpPort - in", NULLPTR));
-
-		waitObjects.Wait(INFINITE_TIME);
-
-		if (!out.SourceExhausted())
-		{
-			std::cout << "o" << std::flush;
-			out.PumpAll2(false);
-			if (out.SourceExhausted())
-				std::cout << "EOF received on source socket.\n";
-		}
-
-		if (!in.SourceExhausted())
-		{
-			std::cout << "i" << std::flush;
-			in.PumpAll2(false);
-			if (in.SourceExhausted())
-				std::cout << "EOF received on destination socket.\n";
-		}
-	}
-#else
-	std::cout << "Socket support was not enabled at compile time.\n";
-	exit(-1);
-#endif
-}
-
 bool Validate(int alg, bool thorough, const char *seedInput)
 {
 	bool result;
 
 	// Some editors have problems with the '\0' character when redirecting output.
 	//   seedInput is argv[3] when issuing 'cryptest.exe v all <seed>'
-	std::string seed = (seedInput ? seedInput : IntToString(::time(NULLPTR)));
-	seed.resize(16, ' ');
-	OFB_Mode<AES>::Encryption& prng = dynamic_cast<OFB_Mode<AES>::Encryption&>(GlobalRNG());
-	prng.SetKeyWithIV((byte *)seed.data(), 16, (byte *)seed.data());
+	if (seedInput != NULLPTR)
+	{
+		s_globalSeed = seedInput;
+		s_globalSeed.resize(16, ' ');
+	}
+
+#if (CRYPTOPP_USE_AES_GENERATOR)
+		// Fetch the OFB_Mode<AES> interface, not the RandomNumberGenerator
+		//  interface, to key the underlying cipher. If CRYPTOPP_USE_AES_GENERATOR is 1
+		//  then AES/OFB based is used. Otherwise the OS random number generator is used.
+		SymmetricCipher& cipher = dynamic_cast<SymmetricCipher&>(GlobalRNG());
+		cipher.SetKeyWithIV((byte *)s_globalSeed.data(), 16, (byte *)s_globalSeed.data());
+#endif
 
 	g_testBegin = ::time(NULLPTR);
-	PrintSeedAndThreads(seed);
+	PrintSeedAndThreads();
 
 	switch (alg)
 	{
@@ -881,9 +829,10 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 12: result = ValidateThreeWay(); break;
 	case 13: result = ValidateBBS(); break;
 	case 14: result = ValidateDH(); break;
-	case 15: result = ValidateRSA(); break;
-	case 16: result = ValidateElGamal(); break;
-	case 17: result = ValidateDSA(thorough); break;
+	case 15: result = ValidateX25519(); break;
+	case 16: result = ValidateRSA(); break;
+	case 17: result = ValidateElGamal(); break;
+	case 18: result = ValidateDSA(thorough); break;
 //	case 18: result = ValidateHAVAL(); break;
 	case 19: result = ValidateSAFER(); break;
 	case 20: result = ValidateLUC(); break;
@@ -935,20 +884,28 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 66: result = ValidateCamellia(); break;
 	case 67: result = ValidateWhirlpool(); break;
 	case 68: result = ValidateTTMAC(); break;
-	case 69: result = ValidateSalsa(); break;
-	case 70: result = ValidateSosemanuk(); break;
-	case 71: result = ValidateVMAC(); break;
-	case 72: result = ValidateCCM(); break;
-	case 73: result = ValidateGCM(); break;
-	case 74: result = ValidateCMAC(); break;
-	case 75: result = ValidateSM3(); break;
-	case 76: result = ValidateBLAKE2s(); break;
-	case 77: result = ValidateBLAKE2b(); break;
-	case 78: result = ValidatePoly1305(); break;
-	case 79: result = ValidateSipHash(); break;
-	case 80: result = ValidateHashDRBG(); break;
-	case 81: result = ValidateHmacDRBG(); break;
-	case 82: result = ValidateNaCl(); break;
+	case 70: result = ValidateSalsa(); break;
+	case 71: result = ValidateChaCha(); break;
+	case 72: result = ValidateSosemanuk(); break;
+	case 73: result = ValidateRabbit(); break;
+	case 74: result = ValidateHC128(); break;
+	case 75: result = ValidateHC256(); break;
+	case 80: result = ValidateVMAC(); break;
+	case 81: result = ValidateCCM(); break;
+	case 82: result = ValidateGCM(); break;
+	case 83: result = ValidateCMAC(); break;
+	case 84: result = ValidateSM3(); break;
+	case 85: result = ValidateBLAKE2s(); break;
+	case 86: result = ValidateBLAKE2b(); break;
+	case 87: result = ValidatePoly1305(); break;
+	case 88: result = ValidateSipHash(); break;
+	case 89: result = ValidateHashDRBG(); break;
+	case 90: result = ValidateHmacDRBG(); break;
+	case 91: result = ValidateNaCl(); break;
+	case 100: result = ValidateCHAM(); break;
+	case 101: result = ValidateSIMECK(); break;
+	case 102: result = ValidateSIMON(); break;
+	case 103: result = ValidateSPECK(); break;
 
 #if defined(CRYPTOPP_EXTENDED_VALIDATION)
 	// http://github.com/weidai11/cryptopp/issues/92
@@ -965,6 +922,13 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 9994: result = TestHuffmanCodes(); break;
 	// http://github.com/weidai11/cryptopp/issues/346
 	case 9993: result = TestASN1Parse(); break;
+	// http://github.com/weidai11/cryptopp/issues/242
+	case 9992: result = TestX25519(); break;
+	// http://github.com/weidai11/cryptopp/issues/346
+	case 9991: result = TestEd25519(); break;
+# if defined(CRYPTOPP_ALTIVEC_AVAILABLE)
+	case 9990: result = TestAltivecOps(); break;
+# endif
 #endif
 
 	default: return false;
@@ -972,9 +936,9 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 
 	g_testEnd = ::time(NULLPTR);
 
-	std::cout << "\nSeed used was " << seed << std::endl;
-	std::cout << "Test started at " << TimeToString(g_testBegin) << std::endl;
-	std::cout << "Test ended at " << TimeToString(g_testEnd) << std::endl;
+	std::cout << "\nSeed used was " << s_globalSeed;
+	std::cout << "\nTest started at " << TimeToString(g_testBegin);
+	std::cout << "\nTest ended at " << TimeToString(g_testEnd) << std::endl;
 
 	return result;
 }
