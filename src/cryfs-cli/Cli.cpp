@@ -266,6 +266,7 @@ namespace cryfs_cli {
 
             std::cout << "\nMounting filesystem. To unmount, call:\n$ cryfs-unmount " << options.mountDir() << "\n"
                       << std::endl;
+
             if (options.foreground()) {
                 fuse->runInForeground(options.mountDir(), options.fuseOptions());
             } else {
