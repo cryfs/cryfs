@@ -1,5 +1,5 @@
-#ifndef MESSMER_CRYFS_SRC_CLI_VERSIONCHECKER_H
-#define MESSMER_CRYFS_SRC_CLI_VERSIONCHECKER_H
+#ifndef MESSMER_CRYFSCLI_VERSIONCHECKER_H
+#define MESSMER_CRYFSCLI_VERSIONCHECKER_H
 
 #include <cpp-utils/macros.h>
 #include <string>
@@ -8,7 +8,7 @@
 #include <cpp-utils/network/HttpClient.h>
 #include <cpp-utils/pointer/unique_ref.h>
 
-namespace cryfs {
+namespace cryfs_cli {
     class VersionChecker final {
     public:
         //TODO Write a cpputils::shared_ref and use it

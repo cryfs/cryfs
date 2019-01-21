@@ -7,7 +7,7 @@
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 
 using namespace cryfs;
-using namespace cryfs::program_options;
+using namespace cryfs_cli::program_options;
 using std::vector;
 using std::string;
 using boost::none;

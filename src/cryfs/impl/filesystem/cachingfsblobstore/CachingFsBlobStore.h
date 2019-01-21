@@ -50,7 +50,7 @@ namespace cryfs {
 
 
         inline CachingFsBlobStore::CachingFsBlobStore(cpputils::unique_ref<fsblobstore::FsBlobStore> baseBlobStore)
-                : _baseBlobStore(std::move(baseBlobStore)), _cache() {
+                : _baseBlobStore(std::move(baseBlobStore)), _cache("fsblobstore") {
         }
 
         inline CachingFsBlobStore::~CachingFsBlobStore() {

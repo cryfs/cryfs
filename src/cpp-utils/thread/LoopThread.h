@@ -14,7 +14,7 @@ namespace cpputils {
     class LoopThread final {
     public:
         // The loopIteration callback returns true, if more iterations should be run, and false, if the thread should be terminated.
-        LoopThread(std::function<bool()> loopIteration);
+        LoopThread(std::function<bool()> loopIteration, std::string threadName);
         ~LoopThread();
         void start();
         void stop();
@@ -22,6 +22,7 @@ namespace cpputils {
     private:
         std::function<bool()> _loopIteration;
         boost::optional<ThreadSystem::Handle> _runningHandle;
+        std::string _threadName;
 
         DISALLOW_COPY_AND_ASSIGN(LoopThread);
     };

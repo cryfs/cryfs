@@ -13,7 +13,7 @@ using ::testing::Test;
 //Test that Cache uses a move constructor for Value if possible
 class CacheTest_MoveConstructor: public Test {
 public:
-  CacheTest_MoveConstructor(): cache(make_unique_ref<Cache<MinimalKeyType, CopyableMovableValueType, 100>>()) {
+  CacheTest_MoveConstructor(): cache(make_unique_ref<Cache<MinimalKeyType, CopyableMovableValueType, 100>>("test")) {
     CopyableMovableValueType::numCopyConstructorCalled = 0;
   }
   unique_ref<Cache<MinimalKeyType, CopyableMovableValueType, 100>> cache;

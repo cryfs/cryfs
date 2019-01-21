@@ -189,7 +189,7 @@ size_t MeterFilter::PutMaybeModifiable(byte *begin, size_t length, int messageEn
 			FILTER_OUTPUT_MAYBE_MODIFIABLE(1, m_begin, t = (size_t)SaturatingSubtract(m_rangesToSkip.front().position, m_currentMessageBytes), false, modifiable);
 
 			CRYPTOPP_ASSERT(t < m_length);
-			m_begin += t;
+			m_begin = PtrAdd(m_begin, t);
 			m_length -= t;
 			m_currentMessageBytes += t;
 			m_totalBytes += t;
@@ -203,7 +203,7 @@ size_t MeterFilter::PutMaybeModifiable(byte *begin, size_t length, int messageEn
 				m_rangesToSkip.pop_front();
 			}
 
-			m_begin += t;
+			m_begin = PtrAdd(m_begin, t);
 			m_length -= t;
 			m_currentMessageBytes += t;
 			m_totalBytes += t;
@@ -264,7 +264,7 @@ byte *FilterWithBufferedInput::BlockQueue::GetBlock()
 	if (m_size >= m_blockSize)
 	{
 		byte *ptr = m_begin;
-		if ((m_begin+=m_blockSize) == m_buffer.end())
+		if ((m_begin = PtrAdd(m_begin, m_blockSize)) == m_buffer.end())
 			m_begin = m_buffer;
 		m_size -= m_blockSize;
 		return ptr;
@@ -275,9 +275,9 @@ byte *FilterWithBufferedInput::BlockQueue::GetBlock()
 
 byte *FilterWithBufferedInput::BlockQueue::GetContigousBlocks(size_t &numberOfBytes)
 {
-	numberOfBytes = STDMIN(numberOfBytes, STDMIN(size_t(m_buffer.end()-m_begin), m_size));
+	numberOfBytes = STDMIN(numberOfBytes, STDMIN<size_t>(PtrDiff(m_buffer.end(), m_begin), m_size));
 	byte *ptr = m_begin;
-	m_begin += numberOfBytes;
+	m_begin = PtrAdd(m_begin, numberOfBytes);
 	m_size -= numberOfBytes;
 	if (m_size == 0 || m_begin == m_buffer.end())
 		m_begin = m_buffer;
@@ -293,7 +293,7 @@ size_t FilterWithBufferedInput::BlockQueue::GetAll(byte *outString)
 	size_t numberOfBytes = m_maxBlocks*m_blockSize;
 	const byte *ptr = GetContigousBlocks(numberOfBytes);
 	memcpy(outString, ptr, numberOfBytes);
-	memcpy(outString+numberOfBytes, m_begin, m_size);
+	memcpy(PtrAdd(outString, numberOfBytes), m_begin, m_size);
 	m_size = 0;
 	return size;
 }
@@ -304,11 +304,12 @@ void FilterWithBufferedInput::BlockQueue::Put(const byte *inString, size_t lengt
 	if (!inString || !length) return;
 
 	CRYPTOPP_ASSERT(m_size + length <= m_buffer.size());
-	byte *end = (m_size < size_t(m_buffer.end()-m_begin)) ? m_begin + m_size : m_begin + m_size - m_buffer.size();
+	byte *end = (m_size < static_cast<size_t>(PtrDiff(m_buffer.end(), m_begin)) ?
+		PtrAdd(m_begin, m_size) : PtrAdd(m_begin, m_size - m_buffer.size()));
 	size_t len = STDMIN(length, size_t(m_buffer.end()-end));
 	memcpy(end, inString, len);
 	if (len < length)
-		memcpy(m_buffer, inString+len, length-len);
+		memcpy(m_buffer, PtrAdd(inString, len), length-len);
 	m_size += length;
 }
 
@@ -364,7 +365,7 @@ size_t FilterWithBufferedInput::PutMaybeModifiable(byte *inString, size_t length
 			CRYPTOPP_ASSERT(m_queue.CurrentSize() == 0);
 			m_queue.ResetQueue(m_blockSize, (2*m_blockSize+m_lastSize-2)/m_blockSize);
 
-			inString += len;
+			inString = PtrAdd(inString, len);
 			newLength -= m_firstSize;
 			m_firstInputDone = true;
 		}
@@ -385,7 +386,7 @@ size_t FilterWithBufferedInput::PutMaybeModifiable(byte *inString, size_t length
 				{
 					size_t len = newLength - m_lastSize;
 					NextPutMaybeModifiable(inString, len, modifiable);
-					inString += len;
+					inString = PtrAdd(inString, len);
 					newLength -= len;
 				}
 			}
@@ -402,7 +403,7 @@ size_t FilterWithBufferedInput::PutMaybeModifiable(byte *inString, size_t length
 					CRYPTOPP_ASSERT(m_queue.CurrentSize() < m_blockSize);
 					size_t len = m_blockSize - m_queue.CurrentSize();
 					m_queue.Put(inString, len);
-					inString += len;
+					inString = PtrAdd(inString, len);
 					NextPutModifiable(m_queue.GetBlock(), m_blockSize);
 					newLength -= m_blockSize;
 				}
@@ -411,7 +412,7 @@ size_t FilterWithBufferedInput::PutMaybeModifiable(byte *inString, size_t length
 				{
 					size_t len = RoundDownToMultipleOf(newLength - m_lastSize, m_blockSize);
 					NextPutMaybeModifiable(inString, len, modifiable);
-					inString += len;
+					inString = PtrAdd(inString, len);
 					newLength -= len;
 				}
 			}
@@ -463,7 +464,7 @@ void FilterWithBufferedInput::NextPutMultiple(const byte *inString, size_t lengt
 	{
 		CRYPTOPP_ASSERT(length >= m_blockSize);
 		NextPutSingle(inString);
-		inString += m_blockSize;
+		inString = PtrAdd(inString, m_blockSize);
 		length -= m_blockSize;
 	}
 }
@@ -541,7 +542,7 @@ size_t ArraySink::Put2(const byte *begin, size_t length, int messageEnd, bool bl
 	if (m_buf && begin)
 	{
 		copied = STDMIN(length, SaturatingSubtract(m_size, m_total));
-		memmove(m_buf+m_total, begin, copied);
+		memmove(PtrAdd(m_buf, m_total), begin, copied);
 	}
 	m_total += copied;
 	return length - copied;
@@ -550,7 +551,7 @@ size_t ArraySink::Put2(const byte *begin, size_t length, int messageEnd, bool bl
 byte * ArraySink::CreatePutSpace(size_t &size)
 {
 	size = SaturatingSubtract(m_size, m_total);
-	return m_buf + m_total;
+	return PtrAdd(m_buf, m_total);
 }
 
 void ArraySink::IsolatedInitialize(const NameValuePairs &parameters)
@@ -571,7 +572,7 @@ size_t ArrayXorSink::Put2(const byte *begin, size_t length, int messageEnd, bool
 	if (m_buf && begin)
 	{
 		copied = STDMIN(length, SaturatingSubtract(m_size, m_total));
-		xorbuf(m_buf+m_total, begin, copied);
+		xorbuf(PtrAdd(m_buf, m_total), begin, copied);
 	}
 	m_total += copied;
 	return length - copied;
@@ -679,7 +680,7 @@ void StreamTransformationFilter::NextPutMultiple(const byte *inString, size_t le
 			len = length;
 		m_cipher.ProcessString(space, inString, len);
 		AttachedTransformation()->PutModifiable(space, len);
-		inString += len;
+		inString = PtrAdd(inString, len);
 		length -= len;
 	}
 	while (length > 0);
@@ -693,15 +694,13 @@ void StreamTransformationFilter::NextPutModifiable(byte *inString, size_t length
 
 void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 {
-	byte *space = NULLPTR;
-
-#if 1
-	// This block is new to StreamTransformationFilter. It somewhat of a hack and was added
-	//  for OCB mode; see GitHub Issue 515. The rub with OCB is, its a block cipher and the
-	//  last block size can be 0. However, "last block = 0" is not the 0 predacted in the
-	//  original code. In the orginal code 0 means "nothing special" so DEFAULT_PADDING is
-	//  applied. OCB's 0 literally means a final block size can be 0 or non-0; and no padding
-	//  is needed in either case because OCB has its own scheme (see handling of P_* and A_*).
+	// This block is new to StreamTransformationFilter. It is somewhat of a hack and was
+	//  added for OCB mode; see GitHub Issue 515. The rub with OCB is, its a block cipher
+	//  and the last block size can be 0. However, "last block = 0" is not the 0 predicated
+	//  in the original code. In the orginal code 0 means "nothing special" so
+	//  DEFAULT_PADDING is applied. OCB's 0 literally means a final block size can be 0 or
+	//  non-0; and no padding is needed in either case because OCB has its own scheme (see
+	//  handling of P_* and A_*).
 	// Stream ciphers have policy objects to convey how to operate the cipher. The Crypto++
 	//  framework operates well when MinLastBlockSize() is 1. However, it did not appear to
 	//  cover the OCB case either because we can't stream OCB. It needs full block sizes. In
@@ -714,19 +713,19 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 	// In some respect we have already hit the need for more information. For example, OCB
 	//  calculates the checksum on the cipher text at the same time, so we don't need the
 	//  disjoint behavior of calling "EncryptBlock" followed by a separate "AuthenticateBlock".
-	//  Additional information may allow us to avoid the two spearate calls.
+	//  Additional information may allow us to avoid the two separate calls.
 	if (m_isSpecial)
 	{
 		const size_t leftOver = length % m_mandatoryBlockSize;
-		space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, m_reservedBufferSize);
-
+		byte* space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, m_reservedBufferSize);
 		length -= leftOver;
+
 		if (length)
 		{
 			// Process full blocks
 			m_cipher.ProcessData(space, inString, length);
 			AttachedTransformation()->Put(space, length);
-			inString += length;
+			inString = PtrAdd(inString, length);
 		}
 
 		if (leftOver)
@@ -744,7 +743,6 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 
 		return;
 	}
-#endif
 
 	switch (m_padding)
 	{
@@ -759,9 +757,9 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 			{
 				// do padding
 				size_t blockSize = STDMAX(minLastBlockSize, (size_t)m_mandatoryBlockSize);
-				space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, blockSize);
+				byte* space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, blockSize);
 				if (inString) {memcpy(space, inString, length);}
-				memset(space + length, 0, blockSize - length);
+				memset(PtrAdd(space, length), 0, blockSize - length);
 				size_t used = m_cipher.ProcessLastBlock(space, blockSize, space, blockSize);
 				AttachedTransformation()->Put(space, used);
 			}
@@ -775,7 +773,7 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 						throw InvalidCiphertext("StreamTransformationFilter: ciphertext length is not a multiple of block size");
 				}
 
-				space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, length, m_optimalBufferSize);
+				byte* space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, length, m_optimalBufferSize);
 				size_t used = m_cipher.ProcessLastBlock(space, length, inString, length);
 				AttachedTransformation()->Put(space, used);
 			}
@@ -786,6 +784,7 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 	case W3C_PADDING:
 	case ONE_AND_ZEROS_PADDING:
 		unsigned int s;
+		byte* space;
 		s = m_mandatoryBlockSize;
 		CRYPTOPP_ASSERT(s > 1);
 		space = HelpCreatePutSpace(*AttachedTransformation(), DEFAULT_CHANNEL, s, m_optimalBufferSize);
@@ -797,18 +796,18 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 			{
 				CRYPTOPP_ASSERT(s < 256);
 				byte pad = static_cast<byte>(s-length);
-				memset(space+length, pad, s-length);
+				memset(PtrAdd(space, length), pad, s-length);
 			}
 			else if (m_padding == W3C_PADDING)
 			{
 				CRYPTOPP_ASSERT(s < 256);
-				memset(space+length, 0, s-length-1);
+				memset(PtrAdd(space, length), 0, s-length-1);
 				space[s-1] = static_cast<byte>(s-length);
 			}
 			else
 			{
 				space[length] = 0x80;
-				memset(space+length+1, 0, s-length-1);
+				memset(PtrAdd(space, length+1), 0, s-length-1);
 			}
 			m_cipher.ProcessData(space, space, s);
 			AttachedTransformation()->Put(space, s);
@@ -821,7 +820,7 @@ void StreamTransformationFilter::LastPut(const byte *inString, size_t length)
 			if (m_padding == PKCS_PADDING)
 			{
 				byte pad = space[s-1];
-                                if (pad < 1 || pad > s || FindIfNot(space+s-pad, space+s, pad) != space+s)
+                                if (pad < 1 || pad > s || FindIfNot(PtrAdd(space, s-pad), PtrAdd(space, s), pad) != PtrAdd(space, s))
                                     throw InvalidCiphertext("StreamTransformationFilter: invalid PKCS #7 block padding found");
 				length = s-pad;
 			}
@@ -1196,7 +1195,7 @@ size_t StringStore::TransferTo2(BufferedTransformation &target, lword &transferB
 {
 	lword position = 0;
 	size_t blockedBytes = CopyRangeTo2(target, position, transferBytes, channel, blocking);
-	m_count += (size_t)position;
+	m_count += static_cast<size_t>(position);
 	transferBytes = position;
 	return blockedBytes;
 }
@@ -1205,9 +1204,9 @@ size_t StringStore::CopyRangeTo2(BufferedTransformation &target, lword &begin, l
 {
 	size_t i = UnsignedMin(m_length, m_count+begin);
 	size_t len = UnsignedMin(m_length-i, end-begin);
-	size_t blockedBytes = target.ChannelPut2(channel, m_store+i, len, 0, blocking);
+	size_t blockedBytes = target.ChannelPut2(channel, PtrAdd(m_store, i), len, 0, blocking);
 	if (!blockedBytes)
-		begin += len;
+		begin = PtrAdd(begin, len);
 	return blockedBytes;
 }
 
@@ -1240,7 +1239,7 @@ size_t NullStore::CopyRangeTo2(BufferedTransformation &target, lword &begin, lwo
 		size_t blockedBytes = target.ChannelPut2(channel, nullBytes, len, 0, blocking);
 		if (blockedBytes)
 			return blockedBytes;
-		begin += len;
+		begin = PtrAdd(begin, len);
 	}
 	return 0;
 }
@@ -1249,8 +1248,7 @@ size_t NullStore::TransferTo2(BufferedTransformation &target, lword &transferByt
 {
 	lword begin = 0;
 	size_t blockedBytes = NullStore::CopyRangeTo2(target, begin, transferBytes, channel, blocking);
-	transferBytes = begin;
-	m_size -= begin;
+	transferBytes = begin; m_size -= begin;
 	return blockedBytes;
 }
 

@@ -44,6 +44,9 @@
     <ClCompile Include="cryptlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="darn.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="des.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,7 +92,7 @@
     <ClCompile Include="gcm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gcm-simd.cpp">
+    <ClCompile Include="gcm_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gf2n.cpp">
@@ -155,7 +158,7 @@
     <ClCompile Include="rijndael.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rijndael-simd.cpp">
+    <ClCompile Include="rijndael_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rng.cpp">
@@ -170,7 +173,7 @@
     <ClCompile Include="sha.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sha-simd.cpp">
+    <ClCompile Include="sha_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="simple.cpp">
@@ -179,7 +182,7 @@
     <ClCompile Include="skipjack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sse-simd.cpp">
+    <ClCompile Include="sse_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="strciphr.cpp">
@@ -230,6 +233,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cryptlib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="darn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="des.h">

@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <boost/optional.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 namespace blobstore {
 namespace onblocks {
@@ -38,12 +39,11 @@ public:
 
 private:
 
+  uint64_t _tryRead(void *target, uint64_t offset, uint64_t size) const;
   void _read(void *target, uint64_t offset, uint64_t count) const;
   void _traverseLeaves(uint64_t offsetBytes, uint64_t sizeBytes, std::function<void (uint64_t leafOffset, datatreestore::LeafHandle leaf, uint32_t begin, uint32_t count)> onExistingLeaf, std::function<cpputils::Data (uint64_t beginByte, uint32_t count)> onCreateLeaf) const;
 
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> _datatree;
-  mutable boost::optional<uint64_t> _sizeCache;
-  mutable std::mutex _mutex;
 
   DISALLOW_COPY_AND_ASSIGN(BlobOnBlocks);
 };

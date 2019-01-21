@@ -36,7 +36,7 @@ private:
 
 class CacheTest_RaceCondition: public ::testing::Test {
 public:
-    CacheTest_RaceCondition(): cache(), destructorStarted(), destructorFinished(false) {}
+    CacheTest_RaceCondition(): cache("test"), destructorStarted(), destructorFinished(false) {}
 
     static constexpr unsigned int MAX_ENTRIES = 100;
 

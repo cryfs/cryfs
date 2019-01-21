@@ -12,16 +12,19 @@ New Features & Improvements:
 * New block size options: 4KB and 16KB
 * New default block size: 16KB. This should decrease the size of the ciphertext directory for most users.
 * Increased scrypt hardness to (N=1048576, r=4, p=8) to make it harder to crack the key while allowing cryfs to take advantage of multicore machines.
+* cryfs-unmount tool to unmount filesystems
 
 Fixed bugs:
 * `du` shows correct file system size on Mac OS X.
 * On Mac OS X, Finder shows the correct name for the mount directory
 
 
-Version 0.9.10 (unreleased)
+Version 0.9.10
 --------------
 Fixed bugs:
 * Fixed occasional deadlock (https://github.com/cryfs/cryfs/issues/64)
+* Fix for reading empty files out of bounds
+* Fixed race condition (https://github.com/cryfs/cryfs/issues/224 and https://github.com/cryfs/cryfs/issues/243)
 
 
 Version 0.9.9

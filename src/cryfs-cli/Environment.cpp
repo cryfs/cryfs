@@ -6,7 +6,7 @@
 using std::string;
 namespace bf = boost::filesystem;
 
-namespace cryfs {
+namespace cryfs_cli {
     const string Environment::FRONTEND_KEY = "CRYFS_FRONTEND";
     const string Environment::FRONTEND_NONINTERACTIVE = "noninteractive";
     const string Environment::NOUPDATECHECK_KEY = "CRYFS_NO_UPDATE_CHECK";

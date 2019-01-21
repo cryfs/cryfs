@@ -18,8 +18,8 @@
 /// </pre>
 /// \details Generally speaking, CPU_Query() is in the source file <tt>cpu.cpp</tt> because it
 ///   does not require special architectural flags. CPU_Probe() is in a source file that recieves
-///   architectural flags, like <tt>sse-simd.cpp</tt>, <tt>neon-simd.cpp</tt> and
-///   <tt>ppc-simd.cpp</tt>. For example, compiling <tt>neon-simd.cpp</tt> on an ARM64 machine will
+///   architectural flags, like <tt>sse_simd.cpp</tt>, <tt>neon_simd.cpp</tt> and
+///   <tt>ppc_simd.cpp</tt>. For example, compiling <tt>neon_simd.cpp</tt> on an ARM64 machine will
 ///   have <tt>-march=armv8-a</tt> applied during a compile to make the instruction set architecture
 ///   (ISA) available.
 /// \details The cpu probes are expensive when compared to a standard OS feature query. The library
@@ -40,7 +40,7 @@
 #endif
 
 // Applies to both X86/X32/X64 and ARM32/ARM64
-#if defined(CRYPTOPP_LLVM_CLANG_VERSION) || defined(CRYPTOPP_APPLE_CLANG_VERSION) || defined(CRYPTOPP_CLANG_INTEGRATED_ASSEMBLER)
+#if defined(CRYPTOPP_LLVM_CLANG_VERSION) || defined(CRYPTOPP_APPLE_CLANG_VERSION)
 	#define NEW_LINE "\n"
 	#define INTEL_PREFIX ".intel_syntax;"
 	#define INTEL_NOPREFIX ".intel_syntax;"
@@ -85,6 +85,8 @@ extern CRYPTOPP_DLL bool g_hasSSE2;
 extern CRYPTOPP_DLL bool g_hasSSSE3;
 extern CRYPTOPP_DLL bool g_hasSSE41;
 extern CRYPTOPP_DLL bool g_hasSSE42;
+extern CRYPTOPP_DLL bool g_hasAVX;
+extern CRYPTOPP_DLL bool g_hasAVX2;
 extern CRYPTOPP_DLL bool g_hasAESNI;
 extern CRYPTOPP_DLL bool g_hasCLMUL;
 extern CRYPTOPP_DLL bool g_hasSHA;
@@ -158,6 +160,7 @@ inline bool HasSSE42()
 /// \brief Determines AES-NI availability
 /// \returns true if AES-NI is determined to be available, false otherwise
 /// \details HasAESNI() is a runtime check performed using CPUID
+/// \since Crypto++ 5.6.1
 /// \note This function is only available on Intel IA-32 platforms
 inline bool HasAESNI()
 {
@@ -169,6 +172,7 @@ inline bool HasAESNI()
 /// \brief Determines Carryless Multiply availability
 /// \returns true if pclmulqdq is determined to be available, false otherwise
 /// \details HasCLMUL() is a runtime check performed using CPUID
+/// \since Crypto++ 5.6.1
 /// \note This function is only available on Intel IA-32 platforms
 inline bool HasCLMUL()
 {
@@ -180,6 +184,7 @@ inline bool HasCLMUL()
 /// \brief Determines SHA availability
 /// \returns true if SHA is determined to be available, false otherwise
 /// \details HasSHA() is a runtime check performed using CPUID
+/// \since Crypto++ 6.0
 /// \note This function is only available on Intel IA-32 platforms
 inline bool HasSHA()
 {
@@ -191,12 +196,37 @@ inline bool HasSHA()
 /// \brief Determines ADX availability
 /// \returns true if ADX is determined to be available, false otherwise
 /// \details HasADX() is a runtime check performed using CPUID
+/// \since Crypto++ 7.0
 /// \note This function is only available on Intel IA-32 platforms
 inline bool HasADX()
 {
 	if (!g_x86DetectionDone)
 		DetectX86Features();
 	return g_hasADX;
+}
+
+/// \brief Determines AVX availability
+/// \returns true if AVX is determined to be available, false otherwise
+/// \details HasAVX() is a runtime check performed using CPUID
+/// \since Crypto++ 8.0
+/// \note This function is only available on Intel IA-32 platforms
+inline bool HasAVX()
+{
+	if (!g_x86DetectionDone)
+		DetectX86Features();
+	return g_hasAVX;
+}
+
+/// \brief Determines AVX2 availability
+/// \returns true if AVX2 is determined to be available, false otherwise
+/// \details HasAVX2() is a runtime check performed using CPUID
+/// \since Crypto++ 8.0
+/// \note This function is only available on Intel IA-32 platforms
+inline bool HasAVX2()
+{
+	if (!g_x86DetectionDone)
+		DetectX86Features();
+	return g_hasAVX2;
 }
 
 /// \brief Determines if the CPU is an Intel P4
@@ -307,17 +337,44 @@ inline int GetCacheLineSize()
 
 // ***************************** ARM-32, Aarch32 and Aarch64 ***************************** //
 
-#if CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARM64 || CRYPTOPP_DOXYGEN_PROCESSING
+#if CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARMV8 || CRYPTOPP_DOXYGEN_PROCESSING
 
 // Hide from Doxygen
 #ifndef CRYPTOPP_DOXYGEN_PROCESSING
 extern bool g_ArmDetectionDone;
-extern bool g_hasNEON, g_hasPMULL, g_hasCRC32, g_hasAES, g_hasSHA1, g_hasSHA2;
+extern bool g_hasARMv7;
+extern bool g_hasNEON;
+extern bool g_hasPMULL;
+extern bool g_hasCRC32;
+extern bool g_hasAES;
+extern bool g_hasSHA1;
+extern bool g_hasSHA2;
+extern bool g_hasSHA512;
+extern bool g_hasSHA3;
+extern bool g_hasSM3;
+extern bool g_hasSM4;
 void CRYPTOPP_API DetectArmFeatures();
 #endif  // CRYPTOPP_DOXYGEN_PROCESSING
 
 /// \name ARM A-32, Aarch32 and AArch64 CPU FEATURES
 //@{
+
+/// \brief Determine if an ARM processor is ARMv7 or above
+/// \returns true if the hardware is ARMv7 or above, false otherwise.
+/// \details Some AES code requires ARMv7 or above
+/// \since Crypto++ 8.0
+/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+inline bool HasARMv7()
+{
+	// ASIMD is a core feature on Aarch32 and Aarch64 like SSE2 is a core feature on x86_64
+#if defined(__aarch32__) || defined(__aarch64__)
+	return true;
+#else
+	if (!g_ArmDetectionDone)
+		DetectArmFeatures();
+	return g_hasARMv7;
+#endif
+}
 
 /// \brief Determine if an ARM processor has Advanced SIMD available
 /// \returns true if the hardware is capable of Advanced SIMD at runtime, false otherwise.
@@ -325,6 +382,7 @@ void CRYPTOPP_API DetectArmFeatures();
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
 ///   need to compile with <tt>-mfpu=neon</tt> (32-bit) or <tt>-march=armv8-a</tt>
 ///   (64-bit). Also see ARM's <tt>__ARM_NEON</tt> preprocessor macro.
+/// \since Crypto++ 5.6.4
 /// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
 inline bool HasNEON()
 {
@@ -339,12 +397,14 @@ inline bool HasNEON()
 }
 
 /// \brief Determine if an ARM processor provides Polynomial Multiplication
-/// \returns true if the hardware is capable of polynomial multiplications at runtime, false otherwise.
+/// \returns true if the hardware is capable of polynomial multiplications at runtime,
+///   false otherwise.
 /// \details The multiplication instructions are available under Aarch32 and Aarch64.
-/// \details Runtime support requires compile time support. When compiling with GCC, you may
-///   need to compile with <tt>-march=armv8-a+crypto</tt>; while Apple requires
+/// \details Runtime support requires compile time support. When compiling with GCC,
+///   you may need to compile with <tt>-march=armv8-a+crypto</tt>; while Apple requires
 ///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
-/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+/// \since Crypto++ 5.6.4
+/// \note This function is only available on Aarch32 and Aarch64 platforms
 inline bool HasPMULL()
 {
 #if defined(__aarch32__) || defined(__aarch64__)
@@ -358,12 +418,14 @@ inline bool HasPMULL()
 
 /// \brief Determine if an ARM processor has CRC32 available
 /// \returns true if the hardware is capable of CRC32 at runtime, false otherwise.
-/// \details CRC32 instructions provide access to the processor's CRC-32 and CRC-32C instructions.
-///   They are provided by ARM C Language Extensions 2.0 (ACLE 2.0) and available under Aarch32 and Aarch64.
-/// \details Runtime support requires compile time support. When compiling with GCC, you may
-///   need to compile with <tt>-march=armv8-a+crc</tt>; while Apple requires
+/// \details CRC32 instructions provide access to the processor's CRC-32 and CRC-32C
+///   instructions. They are provided by ARM C Language Extensions 2.0 (ACLE 2.0) and
+///   available under Aarch32 and Aarch64.
+/// \details Runtime support requires compile time support. When compiling with GCC,
+///   you may need to compile with <tt>-march=armv8-a+crc</tt>; while Apple requires
 ///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRC32</tt> preprocessor macro.
-/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+/// \since Crypto++ 5.6.4
+/// \note This function is only available on Aarch32 and Aarch64 platforms
 inline bool HasCRC32()
 {
 #if defined(__aarch32__) || defined(__aarch64__)
@@ -382,7 +444,8 @@ inline bool HasCRC32()
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
 ///   need to compile with <tt>-march=armv8-a+crypto</tt>; while Apple requires
 ///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
-/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+/// \since Crypto++ 5.6.4
+/// \note This function is only available on Aarch32 and Aarch64 platforms
 inline bool HasAES()
 {
 #if defined(__aarch32__) || defined(__aarch64__)
@@ -401,7 +464,8 @@ inline bool HasAES()
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
 ///   need to compile with <tt>-march=armv8-a+crypto</tt>; while Apple requires
 ///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
-/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+/// \since Crypto++ 5.6.4
+/// \note This function is only available on Aarch32 and Aarch64 platforms
 inline bool HasSHA1()
 {
 #if defined(__aarch32__) || defined(__aarch64__)
@@ -413,14 +477,15 @@ inline bool HasSHA1()
 #endif
 }
 
-/// \brief Determine if an ARM processor has SHA2 available
-/// \returns true if the hardware is capable of SHA2 at runtime, false otherwise.
-/// \details SHA2 is part of the optional Crypto extensions on Aarch32 and Aarch64. They are
+/// \brief Determine if an ARM processor has SHA256 available
+/// \returns true if the hardware is capable of SHA256 at runtime, false otherwise.
+/// \details SHA256 is part of the optional Crypto extensions on Aarch32 and Aarch64. They are
 ///   accessed using ARM C Language Extensions 2.0 (ACLE 2.0).
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
 ///   need to compile with <tt>-march=armv8-a+crypto</tt>; while Apple requires
 ///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
-/// \note This function is only available on ARM-32, Aarch32 and Aarch64 platforms
+/// \since Crypto++ 5.6.4
+/// \note This function is only available on Aarch32 and Aarch64 platforms
 inline bool HasSHA2()
 {
 #if defined(__aarch32__) || defined(__aarch64__)
@@ -432,9 +497,89 @@ inline bool HasSHA2()
 #endif
 }
 
+/// \brief Determine if an ARM processor has SHA512 available
+/// \returns true if the hardware is capable of SHA512 at runtime, false otherwise.
+/// \details SHA512 is part of the ARMv8.4 Crypto extensions on Aarch32 and Aarch64. They
+///   are accessed using ARM C Language Extensions 2.0 (ACLE 2.0).
+/// \details Runtime support requires compile time support. When compiling with GCC, you
+///   may need to compile with <tt>-march=armv8.4-a+crypto</tt>; while Apple requires
+///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
+/// \since Crypto++ 8.0
+/// \note This function is only available on Aarch32 and Aarch64 platforms
+inline bool HasSHA512()
+{
+#if defined(__aarch32__) || defined(__aarch64__)
+	if (!g_ArmDetectionDone)
+		DetectArmFeatures();
+	return g_hasSHA512;
+#else
+	return false;
+#endif
+}
+
+/// \brief Determine if an ARM processor has SHA3 available
+/// \returns true if the hardware is capable of SHA3 at runtime, false otherwise.
+/// \details SHA3 is part of the ARMv8.4 Crypto extensions on Aarch32 and Aarch64. They
+///   are accessed using ARM C Language Extensions 2.0 (ACLE 2.0).
+/// \details Runtime support requires compile time support. When compiling with GCC, you
+///   may need to compile with <tt>-march=armv8.4-a+crypto</tt>; while Apple requires
+///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
+/// \since Crypto++ 8.0
+/// \note This function is only available on Aarch32 and Aarch64 platforms
+inline bool HasSHA3()
+{
+#if defined(__aarch32__) || defined(__aarch64__)
+	if (!g_ArmDetectionDone)
+		DetectArmFeatures();
+	return g_hasSHA3;
+#else
+	return false;
+#endif
+}
+
+/// \brief Determine if an ARM processor has SM3 available
+/// \returns true if the hardware is capable of SM3 at runtime, false otherwise.
+/// \details SM3 is part of the ARMv8.4 Crypto extensions on Aarch32 and Aarch64. They
+///   are accessed using ARM C Language Extensions 2.0 (ACLE 2.0).
+/// \details Runtime support requires compile time support. When compiling with GCC, you
+///   may need to compile with <tt>-march=armv8.4-a+crypto</tt>; while Apple requires
+///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
+/// \since Crypto++ 8.0
+/// \note This function is only available on Aarch32 and Aarch64 platforms
+inline bool HasSM3()
+{
+#if defined(__aarch32__) || defined(__aarch64__)
+	if (!g_ArmDetectionDone)
+		DetectArmFeatures();
+	return g_hasSM3;
+#else
+	return false;
+#endif
+}
+
+/// \brief Determine if an ARM processor has SM4 available
+/// \returns true if the hardware is capable of SM4 at runtime, false otherwise.
+/// \details SM4 is part of the ARMv8.4 Crypto extensions on Aarch32 and Aarch64. They
+///   are accessed using ARM C Language Extensions 2.0 (ACLE 2.0).
+/// \details Runtime support requires compile time support. When compiling with GCC, you
+///   may need to compile with <tt>-march=armv8.4-a+crypto</tt>; while Apple requires
+///   <tt>-arch arm64</tt>. Also see ARM's <tt>__ARM_FEATURE_CRYPTO</tt> preprocessor macro.
+/// \since Crypto++ 8.0
+/// \note This function is only available on Aarch32 and Aarch64 platforms
+inline bool HasSM4()
+{
+#if defined(__aarch32__) || defined(__aarch64__)
+	if (!g_ArmDetectionDone)
+		DetectArmFeatures();
+	return g_hasSM4;
+#else
+	return false;
+#endif
+}
+
 //@}
 
-#endif  // CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARM64
+#endif  // CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARMV8
 
 // ***************************** PowerPC ***************************** //
 
@@ -443,7 +588,15 @@ inline bool HasSHA2()
 // Hide from Doxygen
 #ifndef CRYPTOPP_DOXYGEN_PROCESSING
 extern bool g_PowerpcDetectionDone;
-extern bool g_hasAltivec, g_hasPower7, g_hasPower8, g_hasAES, g_hasSHA256, g_hasSHA512;
+extern bool g_hasAltivec;
+extern bool g_hasPower7;
+extern bool g_hasPower8;
+extern bool g_hasPower9;
+extern bool g_hasAES;
+extern bool g_hasPMULL;
+extern bool g_hasSHA256;
+extern bool g_hasSHA512;
+extern bool g_hasDARN;
 extern word32 g_cacheLineSize;
 void CRYPTOPP_API DetectPowerpcFeatures();
 #endif  // CRYPTOPP_DOXYGEN_PROCESSING
@@ -453,13 +606,10 @@ void CRYPTOPP_API DetectPowerpcFeatures();
 
 /// \brief Determine if a PowerPC processor has Altivec available
 /// \returns true if the hardware is capable of Altivec at runtime, false otherwise.
-/// \details Altivec instructions are available under most modern PowerPCs.
+/// \details Altivec instructions are available on modern PowerPCs.
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
-///   need to compile with <tt>-mcpu=power7</tt>; while IBM XL C/C++ compilers require
-///   <tt>-qarch=pwr7 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
-/// \details Atilvec was first available on Power4 platforms. However Crypto++ releies on unaligned
-///   loads and stores which is a Power7 feature. If the platform lacks Power7 extensions, then the
-///   GNUmakefile sets <tt>-DCRYPTOPP_DISABLE_ALTIVEC</tt>.
+///   need to compile with <tt>-mcpu=power4</tt>; while IBM XL C/C++ compilers require
+///   <tt>-qarch=pwr6 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
 /// \note This function is only available on PowerPC and PowerPC-64 platforms
 inline bool HasAltivec()
 {
@@ -468,15 +618,11 @@ inline bool HasAltivec()
 	return g_hasAltivec;
 }
 
-/// \brief Determine if a PowerPC processor has Power8 available
-/// \returns true if the hardware is capable of Power8 at runtime, false otherwise.
-/// \details Altivec instructions are available under most modern PowerPCs.
+/// \brief Determine if a PowerPC processor has Power7 available
+/// \returns true if the hardware is capable of Power7 at runtime, false otherwise.
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
-///   need to compile with <tt>-mcpu=power8</tt>; while IBM XL C/C++ compilers require
-///   <tt>-qarch=pwr8 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
-/// \details Atilvec was first available on Power4 platforms. However Crypto++ releies on unaligned
-///   loads and stores which is a Power7 feature. If the platform lacks Power7 extensions, then the
-///   GNUmakefile sets <tt>-DCRYPTOPP_DISABLE_ALTIVEC</tt>.
+///   need to compile with <tt>-mcpu=power7</tt>; while IBM XL C/C++ compilers require
+///   <tt>-qarch=pwr7 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
 /// \note This function is only available on PowerPC and PowerPC-64 platforms
 inline bool HasPower7()
 {
@@ -487,19 +633,28 @@ inline bool HasPower7()
 
 /// \brief Determine if a PowerPC processor has Power8 available
 /// \returns true if the hardware is capable of Power8 at runtime, false otherwise.
-/// \details Altivec instructions are available under most modern PowerPCs.
 /// \details Runtime support requires compile time support. When compiling with GCC, you may
 ///   need to compile with <tt>-mcpu=power8</tt>; while IBM XL C/C++ compilers require
 ///   <tt>-qarch=pwr8 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
-/// \details Atilvec was first available on Power4 platforms. However Crypto++ releies on unaligned
-///   loads and stores which is a Power7 feature. If the platform lacks Power7 extensions, then the
-///   GNUmakefile sets <tt>-DCRYPTOPP_DISABLE_ALTIVEC</tt>.
 /// \note This function is only available on PowerPC and PowerPC-64 platforms
 inline bool HasPower8()
 {
 	if (!g_PowerpcDetectionDone)
 		DetectPowerpcFeatures();
 	return g_hasPower8;
+}
+
+/// \brief Determine if a PowerPC processor has Power9 available
+/// \returns true if the hardware is capable of Power9 at runtime, false otherwise.
+/// \details Runtime support requires compile time support. When compiling with GCC, you may
+///   need to compile with <tt>-mcpu=power9</tt>; while IBM XL C/C++ compilers require
+///   <tt>-qarch=pwr9 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
+/// \note This function is only available on PowerPC and PowerPC-64 platforms
+inline bool HasPower9()
+{
+	if (!g_PowerpcDetectionDone)
+		DetectPowerpcFeatures();
+	return g_hasPower9;
 }
 
 /// \brief Determine if a PowerPC processor has AES available
@@ -514,6 +669,20 @@ inline bool HasAES()
 	if (!g_PowerpcDetectionDone)
 		DetectPowerpcFeatures();
 	return g_hasAES;
+}
+
+/// \brief Determine if a PowerPC processor has Polynomial Multiply available
+/// \returns true if the hardware is capable of PMULL at runtime, false otherwise.
+/// \details PMULL is part of the in-crypto extensions on Power8 and Power9.
+/// \details Runtime support requires compile time support. When compiling with GCC, you may
+///   need to compile with <tt>-mcpu=power8</tt>; while IBM XL C/C++ compilers require
+///   <tt>-qarch=pwr8 -qaltivec</tt>. Also see PowerPC's <tt>__CRYPTO</tt> preprocessor macro.
+/// \note This function is only available on PowerPC and PowerPC-64 platforms
+inline bool HasPMULL()
+{
+	if (!g_PowerpcDetectionDone)
+		DetectPowerpcFeatures();
+	return g_hasPMULL;
 }
 
 /// \brief Determine if a PowerPC processor has SHA256 available
@@ -542,6 +711,25 @@ inline bool HasSHA512()
 	if (!g_PowerpcDetectionDone)
 		DetectPowerpcFeatures();
 	return g_hasSHA512;
+}
+
+/// \brief Determine if a PowerPC processor has DARN available
+/// \returns true if the hardware is capable of DARN at runtime, false otherwise.
+/// \details Runtime support requires compile time support. When compiling with GCC, you may
+///   need to compile with <tt>-mcpu=power9</tt>; while IBM XL C/C++ compilers require
+///   <tt>-qarch=pwr9 -qaltivec</tt>. Also see PowerPC's <tt>_ALTIVEC_</tt> preprocessor macro.
+/// \note This function is only available on PowerPC and PowerPC-64 platforms
+inline bool HasDARN()
+{
+	if (!g_PowerpcDetectionDone)
+		DetectPowerpcFeatures();
+
+	// see comments in cpu.cpp
+#if defined(__ibmxl__) && defined(__linux__)
+	return false;
+#else
+	return g_hasDARN;
+#endif
 }
 
 /// \brief Provides the cache line size
@@ -614,7 +802,12 @@ inline int GetCacheLineSize()
 	#define GNU_AS2(x, y) #x ", " #y ";" NEW_LINE
 	#define GNU_AS3(x, y, z) #x ", " #y ", " #z ";" NEW_LINE
 	#define GNU_ASL(x) "\n" #x ":" NEW_LINE
+// clang 5.0.0 and apple clang 9.0.0 don't support numerical backward jumps
+#if (CRYPTOPP_LLVM_CLANG_VERSION >= 50000) || (CRYPTOPP_APPLE_CLANG_VERSION >= 90000)
+	#define GNU_ASJ(x, y, z) ATT_PREFIX ";" NEW_LINE #x " " #y #z ";" NEW_LINE INTEL_PREFIX ";" NEW_LINE
+#else
 	#define GNU_ASJ(x, y, z) #x " " #y #z ";" NEW_LINE
+#endif
 	#define AS1(x) GNU_AS1(x)
 	#define AS2(x, y) GNU_AS2(x, y)
 	#define AS3(x, y, z) GNU_AS3(x, y, z)

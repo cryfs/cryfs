@@ -7,10 +7,10 @@ using namespace cpputils::logging;
 namespace blockstore {
 namespace caching {
 
-PeriodicTask::PeriodicTask(function<void ()> task, double intervalSec) :
+PeriodicTask::PeriodicTask(function<void ()> task, double intervalSec, std::string threadName) :
         _task(task),
         _interval(static_cast<uint64_t>(UINT64_C(1000000000) * intervalSec)),
-        _thread(std::bind(&PeriodicTask::_loopIteration, this)) {
+        _thread(std::bind(&PeriodicTask::_loopIteration, this), std::move(threadName)) {
     _thread.start();
 }
 

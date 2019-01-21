@@ -20,6 +20,7 @@
 #include "../../cryfs/impl/testutils/MockConsole.h"
 #include "../../cryfs/impl/testutils/TestWithFakeHomeDirectory.h"
 #include <cryfs/impl/ErrorCodes.h>
+#include <fspp/fuse/Fuse.h>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>
@@ -45,7 +46,7 @@ public:
     int run(const std::vector<std::string>& args, std::function<void()> onMounted) {
         std::vector<const char*> _args;
         _args.reserve(args.size() + 1);
-            _args.emplace_back("cryfs");
+        _args.emplace_back("cryfs");
         for (const std::string& arg : args) {
             _args.emplace_back(arg.c_str());
         }
@@ -53,7 +54,7 @@ public:
         ON_CALL(*console, askPassword(testing::StrEq("Password: "))).WillByDefault(testing::Return("pass"));
         ON_CALL(*console, askPassword(testing::StrEq("Confirm Password: "))).WillByDefault(testing::Return("pass"));
         // Run Cryfs
-        return cryfs::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient(), std::move(onMounted));
+        return cryfs_cli::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient(), std::move(onMounted));
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(const std::vector<std::string>& args, const std::string &message, cryfs::ErrorCode errorCode) {
@@ -90,18 +91,7 @@ public:
     };
 
     static void _unmount(const boost::filesystem::path &mountDir) {
-        int returncode = -1;
-#if defined(__APPLE__)
-        returncode = cpputils::Subprocess::call(std::string("umount ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
-#elif defined(_MSC_VER)
-        std::wstring mountDir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountDir.string());
-        BOOL success = DokanRemoveMountPoint(mountDir_.c_str());
-        returncode = success ? 0 : -1;
-#else
-        returncode = cpputils::Subprocess::call(
-        std::string("fusermount -u ") + mountDir.string().c_str() + " 2>/dev/null").exitcode;
-#endif
-        EXPECT_EQ(0, returncode);
+        fspp::fuse::Fuse::unmount(mountDir, true);
     }
 
     FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {

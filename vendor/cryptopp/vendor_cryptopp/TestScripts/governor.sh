@@ -6,6 +6,17 @@
 # run 'governor.sh powersave' or reboot. The script is based on code by
 # Andy Polyakov, http://www.openssl.org/~appro/cryptogams/.
 
+# Fixup ancient Bash
+# https://unix.stackexchange.com/q/468579/56041
+if [[ -z "$BASH_SOURCE" ]]; then
+	BASH_SOURCE="$0"
+fi
+
+if [[ "$EUID" -ne 0 ]]; then
+    echo "This script must be run as root"
+    [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
+fi
+
 if [ "x$1" = "x" ]; then
     echo "usage: $0 on[demand]|pe[rformance]|po[wersave]|us[erspace]?"
     [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1
