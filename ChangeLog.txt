@@ -1,4 +1,4 @@
-Version 0.9.10 (unreleased)
+Version 0.9.10
 --------------
 Fixed bugs:
 * Fixed occasional deadlock (https://github.com/cryfs/cryfs/issues/64)
