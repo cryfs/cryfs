@@ -16,7 +16,6 @@ using std::istream;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using cpputils::SCryptSettings;
 using cpputils::either;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
