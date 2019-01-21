@@ -28,7 +28,7 @@ CryFS has experimental Windows support since the 0.10 release series. To install
 
 1. Install [DokanY](https://github.com/dokan-dev/dokany/releases)
 2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2017](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
-3. Install CryFS
+3. Install [CryFS](https://www.cryfs.org/#download)
 
 GUI
 ===
