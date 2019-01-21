@@ -19,6 +19,7 @@ OSX
 
 CryFS is distributed via Homebrew. Just do
 
+    brew cask install osxfuse
     brew install cryfs
     
 Windows (experimental)
