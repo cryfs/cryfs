@@ -6,10 +6,29 @@ See [https://www.cryfs.org](https://www.cryfs.org).
 Install latest release
 ======================
 
+Linux
+------
+
 This only works for Ubuntu 17.04 and later, and Debian Stretch and later.
 You can also use CryFS on older versions of these distributions by following the **Building from source** instructions below.
 
     sudo apt install cryfs
+    
+OSX
+----
+
+CryFS is distributed via Homebrew. Just do
+
+    brew install cryfs
+    
+Windows (experimental)
+----------------------
+
+CryFS has experimental Windows support since the 0.10 release series. To install it, do:
+
+1. Install [DokanY](https://github.com/dokan-dev/dokany/releases)
+2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2017](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+3. Install CryFS
 
 GUI
 ===
@@ -72,12 +91,14 @@ You can pass the following variables to the *cmake* command (using *-Dvariablena
  - **-DCRYFS_UPDATE_CHECKS**=off: Build a CryFS that doesn't check online for updates and security vulnerabilities.
 
 Building on Windows (experimental)
----------------
+----------------------------------
 
 Build with Visual Studio 2017 and pass in the following flags to CMake:
 
-  -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
-  -DBOOST_ROOT=[path to root of boost installation]
+    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
+    -DBOOST_ROOT=[path to root of boost installation]
+
+If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2017.
 
 Troubleshooting
 ---------------
@@ -141,7 +162,7 @@ There are additional requirements if you want to create packages. They are:
  2. Build
 
         $ mkdir cmake && cd cmake
-        $ cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=off
+        $ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=off
         $ make package
 
 
