@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CRYFS_PROGRAMOPTIONS_PROGRAMOPTIONS_H
-#define MESSMER_CRYFS_PROGRAMOPTIONS_PROGRAMOPTIONS_H
+#ifndef MESSMER_CRYFSCLI_PROGRAMOPTIONS_PROGRAMOPTIONS_H
+#define MESSMER_CRYFSCLI_PROGRAMOPTIONS_PROGRAMOPTIONS_H
 
 #include <vector>
 #include <string>
@@ -8,7 +8,7 @@
 #include <cpp-utils/macros.h>
 #include <boost/filesystem.hpp>
 
-namespace cryfs {
+namespace cryfs_cli {
     namespace program_options {
         class ProgramOptions final {
         public:
@@ -25,6 +25,7 @@ namespace cryfs {
 
             const boost::filesystem::path &baseDir() const;
             const boost::filesystem::path &mountDir() const;
+			bool mountDirIsDriveLetter() const;
             const boost::optional<boost::filesystem::path> &configFile() const;
             bool foreground() const;
             bool allowFilesystemUpgrade() const;
@@ -38,9 +39,10 @@ namespace cryfs {
             const std::vector<std::string> &fuseOptions() const;
 
         private:
-            boost::filesystem::path _baseDir;
-            boost::filesystem::path _mountDir;
-            boost::optional<boost::filesystem::path> _configFile;
+			boost::optional<boost::filesystem::path> _configFile;
+            boost::filesystem::path _baseDir; // this is always absolute
+            boost::filesystem::path _mountDir; // this is absolute iff !_mountDirIsDriveLetter
+			bool _mountDirIsDriveLetter;
             bool _foreground;
             bool _allowFilesystemUpgrade;
             bool _allowReplacedFilesystem;

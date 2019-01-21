@@ -13,7 +13,7 @@
 // Furthermore, the class checks that there are no memory leaks left after destructing the QueueMap (by counting leftover instances of Keys/Values).
 class CacheTest: public ::testing::Test {
 public:
-  CacheTest(): _cache() {}
+  CacheTest(): _cache("test") {}
 
   void push(int key, int value);
   boost::optional<int> pop(int key);

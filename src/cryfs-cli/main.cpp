@@ -10,7 +10,7 @@
 #include <cpp-utils/network/CurlHttpClient.h>
 #endif
 
-using namespace cryfs;
+using namespace cryfs_cli;
 using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::IOStreamConsole;
@@ -35,13 +35,13 @@ int main(int argc, const char *argv[]) {
 #endif
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient), []{});
-    } catch (const CryfsException &e) {
+    } catch (const cryfs::CryfsException &e) {
         if (e.what() != string()) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
         return exitCode(e.errorCode());
     } catch (const std::exception &e) {
         cerr << "Error: " << e.what();
-        return exitCode(ErrorCode::UnspecifiedError);
+        return exitCode(cryfs::ErrorCode::UnspecifiedError);
     }
 }

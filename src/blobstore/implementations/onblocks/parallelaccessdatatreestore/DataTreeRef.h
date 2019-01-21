@@ -22,10 +22,6 @@ public:
     return _baseTree->maxBytesPerLeaf();
   }
 
-  void traverseLeaves(uint32_t beginIndex, uint32_t endIndex, std::function<void (uint32_t index, bool isRightBorderLeaf, datatreestore::LeafHandle leaf)> onExistingLeaf, std::function<cpputils::Data (uint32_t index)> onCreateLeaf) {
-    return _baseTree->traverseLeaves(beginIndex, endIndex, onExistingLeaf, onCreateLeaf);
-  }
-
   uint32_t numLeaves() const {
     return _baseTree->numLeaves();
   }
@@ -34,8 +30,24 @@ public:
     return _baseTree->resizeNumBytes(newNumBytes);
   }
 
-  uint64_t numStoredBytes() const {
-    return _baseTree->numStoredBytes();
+  uint64_t numBytes() const {
+    return _baseTree->numBytes();
+  }
+
+  uint64_t tryReadBytes(void *target, uint64_t offset, uint64_t count) const {
+    return _baseTree->tryReadBytes(target, offset, count);
+  }
+
+  void readBytes(void *target, uint64_t offset, uint64_t count) const {
+    return _baseTree->readBytes(target, offset, count);
+  }
+
+  cpputils::Data readAllBytes() const {
+    return _baseTree->readAllBytes();
+  }
+
+  void writeBytes(const void *source, uint64_t offset, uint64_t count) {
+    return _baseTree->writeBytes(source, offset, count);
   }
 
   void flush() {

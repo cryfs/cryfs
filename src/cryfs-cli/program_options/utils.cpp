@@ -7,7 +7,7 @@ using std::make_pair;
 using std::vector;
 using std::string;
 
-namespace cryfs {
+namespace cryfs_cli {
     namespace program_options {
         pair<vector<string>, vector<string>> splitAtDoubleDash(const vector<string> &options) {
             auto doubleDashIterator = std::find(options.begin(), options.end(), string("--"));

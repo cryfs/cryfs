@@ -81,6 +81,12 @@ MAKE=make
 DISASS=objdump
 DISASSARGS=("--disassemble")
 
+# Fixup ancient Bash
+# https://unix.stackexchange.com/q/468579/56041
+if [[ -z "$BASH_SOURCE" ]]; then
+	BASH_SOURCE="$0"
+fi
+
 # Fixup, Solaris and friends
 if [[ (-d /usr/xpg4/bin) ]]; then
 	SED=/usr/xpg4/bin/sed
@@ -1009,6 +1015,12 @@ if [[ ("$GCC_COMPILER" -ne "0" || "$CLANG_COMPILER" -ne "0") ]]; then
 	WARNING_CXXFLAGS+=("-Wcast-align" "-Wwrite-strings" "-Wformat=2" "-Wformat-security")
 fi
 
+# On PowerPC we test the original Altivec load and store with unaligned data.
+# Modern compilers generate a warning and recommend the new loads and stores.
+if [[ ("$GCC_COMPILER" -ne "0" && ("$IS_PPC32" -ne "0" || "$IS_PPC64" -ne "0") ) ]]; then
+	WARNING_CXXFLAGS+=("-Wno-deprecated")
+fi
+
 echo | tee -a "$TEST_RESULTS"
 echo "DEBUG_CXXFLAGS: $DEBUG_CXXFLAGS" | tee -a "$TEST_RESULTS"
 echo "RELEASE_CXXFLAGS: $RELEASE_CXXFLAGS" | tee -a "$TEST_RESULTS"
@@ -1161,7 +1173,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_X86" -ne "0" || "$IS_X64" -ne "0")) ]]; t
 
 		TEST_LIST+=("X86 CRC32 code generation")
 
-		OBJFILE=crc-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=crc_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1201,7 +1213,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_X86" -ne "0" || "$IS_X64" -ne "0")) ]]; t
 
 		TEST_LIST+=("X86 AES-NI code generation")
 
-		OBJFILE=rijndael-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=rijndael_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1265,7 +1277,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_X86" -ne "0" || "$IS_X64" -ne "0")) ]]; t
 
 		TEST_LIST+=("X86 carryless multiply code generation")
 
-		OBJFILE=gcm-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=gcm_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1353,7 +1365,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_X86" -ne "0" || "$IS_X64" -ne "0")) ]]; t
 
 		TEST_LIST+=("X86 SHA code generation")
 
-		OBJFILE=sha-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=sha_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1424,7 +1436,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_ARM32" -ne "0" || "$IS_ARM64" -ne "0")) ]
 
 		TEST_LIST+=("ARM NEON code generation")
 
-		OBJFILE=aria-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=aria_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1532,7 +1544,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_ARM32" -ne "0" || "$IS_ARM64" -ne "0")) ]
 
 		TEST_LIST+=("ARM CRC32 code generation")
 
-		OBJFILE=crc-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=crc_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1584,7 +1596,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_ARM32" -ne "0" || "$IS_ARM64" -ne "0")) ]
 
 		TEST_LIST+=("ARM carryless multiply code generation")
 
-		OBJFILE=gcm-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=gcm_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1624,7 +1636,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_ARM32" -ne "0" || "$IS_ARM64" -ne "0")) ]
 
 		TEST_LIST+=("ARM AES generation")
 
-		OBJFILE=rijndael-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=rijndael_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1676,7 +1688,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_ARM32" -ne "0" || "$IS_ARM64" -ne "0")) ]
 
 		TEST_LIST+=("ARM SHA generation")
 
-		OBJFILE=sha-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=sha_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1780,7 +1792,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_PPC32" -ne "0" || "$IS_PPC64" -ne "0")) ]
 
 		TEST_LIST+=("Power8 AES generation")
 
-		OBJFILE=rijndael-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=rijndael_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS $PPC_AES_FLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1843,7 +1855,7 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_PPC32" -ne "0" || "$IS_PPC64" -ne "0")) ]
 
 		TEST_LIST+=("Power8 SHA generation")
 
-		OBJFILE=sha-simd.o; rm -f "$OBJFILE" 2>/dev/null
+		OBJFILE=sha_simd.o; rm -f "$OBJFILE" 2>/dev/null
 		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS $PPC_SHA_FLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
 
 		COUNT=0
@@ -1864,6 +1876,51 @@ if [[ ("$HAVE_DISASS" -ne "0" && ("$IS_PPC32" -ne "0" || "$IS_PPC64" -ne "0")) ]
 
 		if [[ ("$FAILED" -eq "0") ]]; then
 			echo "Verified vshasigmaw and vshasigmad machine instructions" | tee -a "$TEST_RESULTS"
+		fi
+	fi
+
+	############################################
+	# Power8 VMULL
+
+	PPC_VMULL=0
+	if [[ ("$PPC_VMULL" -eq "0") ]]; then
+		"$CXX" -DCRYPTOPP_ADHOC_MAIN -mcpu=power8 adhoc.cpp -o "$TMPDIR/adhoc.exe" > /dev/null 2>&1
+		if [[ "$?" -eq "0" ]]; then
+			PPC_VMULL=1
+			PPC_VMULL_FLAGS="-mcpu=power8"
+		fi
+	fi
+	if [[ ("$PPC_VMULL" -eq "0") ]]; then
+		"$CXX" -DCRYPTOPP_ADHOC_MAIN -qarch=pwr8 adhoc.cpp -o "$TMPDIR/adhoc.exe" > /dev/null 2>&1
+		if [[ "$?" -eq "0" ]]; then
+			PPC_VMULL=1
+			PPC_VMULL_FLAGS="-qarch=pwr8"
+		fi
+	fi
+
+	if [[ ("$PPC_VMULL" -ne "0") ]]; then
+		echo
+		echo "************************************" | tee -a "$TEST_RESULTS"
+		echo "Testing: Power8 carryless multiply generation" | tee -a "$TEST_RESULTS"
+		echo
+
+		TEST_LIST+=("Power8 carryless multiply generation")
+
+		OBJFILE=gcm_simd.o; rm -f "$OBJFILE" 2>/dev/null
+		CXX="$CXX" CXXFLAGS="$RELEASE_CXXFLAGS $PPC_VMULL_FLAGS" "$MAKE" "${MAKEARGS[@]}" $OBJFILE 2>&1 | tee -a "$TEST_RESULTS"
+
+		COUNT=0
+		FAILED=0
+		DISASS_TEXT=$("$DISASS" "${DISASSARGS[@]}" "$OBJFILE" 2>/dev/null)
+
+		COUNT=$(echo -n "$DISASS_TEXT" | "$GREP" -i -c vpmsum)
+		if [[ ("$COUNT" -eq "0") ]]; then
+			FAILED=1
+			echo "ERROR: failed to generate vpmsum instruction" | tee -a "$TEST_RESULTS"
+		fi
+
+		if [[ ("$FAILED" -eq "0") ]]; then
+			echo "Verified vpmsum machine instruction" | tee -a "$TEST_RESULTS"
 		fi
 	fi
 fi
@@ -1888,14 +1945,20 @@ if true; then
 
 	if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 		echo "ERROR: failed to make cryptest.exe" | tee -a "$TEST_RESULTS"
+		# Stop now if things are broke
+		[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 	else
 		./cryptest.exe v 2>&1 | tee -a "$TEST_RESULTS"
 		if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 			echo "ERROR: failed to execute validation suite" | tee -a "$TEST_RESULTS"
+			# Stop now if things are broke
+			[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 		fi
 		./cryptest.exe tv all 2>&1 | tee -a "$TEST_RESULTS"
 		if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 			echo "ERROR: failed to execute test vectors" | tee -a "$TEST_RESULTS"
+			# Stop now if things are broke
+			[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 		fi
 	fi
 
@@ -1916,14 +1979,20 @@ if true; then
 
 	if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 		echo "ERROR: failed to make cryptest.exe" | tee -a "$TEST_RESULTS"
+		# Stop now if things are broke
+		[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 	else
 		./cryptest.exe v 2>&1 | tee -a "$TEST_RESULTS"
 		if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 			echo "ERROR: failed to execute validation suite" | tee -a "$TEST_RESULTS"
+			# Stop now if things are broke
+			[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 		fi
 		./cryptest.exe tv all 2>&1 | tee -a "$TEST_RESULTS"
 		if [[ ("${PIPESTATUS[0]}" -ne "0") ]]; then
 			echo "ERROR: failed to execute test vectors" | tee -a "$TEST_RESULTS"
+			# Stop now if things are broke
+			[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 		fi
 		echo
 	fi

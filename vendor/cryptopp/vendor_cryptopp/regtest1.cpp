@@ -1,5 +1,6 @@
 // regtest1.cpp - originally written and placed in the public domain by Wei Dai
-//                regtest.cpp split into 3 files due to OOM kills by JW in April 2017
+//                regtest.cpp split into 3 files due to OOM kills by JW
+//                in April 2017. A second split occured in July 2018.
 
 #define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 
@@ -18,6 +19,7 @@
 #include "sha.h"
 #include "sha3.h"
 #include "sm3.h"
+#include "hkdf.h"
 #include "tiger.h"
 #include "ripemd.h"
 #include "panama.h"
@@ -25,6 +27,7 @@
 
 #include "osrng.h"
 #include "drbg.h"
+#include "darn.h"
 #include "mersenne.h"
 #include "rdrand.h"
 #include "padlkrng.h"
@@ -45,10 +48,14 @@ USING_NAMESPACE(CryptoPP)
 
 // Unkeyed ciphers
 void RegisterFactories1();
-// Shared key ciphers
+// MAC ciphers
 void RegisterFactories2();
-// Public key ciphers
+// Stream ciphers
 void RegisterFactories3();
+// Block ciphers
+void RegisterFactories4();
+// Public key ciphers
+void RegisterFactories5();
 
 void RegisterFactories(Test::TestClass suites)
 {
@@ -59,13 +66,17 @@ void RegisterFactories(Test::TestClass suites)
 	if ((suites & Test::Unkeyed) == Test::Unkeyed)
 		RegisterFactories1();
 
-	if ((suites & Test::SharedKeyMAC) == Test::SharedKeyMAC ||
-		(suites & Test::SharedKeyStream) == Test::SharedKeyStream ||
-		(suites & Test::SharedKeyBlock) == Test::SharedKeyBlock)
+	if ((suites & Test::SharedKeyMAC) == Test::SharedKeyMAC)
 		RegisterFactories2();
 
-	if ((suites & Test::PublicKey) == Test::PublicKey)
+	if ((suites & Test::SharedKeyStream) == Test::SharedKeyStream)
 		RegisterFactories3();
+
+	if ((suites & Test::SharedKeyBlock) == Test::SharedKeyBlock)
+		RegisterFactories4();
+
+	if ((suites & Test::PublicKey) == Test::PublicKey)
+		RegisterFactories5();
 
 	s_registered = true;
 }
@@ -123,9 +134,18 @@ void RegisterFactories1()
 	if (HasRDSEED())
 		RegisterDefaultFactoryFor<RandomNumberGenerator, RDSEED>();
 #endif
+#if (CRYPTOPP_BOOL_PPC32 || CRYPTOPP_BOOL_PPC64)
+	if (HasDARN())
+		RegisterDefaultFactoryFor<RandomNumberGenerator, DARN>();
+#endif
 	RegisterDefaultFactoryFor<RandomNumberGenerator, OFB_Mode<AES>::Encryption >("AES/OFB RNG");
 	RegisterDefaultFactoryFor<NIST_DRBG, Hash_DRBG<SHA1> >("Hash_DRBG(SHA1)");
 	RegisterDefaultFactoryFor<NIST_DRBG, Hash_DRBG<SHA256> >("Hash_DRBG(SHA256)");
 	RegisterDefaultFactoryFor<NIST_DRBG, HMAC_DRBG<SHA1> >("HMAC_DRBG(SHA1)");
 	RegisterDefaultFactoryFor<NIST_DRBG, HMAC_DRBG<SHA256> >("HMAC_DRBG(SHA256)");
+
+	RegisterDefaultFactoryFor<KeyDerivationFunction, HKDF<SHA1> >();
+	RegisterDefaultFactoryFor<KeyDerivationFunction, HKDF<SHA256> >();
+	RegisterDefaultFactoryFor<KeyDerivationFunction, HKDF<SHA512> >();
+	RegisterDefaultFactoryFor<KeyDerivationFunction, HKDF<Whirlpool> >();
 }

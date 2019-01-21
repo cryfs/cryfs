@@ -45,7 +45,7 @@ void CachingBlockStore2::CachedBlock::write(Data data) {
 }
 
 CachingBlockStore2::CachingBlockStore2(cpputils::unique_ref<BlockStore2> baseBlockStore)
-: _baseBlockStore(std::move(baseBlockStore)), _cachedBlocksNotInBaseStoreMutex(), _cachedBlocksNotInBaseStore(), _cache() {
+: _baseBlockStore(std::move(baseBlockStore)), _cachedBlocksNotInBaseStoreMutex(), _cachedBlocksNotInBaseStore(), _cache("blockstore") {
 }
 
 bool CachingBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
