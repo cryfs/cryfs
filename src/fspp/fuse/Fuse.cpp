@@ -8,6 +8,7 @@
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/process/subprocess.h>
+#include <cpp-utils/thread/debugging.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
 
@@ -23,7 +24,9 @@ namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 using std::make_shared;
 using std::shared_ptr;
+using std::string;
 using namespace fspp::fuse;
+using cpputils::set_thread_name;
 
 namespace {
 bool is_valid_fspp_path(const bf::path& path) {
@@ -32,6 +35,18 @@ bool is_valid_fspp_path(const bf::path& path) {
          && !path.has_root_name()                      // on Windows, it shouldn't have a device specifier (i.e. no "C:")
          && (path.string() == path.generic_string());  // must use portable '/' as directory separator
 }
+
+class ThreadNameForDebugging final {
+public:
+  ThreadNameForDebugging(const string& threadName) {
+    std::string name = "fspp_" + threadName;
+    set_thread_name(name.c_str());
+  }
+
+  ~ThreadNameForDebugging() {
+    set_thread_name("fspp_idle");
+  }
+};
 }
 
 #define FUSE_OBJ (static_cast<Fuse *>(fuse_get_context()->private_data))
@@ -335,6 +350,7 @@ void Fuse::unmount(const bf::path& mountdir, bool force) {
 }
 
 int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
+  ThreadNameForDebugging _threadName("getattr");
 #ifdef FSPP_LOG
   LOG(DEBUG, "getattr({}, _, _)", path);
 #endif
@@ -357,6 +373,7 @@ int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
 }
 
 int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("fgetattr");
 #ifdef FSPP_LOG
   LOG(DEBUG, "fgetattr({}, _, _)\n", path);
 #endif
@@ -389,6 +406,7 @@ int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info
 }
 
 int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
+  ThreadNameForDebugging _threadName("readlink");
 #ifdef FSPP_LOG
   LOG(DEBUG, "readlink({}, _, {})", path, size);
 #endif
@@ -414,11 +432,13 @@ int Fuse::mknod(const bf::path &path, ::mode_t mode, dev_t rdev) {
   UNUSED(rdev);
   UNUSED(mode);
   UNUSED(path);
+  ThreadNameForDebugging _threadName("mknod");
   LOG(WARN, "Called non-implemented mknod({}, {}, _)", path, mode);
   return ENOSYS;
 }
 
 int Fuse::mkdir(const bf::path &path, ::mode_t mode) {
+  ThreadNameForDebugging _threadName("mkdir");
 #ifdef FSPP_LOG
   LOG(DEBUG, "mkdir({}, {})", path, mode);
 #endif
@@ -442,6 +462,7 @@ int Fuse::mkdir(const bf::path &path, ::mode_t mode) {
 }
 
 int Fuse::unlink(const bf::path &path) {
+  ThreadNameForDebugging _threadName("unlink");
 #ifdef FSPP_LOG
   LOG(DEBUG, "unlink({})", path);
 #endif
@@ -464,6 +485,7 @@ int Fuse::unlink(const bf::path &path) {
 }
 
 int Fuse::rmdir(const bf::path &path) {
+  ThreadNameForDebugging _threadName("rmdir");
 #ifdef FSPP_LOG
   LOG(DEBUG, "rmdir({})", path);
 #endif
@@ -486,6 +508,7 @@ int Fuse::rmdir(const bf::path &path) {
 }
 
 int Fuse::symlink(const bf::path &to, const bf::path &from) {
+  ThreadNameForDebugging _threadName("symlink");
 #ifdef FSPP_LOG
   LOG(DEBUG, "symlink({}, {})", to, from);
 #endif
@@ -509,6 +532,7 @@ int Fuse::symlink(const bf::path &to, const bf::path &from) {
 }
 
 int Fuse::rename(const bf::path &from, const bf::path &to) {
+  ThreadNameForDebugging _threadName("rename");
 #ifdef FSPP_LOG
   LOG(DEBUG, "rename({}, {})", from, to);
 #endif
@@ -533,6 +557,7 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
 
 //TODO
 int Fuse::link(const bf::path &from, const bf::path &to) {
+  ThreadNameForDebugging _threadName("link");
   LOG(WARN, "NOT IMPLEMENTED: link({}, {})", from, to);
   //auto real_from = _impl->RootDir() / from;
   //auto real_to = _impl->RootDir() / to;
@@ -542,6 +567,7 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
 }
 
 int Fuse::chmod(const bf::path &path, ::mode_t mode) {
+  ThreadNameForDebugging _threadName("chmod");
 #ifdef FSPP_LOG
   LOG(DEBUG, "chmod({}, {})", path, mode);
 #endif
@@ -564,6 +590,7 @@ int Fuse::chmod(const bf::path &path, ::mode_t mode) {
 }
 
 int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
+  ThreadNameForDebugging _threadName("chown");
 #ifdef FSPP_LOG
   LOG(DEBUG, "chown({}, {}, {})", path, uid, gid);
 #endif
@@ -586,6 +613,7 @@ int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
 }
 
 int Fuse::truncate(const bf::path &path, int64_t size) {
+  ThreadNameForDebugging _threadName("truncate");
 #ifdef FSPP_LOG
   LOG(DEBUG, "truncate({}, {})", path, size);
 #endif
@@ -608,6 +636,7 @@ int Fuse::truncate(const bf::path &path, int64_t size) {
 }
 
 int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("ftruncate");
 #ifdef FSPP_LOG
   LOG(DEBUG, "ftruncate({}, {})", path, size);
 #endif
@@ -630,6 +659,7 @@ int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo
 }
 
 int Fuse::utimens(const bf::path &path, const timespec times[2]) {
+  ThreadNameForDebugging _threadName("utimens");
 #ifdef FSPP_LOG
   LOG(DEBUG, "utimens({}, _)", path);
 #endif
@@ -652,6 +682,7 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
 }
 
 int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("open");
 #ifdef FSPP_LOG
   LOG(DEBUG, "open({}, _)", path);
 #endif
@@ -674,6 +705,7 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("release");
 #ifdef FSPP_LOG
   LOG(DEBUG, "release({}, _)", path);
 #endif
@@ -696,6 +728,7 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::read(const bf::path &path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("read");
 #ifdef FSPP_LOG
   LOG(DEBUG, "read({}, _, {}, {}, _)", path, size, offset);
 #endif
@@ -717,6 +750,7 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, int64_t offset, fus
 }
 
 int Fuse::write(const bf::path &path, const char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("write");
 #ifdef FSPP_LOG
   LOG(DEBUG, "write({}, _, {}, {}, _)", path, size, offsset);
 #endif
@@ -739,6 +773,7 @@ int Fuse::write(const bf::path &path, const char *buf, size_t size, int64_t offs
 }
 
 int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
+  ThreadNameForDebugging _threadName("statfs");
 #ifdef FSPP_LOG
   LOG(DEBUG, "statfs({}, _)", path);
 #endif
@@ -762,6 +797,7 @@ int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
 }
 
 int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("flush");
 #ifdef FSPP_LOG
   LOG(WARN, "flush({}, _)", path);
 #endif
@@ -784,6 +820,7 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
 }
 
 int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("fsync");
 #ifdef FSPP_LOG
   LOG(DEBUG, "fsync({}, {}, _)", path, datasync);
 #endif
@@ -812,12 +849,14 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
 int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
   UNUSED(path);
   UNUSED(fileinfo);
+  ThreadNameForDebugging _threadName("opendir");
   //LOG(DEBUG, "opendir({}, _)", path);
   //We don't need opendir, because readdir works directly on the path
   return 0;
 }
 
 int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("readdir");
 #ifdef FSPP_LOG
   LOG(DEBUG, "readdir({}, _, _, {}, _)", path, offest);
 #endif
@@ -863,6 +902,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
 int Fuse::releasedir(const bf::path &path, fuse_file_info *fileinfo) {
   UNUSED(path);
   UNUSED(fileinfo);
+  ThreadNameForDebugging _threadName("releasedir");
   //LOG(DEBUG, "releasedir({}, _)", path);
   //We don't need releasedir, because readdir works directly on the path
   return 0;
@@ -873,12 +913,14 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
   UNUSED(fileinfo);
   UNUSED(datasync);
   UNUSED(path);
+  ThreadNameForDebugging _threadName("fsyncdir");
   //LOG(WARN, "Called non-implemented fsyncdir({}, {}, _)", path, datasync);
   return 0;
 }
 
 void Fuse::init(fuse_conn_info *conn) {
   UNUSED(conn);
+  ThreadNameForDebugging _threadName("init");
   _fs = _init(this);
 
   LOG(INFO, "Filesystem started.");
@@ -892,6 +934,7 @@ void Fuse::init(fuse_conn_info *conn) {
 }
 
 void Fuse::destroy() {
+  ThreadNameForDebugging _threadName("destroy");
   _fs = make_shared<InvalidFilesystem>();
   LOG(INFO, "Filesystem stopped.");
   _running = false;
@@ -899,6 +942,7 @@ void Fuse::destroy() {
 }
 
 int Fuse::access(const bf::path &path, int mask) {
+  ThreadNameForDebugging _threadName("access");
 #ifdef FSPP_LOG
   LOG(DEBUG, "access({}, {})", path, mask);
 #endif
@@ -921,6 +965,7 @@ int Fuse::access(const bf::path &path, int mask) {
 }
 
 int Fuse::create(const bf::path &path, ::mode_t mode, fuse_file_info *fileinfo) {
+  ThreadNameForDebugging _threadName("create");
 #ifdef FSPP_LOG
   LOG(DEBUG, "create({}, {}, _)", path, mode);
 #endif
