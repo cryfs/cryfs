@@ -56,6 +56,11 @@ public:
   // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
   bool HasVersionNumbers() const;
   void SetHasVersionNumbers(bool value);
+
+  // This is a trigger to recognize old file systems that didn't have version numbers.
+  // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
+  bool HasParentPointers() const;
+  void SetHasParentPointers(bool value);
 #endif
 
   static CryConfig load(const cpputils::Data &data);
@@ -73,6 +78,7 @@ private:
   boost::optional<uint32_t> _exclusiveClientId;
 #ifndef CRYFS_NO_COMPATIBILITY
   bool _hasVersionNumbers;
+  bool _hasParentPointers;
 #endif
 
   CryConfig &operator=(const CryConfig &rhs) = delete;

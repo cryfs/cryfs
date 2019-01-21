@@ -80,7 +80,14 @@ unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(uniqu
   if ("" == rootBlobId) {
     return make_unique_ref<FsBlobStore>(std::move(blobStore));
   }
-  return FsBlobStore::migrateIfNeeded(std::move(blobStore), BlockId::FromString(rootBlobId));
+  if (!configFile->config()->HasParentPointers()) {
+    auto result = FsBlobStore::migrateIfNeeded(std::move(blobStore), BlockId::FromString(rootBlobId));
+    // Don't migrate again if it was successful
+    configFile->config()->SetHasParentPointers(true);
+    configFile->save();
+    return result;
+  }
+  return make_unique_ref<FsBlobStore>(std::move(blobStore));
 }
 #endif
 
@@ -106,6 +113,7 @@ unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref
   if (!configFile->config()->HasVersionNumbers()) {
     IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath, myClientId);
     configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + IntegrityBlockStore2::HEADER_LENGTH - blockstore::BlockId::BINARY_LENGTH); // Minus BlockId size because EncryptedBlockStore doesn't store the BlockId anymore (that was moved to IntegrityBlockStore)
+    // Don't migrate again if it was successful
     configFile->config()->SetHasVersionNumbers(true);
     configFile->save();
   }
