@@ -26,10 +26,12 @@
 #include <cryfs/impl/localstate/BasedirMetadata.h>
 #include "Environment.h"
 #include <cryfs/impl/CryfsException.h>
+#include <cpp-utils/thread/debugging.h>
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
 
+using namespace cryfs_cli;
 using namespace cryfs;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
@@ -66,7 +68,7 @@ using gitversion::VersionCompare;
 //TODO Replace ASSERTs with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
 //TODO Can we improve performance by setting compiler parameter -maes for scrypt?
 
-namespace cryfs {
+namespace cryfs_cli {
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false), _idleUnmounter(none), _device(none) {
@@ -262,12 +264,9 @@ namespace cryfs {
 
             _initLogfile(options);
 
-#ifdef __APPLE__
-          std::cout << "\nMounting filesystem. To unmount, call:\n$ umount " << options.mountDir() << "\n" << std::endl;
-#else
-          std::cout << "\nMounting filesystem. To unmount, call:\n$ fusermount -u " << options.mountDir() << "\n"
-                    << std::endl;
-#endif
+            std::cout << "\nMounting filesystem. To unmount, call:\n$ cryfs-unmount " << options.mountDir() << "\n"
+                      << std::endl;
+
             if (options.foreground()) {
                 fuse->runInForeground(options.mountDir(), options.fuseOptions());
             } else {
@@ -304,7 +303,7 @@ namespace cryfs {
             return none;
         }
         uint64_t millis = std::llround(60000 * (*minutes));
-        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback);
+        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback, "idlecallback");
     }
 
     void Cli::_initLogfile(const ProgramOptions &options) {
@@ -320,10 +319,17 @@ namespace cryfs {
         }
     }
 
-    void Cli::_sanityChecks(const ProgramOptions &options) {
-        _checkDirAccessible(options.baseDir(), "base directory", ErrorCode::InaccessibleBaseDir);
-        _checkDirAccessible(options.mountDir(), "mount directory", ErrorCode::InaccessibleMountDir);
-        _checkMountdirDoesntContainBasedir(options);
+	void Cli::_sanityChecks(const ProgramOptions &options) {
+		_checkDirAccessible(bf::absolute(options.baseDir()), "base directory", ErrorCode::InaccessibleBaseDir);
+
+		if (!options.mountDirIsDriveLetter()) {
+			_checkDirAccessible(options.mountDir(), "mount directory", ErrorCode::InaccessibleMountDir);
+			_checkMountdirDoesntContainBasedir(options);
+		} else {
+			if (bf::exists(options.mountDir())) {
+				throw CryfsException("Drive " + options.mountDir().string() + " already exists.", ErrorCode::InaccessibleMountDir);
+			}
+		}
     }
 
     void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name, ErrorCode errorCode) {
@@ -396,6 +402,7 @@ namespace cryfs {
 
     int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
         cpputils::showBacktraceOnCrash();
+        cpputils::set_thread_name("cryfs");
 
         try {
             _showVersion(std::move(httpClient));

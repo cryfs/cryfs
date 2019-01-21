@@ -8,7 +8,7 @@
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
-using namespace cryfs::program_options;
+using namespace cryfs_cli::program_options;
 using cryfs::CryConfigConsole;
 using cryfs::CryfsException;
 using cryfs::ErrorCode;
@@ -49,8 +49,8 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (!vm.count("mount-dir")) {
         _showHelpAndExit("Please specify a mount directory.", ErrorCode::InvalidArguments);
     }
-    bf::path baseDir = bf::absolute(vm["base-dir"].as<string>());
-    bf::path mountDir = bf::absolute(vm["mount-dir"].as<string>());
+    bf::path baseDir = vm["base-dir"].as<string>();
+    bf::path mountDir = vm["mount-dir"].as<string>();
     optional<bf::path> configfile = none;
     if (vm.count("config")) {
         configfile = bf::absolute(vm["config"].as<string>());

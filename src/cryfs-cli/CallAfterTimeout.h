@@ -1,15 +1,15 @@
 #pragma once
-#ifndef MESSMER_CRYFS_SRC_CLI_CALLAFTERTIMEOUT_H
-#define MESSMER_CRYFS_SRC_CLI_CALLAFTERTIMEOUT_H
+#ifndef MESSMER_CRYFSCLI_CALLAFTERTIMEOUT_H
+#define MESSMER_CRYFSCLI_CALLAFTERTIMEOUT_H
 
 #include <functional>
 #include <mutex>
 #include <cpp-utils/thread/LoopThread.h>
 
-namespace cryfs {
+namespace cryfs_cli {
     class CallAfterTimeout final {
     public:
-        CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback);
+        CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName);
         void resetTimer();
     private:
         bool _checkTimeoutThreadIteration();
@@ -25,8 +25,8 @@ namespace cryfs {
         DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
     };
 
-    inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback)
-        :_callback(std::move(callback)), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
+    inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName)
+        :_callback(std::move(callback)), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this), "timeout_" + timeoutName) {
         resetTimer();
         _checkTimeoutThread.start();
     }

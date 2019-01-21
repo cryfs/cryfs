@@ -16,6 +16,17 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
+std::string Tiger::AlgorithmProvider() const
+{
+#ifndef CRYPTOPP_DISABLE_TIGER_ASM
+# if CRYPTOPP_SSE2_ASM_AVAILABLE
+	if (HasSSE2())
+		return "SSE2";
+# endif
+#endif
+	return "C++";
+}
+
 void Tiger::InitState(HashWordType *state)
 {
 	state[0] = W64LIT(0x0123456789ABCDEF);
@@ -25,6 +36,7 @@ void Tiger::InitState(HashWordType *state)
 
 void Tiger::TruncatedFinal(byte *hash, size_t size)
 {
+	CRYPTOPP_ASSERT(hash != NULLPTR);
 	ThrowIfInvalidTruncatedSize(size);
 
 	PadLastBlock(56, 0x01);
@@ -39,9 +51,9 @@ void Tiger::TruncatedFinal(byte *hash, size_t size)
 	Restart();		// reinit for next use
 }
 
-void Tiger::Transform (word64 *digest, const word64 *X)
+void Tiger::Transform (word64 *state, const word64 *data)
 {
-#if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32)
+#if CRYPTOPP_SSE2_ASM_AVAILABLE && CRYPTOPP_BOOL_X86
 	if (HasSSE2())
 	{
 #ifdef __GNUC__
@@ -51,8 +63,8 @@ void Tiger::Transform (word64 *digest, const word64 *X)
 		AS_PUSH_IF86(bx)
 #else
 		AS2(	lea		edx, [table])
-		AS2(	mov		eax, digest)
-		AS2(	mov		esi, X)
+		AS2(	mov		eax, state)
+		AS2(	mov		esi, data)
 #endif
 		AS2(	movq	mm0, [eax])
 		AS2(	movq	mm1, [eax+1*8])
@@ -181,19 +193,11 @@ void Tiger::Transform (word64 *digest, const word64 *X)
 		AS2(	psubq	mm3, mm4)\
 		AS2(	movq	[Y+7*8], mm3)
 
-#if CRYPTOPP_BOOL_X32
-		SSE2_pass(mm0, mm1, mm2, 5, esi)
-		SSE2_key_schedule(esp+8, esi)
-		SSE2_pass(mm2, mm0, mm1, 7, esp+8)
-		SSE2_key_schedule(esp+8, esp+8)
-		SSE2_pass(mm1, mm2, mm0, 9, esp+8)
-#else
 		SSE2_pass(mm0, mm1, mm2, 5, esi)
 		SSE2_key_schedule(esp+4, esi)
 		SSE2_pass(mm2, mm0, mm1, 7, esp+4)
 		SSE2_key_schedule(esp+4, esp+4)
 		SSE2_pass(mm1, mm2, mm0, 9, esp+4)
-#endif
 
 		AS2(	pxor	mm0, [eax+0*8])
 		AS2(	movq	[eax+0*8], mm0)
@@ -209,7 +213,7 @@ void Tiger::Transform (word64 *digest, const word64 *X)
 		AS_POP_IF86(bx)
 		ATT_PREFIX
 			:
-			: "a" (digest), "S" (X), "d" (table)
+			: "a" (state), "S" (data), "d" (table)
 			: "%ecx", "%edi", "memory", "cc"
 		);
 #endif
@@ -217,9 +221,9 @@ void Tiger::Transform (word64 *digest, const word64 *X)
 	else
 #endif
 	{
-		word64 a = digest[0];
-		word64 b = digest[1];
-		word64 c = digest[2];
+		word64 a = state[0];
+		word64 b = state[1];
+		word64 c = state[2];
 		word64 Y[8];
 
 #define t1 (table)
@@ -263,15 +267,15 @@ void Tiger::Transform (word64 *digest, const word64 *X)
 	Y[6] += Y[5]; \
 	Y[7] -= Y[6] ^ W64LIT(0x0123456789ABCDEF)
 
-		pass(a,b,c,5,X);
-		key_schedule(Y,X);
+		pass(a,b,c,5,data);
+		key_schedule(Y,data);
 		pass(c,a,b,7,Y);
 		key_schedule(Y,Y);
 		pass(b,c,a,9,Y);
 
-		digest[0] = a ^ digest[0];
-		digest[1] = b - digest[1];
-		digest[2] = c + digest[2];
+		state[0] = a ^ state[0];
+		state[1] = b - state[1];
+		state[2] = c + state[2];
 	}
 }
 

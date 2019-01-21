@@ -28,6 +28,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	class CRYPTOPP_NO_VTABLE Base : public BlockCipherImpl<SHACAL2_Info>
 	{
 	public:
+		std::string AlgorithmProvider() const;
 		void UncheckedSetKey(const byte *userKey, unsigned int length, const NameValuePairs &params);
 
 	protected:
@@ -37,7 +38,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	};
 
 	/// \brief SHACAL2 block cipher transformation functions
-	/// \details Provides implementation for encryption transformation
+	/// \details Encryption transformation
 	class CRYPTOPP_NO_VTABLE Enc : public Base
 	{
 	public:
@@ -45,7 +46,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	};
 
 	/// \brief SHACAL2 block cipher transformation functions
-	/// \details Provides implementation for decryption transformation
+	/// \details Decryption transformation
 	class CRYPTOPP_NO_VTABLE Dec : public Base
 	{
 	public:

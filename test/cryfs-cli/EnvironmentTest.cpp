@@ -4,7 +4,7 @@
 #include <boost/filesystem.hpp>
 #include <cpp-utils/system/env.h>
 
-using namespace cryfs;
+using namespace cryfs_cli;
 using std::string;
 using boost::optional;
 using boost::none;

@@ -865,12 +865,12 @@ public:
 	/// \brief Stop redirecting input
 	void StopRedirection() {m_target = NULLPTR;}
 
-	Behavior GetBehavior() {return (Behavior) m_behavior;}
+	Behavior GetBehavior() {return static_cast<Behavior>(m_behavior);}
 	void SetBehavior(Behavior behavior) {m_behavior=behavior;}
 	bool GetPassSignals() const {return (m_behavior & PASS_SIGNALS) != 0;}
-	void SetPassSignals(bool pass) { if (pass) m_behavior |= PASS_SIGNALS; else m_behavior &= ~(word32) PASS_SIGNALS; }
+	void SetPassSignals(bool pass) { if (pass) m_behavior |= PASS_SIGNALS; else m_behavior &= ~static_cast<word32>(PASS_SIGNALS); }
 	bool GetPassWaitObjects() const {return (m_behavior & PASS_WAIT_OBJECTS) != 0;}
-	void SetPassWaitObjects(bool pass) { if (pass) m_behavior |= PASS_WAIT_OBJECTS; else m_behavior &= ~(word32) PASS_WAIT_OBJECTS; }
+	void SetPassWaitObjects(bool pass) { if (pass) m_behavior |= PASS_WAIT_OBJECTS; else m_behavior &= ~static_cast<word32>(PASS_WAIT_OBJECTS); }
 
 	bool CanModifyInput() const
 		{return m_target ? m_target->CanModifyInput() : false;}
@@ -1063,12 +1063,13 @@ template <class T>
 class StringSinkTemplate : public Bufferless<Sink>
 {
 public:
+	typedef typename T::value_type value_type;
 	virtual ~StringSinkTemplate() {}
 
 	/// \brief Construct a StringSinkTemplate
-	/// \param output std::basic_string<char> type
+	/// \param output std::basic_string<char> or std::vector<byte> type
 	StringSinkTemplate(T &output)
-		: m_output(&output) {CRYPTOPP_ASSERT(sizeof(output[0])==1);}
+		: m_output(&output) {CRYPTOPP_ASSERT(sizeof(value_type)==1);}
 
 	void IsolatedInitialize(const NameValuePairs &parameters)
 		{if (!parameters.GetValue("OutputStringPointer", m_output)) throw InvalidArgument("StringSink: OutputStringPointer not specified");}
@@ -1076,14 +1077,12 @@ public:
 	size_t Put2(const byte *inString, size_t length, int messageEnd, bool blocking)
 	{
 		CRYPTOPP_UNUSED(messageEnd); CRYPTOPP_UNUSED(blocking);
-		typedef typename T::traits_type::char_type char_type;
-
 		if (length > 0)
 		{
 			typename T::size_type size = m_output->size();
 			if (length < size && size + length > m_output->capacity())
 				m_output->reserve(2*size);
-			m_output->append((const char_type *)inString, (const char_type *)inString+length);
+			m_output->insert(m_output->end(), (const value_type *)inString, (const value_type *)inString+length);
 		}
 		return 0;
 	}
@@ -1098,6 +1097,11 @@ private:
 /// \since Crypto++ 4.0
 DOCUMENTED_TYPEDEF(StringSinkTemplate<std::string>, StringSink)
 CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::string>;
+
+/// \brief Append input to a std::vector<byte> object
+/// \details VectorSink is a typedef for StringSinkTemplate<std::vector<byte> >.
+DOCUMENTED_TYPEDEF(StringSinkTemplate<std::vector<byte> >, VectorSink)
+CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::vector<byte> >;
 
 /// \brief Incorporates input into RNG as additional entropy
 /// \since Crypto++ 4.0
@@ -1288,37 +1292,44 @@ public:
 	//@{
 
 	/// \brief Pump data to attached transformation
-	/// \param pumpMax the maximpum number of bytes to pump
+	/// \param pumpMax the maximum number of bytes to pump
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
 	/// \details Internally, Pump() calls Pump2().
-	/// \note pumpMax is a \p lword, which is a 64-bit value that typically uses \p LWORD_MAX. The default
-	///   argument is a \p size_t that uses \p SIZE_MAX, and it can be 32-bits or 64-bits.
-	lword Pump(lword pumpMax=(size_t)SIZE_MAX)
+	/// \note pumpMax is a <tt>lword</tt>, which is a 64-bit value that typically uses
+	///   <tt>LWORD_MAX</tt>. The default argument is <tt>SIZE_MAX</tt>, and it can be
+	///   32-bits or 64-bits.
+	/// \sa Pump2, PumpAll, AnyRetrievable, MaxRetrievable
+	lword Pump(lword pumpMax=SIZE_MAX)
 		{Pump2(pumpMax); return pumpMax;}
 
 	/// \brief Pump messages to attached transformation
-	/// \param count the maximpum number of messages to pump
+	/// \param count the maximum number of messages to pump
 	/// \returns TODO
 	/// \details Internally, PumpMessages() calls PumpMessages2().
 	unsigned int PumpMessages(unsigned int count=UINT_MAX)
 		{PumpMessages2(count); return count;}
 
 	/// \brief Pump all data to attached transformation
-	/// \details Internally, PumpAll() calls PumpAll2().
+	/// \details Pumps all data to the attached transformation and signal the end of the current
+	///   message. To avoid the MessageEnd() signal call \ref Pump "Pump(LWORD_MAX)" or \ref Pump2
+	///   "Pump2(LWORD_MAX, bool)".
+	/// \details Internally, PumpAll() calls PumpAll2(), which calls PumpMessages().
+	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	void PumpAll()
 		{PumpAll2();}
 
 	/// \brief Pump data to attached transformation
-	/// \param byteCount the maximpum number of bytes to pump
+	/// \param byteCount the maximum number of bytes to pump
 	/// \param blocking specifies whether the object should block when processing input
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
 	/// \details byteCount is an \a IN and \a OUT parameter. When the call is made, byteCount is the
 	///   requested size of the pump. When the call returns, byteCount is the number of bytes that
 	///   were pumped.
+	/// \sa Pump, PumpAll, AnyRetrievable, MaxRetrievable
 	virtual size_t Pump2(lword &byteCount, bool blocking=true) =0;
 
 	/// \brief Pump messages to attached transformation
-	/// \param messageCount the maximpum number of messages to pump
+	/// \param messageCount the maximum number of messages to pump
 	/// \param blocking specifies whether the object should block when processing input
 	/// \details messageCount is an IN and OUT parameter.
 	virtual size_t PumpMessages2(unsigned int &messageCount, bool blocking=true) =0;
@@ -1326,6 +1337,7 @@ public:
 	/// \brief Pump all data to attached transformation
 	/// \param blocking specifies whether the object should block when processing input
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	virtual size_t PumpAll2(bool blocking=true);
 
 	/// \brief Determines if the Source is exhausted
@@ -1413,6 +1425,24 @@ public:
 ///   The third constructor takes a pointer and length.
 /// \since Crypto++ 5.6.0
 DOCUMENTED_TYPEDEF(StringSource, ArraySource)
+
+/// \brief std::vector-based implementation of the Source interface
+/// \since Crypto++ 8.0
+class CRYPTOPP_DLL VectorSource : public SourceTemplate<StringStore>
+{
+public:
+	/// \brief Construct a VectorSource
+	/// \param attachment an optional attached transformation
+	VectorSource(BufferedTransformation *attachment = NULLPTR)
+		: SourceTemplate<StringStore>(attachment) {}
+
+	/// \brief Construct a VectorSource
+	/// \param vec vector of bytes
+	/// \param pumpAll flag indicating if source data should be pumped to its attached transformation
+	/// \param attachment an optional attached transformation
+	VectorSource(const std::vector<byte> &vec, bool pumpAll, BufferedTransformation *attachment = NULLPTR)
+		: SourceTemplate<StringStore>(attachment) {SourceInitialize(pumpAll, MakeParameters("InputBuffer", ConstByteArrayParameter(vec)));}
+};
 
 /// \brief RNG-based implementation of Source interface
 /// \since Crypto++ 4.0

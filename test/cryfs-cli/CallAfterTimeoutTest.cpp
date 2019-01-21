@@ -8,14 +8,14 @@ using cpputils::make_unique_ref;
 using boost::chrono::milliseconds;
 using boost::chrono::minutes;
 using boost::this_thread::sleep_for;
-using namespace cryfs;
+using namespace cryfs_cli;
 
 class CallAfterTimeoutTest : public ::testing::Test {
 public:
     CallAfterTimeoutTest(): called(false) {}
 
     unique_ref<CallAfterTimeout> callAfterTimeout(milliseconds timeout) {
-        return make_unique_ref<CallAfterTimeout>(timeout, [this] {called = true;});
+        return make_unique_ref<CallAfterTimeout>(timeout, [this] {called = true;}, "test");
     }
 
     std::atomic<bool> called;

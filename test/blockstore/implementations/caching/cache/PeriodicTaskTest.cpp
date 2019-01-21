@@ -37,7 +37,7 @@ class PeriodicTaskTest: public Test {
 };
 
 TEST_F(PeriodicTaskTest, DoesntDeadlockInDestructorWhenDestructedImmediately) {
-  PeriodicTask task([](){}, 1);
+  PeriodicTask task([](){}, 1, "test");
 }
 
 TEST_F(PeriodicTaskTest, CallsCallbackAtLeast10Times) {
@@ -45,7 +45,7 @@ TEST_F(PeriodicTaskTest, CallsCallbackAtLeast10Times) {
 
   PeriodicTask task([&counter](){
     counter.decrease();
-  }, 0.001);
+  }, 0.001, "test");
 
   counter.waitForZero();
 }
@@ -55,7 +55,7 @@ TEST_F(PeriodicTaskTest, DoesntCallCallbackAfterDestruction) {
   {
     PeriodicTask task([&callCount](){
       callCount += 1;
-    }, 0.001);
+    }, 0.001, "test");
   }
   int callCountDirectlyAfterDestruction = callCount;
   boost::this_thread::sleep_for(boost::chrono::seconds(1));

@@ -1,11 +1,11 @@
 #pragma once
-#ifndef MESSMER_CRYFS_CLI_ENVIRONMENT_H
-#define MESSMER_CRYFS_CLI_ENVIRONMENT_H
+#ifndef MESSMER_CRYFSCLI_ENVIRONMENT_H
+#define MESSMER_CRYFSCLI_ENVIRONMENT_H
 
 #include <string>
 #include <boost/filesystem/path.hpp>
 
-namespace cryfs {
+namespace cryfs_cli {
 
     class Environment {
     public:
