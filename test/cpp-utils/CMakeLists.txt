@@ -55,6 +55,7 @@ set(SOURCES
     system/HomedirTest.cpp
 	system/EnvTest.cpp
 	thread/debugging_test.cpp
+	thread/LeftRightTest.cpp
     value_type/ValueTypeTest.cpp
 )
 
