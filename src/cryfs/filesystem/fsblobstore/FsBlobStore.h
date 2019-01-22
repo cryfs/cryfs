@@ -38,7 +38,7 @@ namespace cryfs {
         private:
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, cpputils::SignalCatcher* signalCatcher);
+            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, cpputils::SignalCatcher* signalCatcher, std::function<void(uint32_t numNodes)> perBlobCallback);
 #endif
 
             std::function<fspp::num_bytes_t(const blockstore::BlockId &)> _getLstatSize();

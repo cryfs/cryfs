@@ -3,6 +3,7 @@
 #include "KnownBlockVersions.h"
 #include <cpp-utils/data/SerializationHelper.h>
 #include <cpp-utils/process/SignalCatcher.h>
+#include <cpp-utils/io/ProgressBar.h>
 
 using cpputils::Data;
 using cpputils::unique_ref;
@@ -199,15 +200,16 @@ void IntegrityBlockStore2::forEachBlock(std::function<void (const BlockId &)> ca
 void IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(BlockStore2 *baseBlockStore, const boost::filesystem::path &integrityFilePath, uint32_t myClientId) {
   SignalCatcher signalCatcher;
 
-  std::cout << "Migrating file system for integrity features. Please don't interrupt this process. This can take a while..." << std::flush;
   KnownBlockVersions knownBlockVersions(integrityFilePath, myClientId);
-  baseBlockStore->forEachBlock([&baseBlockStore, &knownBlockVersions, &signalCatcher] (const BlockId &blockId) {
+  uint64_t numProcessedBlocks = 0;
+  cpputils::ProgressBar progressbar("Migrating file system for integrity features. This can take a while...", baseBlockStore->numBlocks());
+  baseBlockStore->forEachBlock([&] (const BlockId &blockId) {
     if (signalCatcher.signal_occurred()) {
       throw std::runtime_error("Caught signal");
     }
     migrateBlockFromBlockstoreWithoutVersionNumbers(baseBlockStore, blockId, &knownBlockVersions);
+    progressbar.update(++numProcessedBlocks);
   });
-  std::cout << "done" << std::endl;
 }
 
 void IntegrityBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(blockstore::BlockStore2* baseBlockStore, const blockstore::BlockId& blockId, KnownBlockVersions *knownBlockVersions) {

@@ -3,6 +3,7 @@
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
 #include <cryfs/config/CryConfigFile.h>
+#include <cpp-utils/io/ProgressBar.h>
 #include <cpp-utils/process/SignalCatcher.h>
 
 using cpputils::unique_ref;
@@ -42,15 +43,19 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
 
         auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
 
-        std::cout << "Migrating file system for conflict resolution features. Please don't interrupt this process. This can take a while..." << std::flush;
-        fsBlobStore->_migrate(std::move(*rootBlob), blockstore::BlockId::Null(), &signalCatcher);
-        std::cout << "done" << std::endl;
+        uint64_t migratedBlocks = 0;
+        cpputils::ProgressBar progressbar("Migrating file system for conflict resolution features. This can take a while...", fsBlobStore->numBlocks());
+        fsBlobStore->_migrate(std::move(*rootBlob), blockstore::BlockId::Null(), &signalCatcher, [&] (uint32_t numNodes) {
+            migratedBlocks += numNodes;
+            progressbar.update(migratedBlocks);
+        });
 
         return fsBlobStore;
     }
 
-    void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, SignalCatcher* signalCatcher) {
+    void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, SignalCatcher* signalCatcher, std::function<void(uint32_t numNodes)> perBlobCallback) {
         FsBlobView::migrate(node.get(), parentId);
+        perBlobCallback(node->numNodes());
         if (FsBlobView::blobType(*node) == FsBlobView::BlobType::DIR) {
             DirBlob dir(std::move(node), _getLstatSize());
             vector<fspp::Dir::Entry> children;
@@ -64,7 +69,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
                 ASSERT(childEntry != none, "Couldn't load child, although it was returned as a child in the list.");
                 auto childBlob = _baseBlobStore->load(childEntry->blockId());
                 ASSERT(childBlob != none, "Couldn't load child blob");
-                _migrate(std::move(*childBlob), dir.blockId(), signalCatcher);
+                _migrate(std::move(*childBlob), dir.blockId(), signalCatcher, perBlobCallback);
             }
         }
     }
