@@ -11,6 +11,7 @@ set(SOURCES
         crypto/hash/Hash.cpp
         process/daemonize.cpp
         process/subprocess.cpp
+        process/SignalCatcher.cpp
         tempfile/TempFile.cpp
         tempfile/TempDir.cpp
         network/HttpClient.cpp
@@ -26,6 +27,7 @@ set(SOURCES
         thread/ThreadSystem.cpp
         thread/debugging_nonwindows.cpp
         thread/debugging_windows.cpp
+        thread/LeftRight.cpp
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp

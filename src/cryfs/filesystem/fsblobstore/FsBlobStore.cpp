@@ -3,6 +3,7 @@
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
 #include <cryfs/config/CryConfigFile.h>
+#include <cpp-utils/process/SignalCatcher.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
