@@ -56,7 +56,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
             dir.AppendChildrenTo(&children);
             for (const auto &child : children) {
                 auto childEntry = dir.GetChild(child.name);
-                ASSERT(childEntry != none, "Couldn't load child, although it was returned as a child in the lsit.");
+                ASSERT(childEntry != none, "Couldn't load child, although it was returned as a child in the list.");
                 auto childBlob = _baseBlobStore->load(childEntry->blockId());
                 ASSERT(childBlob != none, "Couldn't load child blob");
                 _migrate(std::move(*childBlob), dir.blockId());
