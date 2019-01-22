@@ -8,6 +8,9 @@
 #include "FileBlob.h"
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
+#ifndef CRYFS_NO_COMPATIBILITY
+#include <cpp-utils/process/SignalCatcher.h>
+#endif
 
 namespace cryfs {
     namespace fsblobstore {
@@ -29,13 +32,13 @@ namespace cryfs {
             uint64_t virtualBlocksizeBytes() const;
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            static cpputils::unique_ref<FsBlobStore> migrateIfNeeded(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId);
+            static cpputils::unique_ref<FsBlobStore> migrate(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId);
 #endif
 
         private:
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId);
+            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, cpputils::SignalCatcher* signalCatcher);
 #endif
 
             std::function<fspp::num_bytes_t(const blockstore::BlockId &)> _getLstatSize();

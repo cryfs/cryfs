@@ -81,7 +81,7 @@ unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(uniqu
     return make_unique_ref<FsBlobStore>(std::move(blobStore));
   }
   if (!configFile->config()->HasParentPointers()) {
-    auto result = FsBlobStore::migrateIfNeeded(std::move(blobStore), BlockId::FromString(rootBlobId));
+    auto result = FsBlobStore::migrate(std::move(blobStore), BlockId::FromString(rootBlobId));
     // Don't migrate again if it was successful
     configFile->config()->SetHasParentPointers(true);
     configFile->save();
