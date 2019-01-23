@@ -23,6 +23,7 @@ set(SOURCES
         io/IOStreamConsole.cpp
         io/NoninteractiveConsole.cpp
         io/pipestream.cpp
+        io/ProgressBar.cpp
         thread/LoopThread.cpp
         thread/ThreadSystem.cpp
         thread/debugging_nonwindows.cpp

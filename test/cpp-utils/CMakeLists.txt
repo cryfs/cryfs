@@ -29,6 +29,7 @@ set(SOURCES
     io/ConsoleTest_Print.cpp
     io/ConsoleTest_Ask.cpp
 	io/ConsoleTest_AskPassword.cpp
+	io/ProgressBarTest.cpp
     random/RandomIncludeTest.cpp
     lock/LockPoolIncludeTest.cpp
     lock/ConditionBarrierIncludeTest.cpp
