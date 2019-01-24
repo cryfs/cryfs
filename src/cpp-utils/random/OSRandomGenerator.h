@@ -2,7 +2,6 @@
 #ifndef MESSMER_CPPUTILS_RANDOM_OSRANDOMGENERATOR_H
 #define MESSMER_CPPUTILS_RANDOM_OSRANDOMGENERATOR_H
 
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGenerator.h"
 #include <vendor_cryptopp/osrng.h>
 
