@@ -2,8 +2,6 @@
 #ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSEDBLOCK_H_
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_COMPRESSING_COMPRESSEDBLOCK_H_
 
-#include "cpp-utils/crypto/cryptopp_byte.h"
-
 #include "../../interface/Block.h"
 #include "../../interface/BlockStore.h"
 #include <cpp-utils/data/DataUtils.h>

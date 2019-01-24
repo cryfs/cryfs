@@ -2,7 +2,6 @@
 #ifndef MESSMER_CPPUTILS_TEST_CRYPTO_SYMMETRIC_TESTUTILS_FAKEAUTHENTICATEDCIPHER_H_
 #define MESSMER_CPPUTILS_TEST_CRYPTO_SYMMETRIC_TESTUTILS_FAKEAUTHENTICATEDCIPHER_H_
 
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "cpp-utils/crypto/symmetric/Cipher.h"
 #include "cpp-utils/data/FixedSizeData.h"
 #include "cpp-utils/data/Data.h"

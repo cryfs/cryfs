@@ -1,4 +1,3 @@
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include <gtest/gtest.h>
 #include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"

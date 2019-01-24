@@ -1,4 +1,3 @@
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "Gzip.h"
 #include <vendor_cryptopp/gzip.h>
 
