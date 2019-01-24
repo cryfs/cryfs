@@ -1,13 +1,11 @@
 image:
-#- Visual Studio 2013
-#- Visual Studio 2015
 - Visual Studio 2017
 #- Visual Studio 2017 Preview
 
 platform:
 - x64
 - x86
-- Any CPU
+#- Any CPU
 
 configuration:
  - Debug
