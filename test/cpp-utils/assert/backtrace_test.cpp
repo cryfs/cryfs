@@ -19,6 +19,12 @@ namespace {
 	}
 }
 
+TEST(BacktraceTest, ContainsBacktrace) {
+	string backtrace = cpputils::backtrace();
+	EXPECT_THAT(backtrace, HasSubstr("#1"));
+}
+
+#if !(defined(_MSC_VER) && defined(NDEBUG))
 TEST(BacktraceTest, ContainsExecutableName) {
     string backtrace = cpputils::backtrace();
     EXPECT_THAT(backtrace, HasSubstr("cpp-utils-test"));
@@ -29,7 +35,7 @@ TEST(BacktraceTest, ContainsTopLevelLine) {
     EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
     EXPECT_THAT(backtrace, HasSubstr("ContainsTopLevelLine"));
 }
-
+#endif
 
 namespace {
 	std::string call_process_exiting_with_nullptr_violation() {
@@ -77,6 +83,7 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException) {
 	}
 }
 
+#if !(defined(_MSC_VER) && defined(NDEBUG))
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
 	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
@@ -96,6 +103,27 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
 	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
 }
+#else
+TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
+	auto output = call_process_exiting_with_nullptr_violation();
+	EXPECT_THAT(output, HasSubstr("#1"));
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
+	auto output = call_process_exiting_with_sigsegv();
+	EXPECT_THAT(output, HasSubstr("#1"));
+}
+
+TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
+	auto output = call_process_exiting_with_exception("my_exception_message");
+	EXPECT_THAT(output, HasSubstr("#1"));
+}
+
+TEST(BacktraceTest, ShowBacktraceOnSigIll) {
+	auto output = call_process_exiting_with_sigill();
+	EXPECT_THAT(output, HasSubstr("#1"));
+}
+#endif
 
 #if !defined(_MSC_VER)
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {

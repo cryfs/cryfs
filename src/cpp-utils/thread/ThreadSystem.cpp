@@ -1,7 +1,9 @@
 #include "ThreadSystem.h"
 #include "../logging/logging.h"
+#include "debugging.h"
 
 using std::function;
+using std::string;
 using namespace cpputils::logging;
 
 namespace cpputils {
@@ -21,10 +23,10 @@ namespace cpputils {
 #endif
     }
 
-    ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration) {
+    ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration, string threadName) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        auto thread = _startThread(loopIteration);
-        _runningThreads.push_back(RunningThread{std::move(loopIteration), std::move(thread)});
+        auto thread = _startThread(loopIteration, threadName);
+        _runningThreads.push_back(RunningThread{std::move(threadName), std::move(loopIteration), std::move(thread)});
         return std::prev(_runningThreads.end());
     }
 
@@ -59,13 +61,14 @@ namespace cpputils {
 
     void ThreadSystem::_restartAllThreads() {
         for (RunningThread &thread : _runningThreads) {
-            thread.thread = _startThread(thread.loopIteration);
+            thread.thread = _startThread(thread.loopIteration, thread.threadName);
         }
         _mutex.unlock(); // Was locked in the before-fork handler
     }
 
-    boost::thread ThreadSystem::_startThread(function<bool()> loopIteration) {
-        return boost::thread([loopIteration = std::move(loopIteration)] {
+    boost::thread ThreadSystem::_startThread(function<bool()> loopIteration, const string& threadName) {
+        return boost::thread([loopIteration = std::move(loopIteration), threadName] {
+            cpputils::set_thread_name(threadName.c_str());
             ThreadSystem::_runThread(loopIteration);
         });
     }

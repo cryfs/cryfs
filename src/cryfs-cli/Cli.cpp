@@ -26,6 +26,7 @@
 #include <cryfs/localstate/BasedirMetadata.h>
 #include "Environment.h"
 #include <cryfs/CryfsException.h>
+#include <cpp-utils/thread/debugging.h>
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword
@@ -297,7 +298,7 @@ namespace cryfs_cli {
             return none;
         }
         uint64_t millis = std::llround(60000 * (*minutes));
-        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback);
+        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback, "idlecallback");
     }
 
     void Cli::_initLogfile(const ProgramOptions &options) {
@@ -396,6 +397,7 @@ namespace cryfs_cli {
 
     int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
         cpputils::showBacktraceOnCrash();
+        cpputils::set_thread_name("cryfs");
 
         try {
             _showVersion(std::move(httpClient));

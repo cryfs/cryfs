@@ -54,6 +54,7 @@ set(SOURCES
     system/MemoryTest.cpp
     system/HomedirTest.cpp
 	system/EnvTest.cpp
+	thread/debugging_test.cpp
     value_type/ValueTypeTest.cpp
 	either_test.cpp
 )
