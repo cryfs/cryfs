@@ -4,7 +4,6 @@
 #include <sstream>
 #include <cpp-utils/logging/logging.h>
 
-using boost::optional;
 using boost::none;
 using std::ifstream;
 using std::ofstream;
