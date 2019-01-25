@@ -2,7 +2,6 @@
 #ifndef MESSMER_CPPUTILS_CRYPTO_SYMMETRIC_CFBCIPHER_H_
 #define MESSMER_CPPUTILS_CRYPTO_SYMMETRIC_CFBCIPHER_H_
 
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "../../data/FixedSizeData.h"
 #include "../../data/Data.h"
 #include "../../random/Random.h"

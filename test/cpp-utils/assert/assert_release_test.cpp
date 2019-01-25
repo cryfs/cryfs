@@ -2,6 +2,10 @@
 #include <gmock/gmock.h>
 #include <regex>
 
+#ifdef NDEBUG
+#define _REAL_NDEBUG
+#endif
+
 //Include the ASSERT macro for a release build
 #ifndef NDEBUG
 #define NDEBUG
@@ -31,10 +35,11 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
 	  /*EXPECT_THAT(e.what(), MatchesRegex(
 		  R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)"
 	  ));*/
-	  EXPECT_TRUE(std::regex_search(e.what(), std::regex(R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:26: my message)")));
+	  EXPECT_TRUE(std::regex_search(e.what(), std::regex(R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:30: my message)")));
   }
 }
 
+#if !(defined(_MSC_VER) && defined(_REAL_NDEBUG))
 TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
   try {
     ASSERT(2==5, "my message");
@@ -45,3 +50,15 @@ TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
     ));
   }
 }
+#else
+TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
+  try {
+    ASSERT(2==5, "my message");
+    FAIL();
+  } catch (const cpputils::AssertFailed &e) {
+    EXPECT_THAT(e.what(), HasSubstr(
+      "#1"
+    ));
+  }
+}
+#endif

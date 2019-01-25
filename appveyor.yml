@@ -1,13 +1,11 @@
 image:
-#- Visual Studio 2013
-#- Visual Studio 2015
 - Visual Studio 2017
 #- Visual Studio 2017 Preview
 
 platform:
 - x64
 - x86
-- Any CPU
+#- Any CPU
 
 configuration:
  - Debug
@@ -33,7 +31,8 @@ install:
 build_script:
   - cmd: mkdir build
   - cmd: cd build
-  - cmd: cmake .. -G "Ninja" -DBUILD_TESTING=on -DBOOST_ROOT="C:/Libraries/boost_1_65_1" -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.1.0"
+  # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
+  - cmd: cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DBOOST_ROOT="C:/Libraries/boost_1_65_1" -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.1.0"
   - cmd: cmake --build . --config %CONFIGURATION%
   - cmd: .\test\gitversion\gitversion-test.exe
   # cpp-utils-test disables ThreadDebuggingTest_ThreadName.*_thenIsCorrect because the appveyor image is too old to support the API needed for that
