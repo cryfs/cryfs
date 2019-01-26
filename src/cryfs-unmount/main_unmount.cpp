@@ -4,7 +4,7 @@
 #endif
 
 #include <iostream>
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/CryfsException.h>
 #include <cpp-utils/assert/backtrace.h>
 #include "Cli.h"
 

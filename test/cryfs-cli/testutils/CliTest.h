@@ -17,10 +17,10 @@
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/network/FakeHttpClient.h>
 #include <cpp-utils/lock/ConditionBarrier.h>
-#include "../../cryfs/testutils/MockConsole.h"
-#include "../../cryfs/testutils/TestWithFakeHomeDirectory.h"
+#include "../../cryfs/impl/testutils/MockConsole.h"
+#include "../../cryfs/impl/testutils/TestWithFakeHomeDirectory.h"
 #include <fspp/fuse/Fuse.h>
-#include <cryfs/ErrorCodes.h>
+#include <cryfs/impl/ErrorCodes.h>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>
