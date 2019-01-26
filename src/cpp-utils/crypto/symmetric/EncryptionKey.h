@@ -5,7 +5,6 @@
 #include <cpp-utils/data/FixedSizeData.h>
 #include <memory>
 #include <cpp-utils/system/memory.h>
-#include "../cryptopp_byte.h"
 #include <cpp-utils/random/RandomGenerator.h>
 
 namespace cpputils {

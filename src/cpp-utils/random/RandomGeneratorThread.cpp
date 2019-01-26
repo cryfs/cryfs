@@ -1,4 +1,3 @@
-#include "cpp-utils/crypto/cryptopp_byte.h"
 #include "RandomGeneratorThread.h"
 
 namespace cpputils {
