@@ -13,25 +13,26 @@ using cryfs::ErrorCode;
 
 int main(int argc, const char *argv[]) {
 #if defined(_MSC_VER)
-	if (!IsWindows7SP1OrGreater()) {
-		std::cerr << "CryFS is currently only supported on Windows 7 SP1 (or later)." << std::endl;
-		exit(1);
-	}
+    if (!IsWindows7SP1OrGreater()) {
+        std::cerr << "CryFS is currently only supported on Windows 7 SP1 (or later)." << std::endl;
+        exit(1);
+    }
 #endif
 
-	cpputils::showBacktraceOnCrash();
+    cpputils::showBacktraceOnCrash();
 
-	try {
-		cryfs_unmount::Cli().main(argc, argv);
-	}
-	catch (const cryfs::CryfsException &e) {
-		if (e.what() != std::string()) {
-			std::cerr << "Error " << static_cast<int>(e.errorCode()) << ": " << e.what() << std::endl;
-		}
-		return exitCode(e.errorCode());
-	}
-	catch (const std::runtime_error &e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-		return exitCode(ErrorCode::UnspecifiedError);
-	}
-	return exitCode(ErrorCode::Success);
+    try {
+        cryfs_unmount::Cli().main(argc, argv);
+    }
+    catch (const cryfs::CryfsException &e) {
+        if (e.what() != std::string()) {
+            std::cerr << "Error " << static_cast<int>(e.errorCode()) << ": " << e.what() << std::endl;
+        }
+        return exitCode(e.errorCode());
+    }
+    catch (const std::runtime_error &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return exitCode(ErrorCode::UnspecifiedError);
+    }
+    return exitCode(ErrorCode::Success);
+}

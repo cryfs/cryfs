@@ -4,7 +4,6 @@ INCLUDE(GNUInstallDirs)
 set(SOURCES
         Cli.cpp
         VersionChecker.cpp
-        CallAfterTimeout.cpp
         Environment.cpp
         program_options/utils.cpp
         program_options/ProgramOptions.cpp

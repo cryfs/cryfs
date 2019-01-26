@@ -1,7 +1,6 @@
 project (cryfs-cli-test)
 
 set(SOURCES
-    CallAfterTimeoutTest.cpp
     testutils/CliTest.cpp
     CliTest_Setup.cpp
     CliTest_WrongEnvironment.cpp

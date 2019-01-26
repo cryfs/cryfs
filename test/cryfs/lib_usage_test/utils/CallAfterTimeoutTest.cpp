@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpp-utils/pointer/unique_ref.h>
-#include <cryfs-cli/CallAfterTimeout.h>
+#include <cryfs/lib/utils/CallAfterTimeout.h>
 #include <atomic>
 
 using cpputils::unique_ref;
@@ -8,7 +8,7 @@ using cpputils::make_unique_ref;
 using boost::chrono::milliseconds;
 using boost::chrono::minutes;
 using boost::this_thread::sleep_for;
-using namespace cryfs_cli;
+using namespace cryfs;
 
 class CallAfterTimeoutTest : public ::testing::Test {
 public:

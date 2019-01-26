@@ -142,6 +142,6 @@ void cryfs_mount_handle::_create_idle_unmounter(fspp::fuse::Fuse *fuse, cryfs::C
 
     _idle_unmounter = make_unique_ref<CallAfterTimeout>(*_unmount_idle, [fuse] {
         fuse->stop();
-    });
+    }, "idle_unmounter");
     device->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idle_unmounter->get()));
 }

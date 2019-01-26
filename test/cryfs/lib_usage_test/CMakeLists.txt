@@ -7,6 +7,7 @@ set(SOURCES
         Mount_Test.cpp
         Unmount_Test.cpp
         testutils/UnmountAfterTimeout.cpp
+        utils/CallAfterTimeoutTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

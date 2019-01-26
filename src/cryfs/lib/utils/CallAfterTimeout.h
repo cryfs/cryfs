@@ -10,7 +10,7 @@ namespace cryfs {
 
 class CallAfterTimeout final {
 public:
-  CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback);
+    CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName);
 
   void resetTimer();
 
@@ -30,9 +30,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
 };
 
-inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback)
-    : _callback(callback), _timeout(timeout), _start(),
-      _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this)) {
+inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName)
+        :_callback(std::move(callback)), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this), "timeout_" + timeoutName) {
     resetTimer();
     _checkTimeoutThread.start();
 }
