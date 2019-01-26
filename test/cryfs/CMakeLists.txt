@@ -1,26 +1,26 @@
 project (cryfs-test)
 
 set(SOURCES
-    config/crypto/CryConfigEncryptorFactoryTest.cpp
-    config/crypto/outer/OuterConfigTest.cpp
-    config/crypto/outer/OuterEncryptorTest.cpp
-    config/crypto/inner/ConcreteInnerEncryptorTest.cpp
-    config/crypto/inner/InnerConfigTest.cpp
-    config/crypto/CryConfigEncryptorTest.cpp
-    config/CompatibilityTest.cpp
-    config/CryConfigCreatorTest.cpp
-    config/CryConfigFileTest.cpp
-    config/CryConfigTest.cpp
-    config/CryCipherTest.cpp
-    config/CryConfigLoaderTest.cpp
-    config/CryConfigConsoleTest.cpp
-    config/CryPasswordBasedKeyProviderTest.cpp
-    config/CryPresetPasswordBasedKeyProviderTest.cpp
-    filesystem/CryFsTest.cpp
-    filesystem/CryNodeTest.cpp
-    filesystem/FileSystemTest.cpp
-    localstate/LocalStateMetadataTest.cpp
-    localstate/BasedirMetadataTest.cpp
+        impl/config/crypto/CryConfigEncryptorFactoryTest.cpp
+        impl/config/crypto/outer/OuterConfigTest.cpp
+        impl/config/crypto/outer/OuterEncryptorTest.cpp
+        impl/config/crypto/inner/ConcreteInnerEncryptorTest.cpp
+        impl/config/crypto/inner/InnerConfigTest.cpp
+        impl/config/crypto/CryConfigEncryptorTest.cpp
+        impl/config/CompatibilityTest.cpp
+        impl/config/CryConfigCreatorTest.cpp
+        impl/config/CryConfigFileTest.cpp
+        impl/config/CryConfigTest.cpp
+        impl/config/CryCipherTest.cpp
+        impl/config/CryConfigLoaderTest.cpp
+        impl/config/CryConfigConsoleTest.cpp
+        impl/config/CryPasswordBasedKeyProviderTest.cpp
+        impl/config/CryPresetPasswordBasedKeyProviderTest.cpp
+        impl/filesystem/CryFsTest.cpp
+        impl/filesystem/CryNodeTest.cpp
+        impl/filesystem/FileSystemTest.cpp
+        impl/localstate/LocalStateMetadataTest.cpp
+        impl/localstate/BasedirMetadataTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
