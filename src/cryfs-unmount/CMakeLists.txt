@@ -8,9 +8,10 @@ set(SOURCES
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils cryfs fspp-fuse)
+target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils cryfs fspp-fuse gitversion)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+target_add_boost(${PROJECT_NAME} program_options)
 
 add_executable(${PROJECT_NAME}_bin main_unmount.cpp)
 set_target_properties(${PROJECT_NAME}_bin PROPERTIES OUTPUT_NAME cryfs-unmount)
