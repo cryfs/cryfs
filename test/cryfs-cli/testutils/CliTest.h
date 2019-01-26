@@ -19,8 +19,8 @@
 #include <cpp-utils/lock/ConditionBarrier.h>
 #include "../../cryfs/impl/testutils/MockConsole.h"
 #include "../../cryfs/impl/testutils/TestWithFakeHomeDirectory.h"
-#include <cryfs/impl/ErrorCodes.h>
 #include <fspp/fuse/Fuse.h>
+#include <cryfs/impl/ErrorCodes.h>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>

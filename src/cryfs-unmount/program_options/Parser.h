@@ -4,7 +4,7 @@
 
 #include "ProgramOptions.h"
 #include <boost/program_options.hpp>
-#include <cryfs/ErrorCodes.h>
+#include <cryfs/impl/ErrorCodes.h>
 
 namespace cryfs_unmount {
 	namespace program_options {

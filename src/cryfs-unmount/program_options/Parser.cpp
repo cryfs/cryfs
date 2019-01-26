@@ -1,8 +1,8 @@
 #include "Parser.h"
 #include <iostream>
 #include <boost/optional.hpp>
-#include <cryfs/config/CryConfigConsole.h>
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/config/CryConfigConsole.h>
+#include <cryfs/impl/CryfsException.h>
 #include <cryfs-cli/Environment.h>
 
 namespace po = boost::program_options;

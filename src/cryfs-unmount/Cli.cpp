@@ -2,7 +2,7 @@
 #include <fspp/fuse/Fuse.h>
 #include <cryfs-unmount/program_options/Parser.h>
 #include <gitversion/gitversion.h>
-#include <cryfs/CryfsException.h>
+#include <cryfs/impl/CryfsException.h>
 
 #include <iostream>
 
