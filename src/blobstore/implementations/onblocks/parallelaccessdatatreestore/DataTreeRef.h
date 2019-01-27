@@ -54,6 +54,10 @@ public:
     return _baseTree->flush();
   }
 
+  uint32_t numNodes() const {
+    return _baseTree->numNodes();
+  }
+
 private:
 
   datatreestore::DataTree *_baseTree;

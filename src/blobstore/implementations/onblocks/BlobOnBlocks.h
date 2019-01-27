@@ -35,6 +35,8 @@ public:
 
   void flush() override;
 
+  uint32_t numNodes() const override;
+
   cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> releaseTree();
 
 private:
