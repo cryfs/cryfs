@@ -2,7 +2,7 @@
 #include "FileBlob.h"
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
-#include <cryfs/config/CryConfigFile.h>
+#include <cryfs/impl/config/CryConfigFile.h>
 #include <cpp-utils/io/ProgressBar.h>
 #include <cpp-utils/process/SignalCatcher.h>
 
