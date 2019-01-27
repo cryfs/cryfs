@@ -11,6 +11,7 @@
 #include <cpp-utils/thread/debugging.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
+#include <codecvt>
 
 #if defined(_MSC_VER)
 #include <codecvt>
@@ -265,6 +266,9 @@ void Fuse::_logUnknownException() {
 }
 
 void Fuse::run(const bf::path &mountdir, const vector<string> &fuseOptions) {
+  // Avoid encoding errors for non-utf8 characters, see https://github.com/cryfs/cryfs/issues/247
+  bf::path::imbue(std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>()));
+
   _mountdir = mountdir;
 
   ASSERT(_argv.size() == 0, "Filesystem already started");
