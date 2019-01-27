@@ -10,7 +10,11 @@ namespace cryfs {
     void FsBlobView::migrate(blobstore::Blob *blob, const blockstore::BlockId &parentId) {
         constexpr unsigned int OLD_HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t);
 
-        ASSERT(FsBlobView::getFormatVersionHeader(*blob) == 0, "Block already migrated");
+        if(FsBlobView::getFormatVersionHeader(*blob) != 0) {
+          // blob already migrated
+          return;
+        }
+
         // Resize blob and move data back
         cpputils::Data data = blob->readAll();
         blob->resize(blob->size() + blockstore::BlockId::BINARY_LENGTH);

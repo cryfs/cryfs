@@ -26,6 +26,8 @@ public:
 
   virtual void flush() = 0;
 
+  virtual uint32_t numNodes() const = 0;
+
   //TODO Test tryRead
 };
 

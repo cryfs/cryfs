@@ -52,6 +52,10 @@ void BlobOnBlocks::flush() {
   _datatree->flush();
 }
 
+uint32_t BlobOnBlocks::numNodes() const {
+  return _datatree->numNodes();
+}
+
 const BlockId &BlobOnBlocks::blockId() const {
   return _datatree->blockId();
 }

@@ -32,6 +32,7 @@ CryConfig::CryConfig()
 , _exclusiveClientId(none)
 #ifndef CRYFS_NO_COMPATIBILITY
 , _hasVersionNumbers(true)
+, _hasParentPointers(true)
 #endif
 {
 }
@@ -53,6 +54,7 @@ CryConfig CryConfig::load(const Data &data) {
   cfg._exclusiveClientId = pt.get_optional<uint32_t>("cryfs.exclusiveClientId");
 #ifndef CRYFS_NO_COMPATIBILITY
   cfg._hasVersionNumbers = pt.get<bool>("cryfs.migrations.hasVersionNumbers", false);
+  cfg._hasParentPointers = pt.get<bool>("cryfs.migrations.hasParentPointers", false);
 #endif
 
   optional<string> filesystemIdOpt = pt.get_optional<string>("cryfs.filesystemId");
@@ -81,6 +83,7 @@ Data CryConfig::save() const {
   }
 #ifndef CRYFS_NO_COMPATIBILITY
   pt.put<bool>("cryfs.migrations.hasVersionNumbers", _hasVersionNumbers);
+  pt.put<bool>("cryfs.migrations.hasParentPointers", _hasParentPointers);
 #endif
 
   stringstream stream;
@@ -171,6 +174,14 @@ bool CryConfig::HasVersionNumbers() const {
 
 void CryConfig::SetHasVersionNumbers(bool value) {
   _hasVersionNumbers = value;
+}
+
+bool CryConfig::HasParentPointers() const {
+  return _hasParentPointers;
+}
+
+void CryConfig::SetHasParentPointers(bool value) {
+  _hasParentPointers = value;
 }
 #endif
 
