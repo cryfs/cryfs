@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
         // TODO Show more info about error
         throw std::runtime_error("Error loading config file.");
     }
-    const auto& config_ = config->configFile.config();
+    const auto& config_ = config->configFile->config();
     std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
 #ifndef CRYFS_NO_COMPATIBILITY
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && !config_->HasParentPointers() && !config_->HasVersionNumbers();
