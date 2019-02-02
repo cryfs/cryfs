@@ -30,9 +30,17 @@ TEST(LeftRightTest, givenVector_whenWritingAndReading_thenChangesArePresent) {
     EXPECT_EQ((vector<int>{5, 6}), read);
 }
 
+TEST(LeftRightTest, givenVector_whenWritingReturnsValue_thenValueIsReturned) {
+    LeftRight<vector<int>> obj;
+
+    auto a = obj.write([] (auto&) -> int {return 5;});
+    static_assert(std::is_same<int, decltype(a)>::value, "");
+    EXPECT_EQ(5, a);
+}
+
 TEST(LeftRightTest, readsCanBeConcurrent) {
     LeftRight<int> obj;
-	std::atomic<int> num_running_readers{0};
+    std::atomic<int> num_running_readers{0};
 
     std::thread reader1([&] () {
        obj.read([&] (auto&) {
@@ -157,7 +165,7 @@ TEST(LeftRightTest, whenWriteThrowsException_thenThrowsThrough) {
     );
 }
 
-TEST(LeftRightTest, givenInt_whenWriteThrowsException_thenResetsToOldState) {
+TEST(LeftRightTest, givenInt_whenWriteThrowsExceptionOnFirstCall_thenResetsToOldState) {
     LeftRight<int> obj;
 
     obj.write([](auto& obj) {obj = 5;});
@@ -178,6 +186,37 @@ TEST(LeftRightTest, givenInt_whenWriteThrowsException_thenResetsToOldState) {
     obj.write([] (auto&) {}); // this switches to the background copy
     read = obj.read([] (auto& obj) {return obj;});
     EXPECT_EQ(5, read);
+}
+
+// note: each write is executed twice, on the foreground and background copy.
+// We need to test a thrown exception in either call is handled correctly.
+TEST(LeftRightTest, givenInt_whenWriteThrowsExceptionOnSecondCall_thenKeepsNewState) {
+    LeftRight<int> obj;
+
+    obj.write([](auto& obj) {obj = 5;});
+    bool write_called = false;
+
+    EXPECT_THROW(
+        obj.write([&](auto& obj) {
+            obj = 6;
+            if (write_called) {
+                // this is the second time the write callback is executed
+                throw MyException();
+            } else {
+                write_called = true;
+            }
+        }),
+    MyException
+    );
+
+    // check reading it returns new value
+    int read = obj.read([] (auto& obj) {return obj;});
+    EXPECT_EQ(6, read);
+
+    // check changes are also present in background copy
+    obj.write([] (auto&) {}); // this switches to the background copy
+    read = obj.read([] (auto& obj) {return obj;});
+    EXPECT_EQ(6, read);
 }
 
 TEST(LeftRightTest, givenVector_whenWriteThrowsException_thenResetsToOldState) {

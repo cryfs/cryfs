@@ -31,14 +31,6 @@ private:
 template <class T>
 class LeftRight final {
 public:
-    LeftRight()
-    : _writeMutex()
-    , _foregroundCounterIndex{0}
-    , _foregroundDataIndex{0}
-    , _counters{{{0}, {0}}}
-    , _data{{{}, {}}}
-    , _inDestruction(false) {}
-
     ~LeftRight() {
         // from now on, no new readers/writers will be accepted (see asserts in read()/write())
         _inDestruction = true;
@@ -56,22 +48,25 @@ public:
 
     template <typename F>
     auto read(F&& readFunc) const {
+        detail::IncrementRAII _increment_counter(&_counters[_foregroundCounterIndex.load()]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+
         if(_inDestruction.load()) {
             throw std::logic_error("Issued LeftRight::read() after the destructor started running");
         }
 
-        detail::IncrementRAII _increment_counter(&_counters[_foregroundCounterIndex.load()]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
         return readFunc(_data[_foregroundDataIndex.load()]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
-    // Throwing from write would result in invalid state
+    // Throwing an exception in writeFunc is ok but causes the state to be either the old or the new state,
+    // depending on if the first or the second call to writeFunc threw.
     template <typename F>
     auto write(F&& writeFunc) {
+        std::unique_lock<std::mutex> lock(_writeMutex);
+
         if(_inDestruction.load()) {
             throw std::logic_error("Issued LeftRight::read() after the destructor started running");
         }
 
-        std::unique_lock<std::mutex> lock(_writeMutex);
         return _write(writeFunc);
     }
 
@@ -116,7 +111,7 @@ private:
         _waitForBackgroundCounterToBeZero(localCounterIndex);
 
         /*
-         *4. Switch A/B counters
+         * 4. Switch A/B counters
          *
          * Now that we know all readers on B are really gone, we can switch the counters and have new readers
          * increment A's counter again, which is the correct counter since they're reading A.
@@ -133,7 +128,7 @@ private:
         _waitForBackgroundCounterToBeZero(localCounterIndex);
 
         // 6. Write to B
-        _callWriteFuncOnBackgroundInstance(writeFunc, localDataIndex);
+        return _callWriteFuncOnBackgroundInstance(writeFunc, localDataIndex);
     }
 
     template<class F>
@@ -155,11 +150,11 @@ private:
     }
 
     std::mutex _writeMutex;
-    std::atomic<uint8_t> _foregroundCounterIndex;
-    std::atomic<uint8_t> _foregroundDataIndex;
-    mutable std::array<std::atomic<int32_t>, 2> _counters;
-    std::array<T, 2> _data;
-    std::atomic<bool> _inDestruction;
+    std::atomic<uint8_t> _foregroundCounterIndex = {0};
+    std::atomic<uint8_t> _foregroundDataIndex = {0};
+    mutable std::array<std::atomic<int32_t>, 2> _counters = {{{0}, {0}}};
+    std::array<T, 2> _data = {{{}, {}}};
+    std::atomic<bool> _inDestruction = {false};
 };
 
 }
