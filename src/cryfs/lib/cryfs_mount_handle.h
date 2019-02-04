@@ -13,11 +13,11 @@ public:
     cryfs_mount_handle(std::shared_ptr<cryfs::CryConfigFile> config, const boost::filesystem::path &basedir);
 
     const char *get_ciphername() const;
-    cryfs_status set_mountdir(const std::string &mountdir);
+    cryfs_status set_mountdir(boost::filesystem::path mountdir);
     cryfs_status set_run_in_foreground(bool foreground);
-    cryfs_status set_logfile(const boost::filesystem::path &logfile);
+    cryfs_status set_logfile(boost::filesystem::path logfile);
     cryfs_status set_unmount_idle(const boost::chrono::milliseconds unmount_idle);
-    cryfs_status add_fuse_argument(const std::string &argument);
+    cryfs_status add_fuse_argument(std::string argument);
 
     cryfs_status mount();
 

@@ -50,14 +50,14 @@ const char *cryfs_mount_handle::get_ciphername() const {
     return _config->config()->Cipher().c_str();
 }
 
-cryfs_status cryfs_mount_handle::set_mountdir(const string &mountdir) {
+cryfs_status cryfs_mount_handle::set_mountdir(bf::path mountdir) {
     if (!bf::exists(mountdir)) {
         return cryfs_error_MOUNTDIR_DOESNT_EXIST;
     }
     if (!cryfs::filesystem_checks::check_dir_accessible(mountdir)) {
         return cryfs_error_MOUNTDIR_INACCESSIBLE;
     }
-    _mountdir = mountdir;
+    _mountdir = std::move(mountdir);
     return cryfs_success;
 }
 
@@ -66,14 +66,14 @@ cryfs_status cryfs_mount_handle::set_run_in_foreground(bool run_in_foreground) {
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount_handle::set_logfile(const bf::path &logfile) {
+cryfs_status cryfs_mount_handle::set_logfile(bf::path logfile) {
     if (!bf::is_directory(logfile.parent_path())) {
         return cryfs_error_INVALID_LOGFILE;
     }
     if (bf::exists(logfile) && !cryfs::filesystem_checks::check_file_appendable(logfile)) {
         return cryfs_error_LOGFILE_NOT_WRITABLE;
     }
-    _logfile = logfile;
+    _logfile = std::move(logfile);
     return cryfs_success;
 }
 
@@ -82,8 +82,8 @@ cryfs_status cryfs_mount_handle::set_unmount_idle(const boost::chrono::milliseco
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount_handle::add_fuse_argument(const string &argument) {
-    _fuse_arguments.push_back(argument);
+cryfs_status cryfs_mount_handle::add_fuse_argument(string argument) {
+    _fuse_arguments.push_back(std::move(argument));
     return cryfs_success;
 }
 

@@ -13,10 +13,10 @@ struct cryfs_create_context final {
 public:
   cryfs_create_context(cryfs_api_context *api_context);
 
-  cryfs_status set_basedir(const std::string &basedir);
-  cryfs_status set_cipher(const std::string &cipher);
-  cryfs_status set_password(const std::string &password);
-  cryfs_status set_externalconfig(const std::string &configfile);
+  cryfs_status set_basedir(boost::filesystem::path basedir);
+  cryfs_status set_cipher(std::string cipher);
+  cryfs_status set_password(std::string password);
+  cryfs_status set_externalconfig(boost::filesystem::path configfile);
   cryfs_status create(cryfs_mount_handle **handle);
 
   cryfs_status free();

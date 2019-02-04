@@ -36,35 +36,35 @@ cryfs_status cryfs_create_context::free() {
     return _api_context->delete_create_context(this);
 }
 
-cryfs_status cryfs_create_context::set_basedir(const string &basedir) {
+cryfs_status cryfs_create_context::set_basedir(bf::path basedir) {
   if (!bf::exists(basedir)) {
     return cryfs_error_BASEDIR_DOESNT_EXIST;
   }
   if (!cryfs::filesystem_checks::check_dir_accessible(basedir)) {
     return cryfs_error_BASEDIR_INACCESSIBLE;
   }
-  _basedir = basedir;
+  _basedir = std::move(basedir);
   return cryfs_success;
 }
 
-cryfs_status cryfs_create_context::set_cipher(const string &cipher) {
+cryfs_status cryfs_create_context::set_cipher(string cipher) {
   //TODO ...
   return cryfs_success;
 }
 
-cryfs_status cryfs_create_context::set_password(const string &password) {
-  _password = password;
+cryfs_status cryfs_create_context::set_password(string password) {
+  _password = std::move(password);
   return cryfs_success;
 }
 
-cryfs_status cryfs_create_context::set_externalconfig(const string &configfile) {
+cryfs_status cryfs_create_context::set_externalconfig(bf::path configfile) {
   if (!bf::exists(configfile)) {
     return cryfs_error_CONFIGFILE_DOESNT_EXIST;
   }
   if (!cryfs::filesystem_checks::check_file_readable(configfile)) {
     return cryfs_error_CONFIGFILE_NOT_READABLE;
   }
-  _configfile = configfile;
+  _configfile = std::move(configfile);
   return cryfs_success;
 }
 
