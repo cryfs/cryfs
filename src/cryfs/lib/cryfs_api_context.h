@@ -19,8 +19,8 @@ public:
   cryfs_status delete_create_context(cryfs_create_context *context);
 
 private:
-  cryfs::context_list<cryfs_load_context, cryfs_api_context*> _load_contexts;
-  cryfs::context_list<cryfs_create_context, cryfs_api_context*> _create_contexts;
+  cryfs::context_list<cryfs_load_context> _load_contexts;
+  cryfs::context_list<cryfs_create_context> _create_contexts;
 
   DISALLOW_COPY_AND_ASSIGN(cryfs_api_context);
 };

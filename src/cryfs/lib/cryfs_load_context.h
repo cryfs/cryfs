@@ -14,9 +14,13 @@ struct cryfs_load_context final {
 public:
     cryfs_load_context(cryfs_api_context *api_context);
 
-    cryfs_status set_basedir(boost::filesystem::path basedir);
+    cryfs_status set_basedir(const boost::filesystem::path& basedir);
     cryfs_status set_password(std::string password);
-    cryfs_status set_externalconfig(boost::filesystem::path configfile);
+    cryfs_status set_externalconfig(const boost::filesystem::path& configfile);
+
+    // TODO Test set_localstatedir
+    cryfs_status set_localstatedir(const boost::filesystem::path& localstatedir);
+    
     cryfs_status load(cryfs_mount_handle **handle);
 
     cryfs_status free();
@@ -27,7 +31,8 @@ private:
     boost::optional<boost::filesystem::path> _basedir;
     boost::optional<std::string> _password;
     boost::optional<boost::filesystem::path> _configfile;
-    cryfs::context_list<cryfs_mount_handle, std::shared_ptr<cryfs::CryConfigFile>, const boost::filesystem::path &> _mount_handles;
+    boost::optional<boost::filesystem::path> _localstatedir;
+    cryfs::context_list<cryfs_mount_handle> _mount_handles;
 
     cpputils::either<cryfs::CryConfigFile::LoadError, cpputils::unique_ref<cryfs::CryConfigFile>> _load_configfile() const;
     boost::filesystem::path _determine_configfile_path() const;

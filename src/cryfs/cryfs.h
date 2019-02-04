@@ -35,7 +35,9 @@ typedef enum {
     cryfs_error_MOUNTDIR_INACCESSIBLE = -15,
     cryfs_error_INVALID_LOGFILE = -16,
     cryfs_error_LOGFILE_NOT_WRITABLE = -17,
-    cryfs_error_UNMOUNT_FAILED = -18
+    cryfs_error_UNMOUNT_FAILED = -18,
+    cryfs_error_LOCALSTATEDIR_NOT_WRITEABLE = -19,
+    cryfs_error_LOCALSTATEDIR_NOT_SET = -20
 } cryfs_status;
 
 typedef struct cryfs_api_context cryfs_api_context;
@@ -52,6 +54,7 @@ CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_init(cr
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_basedir(cryfs_load_context *context, const char *basedir, size_t basedir_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_password(cryfs_load_context *context, const char *password, size_t password_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const char *configfile, size_t configfile_length);
+CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_set_localstatedir(cryfs_load_context *context, const char *localstatedir, size_t localstatedir_length);
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **result); // result can be nullptr if you don't want a mount handle
 CRYFS_EXPORT __attribute__((warn_unused_result)) cryfs_status cryfs_load_free(cryfs_load_context **context);
 

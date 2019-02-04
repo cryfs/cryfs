@@ -7,6 +7,9 @@
 
 namespace cpputils {
 
+// Finds and returns the longest prefix of path that actually exists.
+boost::filesystem::path find_longest_existing_path_prefix(const boost::filesystem::path& path);
+
 #if defined(_MSC_VER)
 
 inline bool path_is_just_drive_letter(const boost::filesystem::path& path) {

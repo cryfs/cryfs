@@ -36,10 +36,13 @@ cryfs_status cryfs_create_context::free() {
     return _api_context->delete_create_context(this);
 }
 
-cryfs_status cryfs_create_context::set_basedir(bf::path basedir) {
-  if (!bf::exists(basedir)) {
+cryfs_status cryfs_create_context::set_basedir(const bf::path& basedir_) {
+  if (!bf::exists(basedir_)) {
     return cryfs_error_BASEDIR_DOESNT_EXIST;
   }
+
+  bf::path basedir = bf::canonical(basedir_);
+
   if (!cryfs::filesystem_checks::check_dir_accessible(basedir)) {
     return cryfs_error_BASEDIR_INACCESSIBLE;
   }
@@ -57,10 +60,13 @@ cryfs_status cryfs_create_context::set_password(string password) {
   return cryfs_success;
 }
 
-cryfs_status cryfs_create_context::set_externalconfig(bf::path configfile) {
-  if (!bf::exists(configfile)) {
+cryfs_status cryfs_create_context::set_externalconfig(const bf::path& configfile_) {
+  if (!bf::exists(configfile_)) {
     return cryfs_error_CONFIGFILE_DOESNT_EXIST;
   }
+
+  bf::path configfile = bf::canonical(configfile_);
+
   if (!cryfs::filesystem_checks::check_file_readable(configfile)) {
     return cryfs_error_CONFIGFILE_NOT_READABLE;
   }

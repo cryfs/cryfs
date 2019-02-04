@@ -107,6 +107,15 @@ cryfs_status cryfs_load_set_externalconfig(cryfs_load_context *context, const ch
     });
 }
 
+cryfs_status cryfs_load_set_localstatedir(cryfs_load_context *context, const char *localstatedir, size_t localstatedir_length) {
+    return catchAllExceptions([&] {
+        if (nullptr == context) {
+            return cryfs_error_INVALID_CONTEXT;
+        }
+        return context->set_localstatedir(string(localstatedir, localstatedir_length));
+    });
+}
+
 cryfs_status cryfs_load(cryfs_load_context *context, cryfs_mount_handle **handle) {
     return catchAllExceptions([&] {
         if (nullptr == context) {

@@ -20,26 +20,12 @@ using blockstore::ondisk::OnDiskBlockStore2;
 using cryfs::CallAfterTimeout;
 namespace bf = boost::filesystem;
 
-namespace {
-    // TODO Remove this and merge with cryfs-cli/Environment.h. Note: This also exists in cryfs_load_context.cpp
-    bf::path _localStateDir() {
-        const string LOCALSTATEDIR_KEY = "CRYFS_LOCAL_STATE_DIR";
-
-        const char* localStateDir = std::getenv(LOCALSTATEDIR_KEY.c_str());
-
-        if (nullptr == localStateDir) {
-            // this is the default
-            return cpputils::system::HomeDirectory::getXDGDataDir() / "cryfs";
-        }
-
-        return bf::absolute(localStateDir);
-    }
-}
-
-cryfs_mount_handle::cryfs_mount_handle(shared_ptr<CryConfigFile> config, const bf::path &basedir)
+cryfs_mount_handle::cryfs_mount_handle(shared_ptr<CryConfigFile> config, const bf::path &basedir, LocalStateDir localstatedir)
     : _config(config),
       _basedir(basedir),
       _mountdir(none),
+      _logfile(none),
+      _localstatedir(std::move(localstatedir)),
       _unmount_idle(none),
       _run_in_foreground(false),
       _fuse_arguments(),
@@ -50,10 +36,13 @@ const char *cryfs_mount_handle::get_ciphername() const {
     return _config->config()->Cipher().c_str();
 }
 
-cryfs_status cryfs_mount_handle::set_mountdir(bf::path mountdir) {
-    if (!bf::exists(mountdir)) {
+cryfs_status cryfs_mount_handle::set_mountdir(const bf::path& mountdir_) {
+    if (!bf::exists(mountdir_)) {
         return cryfs_error_MOUNTDIR_DOESNT_EXIST;
     }
+
+    bf::path mountdir = bf::canonical(mountdir_);
+
     if (!cryfs::filesystem_checks::check_dir_accessible(mountdir)) {
         return cryfs_error_MOUNTDIR_INACCESSIBLE;
     }
@@ -66,7 +55,9 @@ cryfs_status cryfs_mount_handle::set_run_in_foreground(bool run_in_foreground) {
     return cryfs_success;
 }
 
-cryfs_status cryfs_mount_handle::set_logfile(bf::path logfile) {
+cryfs_status cryfs_mount_handle::set_logfile(const bf::path& logfile_) {
+    bf::path logfile = bf::weakly_canonical(logfile_);
+
     if (!bf::is_directory(logfile.parent_path())) {
         return cryfs_error_INVALID_LOGFILE;
     }
@@ -109,12 +100,11 @@ shared_ptr<fspp::FilesystemImpl> cryfs_mount_handle::_init_filesystem(fspp::fuse
 
     auto blockstore = make_unique_ref<OnDiskBlockStore2>(_basedir);
 
-    LocalStateDir localStateDir(_localStateDir());
     uint32_t myClientId = 0x12345678; // TODO Get the correct client id instead, use pattern like in CryConfigLoader for Cli.cpp.
     bool allowIntegrityViolation = false; // TODO Make this configurable
     bool missingBlockIsIntegrityViolation = false; // TODO Make this configurable
     auto onIntegrityViolation = [] {}; // TODO Make this configurable
-    auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
+    auto crydevice = make_unique_ref<CryDevice>(_config, std::move(blockstore), _localstatedir, myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
 
     _create_idle_unmounter(fuse, crydevice.get());
 

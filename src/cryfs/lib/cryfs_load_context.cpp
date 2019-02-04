@@ -2,6 +2,7 @@
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/system/homedir.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
+#include <cpp-utils/system/path.h>
 #include <gitversion/gitversion.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <boost/algorithm/string/predicate.hpp>
@@ -38,22 +39,6 @@ using cpputils::SCrypt;
 using blockstore::ondisk::OnDiskBlockStore2;
 
 
-namespace {
-    // TODO Remove this and merge with cryfs-cli/Environment.h. Note: This also exists in cryfs_mount_handle.cpp
-    bf::path _localStateDir() {
-        const string LOCALSTATEDIR_KEY = "CRYFS_LOCAL_STATE_DIR";
-
-        const char* localStateDir = std::getenv(LOCALSTATEDIR_KEY.c_str());
-
-        if (nullptr == localStateDir) {
-            // this is the default
-            return cpputils::system::HomeDirectory::getXDGDataDir() / "cryfs";
-        }
-
-        return bf::absolute(localStateDir);
-    }
-}
-
 using namespace cpputils::logging;
 
 cryfs_load_context::cryfs_load_context(cryfs_api_context *api_context)
@@ -66,10 +51,13 @@ cryfs_status cryfs_load_context::free() {
     return _api_context->delete_load_context(this);
 }
 
-cryfs_status cryfs_load_context::set_basedir(bf::path basedir) {
-    if (!bf::exists(basedir)) {
+cryfs_status cryfs_load_context::set_basedir(const bf::path& basedir_) {
+    if (!bf::exists(basedir_)) {
         return cryfs_error_BASEDIR_DOESNT_EXIST;
     }
+
+    bf::path basedir = bf::canonical(basedir_);
+
     if (!cryfs::filesystem_checks::check_dir_accessible(basedir)) {
         return cryfs_error_BASEDIR_INACCESSIBLE;
     }
@@ -82,14 +70,32 @@ cryfs_status cryfs_load_context::set_password(string password) {
     return cryfs_success;
 }
 
-cryfs_status cryfs_load_context::set_externalconfig(bf::path configfile) {
-    if (!bf::exists(configfile)) {
+cryfs_status cryfs_load_context::set_externalconfig(const bf::path& configfile_) {
+    if (!bf::exists(configfile_)) {
         return cryfs_error_CONFIGFILE_DOESNT_EXIST;
     }
+
+    bf::path configfile = bf::canonical(configfile_);
+
     if (!cryfs::filesystem_checks::check_file_readable(configfile)) {
         return cryfs_error_CONFIGFILE_NOT_READABLE;
     }
     _configfile = std::move(configfile);
+    return cryfs_success;
+}
+
+cryfs_status cryfs_load_context::set_localstatedir(const bf::path& localstatedir_) {
+    bf::path localstatedir = bf::weakly_canonical(localstatedir_);
+
+    bf::path longest_existing_prefix = cpputils::find_longest_existing_path_prefix(localstatedir);
+
+    if (!cryfs::filesystem_checks::check_dir_accessible(longest_existing_prefix)) {
+        // either localstatedir_ exists and is not writeable,
+        // or it doesn't exist but we can't create it because the longest existing prefix isn't writeable.
+        return cryfs_error_LOCALSTATEDIR_NOT_WRITEABLE;
+    }
+
+    _localstatedir = std::move(localstatedir);
     return cryfs_success;
 }
 
@@ -99,6 +105,9 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     }
     if (_password == none) {
         return cryfs_error_PASSWORD_NOT_SET;
+    }
+    if (_localstatedir == none) {
+        return cryfs_error_LOCALSTATEDIR_NOT_SET;
     }
     auto configfileEither = _load_configfile();
     if (configfileEither.is_left()) {
@@ -116,7 +125,7 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     //TODO CLI caller needs to check cipher if specified on command line
 
     auto blockstore = make_unique_ref<OnDiskBlockStore2>(*_basedir);
-    LocalStateDir localStateDir(_localStateDir());
+    LocalStateDir localStateDir(*_localstatedir);
     uint32_t myClientId = 0x12345678; // TODO Get the correct client id instead, use pattern like in CryConfigLoader for Cli.cpp.
     bool allowIntegrityViolation = false; // TODO Make this configurable
     bool missingBlockIsIntegrityViolation = false; // TODO Make this configurable
@@ -124,7 +133,7 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
     unique_ptr<CryDevice> crydevice;
     try {
         auto onIntegrityViolation = [] {}; // TODO Make this configurable
-        crydevice = make_unique<CryDevice>(configfile, std::move(blockstore), std::move(localStateDir), myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
+        crydevice = make_unique<CryDevice>(configfile, std::move(blockstore), localStateDir, myClientId, allowIntegrityViolation, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
     } catch (const std::runtime_error& e) {
         // this might be thrown if the file system tries to migrate to a newer version and the root block doesn't exist
         return cryfs_error_FILESYSTEM_INVALID;
@@ -135,7 +144,7 @@ cryfs_status cryfs_load_context::load(cryfs_mount_handle **handle) {
 
     if (nullptr != handle) {
         // TODO Why don't we pass the CryDevice to the mount handle?
-        *handle = _mount_handles.create(configfile, *_basedir);
+        *handle = _mount_handles.create(configfile, *_basedir, std::move(localStateDir));
     }
     return cryfs_success;
 }

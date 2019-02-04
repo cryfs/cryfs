@@ -10,12 +10,12 @@
 
 struct cryfs_mount_handle final {
 public:
-    cryfs_mount_handle(std::shared_ptr<cryfs::CryConfigFile> config, const boost::filesystem::path &basedir);
+    cryfs_mount_handle(std::shared_ptr<cryfs::CryConfigFile> config, const boost::filesystem::path &basedir, cryfs::LocalStateDir localstatedir);
 
     const char *get_ciphername() const;
-    cryfs_status set_mountdir(boost::filesystem::path mountdir);
+    cryfs_status set_mountdir(const boost::filesystem::path& mountdir);
     cryfs_status set_run_in_foreground(bool foreground);
-    cryfs_status set_logfile(boost::filesystem::path logfile);
+    cryfs_status set_logfile(const boost::filesystem::path& logfile);
     cryfs_status set_unmount_idle(const boost::chrono::milliseconds unmount_idle);
     cryfs_status add_fuse_argument(std::string argument);
 
@@ -30,6 +30,7 @@ private:
     boost::filesystem::path _basedir;
     boost::optional<boost::filesystem::path> _mountdir;
     boost::optional<boost::filesystem::path> _logfile;
+    cryfs::LocalStateDir _localstatedir;
     boost::optional<boost::chrono::milliseconds> _unmount_idle;
     bool _run_in_foreground;
     std::vector<std::string> _fuse_arguments;

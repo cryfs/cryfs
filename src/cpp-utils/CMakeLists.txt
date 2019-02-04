@@ -64,6 +64,7 @@ set(SOURCES
 		system/filetime_nonwindows.cpp
 		system/filetime_windows.cpp
 		system/env.cpp
+        system/path.cpp
         value_type/ValueType.cpp
 )
 
