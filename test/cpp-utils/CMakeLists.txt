@@ -22,6 +22,7 @@ set(SOURCES
     process/pipe/PipeBuilderTest.cpp
     process/daemon/DaemonPipeReadWriteTest.cpp
     process/daemon/DaemonizeTest.cpp
+	process/SignalCatcherTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp
@@ -34,6 +35,7 @@ set(SOURCES
     io/ConsoleTest_Print.cpp
     io/ConsoleTest_Ask.cpp
 	io/ConsoleTest_AskPassword.cpp
+	io/ProgressBarTest.cpp
     random/RandomIncludeTest.cpp
     lock/LockPoolIncludeTest.cpp
     lock/ConditionBarrierIncludeTest.cpp
@@ -61,6 +63,7 @@ set(SOURCES
     system/HomedirTest.cpp
 	system/EnvTest.cpp
 	thread/debugging_test.cpp
+	thread/LeftRightTest.cpp
     value_type/ValueTypeTest.cpp
 	either_test.cpp
 )

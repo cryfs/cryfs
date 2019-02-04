@@ -13,6 +13,7 @@
 #include <cpp-utils/assert/assert.h>
 #include "impl/LeafTraverser.h"
 #include <boost/thread.hpp>
+#include <blobstore/implementations/onblocks/utils/Math.h>
 
 using blockstore::BlockId;
 using blobstore::onblocks::datanodestore::DataNodeStore;
@@ -64,7 +65,16 @@ unique_ref<DataNode> DataTree::releaseRootNode() {
   return std::move(_rootNode);
 }
 
-//TODO Test numLeaves(), for example also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
+uint32_t DataTree::numNodes() const {
+  uint32_t numNodesCurrentLevel = numLeaves();
+  uint32_t totalNumNodes = numNodesCurrentLevel;
+  for(size_t level = 0; level < _rootNode->depth(); ++level) {
+    numNodesCurrentLevel = blobstore::onblocks::utils::ceilDivision(numNodesCurrentLevel, static_cast<uint32_t>(_nodeStore->layout().maxChildrenPerInnerNode()));
+    totalNumNodes += numNodesCurrentLevel;
+  }
+  return totalNumNodes;
+}
+
 uint32_t DataTree::numLeaves() const {
   shared_lock<shared_mutex> lock(_treeStructureMutex);
 

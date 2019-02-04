@@ -85,6 +85,10 @@ namespace cryfs {
             return _baseBlob->flush();
         }
 
+        uint32_t numNodes() const override {
+            return _baseBlob->numNodes();
+        }
+
         cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() {
             return std::move(_baseBlob);
         }

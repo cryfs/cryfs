@@ -2,9 +2,6 @@
 
 set -e
 
-# Workaround homebrew bug, see https://twitter.com/axccl/status/1083393735277363205 and https://github.com/openPMD/openPMD-api/pull/431/files
-brew upgrade --cleanup || brew upgrade --cleanup
-
 # Install newer GCC if we're running on GCC
 if [ "${CXX}" == "g++" ]; then
     # We need to uninstall oclint because it creates a /usr/local/include/c++ symlink that clashes with the gcc5 package

@@ -164,6 +164,18 @@ int main(int argc, char* argv[]) {
         // TODO Show more info about error
         throw std::runtime_error("Error loading config file.");
     }
+    const auto& config_ = config->configFile->config();
+    std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
+#ifndef CRYFS_NO_COMPATIBILITY
+    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && !config_->HasParentPointers() && !config_->HasVersionNumbers();
+#else
+    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion;
+#endif
+    if (!is_correct_format) {
+        // TODO At this point, the cryfs.config file was already switched to 0.10 format. We should probably not do that.
+        std::cerr << "The filesystem is not in the 0.10 format. It needs to be migrated. The cryfs-stats tool unfortunately can't handle this, please mount and unmount the filesystem once." << std::endl;
+        exit(1);
+    }
 
     cout << "Listing all blocks..." << flush;
     set<BlockId> unaccountedBlocks = _getAllBlockIds(basedir, *config, localStateDir);

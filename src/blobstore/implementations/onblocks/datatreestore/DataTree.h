@@ -40,6 +40,7 @@ public:
 
   void resizeNumBytes(uint64_t newNumBytes);
 
+  uint32_t numNodes() const;
   uint32_t numLeaves() const;
   uint64_t numBytes() const;
 
