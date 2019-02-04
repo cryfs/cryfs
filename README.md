@@ -46,7 +46,7 @@ Requirements
   - GCC version >= 5.0 or Clang >= 4.0
   - CMake version >= 3.0 
   - libcurl4 (including development headers)
-  - Boost libraries version >= 1.58 (including development headers)
+  - Boost libraries version >= 1.60 (including development headers)
     - filesystem
     - system
     - chrono
