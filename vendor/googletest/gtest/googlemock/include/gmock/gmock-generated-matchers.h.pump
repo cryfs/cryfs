@@ -37,6 +37,8 @@ $$ }} This line fixes auto-indentation of the following code in Emacs.
 //
 // This file implements some commonly used variadic matchers.
 
+// GOOGLETEST_CM0002 DO NOT DELETE
+
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_MATCHERS_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_GENERATED_MATCHERS_H_
 
@@ -590,7 +592,8 @@ $$   // show up in the generated code.
 // ================
 //
 // To learn more about using these macros, please search for 'MATCHER'
-// on https://github.com/google/googletest/blob/master/googlemock/docs/CookBook.md
+// on
+// https://github.com/google/googletest/blob/master/googlemock/docs/CookBook.md
 
 $range i 0..n
 $for i

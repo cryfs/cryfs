@@ -1,6 +1,5 @@
 This directory contains external projects, taken from the following locations:
-googletest: https://github.com/google/googletest/tree/4e4df226fc197c0dda6e37f5c8c3845ca1e73a49
- - changed: added NOLINT comment as workaround for clang-tidy warning https://github.com/google/googletest/issues/853
+googletest: https://github.com/google/googletest/tree/release-1.8.1
 spdlog: https://github.com/gabime/spdlog/tree/v0.16.3/include/spdlog
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_0_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_0_0
