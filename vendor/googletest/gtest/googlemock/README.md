@@ -53,7 +53,7 @@ the Apache License, which is different from Google Mock's license.
 If you are new to the project, we suggest that you read the user
 documentation in the following order:
 
-  * Learn the [basics](../../master/googletest/docs/Primer.md) of
+  * Learn the [basics](../../master/googletest/docs/primer.md) of
     Google Test, if you choose to use Google Mock with it (recommended).
   * Read [Google Mock for Dummies](../../master/googlemock/docs/ForDummies.md).
   * Read the instructions below on how to build Google Mock.
@@ -129,42 +129,21 @@ build Google Mock and its tests, which has further requirements:
 
 If you have CMake available, it is recommended that you follow the
 [build instructions][gtest_cmakebuild]
-as described for Google Test. 
+as described for Google Test.
 
 If are using Google Mock with an
 existing CMake project, the section
 [Incorporating Into An Existing CMake Project][gtest_incorpcmake]
-may be of particular interest. 
-To make it work for Google Mock you will need to change 
+may be of particular interest.
+To make it work for Google Mock you will need to change
 
     target_link_libraries(example gtest_main)
 
-to 
-
-    target_link_libraries(example gmock_main)
-    
-This works because `gmock_main` library is compiled with Google Test.
-However, it does not automatically add Google Test includes.
-Therefore you will also have to change
-
-    if (CMAKE_VERSION VERSION_LESS 2.8.11)
-      include_directories("${gtest_SOURCE_DIR}/include")
-    endif()
-
 to
 
-    if (CMAKE_VERSION VERSION_LESS 2.8.11)
-      include_directories(BEFORE SYSTEM
-        "${gtest_SOURCE_DIR}/include" "${gmock_SOURCE_DIR}/include")
-    else()
-      target_include_directories(gmock_main SYSTEM BEFORE INTERFACE
-        "${gtest_SOURCE_DIR}/include" "${gmock_SOURCE_DIR}/include")
-    endif()
+    target_link_libraries(example gmock_main)
 
-This will addtionally mark Google Mock includes as system, which will 
-silence compiler warnings when compiling your tests using clang with 
-`-Wpedantic -Wall -Wextra -Wconversion`.
-
+This works because `gmock_main` library is compiled with Google Test.
 
 #### Preparing to Build (Unix only) ####
 
