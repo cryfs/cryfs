@@ -1,4 +1,4 @@
-Version 0.10.0 (unreleased)
+Version 0.10.0
 ---------------
 New Features & Improvements:
 * Experimental Windows support
