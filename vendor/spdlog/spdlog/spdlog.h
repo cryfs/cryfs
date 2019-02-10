@@ -11,6 +11,7 @@
 #include "tweakme.h"
 #include "common.h"
 #include "logger.h"
+#include <functional>
 
 namespace spdlog
 {
