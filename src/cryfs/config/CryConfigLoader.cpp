@@ -43,12 +43,6 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::pat
   }
 #endif
   _checkVersion(*config->config(), allowFilesystemUpgrade);
-#ifndef CRYFS_NO_COMPATIBILITY
-  //Since 0.9.3-alpha set the config value cryfs.blocksizeBytes wrongly to 32768 (but didn't use the value), we have to fix this here.
-  if (config->config()->Version() != "0+unknown" && VersionCompare::isOlderThan(config->config()->Version(), "0.9.3-rc1")) {
-    config->config()->SetBlocksizeBytes(32832);
-  }
-#endif
   if (config->config()->Version() != CryConfig::FilesystemFormatVersion) {
     config->config()->SetVersion(CryConfig::FilesystemFormatVersion);
     config->save();
@@ -65,6 +59,9 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::pat
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
+  if (gitversion::VersionCompare::isOlderThan(config.Version(), "0.9.4")) {
+    throw CryfsException("This filesystem is for CryFS " + config.Version() + ". This format is not supported anymore. Please migrate the file system to a supported version first by opening it with CryFS 0.9.x (x>=4).", ErrorCode::TooOldFilesystemFormat);
+  }
   if (gitversion::VersionCompare::isOlderThan(CryConfig::FilesystemFormatVersion, config.Version())) {
     if (!_console->askYesNo("This filesystem is for CryFS " + config.Version() + " or later and should not be opened with older versions. It is strongly recommended to update your CryFS version. However, if you have backed up your base directory and know what you're doing, you can continue trying to load it. Do you want to continue?", false)) {
       throw CryfsException("This filesystem is for CryFS " + config.Version() + " or later. Please update your CryFS version.", ErrorCode::TooNewFilesystemFormat);
