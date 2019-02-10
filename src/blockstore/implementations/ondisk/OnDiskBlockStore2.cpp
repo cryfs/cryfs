@@ -12,10 +12,15 @@ namespace ondisk {
 
 const string OnDiskBlockStore2::FORMAT_VERSION_HEADER_PREFIX = "cryfs;block;";
 const string OnDiskBlockStore2::FORMAT_VERSION_HEADER = OnDiskBlockStore2::FORMAT_VERSION_HEADER_PREFIX + "0";
+namespace {
+constexpr size_t PREFIX_LENGTH = 3;
+constexpr size_t POSTFIX_LENGTH = BlockId::STRING_LENGTH - PREFIX_LENGTH;
+constexpr const char* ALLOWED_BLOCKID_CHARACTERS = "0123456789ABCDEF";
+}
 
 boost::filesystem::path OnDiskBlockStore2::_getFilepath(const BlockId &blockId) const {
   std::string blockIdStr = blockId.ToString();
-  return _rootDir / blockIdStr.substr(0,3) / blockIdStr.substr(3);
+  return _rootDir / blockIdStr.substr(0, PREFIX_LENGTH) / blockIdStr.substr(PREFIX_LENGTH);
 }
 
 Data OnDiskBlockStore2::_checkAndRemoveHeader(const Data &data) {
@@ -112,12 +117,24 @@ uint64_t OnDiskBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) c
 
 void OnDiskBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
   for (auto prefixDir = boost::filesystem::directory_iterator(_rootDir); prefixDir != boost::filesystem::directory_iterator(); ++prefixDir) {
-    if (boost::filesystem::is_directory(prefixDir->path())) {
-      std::string blockIdPrefix = prefixDir->path().filename().string();
-      for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
-        std::string blockIdPostfix = block->path().filename().string();
-        callback(BlockId::FromString(blockIdPrefix + blockIdPostfix));
+    if (!boost::filesystem::is_directory(prefixDir->path())) {
+      continue;
+    }
+
+    std::string blockIdPrefix = prefixDir->path().filename().string();
+    if (blockIdPrefix.size() != PREFIX_LENGTH || std::string::npos != blockIdPrefix.find_first_not_of(ALLOWED_BLOCKID_CHARACTERS)) {
+      // directory has wrong length or an invalid character
+      continue;
+    }
+
+    for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
+      std::string blockIdPostfix = block->path().filename().string();
+      if (blockIdPostfix.size() != POSTFIX_LENGTH || std::string::npos != blockIdPostfix.find_first_not_of(ALLOWED_BLOCKID_CHARACTERS)) {
+        // filename has wrong length or an invalid character
+        continue;
       }
+
+      callback(BlockId::FromString(blockIdPrefix + blockIdPostfix));
     }
   }
 }
