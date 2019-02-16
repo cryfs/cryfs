@@ -140,7 +140,7 @@ public:
         auto versionInfo = gitversion::Parser::parse(CryConfig::FilesystemFormatVersion);
         string olderVersion;
         if (std::stol(versionInfo.minorVersion) > 0) {
-            olderVersion = versionInfo.majorVersion + "." + std::to_string(std::stol(versionInfo.minorVersion) - 1);
+            olderVersion = versionInfo.majorVersion + "." + std::to_string(std::stol(versionInfo.minorVersion) - 1) + ".9";
         } else {
             olderVersion = std::to_string(std::stol(versionInfo.majorVersion) - 1) + "." + versionInfo.minorVersion;
         }
@@ -253,20 +253,20 @@ TEST_F(CryConfigLoaderTest, Cipher_Create) {
 }
 
 TEST_F(CryConfigLoaderTest, Version_Load) {
-    CreateWithVersion("0.9.2", "0.9.2");
+    CreateWithVersion("0.9.4", "0.9.4");
     auto loaded = std::move(Load().value());
     EXPECT_EQ(CryConfig::FilesystemFormatVersion, loaded->config()->Version());
     EXPECT_EQ(gitversion::VersionString(), loaded->config()->LastOpenedWithVersion());
-    EXPECT_EQ("0.9.2", loaded->config()->CreatedWithVersion());
+    EXPECT_EQ("0.9.4", loaded->config()->CreatedWithVersion());
 }
 
 TEST_F(CryConfigLoaderTest, Version_Load_IsStoredAndNotOnlyOverwrittenInMemoryOnLoad) {
-    CreateWithVersion("0.9.2", "0.9.2", "mypassword");
+    CreateWithVersion("0.9.4", "0.9.4", "mypassword");
     Load().value();
     auto configFile = CryConfigFile::load(file.path(), keyProvider("mypassword").get()).right_opt().value();
     EXPECT_EQ(CryConfig::FilesystemFormatVersion, configFile->config()->Version());
     EXPECT_EQ(gitversion::VersionString(), configFile->config()->LastOpenedWithVersion());
-    EXPECT_EQ("0.9.2", configFile->config()->CreatedWithVersion());
+    EXPECT_EQ("0.9.4", configFile->config()->CreatedWithVersion());
 }
 
 TEST_F(CryConfigLoaderTest, Version_Create) {
