@@ -61,13 +61,14 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-
-if(NOT MSVC)
-  find_package(Backtrace REQUIRED)
-  target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
-else()
-  target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+if(MSVC)
+    target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+elseif(NOT APPLE)
+    # note: We use the libunwind code on Apple, but we don't seem to need these lines to link against it.
+    find_package(Libunwind REQUIRED)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUNWIND_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ${LIBUNWIND_DEFINITIONS})
 endif()
 
 if (NOT MSVC)

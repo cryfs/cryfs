@@ -86,6 +86,50 @@ references:
         cmake --version
         /usr/local/bin/$CC --version
         /usr/local/bin/$CXX --version
+  upgrade_libunwind_pre: &upgrade_libunwind_pre
+    restore_cache:
+      keys:
+        # Find the most recent cache from any branch
+        - v1_upgrade_libunwind_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+  upgrade_libunwind_post: &upgrade_libunwind_post
+    save_cache:
+      key: v1_upgrade_libunwind_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+      paths:
+        - /tmp/libunwind-1.2.1
+  upgrade_libunwind: &upgrade_libunwind
+    run:
+      name: Upgrade Libunwind
+      command: |
+        # We need to install libunwind manually because Circle CI uses Ubuntu 14.04 and the default libunwind version
+        # on that Ubuntu suffers from http://savannah.nongnu.org/bugs/?43752.
+        # This isn't an issue for any later version of Ubuntu.
+
+        # Detect number of CPU cores
+        export NUMCORES=`nproc`
+        echo Using $NUMCORES cores
+        # Download and prepare libunwind (only if not already present from cache)
+        if [ ! -d "/tmp/libunwind-1.2.1" ]; then
+          echo "Didn't find libunwind in cache. Downloading and building."
+          wget -O /tmp/libunwind-1.2.1.tar.gz http://download.savannah.nongnu.org/releases/libunwind/libunwind-1.2.1.tar.gz
+          if [ $(sha512sum /tmp/libunwind-1.2.1.tar.gz | awk '{print $1;}') == "af7c280d2a963779a4a2711887618bc96383011e4e5d52e4085aa7fb351e55e357468f6ff85e66a216f1c6826538f498335a917a5970575c93be74c96316319b" ]; then
+            echo Correct sha512sum
+          else
+            echo Wrong sha512sum
+            sha512sum /tmp/libunwind-1.2.1.tar.gz
+            exit 1
+          fi
+          echo Extracting...
+          tar -xf /tmp/libunwind-1.2.1.tar.gz -C /tmp
+          rm -rf /tmp/libunwind-1.2.1.tar.gz
+          cd /tmp/libunwind-1.2.1
+          ./configure
+          make -j${NUMCORES}
+        else
+          echo Found libunwind in cache. Use cache and build.
+        fi
+        # Compile and install libunwind (if cached, this should be fast)
+        cd /tmp/libunwind-1.2.1
+        sudo make -j${NUMCORES} install
   upgrade_boost_pre: &upgrade_boost_pre
     restore_cache:
       keys:
@@ -189,6 +233,9 @@ references:
     - <<: *container_setup_pre
     - <<: *container_setup
     - <<: *container_setup_post
+    - <<: *upgrade_libunwind_pre
+    - <<: *upgrade_libunwind
+    - <<: *upgrade_libunwind_post
     - <<: *upgrade_boost_pre
     - <<: *upgrade_boost
     - <<: *upgrade_boost_post
@@ -489,6 +536,9 @@ jobs:
     - <<: *container_setup_pre
     - <<: *container_setup
     - <<: *container_setup_post
+    - <<: *upgrade_libunwind_pre
+    - <<: *upgrade_libunwind
+    - <<: *upgrade_libunwind_post
     - <<: *upgrade_boost_pre
     - <<: *upgrade_boost
     - <<: *upgrade_boost_post

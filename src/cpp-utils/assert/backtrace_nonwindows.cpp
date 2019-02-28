@@ -1,17 +1,14 @@
 #if !defined(_MSC_VER)
 
-#include "backtrace.h"
-#include <execinfo.h>
 #include <csignal>
-#include <iostream>
-#include <unistd.h>
 #include <cxxabi.h>
-#include <string>
 #include <sstream>
-#include <string>
-#include <dlfcn.h>
+
 #include "../logging/logging.h"
 #include <cpp-utils/process/SignalHandler.h>
+
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
 
 // TODO Add file and line number on non-windows
 
@@ -30,7 +27,12 @@ namespace {
             demangledName = abi::__cxa_demangle(mangledName.c_str(), NULL, NULL, &status);
             if (status == 0) {
                 result = demangledName;
+            } else if (status == -2) {
+                // mangledName was not a c++ mangled name, probably because it's a C name like for static
+                // initialization or stuff. Let's just return the name instead.
+                result = mangledName;
             } else {
+                // other error
                 result = "[demangling error " + std::to_string(status) + "]" + mangledName;
             }
             free(demangledName);
@@ -41,46 +43,55 @@ namespace {
         }
     }
 
-    void pretty_print(std::ostream& str, const void *addr) {
-        Dl_info info;
-        if (0 == dladdr(addr, &info)) {
-            str << "[failed parsing line]";
-        } else {
-            if (nullptr == info.dli_fname) {
-                str << "[no dli_fname]";
-            } else {
-                str << info.dli_fname;
-            }
-            str << ":" << std::hex << info.dli_fbase << " ";
-            if (nullptr == info.dli_sname) {
-                str << "[no symbol name]";
-            } else if (info.dli_sname[0] == '_') {
-                // is a mangled name
-                str << demangle(info.dli_sname);
-            } else {
-                // is not a mangled name
-                str << info.dli_sname;
-            }
-            str << " : " << std::hex << info.dli_saddr;
-        }
-    }
+    void pretty_print(std::ostringstream& str, unw_cursor_t* cursor) {
+        constexpr unsigned int MAXNAMELEN=256;
+        char name[MAXNAMELEN];
+        unw_word_t offp = 0, ip = 0;
 
-    string backtrace_to_string(void *array[], size_t size) {
-        ostringstream result;
-        for (size_t i = 0; i < size; ++i) {
-            result << "#" << std::dec << i << " ";
-            pretty_print(result, array[i]);
-            result << "\n";
+        int status = unw_get_reg(cursor, UNW_REG_IP, &ip);
+        if (0 != status) {
+            str << "[unw_get_reg error: " << status << "]: ";
+        } else {
+            str << "0x" << std::hex << ip << ": ";
         }
-        return result.str();
+
+        status = unw_get_proc_name(cursor, name, MAXNAMELEN, &offp);
+        if (0 != status) {
+            str << "[unw_get_proc_name error: " << status << "]";
+        } else {
+            str << demangle(name);
+        }
+        str << " +0x" << std::hex << offp;
     }
 }
 
 	string backtrace() {
-		constexpr unsigned int MAX_SIZE = 100;
-		void *array[MAX_SIZE];
-		size_t size = ::backtrace(array, MAX_SIZE);
-		return backtrace_to_string(array, size);
+        std::ostringstream result;
+
+        unw_context_t uc;
+        int status = unw_getcontext(&uc);
+        if (0 != status) {
+            return "[unw_getcontext error: " + std::to_string(status) + "]";
+        }
+
+        unw_cursor_t cursor;
+        status = unw_init_local(&cursor, &uc);
+        if (0 != status) {
+            return "[unw_init_local error: " + std::to_string(status) + "]";
+        }
+
+
+        size_t line = 0;
+        while ((status = unw_step(&cursor)) > 0) {
+            result << "#" << std::dec << (line++) << " ";
+            pretty_print(result, &cursor);
+            result << "\n";
+        }
+        if (status != 0) {
+            result << "[unw_step error :" << status << "]";
+        }
+
+        return result.str();
 	}
 
 namespace {

@@ -20,11 +20,17 @@ using SignalHandlerFunction = void(int);
 
 #if !defined(_MSC_VER)
 
+namespace detail {
+void check_against_libunwind_bug();
+}
+
 template<SignalHandlerFunction* handler>
 class SignalHandlerRAII final {
 public:
     explicit SignalHandlerRAII(int signal)
             : _old_handler(), _signal(signal) {
+        detail::check_against_libunwind_bug();
+
         struct sigaction new_signal_handler{};
         std::memset(&new_signal_handler, 0, sizeof(new_signal_handler));
         new_signal_handler.sa_handler = handler;  // NOLINT(cppcoreguidelines-pro-type-union-access)
