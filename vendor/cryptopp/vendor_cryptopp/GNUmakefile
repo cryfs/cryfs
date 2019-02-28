@@ -24,21 +24,16 @@ RANLIB ?= ranlib
 CP ?= cp
 MV ?= mv
 RM ?= rm -f
+GREP ?= grep
 CHMOD ?= chmod
 MKDIR ?= mkdir -p
 
 LN ?= ln -sf
 LDCONF ?= /sbin/ldconfig -n
 
-INSTALL = install
-INSTALL_PROGRAM = $(INSTALL)
-INSTALL_DATA = $(INSTALL) -m 644
-
 # Solaris provides a non-Posix grep at /usr/bin
 ifneq ($(wildcard /usr/xpg4/bin/grep),)
-  GREP ?= /usr/xpg4/bin/grep
-else
-  GREP ?= grep
+  GREP := /usr/xpg4/bin/grep
 endif
 
 # Attempt to determine target machine, fallback to "this" machine.
@@ -67,6 +62,7 @@ ifeq ($(SYSTEMX),)
 endif
 
 IS_LINUX := $(shell echo "$(SYSTEMX)" | $(GREP) -i -c "Linux")
+IS_HURD := $(shell echo "$(SYSTEMX)" | $(GREP) -i -c -E "GNU|Hurd")
 IS_MINGW := $(shell echo "$(SYSTEMX)" | $(GREP) -i -c "MinGW")
 IS_CYGWIN := $(shell echo "$(SYSTEMX)" | $(GREP) -i -c "Cygwin")
 IS_DARWIN := $(shell echo "$(SYSTEMX)" | $(GREP) -i -c "Darwin")
@@ -91,7 +87,7 @@ endif
 
 # Enable shared object versioning for Linux and Solaris
 HAS_SOLIB_VERSION ?= 0
-ifneq ($(IS_LINUX)$(IS_SUN),00)
+ifneq ($(IS_LINUX)$(IS_HURD)$(IS_SUN),000)
   HAS_SOLIB_VERSION := 1
 endif
 
@@ -100,9 +96,9 @@ ifeq ($(wildcard adhoc.cpp),)
 $(shell cp adhoc.cpp.proto adhoc.cpp)
 endif
 
-# Tell MacPorts and Homebrew GCC to use Clang integrated assembler
+# Tell MacPorts and Homebrew GCC to use Clang integrated assembler (only on Intel-based Macs)
 #   http://github.com/weidai11/cryptopp/issues/190
-ifeq ($(GCC_COMPILER)$(OSXPORT_COMPILER),11)
+ifeq ($(GCC_COMPILER)$(OSXPORT_COMPILER)$(IS_PPC32)$(IS_PPC64),1100)
   ifeq ($(findstring -Wa,-q,$(CXXFLAGS)),)
     CXXFLAGS += -Wa,-q
   endif
@@ -126,6 +122,9 @@ ifeq ($(DETECT_FEATURES),1)
   ifneq ($(strip $(TCXXFLAGS)),)
     $(info Using testing flags: $(TCXXFLAGS))
   endif
+  #TPROG = TestPrograms/test_cxx.cxx
+  #$(info Testing compile... )
+  #$(info $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 1>/dev/null))
 endif
 
 # Fixup AIX
@@ -271,6 +270,7 @@ ifeq ($(DETECT_FEATURES),1)
   ifeq ($(strip $(HAVE_OPT)),0)
     ARIA_FLAG = $(SSSE3_FLAG)
     CHAM_FLAG = $(SSSE3_FLAG)
+    KECCAK_FLAG = $(SSSE3_FLAG)
     LEA_FLAG = $(SSSE3_FLAG)
     SIMECK_FLAG = $(SSSE3_FLAG)
     SIMON64_FLAG = $(SSSE3_FLAG)
@@ -310,6 +310,7 @@ ifeq ($(DETECT_FEATURES),1)
   HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
   ifeq ($(strip $(HAVE_OPT)),0)
     GCM_FLAG = $(SSSE3_FLAG) $(CLMUL_FLAG)
+    GF2N_FLAG = $(CLMUL_FLAG)
     SUN_LDFLAGS += $(CLMUL_FLAG)
   else
     CLMUL_FLAG =
@@ -389,6 +390,13 @@ ifeq ($(DETECT_FEATURES),1)
       CXXFLAGS += -DCRYPTOPP_DISABLE_AVX2
     else ifeq ($(SHANI_FLAG),)
       CXXFLAGS += -DCRYPTOPP_DISABLE_SHANI
+    endif
+  endif
+
+  # Drop to SSE2 if available
+  ifeq ($(GCM_FLAG),)
+    ifneq ($(SSE2_FLAG),)
+      GCM_FLAG = $(SSE2_FLAG)
     endif
   endif
 
@@ -521,6 +529,7 @@ ifeq ($(IS_ARMV8),1)
     HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       GCM_FLAG = -march=armv8-a+crypto
+      GF2N_FLAG = -march=armv8-a+crypto
     else
       CXXFLAGS += -DCRYPTOPP_ARM_PMULL_AVAILABLE=0
     endif
@@ -616,6 +625,7 @@ ifeq ($(DETECT_FEATURES),1)
     BLAKE2B_FLAG = $(POWER8_FLAG)
     CRC_FLAG = $(POWER8_FLAG)
     GCM_FLAG = $(POWER8_FLAG)
+    GF2N_FLAG = $(POWER8_FLAG)
     AES_FLAG = $(POWER8_FLAG)
     SHA_FLAG = $(POWER8_FLAG)
     SHACAL2_FLAG = $(POWER8_FLAG)
@@ -808,22 +818,22 @@ ifeq ($(IS_SUN)$(SUN_COMPILER),11)
 endif  # SunOS
 
 # TODO: can we remove this since removing sockets?
-ifneq ($(IS_MINGW),0)
-  LDLIBS += -lws2_32
-endif
+#ifneq ($(IS_MINGW),0)
+#  LDLIBS += -lws2_32
+#endif
 
 # TODO: can we remove this since removing sockets?
-ifneq ($(IS_SUN),0)
-  LDLIBS += -lnsl -lsocket
-endif
+#ifneq ($(IS_SUN),0)
+#  LDLIBS += -lnsl -lsocket
+#endif
 
-ifeq ($(IS_LINUX),1)
+ifneq ($(IS_LINUX)$(IS_HURD),00)
   ifeq ($(findstring -fopenmp,$(CXXFLAGS)),-fopenmp)
     ifeq ($(findstring -lgomp,$(LDLIBS)),)
       LDLIBS += -lgomp
     endif # LDLIBS
   endif # OpenMP
-endif # IS_LINUX
+endif # IS_LINUX or IS_HURD
 
 # Add -errtags=yes to get the name for a warning suppression
 ifneq ($(SUN_COMPILER),0)	# override flags for CC Sun C++ compiler
@@ -1007,7 +1017,7 @@ ifeq ($(HAS_SOLIB_VERSION),1)
 # Different patchlevels and minors are compatible since 6.1
 SOLIB_COMPAT_SUFFIX=.$(LIB_MAJOR)
 # Linux uses -Wl,-soname
-ifeq ($(IS_LINUX),1)
+ifneq ($(IS_LINUX)$(IS_HURD),00)
 # Linux uses full version suffix for shared library
 SOLIB_VERSION_SUFFIX=.$(LIB_MAJOR).$(LIB_MINOR).$(LIB_PATCH)
 SOLIB_FLAGS=-Wl,-soname,libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
@@ -1122,9 +1132,13 @@ lcov coverage: cryptest.exe
 	lcov --base-directory . --directory . --zerocounters -q
 	./cryptest.exe v
 	./cryptest.exe tv all
+	./cryptest.exe b 0.25
 	lcov --base-directory . --directory . -c -o cryptest.info
-	lcov --remove cryptest.info "adhoc.cpp" "wait.*" "network.*" "socketft.*" "fips140.*" "*test.*" "bench*.cpp" "validat*.*" "/usr/*" -o cryptest.info
-	genhtml -o ./TestCoverage/ -t "cryptest.exe test coverage" --num-spaces 4 cryptest.info
+	lcov --remove cryptest.info "adhoc.*" -o cryptest.info
+	lcov --remove cryptest.info "fips140.*" -o cryptest.info
+	lcov --remove cryptest.info "*test.*" -o cryptest.info
+	lcov --remove cryptest.info "/usr/*" -o cryptest.info
+	genhtml -o ./TestCoverage/ -t "Crypto++ test coverage" --num-spaces 4 cryptest.info
 
 # Travis CI and CodeCov rule
 .PHONY: gcov codecov
@@ -1218,11 +1232,14 @@ distclean: clean autotools-clean cmake-clean
 .PHONY: install
 install: cryptest.exe install-lib
 	@-$(MKDIR) $(DESTDIR)$(BINDIR)
-	$(INSTALL_PROGRAM) cryptest.exe $(DESTDIR)$(BINDIR)
+	$(CP) cryptest.exe $(DESTDIR)$(BINDIR)
+	$(CHMOD) 0755 $(DESTDIR)$(BINDIR)/cryptest.exe
 	@-$(MKDIR) $(DESTDIR)$(DATADIR)/cryptopp/TestData
 	@-$(MKDIR) $(DESTDIR)$(DATADIR)/cryptopp/TestVectors
-	$(INSTALL_DATA) TestData/*.dat $(DESTDIR)$(DATADIR)/cryptopp/TestData
-	$(INSTALL_DATA) TestVectors/*.txt $(DESTDIR)$(DATADIR)/cryptopp/TestVectors
+	$(CP) TestData/*.dat $(DESTDIR)$(DATADIR)/cryptopp/TestData
+	$(CHMOD) 0644 $(DESTDIR)$(DATADIR)/cryptopp/TestData/*.dat
+	$(CP) TestVectors/*.txt $(DESTDIR)$(DATADIR)/cryptopp/TestVectors
+	$(CHMOD) 0644 $(DESTDIR)$(DATADIR)/cryptopp/TestVectors/*.txt
 
 # A recipe to install only the library, and not cryptest.exe. Also
 # see https://github.com/weidai11/cryptopp/issues/653. Some users
@@ -1231,19 +1248,23 @@ install: cryptest.exe install-lib
 .PHONY: install-lib
 install-lib:
 	@-$(MKDIR) $(DESTDIR)$(INCLUDEDIR)/cryptopp
-	$(INSTALL_DATA) *.h $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	$(CP) *.h $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	$(CHMOD) 0644 $(DESTDIR)$(INCLUDEDIR)/cryptopp/*.h
 ifneq ($(wildcard libcryptopp.a),)
 	@-$(MKDIR) $(DESTDIR)$(LIBDIR)
-	$(INSTALL_DATA) libcryptopp.a $(DESTDIR)$(LIBDIR)
+	$(CP) libcryptopp.a $(DESTDIR)$(LIBDIR)
+	$(CHMOD) 0644 $(DESTDIR)$(LIBDIR)/libcryptopp.a
 endif
 ifneq ($(wildcard libcryptopp.dylib),)
 	@-$(MKDIR) $(DESTDIR)$(LIBDIR)
-	$(INSTALL_PROGRAM) libcryptopp.dylib $(DESTDIR)$(LIBDIR)
+	$(CP) libcryptopp.dylib $(DESTDIR)$(LIBDIR)
+	$(CHMOD) 0755 $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
 	-install_name_tool -id $(DESTDIR)$(LIBDIR)/libcryptopp.dylib $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
 endif
 ifneq ($(wildcard libcryptopp.so$(SOLIB_VERSION_SUFFIX)),)
 	@-$(MKDIR) $(DESTDIR)$(LIBDIR)
-	$(INSTALL_PROGRAM) libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)
+	$(CP) libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)
+	$(CHMOD) 0755 $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
 ifeq ($(HAS_SOLIB_VERSION),1)
 	-$(LN) libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)/libcryptopp.so
 	$(LDCONF) $(DESTDIR)$(LIBDIR)
@@ -1251,7 +1272,8 @@ endif
 endif
 ifneq ($(wildcard libcryptopp.pc),)
 	@-$(MKDIR) $(DESTDIR)$(LIBDIR)/pkgconfig
-	$(INSTALL_DATA) libcryptopp.pc $(DESTDIR)$(LIBDIR)/pkgconfig/libcryptopp.pc
+	$(CP) libcryptopp.pc $(DESTDIR)$(LIBDIR)/pkgconfig
+	$(CHMOD) 0644 $(DESTDIR)$(LIBDIR)/pkgconfig/libcryptopp.pc
 endif
 
 .PHONY: remove uninstall
@@ -1327,7 +1349,7 @@ libcryptopp.pc:
 	@echo '' >> libcryptopp.pc
 	@echo 'Name: Crypto++' >> libcryptopp.pc
 	@echo 'Description: Crypto++ cryptographic library' >> libcryptopp.pc
-	@echo 'Version: 8.0' >> libcryptopp.pc
+	@echo 'Version: 8.1' >> libcryptopp.pc
 	@echo 'URL: https://cryptopp.com/' >> libcryptopp.pc
 	@echo '' >> libcryptopp.pc
 	@echo 'Cflags: -I$${includedir}' >> libcryptopp.pc
@@ -1380,7 +1402,7 @@ ifneq ($(IS_DARWIN),0)
 	$(CP) cryptopp$(LIB_VER).zip $(PWD)/cryptopp$(LIB_VER)
 	hdiutil makehybrid -iso -joliet -o cryptopp$(LIB_VER).iso $(PWD)/cryptopp$(LIB_VER)
 	@-$(RM) -r $(PWD)/cryptopp$(LIB_VER)
-else ifneq ($(IS_LINUX),0)
+else ifneq ($(IS_LINUX)$(IS_HURD),00)
 	$(MKDIR) $(PWD)/cryptopp$(LIB_VER)
 	$(CP) cryptopp$(LIB_VER).zip $(PWD)/cryptopp$(LIB_VER)
 	genisoimage -q -o cryptopp$(LIB_VER).iso $(PWD)/cryptopp$(LIB_VER)
@@ -1434,6 +1456,10 @@ chacha_avx.o : chacha_avx.cpp
 cham_simd.o : cham_simd.cpp
 	$(CXX) $(strip $(CXXFLAGS) $(CHAM_FLAG) -c) $<
 
+# SSE4.2 or ARMv8a available
+crc_simd.o : crc_simd.cpp
+	$(CXX) $(strip $(CXXFLAGS) $(CRC_FLAG) -c) $<
+
 # Power9 available
 darn.o : darn.cpp
 	$(CXX) $(strip $(CXXFLAGS) $(DARN_FLAG) -c) $<
@@ -1442,17 +1468,17 @@ darn.o : darn.cpp
 donna_sse.o : donna_sse.cpp
 	$(CXX) $(strip $(CXXFLAGS) $(SSE2_FLAG) -c) $<
 
-# SSE2 on i686
-sse_simd.o : sse_simd.cpp
-	$(CXX) $(strip $(CXXFLAGS) $(SSE2_FLAG) -c) $<
-
-# SSE4.2 or ARMv8a available
-crc_simd.o : crc_simd.cpp
-	$(CXX) $(strip $(CXXFLAGS) $(CRC_FLAG) -c) $<
-
-# PCLMUL or ARMv7a/ARMv8a available
+# Carryless multiply
 gcm_simd.o : gcm_simd.cpp
 	$(CXX) $(strip $(CXXFLAGS) $(GCM_FLAG) -c) $<
+
+# Carryless multiply
+gf2n_simd.o : gf2n_simd.cpp
+	$(CXX) $(strip $(CXXFLAGS) $(GF2N_FLAG) -c) $<
+
+# SSSE3 available
+keccak_simd.o : keccak_simd.cpp
+	$(CXX) $(strip $(CXXFLAGS) $(KECCAK_FLAG) -c) $<
 
 # SSSE3 available
 lea_simd.o : lea_simd.cpp
@@ -1525,7 +1551,15 @@ sm4_simd.o : sm4_simd.cpp
 ifeq ($(XLC_COMPILER),1)
 sm3.o : sm3.cpp
 	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
+donna_32.o : donna_32.cpp
+	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
+donna_64.o : donna_64.cpp
+	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
 endif
+
+# SSE2 on i686
+sse_simd.o : sse_simd.cpp
+	$(CXX) $(strip $(CXXFLAGS) $(SSE2_FLAG) -c) $<
 
 # Don't build Rijndael with UBsan. Too much noise due to unaligned data accesses.
 ifneq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)

@@ -2,11 +2,6 @@ This directory contains external projects, taken from the following locations:
 googletest: https://github.com/google/googletest/tree/4e4df226fc197c0dda6e37f5c8c3845ca1e73a49
  - changed: added NOLINT comment as workaround for clang-tidy warning https://github.com/google/googletest/issues/853
 spdlog: https://github.com/gabime/spdlog/tree/v0.16.3/include/spdlog
-cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_0_0
+cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_1_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_0_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
- - cherry-picked commits to get OpenMP for scrypt on Windows:
-   - https://github.com/weidai11/cryptopp/commit/aa043b38a7930725c31a0cd7016986d1c581c573
-   - https://github.com/weidai11/cryptopp/commit/672f5c7f3dad8ae12b2d0ce0940ccb7c8e257bf8
-   - https://github.com/weidai11/cryptopp/commit/7e96a283a3192d29aac5b60e5b4ff19248f00d9a
-   - https://github.com/weidai11/cryptopp/commit/ca32b63038d5f7b13e2e00809cd9184a1efe8c24

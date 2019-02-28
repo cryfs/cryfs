@@ -29,13 +29,18 @@
 # include <wmmintrin.h>
 #endif
 
-#if (CRYPTOPP_ARM_NEON_AVAILABLE)
+// C1189: error: This header is specific to ARM targets
+#if (CRYPTOPP_ARM_NEON_AVAILABLE) && !defined(_M_ARM64)
 # include <arm_neon.h>
 #endif
 
 #if (CRYPTOPP_ARM_ACLE_AVAILABLE)
 # include <stdint.h>
 # include <arm_acle.h>
+#endif
+
+#if defined(CRYPTOPP_ARM_PMULL_AVAILABLE)
+# include "arm_simd.h"
 #endif
 
 #if defined(CRYPTOPP_ALTIVEC_AVAILABLE)
@@ -61,205 +66,6 @@
 
 // Squash MS LNK4221 and libtool warnings
 extern const char GCM_SIMD_FNAME[] = __FILE__;
-
-ANONYMOUS_NAMESPACE_BEGIN
-
-// *************************** ARM NEON *************************** //
-
-#if CRYPTOPP_ARM_PMULL_AVAILABLE
-#if defined(__GNUC__)
-// Schneiders, Hovsmith and O'Rourke used this trick.
-// It results in much better code generation in production code
-// by avoiding D-register spills when using vgetq_lane_u64. The
-// problem does not surface under minimal test cases.
-inline uint64x2_t PMULL_00(const uint64x2_t a, const uint64x2_t b)
-{
-    uint64x2_t r;
-    __asm __volatile("pmull    %0.1q, %1.1d, %2.1d \n\t"
-        :"=w" (r) : "w" (a), "w" (b) );
-    return r;
-}
-
-inline uint64x2_t PMULL_01(const uint64x2_t a, const uint64x2_t b)
-{
-    uint64x2_t r;
-    __asm __volatile("pmull    %0.1q, %1.1d, %2.1d \n\t"
-        :"=w" (r) : "w" (a), "w" (vget_high_u64(b)) );
-    return r;
-}
-
-inline uint64x2_t PMULL_10(const uint64x2_t a, const uint64x2_t b)
-{
-    uint64x2_t r;
-    __asm __volatile("pmull    %0.1q, %1.1d, %2.1d \n\t"
-        :"=w" (r) : "w" (vget_high_u64(a)), "w" (b) );
-    return r;
-}
-
-inline uint64x2_t PMULL_11(const uint64x2_t a, const uint64x2_t b)
-{
-    uint64x2_t r;
-    __asm __volatile("pmull2   %0.1q, %1.2d, %2.2d \n\t"
-        :"=w" (r) : "w" (a), "w" (b) );
-    return r;
-}
-
-inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b, unsigned int c)
-{
-    uint64x2_t r;
-    __asm __volatile("ext   %0.16b, %1.16b, %2.16b, %3 \n\t"
-        :"=w" (r) : "w" (a), "w" (b), "I" (c) );
-    return r;
-}
-
-// https://github.com/weidai11/cryptopp/issues/366
-template <unsigned int C>
-inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b)
-{
-    uint64x2_t r;
-    __asm __volatile("ext   %0.16b, %1.16b, %2.16b, %3 \n\t"
-        :"=w" (r) : "w" (a), "w" (b), "I" (C) );
-    return r;
-}
-#endif // GCC and compatibles
-
-#if defined(_MSC_VER)
-inline uint64x2_t PMULL_00(const uint64x2_t a, const uint64x2_t b)
-{
-    return (uint64x2_t)(vmull_p64(
-        vgetq_lane_u64(vreinterpretq_u64_u8(a),0),
-        vgetq_lane_u64(vreinterpretq_u64_u8(b),0)));
-}
-
-inline uint64x2_t PMULL_01(const uint64x2_t a, const uint64x2_t b)
-{
-    return (uint64x2_t)(vmull_p64(
-        vgetq_lane_u64(vreinterpretq_u64_u8(a),0),
-        vgetq_lane_u64(vreinterpretq_u64_u8(b),1)));
-}
-
-inline uint64x2_t PMULL_10(const uint64x2_t a, const uint64x2_t b)
-{
-    return (uint64x2_t)(vmull_p64(
-        vgetq_lane_u64(vreinterpretq_u64_u8(a),1),
-        vgetq_lane_u64(vreinterpretq_u64_u8(b),0)));
-}
-
-inline uint64x2_t PMULL_11(const uint64x2_t a, const uint64x2_t b)
-{
-    return (uint64x2_t)(vmull_p64(
-        vgetq_lane_u64(vreinterpretq_u64_u8(a),1),
-        vgetq_lane_u64(vreinterpretq_u64_u8(b),1)));
-}
-
-inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b, unsigned int c)
-{
-    return (uint64x2_t)vextq_u8(
-        vreinterpretq_u8_u64(a), vreinterpretq_u8_u64(b), c);
-}
-
-// https://github.com/weidai11/cryptopp/issues/366
-template <unsigned int C>
-inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b)
-{
-    return (uint64x2_t)vextq_u8(
-        vreinterpretq_u8_u64(a), vreinterpretq_u8_u64(b), C);
-}
-#endif // Microsoft and compatibles
-#endif // CRYPTOPP_ARM_PMULL_AVAILABLE
-
-// ************************** Power 8 Crypto ************************** //
-
-#if CRYPTOPP_POWER8_VMULL_AVAILABLE
-
-using CryptoPP::uint32x4_p;
-using CryptoPP::uint64x2_p;
-using CryptoPP::VecGetLow;
-using CryptoPP::VecGetHigh;
-using CryptoPP::VecRotateLeftOctet;
-
-// POWER8 GCM mode is confusing. The algorithm is reflected so
-// nearly everything we do is reversed for a little-endian system,
-// including on big-endian machines. VMULL2LE swaps dwords for a
-// little endian machine; VMULL_00LE, VMULL_01LE, VMULL_10LE and
-// VMULL_11LE are backwards and (1) read low words with
-// VecGetHigh, (2) read high words with VecGetLow, and
-// (3) yields a product that is endian swapped. The steps ensures
-// GCM parameters are presented in the correct order for the
-// algorithm on both big and little-endian systems, but it is
-// awful to try to follow the logic because it is so backwards.
-// Because functions like VMULL_NN are so backwards we can't put
-// them in ppc_simd.h. They simply don't work the way a typical
-// user expects them to work.
-
-inline uint64x2_p VMULL2LE(const uint64x2_p& val)
-{
-#if (CRYPTOPP_BIG_ENDIAN)
-    return VecRotateLeftOctet<8>(val);
-#else
-    return val;
-#endif
-}
-
-// _mm_clmulepi64_si128(a, b, 0x00)
-inline uint64x2_p VMULL_00LE(const uint64x2_p& a, const uint64x2_p& b)
-{
-#if defined(__ibmxl__) || (defined(_AIX) && defined(__xlC__))
-    return VMULL2LE(__vpmsumd (VecGetHigh(a), VecGetHigh(b)));
-#elif defined(__clang__)
-    return VMULL2LE(__builtin_altivec_crypto_vpmsumd (VecGetHigh(a), VecGetHigh(b)));
-#else
-    return VMULL2LE(__builtin_crypto_vpmsumd (VecGetHigh(a), VecGetHigh(b)));
-#endif
-}
-
-// _mm_clmulepi64_si128(a, b, 0x01)
-inline uint64x2_p VMULL_01LE(const uint64x2_p& a, const uint64x2_p& b)
-{
-    // Small speedup. VecGetHigh(b) ensures the high dword of 'b' is 0.
-    // The 0 used in the vmull yields 0 for the high product, so the high
-    // dword of 'a' is "don't care".
-#if defined(__ibmxl__) || (defined(_AIX) && defined(__xlC__))
-    return VMULL2LE(__vpmsumd (a, VecGetHigh(b)));
-#elif defined(__clang__)
-    return VMULL2LE(__builtin_altivec_crypto_vpmsumd (a, VecGetHigh(b)));
-#else
-    return VMULL2LE(__builtin_crypto_vpmsumd (a, VecGetHigh(b)));
-#endif
-}
-
-// _mm_clmulepi64_si128(a, b, 0x10)
-inline uint64x2_p VMULL_10LE(const uint64x2_p& a, const uint64x2_p& b)
-{
-    // Small speedup. VecGetHigh(a) ensures the high dword of 'a' is 0.
-    // The 0 used in the vmull yields 0 for the high product, so the high
-    // dword of 'b' is "don't care".
-#if defined(__ibmxl__) || (defined(_AIX) && defined(__xlC__))
-    return VMULL2LE(__vpmsumd (VecGetHigh(a), b));
-#elif defined(__clang__)
-    return VMULL2LE(__builtin_altivec_crypto_vpmsumd (VecGetHigh(a), b));
-#else
-    return VMULL2LE(__builtin_crypto_vpmsumd (VecGetHigh(a), b));
-#endif
-}
-
-// _mm_clmulepi64_si128(a, b, 0x11)
-inline uint64x2_p VMULL_11LE(const uint64x2_p& a, const uint64x2_p& b)
-{
-    // Small speedup. VecGetLow(a) ensures the high dword of 'a' is 0.
-    // The 0 used in the vmull yields 0 for the high product, so the high
-    // dword of 'b' is "don't care".
-#if defined(__ibmxl__) || (defined(_AIX) && defined(__xlC__))
-    return VMULL2LE(__vpmsumd (VecGetLow(a), b));
-#elif defined(__clang__)
-    return VMULL2LE(__builtin_altivec_crypto_vpmsumd (VecGetLow(a), b));
-#else
-    return VMULL2LE(__builtin_crypto_vpmsumd (VecGetLow(a), b));
-#endif
-}
-#endif // CRYPTOPP_POWER8_VMULL_AVAILABLE
-
-ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -287,23 +93,24 @@ bool CPU_ProbePMULL()
     volatile bool result = true;
     __try
     {
-        const poly64_t   a1={0x9090909090909090}, b1={0xb0b0b0b0b0b0b0b0};
-        const poly8x16_t a2={0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-                             0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0},
-                         b2={0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,
-                             0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0};
-
-        const poly128_t r1 = pmull_p64(a1, b1);
-        const poly128_t r2 = pmull_high_p64((poly64x2_t)(a2), (poly64x2_t)(b2));
-
         // Linaro is missing a lot of pmull gear. Also see http://github.com/weidai11/cryptopp/issues/233.
-        const uint64x2_t t1 = (uint64x2_t)(r1);  // {bignum,bignum}
-        const uint64x2_t t2 = (uint64x2_t)(r2);  // {bignum,bignum}
+        const uint64_t wa1[]={0,0x9090909090909090}, wb1[]={0,0xb0b0b0b0b0b0b0b0};
+        const uint64x2_t a1=vld1q_u64(wa1), b1=vld1q_u64(wb1);
 
-        result = !!(vgetq_lane_u64(t1,0) == 0x5300530053005300 &&
-                    vgetq_lane_u64(t1,1) == 0x5300530053005300 &&
-                    vgetq_lane_u64(t2,0) == 0x6c006c006c006c00 &&
-                    vgetq_lane_u64(t2,1) == 0x6c006c006c006c00);
+        const uint8_t wa2[]={0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
+                             0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0},
+                      wb2[]={0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,
+                             0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0};
+        const uint8x16_t a2=vld1q_u8(wa2), b2=vld1q_u8(wb2);
+
+        const uint64x2_t r1 = PMULL_00(a1, b1);
+        const uint64x2_t r2 = PMULL_11(vreinterpretq_u64_u8(a2),
+                                       vreinterpretq_u64_u8(b2));
+
+        result = !!(vgetq_lane_u64(r1,0) == 0x5300530053005300 &&
+                    vgetq_lane_u64(r1,1) == 0x5300530053005300 &&
+                    vgetq_lane_u64(r2,0) == 0x6c006c006c006c00 &&
+                    vgetq_lane_u64(r2,1) == 0x6c006c006c006c00);
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
@@ -328,14 +135,18 @@ bool CPU_ProbePMULL()
     else
     {
         // Linaro is missing a lot of pmull gear. Also see http://github.com/weidai11/cryptopp/issues/233.
-        const uint64x2_t a1={0,0x9090909090909090}, b1={0,0xb0b0b0b0b0b0b0b0};
-        const uint8x16_t a2={0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
+        const uint64_t wa1[]={0,0x9090909090909090}, wb1[]={0,0xb0b0b0b0b0b0b0b0};
+        const uint64x2_t a1=vld1q_u64(wa1), b1=vld1q_u64(wb1);
+
+        const uint8_t wa2[]={0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
                              0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0},
-                         b2={0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,
+                      wb2[]={0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,
                              0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0};
+        const uint8x16_t a2=vld1q_u8(wa2), b2=vld1q_u8(wb2);
 
         const uint64x2_t r1 = PMULL_00(a1, b1);
-        const uint64x2_t r2 = PMULL_11((uint64x2_t)a2, (uint64x2_t)b2);
+        const uint64x2_t r2 = PMULL_11(vreinterpretq_u64_u8(a2),
+                                       vreinterpretq_u64_u8(b2));
 
         result = !!(vgetq_lane_u64(r1,0) == 0x5300530053005300 &&
                     vgetq_lane_u64(r1,1) == 0x5300530053005300 &&
@@ -374,17 +185,24 @@ bool CPU_ProbePMULL()
         result = false;
     else
     {
-        const uint8x16_p a={0x0f,0x08,0x08,0x08, 0x80,0x80,0x80,0x80,
-                            0x00,0x0a,0x0a,0x0a, 0xa0,0xa0,0xa0,0xa0},
-                         b={0x0f,0xc0,0xc0,0xc0, 0x0c,0x0c,0x0c,0x0c,
-                            0x00,0xe0,0xe0,0xe0, 0x0e,0x0e,0x0e,0x0e};
+        const uint64_t wa1[]={0,W64LIT(0x9090909090909090)},
+                       wb1[]={0,W64LIT(0xb0b0b0b0b0b0b0b0)};
+        const uint64x2_p a1=VecLoad(wa1), b1=VecLoad(wb1);
 
-        const uint64x2_p r1 = VMULL_00LE((uint64x2_p)(a), (uint64x2_p)(b));
-        const uint64x2_p r2 = VMULL_01LE((uint64x2_p)(a), (uint64x2_p)(b));
-        const uint64x2_p r3 = VMULL_10LE((uint64x2_p)(a), (uint64x2_p)(b));
-        const uint64x2_p r4 = VMULL_11LE((uint64x2_p)(a), (uint64x2_p)(b));
+        const uint8_t wa2[]={0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
+                             0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0},
+                      wb2[]={0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,
+                             0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0};
+        const uint32x4_p a2=VecLoad(wa2), b2=VecLoad(wb2);
 
-        result = VecNotEqual(r1, r2) && VecNotEqual(r3, r4);
+        const uint64x2_p r1 = VecPolyMultiply00LE(a1, b1);
+        const uint64x2_p r2 = VecPolyMultiply11LE((uint64x2_p)a2, (uint64x2_p)b2);
+
+        const uint64_t wc1[]={W64LIT(0x5300530053005300), W64LIT(0x5300530053005300)},
+                       wc2[]={W64LIT(0x6c006c006c006c00), W64LIT(0x6c006c006c006c00)};
+        const uint64x2_p c1=VecLoad(wc1), c2=VecLoad(wc2);
+
+        result = !!(VecEqual(r1, c1) && VecEqual(r2, c2));
     }
 
     sigprocmask(SIG_SETMASK, (sigset_t*)&oldMask, NULLPTR);
@@ -765,9 +583,9 @@ uint64x2_p GCM_Reduce_VMULL(uint64x2_p c0, uint64x2_p c1, uint64x2_p c2, uint64x
     const uint64x2_p m1 = {1,1}, m63 = {63,63};
 
     c1 = VecXor(c1, VecShiftRightOctet<8>(c0));
-    c1 = VecXor(c1, VMULL_10LE(c0, r));
+    c1 = VecXor(c1, VecPolyMultiply10LE(c0, r));
     c0 = VecXor(c1, VecShiftLeftOctet<8>(c0));
-    c0 = VMULL_00LE(vec_sl(c0, m1), r);
+    c0 = VecPolyMultiply00LE(vec_sl(c0, m1), r);
     c2 = VecXor(c2, c0);
     c2 = VecXor(c2, VecShiftLeftOctet<8>(c1));
     c1 = vec_sr(vec_mergeh(c1, c2), m63);
@@ -778,9 +596,9 @@ uint64x2_p GCM_Reduce_VMULL(uint64x2_p c0, uint64x2_p c1, uint64x2_p c2, uint64x
 
 inline uint64x2_p GCM_Multiply_VMULL(uint64x2_p x, uint64x2_p h, uint64x2_p r)
 {
-    const uint64x2_p c0 = VMULL_00LE(x, h);
-    const uint64x2_p c1 = VecXor(VMULL_01LE(x, h), VMULL_10LE(x, h));
-    const uint64x2_p c2 = VMULL_11LE(x, h);
+    const uint64x2_p c0 = VecPolyMultiply00LE(x, h);
+    const uint64x2_p c1 = VecXor(VecPolyMultiply01LE(x, h), VecPolyMultiply10LE(x, h));
+    const uint64x2_p c2 = VecPolyMultiply11LE(x, h);
 
     return GCM_Reduce_VMULL(c0, c1, c2, r);
 }
@@ -875,35 +693,35 @@ size_t GCM_AuthenticateBlocks_VMULL(const byte *data, size_t len, const byte *mt
             {
                 d1 = LoadBuffer2(data);
                 d1 = VecXor(d1, x);
-                c0 = VecXor(c0, VMULL_00LE(d1, h0));
-                c2 = VecXor(c2, VMULL_01LE(d1, h1));
+                c0 = VecXor(c0, VecPolyMultiply00LE(d1, h0));
+                c2 = VecXor(c2, VecPolyMultiply01LE(d1, h1));
                 d1 = VecXor(d1, SwapWords(d1));
-                c1 = VecXor(c1, VMULL_00LE(d1, h2));
+                c1 = VecXor(c1, VecPolyMultiply00LE(d1, h2));
                 break;
             }
 
             d1 = LoadBuffer1(data+(s-i)*16-8);
-            c0 = VecXor(c0, VMULL_01LE(d2, h0));
-            c2 = VecXor(c2, VMULL_01LE(d1, h1));
+            c0 = VecXor(c0, VecPolyMultiply01LE(d2, h0));
+            c2 = VecXor(c2, VecPolyMultiply01LE(d1, h1));
             d2 = VecXor(d2, d1);
-            c1 = VecXor(c1, VMULL_01LE(d2, h2));
+            c1 = VecXor(c1, VecPolyMultiply01LE(d2, h2));
 
             if (++i == s)
             {
                 d1 = LoadBuffer2(data);
                 d1 = VecXor(d1, x);
-                c0 = VecXor(c0, VMULL_10LE(d1, h0));
-                c2 = VecXor(c2, VMULL_11LE(d1, h1));
+                c0 = VecXor(c0, VecPolyMultiply10LE(d1, h0));
+                c2 = VecXor(c2, VecPolyMultiply11LE(d1, h1));
                 d1 = VecXor(d1, SwapWords(d1));
-                c1 = VecXor(c1, VMULL_10LE(d1, h2));
+                c1 = VecXor(c1, VecPolyMultiply10LE(d1, h2));
                 break;
             }
 
             d2 = LoadBuffer2(data+(s-i)*16-8);
-            c0 = VecXor(c0, VMULL_10LE(d1, h0));
-            c2 = VecXor(c2, VMULL_10LE(d2, h1));
+            c0 = VecXor(c0, VecPolyMultiply10LE(d1, h0));
+            c2 = VecXor(c2, VecPolyMultiply10LE(d2, h1));
             d1 = VecXor(d1, d2);
-            c1 = VecXor(c1, VMULL_10LE(d1, h2));
+            c1 = VecXor(c1, VecPolyMultiply10LE(d1, h2));
         }
         data += s*16;
         len -= s*16;

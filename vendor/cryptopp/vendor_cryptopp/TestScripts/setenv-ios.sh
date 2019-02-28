@@ -63,26 +63,31 @@ do
   # ARMv5
   if [ "$CL" == "armv5" ]; then
     BACK_ARCH=armv5
+    APPLE_SDK=iPhoneOS
   fi
 
   # ARMv6
   if [ "$CL" == "armv6" ]; then
     BACK_ARCH=armv6
+    APPLE_SDK=iPhoneOS
   fi
 
   # ARMv7
   if [ "$CL" == "armv7" ]; then
     BACK_ARCH=armv7
+    APPLE_SDK=iPhoneOS
   fi
 
   # ARMv7s
   if [ "$CL" == "armv7s" ]; then
     BACK_ARCH=armv7s
+    APPLE_SDK=iPhoneOS
   fi
 
   # ARM64
   if [[ ("$CL" == "arm64" || "$CL" == "armv8" || "$CL" == "aarch64") ]]; then
     BACK_ARCH=arm64
+    APPLE_SDK=iPhoneOS
   fi
 
   # iPhone
@@ -201,7 +206,7 @@ fi
 
 # Simulator fixup. LD fails to link dylib.
 if [ "$APPLE_SDK" == "iPhoneSimulator" ] && [ "$IOS_ARCH" == "i386" ]; then
-  IOS_FLAGS="$IOS_FLAGS -miphoneos-version-min=5 -DCRYPTOPP_DISABLE_ASM"
+  IOS_FLAGS="$IOS_FLAGS -miphoneos-version-min=5"
 fi
 
 # ARMv7s fixup. Xcode 4/iOS 6
@@ -217,12 +222,6 @@ fi
 # Yet another ARM64 fixup.
 if [ "$APPLE_SDK" == "AppleTVOS" ]; then
   IOS_FLAGS=""
-fi
-
-# ARM64 Simulator fixup. Under Xcode 6/iOS 8, it uses x86_64 and not i386
-# -ios_simulator_version_min does not work though it is in LLVM sources.
-if [ "$IOS_ARCH" == "x86_64" ]; then
-  IOS_FLAGS="$IOS_FLAGS -DCRYPTOPP_DISABLE_ASM"
 fi
 
 # Disable ASM for simulator. We are failing on Travis due to missing _start.
