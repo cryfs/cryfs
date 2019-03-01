@@ -13,6 +13,7 @@
 
 #include "cryptlib.h"
 #include "secblock.h"
+#include "misc.h"
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -26,28 +27,30 @@ NAMESPACE_BEGIN(CryptoPP)
 /// \since Crypto++ 5.6.2
 class SHA3 : public HashTransformation
 {
-public:
-	/// \brief Construct a SHA3
-	/// \param digestSize the digest size, in bytes
-	/// \details SHA3 is the base class for SHA3_224, SHA3_256, SHA3_384 and SHA3_512.
-	///   Library users should instantiate a derived class, and only use SHA3
-	///   as a base class reference or pointer.
-	SHA3(unsigned int digestSize) : m_digestSize(digestSize) {Restart();}
-	unsigned int DigestSize() const {return m_digestSize;}
-	std::string AlgorithmName() const {return "SHA3-" + IntToString(m_digestSize*8);}
-	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() { return "SHA3"; }
-	unsigned int OptimalDataAlignment() const {return GetAlignmentOf<word64>();}
-
-	void Update(const byte *input, size_t length);
-	void Restart();
-	void TruncatedFinal(byte *hash, size_t size);
-
-	// unsigned int BlockSize() const { return r(); } // that's the idea behind it
 protected:
-	inline unsigned int r() const {return 200 - 2 * m_digestSize;}
+    /// \brief Construct a SHA3
+    /// \param digestSize the digest size, in bytes
+    /// \details SHA3 is the base class for SHA3_224, SHA3_256, SHA3_384 and SHA3_512.
+    ///   Library users should instantiate a derived class, and only use SHA3
+    ///   as a base class reference or pointer.
+    /// \details This constructor was moved to protected at Crypto++ 8.1
+    ///   because users were attempting to create Keccak objects with it.
+    /// \since Crypto++ 5.6.2
+    SHA3(unsigned int digestSize) : m_digestSize(digestSize) {Restart();}
 
-	FixedSizeSecBlock<word64, 25> m_state;
-	unsigned int m_digestSize, m_counter;
+public:
+    unsigned int DigestSize() const {return m_digestSize;}
+    unsigned int OptimalDataAlignment() const {return GetAlignmentOf<word64>();}
+
+    void Update(const byte *input, size_t length);
+    void Restart();
+    void TruncatedFinal(byte *hash, size_t size);
+
+protected:
+    inline unsigned int r() const {return BlockSize();}
+
+    FixedSizeSecBlock<word64, 25> m_state;
+    unsigned int m_digestSize, m_counter;
 };
 
 /// \brief SHA3 message digest template
@@ -57,47 +60,48 @@ template<unsigned int T_DigestSize>
 class SHA3_Final : public SHA3
 {
 public:
-	CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize)
-	CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE)
+    CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize)
+    CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE)
+    static std::string StaticAlgorithmName()
+        { return "SHA3-" + IntToString(DIGESTSIZE * 8); }
 
-	/// \brief Construct a SHA3-X message digest
-	SHA3_Final() : SHA3(DIGESTSIZE) {}
-	static std::string StaticAlgorithmName() { return "SHA3-" + IntToString(DIGESTSIZE * 8); }
-	unsigned int BlockSize() const { return BLOCKSIZE; }
+    /// \brief Construct a SHA3-X message digest
+    SHA3_Final() : SHA3(DIGESTSIZE) {}
+
+    /// \brief Provides the block size of the compression function
+    /// \return block size of the compression function, in bytes
+    /// \details BlockSize() will return 0 if the hash is not block based
+    ///   or does not have an equivalent block size. For example, Keccak
+    ///   and SHA-3 do not have a block size, but they do have an equivalent
+    ///   block size called rate expressed as <tt>r</tt>.
+    unsigned int BlockSize() const { return BLOCKSIZE; }
+
+    std::string AlgorithmName() const { return StaticAlgorithmName(); }
+
 private:
 #if !defined(__BORLANDC__)
-	CRYPTOPP_COMPILE_ASSERT(BLOCKSIZE < 200); // ensure there was no underflow in the math
-	CRYPTOPP_COMPILE_ASSERT(BLOCKSIZE > (int)T_DigestSize); // this is a general expectation by HMAC
+    // ensure there was no underflow in the math
+    CRYPTOPP_COMPILE_ASSERT(BLOCKSIZE < 200);
+    // this is a general expectation by HMAC
+    CRYPTOPP_COMPILE_ASSERT((int)BLOCKSIZE > (int)DIGESTSIZE);
 #endif
 };
 
 /// \brief SHA3-224 message digest
 /// \since Crypto++ 5.6.2
-// typedef SHA3_Final<28> SHA3_224;
-class SHA3_224 : public SHA3_Final<28>
-{
-};
+class SHA3_224 : public SHA3_Final<28> {};
 
 /// \brief SHA3-256 message digest
 /// \since Crypto++ 5.6.2
-// typedef SHA3_Final<32> SHA3_256;
-class SHA3_256 : public SHA3_Final<32>
-{
-};
+class SHA3_256 : public SHA3_Final<32> {};
 
 /// \brief SHA3-384 message digest
 /// \since Crypto++ 5.6.2
-// typedef SHA3_Final<48> SHA3_384;
-class SHA3_384 : public SHA3_Final<48>
-{
-};
+class SHA3_384 : public SHA3_Final<48> {};
 
 /// \brief SHA3-512 message digest
 /// \since Crypto++ 5.6.2
-// typedef SHA3_Final<64> SHA3_512;
-class SHA3_512 : public SHA3_Final<64>
-{
-};
+class SHA3_512 : public SHA3_Final<64> {};
 
 NAMESPACE_END
 

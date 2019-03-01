@@ -95,6 +95,9 @@
     <ClCompile Include="chacha_avx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="chachapoly.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="cham.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -203,6 +206,9 @@
     <ClCompile Include="gf2n.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gf2n_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="gfpcrypt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -251,7 +257,10 @@
     <ClCompile Include="keccak.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="keccakc.cpp">
+    <ClCompile Include="keccak_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="keccak_simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="lea.cpp">
@@ -399,6 +408,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="shacal2_simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="shake.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="shark.cpp">
@@ -753,9 +765,6 @@
     <ClInclude Include="keccak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="keccakc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="lubyrack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -915,6 +924,9 @@
     <ClInclude Include="shacal2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="shake.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="shark.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1014,9 +1026,18 @@
     <ClInclude Include="chacha.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="chachapoly.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="rdrand.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="x64dll.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="x64masm.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
     <CustomBuild Include="adhoc.cpp.proto">

@@ -71,6 +71,12 @@ public:
 	///   to optimize it well in either form.
 	CRYPTOPP_CONSTEXPR size_type max_size() const {return ELEMS_MAX;}
 
+#if defined(__SUNPRO_CC)
+	// https://github.com/weidai11/cryptopp/issues/770
+	// and https://stackoverflow.com/q/53999461/608639
+	CRYPTOPP_CONSTEXPR size_type max_size(size_type n) const {return (~(size_type)0)/n;}
+#endif
+
 #if defined(CRYPTOPP_CXX11_VARIADIC_TEMPLATES) || defined(CRYPTOPP_DOXYGEN_PROCESSING)
 
 	/// \brief Constructs a new V using variadic arguments
@@ -248,7 +254,7 @@ public:
 		return StandardReallocate(*this, oldPtr, oldSize, newSize, preserve);
 	}
 
-	/// \brief Template class memeber Rebind
+	/// \brief Template class member Rebind
 	/// \tparam V bound class or type
 	/// \details Rebind allows a container class to allocate a different type of object
 	///   to store elements. For example, a std::list will allocate std::list_node to
@@ -415,7 +421,7 @@ public:
 			CRYPTOPP_ASSERT(size <= S);
 			CRYPTOPP_ASSERT(m_allocated);
 			m_allocated = false;
-			SecureWipeArray((pointer)ptr, size);
+			SecureWipeArray(reinterpret_cast<pointer>(ptr), size);
 		}
 		else
 			m_fallbackAllocator.deallocate(ptr, size);
@@ -497,7 +503,7 @@ private:
 	// The library is OK but users may hit it. So we need to guard
 	// for a large T, and that is what PAD achieves.
 	T* GetAlignedArray() {
-		T* p_array = (T*)(void*)(((byte*)m_array) + (0-(size_t)m_array)%16);
+		T* p_array = reinterpret_cast<T*>(static_cast<void*>((reinterpret_cast<byte*>(m_array)) + (0-reinterpret_cast<size_t>(m_array))%16));
 		// Verify the 16-byte alignment
 		CRYPTOPP_ASSERT(IsAlignedOn(p_array, 16));
 		// Verify allocated array with pad is large enough.

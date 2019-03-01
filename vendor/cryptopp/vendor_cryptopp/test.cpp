@@ -41,6 +41,21 @@
 #include <windows.h>
 #endif
 
+#if defined(CRYPTOPP_UNIX_AVAILABLE) || defined(CRYPTOPP_BSD_AVAILABLE)
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#define UNIX_PATH_FAMILY 1
+#endif
+
+#if defined(CRYPTOPP_OSX_AVAILABLE)
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <mach-o/dyld.h>
+#define UNIX_PATH_FAMILY 1
+#endif
+
 #if (_MSC_VER >= 1000)
 #include <crtdbg.h>		// for the debug heap
 #endif
@@ -75,6 +90,7 @@ NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
 const int MAX_PHRASE_LENGTH=250;
+std::string g_argvPathHint="";
 
 void GenerateRSAKey(unsigned int keyLength, const char *privFilename, const char *pubFilename, const char *seed);
 std::string RSAEncryptString(const char *pubFilename, const char *seed, const char *message);
@@ -110,6 +126,7 @@ void HexDecode(const char *infile, const char *outfile);
 void FIPS140_GenerateRandomFiles();
 
 bool Validate(int, bool, const char *);
+void SetArgvPathHint(const char* argv0, std::string& pathHint);
 
 ANONYMOUS_NAMESPACE_BEGIN
 #if (CRYPTOPP_USE_AES_GENERATOR)
@@ -148,6 +165,9 @@ int scoped_main(int argc, char *argv[])
 	cout.set_safe_flag(stream_MT::unsafe_object);
 	cin.set_safe_flag(stream_MT::unsafe_object);
 #endif
+
+	// A hint to help locate TestData/ and TestVectors/ after install.
+	SetArgvPathHint(argv[0], g_argvPathHint);
 
 	try
 	{
@@ -426,6 +446,82 @@ int scoped_main(int argc, char *argv[])
 	}
 } // main()
 
+void SetArgvPathHint(const char* argv0, std::string& pathHint)
+{
+# if (PATH_MAX > 0)  // Posix
+	size_t path_max = (size_t)PATH_MAX;
+#elif (MAX_PATH > 0)  // Microsoft
+	size_t path_max = (size_t)MAX_PATH;
+#else
+	size_t path_max = 260;
+#endif
+
+	// OS X and Solaris provide a larger path using pathconf than MAX_PATH.
+	// Also see https://stackoverflow.com/a/33249023/608639 for FreeBSD.
+#if defined(_PC_PATH_MAX)
+	long ret = pathconf(argv0, _PC_PATH_MAX);
+	const size_t old_path_max = path_max;
+	if (SafeConvert(ret, path_max) == false)
+		path_max = old_path_max;
+#endif
+
+	const size_t argLen = std::strlen(argv0);
+	if (argLen >= path_max)
+		return; // Can't use realpath safely
+	pathHint = std::string(argv0, argLen);
+
+#if defined(AT_EXECFN)
+	if (getauxval(AT_EXECFN))
+		pathHint = getauxval(AT_EXECFN);
+#elif defined(_MSC_VER)
+	char* pgmptr = NULLPTR;
+	errno_t err = _get_pgmptr(&pgmptr);
+	if (err == 0 && pgmptr != NULLPTR)
+		pathHint = pgmptr;
+#elif defined(CRYPTOPP_OSX_AVAILABLE)
+	std::string t(path_max, (char)0);
+	unsigned int len = (unsigned int)t.size();
+	if (_NSGetExecutablePath(&t[0], &len) == 0)
+	{
+		t.resize(len);
+		std::swap(pathHint, t);
+	}
+#elif defined(sun) || defined(__sun)
+	if (getexecname())
+		pathHint = getexecname();
+#endif
+
+#if (_POSIX_C_SOURCE >= 200809L) || (_XOPEN_SOURCE >= 700)
+	char* resolved = realpath (pathHint.c_str(), NULLPTR);
+	if (resolved != NULLPTR)
+	{
+		pathHint = resolved;
+		std::free(resolved);
+	}
+#elif defined(UNIX_PATH_FAMILY)
+	std::string resolved(path_max, (char)0);
+	char* r = realpath (pathHint.c_str(), &resolved[0]);
+	if (r != NULLPTR)
+	{
+		resolved.resize(std::strlen(&resolved[0]));
+		std::swap(pathHint, resolved);
+	}
+#endif
+
+#if defined(UNIX_PATH_FAMILY)
+	// Is it possible for realpath to fail?
+	struct stat buf; int x;
+	x = lstat(pathHint.c_str(), &buf);
+	if (x != 0 || S_ISLNK(buf.st_mode))
+		pathHint.clear();
+#endif
+
+	// Trim the executable name, leave the path with a slash.
+	std::string::size_type pos = pathHint.find_last_of("\\/");
+	if (pos != std::string::npos)
+		pathHint.erase(pos+1);
+}
+
 void FIPS140_GenerateRandomFiles()
 {
 #ifdef OS_RNG_AVAILABLE
@@ -451,7 +547,8 @@ void PrintSeedAndThreads()
 		tc = omp_get_num_threads();
 	}
 
-	std::cout << "Using " << tc << " OMP " << (tc == 1 ? "thread" : "threads") << std::endl;
+	std::cout << "OpenMP version " << (int)_OPENMP << ", ";
+	std::cout << tc << (tc == 1 ? " thread" : " threads") << std::endl;
 #endif
 }
 
@@ -812,6 +909,7 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	g_testBegin = ::time(NULLPTR);
 	PrintSeedAndThreads();
 
+	// TODO: we need to group these tests like benchmarks...
 	switch (alg)
 	{
 	case 0: result = ValidateAll(thorough); break;
@@ -886,10 +984,11 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 68: result = ValidateTTMAC(); break;
 	case 70: result = ValidateSalsa(); break;
 	case 71: result = ValidateChaCha(); break;
-	case 72: result = ValidateSosemanuk(); break;
-	case 73: result = ValidateRabbit(); break;
-	case 74: result = ValidateHC128(); break;
-	case 75: result = ValidateHC256(); break;
+	case 72: result = ValidateChaChaTLS(); break;
+	case 73: result = ValidateSosemanuk(); break;
+	case 74: result = ValidateRabbit(); break;
+	case 75: result = ValidateHC128(); break;
+	case 76: result = ValidateHC256(); break;
 	case 80: result = ValidateVMAC(); break;
 	case 81: result = ValidateCCM(); break;
 	case 82: result = ValidateGCM(); break;
@@ -906,6 +1005,10 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 101: result = ValidateSIMECK(); break;
 	case 102: result = ValidateSIMON(); break;
 	case 103: result = ValidateSPECK(); break;
+
+	case 110: result = ValidateSHA3(); break;
+	case 111: result = ValidateSHAKE(); break;
+	case 112: result = ValidateSHAKE_XOF(); break;
 
 #if defined(CRYPTOPP_EXTENDED_VALIDATION)
 	// http://github.com/weidai11/cryptopp/issues/92

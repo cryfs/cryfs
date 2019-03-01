@@ -23,6 +23,7 @@
 #include "sha3.h"
 #include "blake2.h"
 #include "ripemd.h"
+#include "chacha.h"
 #include "poly1305.h"
 #include "siphash.h"
 #include "panama.h"
@@ -72,6 +73,7 @@ void RegisterFactories2()
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, CMAC<AES> >();
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, DMAC<AES> >();
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, Poly1305<AES> >();
+	RegisterDefaultFactoryFor<MessageAuthenticationCode, Poly1305TLS>();
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, CMAC<DES_EDE3> >();
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, BLAKE2s>();
 	RegisterDefaultFactoryFor<MessageAuthenticationCode, BLAKE2b>();
@@ -93,6 +95,8 @@ void RegisterFactories3()
 	RegisterSymmetricCipherDefaultFactories<Salsa20>();
 	RegisterSymmetricCipherDefaultFactories<XSalsa20>();
 	RegisterSymmetricCipherDefaultFactories<ChaCha>();
+	RegisterSymmetricCipherDefaultFactories<ChaChaTLS>();
+	RegisterSymmetricCipherDefaultFactories<XChaCha20>();
 	RegisterSymmetricCipherDefaultFactories<Sosemanuk>();
 	RegisterSymmetricCipherDefaultFactories<Rabbit>();
 	RegisterSymmetricCipherDefaultFactories<RabbitWithIV>();
