@@ -23,7 +23,8 @@
 # include <immintrin.h>
 #endif
 
-#if (CRYPTOPP_ARM_NEON_AVAILABLE)
+// C1189: error: This header is specific to ARM targets
+#if (CRYPTOPP_ARM_NEON_AVAILABLE) && !defined(_M_ARM64)
 # include <arm_neon.h>
 #endif
 
@@ -83,7 +84,10 @@ bool CPU_ProbeSHA1()
     volatile bool result = true;
     __try
     {
-        uint32x4_t data1 = {1,2,3,4}, data2 = {5,6,7,8}, data3 = {9,10,11,12};
+        unsigned int w[] = {1,2,3,4, 5,6,7,8, 9,10,11,12};
+        uint32x4_t data1 = vld1q_u32(w+0);
+        uint32x4_t data2 = vld1q_u32(w+4);
+        uint32x4_t data3 = vld1q_u32(w+8);
 
         uint32x4_t r1 = vsha1cq_u32 (data1, 0, data2);
         uint32x4_t r2 = vsha1mq_u32 (data1, 0, data2);
@@ -116,7 +120,10 @@ bool CPU_ProbeSHA1()
         result = false;
     else
     {
-        uint32x4_t data1 = {1,2,3,4}, data2 = {5,6,7,8}, data3 = {9,10,11,12};
+        unsigned int w[] = {1,2,3,4, 5,6,7,8, 9,10,11,12};
+        uint32x4_t data1 = vld1q_u32(w+0);
+        uint32x4_t data2 = vld1q_u32(w+4);
+        uint32x4_t data3 = vld1q_u32(w+8);
 
         uint32x4_t r1 = vsha1cq_u32 (data1, 0, data2);
         uint32x4_t r2 = vsha1mq_u32 (data1, 0, data2);
@@ -145,7 +152,10 @@ bool CPU_ProbeSHA2()
     volatile bool result = true;
     __try
     {
-        uint32x4_t data1 = {1,2,3,4}, data2 = {5,6,7,8}, data3 = {9,10,11,12};
+        unsigned int w[] = {1,2,3,4, 5,6,7,8, 9,10,11,12};
+        uint32x4_t data1 = vld1q_u32(w+0);
+        uint32x4_t data2 = vld1q_u32(w+4);
+        uint32x4_t data3 = vld1q_u32(w+8);
 
         uint32x4_t r1 = vsha256hq_u32 (data1, data2, data3);
         uint32x4_t r2 = vsha256h2q_u32 (data1, data2, data3);
@@ -177,7 +187,10 @@ bool CPU_ProbeSHA2()
         result = false;
     else
     {
-        uint32x4_t data1 = {1,2,3,4}, data2 = {5,6,7,8}, data3 = {9,10,11,12};
+        unsigned int w[] = {1,2,3,4, 5,6,7,8, 9,10,11,12};
+        uint32x4_t data1 = vld1q_u32(w+0);
+        uint32x4_t data2 = vld1q_u32(w+4);
+        uint32x4_t data3 = vld1q_u32(w+8);
 
         uint32x4_t r1 = vsha256hq_u32 (data1, data2, data3);
         uint32x4_t r2 = vsha256h2q_u32 (data1, data2, data3);

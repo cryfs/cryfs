@@ -18,11 +18,12 @@
 # endif
 #endif
 
-// Issue 340
+// Issue 340 and Issue 793
 #if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wconversion"
 # pragma GCC diagnostic ignored "-Wsign-conversion"
+# pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
 #include "cryptlib.h"
@@ -100,35 +101,6 @@
 #endif
 
 #endif // CRYPTOPP_DOXYGEN_PROCESSING
-
-// NumericLimitsMin and NumericLimitsMax added for word128 types,
-//   see http://github.com/weidai11/cryptopp/issues/364
-ANONYMOUS_NAMESPACE_BEGIN
-template<class T>
-T NumericLimitsMin()
-{
-	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
-	return (std::numeric_limits<T>::min)();
-}
-template<class T>
-T NumericLimitsMax()
-{
-	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
-	return (std::numeric_limits<T>::max)();
-}
-#if defined(CRYPTOPP_WORD128_AVAILABLE)
-template<>
-CryptoPP::word128 NumericLimitsMin()
-{
-	return 0;
-}
-template<>
-CryptoPP::word128 NumericLimitsMax()
-{
-	return (((CryptoPP::word128)W64LIT(0xffffffffffffffff)) << 64U) | (CryptoPP::word128)W64LIT(0xffffffffffffffff);
-}
-#endif
-ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -617,7 +589,7 @@ template <class T1, class T2> inline const T1 UnsignedMin(const T1& a, const T2&
 template <class T1, class T2>
 inline bool SafeConvert(T1 from, T2 &to)
 {
-	to = (T2)from;
+	to = static_cast<T2>(from);
 	if (from != to || (from > 0) != (to > 0))
 		return false;
 	return true;
@@ -632,7 +604,7 @@ template <class T>
 std::string IntToString(T value, unsigned int base = 10)
 {
 	// Hack... set the high bit for uppercase.
-	static const unsigned int HIGH_BIT = (1U << 31);
+	const unsigned int HIGH_BIT = (1U << 31);
 	const char CH = !!(base & HIGH_BIT) ? 'A' : 'a';
 	base &= ~HIGH_BIT;
 
@@ -899,18 +871,20 @@ CRYPTOPP_DLL void CRYPTOPP_API xorbuf(byte *output, const byte *input, const byt
 /// \param buf1 the first buffer
 /// \param buf2 the second buffer
 /// \param count the size of the buffers, in bytes
-/// \details The function effectively performs an XOR of the elements in two equally sized buffers
-///   and retruns a result based on the XOR operation. The function is near constant-time because
-///   CPU micro-code timings could affect the "constant-ness". Calling code is responsible for
-///   mitigating timing attacks if the buffers are not equally sized.
+/// \details The function effectively performs an XOR of the elements in two equally sized
+///   buffers and retruns a result based on the XOR operation. The function is near
+///   constant-time because CPU micro-code timings could affect the "constant-ness".
+///   Calling code is responsible for mitigating timing attacks if the buffers are not
+///   equally sized.
 /// \sa ModPowerOf2
 CRYPTOPP_DLL bool CRYPTOPP_API VerifyBufsEqual(const byte *buf1, const byte *buf2, size_t count);
 
 /// \brief Tests whether a value is a power of 2
 /// \param value the value to test
 /// \returns true if value is a power of 2, false otherwise
-/// \details The function creates a mask of <tt>value - 1</tt> and returns the result of
-///   an AND operation compared to 0. If value is 0 or less than 0, then the function returns false.
+/// \details The function creates a mask of <tt>value - 1</tt> and returns the result
+///   of an AND operation compared to 0. If value is 0 or less than 0, then the function
+///   returns false.
 template <class T>
 inline bool IsPowerOf2(const T &value)
 {
@@ -933,13 +907,65 @@ inline bool IsPowerOf2<word64>(const word64 &value)
 # endif  // __x86_64__
 #endif   // __BMI__
 
+/// \brief Provide the minimum value for a type
+/// \tparam T type of class
+/// \returns the minimum value of the type or class
+/// \details NumericLimitsMin() was introduced for Clang at <A
+///  HREF="http://github.com/weidai11/cryptopp/issues/364">Issue 364,
+///  Apple Clang 6.0 and numeric_limits<word128>::max() returns 0</A>.
+/// \details NumericLimitsMin() requires a specialization for <tt>T</tt>,
+///  meaning <tt>std::numeric_limits<T>::is_specialized</tt> must return
+///  <tt>true</tt>. In the case of <tt>word128</tt> Clang did not specialize
+///  <tt>numeric_limits</tt> for the type.
+/// \since Crypto++ 8.1
+template<class T>
+inline T NumericLimitsMin()
+{
+	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
+	return (std::numeric_limits<T>::min)();
+}
+
+/// \brief Provide the maximum value for a type
+/// \tparam T type of class
+/// \returns the maximum value of the type or class
+/// \details NumericLimitsMax() was introduced for Clang at <A
+///  HREF="http://github.com/weidai11/cryptopp/issues/364">Issue 364,
+///  Apple Clang 6.0 and numeric_limits<word128>::max() returns 0</A>.
+/// \details NumericLimitsMax() requires a specialization for <tt>T</tt>,
+///  meaning <tt>std::numeric_limits<T>::is_specialized</tt> must return
+///  <tt>true</tt>. In the case of <tt>word128</tt> Clang did not specialize
+///  <tt>numeric_limits</tt> for the type.
+/// \since Crypto++ 8.1
+template<class T>
+inline T NumericLimitsMax()
+{
+	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
+	return (std::numeric_limits<T>::max)();
+}
+
+// NumericLimitsMin and NumericLimitsMax added for word128 types,
+//   see http://github.com/weidai11/cryptopp/issues/364
+#if defined(CRYPTOPP_WORD128_AVAILABLE)
+template<>
+inline word128 NumericLimitsMin()
+{
+	return 0;
+}
+template<>
+inline word128 NumericLimitsMax()
+{
+	return (static_cast<word128>(LWORD_MAX) << 64U) | LWORD_MAX;
+}
+#endif
+
 /// \brief Performs a saturating subtract clamped at 0
 /// \tparam T1 class or type
 /// \tparam T2 class or type
 /// \param a the minuend
 /// \param b the subtrahend
 /// \returns the difference produced by the saturating subtract
-/// \details Saturating arithmetic restricts results to a fixed range. Results that are less than 0 are clamped at 0.
+/// \details Saturating arithmetic restricts results to a fixed range. Results that are
+///   less than 0 are clamped at 0.
 /// \details Use of saturating arithmetic in places can be advantageous because it can
 ///   avoid a branch by using an instruction like a conditional move (<tt>CMOVE</tt>).
 template <class T1, class T2>
@@ -955,8 +981,8 @@ inline T1 SaturatingSubtract(const T1 &a, const T2 &b)
 /// \param a the minuend
 /// \param b the subtrahend
 /// \returns the difference produced by the saturating subtract
-/// \details Saturating arithmetic restricts results to a fixed range. Results that are less than
-///   1 are clamped at 1.
+/// \details Saturating arithmetic restricts results to a fixed range. Results that are
+///   less than 1 are clamped at 1.
 /// \details Use of saturating arithmetic in places can be advantageous because it can
 ///   avoid a branch by using an instruction like a conditional move (<tt>CMOVE</tt>).
 template <class T1, class T2>
@@ -1156,6 +1182,7 @@ inline CipherDir GetCipherDir(const T &obj)
 ///   to free memory. There is no guarantee CallNewHandler will be able to procure more memory so
 ///   an allocation succeeds. If the call to set_new_handler fails, then CallNewHandler throws
 ///   a bad_alloc exception.
+/// \sa AlignedAllocate, AlignedDeallocate, UnalignedAllocate, UnalignedDeallocate
 CRYPTOPP_DLL void CRYPTOPP_API CallNewHandler();
 
 /// \brief Performs an addition with carry on a block of bytes
@@ -1380,37 +1407,44 @@ std::string StringNarrow(const wchar_t *str, bool throwOnError = true);
 ///   then a 0x21 error is returned on Windows which eventually results in an InvalidArgument() exception.
 std::wstring StringWiden(const char *str, bool throwOnError = true);
 
-#ifdef CRYPTOPP_DOXYGEN_PROCESSING
-
 /// \brief Allocates a buffer on 16-byte boundary
 /// \param size the size of the buffer
-/// \details AlignedAllocate is primarily used when the data will be proccessed by MMX, SSE2 and NEON
-///   instructions. The assembly language routines rely on the alignment. If the alignment is not
+/// \details AlignedAllocate is primarily used when the data will be
+///   proccessed by SSE, NEON, ARMv8 or PowerPC instructions. The assembly
+///   language routines rely on the alignment. If the alignment is not
 ///   respected, then a SIGBUS could be generated on Unix and Linux, and an
 ///   EXCEPTION_DATATYPE_MISALIGNMENT could be generated on Windows.
-/// \note AlignedAllocate and AlignedDeallocate are available when CRYPTOPP_BOOL_ALIGN16 is
-///   defined. CRYPTOPP_BOOL_ALIGN16 is defined in config.h
+/// \details Formerly, AlignedAllocate and AlignedDeallocate were only
+///   available on certain platforms when CRYTPOPP_DISABLE_ASM was not in
+///   effect. However, Android and iOS debug simulator builds got into a
+///   state where the aligned allocator was not available and caused link
+///   failures.
+/// \since AlignedAllocate for SIMD since Crypto++ 1.0, AlignedAllocate
+///   for all builds since Crypto++ 8.1
+/// \sa AlignedDeallocate, UnalignedAllocate, UnalignedDeallocate, CallNewHandler,
+///   <A HREF="http://github.com/weidai11/cryptopp/issues/779">Issue 779</A>
 CRYPTOPP_DLL void* CRYPTOPP_API AlignedAllocate(size_t size);
 
 /// \brief Frees a buffer allocated with AlignedAllocate
 /// \param ptr the buffer to free
-/// \note AlignedAllocate and AlignedDeallocate are available when CRYPTOPP_BOOL_ALIGN16 is
-///   defined. CRYPTOPP_BOOL_ALIGN16 is defined in config.h
+/// \since AlignedDeallocate for SIMD since Crypto++ 1.0, AlignedAllocate
+///   for all builds since Crypto++ 8.1
+/// \sa AlignedAllocate, UnalignedAllocate, UnalignedDeallocate, CallNewHandler,
+///   <A HREF="http://github.com/weidai11/cryptopp/issues/779">Issue 779</A>
 CRYPTOPP_DLL void CRYPTOPP_API AlignedDeallocate(void *ptr);
-
-#endif // CRYPTOPP_DOXYGEN_PROCESSING
-
-#if CRYPTOPP_BOOL_ALIGN16
-CRYPTOPP_DLL void* CRYPTOPP_API AlignedAllocate(size_t size);
-CRYPTOPP_DLL void CRYPTOPP_API AlignedDeallocate(void *ptr);
-#endif // CRYPTOPP_BOOL_ALIGN16
 
 /// \brief Allocates a buffer
 /// \param size the size of the buffer
+/// \since Crypto++ 1.0
+/// \sa AlignedAllocate, AlignedDeallocate, UnalignedDeallocate, CallNewHandler,
+///   <A HREF="http://github.com/weidai11/cryptopp/issues/779">Issue 779</A>
 CRYPTOPP_DLL void * CRYPTOPP_API UnalignedAllocate(size_t size);
 
 /// \brief Frees a buffer allocated with UnalignedAllocate
 /// \param ptr the buffer to free
+/// \since Crypto++ 1.0
+/// \sa AlignedAllocate, AlignedDeallocate, UnalignedAllocate, CallNewHandler,
+///   <A HREF="http://github.com/weidai11/cryptopp/issues/779">Issue 779</A>
 CRYPTOPP_DLL void CRYPTOPP_API UnalignedDeallocate(void *ptr);
 
 // ************** rotate functions ***************
@@ -1436,8 +1470,8 @@ template <unsigned int R, class T> inline T rotlConstant(T x)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(R < THIS_SIZE);
 	return T((x<<R)|(x>>(-R&MASK)));
 }
@@ -1462,8 +1496,8 @@ template <unsigned int R, class T> inline T rotrConstant(T x)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(R < THIS_SIZE);
 	return T((x >> R)|(x<<(-R&MASK)));
 }
@@ -1487,8 +1521,8 @@ template <class T> inline T rotlFixed(T x, unsigned int y)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(y < THIS_SIZE);
 	return T((x<<y)|(x>>(-y&MASK)));
 }
@@ -1512,8 +1546,8 @@ template <class T> inline T rotrFixed(T x, unsigned int y)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(y < THIS_SIZE);
 	return T((x >> y)|(x<<(-y&MASK)));
 }
@@ -1532,8 +1566,8 @@ template <class T> inline T rotrFixed(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotlVariable(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(y < THIS_SIZE);
 	return T((x<<y)|(x>>(-y&MASK)));
 }
@@ -1552,8 +1586,8 @@ template <class T> inline T rotlVariable(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotrVariable(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	CRYPTOPP_ASSERT(y < THIS_SIZE);
 	return T((x>>y)|(x<<(-y&MASK)));
 }
@@ -1569,8 +1603,8 @@ template <class T> inline T rotrVariable(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotlMod(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	return T((x<<(y&MASK))|(x>>(-y&MASK)));
 }
 
@@ -1585,8 +1619,8 @@ template <class T> inline T rotlMod(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotrMod(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8)
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1)
 	return T((x>>(y&MASK))|(x<<(-y&MASK)));
 }
 

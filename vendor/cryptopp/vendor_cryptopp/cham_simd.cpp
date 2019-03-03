@@ -10,26 +10,25 @@
 
 #include "cham.h"
 #include "misc.h"
-#include "adv_simd.h"
 
 // Uncomment for benchmarking C++ against SSE or NEON.
 // Do so in both simon.cpp and simon-simd.cpp.
 // #undef CRYPTOPP_SSSE3_AVAILABLE
 // #undef CRYPTOPP_ARM_NEON_AVAILABLE
 
-#if defined(CRYPTOPP_SSE2_AVAILABLE)
-# define CRYPTOPP_AVX512_ROTATE 1
-# include <xmmintrin.h>
-# include <emmintrin.h>
-#endif
-
 #if (CRYPTOPP_SSSE3_AVAILABLE)
+#include "adv_simd.h"
 # include <pmmintrin.h>
 # include <tmmintrin.h>
 #endif
 
 #if defined(__XOP__)
 # include <ammintrin.h>
+#endif
+
+#if defined(__AVX512F__)
+# define CRYPTOPP_AVX512_ROTATE 1
+# include <immintrin.h>
 #endif
 
 // Squash MS LNK4221 and libtool warnings
@@ -68,7 +67,6 @@ inline __m128i RotateRight16(const __m128i& val)
 #endif
 }
 
-// Faster than two Shifts and an Or. Thanks to Louis Wingers and Bryan Weeks.
 template <>
 inline __m128i RotateLeft16<8>(const __m128i& val)
 {
@@ -80,7 +78,6 @@ inline __m128i RotateLeft16<8>(const __m128i& val)
 #endif
 }
 
-// Faster than two Shifts and an Or. Thanks to Louis Wingers and Bryan Weeks.
 template <>
 inline __m128i RotateRight16<8>(const __m128i& val)
 {

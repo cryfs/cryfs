@@ -53,6 +53,7 @@ TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromOutside_the
   });
 
   nameIsSet.wait();
+  set_thread_name("outer_thread_name"); // just to make sure the next line doesn't read the outer thread name
   string name = get_thread_name(&child);
   EXPECT_EQ("my_thread_name", name);
 

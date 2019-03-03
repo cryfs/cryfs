@@ -6,30 +6,32 @@ Currently the library contains the following algorithms:
 
                    algorithm type  name
 
- authenticated encryption schemes  GCM, CCM, EAX
+ authenticated encryption schemes  GCM, CCM, EAX, ChaCha20Poly1305 and
+                                   XChaCha20Poly1305
 
-        high speed stream ciphers  ChaCha (8/12/20), Panama, Sosemanuk, Salsa20,
-                                   XSalsa20
+        high speed stream ciphers  ChaCha (8/12/20), ChaCha (IETF), Panama, Salsa20,
+                                   Sosemanuk, XSalsa20, XChaCha20
 
            AES and AES candidates  AES (Rijndael), RC6, MARS, Twofish, Serpent,
                                    CAST-256
 
-                                   ARIA, IDEA, Blowfish, Triple-DES (DES-EDE2 and
-                                   DES-EDE3), Camellia, SEED, Kalyna (128/256/512),
-              other block ciphers  RC5, SIMON-64, SIMON-128, SPECK-64, SPECK-128,
-                                   Skipjack, SHACAL-2, SM4, Threefish (256/512/1024),
-                                   TEA, XTEA
+                                   ARIA, Blowfish, Camellia, CHAM, HIGHT, IDEA,
+                                   Kalyna (128/256/512), LEA, SEED, RC5, SHACAL-2,
+              other block ciphers  SIMON (64/128), Skipjack, SPECK (64/128),
+                                   Simeck, SM4, Threefish (256/512/1024),
+                                   Triple-DES (DES-EDE2 and DES-EDE3), TEA, XTEA
 
   block cipher modes of operation  ECB, CBC, CBC ciphertext stealing (CTS),
                                    CFB, OFB, counter mode (CTR)
 
      message authentication codes  BLAKE2s, BLAKE2b, CMAC, CBC-MAC, DMAC, GMAC, HMAC,
-                                   Poly1305, SipHash, Two-Track-MAC, VMAC,
+                                   Poly1305, Poly1305 (IETF), SipHash, Two-Track-MAC,
+                                   VMAC
 
                                    BLAKE2s, BLAKE2b, Keccack (F1600), SHA-1,
                    hash functions  SHA-2 (224/256/384/512), SHA-3 (224/256/384/512),
-                                   SipHash, SM3, Tiger, RIPEMD-128, RIPEMD-160,
-                                   RIPEMD-256, RIPEMD-320, WHIRLPOOL
+                                   SHAKE (128/256), SipHash, SM3, Tiger,
+                                   RIPEMD (128/160/256/320), WHIRLPOOL
 
                                    RSA, DSA, Determinsitic DSA, ElGamal,
           public-key cryptography  Nyberg-Rueppel (NR), Rabin-Williams (RW), LUC,
@@ -69,8 +71,6 @@ Other features include:
       + 32-bit CRC, CRC-C and Adler32 checksum
   * class wrappers for these platform and operating system features (optional):
       + high resolution timers on Windows, Unix, and Mac OS
-      + Berkeley and Windows style sockets
-      + Windows named pipes
       + /dev/random, /dev/urandom, /dev/srandom
       + Microsoft's CryptGenRandom or BCryptGenRandom on Windows
   * A high level interface for most of the above, using a filter/pipeline
@@ -206,15 +206,22 @@ library in your programs to help avoid unwanted redirections.
 *** Side Channel Attacks ***
 
 Crypto++ attempts to resist side channel attacks using various remediations. We
-believe the library is hardened but the remdiations may be incomplete. The first
-line of defense uses hardware instructions when possible. The library also uses
-cache-aware algoirthms and access patterns to minimize leakage. If you suspect
-or find an information leak then please report it.
+believe the library is mostly hardened but the remdiations may be incomplete. The
+first line of defense uses hardware instructions when possible for block ciphers,
+hashes and other primitives. Hardware acceleration remediates many timing attacks.
+The library also uses cache-aware algoirthms and access patterns to minimize leakage.
+
+Some of the public key algorithms have branches and some of the branches depend on
+data that can be private or secret. The branching occurs in some field operations
+like exponentiation over integers and elliptic curves. The branching has been
+minimized but not completely eliminated.
 
 Crypto++ does not enagage Specter remediations at this time. The GCC options for
 Specter are -mfunction-return=thunk and -mindirect-branch=thunk, and the library
 uses them during testing. If you want the Specter workarounds then add the GCC
 options to your CXXFLAGS when building the library.
+
+If you suspect or find an information leak then please report it.
 
 *** Documentation and Support ***
 

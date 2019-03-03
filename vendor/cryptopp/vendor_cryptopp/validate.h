@@ -20,6 +20,12 @@
 NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
+// A hint to help locate TestData/ and TestVectors/ after install. Due to
+// execve the path can be malicious. If the path is ficticous then we move
+// onto the next potential path. Also note we only read from the path; we
+// never write through it. Storage for the string is in test.cpp.
+extern std::string g_argvPathHint;
+
 bool ValidateAll(bool thorough);
 bool TestSettings();
 bool TestOS_RNG();
@@ -46,6 +52,10 @@ bool ValidateMD4();
 bool ValidateMD5();
 bool ValidateSHA();
 bool ValidateSHA2();
+bool ValidateSHA3();
+bool ValidateSHAKE();      // output <= r, where r is blocksize
+bool ValidateSHAKE_XOF();  // output > r, needs hand crafted tests
+bool ValidateKeccak();
 bool ValidateTiger();
 bool ValidateRIPEMD();
 bool ValidatePanama();
@@ -100,6 +110,7 @@ bool ValidateHC256();
 bool ValidateRabbit();
 bool ValidateSalsa();
 bool ValidateChaCha();
+bool ValidateChaChaTLS();
 bool ValidateSosemanuk();
 
 bool ValidateVMAC();
@@ -205,10 +216,10 @@ inline std::string TimeToString(const time_t& t)
 
 	// Cleanup whitespace
 	std::string::size_type pos = 0;
-	while (!str.empty() && std::isspace(*(str.end()-1)))
+	while (!str.empty() && std::isspace(str[str.length()-1]))
 		{str.erase(str.end()-1);}
 	while (!str.empty() && std::string::npos != (pos = str.find("  ", pos)))
-		{ str.erase(pos, 1); }
+		{str.erase(pos, 1);}
 
 	return str;
 }
@@ -252,39 +263,68 @@ inline int StringToValue<int, true>(const std::string& str)
 
 inline std::string AddSeparator(std::string str)
 {
-	const char last = (str.empty() ? '\0' : *str.end()-1);
+	if (str.empty()) return "";
+	const char last = str[str.length()-1];
 	if (last != '/' && last != '\\')
 		return str + "/";
 	return str;
 }
 
-// Ideally we would cache the directory and just add the prefix
-// to subsequent calls, but ... Static Initialization Order Fiasco
+// Use CRYPTOPP_DATA_DIR last. The problem this sidesteps is, finding an
+// old version of Crypto++ library in CRYPTOPP_DATA_DIR when the library
+// has been staged in DESTDIR. Using CRYPTOPP_DATA_DIR first only works
+// as expected when CRYPTOPP_DATA_DIR is empty before an install. We
+// encountered this problem rather quickly during testing of Crypto++ 8.1
+// when Crypto++ 8.0 was installed locally. It took some time to realize
+// where the old test data was coming from.
+static std::string GetDataDir()
+{
+	std::ifstream file;
+	std::string name, filename = "TestData/usage.dat";
+
+#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
+	// Look in $ORIGIN/../share/. This is likely a Linux install directory.
+	name = AddSeparator(g_argvPathHint) + std::string("../share/cryptopp/") + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return AddSeparator(g_argvPathHint) + std::string("../share/cryptopp/");
+#endif
+#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
+	// Look in current working directory
+	name = AddSeparator(g_argvPathHint) + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return AddSeparator(g_argvPathHint);
+#endif
+#ifdef CRYPTOPP_DATA_DIR
+	// Honor CRYPTOPP_DATA_DIR. This is likely an install directory if it is not "./".
+	name = AddSeparator(CRYPTOPP_DATA_DIR) + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return AddSeparator(CRYPTOPP_DATA_DIR);
+#endif
+	return "./";
+}
+
 inline std::string DataDir(const std::string& filename)
 {
 	std::string name;
 	std::ifstream file;
-#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
-	// Data files in PWD are probably the newest. This is probably a build directory.
-	name = std::string("./") + filename;
+
+#if CRYPTOPP_CXX11_DYNAMIC_INIT
+	static std::string path = AddSeparator(GetDataDir());
+	name = path + filename;
+	file.open(name.c_str());
+	if (file.is_open())
+		return name;
+#else
+	// Avoid static initialization problems
+	name = AddSeparator(GetDataDir()) + filename;
 	file.open(name.c_str());
 	if (file.is_open())
 		return name;
 #endif
-#ifdef CRYPTOPP_DATA_DIR
-	// Honor the user's setting next. This is likely an install directory if it is not "./".
-	name = AddSeparator(CRYPTOPP_DATA_DIR) + filename;
-	file.open(name.c_str());
-	if (file.is_open())
-		return name;
-#endif
-#ifndef CRYPTOPP_DISABLE_DATA_DIR_SEARCH
-	// Finally look in $ORIGIN/../share/. This is likely a Linux install directory for users.
-	name = std::string("../share/cryptopp/") + filename;
-	file.open(name.c_str());
-	if (file.is_open())
-		return name;
-#endif
+
 	// This will cause the expected exception in the caller
 	return filename;
 }

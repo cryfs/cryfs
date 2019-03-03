@@ -125,6 +125,7 @@ void Benchmark2(double t, double hertz)
 		BenchMarkByName<MessageAuthenticationCode>("CMAC(AES)");
 		BenchMarkByName<MessageAuthenticationCode>("DMAC(AES)");
 		BenchMarkByName<MessageAuthenticationCode>("Poly1305(AES)");
+		BenchMarkByName<MessageAuthenticationCode>("Poly1305TLS");
 		BenchMarkByName<MessageAuthenticationCode>("BLAKE2s");
 		BenchMarkByName<MessageAuthenticationCode>("BLAKE2b");
 		BenchMarkByName<MessageAuthenticationCode>("SipHash-2-4");
@@ -141,6 +142,7 @@ void Benchmark2(double t, double hertz)
 		BenchMarkByName<SymmetricCipher>("ChaCha", 0, "ChaCha20");
 		BenchMarkByName<SymmetricCipher>("ChaCha", 0, "ChaCha12", MakeParameters(Name::Rounds(), 12));
 		BenchMarkByName<SymmetricCipher>("ChaCha", 0, "ChaCha8", MakeParameters(Name::Rounds(), 8));
+		BenchMarkByName<SymmetricCipher>("ChaChaTLS");
 		BenchMarkByName<SymmetricCipher>("Sosemanuk");
 		BenchMarkByName<SymmetricCipher>("Rabbit");
 		BenchMarkByName<SymmetricCipher>("RabbitWithIV");
@@ -245,6 +247,8 @@ void Benchmark2(double t, double hertz)
 		}
 		BenchMarkByName2<AuthenticatedSymmetricCipher, AuthenticatedSymmetricCipher>("AES/CCM");
 		BenchMarkByName2<AuthenticatedSymmetricCipher, AuthenticatedSymmetricCipher>("AES/EAX");
+		BenchMarkByName2<AuthenticatedSymmetricCipher, AuthenticatedSymmetricCipher>("ChaCha20/Poly1305");
+		BenchMarkByName2<AuthenticatedSymmetricCipher, AuthenticatedSymmetricCipher>("XChaCha20/Poly1305");
 	}
 
 	std::cout << "\n</TABLE>" << std::endl;

@@ -280,8 +280,6 @@ void CallNewHandler()
 		throw std::bad_alloc();
 }
 
-#if CRYPTOPP_BOOL_ALIGN16
-
 void * AlignedAllocate(size_t size)
 {
 	byte *p;
@@ -300,10 +298,13 @@ void * AlignedAllocate(size_t size)
 
 #ifdef CRYPTOPP_NO_ALIGNED_ALLOC
 	size_t adjustment = 16-((size_t)p%16);
+	CRYPTOPP_ASSERT(adjustment > 0);
 	p += adjustment;
 	p[-1] = (byte)adjustment;
 #endif
 
+	// If this assert fires then there are problems that need
+	// to be fixed. Please open a bug report.
 	CRYPTOPP_ASSERT(IsAlignedOn(p, 16));
 	return p;
 }
@@ -319,8 +320,6 @@ void AlignedDeallocate(void *p)
 	free(p);
 #endif
 }
-
-#endif  // CRYPTOPP_BOOL_ALIGN16
 
 void * UnalignedAllocate(size_t size)
 {
