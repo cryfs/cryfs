@@ -129,13 +129,13 @@ private:
 
 class SignalCatcherRegistry final {
 public:
-    void add(int signal, std::atomic<bool>* signal_occurred_flag) {
+    void add(int signal, details::SignalCatcherImpl* signal_occurred_flag) {
         _catchers.write([&] (auto& catchers) {
             catchers.emplace_back(signal, signal_occurred_flag);
         });
     }
 
-    void remove(std::atomic<bool>* catcher) {
+    void remove(details::SignalCatcherImpl* catcher) {
         _catchers.write([&] (auto& catchers) {
             auto found = std::find_if(catchers.rbegin(), catchers.rend(), [catcher] (const auto& entry) {return entry.second == catcher;});
             ASSERT(found != catchers.rend(), "Signal handler not found");
@@ -147,7 +147,7 @@ public:
         ASSERT(0 == _catchers.read([] (auto& catchers) {return catchers.size();}), "Leftover signal catchers that weren't destroyed");
     }
 
-	std::atomic<bool>* find(int signal) {
+	details::SignalCatcherImpl* find(int signal) {
 		// this is called in a signal handler and must be mutex-free.
 		return _catchers.read([&](auto& catchers) {
 			auto found = std::find_if(catchers.rbegin(), catchers.rend(), [signal](const auto& entry) {return entry.first == signal; });
@@ -165,23 +165,14 @@ private:
     SignalCatcherRegistry() = default;
 
     // using LeftRight datastructure because we need mutex-free reads. Signal handlers can't use mutexes.
-    LeftRight<vector<pair<int, std::atomic<bool>*>>> _catchers;
+    LeftRight<vector<pair<int, details::SignalCatcherImpl*>>> _catchers;
 
     DISALLOW_COPY_AND_ASSIGN(SignalCatcherRegistry);
 };
 
-void got_signal(int signal) {
-#if defined(_MSC_VER)
-	// Only needed on Windows, Linux does this by default. See comment on SignalHandlerRunningRAII class.
-	SignalHandlerRunningRAII disable_signal_processing_while_handler_running_and_reset_handler_afterwards(signal);
-#endif
-	std::atomic<bool>* catcher = SignalCatcherRegistry::singleton().find(signal);
-	*catcher = true;
-}
-
 class SignalCatcherRegisterer final {
 public:
-    SignalCatcherRegisterer(int signal, std::atomic<bool>* catcher)
+    SignalCatcherRegisterer(int signal, details::SignalCatcherImpl* catcher)
     : _catcher(catcher) {
         SignalCatcherRegistry::singleton().add(signal, _catcher);
     }
@@ -191,7 +182,7 @@ public:
     }
 
 private:
-    std::atomic<bool>* _catcher;
+    details::SignalCatcherImpl* _catcher;
 
     DISALLOW_COPY_AND_ASSIGN(SignalCatcherRegisterer);
 };
@@ -203,7 +194,8 @@ namespace details {
 class SignalCatcherImpl final {
 public:
     SignalCatcherImpl(int signal, std::atomic<bool>* signal_occurred_flag)
-    : _registerer(signal, signal_occurred_flag)
+    : _signal_occurred_flag(signal_occurred_flag)
+    , _registerer(signal, this)
     , _handler(signal) {
         // note: the order of the members ensures that:
         //  - when registering the signal handler fails, the registerer will be destroyed, unregistering the signal_occurred_flag,
@@ -212,13 +204,28 @@ public:
         // Allow only the set of signals that is supported on all platforms, see for Windows: https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/signal?view=vs-2017
         ASSERT(signal == SIGABRT || signal == SIGFPE || signal == SIGILL || signal == SIGINT || signal == SIGSEGV || signal == SIGTERM, "Unknown signal");
     }
+
+    void setSignalOccurred() {
+        *_signal_occurred_flag = true;
+    }
 private:
+    std::atomic<bool>* _signal_occurred_flag;
     SignalCatcherRegisterer _registerer;
     SignalHandlerRAII _handler;
 
     DISALLOW_COPY_AND_ASSIGN(SignalCatcherImpl);
 };
 
+}
+
+namespace {
+void got_signal(int signal) {
+#if defined(_MSC_VER)
+    // Only needed on Windows, Linux does this by default. See comment on SignalHandlerRunningRAII class.
+    SignalHandlerRunningRAII disable_signal_processing_while_handler_running_and_reset_handler_afterwards(signal);
+#endif
+    SignalCatcherRegistry::singleton().find(signal)->setSignalOccurred();
+}
 }
 
 SignalCatcher::SignalCatcher(std::initializer_list<int> signals)
