@@ -12,6 +12,7 @@ set(SOURCES
         process/daemonize.cpp
         process/subprocess.cpp
         process/SignalCatcher.cpp
+        process/SignalHandler.cpp
         tempfile/TempFile.cpp
         tempfile/TempDir.cpp
         network/HttpClient.cpp

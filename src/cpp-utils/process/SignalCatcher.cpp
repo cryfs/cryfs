@@ -1,4 +1,5 @@
 #include "SignalCatcher.h"
+#include "SignalHandler.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -15,117 +16,6 @@ namespace cpputils {
 namespace {
 
 void got_signal(int signal);
-
-using SignalHandlerFunction = void(int);
-
-constexpr SignalHandlerFunction* signal_catcher_function = &got_signal;
-
-#if !defined(_MSC_VER)
-
-class SignalHandlerRAII final {
-public:
-	SignalHandlerRAII(int signal)
-		: _old_handler(), _signal(signal) {
-		struct sigaction new_signal_handler{};
-		std::memset(&new_signal_handler, 0, sizeof(new_signal_handler));
-		new_signal_handler.sa_handler = signal_catcher_function;  // NOLINT(cppcoreguidelines-pro-type-union-access)
-		new_signal_handler.sa_flags = SA_RESTART;
-		int error = sigfillset(&new_signal_handler.sa_mask);  // block all signals while signal handler is running
-		if (0 != error) {
-			throw std::runtime_error("Error calling sigfillset. Errno: " + std::to_string(errno));
-		}
-		_sigaction(_signal, &new_signal_handler, &_old_handler);
-	}
-
-	~SignalHandlerRAII() {
-		// reset to old signal handler
-		struct sigaction removed_handler{};
-		_sigaction(_signal, &_old_handler, &removed_handler);
-		if (signal_catcher_function != removed_handler.sa_handler) {  // NOLINT(cppcoreguidelines-pro-type-union-access)
-			ASSERT(false, "Signal handler screwup. We just replaced a signal handler that wasn't our own.");
-		}
-	}
-
-private:
-	static void _sigaction(int signal, struct sigaction *new_handler, struct sigaction *old_handler) {
-		int error = sigaction(signal, new_handler, old_handler);
-		if (0 != error) {
-			throw std::runtime_error("Error calling sigaction. Errno: " + std::to_string(errno));
-		}
-	}
-
-	struct sigaction _old_handler;
-	int _signal;
-
-	DISALLOW_COPY_AND_ASSIGN(SignalHandlerRAII);
-};
-
-#else
-
-class SignalHandlerRAII final {
-public:
-	SignalHandlerRAII(int signal)
-		: _old_handler(nullptr), _signal(signal) {
-		_old_handler = ::signal(_signal, signal_catcher_function);
-		if (_old_handler == SIG_ERR) {
-			throw std::logic_error("Error calling signal(). Errno: " + std::to_string(errno));
-		}
-	}
-
-	~SignalHandlerRAII() {
-		// reset to old signal handler
-		SignalHandlerFunction* error = ::signal(_signal, _old_handler);
-		if (error == SIG_ERR) {
-			throw std::logic_error("Error resetting signal(). Errno: " + std::to_string(errno));
-		}
-		if (error != signal_catcher_function) {
-			throw std::logic_error("Signal handler screwup. We just replaced a signal handler that wasn't our own.");
-		}
-	}
-
-private:
-
-	SignalHandlerFunction* _old_handler;
-	int _signal;
-
-	DISALLOW_COPY_AND_ASSIGN(SignalHandlerRAII);
-};
-
-// The Linux default behavior (i.e. the way we set up sigaction above) is to disable signal processing while the signal
-// handler is running and to re-enable the custom handler once processing is finished. The Windows default behavior
-// is to reset the handler to the default handler directly before executing the handler, i.e. the handler will only
-// be called once. To fix this, we use this RAII class on Windows, of which an instance will live in the signal handler.
-// In its constructor, it disables signal handling, and in its destructor it re-sets the custom handler.
-// This is not perfect since there is a small time window between calling the signal handler and calling the constructor
-// of this class, but it's the best we can do.
-class SignalHandlerRunningRAII final {
-public:
-	SignalHandlerRunningRAII(int signal) : _signal(signal) {
-		SignalHandlerFunction* old_handler = ::signal(_signal, SIG_IGN);
-		if (old_handler == SIG_ERR) {
-			throw std::logic_error("Error disabling signal(). Errno: " + std::to_string(errno));
-		}
-		if (old_handler != SIG_DFL) {
-			// see description above, we expected the signal handler to be reset.
-			throw std::logic_error("We expected windows to reset the signal handler but it didn't. Did the Windows API change?");
-		}
-	}
-
-	~SignalHandlerRunningRAII() {
-		SignalHandlerFunction* old_handler = ::signal(_signal, signal_catcher_function);
-		if (old_handler == SIG_ERR) {
-			throw std::logic_error("Error resetting signal() after calling handler. Errno: " + std::to_string(errno));
-		}
-		if (old_handler != SIG_IGN) {
-			throw std::logic_error("Weird, we just did set the signal handler to ignore. Why isn't it still ignore?");
-		}
-	}
-
-private:
-	int _signal;
-};
-
-#endif
 
 class SignalCatcherRegistry final {
 public:
@@ -211,7 +101,7 @@ public:
 private:
     std::atomic<bool>* _signal_occurred_flag;
     SignalCatcherRegisterer _registerer;
-    SignalHandlerRAII _handler;
+    SignalHandlerRAII<&got_signal> _handler;
 
     DISALLOW_COPY_AND_ASSIGN(SignalCatcherImpl);
 };

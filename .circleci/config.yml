@@ -479,7 +479,7 @@ jobs:
       OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
-      GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_DebugBuild.*:SignalCatcherTest.*_thenDies:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*"
+      GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_DebugBuild.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*"
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_tidy:
