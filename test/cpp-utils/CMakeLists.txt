@@ -17,6 +17,7 @@ set(SOURCES
     process/subprocess_include_test.cpp
     process/SubprocessTest.cpp
 	process/SignalCatcherTest.cpp
+	process/SignalHandlerTest.cpp
     tempfile/TempFileTest.cpp
     tempfile/TempFileIncludeTest.cpp
     tempfile/TempDirIncludeTest.cpp

@@ -11,6 +11,7 @@
 #include <string>
 #include <dlfcn.h>
 #include "../logging/logging.h"
+#include <cpp-utils/process/SignalHandler.h>
 
 // TODO Add file and line number on non-windows
 
@@ -95,21 +96,15 @@ namespace {
         LOG(ERR, "SIGABRT\n{}", backtrace());
         exit(1);
     }
-    void set_handler(int signum, void(*handler)(int)) {
-        auto result = signal(signum, handler);
-#pragma GCC diagnostic push // SIG_ERR uses old style casts
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-        if (SIG_ERR == result) {
-            LOG(ERR, "Failed to set signal {} handler. Errno: {}", signum, errno);
-        }
-#pragma GCC diagnostic pop
-    }
 }
 
 	void showBacktraceOnCrash() {
-		set_handler(SIGSEGV, &sigsegv_handler);
-		set_handler(SIGABRT, &sigabrt_handler);
-		set_handler(SIGILL, &sigill_handler);
+        // the signal handler RAII objects will be initialized on first call (which will register the signal handler)
+        // and destroyed on program exit (which will unregister the signal handler)
+
+        static SignalHandlerRAII<&sigsegv_handler> segv(SIGSEGV);
+        static SignalHandlerRAII<&sigabrt_handler> abrt(SIGABRT);
+        static SignalHandlerRAII<&sigill_handler> ill(SIGILL);
 	}
 }
 
