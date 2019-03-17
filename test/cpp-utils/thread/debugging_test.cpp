@@ -11,6 +11,24 @@ TEST(ThreadDebuggingTest_ThreadName, givenMainThread_whenSettingAndGetting_thenD
 	get_thread_name();
 }
 
+TEST(ThreadDebuggingTest_ThreadName, givenMainThread_whenGettingFromInside_thenIsCorrect) {
+    set_thread_name("my_thread_name");
+    string name = get_thread_name();
+    EXPECT_EQ("my_thread_name", name);
+}
+
+TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromInside_thenIsCorrect) {
+    std::thread child([] {
+        set_thread_name("my_thread_name");
+        string name = get_thread_name();
+        EXPECT_EQ("my_thread_name", name);
+    });
+    child.join();
+}
+
+
+#if defined(__GLIBC__) || defined(__APPLE__) || defined(_MSC_VER)
+// disabled on musl because getting the thread name for a child thread doesn't work there
 TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenSettingAndGetting_thenDoesntCrash) {
     ConditionBarrier nameIsChecked;
 
@@ -27,37 +45,22 @@ TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenSettingAndGetting_then
 	EXPECT_TRUE(child_didnt_crash);
 }
 
-TEST(ThreadDebuggingTest_ThreadName, givenMainThread_whenGettingFromInside_thenIsCorrect) {
-    set_thread_name("my_thread_name");
-    string name = get_thread_name();
-    EXPECT_EQ("my_thread_name", name);
-}
-
-TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromInside_thenIsCorrect) {
-  std::thread child([] {
-    set_thread_name("my_thread_name");
-    string name = get_thread_name();
-    EXPECT_EQ("my_thread_name", name);
-  });
-  child.join();
-}
-
 TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromOutside_thenIsCorrect) {
-  ConditionBarrier nameIsSet;
-  ConditionBarrier nameIsChecked;
+    ConditionBarrier nameIsSet;
+    ConditionBarrier nameIsChecked;
 
-  std::thread child([&] {
-    set_thread_name("my_thread_name");
-    nameIsSet.release();
-    nameIsChecked.wait();
-  });
+    std::thread child([&] {
+        set_thread_name("my_thread_name");
+        nameIsSet.release();
+        nameIsChecked.wait();
+    });
 
-  nameIsSet.wait();
-  set_thread_name("outer_thread_name"); // just to make sure the next line doesn't read the outer thread name
-  string name = get_thread_name(&child);
-  EXPECT_EQ("my_thread_name", name);
+    nameIsSet.wait();
+    set_thread_name("outer_thread_name"); // just to make sure the next line doesn't read the outer thread name
+    string name = get_thread_name(&child);
+    EXPECT_EQ("my_thread_name", name);
 
-  nameIsChecked.release();
-  child.join();
+    nameIsChecked.release();
+    child.join();
 }
-
+#endif
