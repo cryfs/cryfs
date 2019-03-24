@@ -10,7 +10,6 @@ if (BUILD_TESTING)
   project (googletest)
   add_library(${PROJECT_NAME} dummy.cpp)
   target_link_libraries(${PROJECT_NAME} PUBLIC gtest gmock)
-  target_link_libraries(${PROJECT_NAME} PRIVATE gmock_main)
   target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${gtest_INCLUDE_DIRS}/include SYSTEM ${gmock_INCLUDE_DIRS}/include)
 
   # Disable "missing override" warning because gmock MOCK_METHOD() don't use override :(

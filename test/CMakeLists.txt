@@ -1,6 +1,7 @@
 if (BUILD_TESTING)
   include_directories(../src)
 
+  add_subdirectory(my-gtest-main)
   add_subdirectory(gitversion)
   add_subdirectory(cpp-utils)
   if (NOT MSVC)

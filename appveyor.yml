@@ -36,7 +36,7 @@ build_script:
   - cmd: cmake --build . --config %CONFIGURATION%
   - cmd: .\test\gitversion\gitversion-test.exe
   # cpp-utils-test disables ThreadDebuggingTest_ThreadName.*_thenIsCorrect because the appveyor image is too old to support the API needed for that
-  - cmd: cd .\test\cpp-utils\ && .\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect && cd ..\..
+  - cmd: .\test\cpp-utils\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect
   #- cmd: .\test\fspp\fspp-test.exe
   - cmd: .\test\parallelaccessstore\parallelaccessstore-test.exe
   - cmd: .\test\blockstore\blockstore-test.exe

@@ -1,19 +1,26 @@
 #include <cpp-utils/process/subprocess.h>
 #include <gtest/gtest.h>
+#include <boost/filesystem.hpp>
 
 #include <cpp-utils/lock/ConditionBarrier.h>
+#include "my-gtest-main.h"
 
 using cpputils::Subprocess;
 using cpputils::SubprocessError;
+using std::string;
+namespace bf = boost::filesystem;
 
 namespace {
 std::string exit_with_message_and_status(const char* message, int status) {
 #if defined(_MSC_VER)
-    constexpr const char* executable = "cpp-utils-test_exit_status.exe";
+    auto executable = get_executable().parent_path() / "cpp-utils-test_exit_status.exe";
 #else
-    constexpr const char* executable = "./test/cpp-utils/cpp-utils-test_exit_status";
+    auto executable = get_executable().parent_path() / "cpp-utils-test_exit_status";
 #endif
-	return std::string(executable) + " \"" + message + "\" " + std::to_string(status);
+    if (!bf::exists(executable)) {
+        throw std::runtime_error(executable.string() + " not found.");
+    }
+	return executable.string() + " \"" + message + "\" " + std::to_string(status);
 }
 }
 

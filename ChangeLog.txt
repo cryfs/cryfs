@@ -7,6 +7,7 @@ Fixed bugs:
 
 Other:
 * Updated to crypto++ 8.1
+* Unit tests can now be run from any directory
 
 
 Version 0.10.0

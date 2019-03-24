@@ -2,18 +2,24 @@
 #include <csignal>
 #include "cpp-utils/assert/backtrace.h"
 #include "cpp-utils/process/subprocess.h"
+#include <boost/filesystem.hpp>
+#include "my-gtest-main.h"
 
 using std::string;
 using testing::HasSubstr;
+namespace bf = boost::filesystem;
 
 namespace {
 	std::string call_process_exiting_with(const std::string& kind, const std::string& signal = "") {
 #if defined(_MSC_VER)
-		constexpr const char* executable = "cpp-utils-test_exit_signal.exe";
+		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal.exe";
 #else
-		constexpr const char* executable = "./test/cpp-utils/cpp-utils-test_exit_signal";
+		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal";
 #endif
-		const std::string command = std::string(executable) + " \"" + kind + "\" \"" + signal + "\"  2>&1";
+		if (!bf::exists(executable)) {
+			throw std::runtime_error(executable.string() + " not found.");
+		}
+		const std::string command = executable.string() + " \"" + kind + "\" \"" + signal + "\"  2>&1";
 		auto result = cpputils::Subprocess::call(command);
 		return result.output;
 	}
