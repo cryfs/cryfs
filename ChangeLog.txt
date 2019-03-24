@@ -5,6 +5,9 @@ Fixed bugs:
 * When trying to migrate a file system from CryFS 0.9.3 or older, show an error message suggesting to first open it with 0.9.10 because we can't load that anymore.
 * The '--unmount-idle' parameter works again
 
+Compatibility:
+* Fixed some incompatibilities with systems using the musl libc
+
 Other:
 * Updated to crypto++ 8.1
 * Unit tests can now be run from any directory
