@@ -110,10 +110,6 @@ private:
 
 namespace {
 void got_signal(int signal) {
-#if defined(_MSC_VER)
-    // Only needed on Windows, Linux does this by default. See comment on SignalHandlerRunningRAII class.
-    SignalHandlerRunningRAII disable_signal_processing_while_handler_running_and_reset_handler_afterwards(signal);
-#endif
     SignalCatcherRegistry::singleton().find(signal)->setSignalOccurred();
 }
 }
