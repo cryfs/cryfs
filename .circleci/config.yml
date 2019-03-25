@@ -466,18 +466,6 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: "-DUSE_WERROR=on"
       RUN_TESTS: false
-  gcc_werror:
-    <<: *job_definition
-    environment:
-      CC: gcc-8
-      CXX: g++-8
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-8"
-      CXXFLAGS: "-Werror"
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: false
   no_compatibility:
     <<: *job_definition
     environment:
