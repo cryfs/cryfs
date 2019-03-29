@@ -97,7 +97,7 @@ Building on Windows (experimental)
 
 Build with Visual Studio 2017 and pass in the following flags to CMake:
 
-    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
+    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.1"]
     -DBOOST_ROOT=[path to root of boost installation]
 
 If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2017.
