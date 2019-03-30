@@ -48,7 +48,7 @@ if(MSVC)
   add_definitions(/bigobj)
 endif()
 
-add_subdirectory(vendor)
+add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(test)
