@@ -92,38 +92,22 @@ TEST(BacktraceTest, ContainsBacktrace) {
 
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
-#if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
-#else
     EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
-#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
 	auto output = call_process_exiting_with_sigsegv();
-#if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
-#else
     EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
-#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
 	auto output = call_process_exiting_with_exception("my_exception_message");
-#if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
-#else
     EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
-#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
-#if defined(_MSC_VER)
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
-#else
     EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
-#endif
 }
 #else
 TEST(BacktraceTest, ContainsBacktrace) {
@@ -163,13 +147,8 @@ TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {
 }
 #endif
 
-#if !defined(_MSC_VER)
 constexpr const char* sigsegv_message = "SIGSEGV";
 constexpr const char* sigill_message = "SIGILL";
-#else
-constexpr const char* sigsegv_message = "EXCEPTION_ACCESS_VIOLATION";
-constexpr const char* sigill_message = "EXCEPTION_ILLEGAL_INSTRUCTION";
-#endif
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv_ShowsCorrectSignalName) {
 	auto output = call_process_exiting_with_sigsegv();
@@ -188,9 +167,3 @@ TEST(BacktraceTest, ShowBacktraceOnUnhandledException_ShowsCorrectExceptionMessa
 }
 #endif
 
-#if defined(_MSC_VER)
-TEST(BacktraceTest, UnknownCode_ShowsCorrectSignalName) {
-	auto output = call_process_exiting_with_code(0x1234567);
-	EXPECT_THAT(output, HasSubstr("UNKNOWN_CODE(0x1234567)"));
-}
-#endif

@@ -44,8 +44,7 @@ set(SOURCES
         data/DataUtils.cpp
         data/Data.cpp
         assert/assert.h
-        assert/backtrace_nonwindows.cpp
-        assert/backtrace_windows.cpp
+        assert/backtrace.cpp
         assert/AssertFailed.cpp
         system/get_total_memory.cpp
         system/homedir.cpp
@@ -62,7 +61,7 @@ set(SOURCES
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 if(MSVC)
-    target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Ole32 DbgEng)
 elseif (APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 else()
