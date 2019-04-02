@@ -46,7 +46,7 @@ Requirements
   - GCC version >= 5.0 or Clang >= 4.0
   - CMake version >= 3.0 
   - libcurl4 (including development headers)
-  - Boost libraries version >= 1.57 (including development headers)
+  - Boost libraries version >= 1.65.1 (including development headers)
     - filesystem
     - system
     - chrono
@@ -56,15 +56,14 @@ Requirements
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
   - OpenMP
-  - Libunwind
 
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python libunwind-dev
+        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python libunwind-devel
+        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
 
         # Macintosh
         brew install cmake boost openssl libomp

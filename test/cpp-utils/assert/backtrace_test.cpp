@@ -25,12 +25,8 @@ namespace {
 	}
 }
 
-TEST(BacktraceTest, ContainsBacktrace) {
-	string backtrace = cpputils::backtrace();
-	EXPECT_THAT(backtrace, HasSubstr("#1"));
-}
-
 #if !(defined(_MSC_VER) && defined(NDEBUG))
+
 TEST(BacktraceTest, ContainsTopLevelLine) {
     string backtrace = cpputils::backtrace();
     EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
@@ -85,12 +81,21 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException) {
 }
 
 #if !(defined(_MSC_VER) && defined(NDEBUG))
+TEST(BacktraceTest, ContainsBacktrace) {
+    string backtrace = cpputils::backtrace();
+#if defined(_MSC_VER)
+    EXPECT_THAT(backtrace, HasSubstr("testing::Test::Run"));
+#else
+    EXPECT_THAT(backtrace, HasSubstr("BacktraceTest_ContainsBacktrace_Test::TestBody"));
+#endif
+}
+
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
-#if !defined(_MSC_VER)
-	EXPECT_THAT(output, HasSubstr("cpputils::(anonymous namespace)::sig"));
-#else
+#if defined(_MSC_VER)
     EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+#else
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
@@ -99,7 +104,7 @@ TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
 #if defined(_MSC_VER)
     EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-	EXPECT_THAT(output, HasSubstr("cpputils::(anonymous namespace)::sigsegv_handler(int)"));
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
@@ -108,19 +113,23 @@ TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
 #if defined(_MSC_VER)
     EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-	EXPECT_THAT(output, HasSubstr("cpputils::(anonymous namespace)::sigabrt_handler(int)"));
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
 #if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-	EXPECT_THAT(output, HasSubstr("cpputils::(anonymous namespace)::sigill_handler(int)"));
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 #else
+TEST(BacktraceTest, ContainsBacktrace) {
+	string backtrace = cpputils::backtrace();
+	EXPECT_THAT(backtrace, HasSubstr("#1"));
+}
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
 	EXPECT_THAT(output, HasSubstr("#1"));
@@ -145,7 +154,7 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 #if !defined(_MSC_VER)
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
 	auto output = call_process_exiting_with_sigabrt();
-	EXPECT_THAT(output, HasSubstr("cpputils::(anonymous namespace)::sigabrt_handler(int)"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {

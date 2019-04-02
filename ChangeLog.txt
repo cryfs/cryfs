@@ -7,7 +7,7 @@ Fixed bugs:
 
 Compatibility:
 * Fixed some incompatibilities with systems using the musl libc
-* Use libunwind instead of libbacktrace to build stack traces. This fixes a segfault issue with platforms using libexecinfo and is generally more portable.
+* Use boost::stacktrace instead of libbacktrace to build stack traces. This fixes a segfault issue with platforms using libexecinfo and is generally more portable.
 
 Other:
 * Updated to crypto++ 8.1
