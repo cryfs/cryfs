@@ -14,7 +14,13 @@ using fspp::fuse::FuseErrnoException;
 
 class FuseFlushErrorTest: public FuseFlushTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseFlushErrorTest, FuseFlushErrorTest, Values(EBADF, EINTR, EIO));
+INSTANTIATE_TEST_CASE_P(FuseFlushErrorTest, FuseFlushErrorTest, Values(
+    EBADF,
+#if defined(__GLIBC__) || defined(__APPLE__)
+    // musl has different handling for EINTR, see https://ewontfix.com/4/
+    EINTR,
+#endif
+    EIO));
 
 TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   ReturnIsFileOnLstat(FILENAME);
