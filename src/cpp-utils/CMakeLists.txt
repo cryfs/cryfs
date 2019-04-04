@@ -61,13 +61,19 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-
-if(NOT MSVC)
-  find_package(Backtrace REQUIRED)
-  target_include_directories(${PROJECT_NAME} PUBLIC ${Backtrace_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${Backtrace_LIBRARIES})
+if(MSVC)
+    target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+elseif (APPLE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 else()
-  target_link_libraries(${PROJECT_NAME} PUBLIC DbgHelp)
+    find_program(ADDR2LINE addr2line)
+    if ("${ADDR2LINE}" STREQUAL "ADDR2LINE-NOTFOUND")
+        message(WARNING "addr2line not found. Backtraces will be reduced.")
+    else()
+        message(STATUS "addr2line found. Using it for backtraces.")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_STACKTRACE_USE_ADDR2LINE)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_STACKTRACE_ADDR2LINE_LOCATION=${ADDR2LINE})
+    endif()
 endif()
 
 if (NOT MSVC)
@@ -85,6 +91,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp)
 
-target_add_boost(${PROJECT_NAME} filesystem system thread)
+target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})

@@ -108,7 +108,7 @@ endfunction(target_enable_style_warnings)
 function(target_add_boost TARGET)
     # Load boost libraries
     if(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
-        # Many supported systems don't have boost >= 1.58. Better link it statically.
+        # Many supported systems don't have boost >= 1.65.1. Better link it statically.
         message(STATUS "Boost will be statically linked")
         set(Boost_USE_STATIC_LIBS ON)
     else(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
@@ -116,7 +116,7 @@ function(target_add_boost TARGET)
         set(Boost_USE_STATIC_LIBS OFF)
     endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
     set(BOOST_THREAD_VERSION 4)
-    find_package(Boost 1.58.0
+    find_package(Boost 1.65.1
             REQUIRED
             COMPONENTS ${ARGN})
     target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})

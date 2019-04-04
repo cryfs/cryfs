@@ -46,7 +46,7 @@ Requirements
   - GCC version >= 5.0 or Clang >= 4.0
   - CMake version >= 3.0 
   - libcurl4 (including development headers)
-  - Boost libraries version >= 1.58 (including development headers)
+  - Boost libraries version >= 1.65.1 (including development headers)
     - filesystem
     - system
     - chrono
@@ -60,7 +60,7 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt-get install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
+        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
 
         # Fedora
         sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
@@ -96,7 +96,7 @@ Building on Windows (experimental)
 
 Build with Visual Studio 2017 and pass in the following flags to CMake:
 
-    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.1.0"]
+    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.1"]
     -DBOOST_ROOT=[path to root of boost installation]
 
 If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2017.

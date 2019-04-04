@@ -95,7 +95,7 @@ references:
     save_cache:
       key: v4_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
       paths:
-      - /tmp/boost_1_58_0
+      - /tmp/boost_1_65_1
   upgrade_boost: &upgrade_boost
     run:
       name: Upgrade Boost
@@ -104,10 +104,10 @@ references:
         export NUMCORES=`nproc`
         echo Using $NUMCORES cores
         # Download and prepare boost (only if not already present from cache)
-        if [ ! -d "/tmp/boost_1_58_0" ]; then
+        if [ ! -d "/tmp/boost_1_65_1" ]; then
           echo "Didn't find boost in cache. Downloading and building."
-          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2/download
-          if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "7480ec713b0aa13f0ec990603e87e3b5c8d53f4411329b10fae37fc963b90aad12dbd9290a33c3669ae801e9012a68683eadff057591e9ca2ebcd22b1a67b5d1" ]; then
+          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.65.1/boost_1_65_1.tar.bz2/download
+          if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "a9e6866d3bb3e7c198f442ff09f5322f58064dca79bc420f2f0168eb63964226dfbc4f034a5a5e5958281fdf7518a1b057c894fbda0b61fced59c1661bf30f1a" ]; then
             echo Correct sha512sum
           else
             echo Wrong sha512sum
@@ -117,14 +117,14 @@ references:
           echo Extracting...
           tar -xf /tmp/boost.tar.bz2 -C /tmp
           rm -rf boost.tar.bz2
-          cd /tmp/boost_1_58_0
+          cd /tmp/boost_1_65_1
           ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
           cd ..
         else
           echo Found boost in cache. Use cache and build.
         fi
         # Compile and install boost (if cached, this should be fast)
-        cd /tmp/boost_1_58_0
+        cd /tmp/boost_1_65_1
         sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
   build_pre: &build_pre
     restore_cache:
@@ -419,18 +419,6 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: "-DUSE_WERROR=on"
       RUN_TESTS: false
-  gcc_werror:
-    <<: *job_definition
-    environment:
-      CC: gcc-8
-      CXX: g++-8
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-8"
-      CXXFLAGS: "-Werror"
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: false
   no_compatibility:
     <<: *job_definition
     environment:
@@ -479,7 +467,7 @@ jobs:
       OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
-      GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_DebugBuild.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*"
+      GTEST_ARGS: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_*:BacktraceTest.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*"
       CMAKE_FLAGS: ""
       RUN_TESTS: true
   clang_tidy:

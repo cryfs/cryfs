@@ -88,7 +88,8 @@ public:
     , _registerer(signal, this)
     , _handler(signal) {
         // note: the order of the members ensures that:
-        //  - when registering the signal handler fails, the registerer will be destroyed, unregistering the signal_occurred_flag,
+        //  - when registering the signal handler, the SignalCatcher impl already has a valid _signal_occurred_flag set.
+        //  - when registering the signal handler fails, the _registerer will be destroyed again, unregistering this SignalCatcherImpl,
         //    i.e. there is no leak.
 
         // Allow only the set of signals that is supported on all platforms, see for Windows: https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/signal?view=vs-2017

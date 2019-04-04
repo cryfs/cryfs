@@ -2,33 +2,30 @@
 #include <csignal>
 #include "cpp-utils/assert/backtrace.h"
 #include "cpp-utils/process/subprocess.h"
+#include <boost/filesystem.hpp>
+#include "my-gtest-main.h"
 
 using std::string;
 using testing::HasSubstr;
+namespace bf = boost::filesystem;
 
 namespace {
 	std::string call_process_exiting_with(const std::string& kind, const std::string& signal = "") {
 #if defined(_MSC_VER)
-		constexpr const char* executable = "cpp-utils-test_exit_signal.exe";
+		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal.exe";
 #else
-		constexpr const char* executable = "./test/cpp-utils/cpp-utils-test_exit_signal";
+		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal";
 #endif
-		const std::string command = std::string(executable) + " \"" + kind + "\" \"" + signal + "\"  2>&1";
+		if (!bf::exists(executable)) {
+			throw std::runtime_error(executable.string() + " not found.");
+		}
+		const std::string command = executable.string() + " \"" + kind + "\" \"" + signal + "\"  2>&1";
 		auto result = cpputils::Subprocess::call(command);
 		return result.output;
 	}
 }
 
-TEST(BacktraceTest, ContainsBacktrace) {
-	string backtrace = cpputils::backtrace();
-	EXPECT_THAT(backtrace, HasSubstr("#1"));
-}
-
 #if !(defined(_MSC_VER) && defined(NDEBUG))
-TEST(BacktraceTest, ContainsExecutableName) {
-    string backtrace = cpputils::backtrace();
-    EXPECT_THAT(backtrace, HasSubstr("cpp-utils-test"));
-}
 
 TEST(BacktraceTest, ContainsTopLevelLine) {
     string backtrace = cpputils::backtrace();
@@ -84,26 +81,55 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException) {
 }
 
 #if !(defined(_MSC_VER) && defined(NDEBUG))
+TEST(BacktraceTest, ContainsBacktrace) {
+    string backtrace = cpputils::backtrace();
+#if defined(_MSC_VER)
+    EXPECT_THAT(backtrace, HasSubstr("testing::Test::Run"));
+#else
+    EXPECT_THAT(backtrace, HasSubstr("BacktraceTest_ContainsBacktrace_Test::TestBody"));
+#endif
+}
+
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
-	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
+#if defined(_MSC_VER)
+    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+#else
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
 	auto output = call_process_exiting_with_sigsegv();
-	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
+#if defined(_MSC_VER)
+    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+#else
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
 	auto output = call_process_exiting_with_exception("my_exception_message");
-	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
+#if defined(_MSC_VER)
+    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+#else
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+#endif
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
-	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
+#if defined(_MSC_VER)
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+#else
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+#endif
 }
 #else
+TEST(BacktraceTest, ContainsBacktrace) {
+	string backtrace = cpputils::backtrace();
+	EXPECT_THAT(backtrace, HasSubstr("#1"));
+}
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
 	EXPECT_THAT(output, HasSubstr("#1"));
@@ -128,7 +154,7 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 #if !defined(_MSC_VER)
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
 	auto output = call_process_exiting_with_sigabrt();
-	EXPECT_THAT(output, HasSubstr("cpp-utils-test_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {

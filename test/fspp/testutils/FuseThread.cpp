@@ -29,9 +29,7 @@ void FuseThread::start(const bf::path &mountDir, const vector<string> &fuseOptio
 }
 
 void FuseThread::stop() {
-  if (0 != pthread_kill(_child.native_handle(), SIGINT)) {
-      throw std::runtime_error("Error sending stop signal");
-  }
+  _fuse->stop();
   bool thread_stopped = _child.try_join_for(seconds(10));
   ASSERT(thread_stopped, "FuseThread could not be stopped");
   //Wait until it is properly shutdown (busy waiting is simple and doesn't hurt much here)

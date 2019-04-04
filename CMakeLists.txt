@@ -7,7 +7,8 @@ cmake_policy(SET CMP0054 NEW)
 
 project(cryfs)
 
-include(cmake-utils/utils.cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake-utils)
+include(utils)
 
 require_gcc_version(5.0)
 require_clang_version(4.0)
@@ -47,7 +48,7 @@ if(MSVC)
   add_definitions(/bigobj)
 endif()
 
-add_subdirectory(vendor)
+add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(test)

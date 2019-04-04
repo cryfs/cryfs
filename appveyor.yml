@@ -25,18 +25,18 @@ init:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\%VisualStudioVersion%\Community\VC\Auxiliary\Build\vcvars%arch%.bat"
 
 install:
-  - choco install -y dokany --version 1.1.0.2000 --installargs INSTALLDEVFILES=1
+  - choco install -y dokany --version 1.2.1.2000 --installargs INSTALLDEVFILES=1
   - cmake --version
 
 build_script:
   - cmd: mkdir build
   - cmd: cd build
   # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
-  - cmd: cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DBOOST_ROOT="C:/Libraries/boost_1_65_1" -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.1.0"
+  - cmd: cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DBOOST_ROOT="C:/Libraries/boost_1_67_0" -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.1"
   - cmd: cmake --build . --config %CONFIGURATION%
   - cmd: .\test\gitversion\gitversion-test.exe
   # cpp-utils-test disables ThreadDebuggingTest_ThreadName.*_thenIsCorrect because the appveyor image is too old to support the API needed for that
-  - cmd: cd .\test\cpp-utils\ && .\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect && cd ..\..
+  - cmd: .\test\cpp-utils\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect
   #- cmd: .\test\fspp\fspp-test.exe
   - cmd: .\test\parallelaccessstore\parallelaccessstore-test.exe
   - cmd: .\test\blockstore\blockstore-test.exe
