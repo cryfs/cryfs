@@ -1,4 +1,4 @@
-Version 0.10.1 (unreleased)
+Version 0.10.1
 ---------------
 Fixed bugs:
 * If file system migration encounters files or folders with the wrong format in the base directory, it now just ignores them instead of crashing.
