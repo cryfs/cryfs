@@ -91,6 +91,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp)
 
-target_add_boost(${PROJECT_NAME} filesystem system thread)
+target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
