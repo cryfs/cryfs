@@ -29,8 +29,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId, timestampUpdateBehavior) {
 }
 
 CryDir::~CryDir() {
@@ -72,7 +72,7 @@ unique_ref<vector<fspp::Dir::Entry>> CryDir::children() {
   device()->callFsActionCallbacks();
   if (!isRootDir()) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+    parent()->updateAccessTimestampForChild(blockId(), timestampUpdateBehavior());
   }
   auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
   children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));

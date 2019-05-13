@@ -22,8 +22,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId, timestampUpdateBehavior) {
 }
 
 CrySymlink::~CrySymlink() {
@@ -43,7 +43,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+  parent()->updateAccessTimestampForChild(blockId(), timestampUpdateBehavior());
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }

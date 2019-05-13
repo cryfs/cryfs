@@ -5,12 +5,13 @@
 #include <fspp/fs_interface/Dir.h>
 #include "CryNode.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 namespace cryfs {
 
 class CryDir final: public fspp::Dir, public CryNode {
 public:
-  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior);
   ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?

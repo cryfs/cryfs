@@ -7,8 +7,9 @@ namespace cryfs {
 namespace fsblobstore {
 
 enum class TimestampUpdateBehavior : uint8_t {
-    // currently only relatime supported
-    RELATIME
+    // currently only relatime and noatime supported
+      RELATIME
+    , NOATIME
 };
 
 }

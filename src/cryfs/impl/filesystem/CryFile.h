@@ -4,6 +4,7 @@
 
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 #include <fspp/fs_interface/File.h>
 #include "CryNode.h"
 
@@ -11,7 +12,7 @@ namespace cryfs {
 
 class CryFile final: public fspp::File, public CryNode {
 public:
-  CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior);
   ~CryFile();
 
   cpputils::unique_ref<fspp::OpenFile> open(fspp::openflags_t flags) override;

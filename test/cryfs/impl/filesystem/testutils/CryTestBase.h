@@ -1,6 +1,7 @@
 #ifndef MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
@@ -19,7 +20,7 @@ class CryTestBase : public TestWithFakeHomeDirectory {
 public:
     CryTestBase(): _tempLocalStateDir(), _localStateDir(_tempLocalStateDir.path()), _configFile(false), _device(nullptr) {
         auto fakeBlockStore = cpputils::make_unique_ref<blockstore::inmemory::InMemoryBlockStore2>();
-        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation(), cryfs::fsblobstore::TimestampUpdateBehavior::RELATIME);
     }
 
     std::shared_ptr<cryfs::CryConfigFile> configFile() {

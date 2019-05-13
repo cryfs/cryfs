@@ -15,11 +15,14 @@
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
 
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
+
+
 namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation);
+  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior);
 
   statvfs statfs() override;
 
@@ -53,6 +56,8 @@ private:
   blockstore::BlockId _rootBlobId;
   std::shared_ptr<CryConfigFile> _configFile;
   std::vector<std::function<void()>> _onFsAction;
+
+  fsblobstore::TimestampUpdateBehavior _timestampUpdateBehavior;
 
   blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);
   blockstore::BlockId CreateRootBlobAndReturnId();

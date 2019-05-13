@@ -3,6 +3,7 @@
 #include "CryDevice.h"
 #include "CryDir.h"
 #include "CryFile.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/time.h>
@@ -25,11 +26,12 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior)
 : _device(device),
   _parent(none),
   _grandparent(none),
-  _blockId(blockId) {
+  _blockId(blockId),
+  _timestampUpdateBehavior(timestampUpdateBehavior) {
 
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
 
@@ -68,6 +70,10 @@ optional<DirBlobRef*> CryNode::grandparent() {
     return none;
   }
   return _grandparent->get();
+}
+
+fsblobstore::TimestampUpdateBehavior CryNode::timestampUpdateBehavior() const {
+  return _timestampUpdateBehavior;
 }
 
 void CryNode::rename(const bf::path &to) {

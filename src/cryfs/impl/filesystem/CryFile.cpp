@@ -2,6 +2,7 @@
 
 #include "CryDevice.h"
 #include "CryOpenFile.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 #include <fspp/fs_interface/FuseErrnoException.h>
 
 
@@ -18,8 +19,8 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId, timestampUpdateBehavior) {
 }
 
 CryFile::~CryFile() {

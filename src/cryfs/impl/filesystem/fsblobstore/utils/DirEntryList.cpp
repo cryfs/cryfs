@@ -229,7 +229,9 @@ void DirEntryList::setAccessTimes(const blockstore::BlockId &blockId, timespec l
 }
 
 bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior) {
-    ASSERT(timestampUpdateBehavior == TimestampUpdateBehavior::RELATIME, "Currently only relatime supported");
+    ASSERT( timestampUpdateBehavior == TimestampUpdateBehavior::RELATIME || timestampUpdateBehavior == TimestampUpdateBehavior::NOATIME
+          , "Currently only relatime or noatime supported");
+
     auto found = _findById(blockId);
     const timespec lastAccessTime = found->lastAccessTime();
     const timespec lastModificationTime = found->lastModificationTime();
@@ -238,11 +240,24 @@ bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &bloc
         /*.tv_sec = */ now.tv_sec - 60*60*24,
         /*.tv_nsec = */ now.tv_nsec
     };
+
     bool changed = false;
-    if (lastAccessTime < lastModificationTime || lastAccessTime < yesterday) {
-        found->setLastAccessTime(now);
-        changed = true;
+
+    switch(timestampUpdateBehavior) {
+        case TimestampUpdateBehavior::RELATIME:
+            if (lastAccessTime < lastModificationTime || lastAccessTime < yesterday) {
+                found->setLastAccessTime(now);
+                changed = true;
+            }
+            break;
+        case TimestampUpdateBehavior::NOATIME:
+            changed = false;
+            break;
+        default:  /* should never be reached */
+            ASSERT(false, "timestampUpdateBehavior somehow got a value other than RELATIME or NOATIME");
+            break;
     }
+
     return changed;
 }
 

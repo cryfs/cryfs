@@ -5,6 +5,7 @@
 #include <cryfs/impl/config/CryConfigConsole.h>
 #include <cryfs/impl/CryfsException.h>
 #include <cryfs-cli/Environment.h>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
@@ -81,18 +82,25 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("missing-block-is-integrity-violation")) {
         missingBlockIsIntegrityViolation = vm["missing-block-is-integrity-violation"].as<bool>();
     }
+
+    cryfs::fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior = cryfs::fsblobstore::TimestampUpdateBehavior::RELATIME;
     if (vm.count("fuse-option")) {
         auto options = vm["fuse-option"].as<vector<string>>();
         for (const auto& option: options) {
-            if (option == "noatime" || option == "atime") {
-                LOG(WARN, "CryFS currently doesn't support noatime/atime flags. Using relatime behavior.");
+            if (option == "strictatime") {
+                LOG(WARN, "CryFS currently doesn't support strictatime flag. Possible behaviors are relatime (default) and noatime.");
             }
+            if (option == "noatime") {
+                timestampUpdateBehavior = cryfs::fsblobstore::TimestampUpdateBehavior::NOATIME;
+            }
+
+
             fuseOptions.push_back("-o");
             fuseOptions.push_back(option);
         }
     }
 
-    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, allowReplacedFilesystem, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, allowIntegrityViolations, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions));
+    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, allowReplacedFilesystem, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, allowIntegrityViolations, std::move(missingBlockIsIntegrityViolation), timestampUpdateBehavior, std::move(fuseOptions));
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {

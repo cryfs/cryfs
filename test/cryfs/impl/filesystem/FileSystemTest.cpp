@@ -2,6 +2,7 @@
 #include <fspp/fstest/FsTest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
@@ -41,7 +42,7 @@ public:
     auto keyProvider = make_unique_ref<CryPresetPasswordBasedKeyProvider>("mypassword", make_unique_ref<SCrypt>(SCrypt::TestSettings));
     auto config = CryConfigLoader(_console, Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none)
             .loadOrCreate(configFile.path(), false, false).value();
-    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false, failOnIntegrityViolation());
+    return make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), localStateDir, config.myClientId, false, false, failOnIntegrityViolation(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   }
 
   cpputils::TempDir tempLocalStateDir;

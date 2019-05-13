@@ -7,6 +7,7 @@
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
 #include <boost/filesystem.hpp>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 
 namespace cryfs_cli {
     namespace program_options {
@@ -20,6 +21,7 @@ namespace cryfs_cli {
                            boost::optional<uint32_t> blocksizeBytes,
                            bool allowIntegrityViolations,
                            boost::optional<bool> missingBlockIsIntegrityViolation,
+                           cryfs::fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior,
                            std::vector<std::string> fuseOptions);
             ProgramOptions(ProgramOptions &&rhs) = default;
 
@@ -36,6 +38,7 @@ namespace cryfs_cli {
             bool allowIntegrityViolations() const;
             const boost::optional<bool> &missingBlockIsIntegrityViolation() const;
             const boost::optional<boost::filesystem::path> &logFile() const;
+            cryfs::fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior() const;
             const std::vector<std::string> &fuseOptions() const;
 
         private:
@@ -52,6 +55,7 @@ namespace cryfs_cli {
             boost::optional<double> _unmountAfterIdleMinutes;
             boost::optional<bool> _missingBlockIsIntegrityViolation;
             boost::optional<boost::filesystem::path> _logFile;
+            cryfs::fsblobstore::TimestampUpdateBehavior _timestampUpdateBehavior;
             std::vector<std::string> _fuseOptions;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);
