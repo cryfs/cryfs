@@ -341,8 +341,10 @@ void Fuse::stop() {
 void Fuse::unmount(const bf::path& mountdir, bool force) {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
 #if defined(__APPLE__)
+  UNUSED(force);
   int returncode = cpputils::Subprocess::call(std::string("umount ") + mountdir.string()).exitcode;
 #elif defined(_MSC_VER)
+  UNUSED(force);
   std::wstring mountdir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountdir.string());
   BOOL success = DokanRemoveMountPoint(mountdir_.c_str());
   int returncode = success ? 0 : -1;
