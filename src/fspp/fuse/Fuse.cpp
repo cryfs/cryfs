@@ -451,6 +451,11 @@ int Fuse::mkdir(const bf::path &path, ::mode_t mode) {
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
+	// DokanY seems to call mkdir("/"). Ignore that
+	if ("/" == path) {
+		return 0;
+	}
+
     auto context = fuse_get_context();
     _fs->mkdir(path, mode, context->uid, context->gid);
     return 0;

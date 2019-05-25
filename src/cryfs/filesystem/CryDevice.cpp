@@ -179,7 +179,7 @@ optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path)
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   // TODO Is it faster to not let CryFile/CryDir/CryDevice inherit from CryNode and loading CryNode without having to know what it is?
   // TODO Split into smaller functions
-  ASSERT(path.has_root_directory() && !path.has_root_name(), "Must be an absolute path (but on windows without device specifier)");
+  ASSERT(path.has_root_directory() && !path.has_root_name(), "Must be an absolute path (but on windows without device specifier): " + path.string());
 
   callFsActionCallbacks();
 
