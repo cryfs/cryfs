@@ -1,5 +1,7 @@
 Version 0.10.2 (unreleased)
 ---------------
+Improvements:
+* Better logging when local state can't be loaded
 
 
 Version 0.10.1

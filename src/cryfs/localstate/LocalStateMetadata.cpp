@@ -21,6 +21,7 @@ using cpputils::hash::Hash;
 using cpputils::Data;
 using cpputils::Random;
 namespace bf = boost::filesystem;
+using namespace cpputils::logging;
 
 namespace cryfs {
 
@@ -106,17 +107,23 @@ void LocalStateMetadata::_serialize(ostream& stream) const {
 }
 
 LocalStateMetadata LocalStateMetadata::_deserialize(istream& stream) {
-  ptree pt;
-  read_json(stream, pt);
+	try {
+		ptree pt;
+		read_json(stream, pt);
 
-  uint32_t myClientId = pt.get<uint32_t>("myClientId");
-  string encryptionKeySalt = pt.get<string>("encryptionKey.salt");
-  string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
+		uint32_t myClientId = pt.get<uint32_t>("myClientId");
+		string encryptionKeySalt = pt.get<string>("encryptionKey.salt");
+		string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
 
-  return LocalStateMetadata(myClientId, Hash{
-      /*.digest = */ cpputils::hash::Digest::FromString(encryptionKeyDigest),
-      /*.salt = */ cpputils::hash::Salt::FromString(encryptionKeySalt)
-  });
+		return LocalStateMetadata(myClientId, Hash{
+			/*.digest = */ cpputils::hash::Digest::FromString(encryptionKeyDigest),
+			/*.salt = */ cpputils::hash::Salt::FromString(encryptionKeySalt)
+			});
+	}
+	catch (...) {
+		LOG(ERR, "Error loading LocalStateMetadata");
+		throw;
+	}
 }
 
 }
