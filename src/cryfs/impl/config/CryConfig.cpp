@@ -40,6 +40,7 @@ CryConfig::CryConfig()
 CryConfig CryConfig::load(const Data &data) {
   stringstream stream;
   data.StoreToStream(stream);
+
   ptree pt;
   read_json(stream, pt);
 

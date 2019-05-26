@@ -4,6 +4,7 @@
 #include <vendor_cryptopp/sha.h>
 #include <boost/filesystem/operations.hpp>
 #include "LocalStateDir.h"
+#include <cpp-utils/logging/logging.h>
 
 namespace bf = boost::filesystem;
 using boost::property_tree::ptree;
@@ -15,20 +16,27 @@ using std::istream;
 using std::ifstream;
 using std::ofstream;
 using std::string;
+using namespace cpputils::logging;
 
 namespace cryfs {
 
 namespace {
 
 ptree _load(const bf::path &metadataFilePath) {
-  ptree result;
+	try {
+		ptree result;
 
-  ifstream file(metadataFilePath.string());
-  if (file.good()) {
-    read_json(file, result);
-  }
+		ifstream file(metadataFilePath.string());
+		if (file.good()) {
+			read_json(file, result);
+		}
 
-  return result;
+		return result;
+	}
+	catch (...) {
+		LOG(ERR, "Error loading BasedirMetadata");
+		throw;
+	}
 }
 
 void _save(const bf::path &metadataFilePath, const ptree& data) {

@@ -367,8 +367,10 @@ void Fuse::stop() {
 void Fuse::unmount(const bf::path& mountdir, bool force) {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
 #if defined(__APPLE__)
+  UNUSED(force);
   int returncode = cpputils::Subprocess::call(std::string("umount ") + mountdir.string()).exitcode;
 #elif defined(_MSC_VER)
+  UNUSED(force);
   std::wstring mountdir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountdir.string());
   BOOL success = DokanRemoveMountPoint(mountdir_.c_str());
   int returncode = success ? 0 : -1;
@@ -390,11 +392,17 @@ int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->lstat(path, stbuf);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "getattr({}, _, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::getattr: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "getattr({}, _, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -408,7 +416,7 @@ int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
 int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
   ThreadNameForDebugging _threadName("fgetattr");
 #ifdef FSPP_LOG
-  LOG(DEBUG, "fgetattr({}, _, _)\n", path);
+  LOG(DEBUG, "fgetattr({}, _, _)", path);
 #endif
 
   // On FreeBSD, trying to do anything with the mountpoint ends up
@@ -417,17 +425,27 @@ int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info
   // underlying base directory instead of doing the fgetattr().
   // TODO Check if necessary
   if (path.string() == "/") {
-    return getattr(path, stbuf);
+    int result = getattr(path, stbuf);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "fgetattr({}, _, _): success", path);
+#endif
+    return result;
   }
 
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->fstat(fileinfo->fh, stbuf);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "fgetattr({}, _, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::fgetattr: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+      LOG(ERR, "fgetattr({}, _, _): error", path);
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -446,11 +464,17 @@ int Fuse::readlink(const bf::path &path, char *buf, size_t size) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->readSymlink(path, buf, fspp::num_bytes_t(size));
+#ifdef FSPP_LOG
+    LOG(DEBUG, "readlink({}, _, {}): success", path, size);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::readlink: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "readlink({}, _, {}): failed with errno {}", path, size, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -477,13 +501,27 @@ int Fuse::mkdir(const bf::path &path, ::mode_t mode) {
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
+	// DokanY seems to call mkdir("/"). Ignore that
+	if ("/" == path) {
+#ifdef FSPP_LOG
+        LOG(DEBUG, "mkdir({}, {}): ignored", path, mode);
+#endif
+		return 0;
+	}
+
     auto context = fuse_get_context();
     _fs->mkdir(path, mode, context->uid, context->gid);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "mkdir({}, {}): success", path, mode);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::mkdir: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "mkdir({}, {}): failed with errno {}", path, mode, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -502,11 +540,18 @@ int Fuse::unlink(const bf::path &path) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->unlink(path);
+      ThreadNameForDebugging _threadName("unlink");
+#ifdef FSPP_LOG
+    LOG(DEBUG, "unlink({}): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::unlink: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "unlink({}): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -525,11 +570,17 @@ int Fuse::rmdir(const bf::path &path) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->rmdir(path);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "rmdir({}): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::rmdir: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "rmdir({}): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -549,11 +600,17 @@ int Fuse::symlink(const bf::path &to, const bf::path &from) {
     ASSERT(is_valid_fspp_path(from), "has to be an absolute path");
 	auto context = fuse_get_context();
     _fs->createSymlink(to, from, context->uid, context->gid);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "symlink({}, {}): success", to, from);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::symlink: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "symlink({}, {}): failed with errno {}", to, from, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -573,11 +630,17 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
     ASSERT(is_valid_fspp_path(from), "from has to be an absolute path");
     ASSERT(is_valid_fspp_path(to), "rename target has to be an absolute path. If this assert throws, we have to add code here that makes the path absolute.");
     _fs->rename(from, to);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "rename({}, {}): success", from, to);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::rename: {}", e.what());
     return -EIO;
   } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "rename({}, {}): failed with errno {}", from, to, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -607,11 +670,17 @@ int Fuse::chmod(const bf::path &path, ::mode_t mode) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
 	_fs->chmod(path, mode);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "chmod({}, {}): success", path, mode);
+#endif
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::chmod: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "chmod({}, {}): failed with errno {}", path, mode, e.getErrno());
+#endif
 	return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -630,11 +699,17 @@ int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
 	_fs->chown(path, uid, gid);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "chown({}, {}, {}): success", path, uid, gid);
+#endif
 	return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::chown: {}", e.what());
     return -EIO;
   } catch (fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "chown({}, {}, {}): failed with errno {}", path, uid, gid, e.getErrno());
+#endif
 	return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -653,11 +728,17 @@ int Fuse::truncate(const bf::path &path, int64_t size) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->truncate(path, fspp::num_bytes_t(size));
+#ifdef FSPP_LOG
+    LOG(DEBUG, "truncate({}, {}): success", path, size);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::truncate: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "truncate({}, {}): failed with errno {}", path, size, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -676,11 +757,17 @@ int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo
   UNUSED(path);
   try {
     _fs->ftruncate(fileinfo->fh, fspp::num_bytes_t(size));
+#ifdef FSPP_LOG
+    LOG(DEBUG, "ftruncate({}, {}): success", path, size);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::ftruncate: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "ftruncate({}, {}): failed with errno {}", path, size, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -699,11 +786,17 @@ int Fuse::utimens(const bf::path &path, const timespec times[2]) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->utimens(path, times[0], times[1]);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "utimens({}, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::utimens: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "utimens({}, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -722,11 +815,17 @@ int Fuse::open(const bf::path &path, fuse_file_info *fileinfo) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     fileinfo->fh = _fs->openFile(path, fileinfo->flags);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "open({}, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::open: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "open({}, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -745,11 +844,17 @@ int Fuse::release(const bf::path &path, fuse_file_info *fileinfo) {
   UNUSED(path);
   try {
     _fs->closeFile(fileinfo->fh);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "release({}, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::release: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "release({}, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -767,11 +872,18 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, int64_t offset, fus
 #endif
   UNUSED(path);
   try {
-    return _fs->read(fileinfo->fh, buf, fspp::num_bytes_t(size), fspp::num_bytes_t(offset)).value();
+    int result = _fs->read(fileinfo->fh, buf, fspp::num_bytes_t(size), fspp::num_bytes_t(offset)).value();
+#ifdef FSPP_LOG
+    LOG(DEBUG, "read({}, _, {}, {}, _): success with {}", path, size, offset, result);
+#endif
+    return result;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::read: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "read({}, _, {}, {}, _): failed with errno {}", path, size, offset, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -785,16 +897,22 @@ int Fuse::read(const bf::path &path, char *buf, size_t size, int64_t offset, fus
 int Fuse::write(const bf::path &path, const char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
   ThreadNameForDebugging _threadName("write");
 #ifdef FSPP_LOG
-  LOG(DEBUG, "write({}, _, {}, {}, _)", path, size, offsset);
+  LOG(DEBUG, "write({}, _, {}, {}, _)", path, size, offset);
 #endif
   UNUSED(path);
   try {
     _fs->write(fileinfo->fh, buf, fspp::num_bytes_t(size), fspp::num_bytes_t(offset));
+#ifdef FSPP_LOG
+    LOG(DEBUG, "write({}, _, {}, {}, _): success", path, size, offset);
+#endif
     return size;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::write: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "write({}, _, {}, {}, _): failed with errno {}", path, size, offset, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -814,11 +932,17 @@ int Fuse::statfs(const bf::path &path, struct ::statvfs *fsstat) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->statfs(fsstat);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "statfs({}, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::statfs: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "statfs({}, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -837,11 +961,17 @@ int Fuse::flush(const bf::path &path, fuse_file_info *fileinfo) {
   UNUSED(path);
   try {
     _fs->flush(fileinfo->fh);
+#ifdef FSPP_LOG
+    LOG(WARN, "flush({}, _): success", path);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::flush: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "flush({}, _): failed with errno {}", path, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -864,11 +994,17 @@ int Fuse::fsync(const bf::path &path, int datasync, fuse_file_info *fileinfo) {
     } else {
       _fs->fsync(fileinfo->fh);
     }
+#ifdef FSPP_LOG
+  LOG(DEBUG, "fsync({}, {}, _): success", path, datasync);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::fsync: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "fsync({}, {}, _): failed with errno {}", path, datasync, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -891,7 +1027,7 @@ int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
 int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
   ThreadNameForDebugging _threadName("readdir");
 #ifdef FSPP_LOG
-  LOG(DEBUG, "readdir({}, _, _, {}, _)", path, offest);
+  LOG(DEBUG, "readdir({}, _, _, {}, _)", path, offset);
 #endif
   UNUSED(fileinfo);
   UNUSED(offset);
@@ -914,14 +1050,23 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
         ASSERT(false, "Unknown entry type");
       }
       if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {
+#ifdef FSPP_LOG
+        LOG(DEBUG, "readdir({}, _, _, {}, _): failure with ENOMEM", path, offset);
+#endif
         return -ENOMEM;
       }
     }
+#ifdef FSPP_LOG
+    LOG(DEBUG, "readdir({}, _, _, {}, _): success", path, offset);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::readdir: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "readdir({}, _, _, {}, _): failed with errno {}", path, offset, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -982,11 +1127,17 @@ int Fuse::access(const bf::path &path, int mask) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->access(path, mask);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "access({}, {}): success", path, mask);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::access: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "access({}, {}): failed with errno {}", path, mask, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);
@@ -1006,11 +1157,17 @@ int Fuse::create(const bf::path &path, ::mode_t mode, fuse_file_info *fileinfo) 
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto context = fuse_get_context();
     fileinfo->fh = _fs->createAndOpenFile(path, mode, context->uid, context->gid);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "create({}, {}, _): success", path, mode);
+#endif
     return 0;
   } catch(const cpputils::AssertFailed &e) {
     LOG(ERR, "AssertFailed in Fuse::create: {}", e.what());
     return -EIO;
   } catch (FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "create({}, {}, _): failed with errno {}", path, mode, e.getErrno());
+#endif
     return -e.getErrno();
   } catch(const std::exception &e) {
     _logException(e);

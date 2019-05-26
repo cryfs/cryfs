@@ -1,5 +1,10 @@
 Version 0.10.2 (unreleased)
 ---------------
+Fixed bugs:
+* Fix occasional crash in mkdir() on Windows
+
+Improvements:
+* Better logging when local state can't be loaded
 
 
 Version 0.10.1
