@@ -1006,7 +1006,7 @@ TEST(EitherTest, givenLeft_whenModified_thenValueIsChanged) {
         test(a);
       }, [] (const auto& test) {
         either<int, string> a(4);
-        *a.left_opt() = 5;
+        *a.left_opt() = 5;  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn)
         test(a);
       }
     },
@@ -1022,7 +1022,7 @@ TEST(EitherTest, givenRight_whenModified_thenValueIsChanged) {
         test(a);
       }, [] (const auto& test) {
         either<int, string> a("4");
-        *a.right_opt() = "5";
+        *a.right_opt() = "5";  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn)
         test(a);
       }
     },
