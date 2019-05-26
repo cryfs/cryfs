@@ -15,6 +15,7 @@
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cpp-utils/io/IOStreamConsole.h>
 #include <cpp-utils/system/homedir.h>
+#include "traversal.h"
 
 #include <set>
 
@@ -31,6 +32,8 @@ using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
 
+using namespace cryfs_stats;
+
 void printNode(unique_ref<DataNode> node) {
     std::cout << "BlockId: " << node->blockId().ToString() << ", Depth: " << static_cast<int>(node->depth()) << " ";
     auto innerNode = dynamic_pointer_move<DataInnerNode>(node);
@@ -42,39 +45,6 @@ void printNode(unique_ref<DataNode> node) {
     if (leafNode != none) {
         std::cout << "Type: leaf\n";
         return;
-    }
-}
-
-void _forEachBlob(FsBlobStore* blobStore, const BlockId& rootId, std::function<void (const BlockId& blobId)> callback) {
-    callback(rootId);
-    auto rootBlob = blobStore->load(rootId);
-    ASSERT(rootBlob != boost::none, "Blob not found but referenced from directory entry");
-
-    auto rootDir = dynamic_pointer_move<DirBlob>(*rootBlob);
-    if (rootDir != boost::none) {
-        std::vector<fspp::Dir::Entry> children;
-        children.reserve((*rootDir)->NumChildren());
-        (*rootDir)->AppendChildrenTo(&children);
-
-        for (const auto& child : children) {
-            auto childEntry = (*rootDir)->GetChild(child.name);
-            ASSERT(childEntry != boost::none, "We just got this from the entry list, it must exist.");
-            auto childId = childEntry->blockId();
-            _forEachBlob(blobStore, childId, callback);
-        }
-    }
-}
-
-void _forEachBlockInBlob(DataNodeStore* nodeStore, const BlockId& rootId, std::function<void (const BlockId& blockId)> callback) {
-    callback(rootId);
-
-    auto node = nodeStore->load(rootId);
-    auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
-    if (innerNode != boost::none) {
-        for (uint32_t childIndex = 0; childIndex < (*innerNode)->numChildren(); ++childIndex) {
-            auto childId = (*innerNode)->readChild(childIndex).blockId();
-            _forEachBlockInBlob(nodeStore, childId, callback);
-        }
     }
 }
 
@@ -90,18 +60,52 @@ unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader
     return make_unique_ref<LowToHighLevelBlockStore>(std::move(integrityBlockStore));
 }
 
+struct AccumulateBlockIds final {
+public:
+    auto callback() {
+        return [this] (const BlockId& id) {
+            _blockIds.push_back(id);
+        };
+    }
+
+    const std::vector<BlockId>& blockIds() const {
+        return _blockIds;
+    }
+
+    void reserve(size_t size) {
+        _blockIds.reserve(size);
+    }
+
+private:
+    std::vector<BlockId> _blockIds;
+};
+
+class ProgressBar final {
+public:
+    ProgressBar(size_t numBlocks): _currentBlock(0), _numBlocks(numBlocks) {}
+
+    auto callback() {
+        return [this] (const BlockId&) {
+            cout << "\r" << (++_currentBlock) << "/" << _numBlocks << flush;
+        };
+    }
+private:
+    size_t _currentBlock;
+    size_t _numBlocks;
+};
+
 std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
 
     std::vector<BlockId> result;
+    AccumulateBlockIds knownBlobIds;
     cout << "Listing all file system entities (i.e. blobs)..." << flush;
     auto rootId = BlockId::FromString(config.configFile->config()->RootBlob());
-    _forEachBlob(fsBlobStore.get(), rootId, [&result] (const BlockId& blockId) {
-        result.push_back(blockId);
-    });
+    forEachReachableBlob(fsBlobStore.get(), rootId, {knownBlobIds.callback()});
     cout << "done" << endl;
-    return result;
+
+    return knownBlobIds.blockIds();
 }
 
 std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
@@ -109,30 +113,28 @@ std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoade
 
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.configFile->config()->BlocksizeBytes());
-    std::vector<BlockId> result;
+    AccumulateBlockIds knownBlockIds;
     const uint32_t numNodes = nodeStore->numNodes();
-    result.reserve(numNodes);
+    knownBlockIds.reserve(numNodes);
     uint32_t i = 0;
     cout << "Listing all blocks used by these file system entities..." << endl;
     for (const auto& blobId : knownBlobIds) {
-        _forEachBlockInBlob(nodeStore.get(), blobId, [&result, &i, numNodes] (const BlockId& blockId) {
-            cout << "\r" << (++i) << "/" << numNodes << flush;
-            result.push_back(blockId);
+        forEachReachableBlockInBlob(nodeStore.get(), blobId, {
+            ProgressBar(numNodes).callback(),
+            knownBlockIds.callback()
         });
     }
     std::cout << "...done" << endl;
-    return result;
+    return knownBlockIds.blockIds();
 }
 
 set<BlockId> _getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
-    auto blockStore= makeBlockStore(basedir, config, localStateDir);
-    set<BlockId> result;
-    blockStore->forEachBlock([&result] (const BlockId& blockId) {
-        result.insert(blockId);
-    });
-    return result;
+    auto blockStore = makeBlockStore(basedir, config, localStateDir);
+    AccumulateBlockIds allBlockIds;
+    allBlockIds.reserve(blockStore->numBlocks());
+    forEachBlock(blockStore.get(), {allBlockIds.callback()});
+    return set<BlockId>(allBlockIds.blockIds().begin(), allBlockIds.blockIds().end());
 }
-
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
     const auto& config_ = config->configFile->config();
     std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
 #ifndef CRYFS_NO_COMPATIBILITY
-    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && !config_->HasParentPointers() && !config_->HasVersionNumbers();
+    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && config_->HasParentPointers() && config_->HasVersionNumbers();
 #else
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion;
 #endif

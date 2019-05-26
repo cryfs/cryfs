@@ -2,6 +2,7 @@ project (stats)
 
 set(SOURCES
         main.cpp
+        traversal.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
