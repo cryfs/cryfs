@@ -45,24 +45,26 @@ struct FuseOpenFileListTest: public ::testing::Test {
     return open(FILEID1, FILEID2);
   }
   void check(int id, int fileid, int flags) {
-    MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(list.get(id));
-    EXPECT_EQ(fileid, openFile->fileid);
-    EXPECT_EQ(flags, openFile->flags);
+	  list.load(id, [=](OpenFile* _openFile) {
+		  MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(_openFile);
+		  EXPECT_EQ(fileid, openFile->fileid);
+		  EXPECT_EQ(flags, openFile->flags);
+	  });
   }
 };
 
 TEST_F(FuseOpenFileListTest, EmptyList1) {
-  ASSERT_THROW(list.get(0), std::out_of_range);
+	ASSERT_THROW(list.load(0, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, EmptyList2) {
-  ASSERT_THROW(list.get(3), std::out_of_range);
+	ASSERT_THROW(list.load(3, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, InvalidId) {
   int valid_id = open();
   int invalid_id = valid_id + 1;
-  ASSERT_THROW(list.get(invalid_id), std::out_of_range);
+  ASSERT_THROW(list.load(invalid_id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, Open1AndGet) {
@@ -102,18 +104,18 @@ TEST_F(FuseOpenFileListTest, Open3AndGet) {
 TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
   int id = open();
 
-  ASSERT_NO_THROW(list.get(id));
+  ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
   list.close(id);
-  ASSERT_THROW(list.get(id), std::out_of_range);
+  ASSERT_THROW(list.load(id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, GetClosedItemOnNonEmptyList) {
   int id = open();
   open();
 
-  ASSERT_NO_THROW(list.get(id));
+  ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
   list.close(id);
-  ASSERT_THROW(list.get(id), std::out_of_range);
+  ASSERT_THROW(list.load(id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, CloseOnEmptyList1) {
