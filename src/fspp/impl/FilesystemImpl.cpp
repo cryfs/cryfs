@@ -130,7 +130,9 @@ int FilesystemImpl::openFile(File *file, int flags) {
 
 void FilesystemImpl::flush(int descriptor) {
   PROFILE(_flushNanosec);
-  _open_files.get(descriptor)->flush();
+  _open_files.load(descriptor, [](OpenFile* openFile) {
+	  openFile->flush();
+  });
 }
 
 void FilesystemImpl::closeFile(int descriptor) {
@@ -164,9 +166,11 @@ void FilesystemImpl::lstat(const bf::path &path, fspp::fuse::STAT *stbuf) {
 }
 
 void FilesystemImpl::fstat(int descriptor, fspp::fuse::STAT *stbuf) {
-  PROFILE(_fstatNanosec);
-  auto stat_info = _open_files.get(descriptor)->stat();
-  convert_stat_info_(stat_info, stbuf);
+	PROFILE(_fstatNanosec);
+	auto stat_info = _open_files.load(descriptor, [] (OpenFile* openFile) {
+		return openFile->stat();
+	});
+	convert_stat_info_(stat_info, stbuf);
 }
 
 void FilesystemImpl::chmod(const boost::filesystem::path &path, ::mode_t mode) {
@@ -196,27 +200,37 @@ void FilesystemImpl::truncate(const bf::path &path, fspp::num_bytes_t size) {
 
 void FilesystemImpl::ftruncate(int descriptor, fspp::num_bytes_t size) {
   PROFILE(_ftruncateNanosec);
-  _open_files.get(descriptor)->truncate(size);
+  _open_files.load(descriptor, [size] (OpenFile* openFile) {
+	  openFile->truncate(size);
+  });
 }
 
 fspp::num_bytes_t FilesystemImpl::read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   PROFILE(_readNanosec);
-  return _open_files.get(descriptor)->read(buf, count, offset);
+  return _open_files.load(descriptor, [buf, count, offset] (OpenFile* openFile) {
+	  return openFile->read(buf, count, offset);
+  });
 }
 
 void FilesystemImpl::write(int descriptor, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   PROFILE(_writeNanosec);
-  _open_files.get(descriptor)->write(buf, count, offset);
+  return _open_files.load(descriptor, [buf, count, offset] (OpenFile* openFile) {
+	  return openFile->write(buf, count, offset);
+  });
 }
 
 void FilesystemImpl::fsync(int descriptor) {
   PROFILE(_fsyncNanosec);
-  _open_files.get(descriptor)->fsync();
+  _open_files.load(descriptor, [] (OpenFile* openFile) {
+	  openFile->fsync();
+  });
 }
 
 void FilesystemImpl::fdatasync(int descriptor) {
   PROFILE(_fdatasyncNanosec);
-  _open_files.get(descriptor)->fdatasync();
+  _open_files.load(descriptor, [] (OpenFile* openFile) {
+	  openFile->fdatasync();
+  });
 }
 
 void FilesystemImpl::access(const bf::path &path, int mask) {

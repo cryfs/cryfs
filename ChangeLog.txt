@@ -2,6 +2,7 @@ Version 0.10.2 (unreleased)
 ---------------
 Fixed bugs:
 * Fix occasional crash in mkdir() on Windows
+* Fix a race condition when a file descriptor is closed while there's read/write requests for that file being processed.
 
 Improvements:
 * Better logging when local state can't be loaded
