@@ -116,7 +116,6 @@ std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoade
     AccumulateBlockIds knownBlockIds;
     const uint32_t numNodes = nodeStore->numNodes();
     knownBlockIds.reserve(numNodes);
-    uint32_t i = 0;
     cout << "Listing all blocks used by these file system entities..." << endl;
     for (const auto& blobId : knownBlobIds) {
         forEachReachableBlockInBlob(nodeStore.get(), blobId, {
