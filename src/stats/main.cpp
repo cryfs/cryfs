@@ -19,9 +19,14 @@
 
 #include <set>
 
-using namespace boost;
-using namespace boost::filesystem;
-using namespace std;
+using std::endl;
+using std::cout;
+using std::set;
+using std::flush;
+using std::vector;
+using boost::none;
+using boost::filesystem::path;
+
 using namespace cryfs;
 using namespace cpputils;
 using namespace blockstore;

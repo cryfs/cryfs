@@ -5,9 +5,12 @@
 #include "Logger.h"
 #include <stdexcept>
 #include <spdlog/fmt/ostr.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #if defined(_MSC_VER)
 #include <spdlog/sinks/msvc_sink.h>
+#else
+#include <spdlog/sinks/syslog_sink.h>
 #endif
 
 namespace cpputils {
@@ -75,7 +78,7 @@ namespace cpputils {
 #if defined(_MSC_VER)
           return spdlog::create<spdlog::sinks::msvc_sink_mt>(name);
 #else
-          return spdlog::syslog_logger(name, name, LOG_PID);
+          return spdlog::syslog_logger_mt(name, name, LOG_PID);
 #endif
         }
     }

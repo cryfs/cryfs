@@ -315,7 +315,7 @@ namespace cryfs_cli {
         //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
         if (options.logFile() != none) {
             cpputils::logging::setLogger(
-                spdlog::create<spdlog::sinks::simple_file_sink<std::mutex>>("cryfs", options.logFile()->string()));
+                spdlog::create<spdlog::sinks::basic_file_sink_mt>("cryfs", options.logFile()->string()));
         } else if (options.foreground()) {
             cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
         } else {

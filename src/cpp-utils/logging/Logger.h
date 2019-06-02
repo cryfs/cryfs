@@ -2,12 +2,10 @@
 #ifndef MESSMER_CPPUTILS_LOGGING_LOGGER_H
 #define MESSMER_CPPUTILS_LOGGING_LOGGER_H
 
-#if !defined(_MSC_VER)
-#define SPDLOG_ENABLE_SYSLOG
-#endif
-
 #include <spdlog/spdlog.h>
 #include "../macros.h"
+
+#include <spdlog/sinks/stdout_sinks.h>
 
 namespace cpputils {
 namespace logging {

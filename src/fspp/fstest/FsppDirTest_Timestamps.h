@@ -29,9 +29,9 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_inRootDir) {
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) {
     auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = now();
+    timespec lowerBound = cpputils::time::now();
     dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = now();
+    timespec upperBound = cpputils::time::now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
@@ -57,9 +57,9 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createDir_inRootDir) {
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
     auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = now();
+    timespec lowerBound = cpputils::time::now();
     dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = now();
+    timespec upperBound = cpputils::time::now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
@@ -85,9 +85,9 @@ TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_inRootDir) {
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
     auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = now();
+    timespec lowerBound = cpputils::time::now();
     dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = now();
+    timespec upperBound = cpputils::time::now();
     auto child = this->Load("/mydir/childname");
     this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
     this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);

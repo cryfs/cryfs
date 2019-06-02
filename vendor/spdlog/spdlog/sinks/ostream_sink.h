@@ -5,43 +5,53 @@
 
 #pragma once
 
-#include "../details/null_mutex.h"
-#include "base_sink.h"
+#ifndef SPDLOG_H
+#include "spdlog/spdlog.h"
+#endif
 
-#include <ostream>
+#include "spdlog/details/null_mutex.h"
+#include "spdlog/sinks/base_sink.h"
+
 #include <mutex>
+#include <ostream>
 
-namespace spdlog
-{
-namespace sinks
-{
-template<class Mutex>
-class ostream_sink: public base_sink<Mutex>
+namespace spdlog {
+namespace sinks {
+template<typename Mutex>
+class ostream_sink final : public base_sink<Mutex>
 {
 public:
-    explicit ostream_sink(std::ostream& os, bool force_flush=false) :_ostream(os), _force_flush(force_flush) {}
-    ostream_sink(const ostream_sink&) = delete;
-    ostream_sink& operator=(const ostream_sink&) = delete;
-    virtual ~ostream_sink() = default;
+    explicit ostream_sink(std::ostream &os, bool force_flush = false)
+        : ostream_(os)
+        , force_flush_(force_flush)
+    {
+    }
+    ostream_sink(const ostream_sink &) = delete;
+    ostream_sink &operator=(const ostream_sink &) = delete;
 
 protected:
-    void _sink_it(const details::log_msg& msg) override
+    void sink_it_(const details::log_msg &msg) override
     {
-        _ostream.write(msg.formatted.data(), msg.formatted.size());
-        if (_force_flush)
-            _ostream.flush();
+        fmt::memory_buffer formatted;
+        sink::formatter_->format(msg, formatted);
+        ostream_.write(formatted.data(), static_cast<std::streamsize>(formatted.size()));
+        if (force_flush_)
+        {
+            ostream_.flush();
+        }
     }
 
-    void _flush() override
+    void flush_() override
     {
-        _ostream.flush();
+        ostream_.flush();
     }
 
-    std::ostream& _ostream;
-    bool _force_flush;
+    std::ostream &ostream_;
+    bool force_flush_;
 };
 
-typedef ostream_sink<std::mutex> ostream_sink_mt;
-typedef ostream_sink<details::null_mutex> ostream_sink_st;
-}
-}
+using ostream_sink_mt = ostream_sink<std::mutex>;
+using ostream_sink_st = ostream_sink<details::null_mutex>;
+
+} // namespace sinks
+} // namespace spdlog

@@ -5,47 +5,50 @@
 
 #pragma once
 
+#ifndef SPDLOG_H
+#include "spdlog/spdlog.h"
+#endif
+
 #if defined(_WIN32)
 
-#include "base_sink.h"
-#include "../details/null_mutex.h"
+#include "spdlog/details/null_mutex.h"
+#include "spdlog/sinks/base_sink.h"
 
 #include <winbase.h>
 
 #include <mutex>
 #include <string>
 
-namespace spdlog
-{
-namespace sinks
-{
+namespace spdlog {
+namespace sinks {
 /*
-* MSVC sink (logging using OutputDebugStringA)
-*/
-template<class Mutex>
-class msvc_sink : public base_sink < Mutex >
+ * MSVC sink (logging using OutputDebugStringA)
+ */
+template<typename Mutex>
+class msvc_sink : public base_sink<Mutex>
 {
 public:
-    explicit msvc_sink()
-    {
-    }
-
-
+    explicit msvc_sink() {}
 
 protected:
-    void _sink_it(const details::log_msg& msg) override
+    void sink_it_(const details::log_msg &msg) override
     {
-        OutputDebugStringA(msg.formatted.c_str());
+
+        fmt::memory_buffer formatted;
+        sink::formatter_->format(msg, formatted);
+        OutputDebugStringA(fmt::to_string(formatted).c_str());
     }
 
-    void _flush() override
-    {}
+    void flush_() override {}
 };
 
-typedef msvc_sink<std::mutex> msvc_sink_mt;
-typedef msvc_sink<details::null_mutex> msvc_sink_st;
+using msvc_sink_mt = msvc_sink<std::mutex>;
+using msvc_sink_st = msvc_sink<details::null_mutex>;
 
-}
-}
+using windebug_sink_mt = msvc_sink_mt;
+using windebug_sink_st = msvc_sink_st;
+
+} // namespace sinks
+} // namespace spdlog
 
 #endif

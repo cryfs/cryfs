@@ -7,17 +7,15 @@
 #include "testutils/TimestampTestUtils.h"
 #include <cpp-utils/system/stat.h>
 
-using namespace cpputils::time;
-using std::function;
 
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Timestamps: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
 
     void Test_Create() {
-        timespec lowerBound = now();
+        timespec lowerBound = cpputils::time::now();
         auto node = this->CreateNode("/mynode");
-        timespec upperBound = now();
+        timespec upperBound = cpputils::time::now();
         this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *node);
         this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *node);
         this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *node);
