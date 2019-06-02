@@ -10,8 +10,6 @@ SHELL = /bin/sh
 
 # If needed
 TMPDIR ?= /tmp
-# Used for ARMv7 and NEON.
-FP_ABI ?= hard
 # Used for feature tests
 TOUT ?= a.out
 TOUT := $(strip $(TOUT))
@@ -52,8 +50,6 @@ IS_SPARC32 := $(shell echo "$(HOSTX)" | $(GREP) -v "64" | $(GREP) -i -c -E 'sun|
 IS_SPARC64 := $(shell echo "$(HOSTX)" | $(GREP) -i -c -E 'sun|sparc64')
 IS_ARM32 := $(shell echo "$(HOSTX)" | $(GREP) -i -c -E 'arm|armhf|arm7l|eabihf')
 IS_ARMV8 := $(shell echo "$(HOSTX)" | $(GREP) -i -c -E 'aarch32|aarch64|arm64|armv8')
-
-IS_NEON := $(shell $(CXX) $(CXXFLAGS) -dumpmachine 2>/dev/null | $(GREP) -i -c -E 'armv7|armhf|arm7l|eabihf|armv8|aarch32|aarch64')
 
 # Attempt to determine platform
 SYSTEMX := $(shell $(CXX) $(CXXFLAGS) -dumpmachine 2>/dev/null)
@@ -439,37 +435,37 @@ endif
 #####            ARM A-32, Aach64 and NEON            #####
 ###########################################################
 
-ifneq ($(IS_ARM32)$(IS_ARMV8)$(IS_NEON),000)
+ifneq ($(IS_ARM32)$(IS_ARMV8),00)
 ifeq ($(DETECT_FEATURES),1)
 
-ifeq ($(IS_ARM32)$(IS_NEON),11)
+ifneq ($(IS_ARM32),0)
 
   TPROG = TestPrograms/test_arm_neon.cxx
-  TOPT = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
+  TOPT = -march=armv7-a -mfpu=neon
   HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
   ifeq ($(strip $(HAVE_OPT)),0)
-    NEON_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    ARIA_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    AES_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    CRC_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    GCM_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    BLAKE2B_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    BLAKE2S_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    CHACHA_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    CHAM_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    LEA_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SHA_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SIMECK_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SIMON64_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SIMON128_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SPECK64_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SPECK128_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
-    SM4_FLAG = -march=armv7-a -mfloat-abi=$(FP_ABI) -mfpu=neon
+    NEON_FLAG = -march=armv7-a -mfpu=neon
+    ARIA_FLAG = -march=armv7-a -mfpu=neon
+    AES_FLAG = -march=armv7-a -mfpu=neon
+    CRC_FLAG = -march=armv7-a -mfpu=neon
+    GCM_FLAG = -march=armv7-a -mfpu=neon
+    BLAKE2B_FLAG = -march=armv7-a -mfpu=neon
+    BLAKE2S_FLAG = -march=armv7-a -mfpu=neon
+    CHACHA_FLAG = -march=armv7-a -mfpu=neon
+    CHAM_FLAG = -march=armv7-a -mfpu=neon
+    LEA_FLAG = -march=armv7-a -mfpu=neon
+    SHA_FLAG = -march=armv7-a -mfpu=neon
+    SIMECK_FLAG = -march=armv7-a -mfpu=neon
+    SIMON64_FLAG = -march=armv7-a -mfpu=neon
+    SIMON128_FLAG = -march=armv7-a -mfpu=neon
+    SPECK64_FLAG = -march=armv7-a -mfpu=neon
+    SPECK128_FLAG = -march=armv7-a -mfpu=neon
+    SM4_FLAG = -march=armv7-a -mfpu=neon
   else
     CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
   endif
 
-# IS_NEON
+# IS_ARM32
 endif
 
 ifeq ($(IS_ARMV8),1)
@@ -485,7 +481,7 @@ ifeq ($(IS_ARMV8),1)
 
   TPROG = TestPrograms/test_arm_asimd.cxx
   TOPT = -march=armv8-a
-  HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
   ifeq ($(strip $(HAVE_OPT)),0)
     ASIMD_FLAG = -march=armv8-a
     ARIA_FLAG = -march=armv8-a
@@ -508,7 +504,7 @@ ifeq ($(IS_ARMV8),1)
   ifneq ($(ASIMD_FLAG),)
     TPROG = TestPrograms/test_arm_crc.cxx
     TOPT = -march=armv8-a+crc
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       CRC_FLAG = -march=armv8-a+crc
     else
@@ -517,7 +513,7 @@ ifeq ($(IS_ARMV8),1)
 
     TPROG = TestPrograms/test_arm_aes.cxx
     TOPT = -march=armv8-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       AES_FLAG = -march=armv8-a+crypto
     else
@@ -526,7 +522,7 @@ ifeq ($(IS_ARMV8),1)
 
     TPROG = TestPrograms/test_arm_pmull.cxx
     TOPT = -march=armv8-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       GCM_FLAG = -march=armv8-a+crypto
       GF2N_FLAG = -march=armv8-a+crypto
@@ -536,7 +532,7 @@ ifeq ($(IS_ARMV8),1)
 
     TPROG = TestPrograms/test_arm_sha.cxx
     TOPT = -march=armv8-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       SHA_FLAG = -march=armv8-a+crypto
     else
@@ -545,7 +541,7 @@ ifeq ($(IS_ARMV8),1)
 
     TPROG = TestPrograms/test_arm_sm3.cxx
     TOPT = -march=armv8.4-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       SM3_FLAG = -march=armv8.4-a+crypto
       SM4_FLAG = -march=armv8.4-a+crypto
@@ -553,7 +549,7 @@ ifeq ($(IS_ARMV8),1)
 
     TPROG = TestPrograms/test_arm_sha3.cxx
     TOPT = -march=armv8.4-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(CXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
+    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ACLE_FLAG) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
     ifeq ($(strip $(HAVE_OPT)),0)
       SHA3_FLAG = -march=armv8.4-a+crypto
     endif
@@ -567,7 +563,7 @@ endif
 # DETECT_FEATURES
 endif
 
-# IS_ARM32, IS_ARMV8, IS_NEON
+# IS_ARM32, IS_ARMV8
 endif
 
 ###########################################################
@@ -622,13 +618,21 @@ ifeq ($(DETECT_FEATURES),1)
   TOPT = $(POWER8_FLAG)
   HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
   ifeq ($(strip $(HAVE_OPT)),0)
+    AES_FLAG = $(POWER8_FLAG)
+    ARIA_FLAG = $(POWER8_FLAG)
     BLAKE2B_FLAG = $(POWER8_FLAG)
+    BLAKE2S_FLAG = $(POWER8_FLAG)
+    CHACHA_FLAG = $(POWER8_FLAG)
+    CHAM_FLAG = $(POWER8_FLAG)
     CRC_FLAG = $(POWER8_FLAG)
     GCM_FLAG = $(POWER8_FLAG)
     GF2N_FLAG = $(POWER8_FLAG)
-    AES_FLAG = $(POWER8_FLAG)
+    LEA_FLAG = $(POWER8_FLAG)
     SHA_FLAG = $(POWER8_FLAG)
     SHACAL2_FLAG = $(POWER8_FLAG)
+    SIMECK_FLAG = $(POWER8_FLAG)
+    SIMON64_FLAG = $(POWER8_FLAG)
+    SPECK64_FLAG = $(POWER8_FLAG)
     SIMON128_FLAG = $(POWER8_FLAG)
     SPECK128_FLAG = $(POWER8_FLAG)
   else
@@ -641,16 +645,7 @@ ifeq ($(DETECT_FEATURES),1)
   TPROG = TestPrograms/test_ppc_power7.cxx
   TOPT = $(POWER7_FLAG)
   HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | tr ' ' '\n' | wc -l)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    ARIA_FLAG = $(POWER7_FLAG)
-    BLAKE2S_FLAG = $(POWER7_FLAG)
-    CHACHA_FLAG = $(POWER7_FLAG)
-    CHAM_FLAG = $(POWER7_FLAG)
-    LEA_FLAG = $(POWER7_FLAG)
-    SIMECK_FLAG = $(POWER7_FLAG)
-    SIMON64_FLAG = $(POWER7_FLAG)
-    SPECK64_FLAG = $(POWER7_FLAG)
-  else
+  ifneq ($(strip $(HAVE_OPT)),0)
     POWER7_FLAG =
   endif
 
@@ -693,18 +688,12 @@ ifeq ($(DETECT_FEATURES),1)
   #####################################################################
   # Fixups for algorithms that can drop to a lower ISA, if needed
 
-  # Drop to Power7 if Power8 is not available.
+  # Drop to Power4 if Power8 not available
   ifeq ($(POWER8_FLAG),)
-    ifneq ($(POWER7_FLAG),)
-      GCM_FLAG = $(POWER7_FLAG)
-    endif
-  endif
-
-  # Drop to Power4 if Power7 not available
-  ifeq ($(POWER7_FLAG),)
     ifneq ($(ALTIVEC_FLAG),)
       BLAKE2S_FLAG = $(ALTIVEC_FLAG)
       CHACHA_FLAG = $(ALTIVEC_FLAG)
+      GCM_FLAG = $(ALTIVEC_FLAG)
       SIMON64_FLAG = $(ALTIVEC_FLAG)
       SPECK64_FLAG = $(ALTIVEC_FLAG)
     endif
@@ -1349,7 +1338,7 @@ libcryptopp.pc:
 	@echo '' >> libcryptopp.pc
 	@echo 'Name: Crypto++' >> libcryptopp.pc
 	@echo 'Description: Crypto++ cryptographic library' >> libcryptopp.pc
-	@echo 'Version: 8.1' >> libcryptopp.pc
+	@echo 'Version: 8.2' >> libcryptopp.pc
 	@echo 'URL: https://cryptopp.com/' >> libcryptopp.pc
 	@echo '' >> libcryptopp.pc
 	@echo 'Cflags: -I$${includedir}' >> libcryptopp.pc
@@ -1430,7 +1419,7 @@ endif # Dependencies
 
 # Cryptogams ARM asm implementation.
 aes_armv4.o : aes_armv4.S
-	$(CC) $(strip $(CXXFLAGS) $(CRYPTOGAMS_AES_FLAG) -mfloat-abi=$(FP_ABI) -c) $<
+	$(CC) $(strip $(CXXFLAGS) $(CRYPTOGAMS_AES_FLAG) -c) $<
 
 # SSSE3 or NEON available
 aria_simd.o : aria_simd.cpp

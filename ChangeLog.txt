@@ -7,6 +7,9 @@ Fixed bugs:
 Improvements:
 * Better logging when local state can't be loaded
 
+Other:
+* Updated to crypto++ 8.2
+
 
 Version 0.10.1
 ---------------
