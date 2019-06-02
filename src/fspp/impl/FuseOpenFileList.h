@@ -4,7 +4,7 @@
 
 #include "../fs_interface/File.h"
 #include "../fs_interface/OpenFile.h"
-#include "../fs_interface/FuseErrnoException.h"
+#include "../fuse/FuseErrnoException.h"
 #include <cpp-utils/macros.h>
 #include <cpp-utils/assert/assert.h>
 #include "IdList.h"
