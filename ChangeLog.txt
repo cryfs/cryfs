@@ -47,6 +47,12 @@ Fixed bugs:
 * On Mac OS X, Finder shows the correct name for the mount directory
 
 
+Version 0.9.11 (unreleased)
+--------------
+Fixed bugs:
+* Fix a race condition when a file descriptor is closed while there's read/write requests for that file being processed.
+
+
 Version 0.9.10
 --------------
 Fixed bugs:
