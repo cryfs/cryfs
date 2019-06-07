@@ -514,7 +514,6 @@ int Fuse::unlink(const bf::path &path) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->unlink(path);
-      ThreadNameForDebugging _threadName("unlink");
 #ifdef FSPP_LOG
     LOG(DEBUG, "unlink({}): success", path);
 #endif
