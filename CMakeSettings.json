@@ -7,7 +7,7 @@
       "inheritEnvironments": [ "msvc_x86" ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\Dokan Library-1.2.2\"",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     },
@@ -18,7 +18,7 @@
       "inheritEnvironments": [ "msvc_x86" ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\Dokan Library-1.2.2\"",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     },
@@ -29,7 +29,7 @@
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\Dokan Library-1.2.2\"",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     },
@@ -40,7 +40,7 @@
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\DokanLibrary-1.1.0\"",
+      "cmakeCommandArgs": "-DBUILD_TESTING=on -DBOOST_ROOT=C:\\local\\boost_1_68_0 -DDOKAN_PATH=\"C:\\Program Files\\Dokan\\Dokan Library-1.2.2\"",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": ""
     }
