@@ -256,17 +256,25 @@ public:
     /// \brief Construct a BLAKE2s hash
     /// \param digestSize the digest size, in bytes
     /// \param treeMode flag indicating tree mode
+    /// \since Crypto++ 5.6.4
     BLAKE2s(bool treeMode=false, unsigned int digestSize = DIGESTSIZE);
+
+    /// \brief Construct a BLAKE2s hash
+    /// \param digestSize the digest size, in bytes
+    /// \details treeMode flag is set to false
+    /// \since Crypto++ 8.2
+    BLAKE2s(unsigned int digestSize);
 
     /// \brief Construct a BLAKE2s hash
     /// \param key a byte array used to key the cipher
     /// \param keyLength the size of the byte array
     /// \param salt a byte array used as salt
     /// \param saltLength the size of the byte array
-    /// \param personalization a byte array used as prsonalization string
+    /// \param personalization a byte array used as personalization string
     /// \param personalizationLength the size of the byte array
     /// \param treeMode flag indicating tree mode
     /// \param digestSize the digest size, in bytes
+    /// \since Crypto++ 5.6.4
     BLAKE2s(const byte *key, size_t keyLength, const byte* salt = NULLPTR, size_t saltLength = 0,
         const byte* personalization = NULLPTR, size_t personalizationLength = 0,
         bool treeMode=false, unsigned int digestSize = DIGESTSIZE);
@@ -278,6 +286,7 @@ public:
     /// Message Authentication Code (MAC)</A>. For example, "BLAKE2b-512" and "BLAKE2s-256".
     std::string AlgorithmName() const {return std::string(BLAKE2s_Info::StaticAlgorithmName()) + "-" + IntToString(DigestSize()*8);}
 
+    unsigned int BlockSize() const {return BLOCKSIZE;}
     unsigned int DigestSize() const {return m_digestSize;}
     unsigned int OptimalDataAlignment() const;
 
@@ -354,17 +363,25 @@ public:
     /// \brief Construct a BLAKE2b hash
     /// \param digestSize the digest size, in bytes
     /// \param treeMode flag indicating tree mode
+    /// \since Crypto++ 5.6.4
     BLAKE2b(bool treeMode=false, unsigned int digestSize = DIGESTSIZE);
+
+    /// \brief Construct a BLAKE2s hash
+    /// \param digestSize the digest size, in bytes
+    /// \details treeMode flag is set to false
+    /// \since Crypto++ 8.2
+    BLAKE2b(unsigned int digestSize);
 
     /// \brief Construct a BLAKE2b hash
     /// \param key a byte array used to key the cipher
     /// \param keyLength the size of the byte array
     /// \param salt a byte array used as salt
     /// \param saltLength the size of the byte array
-    /// \param personalization a byte array used as prsonalization string
+    /// \param personalization a byte array used as personalization string
     /// \param personalizationLength the size of the byte array
     /// \param treeMode flag indicating tree mode
     /// \param digestSize the digest size, in bytes
+    /// \since Crypto++ 5.6.4
     BLAKE2b(const byte *key, size_t keyLength, const byte* salt = NULLPTR, size_t saltLength = 0,
         const byte* personalization = NULLPTR, size_t personalizationLength = 0,
         bool treeMode=false, unsigned int digestSize = DIGESTSIZE);
@@ -376,6 +393,7 @@ public:
     /// Message Authentication Code (MAC)</A>. For example, "BLAKE2b-512" and "BLAKE2s-256".
     std::string AlgorithmName() const {return std::string(BLAKE2b_Info::StaticAlgorithmName()) + "-" + IntToString(DigestSize()*8);}
 
+    unsigned int BlockSize() const {return BLOCKSIZE;}
     unsigned int DigestSize() const {return m_digestSize;}
     unsigned int OptimalDataAlignment() const;
 

@@ -12,8 +12,8 @@
 // KeccakF1600x2_SSE is ParallelHash128. The SSE2 ParallelHash128
 // implementation was extracted from XKCP using the following command.
 //
-// gcc -I lib/common -I lib/low/KeccakP-1600/Optimized \
-//   -I lib/low/KeccakP-1600-times2/SIMD128/SSE2ufull \
+// gcc -I lib/common -I lib/low/KeccakP-1600/Optimized
+//   -I lib/low/KeccakP-1600-times2/SIMD128/SSE2ufull
 //   lib/low/KeccakP-1600-times2/SIMD128/KeccakP-1600-times2-SIMD128.c -E
 
 #include "pch.h"
@@ -23,7 +23,7 @@
 
 #if (CRYPTOPP_SSSE3_AVAILABLE)
 # include <emmintrin.h>
-# include <immintrin.h>
+# include <tmmintrin.h>
 #endif
 
 // Squash MS LNK4221 and libtool warnings
@@ -39,8 +39,8 @@ extern void KeccakF1600x2_SSE(word64 *state);
 // The F1600 round constants
 extern const word64 KeccakF1600Constants[24];
 
-const word64 rho8[2] = {0x0605040302010007, 0x0E0D0C0B0A09080F};
-const word64 rho56[2] = {0x0007060504030201, 0x080F0E0D0C0B0A09};
+const word64 rho8[2] = {W64LIT(0x0605040302010007), W64LIT(0x0E0D0C0B0A09080F)};
+const word64 rho56[2] = {W64LIT(0x0007060504030201), W64LIT(0x080F0E0D0C0B0A09)};
 
 #define V128 __m128i
 #define CV128 const __m128i

@@ -8,7 +8,6 @@
 #include "factory.h"
 #include "integer.h"
 #include "filters.h"
-#include "hex.h"
 #include "randpool.h"
 #include "files.h"
 #include "trunhash.h"
@@ -16,6 +15,8 @@
 #include "smartptr.h"
 #include "validate.h"
 #include "stdcpp.h"
+#include "misc.h"
+#include "hex.h"
 #include "trap.h"
 
 #include <iostream>
@@ -208,7 +209,7 @@ void PutDecodedDatumInto(const TestData &data, const char *name, BufferedTransfo
 
 		while (repeat--)
 		{
-			q.Put(reinterpret_cast<const byte*>(&s2[0]), s2.size());
+			q.Put(ConstBytePtr(s2), BytePtrSize(s2));
 			RandomizedTransfer(q, target, false);
 		}
 	}
@@ -265,10 +266,11 @@ public:
 			*reinterpret_cast<int *>(pValue) = atoi(value.c_str());
 		else if (valueType == typeid(word64))
 		{
-			std::string x(value); errno = 0;
+			std::string x(value.empty() ? "0" : value);
 			const char* beg = &x[0];
 			char* end = &x[0] + value.size();
 
+			errno = 0;
 			*reinterpret_cast<word64*>(pValue) = STRTOUL64(beg, &end, 0);
 			if (errno != 0)
 				return false;
@@ -279,7 +281,7 @@ public:
 		{
 			m_temp.clear();
 			PutDecodedDatumInto(m_data, name, StringSink(m_temp).Ref());
-			reinterpret_cast<ConstByteArrayParameter *>(pValue)->Assign(reinterpret_cast<const byte *>(&m_temp[0]), m_temp.size(), false);
+			reinterpret_cast<ConstByteArrayParameter *>(pValue)->Assign(BytePtr(m_temp), BytePtrSize(m_temp), false);
 		}
 		else
 			throw ValueTypeMismatch(name, typeid(std::string), valueType);
@@ -496,8 +498,8 @@ void TestSymmetricCipher(TestData &v, const NameValuePairs &overrideParameters)
 		}
 		else
 		{
-			encryptor->SetKey(reinterpret_cast<const byte*>(&key[0]), key.size(), pairs);
-			decryptor->SetKey(reinterpret_cast<const byte*>(&key[0]), key.size(), pairs);
+			encryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
+			decryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
 		}
 
 		word64 seek64 = pairs.GetWord64ValueWithDefault("Seek64", 0);
@@ -547,13 +549,13 @@ void TestSymmetricCipher(TestData &v, const NameValuePairs &overrideParameters)
 				encrypted.reserve(10000 * plaintext.size());
 				for (int j=0; j<10000; j++)
 				{
-					cipher->ProcessString(reinterpret_cast<byte*>(&buf[0]), buf.size());
+					cipher->ProcessString(BytePtr(buf), BytePtrSize(buf));
 					encrypted.append(buf.begin(), buf.end());
 				}
 
 				encrypted.erase(0, encrypted.size() - keybuf.size());
-				xorbuf(reinterpret_cast<byte*>(&keybuf[0]), reinterpret_cast<const byte*>(&encrypted[0]), keybuf.size());
-				cipher->SetKey(reinterpret_cast<const byte*>(&keybuf[0]), keybuf.size());
+				xorbuf(BytePtr(keybuf), BytePtr(encrypted), BytePtrSize(keybuf));
+				cipher->SetKey(BytePtr(keybuf), BytePtrSize(keybuf));
 			}
 
 			encrypted.assign(buf.begin(), buf.end());
@@ -641,8 +643,8 @@ void TestAuthenticatedSymmetricCipher(TestData &v, const NameValuePairs &overrid
 		member_ptr<AuthenticatedSymmetricCipher> encryptor, decryptor;
 		encryptor.reset(ObjectFactoryRegistry<AuthenticatedSymmetricCipher, ENCRYPTION>::Registry().CreateObject(name.c_str()));
 		decryptor.reset(ObjectFactoryRegistry<AuthenticatedSymmetricCipher, DECRYPTION>::Registry().CreateObject(name.c_str()));
-		encryptor->SetKey(reinterpret_cast<const byte*>(&key[0]), key.size(), pairs);
-		decryptor->SetKey(reinterpret_cast<const byte*>(&key[0]), key.size(), pairs);
+		encryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
+		decryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
 
 		// Code coverage
 		(void)encryptor->AlgorithmName();
@@ -736,7 +738,7 @@ void TestDigestOrMAC(TestData &v, bool testDigest)
 		mac.reset(ObjectFactoryRegistry<MessageAuthenticationCode>::Registry().CreateObject(name.c_str()));
 		pHash = mac.get();
 		std::string key = GetDecodedDatum(v, "Key");
-		mac->SetKey(reinterpret_cast<const byte *>(&key[0]), key.size(), pairs);
+		mac->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
 
 		// Code coverage
 		(void)mac->AlgorithmName();
@@ -779,8 +781,7 @@ void TestKeyDerivationFunction(TestData &v)
 	kdf.reset(ObjectFactoryRegistry<KeyDerivationFunction>::Registry().CreateObject(name.c_str()));
 
 	std::string calculated; calculated.resize(expected.size());
-	kdf->DeriveKey(reinterpret_cast<byte*>(&calculated[0]), calculated.size(),
-		reinterpret_cast<const byte*>(&secret[0]), secret.size(), pairs);
+	kdf->DeriveKey(BytePtr(calculated), BytePtrSize(calculated), BytePtr(secret), BytePtrSize(secret), pairs);
 
 	if(calculated != expected)
 	{
