@@ -165,7 +165,7 @@ cpputils::unique_ref<ResourceRef> ParallelAccessStore<Resource, ResourceRef, Key
         auto resourceRef = createResourceRef(found->second.getReference());
         resourceRef->init(this, key);
         onExists(resourceRef.get());
-        return std::move(resourceRef);
+        return resourceRef;
     }
 };
 
@@ -190,7 +190,7 @@ boost::optional<cpputils::unique_ref<ResourceRef>> ParallelAccessStore<Resource,
   } else {
     auto resourceRef = createResourceRef(found->second.getReference());
     resourceRef->init(this, key);
-    return std::move(resourceRef);
+    return resourceRef;
   }
 }
 

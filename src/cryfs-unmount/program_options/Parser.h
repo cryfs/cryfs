@@ -10,12 +10,12 @@ namespace cryfs_unmount {
 	namespace program_options {
 		class Parser final {
 		public:
-			Parser(int argc, const char *argv[]);
+			Parser(int argc, const char **argv);
 
 			ProgramOptions parse() const;
 
 		private:
-			static std::vector<std::string> _argsToVector(int argc, const char *argv[]);
+			static std::vector<std::string> _argsToVector(int argc, const char **argv);
 			static std::vector<const char*> _to_const_char_vector(const std::vector<std::string> &options);
 			static void _addAllowedOptions(boost::program_options::options_description *desc);
 			static void _addPositionalOptionForBaseDir(boost::program_options::options_description *desc,

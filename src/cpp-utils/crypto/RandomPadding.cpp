@@ -29,6 +29,6 @@ namespace cpputils {
         };
         Data result(size);
         std::memcpy(result.data(), data.dataOffset(sizeof(size)), size);
-        return std::move(result);
+        return result;
     }
 }

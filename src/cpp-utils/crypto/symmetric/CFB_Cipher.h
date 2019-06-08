@@ -70,7 +70,7 @@ boost::optional<Data> CFB_Cipher<BlockCipher, KeySize>::decrypt(const CryptoPP::
 	  // TODO Shouldn't we pass in ciphertextSize instead of plaintext.size() here as last argument (and also in the if above)?
 	  decryption.ProcessData(static_cast<CryptoPP::byte*>(plaintext.data()), ciphertextData, plaintext.size());
   }
-  return std::move(plaintext);
+  return plaintext;
 }
 
 }

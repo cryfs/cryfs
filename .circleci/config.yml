@@ -45,6 +45,8 @@ references:
         deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main
         deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main
         deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main
+        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main
+        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main
         EOF
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
@@ -57,8 +59,8 @@ references:
           # They aren't set automatically unfortunately
           sudo ln -s /usr/bin/$CC /usr/bin/clang
           sudo ln -s /usr/bin/$CXX /usr/bin/clang++
-          sudo ln -s /usr/bin/clang-tidy-7 /usr/bin/clang-tidy
-          sudo ln -s /usr/bin/run-clang-tidy-7.py /usr/bin/run-clang-tidy.py
+          sudo ln -s /usr/bin/clang-tidy-8 /usr/bin/clang-tidy
+          sudo ln -s /usr/bin/run-clang-tidy-8.py /usr/bin/run-clang-tidy.py
 
           # Need a c++14 compliant STL for clang
           sudo apt-get install -y g++-5
@@ -299,6 +301,30 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
+  gcc_9_debug:
+    <<: *job_definition
+    environment:
+      CC: gcc-9
+      CXX: g++-9
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-9"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
+  gcc_9_release:
+    <<: *job_definition
+    environment:
+      CC: gcc-9
+      CXX: g++-9
+      BUILD_TOOLSET: gcc
+      APT_COMPILER_PACKAGE: "g++-9"
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_4_debug:
     <<: *job_definition
     environment:
@@ -395,13 +421,37 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
+  clang_8_debug:
+    <<: *job_definition
+    environment:
+      CC: clang-8
+      CXX: clang++-8
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-8
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
+  clang_8_release:
+    <<: *job_definition
+    environment:
+      CC: clang-8
+      CXX: clang++-8
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-8
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_werror:
     <<: *job_definition
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-7
+      APT_COMPILER_PACKAGE: clang-8
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       GTEST_ARGS: ""
@@ -410,10 +460,10 @@ jobs:
   gcc_werror:
     <<: *job_definition
     environment:
-      CC: gcc-8
-      CXX: g++-8
+      CC: gcc-9
+      CXX: g++-9
       BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-8"
+      APT_COMPILER_PACKAGE: "g++-9"
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       GTEST_ARGS: ""
@@ -422,10 +472,10 @@ jobs:
   no_compatibility:
     <<: *job_definition
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-7
+      APT_COMPILER_PACKAGE: clang-8
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
@@ -434,10 +484,10 @@ jobs:
   address_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-7
+      APT_COMPILER_PACKAGE: clang-8
       CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fno-common -fsanitize-address-use-after-scope"
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
@@ -448,10 +498,10 @@ jobs:
   ub_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-7
+      APT_COMPILER_PACKAGE: clang-8
       CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
@@ -460,10 +510,10 @@ jobs:
   thread_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-7
+      APT_COMPILER_PACKAGE: clang-8
       OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
@@ -496,10 +546,10 @@ jobs:
     - store_artifacts:
         path: /tmp/clang-tidy-fixes
     environment:
-      CC: clang-7
-      CXX: clang++-7
+      CC: clang-8
+      CXX: clang++-8
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: "clang-7 clang-tidy-7"
+      APT_COMPILER_PACKAGE: "clang-8 clang-tidy-8"
 
 workflows:
   version: 2
@@ -522,6 +572,10 @@ workflows:
         <<: *enable_for_tags
     - gcc_8_release:
         <<: *enable_for_tags
+    - gcc_9_debug:
+        <<: *enable_for_tags
+    - gcc_9_release:
+        <<: *enable_for_tags
     - clang_4_debug:
         <<: *enable_for_tags
     - clang_4_release:
@@ -537,6 +591,10 @@ workflows:
     - clang_7_debug:
         <<: *enable_for_tags
     - clang_7_release:
+        <<: *enable_for_tags
+    - clang_8_debug:
+        <<: *enable_for_tags
+    - clang_8_release:
         <<: *enable_for_tags
     - clang_werror:
         <<: *enable_for_tags

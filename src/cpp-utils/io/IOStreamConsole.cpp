@@ -67,7 +67,7 @@ unsigned int IOStreamConsole::ask(const string &question, const vector<string> &
         throw std::invalid_argument("options should have at least one entry");
     }
     _output << question << "\n";
-    for (unsigned int i = 0; i < options.size(); ++i) {
+    for (size_t i = 0; i < options.size(); ++i) {
         _output << " [" << (i+1) << "] " << options[i] << "\n";
     }
     int choice = _askForChoice("Your choice [1-" + std::to_string(options.size()) + "]: ", _parseUIntWithMinMax(1, options.size()));

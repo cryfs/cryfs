@@ -18,7 +18,7 @@ void _showVersion() {
 }
 }
 
-void Cli::main(int argc, const char* argv[]) {
+void Cli::main(int argc, const char **argv) {
     _showVersion();
     ProgramOptions options = Parser(argc, argv).parse();
 

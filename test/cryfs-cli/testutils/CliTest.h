@@ -40,7 +40,7 @@ public:
     cpputils::unique_ref<cpputils::HttpClient> _httpClient() {
         cpputils::unique_ref<cpputils::FakeHttpClient> httpClient = cpputils::make_unique_ref<cpputils::FakeHttpClient>();
         httpClient->addWebsite("https://www.cryfs.org/version_info.json", "{\"version_info\":{\"current\":\"0.8.5\"}}");
-        return std::move(httpClient);
+        return httpClient;
     }
 
     int run(const std::vector<std::string>& args, std::function<void()> onMounted) {

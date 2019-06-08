@@ -49,7 +49,7 @@ either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(
         configFile->save();
     }
     //TODO For newer compilers, this works without std::move
-    return std::move(configFile);
+    return configFile;
 }
 
 unique_ref<CryConfigFile> CryConfigFile::create(bf::path path, CryConfig config, CryKeyProvider* keyProvider) {

@@ -113,8 +113,8 @@ int fusepp_ftruncate(const char *path, int64_t size, fuse_file_info *fileinfo) {
   return FUSE_OBJ->ftruncate(bf::path(path), size, fileinfo);
 }
 
-int fusepp_utimens(const char *path, const timespec times[2]) {
-  return FUSE_OBJ->utimens(bf::path(path), times);
+int fusepp_utimens(const char *path, const timespec times[2]) {  // NOLINT(cppcoreguidelines-avoid-c-arrays)
+  return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]});
 }
 
 int fusepp_open(const char *path, fuse_file_info *fileinfo) {
@@ -540,7 +540,6 @@ int Fuse::unlink(const bf::path &path) {
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     _fs->unlink(path);
-      ThreadNameForDebugging _threadName("unlink");
 #ifdef FSPP_LOG
     LOG(DEBUG, "unlink({}): success", path);
 #endif
@@ -778,7 +777,7 @@ int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo
   }
 }
 
-int Fuse::utimens(const bf::path &path, const timespec times[2]) {
+int Fuse::utimens(const bf::path &path, const std::array<timespec, 2> times) {
   ThreadNameForDebugging _threadName("utimens");
 #ifdef FSPP_LOG
   LOG(DEBUG, "utimens({}, _)", path);

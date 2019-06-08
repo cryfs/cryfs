@@ -21,7 +21,7 @@ TEST_F(CacheTest_PushAndPop, PopNonExistingEntry_NonEmptyCache) {
 
 TEST_F(CacheTest_PushAndPop, PopNonExistingEntry_FullCache) {
   //Add a lot of even numbered keys
-  for (unsigned int i = 0; i < MAX_ENTRIES; ++i) {
+  for (int i = 0; i < static_cast<int>(MAX_ENTRIES); ++i) {
     push(2*i, 2*i);
   }
   //Request an odd numbered key
@@ -43,35 +43,35 @@ TEST_F(CacheTest_PushAndPop, MultipleEntries) {
 }
 
 TEST_F(CacheTest_PushAndPop, FullCache) {
-  for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); ++i) {
     push(i, 2*i);
   }
-  for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); ++i) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
 }
 
 TEST_F(CacheTest_PushAndPop, FullCache_PushNonOrdered_PopOrdered) {
-  for(unsigned int i = 1; i < MAX_ENTRIES; i += 2) {
+  for(int i = 1; i < static_cast<int>(MAX_ENTRIES); i += 2) {
     push(i, 2*i);
   }
-  for(unsigned int i = 0; i < MAX_ENTRIES; i += 2) {
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); i += 2) {
     push(i, 2*i);
   }
-  for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); ++i) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
 }
 
 TEST_F(CacheTest_PushAndPop, FullCache_PushOrdered_PopNonOrdered) {
-  for(unsigned int i = 0; i < MAX_ENTRIES; ++i) {
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); ++i) {
     push(i, 2*i);
   }
-  for(unsigned int i = 1; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 1; i < static_cast<int>(MAX_ENTRIES); i += 2) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
-  for(unsigned int i = 0; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); i += 2) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
 }
 
@@ -95,27 +95,27 @@ TEST_F(CacheTest_PushAndPop, FullCache_PushNonOrdered_PopNonOrdered) {
   for(int i = roundDownToEven(MAX_ENTRIES - 1); i >= 0; i -= 2) {
     push(i, 2*i);
   }
-  for(unsigned int i = 1; i < MAX_ENTRIES; i += 2) {
+  for(int i = 1; i < static_cast<int>(MAX_ENTRIES); i += 2) {
     push(i, 2*i);
   }
   for(int i = roundDownToOdd(MAX_ENTRIES-1); i >= 0; i -= 2) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+    EXPECT_EQ(2*i, pop(i).value());
   }
-  for(unsigned int i = 0; i < MAX_ENTRIES; i += 2) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES); i += 2) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
 }
 
 TEST_F(CacheTest_PushAndPop, MoreThanFullCache) {
-  for(unsigned int i = 0; i < MAX_ENTRIES + 2; ++i) {
+  for(int i = 0; i < static_cast<int>(MAX_ENTRIES + 2); ++i) {
     push(i, 2*i);
   }
   //Check that the oldest two elements got deleted automatically
   EXPECT_EQ(boost::none, pop(0));
   EXPECT_EQ(boost::none, pop(1));
   //Check the other elements are still there
-  for(unsigned int i = 2; i < MAX_ENTRIES + 2; ++i) {
-    EXPECT_EQ(static_cast<signed int>(2*i), pop(i).value());
+  for(int i = 2; i < static_cast<int>(MAX_ENTRIES + 2); ++i) {
+    EXPECT_EQ(2*i, pop(i).value());
   }
 }
 
