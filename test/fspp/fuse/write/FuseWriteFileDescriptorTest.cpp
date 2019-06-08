@@ -21,6 +21,6 @@ TEST_P(FuseWriteFileDescriptorTest, FileDescriptorIsCorrect) {
   EXPECT_CALL(*fsimpl, write(Eq(GetParam()), _, _, _))
     .Times(1).WillOnce(Return());
 
-  char buf[1];
-  WriteFile(FILENAME, buf, fspp::num_bytes_t(1), fspp::num_bytes_t(0));
+  std::array<char, 1> buf{};
+  WriteFile(FILENAME, buf.data(), fspp::num_bytes_t(1), fspp::num_bytes_t(0));
 }

@@ -6,7 +6,7 @@
 #include <Windows.h>
 #endif
 
-void handle_exit_signal(char* argv[]) {
+void handle_exit_signal(char **argv) {
 	const std::string kind = argv[1];
 	if (kind == "exception") {
 		throw std::logic_error(argv[2]);
@@ -18,7 +18,7 @@ void handle_exit_signal(char* argv[]) {
 		DWORD code = std::atoll(argv[2]);
 		::RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, NULL);
 #else
-		int code = std::strtol(argv[2], nullptr, 10);
+		int code = static_cast<int>(std::strtol(argv[2], nullptr, 10));
 		::raise(code);
 #endif
 	}

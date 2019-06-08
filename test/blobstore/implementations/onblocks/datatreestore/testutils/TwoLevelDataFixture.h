@@ -67,7 +67,7 @@ private:
     case SizePolicy::Full:
       return _dataNodeStore->layout().maxBytesPerLeaf();
     case SizePolicy::Random:
-      return mod(_dataNodeStore->layout().maxBytesPerLeaf() - childIndex, _dataNodeStore->layout().maxBytesPerLeaf());
+      return mod(static_cast<int>(_dataNodeStore->layout().maxBytesPerLeaf() - childIndex), static_cast<int>(_dataNodeStore->layout().maxBytesPerLeaf()));
     case SizePolicy::Unchanged:
       return leaf->numBytes();
     default:

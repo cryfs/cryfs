@@ -20,6 +20,6 @@ TEST_P(FuseReadFileDescriptorTest, FileDescriptorIsCorrect) {
   EXPECT_CALL(*fsimpl, read(Eq(GetParam()), _, _, _))
     .Times(1).WillOnce(ReturnSuccessfulRead);
 
-  char buf[1];
-  ReadFile(FILENAME, buf, fspp::num_bytes_t(1), fspp::num_bytes_t(0));
+  std::array<char, 1> buf{};
+  ReadFile(FILENAME, buf.data(), fspp::num_bytes_t(1), fspp::num_bytes_t(0));
 }

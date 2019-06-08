@@ -222,7 +222,7 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
   if (traversalBeginIndex < oldNumberOfLeaves) {
       // Traversal wrote over part of the pre-existing data, we can only check the data before it.
       if (traversalBeginIndex != 0) {
-          data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), traversalBeginIndex - 1);
+          data.EXPECT_DATA_CORRECT(nodeStore->load(blockId).get().get(), static_cast<int>(traversalBeginIndex - 1));
       }
   } else {
       // Here, traversal was entirely outside the preexisting data, we can check all preexisting data.

@@ -28,6 +28,7 @@ unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, co
 }
 
 bf::path SymlinkBlob::_readTargetFromBlob(const FsBlobView &blob) {
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
   auto targetStr = std::make_unique<char[]>(blob.size() + 1); // +1 because of the nullbyte
   blob.read(targetStr.get(), 0, blob.size());
   targetStr[blob.size()] = '\0';

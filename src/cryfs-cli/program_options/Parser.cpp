@@ -20,11 +20,11 @@ using boost::optional;
 using boost::none;
 using namespace cpputils::logging;
 
-Parser::Parser(int argc, const char *argv[])
+Parser::Parser(int argc, const char **argv)
         :_options(_argsToVector(argc, argv)) {
 }
 
-vector<string> Parser::_argsToVector(int argc, const char *argv[]) {
+vector<string> Parser::_argsToVector(int argc, const char **argv) {
     vector<string> result;
     for(int i = 0; i < argc; ++i) {
         result.push_back(argv[i]);

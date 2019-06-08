@@ -44,7 +44,7 @@ public:
   int chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid);
   int truncate(const boost::filesystem::path &path, int64_t size);
   int ftruncate(const boost::filesystem::path &path, int64_t size, fuse_file_info *fileinfo);
-  int utimens(const boost::filesystem::path &path, const timespec times[2]);
+  int utimens(const boost::filesystem::path &path, const std::array<timespec, 2> times);
   int open(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int release(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int read(const boost::filesystem::path &path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo);

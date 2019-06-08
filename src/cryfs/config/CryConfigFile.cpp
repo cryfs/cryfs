@@ -49,7 +49,7 @@ optional<CryConfigFile> CryConfigFile::load(bf::path path, CryKeyProvider* keyPr
         configFile.save();
     }
     //TODO For newer compilers, this works without std::move
-    return std::move(configFile);
+    return configFile;
 }
 
 CryConfigFile CryConfigFile::create(bf::path path, CryConfig config, CryKeyProvider* keyProvider) {

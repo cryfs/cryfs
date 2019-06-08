@@ -399,7 +399,7 @@ namespace cryfs_cli {
         return false;
     }
 
-    int Cli::main(int argc, const char *argv[], unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
+    int Cli::main(int argc, const char **argv, unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
         cpputils::showBacktraceOnCrash();
         cpputils::set_thread_name("cryfs");
 

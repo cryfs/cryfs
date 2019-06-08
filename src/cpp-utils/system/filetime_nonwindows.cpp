@@ -5,15 +5,16 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <array>
 #include <cpp-utils/system/stat.h>
 
 namespace cpputils {
 
 int set_filetime(const char *filepath, timespec lastAccessTime, timespec lastModificationTime) {
-	struct timeval casted_times[2];
+	std::array<struct timeval, 2> casted_times{};
 	TIMESPEC_TO_TIMEVAL(&casted_times[0], &lastAccessTime);
 	TIMESPEC_TO_TIMEVAL(&casted_times[1], &lastModificationTime);
-	int retval = ::utimes(filepath, casted_times);
+	int retval = ::utimes(filepath, casted_times.data());
 	if (0 == retval) {
 		return 0;
 	} else {

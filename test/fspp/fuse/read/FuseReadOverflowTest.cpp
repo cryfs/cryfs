@@ -26,13 +26,13 @@ constexpr fspp::num_bytes_t FuseReadOverflowTest::OFFSET;
 
 
 TEST_F(FuseReadOverflowTest, ReadMoreThanFileSizeFromBeginning) {
-  char buf[READSIZE.value()];
-  auto retval = ReadFileReturnError(FILENAME, buf, READSIZE, fspp::num_bytes_t(0));
+  std::array<char, READSIZE.value()> buf{};
+  auto retval = ReadFileReturnError(FILENAME, buf.data(), READSIZE, fspp::num_bytes_t(0));
   EXPECT_EQ(FILESIZE, retval.read_bytes);
 }
 
 TEST_F(FuseReadOverflowTest, ReadMoreThanFileSizeFromMiddle) {
-  char buf[READSIZE.value()];
-  auto retval = ReadFileReturnError(FILENAME, buf, READSIZE, OFFSET);
+  std::array<char, READSIZE.value()> buf{};
+  auto retval = ReadFileReturnError(FILENAME, buf.data(), READSIZE, OFFSET);
   EXPECT_EQ(FILESIZE-OFFSET, retval.read_bytes);
 }

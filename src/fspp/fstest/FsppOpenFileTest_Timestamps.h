@@ -72,8 +72,8 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_nonempty_to_nonempty_grow) {
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, read_inbounds) {
     auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
     auto operation = [&openFile] () {
-        char buffer[5];
-        openFile->read(buffer, fspp::num_bytes_t(5), fspp::num_bytes_t(0));
+        std::array<char, 5> buffer{};
+        openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(0));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }
@@ -81,8 +81,8 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, read_inbounds) {
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, read_outofbounds) {
     auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(0));
     auto operation = [&openFile] () {
-        char buffer[5];
-        openFile->read(buffer, fspp::num_bytes_t(5), fspp::num_bytes_t(2));
+        std::array<char, 5> buffer{};
+        openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(2));
     };
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
 }

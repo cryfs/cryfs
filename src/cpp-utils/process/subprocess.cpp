@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <cerrno>
+#include <array>
 
 #if defined(__APPLE__)
 
@@ -44,9 +45,9 @@ namespace cpputils {
 
 		string getOutput() {
 			string output;
-			char buffer[1024];
-			while (fgets(buffer, sizeof(buffer), _subprocess) != nullptr) {
-				output += buffer;
+			std::array<char, 1024> buffer{};
+			while (fgets(buffer.data(), buffer.size(), _subprocess) != nullptr) {
+				output += buffer.data();
 			}
 			return output;
 		}

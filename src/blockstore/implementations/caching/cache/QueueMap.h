@@ -48,7 +48,7 @@ public:
     _removeFromQueue(found->second);
     auto value = found->second.release();
     _entries.erase(found);
-    return std::move(value);
+    return value;
   }
 
   boost::optional<Value> pop() {
@@ -83,7 +83,7 @@ private:
     }
     void init(const Key *key_, Value value_) {
       key = key_;
-      new(__value) Value(std::move(value_));
+      new(__value.data()) Value(std::move(value_));
     }
     Value release() {
       Value value = std::move(*_value());
@@ -98,9 +98,9 @@ private:
     const Key *key;
   private:
     Value *_value() {
-      return reinterpret_cast<Value*>(__value);
+      return reinterpret_cast<Value*>(__value.data());
     }
-    alignas(Value) char __value[sizeof(Value)];
+    alignas(Value) std::array<char, sizeof(Value)> __value;
     DISALLOW_COPY_AND_ASSIGN(Entry);
   };
 

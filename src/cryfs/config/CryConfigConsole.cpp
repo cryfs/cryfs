@@ -29,7 +29,7 @@ namespace cryfs {
         bool askAgain = true;
         while(askAgain) {
             _console->print("\n");
-            int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
+            unsigned int cipherIndex = _console->ask("Which block cipher do you want to use?", ciphers);
             cipherName = ciphers[cipherIndex];
             askAgain = !_showWarningForCipherAndReturnIfOk(cipherName);
         };
@@ -54,7 +54,7 @@ namespace cryfs {
 
     uint32_t CryConfigConsole::_askBlocksizeBytes() const {
         vector<string> sizes = {"4KB", "8KB", "16KB", "32KB", "64KB", "512KB", "1MB", "4MB"};
-        int index = _console->ask("Which block size do you want to use?", sizes);
+        unsigned int index = _console->ask("Which block size do you want to use?", sizes);
         switch(index) {
             case 0: return 4*1024;
             case 1: return 8*1024;

@@ -71,11 +71,11 @@ int pthread_getname_np_gcompat(pthread_t thread, char *name, size_t len) {
 #endif
 
 std::string get_thread_name(pthread_t thread) {
-  char name[MAX_NAME_LEN];
+  std::array<char, MAX_NAME_LEN> name{};
 #if defined(__GLIBC__) || defined(__APPLE__)
-  int result = pthread_getname_np(thread, name, MAX_NAME_LEN);
+  int result = pthread_getname_np(thread, name.data(), MAX_NAME_LEN);
 #else
-  int result = pthread_getname_np_gcompat(thread, name, MAX_NAME_LEN);
+  int result = pthread_getname_np_gcompat(thread, name.data(), MAX_NAME_LEN);
 #endif
   if (0 != result) {
     throw std::runtime_error("Error getting thread name with pthread_getname_np. Code: " + std::to_string(result));
@@ -83,7 +83,7 @@ std::string get_thread_name(pthread_t thread) {
   // pthread_getname_np returns a null terminated string with maximum 16 bytes.
   // but just to be safe against a buggy implementation, let's set the last byte to zero.
   name[MAX_NAME_LEN - 1] = '\0';
-  return name;
+  return name.data();
 }
 
 }
