@@ -148,9 +148,9 @@ void convert_stat_info_(const fspp::Node::stat_info& input, fspp::fuse::STAT *ou
     output->st_gid = input.gid.value();
     output->st_size = input.size.value();
     output->st_blocks = input.blocks;
-    output->st_atim = input.atime;
-    output->st_mtim = input.mtime;
-    output->st_ctim = input.ctime;
+	output->st_atim = { input.atime.tv_sec, input.atime.tv_nsec };
+	output->st_mtim = { input.mtime.tv_sec, input.mtime.tv_nsec };
+	output->st_ctim = { input.ctime.tv_sec, input.ctime.tv_nsec };
 }
 }
 

@@ -4,7 +4,6 @@
 
 #if defined(_MSC_VER)
 #include <codecvt>
-#include <dokan/dokan.h>
 #endif
 
 #include <gtest/gtest.h>
