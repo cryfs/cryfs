@@ -16,7 +16,6 @@ cryfs \- cryptographic filesystem for the cloud
 [\fB\-f\fR]
 [\fIoptions\fR]
 .I basedir mountpoint
-[\fB\-\-\fR \fIfuse-options\fR]
 .br
 .\" show-ciphers syntax
 .B cryfs \-\-help\fR|\fB\-\-version\fR|\fB\-\-show-ciphers
@@ -197,6 +196,28 @@ write them to syslog in background mode, or to stdout in foreground mode.
 \fB\-\-unmount\-idle\fR \fIarg\fR
 .
 Unmount automatically after \fIarg\fR minutes of inactivity.
+.
+.
+.
+.SH FUSE Options
+.
+.TP
+\fB\-o\fR \fIoption\fR, \fB\-\-fuse\-option\fR \fIoption\fR
+.
+Pass through options to the FUSE filesystem driver.
+
+.TP
+For example: 
+.TP
+\fB\-o\fR \fIallow_other\fR
+This option overrides the security measure restricting file
+access to the filesystem owner, so that all users (including
+root) can access the files.
+.TP
+\fB\-o\fR \fIallow_root\fR
+This option is similar to allow_other but file access is
+limited to the filesystem owner and root.  This option and
+allow_other are mutually exclusive.
 .
 .
 .
