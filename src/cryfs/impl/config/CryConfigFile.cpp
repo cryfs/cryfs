@@ -48,8 +48,11 @@ either<CryConfigFile::LoadError, unique_ref<CryConfigFile>> CryConfigFile::load(
         // Migrate it to new format
         configFile->save();
     }
-    //TODO For newer compilers, this works without std::move
-    return configFile;
+    #if !defined(__clang__) && !defined(_MSC_VER) && defined(__GNUC__) && __GNUC__ < 8
+        return std::move(configFile);
+    #else
+        return configFile;
+    #endif
 }
 
 unique_ref<CryConfigFile> CryConfigFile::create(bf::path path, CryConfig config, CryKeyProvider* keyProvider) {
