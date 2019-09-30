@@ -2,7 +2,8 @@ version: 2.0
 
 references:
   container_config: &container_config
-    machine: true
+    machine:
+      image: ubuntu-1604:201903-01
   cache_init: &cache_init
     run:
       name: Initialize Cache
@@ -14,11 +15,11 @@ references:
     restore_cache:
       keys:
         # Find the most recent cache from any branch
-        - v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+        - v5_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   container_setup_post: &container_setup_post
     save_cache:
       # Add _aptcache_contents to cache key so that it is re-uploaded each time the cache changes.
-      key: v4_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
+      key: v5_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
       paths:
       - /tmp/aptcache
   container_setup: &container_setup
@@ -37,21 +38,21 @@ references:
         sudo touch /etc/apt/sources.list.d/clang.list
         sudo chmod o+w /etc/apt/sources.list.d/clang.list
         cat > /etc/apt/sources.list.d/clang.list << EOF
-        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
-        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
-        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
-        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main
-        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main
-        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main
-        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main
-        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main
-        deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main
-        deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-4.0 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-4.0 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
         EOF
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake3 make libcurl4-openssl-dev libssl-dev libfuse-dev python
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
 
@@ -92,10 +93,10 @@ references:
     restore_cache:
       keys:
         # Find the most recent cache from any branch
-        - v4_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+        - v5_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   upgrade_boost_post: &upgrade_boost_post
     save_cache:
-      key: v4_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+      key: v5_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
       paths:
       - /tmp/boost_1_65_1
   upgrade_boost: &upgrade_boost
@@ -133,13 +134,13 @@ references:
       keys:
         # Find most recent cache from any revision on the same branch (cache keys are prefix matched)
         # CIRCLE_PR_NUMBER is only set if this is a pull request.
-        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}
+        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}
         # Fallback to less specific caches if the one above wasn't found
-        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}
-        - v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}
+        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   build_post: &build_post
     save_cache:
-      key: v3_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}_{{ .Revision }}
+      key: v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}_{{ .Revision }}
       paths:
       - /ccache_data
   build: &build
