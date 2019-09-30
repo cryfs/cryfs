@@ -48,6 +48,8 @@ references:
         deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
         deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
         deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
         EOF
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
@@ -446,13 +448,37 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
+  clang_9_debug:
+    <<: *job_definition
+    environment:
+      CC: clang-9
+      CXX: clang++-9
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-9
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
+  clang_9_release:
+    <<: *job_definition
+    environment:
+      CC: clang-9
+      CXX: clang++-9
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-9
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_werror:
     <<: *job_definition
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-8
+      APT_COMPILER_PACKAGE: clang-9
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       GTEST_ARGS: ""
@@ -473,10 +499,10 @@ jobs:
   no_compatibility:
     <<: *job_definition
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-8
+      APT_COMPILER_PACKAGE: clang-9
       CXXFLAGS: "-DCRYFS_NO_COMPATIBILITY"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
@@ -485,10 +511,10 @@ jobs:
   address_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-8
+      APT_COMPILER_PACKAGE: clang-9
       CXXFLAGS: "-O2 -fsanitize=address -fno-omit-frame-pointer -fno-common -fsanitize-address-use-after-scope"
       BUILD_TYPE: "Debug"
       ASAN_OPTIONS: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
@@ -499,10 +525,10 @@ jobs:
   ub_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-8
+      APT_COMPILER_PACKAGE: clang-9
       CXXFLAGS: "-O2 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow -fno-omit-frame-pointer -fno-common"
       BUILD_TYPE: "Debug"
       GTEST_ARGS: ""
@@ -511,10 +537,10 @@ jobs:
   thread_sanitizer:
     <<: *job_definition
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-8
+      APT_COMPILER_PACKAGE: clang-9
       OMP_NUM_THREADS: "1"
       CXXFLAGS: "-O2 -fsanitize=thread -fno-omit-frame-pointer"
       BUILD_TYPE: "Debug"
@@ -596,6 +622,10 @@ workflows:
     - clang_8_debug:
         <<: *enable_for_tags
     - clang_8_release:
+        <<: *enable_for_tags
+    - clang_9_debug:
+        <<: *enable_for_tags
+    - clang_9_release:
         <<: *enable_for_tags
     - clang_werror:
         <<: *enable_for_tags
