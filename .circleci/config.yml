@@ -83,6 +83,9 @@ references:
         sudo cp -a /dev/urandom /dev/random
 
         if [ "${BUILD_TOOLSET}" = "clang" ]; then
+          # Clang needs libomp-dev for OpenMP
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y libomp-dev libomp5
+
           # They aren't set automatically unfortunately
           sudo ln -s /usr/bin/$CC /usr/bin/clang
           sudo ln -s /usr/bin/$CXX /usr/bin/clang++
@@ -215,12 +218,13 @@ references:
         ccache --max-size=512M
         ccache --show-stats
 
-        # Disable OpenMP if it is clang, because Ubuntu 14.04 doesn't have the libomp-dev package needed to support OpenMP for clang.
-        if [[ ${APT_COMPILER_PACKAGE} == clang* ]]; then
+        # OpenMP has leaks. Disable OpenMP in the asan build.
+        if [[ ${APT_COMPILER_PACKAGE} == clang* ]] && [[ ${CXXFLAGS} == *"-fsanitize=address"* ]]; then
           OPENMP_PARAMS="-DDISABLE_OPENMP=ON"
         else
           OPENMP_PARAMS=""
         fi
+
 
         # Build
         mkdir cmake
