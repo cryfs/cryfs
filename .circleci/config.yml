@@ -25,6 +25,7 @@ references:
   container_setup: &container_setup
     run:
       name: Setup Environment
+      no_output_timeout: 30m
       command: |
         if [ -d "/tmp/aptcache" ]; then
           echo Using packages from apt cache
