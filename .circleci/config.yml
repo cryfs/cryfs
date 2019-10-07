@@ -65,10 +65,6 @@ references:
           sudo ln -s /usr/bin/$CXX /usr/bin/clang++
           sudo ln -s /usr/bin/clang-tidy-8 /usr/bin/clang-tidy
           sudo ln -s /usr/bin/run-clang-tidy-8.py /usr/bin/run-clang-tidy.py
-
-          # Need a c++14 compliant STL for clang
-          sudo apt-get install -y g++-5
-          sudo apt-get remove g++-4.8 gcc-4.8
         fi
 
         # Setup ccache
