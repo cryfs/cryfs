@@ -19,11 +19,11 @@ namespace cryfs {
 
         class ParallelAccessFsBlobStore final {
         public:
-            ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore);
+            explicit ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore);
 
-            cpputils::unique_ref<FileBlobRef> createFileBlob(const blockstore::BlockId &parent);
-            cpputils::unique_ref<DirBlobRef> createDirBlob(const blockstore::BlockId &parent);
-            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+            cpputils::unique_ref<FileBlobRef> createFileBlob(const FsBlobView::Metadata &meta);
+            cpputils::unique_ref<DirBlobRef> createDirBlob(const FsBlobView::Metadata &meta);
+            cpputils::unique_ref<SymlinkBlobRef> createSymlinkBlob(const boost::filesystem::path &target, const FsBlobView::Metadata &);
             boost::optional<cpputils::unique_ref<FsBlobRef>> load(const blockstore::BlockId &blockId);
             void remove(cpputils::unique_ref<FsBlobRef> blob);
             uint64_t virtualBlocksizeBytes() const;
@@ -35,9 +35,7 @@ namespace cryfs {
             cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> _baseBlobStore;
             parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::BlockId> _parallelAccessStore;
 
-            std::function<fspp::num_bytes_t (const blockstore::BlockId &)> _getLstatSize();
-
-            DISALLOW_COPY_AND_ASSIGN(ParallelAccessFsBlobStore);
+          DISALLOW_COPY_AND_ASSIGN(ParallelAccessFsBlobStore);
         };
 
         inline ParallelAccessFsBlobStore::ParallelAccessFsBlobStore(cpputils::unique_ref<cachingfsblobstore::CachingFsBlobStore> baseBlobStore)
@@ -50,15 +48,7 @@ namespace cryfs {
             return _parallelAccessStore.remove(blockId, std::move(blob));
         }
 
-        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &blockId)> ParallelAccessFsBlobStore::_getLstatSize() {
-            return [this] (const blockstore::BlockId &blockId) {
-                auto blob = load(blockId);
-                ASSERT(blob != boost::none, "Blob not found");
-                return (*blob)->lstat_size();
-            };
-        }
-
-        inline uint64_t ParallelAccessFsBlobStore::virtualBlocksizeBytes() const {
+    inline uint64_t ParallelAccessFsBlobStore::virtualBlocksizeBytes() const {
             return _baseBlobStore->virtualBlocksizeBytes();
         }
 

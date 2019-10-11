@@ -36,6 +36,7 @@ private:
   IdData id_;
   friend struct std::hash<IdWrapper>;
   friend struct std::less<IdWrapper>;
+  friend struct std::less_equal<IdWrapper>;
   template<class Tag2> friend bool operator==(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
   template<class Tag2> friend bool operator!=(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
 };
@@ -109,6 +110,12 @@ inline bool operator!=(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
     template <> struct less<IdWrapper> {                                                                               \
       bool operator()(const IdWrapper &lhs, const IdWrapper &rhs) const {                                              \
         return 0 > std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);                              \
+      }                                                                                                                \
+    };                                                                                                                 \
+    /*Allow using IdWrapper in std::map / std::set */                                                                  \
+    template <> struct less_equal<IdWrapper> {                                                                         \
+      bool operator()(const IdWrapper &lhs, const IdWrapper &rhs) const {                                              \
+        return 0 >= std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);                             \
       }                                                                                                                \
     };                                                                                                                 \
   }                                                                                                                    \

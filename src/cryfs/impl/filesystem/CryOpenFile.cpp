@@ -16,8 +16,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlobRef> parent, unique_ref<FileBlobRef> fileBlob)
-: _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
+CryOpenFile::CryOpenFile(const CryDevice *device, unique_ref<FileBlobRef> fileBlob)
+: _device(device),  _fileBlob(std::move(fileBlob)) {
 }
 
 CryOpenFile::~CryOpenFile() {
@@ -27,36 +27,31 @@ CryOpenFile::~CryOpenFile() {
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();
   _fileBlob->flush();
-  _parent->flush();
 }
 
 fspp::Node::stat_info CryOpenFile::stat() const {
   _device->callFsActionCallbacks();
-  return _parent->statChildWithKnownSize(_fileBlob->blockId(), _fileBlob->size());
+  return _fileBlob->metaData()._info;
 }
 
 void CryOpenFile::truncate(fspp::num_bytes_t size) const {
   _device->callFsActionCallbacks();
   _fileBlob->resize(size);
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
 }
 
 fspp::num_bytes_t CryOpenFile::read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   return _fileBlob->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   _device->callFsActionCallbacks();
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
   _fileBlob->write(buf, offset, count);
 }
 
 void CryOpenFile::fsync() {
   _device->callFsActionCallbacks();
   _fileBlob->flush();
-  _parent->flush();
 }
 
 void CryOpenFile::fdatasync() {

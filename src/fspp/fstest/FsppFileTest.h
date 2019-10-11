@@ -87,6 +87,15 @@ public:
         this->EXPECT_MTIME_EQ(MTIME, st);
     });
   }
+
+  void Test_Link(fspp::File *file, fspp::Node *node) {
+    node->link();
+    this->EXPECT_NLINKS(2, file,  node);
+    EXPECT_FALSE(node->unlink());
+    this->EXPECT_NLINKS(1, file,  node);
+    EXPECT_TRUE(node->unlink());
+    this->EXPECT_NLINKS(0, file,  node);
+  }
 };
 
 TYPED_TEST_SUITE_P(FsppFileTest);
@@ -195,23 +204,140 @@ TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
     this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
 }
 
-TYPED_TEST_P(FsppFileTest, Remove) {
+TYPED_TEST_P(FsppFileTest, Link) {
+  this->Test_Link(this->file_root.get(), this->file_root_node.get());
+  this->Test_Link(this->file_nested.get(), this->file_nested_node.get());
+}
+
+TYPED_TEST_P(FsppFileTest, Remove_Only_Node) {
     this->CreateFile("/mytestfile");
     EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
     EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
-    this->Load("/mytestfile")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestfile"));
-    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestfile"));
+    auto node = this->Load("/mytestfile");
+    auto id = node->blockId();
+    node->remove();
+    EXPECT_TRUE(this->IsFileInDir("/mytestfile"));
+    EXPECT_FALSE(this->BlobExists(id));
+}
+
+TYPED_TEST_P(FsppFileTest, Remove_Properly) {
+  this->CreateFile("/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
+  auto node = this->Load("/mytestfile");
+  auto id = node->blockId();
+  this->filesystem.unlink("/mytestfile");
+  EXPECT_FALSE(this->IsFileInDir("/mytestfile"));
+  EXPECT_FALSE(this->BlobExists(id));
 }
 
 TYPED_TEST_P(FsppFileTest, Remove_Nested) {
-    this->CreateDir("/mytestdir");
-    this->CreateFile("/mytestdir/myfile");
-    EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
-    EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myfile"));
-    this->Load("/mytestdir/myfile")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
-    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+  this->CreateDir("/mytestdir");
+  this->CreateFile("/mytestdir/myfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+  this->filesystem.unlink("/mytestdir/myfile");
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
+  EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+}
+
+TYPED_TEST_P(FsppFileTest, Link_Root_Directory) {
+  this->CreateFile("/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
+  this->EXCPECT_NLINKS("/mytestfile", 1);
+  this->filesystem.link("/mytestfile", "/myhardlink");
+  EXPECT_NE(boost::none, this->device->Load("/myhardlink"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestfile", 2);
+  this->EXCPECT_NLINKS("/myhardlink", 2);
+  auto node = this->Load("/mytestfile");
+  auto node2 = this->Load("/myhardlink");
+  auto id = node->blockId();
+  EXPECT_EQ(id, node2->blockId());
+  this->filesystem.unlink("/mytestfile");
+  EXPECT_FALSE(this->IsFileInDir("/mytestfile"));
+  EXPECT_TRUE(this->IsFileInDir("/myhardlink"));
+  EXPECT_TRUE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/myhardlink", 1);
+  this->filesystem.unlink("/myhardlink");
+  EXPECT_FALSE(this->IsFileInDir("/myhardlink"));
+  EXPECT_FALSE(this->BlobExists(id));
+}
+
+TYPED_TEST_P(FsppFileTest, Link_Nested) {
+  this->CreateDir("/mytestdir");
+  this->CreateFile("/mytestdir/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/mytestfile"));
+  this->EXCPECT_NLINKS("/mytestdir/mytestfile", 1);
+  this->filesystem.link("/mytestdir/mytestfile", "/mytestdir/myhardlink");
+  this->EXCPECT_NLINKS("/mytestdir/mytestfile", 2);
+  this->EXCPECT_NLINKS("/mytestdir/myhardlink", 2);
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/myhardlink"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myhardlink"));
+  auto node = this->Load("/mytestdir/mytestfile");
+  auto node2 = this->Load("/mytestdir/myhardlink");
+  auto id = node->blockId();
+  EXPECT_EQ(id, node2->blockId());
+  this->filesystem.unlink("/mytestdir/mytestfile");
+  EXPECT_FALSE(this->IsFileInDir("/mytestdir/mytestfile"));
+  EXPECT_TRUE(this->IsFileInDir("/mytestdir/myhardlink"));
+  EXPECT_TRUE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/mytestdir/myhardlink", 1);
+  this->filesystem.unlink("/mytestdir/myhardlink");
+  EXPECT_FALSE(this->IsFileInDir("/mytestdir/myhardlink"));
+  EXPECT_FALSE(this->BlobExists(id));
+}
+
+TYPED_TEST_P(FsppFileTest, Link_Down) {
+  this->CreateDir("/mytestdir");
+  this->CreateFile("/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
+  this->EXCPECT_NLINKS("/mytestfile", 1);
+  this->filesystem.link("/mytestfile", "/mytestdir/myhardlink");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/myhardlink"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestfile", 2);
+  this->EXCPECT_NLINKS("/mytestdir/myhardlink", 2);
+  auto node = this->Load("/mytestfile");
+  auto node2 = this->Load("/mytestdir/myhardlink");
+  auto id = node->blockId();
+  EXPECT_EQ(id, node2->blockId());
+  this->filesystem.unlink("/mytestfile");
+  EXPECT_FALSE(this->IsFileInDir("/mytestfile"));
+  EXPECT_TRUE(this->IsFileInDir("/mytestdir/myhardlink"));
+  EXPECT_TRUE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/mytestdir/myhardlink", 1);
+  this->filesystem.unlink("/mytestdir/myhardlink");
+  EXPECT_FALSE(this->IsFileInDir("/mytestdir/myhardlink"));
+  EXPECT_FALSE(this->BlobExists(id));
+}
+
+TYPED_TEST_P(FsppFileTest, Link_Up) {
+  this->CreateDir("/mytestdir");
+  this->CreateFile("/mytestdir/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/mytestfile"));
+  this->EXCPECT_NLINKS("/mytestdir/mytestfile", 1);
+  this->filesystem.link("/mytestdir/mytestfile", "/myhardlink");
+  EXPECT_NE(boost::none, this->device->Load("/myhardlink"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestdir/mytestfile", 2);
+  this->EXCPECT_NLINKS("/myhardlink", 2);
+  auto node = this->Load("/mytestdir/mytestfile");
+  auto node2 = this->Load("/myhardlink");
+  auto id = node->blockId();
+  EXPECT_EQ(id, node2->blockId());
+  this->filesystem.unlink("/mytestdir/mytestfile");
+  EXPECT_FALSE(this->IsFileInDir("/mytestdir/mytestfile"));
+  EXPECT_TRUE(this->IsFileInDir("/myhardlink"));
+  EXPECT_TRUE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/myhardlink", 1);
+  this->filesystem.unlink("/myhardlink");
+  EXPECT_FALSE(this->IsFileInDir("/myhardlink"));
+  EXPECT_FALSE(this->BlobExists(id));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(FsppFileTest,
@@ -241,8 +367,14 @@ REGISTER_TYPED_TEST_SUITE_P(FsppFileTest,
   Chmod_Nested,
   Utimens,
   Utimens_Nested,
-  Remove,
-  Remove_Nested
+  Remove_Only_Node,
+  Remove_Properly,
+  Remove_Nested,
+  Link,
+  Link_Root_Directory,
+  Link_Up,
+  Link_Down,
+  Link_Nested
 );
 
 //TODO access

@@ -47,7 +47,7 @@ constexpr fspp::mode_t CryNodeTest::MODE_PUBLIC;
 TEST_F(CryNodeTest, Rename_DoesntLeaveBlocksOver) {
     auto node = CreateFile("/oldname");
     EXPECT_EQ(2u, device().numBlocks()); // In the beginning, there is two blocks (the root block and the created file). If that is not true anymore, we'll have to adapt the test case.
-    node->rename("/newname");
+    node->rename("/oldname", "/newname");
     EXPECT_EQ(2u, device().numBlocks()); // Still same number of blocks
 }
 
@@ -57,27 +57,7 @@ TEST_F(CryNodeTest, Rename_Overwrite_DoesntLeaveBlocksOver) {
     auto node = CreateFile("/oldname");
     CreateFile("/newexistingname");
     EXPECT_EQ(3u, device().numBlocks()); // In the beginning, there is three blocks (the root block and the two created files). If that is not true anymore, we'll have to adapt the test case.
-    node->rename("/newexistingname");
+    node->rename("/oldname", "/newexistingname");
     EXPECT_EQ(2u, device().numBlocks()); // Only the blocks of one file are left
 }
 
-TEST_F(CryNodeTest, Rename_UpdatesParentPointers_File) {
-    this->CreateDir("/mydir");
-    auto node = this->CreateFile("/oldname");
-    node->rename("/mydir/newname");
-    EXPECT_TRUE(node->checkParentPointer());
-}
-
-TEST_F(CryNodeTest, Rename_UpdatesParentPointers_Dir) {
-    this->CreateDir("/mydir");
-    auto node = this->CreateDir("/oldname");
-    node->rename("/mydir/newname");
-    EXPECT_TRUE(node->checkParentPointer());
-}
-
-TEST_F(CryNodeTest, Rename_UpdatesParentPointers_Symlink) {
-    this->CreateDir("/mydir");
-    auto node = this->CreateSymlink("/oldname");
-    node->rename("/mydir/newname");
-    EXPECT_TRUE(node->checkParentPointer());
-}

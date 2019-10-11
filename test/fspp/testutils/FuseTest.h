@@ -80,6 +80,13 @@ public:
   MOCK_PATH_METHOD3(chown, void, uid_t, gid_t);
   MOCK_METHOD4(createSymlink, void(const char*, const char*, uid_t, gid_t));
   MOCK_PATH_METHOD3(readSymlink, void, char*, fspp::num_bytes_t);
+
+  void link(const boost::filesystem::path &to, const boost::filesystem::path &from) override {
+    return link(to.string().c_str(), from.string().c_str());
+  }
+
+  MOCK_METHOD2(link, void(const char*, const char*));
+
 };
 
 class FuseTest: public ::testing::Test {

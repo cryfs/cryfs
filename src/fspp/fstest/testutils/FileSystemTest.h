@@ -8,6 +8,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <cpp-utils/system/stat.h>
+#include <fspp/impl/FilesystemImpl.h>
 
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Node.h"
@@ -30,10 +31,13 @@ public:
     "Given test fixture for instantiating the (type parameterized) FileSystemTest must inherit from FileSystemTestFixture"
   );
 
-  FileSystemTest(): fixture(), device(fixture.createDevice()) {}
+  FileSystemTest(): fixture(), _tmpInvalidDevice(fixture.createDevice()), device(_tmpInvalidDevice.get()), filesystem(std::move(_tmpInvalidDevice)) {}
 
   ConcreteFileSystemTestFixture fixture;
-  cpputils::unique_ref<fspp::Device> device;
+
+  cpputils::unique_ref<fspp::Device> _tmpInvalidDevice;
+  fspp::Device* device;
+  fspp::FilesystemImpl filesystem;
 
   static constexpr fspp::mode_t MODE_PUBLIC = fspp::mode_t()
         .addUserReadFlag().addUserWriteFlag().addUserExecFlag()
@@ -44,6 +48,10 @@ public:
     auto loaded = device->Load(path);
     EXPECT_NE(boost::none, loaded);
     return std::move(*loaded);
+  }
+
+  bool BlobExists(const blockstore::BlockId &id) {
+    return device->BlobExists(id);
   }
 
   cpputils::unique_ref<fspp::Dir> LoadDir(const boost::filesystem::path &path) {
@@ -74,9 +82,32 @@ public:
     return this->LoadFile(path);
   }
 
+
+
   cpputils::unique_ref<fspp::Symlink> CreateSymlink(const boost::filesystem::path &path, const boost::filesystem::path &target = "/my/symlink/target") {
     this->LoadDir(path.parent_path())->createSymlink(path.filename().string(), target, fspp::uid_t(0), fspp::gid_t(0));
     return this->LoadSymlink(path);
+  }
+
+  bool IsFileInDir(const boost::filesystem::path &path) {
+    auto dir = LoadDir(path.parent_path());
+    auto children = dir->children();
+    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children->end() && it->type == fspp::Dir::NodeType::FILE);
+  }
+
+  bool IsDirInDir(const boost::filesystem::path &path) {
+    auto dir = LoadDir(path.parent_path());
+    auto children = dir->children();
+    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children->end() && it->type == fspp::Dir::NodeType::DIR);
+  }
+
+  bool IsSymlinkInDir(const boost::filesystem::path &path) {
+    auto dir = LoadDir(path.parent_path());
+    auto children = dir->children();
+    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children->end() && it->type == fspp::Dir::NodeType::SYMLINK);
   }
 
   void EXPECT_IS_FILE(const cpputils::unique_ref<fspp::Node> &node) {
@@ -89,6 +120,11 @@ public:
 
   void EXPECT_IS_SYMLINK(const cpputils::unique_ref<fspp::Node> &node) {
     EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
+  }
+
+  void EXCPECT_NLINKS(const boost::filesystem::path& path, uint32_t expectedLinks) {
+    auto nod = Load(path);
+    EXPECT_EQ(nod->stat().nlink, expectedLinks);
   }
 
   void setModificationTimestampLaterThanAccessTimestamp(const boost::filesystem::path& path) {

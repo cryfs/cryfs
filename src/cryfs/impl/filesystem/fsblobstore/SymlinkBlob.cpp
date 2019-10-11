@@ -1,7 +1,6 @@
 #include "SymlinkBlob.h"
 
 #include <blockstore/utils/BlockId.h>
-#include <cassert>
 
 using std::string;
 using blobstore::Blob;
@@ -18,10 +17,10 @@ SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::SYMLINK, "Loaded blob is not a symlink");
 }
 
-unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const blockstore::BlockId &parent) {
-  InitializeBlob(blob.get(), FsBlobView::BlobType::SYMLINK, parent);
+unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const FsBlobView::Metadata &meta) {
+  InitializeBlob(blob.get(),  meta, FsBlobView::BlobType::SYMLINK);
   FsBlobView symlinkBlobView(std::move(blob));
-  string targetStr = target.string();
+  const string& targetStr = target.string();
   symlinkBlobView.resize(targetStr.size());
   symlinkBlobView.write(targetStr.c_str(), 0, targetStr.size());
   return make_unique_ref<SymlinkBlob>(symlinkBlobView.releaseBaseBlob());
@@ -36,11 +35,9 @@ bf::path SymlinkBlob::_readTargetFromBlob(const FsBlobView &blob) {
 }
 
 const bf::path &SymlinkBlob::target() const {
+  updateAccessTimestamp();
   return _target;
-}
 
-fspp::num_bytes_t SymlinkBlob::lstat_size() const {
-  return fspp::num_bytes_t(target().string().size());
 }
 
 }

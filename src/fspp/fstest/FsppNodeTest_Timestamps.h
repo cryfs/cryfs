@@ -72,7 +72,7 @@ public:
         auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
             try {
-                node->rename("/notexistingdir/newname");
+                node->rename("/oldname", "/notexistingdir/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(ENOENT, e.getErrno()); //Rename fails, everything is ok.
@@ -88,7 +88,7 @@ public:
         this->CreateFile("/somefile");
         auto operation = [&node] () {
             try {
-                node->rename("/somefile/newname");
+                node->rename("/somefile", "/somefile/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
@@ -120,7 +120,7 @@ public:
     void Test_Rename_InRoot() {
         auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
-            node->rename("/newname");
+            node->rename("/oldname", "/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -133,7 +133,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir/newname");
+            node->rename("/mydir/oldname", "/mydir/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir/oldname", "/mydir/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -146,7 +146,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir/oldname");
+            node->rename("/oldname", "/mydir/oldname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/mydir/oldname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -159,7 +159,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir/newname");
+            node->rename("/oldname", "/mydir/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/mydir/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -172,7 +172,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         auto operation = [&node] () {
-            node->rename("/oldname");
+            node->rename("/mydir/oldname", "/oldname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir/oldname", "/oldname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -185,7 +185,7 @@ public:
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
         auto operation = [&node] () {
-            node->rename("/newname");
+            node->rename("/mydir/oldname", "/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir/oldname", "/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -199,7 +199,7 @@ public:
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir1/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir2/oldname");
+            node->rename("/mydir1/oldname", "/mydir2/oldname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir1/oldname", "/mydir2/oldname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -213,7 +213,7 @@ public:
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir1/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir2/newname");
+            node->rename("/mydir1/oldname", "/mydir2/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir1/oldname", "/mydir2/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -225,7 +225,7 @@ public:
     void Test_Rename_ToItself() {
         auto node = this->CreateNode("/oldname");
         auto operation = [&node] () {
-            node->rename("/oldname");
+            node->rename("/oldname", "/oldname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/oldname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -238,7 +238,7 @@ public:
         auto node = this->CreateNode("/oldname");
         this->CreateNode("/newname");
         auto operation = [&node] () {
-            node->rename("/newname");
+            node->rename("/oldname", "/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -253,7 +253,7 @@ public:
         this->CreateNode("/mydir2/newname");
         auto node = this->CreateNode("/mydir1/oldname");
         auto operation = [&node] () {
-            node->rename("/mydir2/newname");
+            node->rename("/mydir1/oldname", "/mydir2/newname");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir1/oldname", "/mydir2/newname", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -268,7 +268,7 @@ public:
         auto node = this->Load("/oldname");
         auto operation = [&node] () {
             try {
-                node->rename("/newname");
+                node->rename("/oldname", "/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(EISDIR, e.getErrno()); //Rename fails, everything is ok.
@@ -287,7 +287,7 @@ public:
         auto node = this->Load("/mydir1/oldname");
         auto operation = [&node] () {
             try {
-                node->rename("/mydir2/newname");
+                node->rename("/mydir1/oldname", "/mydir2/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(EISDIR, e.getErrno());//Rename fails, everything is ok.
@@ -304,7 +304,7 @@ public:
         auto node = this->Load("/oldname");
         auto operation = [&node] () {
             try {
-                node->rename("/newname");
+                node->rename("/oldname", "/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.
@@ -323,7 +323,7 @@ public:
         auto node = this->Load("/mydir1/oldname");
         auto operation = [&node] () {
             try {
-                node->rename("/mydir2/newname");
+                node->rename("/mydir1/oldname", "/mydir2/newname");
                 EXPECT_TRUE(false); // expect rename to fail
             } catch (const fspp::fuse::FuseErrnoException &e) {
                 EXPECT_EQ(ENOTDIR, e.getErrno()); //Rename fails, everything is ok.

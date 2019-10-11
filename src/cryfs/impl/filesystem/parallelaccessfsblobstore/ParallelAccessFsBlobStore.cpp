@@ -19,7 +19,6 @@ optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &b
         }
         cachingfsblobstore::DirBlobRef *dirBlob = dynamic_cast<cachingfsblobstore::DirBlobRef*>(blob);
         if (dirBlob != nullptr) {
-            dirBlob->setLstatSizeGetter(_getLstatSize());
             return unique_ref<FsBlobRef>(make_unique_ref<DirBlobRef>(dirBlob));
         }
         cachingfsblobstore::SymlinkBlobRef *symlinkBlob = dynamic_cast<cachingfsblobstore::SymlinkBlobRef*>(blob);
@@ -30,9 +29,8 @@ optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &b
     });
 }
 
-unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
-    auto blob = _baseBlobStore->createDirBlob(parent);
-    blob->setLstatSizeGetter(_getLstatSize());
+unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob(const FsBlobView::Metadata &meta) {
+    auto blob = _baseBlobStore->createDirBlob(meta);
     BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<DirBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto dirBlob = dynamic_cast<cachingfsblobstore::DirBlobRef*>(resource);
@@ -41,8 +39,8 @@ unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob(const blockstore
     });
 }
 
-unique_ref<FileBlobRef> ParallelAccessFsBlobStore::createFileBlob(const blockstore::BlockId &parent) {
-    auto blob = _baseBlobStore->createFileBlob(parent);
+unique_ref<FileBlobRef> ParallelAccessFsBlobStore::createFileBlob(const FsBlobView::Metadata &meta) {
+    auto blob = _baseBlobStore->createFileBlob(meta);
     BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<FileBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(resource);
@@ -51,8 +49,8 @@ unique_ref<FileBlobRef> ParallelAccessFsBlobStore::createFileBlob(const blocksto
     });
 }
 
-unique_ref<SymlinkBlobRef> ParallelAccessFsBlobStore::createSymlinkBlob(const bf::path &target, const blockstore::BlockId &parent) {
-    auto blob = _baseBlobStore->createSymlinkBlob(target, parent);
+unique_ref<SymlinkBlobRef> ParallelAccessFsBlobStore::createSymlinkBlob(const bf::path &target, const FsBlobView::Metadata &meta) {
+    auto blob = _baseBlobStore->createSymlinkBlob(target, meta);
     BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<SymlinkBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto symlinkBlob = dynamic_cast<cachingfsblobstore::SymlinkBlobRef*>(resource);

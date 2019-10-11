@@ -18,8 +18,8 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryFile::CryFile(CryDevice *device, const BlockId &blockId)
+: CryNode(device, blockId) {
 }
 
 CryFile::~CryFile() {
@@ -37,27 +37,22 @@ unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
   UNUSED(flags);
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
-  return make_unique_ref<CryOpenFile>(device(), parent(), std::move(blob));
+  return make_unique_ref<CryOpenFile>(device(), std::move(blob));
 }
 
 void CryFile::truncate(fspp::num_bytes_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
-  blob->resize(size);
-  parent()->updateModificationTimestampForChild(blockId());
+  blob->resize(size);  // includes updating of the timestamps
 }
 
-fspp::Dir::EntryType CryFile::getType() const {
+fspp::Dir::NodeType CryFile::getType() const {
   device()->callFsActionCallbacks();
-  return fspp::Dir::EntryType::FILE;
+  return fspp::Dir::NodeType::FILE;
 }
 
 void CryFile::remove() {
   device()->callFsActionCallbacks();
-  if (grandparent() != none) {
-    //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
-  }
   removeNode();
 }
 

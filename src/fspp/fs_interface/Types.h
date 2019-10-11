@@ -69,6 +69,13 @@ private:
 	}
 
 public:
+
+  // do not change the format type
+   mode_t changePermissions(const mode_t& other) const noexcept {
+	  mode_t res = (*this) & S_IFMT_();
+	  res |= other & (~S_IFMT_());
+	  return res;
+	}
     constexpr mode_t& addFileFlag() noexcept {
         return *this |= S_IFREG_();
     }
@@ -180,6 +187,8 @@ struct statvfs final {
     uint64_t num_free_inodes;
     uint64_t num_available_inodes; // free inodes for unprivileged users
 };
+
+struct InodeNumber {};
 
 }
 

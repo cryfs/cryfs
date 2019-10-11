@@ -22,8 +22,9 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CrySymlink::CrySymlink(CryDevice *device,
+                       const BlockId &blockId)
+        : CryNode(device, blockId) {
 }
 
 CrySymlink::~CrySymlink() {
@@ -36,24 +37,19 @@ unique_ref<SymlinkBlobRef> CrySymlink::LoadBlob() const {
   return std::move(*symlink_blob);
 }
 
-fspp::Dir::EntryType CrySymlink::getType() const {
+fspp::Dir::NodeType CrySymlink::getType() const {
   device()->callFsActionCallbacks();
-  return fspp::Dir::EntryType::SYMLINK;
+  return fspp::Dir::NodeType::SYMLINK;
 }
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }
 
 void CrySymlink::remove() {
   device()->callFsActionCallbacks();
-  if (grandparent() != none) {
-    //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
-  }
   removeNode();
 }
 

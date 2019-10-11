@@ -138,8 +138,13 @@ public:
     void Test_deleteChild() {
         auto dir = this->CreateDir("/mydir");
         auto child = this->CreateNode("/mydir/childname");
-        auto operation = [&child]() {
-            child->remove();
+        auto type = child->getType();
+        auto operation = [this, type]() {
+          if (type == fspp::Dir::NodeType::DIR) {
+            this->filesystem.rmdir("/mydir/childname");
+          } else {
+            this->filesystem.unlink("/mydir/childname");
+          }
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -161,8 +166,8 @@ public:
     void Test_renameChild() {
         auto dir = this->CreateDir("/mydir");
         auto child = this->CreateNode("/mydir/childname");
-        auto operation = [&child]() {
-            child->rename("/mydir/mychild");
+        auto operation = [this]() {
+            this->filesystem.rename("/mydir/childname", "/mydir/mychild");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -185,8 +190,8 @@ public:
         auto sourceDir = this->CreateDir("/sourcedir");
         auto child = this->CreateNode("/sourcedir/childname");
         auto dir = this->CreateDir("/mydir");
-        auto operation = [&child]() {
-            child->rename("/mydir/mychild");
+        auto operation = [this]() {
+            this->filesystem.rename("/sourcedir/childname", "/mydir/mychild");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,
@@ -210,8 +215,8 @@ public:
         auto dir = this->CreateDir("/mydir");
         auto child = this->CreateNode("/mydir/childname");
         this->CreateDir("/targetdir");
-        auto operation = [&child]() {
-            child->rename("/targetdir/mychild");
+        auto operation = [this]() {
+            this->filesystem.rename("/mydir/childname", "/targetdir/mychild");
         };
         this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
             this->ExpectDoesntUpdateAccessTimestamp,

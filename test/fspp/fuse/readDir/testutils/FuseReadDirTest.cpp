@@ -79,7 +79,7 @@ void FuseReadDirTest::closeDir(DIR *dir) {
 }
 
 Action<vector<fspp::Dir::Entry>*(const char*)> FuseReadDirTest::ReturnDirEntries(vector<std::string> entries) {
-  vector<fspp::Dir::Entry> *direntries = new vector<fspp::Dir::Entry>(entries.size(), fspp::Dir::Entry(fspp::Dir::EntryType::FILE, ""));
+  vector<fspp::Dir::Entry> *direntries = new vector<fspp::Dir::Entry>(entries.size(), fspp::Dir::Entry(fspp::Dir::NodeType::FILE, ""));
   for(size_t i = 0; i < entries.size(); ++i) {
     (*direntries)[i].name = entries[i];
   }

@@ -651,14 +651,33 @@ int Fuse::rename(const bf::path &from, const bf::path &to) {
 }
 
 //TODO
-int Fuse::link(const bf::path &from, const bf::path &to) {
+int Fuse::link(const bf::path &to, const bf::path &from) {
   ThreadNameForDebugging _threadName("link");
-  LOG(WARN, "NOT IMPLEMENTED: link({}, {})", from, to);
-  //auto real_from = _impl->RootDir() / from;
-  //auto real_to = _impl->RootDir() / to;
-  //int retstat = ::link(real_from.string().c_str(), real_to.string().c_str());
-  //return errcode_map(retstat);
-  return ENOSYS;
+#ifdef FSPP_LOG
+  LOG(DEBUG, "link({}, {})", to, from);
+#endif
+  try {
+    ASSERT(is_valid_fspp_path(from), "has to be an absolute path");
+    _fs->link(to, from);
+#ifdef FSPP_LOG
+    LOG(DEBUG, "link({}, {}): success", to, from);
+#endif
+    return 0;
+  } catch(const cpputils::AssertFailed &e) {
+    LOG(ERR, "AssertFailed in Fuse::symlink: {}", e.what());
+    return -EIO;
+  } catch(const fspp::fuse::FuseErrnoException &e) {
+#ifdef FSPP_LOG
+    LOG(WARN, "link({}, {}): failed with errno {}", to, from, e.getErrno());
+#endif
+    return -e.getErrno();
+  } catch(const std::exception &e) {
+    _logException(e);
+    return -EIO;
+  } catch(...) {
+    _logUnknownException();
+    return -EIO;
+  }
 }
 
 int Fuse::chmod(const bf::path &path, ::mode_t mode) {
@@ -1039,11 +1058,11 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
       //but it doesn't help performance since fuse ignores everything in stbuf
       //except for file-type bits in st_mode and (if used) st_ino.
       //It does getattr() calls on all entries nevertheless.
-      if (entry.type == Dir::EntryType::DIR) {
+      if (entry.type == Dir::NodeType::DIR) {
         stbuf.st_mode = S_IFDIR;
-      } else if (entry.type == Dir::EntryType::FILE) {
+      } else if (entry.type == Dir::NodeType::FILE) {
         stbuf.st_mode = S_IFREG;
-      } else if (entry.type == Dir::EntryType::SYMLINK) {
+      } else if (entry.type == Dir::NodeType::SYMLINK) {
         stbuf.st_mode = S_IFLNK;
       } else {
         ASSERT(false, "Unknown entry type");

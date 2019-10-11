@@ -13,10 +13,45 @@ namespace cryfs {
         public:
             virtual ~FsBlob();
 
-            virtual fspp::num_bytes_t lstat_size() const = 0;
             const blockstore::BlockId &blockId() const;
-            const blockstore::BlockId &parentPointer() const;
-            void setParentPointer(const blockstore::BlockId &parentId);
+
+            const FsBlobView::Metadata& metaData() {
+              return baseBlob().metadata();
+            }
+
+          void chown(fspp::uid_t uid, fspp::gid_t gid) {
+            return baseBlob().chown(uid, gid);
+          }
+
+          void chmod(fspp::mode_t mode) {
+            return baseBlob().chmod(mode);
+          }
+
+          fspp::stat_info stat() {
+            return baseBlob().stat();
+          }
+
+          // increase link count by one
+          void link() {
+            return baseBlob().link();
+          }
+          // decrease link count by one and return if this was the last link and the node has
+          // to be removed. Not that the removal must be done externally;
+          bool unlink() {
+            return baseBlob().unlink();
+          }
+
+            void updateAccessTimestamp() const {
+              return baseBlob().updateAccessTimestamp();
+            }
+
+            void updateModificationTimestamp() {
+              return baseBlob().updateModificationTimestamp();
+            }
+
+            void updateChangeTimestamp() {
+              return baseBlob().updateChangeTimestamp();
+            }
 
         protected:
             FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
@@ -24,7 +59,7 @@ namespace cryfs {
             FsBlobView &baseBlob();
             const FsBlobView &baseBlob() const;
 
-            static void InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::BlockId &parent);
+            static void InitializeBlob(blobstore::Blob *blob, const FsBlobView::Metadata& meta, FsBlobView::BlobType type);
 
             friend class FsBlobStore;
             virtual cpputils::unique_ref<blobstore::Blob> releaseBaseBlob();
@@ -60,21 +95,14 @@ namespace cryfs {
             return _baseBlob;
         }
 
-        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, FsBlobView::BlobType magicNumber, const blockstore::BlockId &parent) {
-            FsBlobView::InitializeBlob(blob, magicNumber, parent);
+        inline void FsBlob::InitializeBlob(blobstore::Blob *blob, const FsBlobView::Metadata& metadata, FsBlobView::BlobType type) {
+            FsBlobView::InitializeBlob(blob, metadata, type);
         }
 
         inline cpputils::unique_ref<blobstore::Blob> FsBlob::releaseBaseBlob() {
             return _baseBlob.releaseBaseBlob();
         }
 
-        inline const blockstore::BlockId &FsBlob::parentPointer() const {
-            return _baseBlob.parentPointer();
-        }
-
-        inline void FsBlob::setParentPointer(const blockstore::BlockId &parentId) {
-            return _baseBlob.setParentPointer(parentId);
-        }
     }
 }
 
