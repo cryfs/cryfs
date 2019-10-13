@@ -10,7 +10,7 @@ namespace cpputils {
 
     class AssertFailed final: public std::exception {
     public:
-        AssertFailed(std::string message) : _message(std::move(message)) { }
+        explicit AssertFailed(std::string message) : _message(std::move(message)) { }
 
         const char *what() const throw() override {
             return _message.c_str();

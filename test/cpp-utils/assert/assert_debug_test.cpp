@@ -21,11 +21,19 @@ TEST(AssertTest_DebugBuild, DiesIfFalse) {
     );
 }
 
+TEST(AssertTest_DebugBuild, whenDisablingAbort_thenThrowsIfFalse) {
+    cpputils::_assert::DisableAbortOnFailedAssertionRAII _disableAbort;
+    EXPECT_THROW(
+        ASSERT(false, "bla"),
+        cpputils::AssertFailed
+    );
+}
+
 TEST(AssertTest_DebugBuild, AssertMessage) {
 #if defined(_MSC_VER)
-constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_test.cpp:\d+: my message)";
+    constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_test.cpp:\d+: my message)";
 #else
-constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_test.cpp:[0-9]+: my message)";
+    constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_test.cpp:[0-9]+: my message)";
 #endif
     EXPECT_DEATH(
       ASSERT(2==5, "my message"),

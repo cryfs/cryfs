@@ -43,7 +43,7 @@ set(SOURCES
         data/DataFixture.cpp
         data/DataUtils.cpp
         data/Data.cpp
-        assert/assert.h
+        assert/assert.cpp
         assert/backtrace_nonwindows.cpp
         assert/backtrace_windows.cpp
         assert/AssertFailed.cpp

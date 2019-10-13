@@ -8,7 +8,7 @@
 
 //Include the ASSERT macro for a release build
 #ifndef NDEBUG
-#define NDEBUG
+#define NDEBUG 1
 #endif
 #include "cpp-utils/assert/assert.h"
 
