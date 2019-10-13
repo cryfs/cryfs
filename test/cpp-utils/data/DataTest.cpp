@@ -229,8 +229,8 @@ TEST_P(DataTestWithStringParam, ToAndFromString) {
 }
 
 struct MockAllocator final : public Allocator {
-    MOCK_METHOD1(allocate, void* (size_t));
-    MOCK_METHOD2(free, void(void*, size_t));
+    MOCK_METHOD(void* , allocate, (size_t), (override));
+    MOCK_METHOD(void, free, (void*, size_t), (override));
 };
 
 class DataTestWithMockAllocator: public DataTest {

@@ -1,7 +1,7 @@
 #include "testutils/FuseRenameTest.h"
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -15,7 +15,7 @@ INSTANTIATE_TEST_SUITE_P(FuseRenameErrorTest, FuseRenameErrorTest, Values(EACCES
 TEST_P(FuseRenameErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME1);
   ReturnDoesntExistOnLstat(FILENAME2);
-  EXPECT_CALL(*fsimpl, rename(StrEq(FILENAME1), StrEq(FILENAME2)))
+  EXPECT_CALL(*fsimpl, rename(Eq(FILENAME1), Eq(FILENAME2)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = RenameReturnError(FILENAME1, FILENAME2);

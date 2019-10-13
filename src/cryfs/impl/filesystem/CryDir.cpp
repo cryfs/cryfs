@@ -68,17 +68,17 @@ unique_ref<DirBlobRef> CryDir::LoadBlob() const {
   return std::move(*dir_blob);
 }
 
-unique_ref<vector<fspp::Dir::Entry>> CryDir::children() {
+vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
   if (!isRootDir()) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
     parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
   }
-  auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
-  children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
-  children->push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
+  vector<fspp::Dir::Entry> children;
+  children.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
+  children.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
   auto blob = LoadBlob();
-  blob->AppendChildrenTo(children.get());
+  blob->AppendChildrenTo(&children);
   return children;
 }
 

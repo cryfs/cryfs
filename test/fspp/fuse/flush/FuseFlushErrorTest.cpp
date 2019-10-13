@@ -3,7 +3,6 @@
 #include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::WithParamInterface;
-using ::testing::StrEq;
 using ::testing::Eq;
 using ::testing::Return;
 using ::testing::Throw;
@@ -25,7 +24,7 @@ INSTANTIATE_TEST_SUITE_P(FuseFlushErrorTest, FuseFlushErrorTest, Values(
 TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   ReturnIsFileOnLstat(FILENAME);
 
-  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), _)).WillOnce(Return(GetParam()));
   EXPECT_CALL(*fsimpl, flush(Eq(GetParam()))).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   auto fs = TestFS();

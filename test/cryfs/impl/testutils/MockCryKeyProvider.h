@@ -7,8 +7,8 @@
 
 class MockCryKeyProvider: public cryfs::CryKeyProvider {
 public:
-  MOCK_METHOD2(requestKeyForExistingFilesystem, cpputils::EncryptionKey(size_t keySize, const cpputils::Data& kdfParameters));
-  MOCK_METHOD1(requestKeyForNewFilesystem, cryfs::CryKeyProvider::KeyResult(size_t keySize));
+  MOCK_METHOD(cpputils::EncryptionKey, requestKeyForExistingFilesystem, (size_t keySize, const cpputils::Data& kdfParameters), (override));
+  MOCK_METHOD(cryfs::CryKeyProvider::KeyResult, requestKeyForNewFilesystem, (size_t keySize), (override));
 };
 
 #endif

@@ -24,7 +24,7 @@ public:
 	std::vector<fspp::Dir::Entry> expectedChildren = expected;
 	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
 	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
-	EXPECT_UNORDERED_EQ(expectedChildren, *dir->children());
+	EXPECT_UNORDERED_EQ(expectedChildren, dir->children());
   }
 
   template<class Entry>

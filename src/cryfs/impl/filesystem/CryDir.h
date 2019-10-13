@@ -19,7 +19,7 @@ public:
   void createSymlink(const std::string &name, const boost::filesystem::path &target, fspp::uid_t uid, fspp::gid_t gid) override;
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
-  cpputils::unique_ref<std::vector<fspp::Dir::Entry>> children() override;
+  std::vector<fspp::Dir::Entry> children() override;
 
   fspp::Dir::EntryType getType() const override;
 

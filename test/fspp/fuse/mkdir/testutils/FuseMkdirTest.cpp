@@ -20,8 +20,8 @@ int FuseMkdirTest::MkdirReturnError(const char *dirname, mode_t mode) {
   }
 }
 
-Action<void(const char*, mode_t, uid_t, gid_t)> FuseMkdirTest::FromNowOnReturnIsDirOnLstat() {
-  return Invoke([this](const char *dirname, mode_t, uid_t, gid_t) {
+Action<void(const boost::filesystem::path&, mode_t, uid_t, gid_t)> FuseMkdirTest::FromNowOnReturnIsDirOnLstat() {
+  return Invoke([this](const boost::filesystem::path& dirname, mode_t, uid_t, gid_t) {
     ReturnIsDirOnLstat(dirname);
   });
 }

@@ -32,8 +32,8 @@ public:
   virtual void createSymlink(const std::string &name, const boost::filesystem::path &target, fspp::uid_t uid, fspp::gid_t gid) = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
-  //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
-  virtual cpputils::unique_ref<std::vector<Entry>> children() = 0;
+  //virtual std::vector<std::string> children() const = 0;
+  virtual std::vector<Entry> children() = 0;
 };
 
 }

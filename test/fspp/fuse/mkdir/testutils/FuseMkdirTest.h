@@ -11,7 +11,7 @@ public:
   void Mkdir(const char *dirname, mode_t mode);
   int MkdirReturnError(const char *dirname, mode_t mode);
 
-  ::testing::Action<void(const char*, mode_t, uid_t, gid_t)> FromNowOnReturnIsDirOnLstat();
+  ::testing::Action<void(const boost::filesystem::path&, mode_t, uid_t, gid_t)> FromNowOnReturnIsDirOnLstat();
 };
 
 #endif

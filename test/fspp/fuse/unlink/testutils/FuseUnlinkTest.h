@@ -11,7 +11,7 @@ public:
   void Unlink(const char *filename);
   int UnlinkReturnError(const char *filename);
 
-  ::testing::Action<void(const char*)> FromNowOnReturnDoesntExistOnLstat();
+  ::testing::Action<void(const boost::filesystem::path&)> FromNowOnReturnDoesntExistOnLstat();
 };
 
 #endif

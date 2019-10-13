@@ -25,15 +25,15 @@ using namespace blockstore;
 
 class BlockStore2Mock: public BlockStore2 {
 public:
-    MOCK_CONST_METHOD0(createBlockId, BlockId());
-    MOCK_METHOD2(tryCreate, bool(const BlockId &blockId, const cpputils::Data &data));
-    MOCK_METHOD2(store, void(const BlockId &, const Data &data));
-    MOCK_CONST_METHOD1(load, optional<Data>(const BlockId &));
-    MOCK_METHOD1(remove, bool(const BlockId &));
-    MOCK_CONST_METHOD0(numBlocks, uint64_t());
-    MOCK_CONST_METHOD0(estimateNumFreeBytes, uint64_t());
-    MOCK_CONST_METHOD1(blockSizeFromPhysicalBlockSize, uint64_t(uint64_t));
-    MOCK_CONST_METHOD1(forEachBlock, void(std::function<void (const blockstore::BlockId &)>));
+    MOCK_METHOD(BlockId, createBlockId, (), (const, override));
+    MOCK_METHOD(bool, tryCreate, (const BlockId &blockId, const cpputils::Data &data), (override));
+    MOCK_METHOD(void, store, (const BlockId &, const Data &data), (override));
+    MOCK_METHOD(optional<Data>, load, (const BlockId &), (const, override));
+    MOCK_METHOD(bool, remove, (const BlockId &), (override));
+    MOCK_METHOD(uint64_t, numBlocks, (), (const, override));
+    MOCK_METHOD(uint64_t, estimateNumFreeBytes, (), (const, override));
+    MOCK_METHOD(uint64_t, blockSizeFromPhysicalBlockSize, (uint64_t), (const, override));
+    MOCK_METHOD(void, forEachBlock, (std::function<void (const blockstore::BlockId &)>), (const, override));
 };
 
 class BlockStore2Test: public Test {

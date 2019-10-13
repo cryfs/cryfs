@@ -15,7 +15,7 @@ using boost::none;
 
 class DestructorCallback {
 public:
-  MOCK_CONST_METHOD0(call, void());
+  MOCK_METHOD(void, call, (), (const));
 };
 
 class Parent {

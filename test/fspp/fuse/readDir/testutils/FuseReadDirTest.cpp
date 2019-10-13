@@ -1,6 +1,5 @@
 #include "FuseReadDirTest.h"
 
-using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using std::vector;
 using std::string;
@@ -8,13 +7,13 @@ using std::string;
 using ::testing::Action;
 using ::testing::Return;
 
-unique_ref<vector<string>> FuseReadDirTest::ReadDir(const char *dirname) {
+vector<string> FuseReadDirTest::ReadDir(const char *dirname) {
   auto fs = TestFS();
 
   DIR *dir = openDir(fs.get(), dirname);
 
-  auto result = make_unique_ref<vector<string>>();
-  readDirEntries(dir, result.get());
+  vector<string> result;
+  readDirEntries(dir, &result);
   closeDir(dir);
   return result;
 }
@@ -78,10 +77,10 @@ void FuseReadDirTest::closeDir(DIR *dir) {
   EXPECT_EQ(0, retval) << "Closing dir failed";
 }
 
-Action<vector<fspp::Dir::Entry>*(const char*)> FuseReadDirTest::ReturnDirEntries(vector<std::string> entries) {
-  vector<fspp::Dir::Entry> *direntries = new vector<fspp::Dir::Entry>(entries.size(), fspp::Dir::Entry(fspp::Dir::EntryType::FILE, ""));
+Action<vector<fspp::Dir::Entry>(const boost::filesystem::path&)> FuseReadDirTest::ReturnDirEntries(vector<std::string> entries) {
+  vector<fspp::Dir::Entry> direntries(entries.size(), fspp::Dir::Entry(fspp::Dir::EntryType::FILE, ""));
   for(size_t i = 0; i < entries.size(); ++i) {
-    (*direntries)[i].name = entries[i];
+    direntries[i].name = entries[i];
   }
-  return Return(direntries);
+  return Return(std::move(direntries));
 }

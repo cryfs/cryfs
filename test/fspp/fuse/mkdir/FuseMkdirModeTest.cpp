@@ -1,7 +1,7 @@
 #include "testutils/FuseMkdirTest.h"
 
 using ::testing::_;
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
@@ -12,7 +12,7 @@ INSTANTIATE_TEST_SUITE_P(FuseMkdirModeTest, FuseMkdirModeTest, Values(0, S_IRUSR
 
 TEST_P(FuseMkdirModeTest, Mkdir) {
   ReturnDoesntExistOnLstat(DIRNAME);
-  EXPECT_CALL(*fsimpl, mkdir(StrEq(DIRNAME), GetParam(), _, _))
+  EXPECT_CALL(*fsimpl, mkdir(Eq(DIRNAME), GetParam(), _, _))
     .Times(1).WillOnce(FromNowOnReturnIsDirOnLstat());
 
   Mkdir(DIRNAME, GetParam());

@@ -20,8 +20,8 @@ int FuseUnlinkTest::UnlinkReturnError(const char *filename) {
   }
 }
 
-Action<void(const char*)> FuseUnlinkTest::FromNowOnReturnDoesntExistOnLstat() {
-  return Invoke([this](const char *filename) {
+Action<void(const boost::filesystem::path&)> FuseUnlinkTest::FromNowOnReturnDoesntExistOnLstat() {
+  return Invoke([this](const boost::filesystem::path& filename) {
     ReturnDoesntExistOnLstat(filename);
   });
 }

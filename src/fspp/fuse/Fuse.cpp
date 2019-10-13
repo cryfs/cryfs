@@ -1034,7 +1034,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto entries = _fs->readDir(path);
     fspp::fuse::STAT stbuf{};
-    for (const auto &entry : *entries) {
+    for (const auto &entry : entries) {
       //We could pass more file metadata to filler() in its third parameter,
       //but it doesn't help performance since fuse ignores everything in stbuf
       //except for file-type bits in st_mode and (if used) st_ino.

@@ -6,13 +6,8 @@ if (BUILD_TESTING)
   set(INSTALL_GTEST off CACHE BOOL "" FORCE)
   set(INSTALL_GMOCK off CACHE BOOL "" FORCE)
   add_subdirectory(gtest EXCLUDE_FROM_ALL)
-
+  
   add_library(googletest INTERFACE)
   target_link_libraries(googletest INTERFACE gtest gmock)
   target_include_directories(googletest SYSTEM INTERFACE ${gtest_INCLUDE_DIRS}/include SYSTEM INTERFACE ${gmock_INCLUDE_DIRS}/include)
-
-  # Disable "missing override" warning because gmock MOCK_METHOD() don't use override :(
-  if (NOT WIN32)
-    target_compile_options(googletest INTERFACE "-Wno-inconsistent-missing-override")
-  endif()
 endif()
