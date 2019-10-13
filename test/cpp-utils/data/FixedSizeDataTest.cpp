@@ -66,7 +66,7 @@ TEST_F(FixedSizeDataTest, NotEqualsTrue) {
 }
 
 class FixedSizeDataTestWithStringParam: public FixedSizeDataTest, public WithParamInterface<string> {};
-INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithStringParam, FixedSizeDataTestWithStringParam, Values("2898B4B8A13CA63CBE0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
+INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithStringParam, FixedSizeDataTestWithStringParam, Values("2898B4B8A13CA63CBE0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
 
 TEST_P(FixedSizeDataTestWithStringParam, FromAndToString) {
   FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromString(GetParam());
@@ -86,7 +86,7 @@ public:
 };
 const Data FixedSizeDataTestWithBinaryParam::VALUE1(DataFixture::generate(SIZE, 3));
 const Data FixedSizeDataTestWithBinaryParam::VALUE2(DataFixture::generate(SIZE, 4));
-INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
+INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromBinary) {
   FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
@@ -109,7 +109,7 @@ TEST_P(FixedSizeDataTestWithBinaryParam, ToAndFromBinary) {
 }
 
 class FixedSizeDataTestWithParam: public FixedSizeDataTest, public WithParamInterface<FixedSizeData<FixedSizeDataTest::SIZE>> {};
-INSTANTIATE_TEST_CASE_P(FixedSizeDataTestWithParam, FixedSizeDataTestWithParam, Values(FixedSizeData<FixedSizeDataTest::SIZE>::FromString("2898B4B8A13CA63CBE0F0278CCE465DB"), FixedSizeData<FixedSizeDataTest::SIZE>::FromString("6FFEBAD90C0DAA2B79628F0627CE9841")));
+INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithParam, FixedSizeDataTestWithParam, Values(FixedSizeData<FixedSizeDataTest::SIZE>::FromString("2898B4B8A13CA63CBE0F0278CCE465DB"), FixedSizeData<FixedSizeDataTest::SIZE>::FromString("6FFEBAD90C0DAA2B79628F0627CE9841")));
 
 TEST_P(FixedSizeDataTestWithParam, CopyConstructor) {
   FixedSizeData<SIZE> copy(GetParam());

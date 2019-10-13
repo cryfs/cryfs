@@ -9,7 +9,7 @@ private:
     stat->f_bavail = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnBavailTest, FuseStatfsReturnBavailTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBavailTest, FuseStatfsReturnBavailTest, Values(
     0,
     10,
     256,

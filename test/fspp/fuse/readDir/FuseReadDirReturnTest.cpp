@@ -33,7 +33,7 @@ public:
     EXPECT_EQ(direntries, *returned_dir_entries);
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseReadDirReturnTest, FuseReadDirReturnTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseReadDirReturnTest, FuseReadDirReturnTest, Values(
     vector<string>({}),
     vector<string>({"oneentry"}),
     vector<string>({"twoentries_1", "twoentries_2"}),

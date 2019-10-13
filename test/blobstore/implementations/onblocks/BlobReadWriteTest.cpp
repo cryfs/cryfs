@@ -182,7 +182,7 @@ public:
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, blob, start, count);
   }
 };
-INSTANTIATE_TEST_CASE_P(BlobReadWriteDataTest, BlobReadWriteDataTest, Values(
+INSTANTIATE_TEST_SUITE_P(BlobReadWriteDataTest, BlobReadWriteDataTest, Values(
   //Blob with only one leaf
   DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     0,   BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()},     // full size leaf, access beginning to end
   DataRange{BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf(),     100, BlobReadWriteDataTest::LAYOUT.maxBytesPerLeaf()-200}, // full size leaf, access middle to middle

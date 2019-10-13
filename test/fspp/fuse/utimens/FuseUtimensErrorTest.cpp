@@ -11,7 +11,7 @@ using namespace fspp::fuse;
 
 class FuseUtimensErrorTest: public FuseUtimensTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseUtimensErrorTest, FuseUtimensErrorTest, Values(EACCES, ENOENT, EPERM, EROFS));
+INSTANTIATE_TEST_SUITE_P(FuseUtimensErrorTest, FuseUtimensErrorTest, Values(EACCES, ENOENT, EPERM, EROFS));
 
 TEST_P(FuseUtimensErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);

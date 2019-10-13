@@ -9,7 +9,7 @@ private:
     stat->f_namemax = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnNamemaxTest, FuseStatfsReturnNamemaxTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnNamemaxTest, FuseStatfsReturnNamemaxTest, Values(
     0,
     10,
     256,

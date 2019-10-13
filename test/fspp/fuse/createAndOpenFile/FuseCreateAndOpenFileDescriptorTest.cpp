@@ -30,7 +30,7 @@ private:
     EXPECT_EQ(1, retval) << "Reading file failed";
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseCreateAndOpenFileDescriptorTest, FuseCreateAndOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseCreateAndOpenFileDescriptorTest, FuseCreateAndOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseCreateAndOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnDoesntExistOnLstat(FILENAME);

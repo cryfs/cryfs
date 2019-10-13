@@ -16,4 +16,4 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(TestFake, BlockStoreTest, FakeBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(TestFake, BlockStoreTest, FakeBlockStoreTestFixture);

@@ -9,7 +9,7 @@ private:
     stat->f_blocks = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnBlocksTest, FuseStatfsReturnBlocksTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBlocksTest, FuseStatfsReturnBlocksTest, Values(
     0,
     10,
     256,

@@ -12,7 +12,7 @@ using namespace fspp::fuse;
 
 class FuseMkdirErrorTest: public FuseMkdirTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseMkdirErrorTest, FuseMkdirErrorTest, Values(EACCES, EDQUOT, EEXIST, EFAULT, ELOOP, EMLINK, ENAMETOOLONG, ENOENT, ENOMEM, ENOSPC, ENOTDIR, EPERM, EROFS, EBADF));
+INSTANTIATE_TEST_SUITE_P(FuseMkdirErrorTest, FuseMkdirErrorTest, Values(EACCES, EDQUOT, EEXIST, EFAULT, ELOOP, EMLINK, ENAMETOOLONG, ENOENT, ENOMEM, ENOSPC, ENOTDIR, EPERM, EROFS, EBADF));
 
 TEST_F(FuseMkdirErrorTest, NoError) {
   ReturnDoesntExistOnLstat(DIRNAME);

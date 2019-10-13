@@ -111,4 +111,4 @@ TEST_P(CryConfigConsoleTest_Cipher_Choose, ChoosesCipherCorrectly) {
     EXPECT_EQ(cipherName, chosenCipher);
 }
 
-INSTANTIATE_TEST_CASE_P(CryConfigConsoleTest_Cipher_Choose, CryConfigConsoleTest_Cipher_Choose, ValuesIn(CryCiphers::supportedCipherNames()));
+INSTANTIATE_TEST_SUITE_P(CryConfigConsoleTest_Cipher_Choose, CryConfigConsoleTest_Cipher_Choose, ValuesIn(CryCiphers::supportedCipherNames()));

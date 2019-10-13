@@ -18,6 +18,6 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(ParallelAccess, BlockStoreTest, ParallelAccessBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(ParallelAccess, BlockStoreTest, ParallelAccessBlockStoreTestFixture);
 
 //TODO Add specific tests ensuring that loading the same block twice doesn't load it twice from the underlying blockstore

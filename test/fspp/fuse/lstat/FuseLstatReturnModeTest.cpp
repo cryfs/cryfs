@@ -11,7 +11,7 @@ public:
     });
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnModeTest, FuseLstatReturnModeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnModeTest, FuseLstatReturnModeTest, Values(
     S_IFREG,
     S_IFDIR,
     S_IFREG | S_IRUSR | S_IWGRP | S_IXOTH, // a file with some access bits set

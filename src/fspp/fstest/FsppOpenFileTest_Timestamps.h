@@ -19,7 +19,7 @@ public:
         return openFile;
     }
 };
-TYPED_TEST_CASE_P(FsppOpenFileTest_Timestamps);
+TYPED_TEST_SUITE_P(FsppOpenFileTest_Timestamps);
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, stat) {
     auto openFile = this->CreateAndOpenFile("/mynode");
@@ -130,7 +130,7 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, fdatasync) {
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation, {this->ExpectDoesntUpdateAnyTimestamps});
 }
 
-REGISTER_TYPED_TEST_CASE_P(FsppOpenFileTest_Timestamps,
+REGISTER_TYPED_TEST_SUITE_P(FsppOpenFileTest_Timestamps,
    stat,
    truncate_empty_to_empty,
    truncate_empty_to_nonempty,

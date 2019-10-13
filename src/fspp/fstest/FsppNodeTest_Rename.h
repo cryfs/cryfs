@@ -210,7 +210,7 @@ public:
     }
 };
 
-REGISTER_NODE_TEST_CASE(FsppNodeTest_Rename,
+REGISTER_NODE_TEST_SUITE(FsppNodeTest_Rename,
     Error_TargetParentDirDoesntExist,
     Error_TargetParentDirIsFile,
     Error_RootDir,

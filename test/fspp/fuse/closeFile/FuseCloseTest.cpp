@@ -71,7 +71,7 @@ public:
     fd->release(); // don't try closing it again
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024*1024*1024));
 
 //TODO Figure out what's wrong and enable this test
 //Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.

@@ -89,7 +89,7 @@ public:
   }
 };
 
-TYPED_TEST_CASE_P(FsppFileTest);
+TYPED_TEST_SUITE_P(FsppFileTest);
 
 TYPED_TEST_P(FsppFileTest, Open_RDONLY) {
   this->Test_Open_RDONLY(this->file_root.get());
@@ -214,7 +214,7 @@ TYPED_TEST_P(FsppFileTest, Remove_Nested) {
     EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
 }
 
-REGISTER_TYPED_TEST_CASE_P(FsppFileTest,
+REGISTER_TYPED_TEST_SUITE_P(FsppFileTest,
   Open_RDONLY,
   Open_RDONLY_Nested,
   Open_WRONLY,

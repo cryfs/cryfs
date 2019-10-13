@@ -29,7 +29,7 @@ private:
   TempDir tempdir;
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixture);
 
 class OnDiskBlockStore2TestFixture: public BlockStore2TestFixture {
 public:
@@ -42,4 +42,4 @@ private:
   TempDir tempdir;
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(OnDisk, BlockStore2Test, OnDiskBlockStore2TestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(OnDisk, BlockStore2Test, OnDiskBlockStore2TestFixture);

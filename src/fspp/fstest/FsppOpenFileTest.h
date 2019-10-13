@@ -29,7 +29,7 @@ public:
     }
 };
 
-TYPED_TEST_CASE_P(FsppOpenFileTest);
+TYPED_TEST_SUITE_P(FsppOpenFileTest);
 
 TYPED_TEST_P(FsppOpenFileTest, CreatedFileIsEmpty) {
     auto file = this->CreateFile("/myfile");
@@ -45,7 +45,7 @@ TYPED_TEST_P(FsppOpenFileTest, FileIsFile) {
     });
 }
 
-REGISTER_TYPED_TEST_CASE_P(FsppOpenFileTest,
+REGISTER_TYPED_TEST_SUITE_P(FsppOpenFileTest,
     CreatedFileIsEmpty,
     FileIsFile
 );

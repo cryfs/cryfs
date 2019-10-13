@@ -11,7 +11,7 @@ private:
 	stat->st_mtim.tv_nsec = 0;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnMtimeTest, FuseLstatReturnMtimeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnMtimeTest, FuseLstatReturnMtimeTest, Values(
     0,
     100,
     1416496809, // current timestamp as of writing the test

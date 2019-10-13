@@ -63,7 +63,7 @@ public:
     EXPECT_EQ(randomData, fileContentWithoutHeader);
   }
 };
-INSTANTIATE_TEST_CASE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));
+INSTANTIATE_TEST_SUITE_P(OnDiskBlockFlushTest, OnDiskBlockFlushTest, Values((size_t)0, (size_t)1, (size_t)1024, (size_t)4096, (size_t)10*1024*1024));
 
 // This test is also tested by OnDiskBlockStoreTest, but there the block is created using the BlockStore interface.
 // Here, we create it using OnDiskBlock::CreateOnDisk()

@@ -56,7 +56,7 @@ public:
     EXPECT_EQ(0, std::memcmp(expected.data(), actual.data(), expected.size()));
   }
 };
-INSTANTIATE_TEST_CASE_P(OnDiskBlockLoadTest, OnDiskBlockLoadTest, Values(0, 1, 5, 1024, 10*1024*1024));
+INSTANTIATE_TEST_SUITE_P(OnDiskBlockLoadTest, OnDiskBlockLoadTest, Values(0, 1, 5, 1024, 10*1024*1024));
 
 TEST_P(OnDiskBlockLoadTest, LoadsCorrectSize) {
   CreateBlockWithSize(GetParam());

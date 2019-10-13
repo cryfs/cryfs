@@ -21,7 +21,7 @@ public:
     CreateFile(fs.get(), filename);
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseFstatParameterTest, FuseFstatParameterTest, Values(0,1,10,1000,1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseFstatParameterTest, FuseFstatParameterTest, Values(0,1,10,1000,1024*1024*1024));
 
 
 TEST_P(FuseFstatParameterTest, FileDescriptorIsCorrect) {

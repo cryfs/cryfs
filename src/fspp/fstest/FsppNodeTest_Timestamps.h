@@ -349,7 +349,7 @@ public:
     }
 };
 
-REGISTER_NODE_TEST_CASE(FsppNodeTest_Timestamps,
+REGISTER_NODE_TEST_SUITE(FsppNodeTest_Timestamps,
     Create,
     Stat,
     Chmod,

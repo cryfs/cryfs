@@ -7,7 +7,7 @@ using ::testing::Values;
 
 class FuseFTruncateSizeTest: public FuseFTruncateTest, public WithParamInterface<fspp::num_bytes_t> {
 };
-INSTANTIATE_TEST_CASE_P(FuseFTruncateSizeTest, FuseFTruncateSizeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseFTruncateSizeTest, FuseFTruncateSizeTest, Values(
     fspp::num_bytes_t(0),
     fspp::num_bytes_t(1),
     fspp::num_bytes_t(10),

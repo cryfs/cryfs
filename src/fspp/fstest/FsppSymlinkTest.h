@@ -11,7 +11,7 @@ class FsppSymlinkTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
 public:
 };
 
-TYPED_TEST_CASE_P(FsppSymlinkTest);
+TYPED_TEST_SUITE_P(FsppSymlinkTest);
 
 TYPED_TEST_P(FsppSymlinkTest, Create_AbsolutePath) {
   this->CreateSymlink("/mysymlink", "/my/symlink/target");
@@ -50,7 +50,7 @@ TYPED_TEST_P(FsppSymlinkTest, Remove_Nested) {
   EXPECT_EQ(boost::none, this->device->LoadSymlink("/mytestdir/mysymlink"));
 }
 
-REGISTER_TYPED_TEST_CASE_P(FsppSymlinkTest,
+REGISTER_TYPED_TEST_SUITE_P(FsppSymlinkTest,
   Create_AbsolutePath,
   Create_RelativePath,
   Read_AbsolutePath,

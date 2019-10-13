@@ -61,7 +61,7 @@ public:
     return testFile->read(buf, count, offset);
   });
 };
-INSTANTIATE_TEST_CASE_P(FuseReadReturnedDataTest, FuseReadReturnedDataTest, Combine(
+INSTANTIATE_TEST_SUITE_P(FuseReadReturnedDataTest, FuseReadReturnedDataTest, Combine(
         Values(fspp::num_bytes_t(0), fspp::num_bytes_t(1), fspp::num_bytes_t(10), fspp::num_bytes_t(1000), fspp::num_bytes_t(1024), fspp::num_bytes_t(10*1024*1024)),
         Values(fspp::num_bytes_t(0), fspp::num_bytes_t(1), fspp::num_bytes_t(10), fspp::num_bytes_t(1024), fspp::num_bytes_t(10*1024*1024)),
         Values(fspp::num_bytes_t(0), fspp::num_bytes_t(1), fspp::num_bytes_t(10), fspp::num_bytes_t(1024), fspp::num_bytes_t(10*1024*1024))

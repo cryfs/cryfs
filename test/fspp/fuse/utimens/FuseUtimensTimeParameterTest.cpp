@@ -17,7 +17,7 @@ const std::array<timespec, 2> TIMEVAL7 = {FuseUtimensTest::makeTimespec(0,0), Fu
 const std::array<timespec, 2> TIMEVAL8 = {FuseUtimensTest::makeTimespec(0,0), FuseUtimensTest::makeTimespec(1000,1000)};
 const std::array<timespec, 2> TIMEVAL9 = {FuseUtimensTest::makeTimespec(1417196126,123000), FuseUtimensTest::makeTimespec(1417109713,321000)}; // current timestamp and the day before as of writing this test case
 const std::array<timespec, 2> TIMEVAL10 = {FuseUtimensTest::makeTimespec(UINT64_C(1024)*1024*1024*1024,999000), FuseUtimensTest::makeTimespec(UINT64_C(2*1024)*1024*1024*1024,321000)}; // needs 64bit for timestamp representation
-INSTANTIATE_TEST_CASE_P(FuseUtimensTimeParameterTest, FuseUtimensTimeParameterTest,
+INSTANTIATE_TEST_SUITE_P(FuseUtimensTimeParameterTest, FuseUtimensTimeParameterTest,
     Values(TIMEVAL1, TIMEVAL2, TIMEVAL3, TIMEVAL4, TIMEVAL5, TIMEVAL6, TIMEVAL7, TIMEVAL8, TIMEVAL9, TIMEVAL10));
 
 

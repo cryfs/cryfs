@@ -9,7 +9,7 @@ private:
     stat->f_bfree = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnBfreeTest, FuseStatfsReturnBfreeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBfreeTest, FuseStatfsReturnBfreeTest, Values(
     0,
     10,
     256,

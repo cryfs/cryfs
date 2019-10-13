@@ -11,7 +11,7 @@ using namespace fspp::fuse;
 
 class FuseFdatasyncFileDescriptorTest: public FuseFdatasyncTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseFdatasyncFileDescriptorTest, FuseFdatasyncFileDescriptorTest, Values(0,1,10,1000,1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseFdatasyncFileDescriptorTest, FuseFdatasyncFileDescriptorTest, Values(0,1,10,1000,1024*1024*1024));
 
 
 TEST_P(FuseFdatasyncFileDescriptorTest, FileDescriptorIsCorrect) {

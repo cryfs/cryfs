@@ -11,7 +11,7 @@ using namespace fspp::fuse;
 
 class FuseTruncateErrorTest: public FuseTruncateTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseTruncateErrorTest, FuseTruncateErrorTest, Values(EACCES, EFAULT, EFBIG, EINTR, EINVAL, EIO, EISDIR, ELOOP, ENAMETOOLONG, ENOENT, ENOTDIR, EPERM, EROFS, ETXTBSY));
+INSTANTIATE_TEST_SUITE_P(FuseTruncateErrorTest, FuseTruncateErrorTest, Values(EACCES, EFAULT, EFBIG, EINTR, EINVAL, EIO, EISDIR, ELOOP, ENAMETOOLONG, ENOENT, ENOTDIR, EPERM, EROFS, ETXTBSY));
 
 TEST_P(FuseTruncateErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);

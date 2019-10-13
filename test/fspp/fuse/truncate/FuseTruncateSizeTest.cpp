@@ -8,7 +8,7 @@ using ::testing::Eq;
 
 class FuseTruncateSizeTest: public FuseTruncateTest, public WithParamInterface<fspp::num_bytes_t> {
 };
-INSTANTIATE_TEST_CASE_P(FuseTruncateSizeTest, FuseTruncateSizeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseTruncateSizeTest, FuseTruncateSizeTest, Values(
     fspp::num_bytes_t(0),
     fspp::num_bytes_t(1),
     fspp::num_bytes_t(10),

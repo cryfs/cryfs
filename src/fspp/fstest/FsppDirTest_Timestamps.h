@@ -8,7 +8,7 @@ template<class ConcreteFileSystemTestFixture>
 class FsppDirTest_Timestamps: public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
 };
-TYPED_TEST_CASE_P(FsppDirTest_Timestamps);
+TYPED_TEST_SUITE_P(FsppDirTest_Timestamps);
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile) {
     auto dir = this->CreateDir("/mydir");
@@ -232,7 +232,7 @@ public:
     }*/
 };
 
-REGISTER_TYPED_TEST_CASE_P(FsppDirTest_Timestamps,
+REGISTER_TYPED_TEST_SUITE_P(FsppDirTest_Timestamps,
    createAndOpenFile,
    createAndOpenFile_TimestampsOfCreatedFile,
    createDir,
@@ -243,7 +243,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppDirTest_Timestamps,
    children_nonempty
 );
 
-REGISTER_NODE_TEST_CASE(FsppDirTest_Timestamps_Entries,
+REGISTER_NODE_TEST_SUITE(FsppDirTest_Timestamps_Entries,
    deleteChild,
    renameChild,
    moveChildIn,

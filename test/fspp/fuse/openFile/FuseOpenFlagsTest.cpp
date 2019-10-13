@@ -7,7 +7,7 @@ using ::testing::Return;
 
 class FuseOpenFlagsTest: public FuseOpenTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseOpenFlagsTest, FuseOpenFlagsTest, Values(O_RDWR, O_RDONLY, O_WRONLY));
+INSTANTIATE_TEST_SUITE_P(FuseOpenFlagsTest, FuseOpenFlagsTest, Values(O_RDWR, O_RDONLY, O_WRONLY));
 
 TEST_P(FuseOpenFlagsTest, testFlags) {
   ReturnIsFileOnLstat(FILENAME);

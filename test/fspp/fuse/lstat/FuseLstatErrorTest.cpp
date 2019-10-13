@@ -14,7 +14,7 @@ using fspp::fuse::FuseErrnoException;
 class FuseLstatErrorTest: public FuseLstatTest, public WithParamInterface<int> {
 public:
 };
-INSTANTIATE_TEST_CASE_P(LstatErrorCodes, FuseLstatErrorTest, Values(EACCES, EBADF, EFAULT, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EOVERFLOW, EINVAL, ENOTDIR));
+INSTANTIATE_TEST_SUITE_P(LstatErrorCodes, FuseLstatErrorTest, Values(EACCES, EBADF, EFAULT, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EOVERFLOW, EINVAL, ENOTDIR));
 
 TEST_F(FuseLstatErrorTest, ReturnNoError) {
   EXPECT_CALL(*fsimpl, lstat(StrEq(FILENAME), _)).Times(AtLeast(1)).WillRepeatedly(ReturnIsFile);

@@ -10,7 +10,7 @@ using namespace fspp::fuse;
 
 class FuseUnlinkErrorTest: public FuseUnlinkTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseUnlinkErrorTest, FuseUnlinkErrorTest, Values(EACCES, EBUSY, EFAULT, EIO, EISDIR, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EPERM, EROFS, EINVAL));
+INSTANTIATE_TEST_SUITE_P(FuseUnlinkErrorTest, FuseUnlinkErrorTest, Values(EACCES, EBUSY, EFAULT, EIO, EISDIR, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, EPERM, EROFS, EINVAL));
 
 TEST_P(FuseUnlinkErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);

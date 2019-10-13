@@ -10,7 +10,7 @@ using namespace fspp::fuse;
 
 class FuseRenameErrorTest: public FuseRenameTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseRenameErrorTest, FuseRenameErrorTest, Values(EACCES, EBUSY, EDQUOT, EFAULT, EINVAL, EISDIR, ELOOP, EMLINK, ENAMETOOLONG, ENOENT, ENOMEM, ENOSPC, ENOTDIR, ENOTEMPTY, EEXIST, EPERM, EROFS, EXDEV, EBADF, ENOTDIR));
+INSTANTIATE_TEST_SUITE_P(FuseRenameErrorTest, FuseRenameErrorTest, Values(EACCES, EBUSY, EDQUOT, EFAULT, EINVAL, EISDIR, ELOOP, EMLINK, ENAMETOOLONG, ENOENT, ENOMEM, ENOSPC, ENOTDIR, ENOTEMPTY, EEXIST, EPERM, EROFS, EXDEV, EBADF, ENOTDIR));
 
 TEST_P(FuseRenameErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME1);

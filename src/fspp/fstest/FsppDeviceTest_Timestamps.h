@@ -35,7 +35,7 @@ public:
   }
 };
 
-REGISTER_NODE_TEST_CASE(FsppDeviceTest_Timestamps,
+REGISTER_NODE_TEST_SUITE(FsppDeviceTest_Timestamps,
     Load_While_Loaded,
     Load_While_Not_Loaded
 );

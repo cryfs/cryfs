@@ -53,7 +53,7 @@ public:
   }
 };
 
-TYPED_TEST_CASE_P(BlockStore2Test);
+TYPED_TEST_SUITE_P(BlockStore2Test);
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails) {
   blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
@@ -418,7 +418,7 @@ TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndBothNullSize) 
   EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(0)));
 }*/
 
-REGISTER_TYPED_TEST_CASE_P(BlockStore2Test,
+REGISTER_TYPED_TEST_SUITE_P(BlockStore2Test,
   givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
   givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds,
   givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds,
