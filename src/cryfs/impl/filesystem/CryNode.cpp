@@ -70,6 +70,10 @@ optional<DirBlobRef*> CryNode::grandparent() {
   return _grandparent->get();
 }
 
+fspp::TimestampUpdateBehavior CryNode::timestampUpdateBehavior() const {
+  return _device->getContext().timestampUpdateBehavior();
+}
+
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {

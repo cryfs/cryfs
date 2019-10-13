@@ -22,7 +22,9 @@
 #include "cryfs/impl/localstate/LocalStateDir.h"
 #include <cryfs/impl/CryfsException.h>
 
+
 using std::string;
+
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::FuseErrnoException;

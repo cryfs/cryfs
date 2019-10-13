@@ -69,6 +69,7 @@ set(SOURCES
     fuse/access/FuseAccessModeTest.cpp
     fuse/access/FuseAccessErrorTest.cpp
     fuse/BasicFuseTest.cpp
+    fuse/TimestampTest.cpp
     fuse/rmdir/testutils/FuseRmdirTest.cpp
     fuse/rmdir/FuseRmdirErrorTest.cpp
     fuse/rmdir/FuseRmdirDirnameTest.cpp

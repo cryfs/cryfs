@@ -30,10 +30,20 @@ public:
     "Given test fixture for instantiating the (type parameterized) FileSystemTest must inherit from FileSystemTestFixture"
   );
 
-  FileSystemTest(): fixture(), device(fixture.createDevice()) {}
+  FileSystemTest(): fixture(nullptr), device(nullptr) {
+      resetFilesystem(fspp::Context{fspp::relatime()});
+  }
 
-  ConcreteFileSystemTestFixture fixture;
-  cpputils::unique_ref<fspp::Device> device;
+  void resetFilesystem(fspp::Context&& context) {
+      device = nullptr;
+      fixture = nullptr;
+      fixture = std::make_unique<ConcreteFileSystemTestFixture>();
+      device = fixture->createDevice();
+      device->setContext(std::move(context));
+  }
+
+  std::unique_ptr<ConcreteFileSystemTestFixture> fixture;
+  std::unique_ptr<fspp::Device> device;
 
   static constexpr fspp::mode_t MODE_PUBLIC = fspp::mode_t()
         .addUserReadFlag().addUserWriteFlag().addUserExecFlag()
@@ -91,14 +101,40 @@ public:
     EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
   }
 
-  void setModificationTimestampLaterThanAccessTimestamp(const boost::filesystem::path& path) {
+  void setAtimeOlderThanMtime(const boost::filesystem::path& path) {
     auto node = device->Load(path).value();
     auto st = node->stat();
-    st.mtime.tv_nsec = st.mtime.tv_nsec + 1;
+    st.atime.tv_nsec = st.mtime.tv_nsec - 1;
     node->utimens(
             st.atime,
             st.mtime
     );
+  }
+
+  void setAtimeNewerThanMtime(const boost::filesystem::path& path) {
+    auto node = device->Load(path).value();
+    auto st = node->stat();
+    st.atime.tv_nsec = st.mtime.tv_nsec + 1;
+    node->utimens(
+            st.atime,
+            st.mtime
+    );
+  }
+
+  void setAtimeNewerThanMtimeButBeforeYesterday(const boost::filesystem::path& path) {
+      auto node = device->Load(path).value();
+      auto st = node->stat();
+      const timespec now = cpputils::time::now();
+      const timespec before_yesterday {
+              /*.tv_sec = */ now.tv_sec - 60*60*24 - 1,
+              /*.tv_nsec = */ now.tv_nsec
+      };
+      st.atime = before_yesterday;
+      st.mtime.tv_nsec = st.atime.tv_nsec - 1;
+      node->utimens(
+              st.atime,
+              st.mtime
+      );
   }
 };
 template<class ConcreteFileSystemTestFixture> constexpr fspp::mode_t FileSystemTest<ConcreteFileSystemTestFixture>::MODE_PUBLIC;

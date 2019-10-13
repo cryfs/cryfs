@@ -21,6 +21,7 @@ public:
   void flush() override;
   void fsync() override;
   void fdatasync() override;
+  fspp::TimestampUpdateBehavior timestampUpdateBehavior() const;
 
 private:
   const CryDevice *_device;

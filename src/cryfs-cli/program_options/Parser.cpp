@@ -81,12 +81,10 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("missing-block-is-integrity-violation")) {
         missingBlockIsIntegrityViolation = vm["missing-block-is-integrity-violation"].as<bool>();
     }
+
     if (vm.count("fuse-option")) {
         auto options = vm["fuse-option"].as<vector<string>>();
         for (const auto& option: options) {
-            if (option == "noatime" || option == "atime") {
-                LOG(WARN, "CryFS currently doesn't support noatime/atime flags. Using relatime behavior.");
-            }
             fuseOptions.push_back("-o");
             fuseOptions.push_back(option);
         }

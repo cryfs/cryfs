@@ -43,7 +43,7 @@ void CryOpenFile::truncate(fspp::num_bytes_t size) const {
 
 fspp::num_bytes_t CryOpenFile::read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), timestampUpdateBehavior());
   return _fileBlob->read(buf, offset, count);
 }
 
@@ -62,6 +62,10 @@ void CryOpenFile::fsync() {
 void CryOpenFile::fdatasync() {
   _device->callFsActionCallbacks();
   _fileBlob->flush();
+}
+
+fspp::TimestampUpdateBehavior CryOpenFile::timestampUpdateBehavior() const {
+  return _device->getContext().timestampUpdateBehavior();
 }
 
 }

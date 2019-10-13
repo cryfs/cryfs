@@ -20,6 +20,7 @@ public:
   MockFilesystem();
   virtual ~MockFilesystem();
 
+  MOCK_METHOD(void, setContext, (fspp::Context&&), (override));
   MOCK_METHOD(int, openFile, (const boost::filesystem::path&, int), (override));
   MOCK_METHOD(void, closeFile, (int), (override));
   MOCK_METHOD(void, lstat, (const boost::filesystem::path&, fspp::fuse::STAT*), (override));
@@ -54,7 +55,7 @@ public:
 
   class TempTestFS {
   public:
-    TempTestFS(std::shared_ptr<MockFilesystem> fsimpl);
+    TempTestFS(std::shared_ptr<MockFilesystem> fsimpl, const std::vector<std::string>& fuseOptions = {});
     virtual ~TempTestFS();
   public:
     const boost::filesystem::path &mountDir() const;
@@ -64,10 +65,18 @@ public:
     FuseThread _fuse_thread;
   };
 
-  cpputils::unique_ref<TempTestFS> TestFS();
+  cpputils::unique_ref<TempTestFS> TestFS(const std::vector<std::string>& fuseOptions = {});
 
   std::shared_ptr<MockFilesystem> fsimpl;
 
+  const fspp::Context& context() const {
+      ASSERT(_context != boost::none, "Context wasn't correctly initialized");
+      return *_context;
+  }
+private:
+  boost::optional<fspp::Context> _context;
+
+public:
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
   static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFile;

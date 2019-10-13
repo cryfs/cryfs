@@ -4,8 +4,8 @@
 
 #include "FsBlobRef.h"
 #include "cryfs/impl/filesystem/fsblobstore/DirBlob.h"
-#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 #include <fspp/fs_interface/Node.h>
+#include <fspp/fs_interface/Context.h>
 
 namespace cryfs {
 namespace cachingfsblobstore {
@@ -62,7 +62,7 @@ public:
         return _base->statChildWithKnownSize(blockId, size);
     }
 
-    void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior) {
+    void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
         return _base->updateAccessTimestampForChild(blockId, timestampUpdateBehavior);
     }
 

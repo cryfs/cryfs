@@ -6,6 +6,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <sys/stat.h>
 #include "../fs_interface/Dir.h"
+#include "../fs_interface/Context.h"
 #if defined(_MSC_VER)
 #include <fuse/fuse.h>
 #else
@@ -18,6 +19,8 @@ namespace fuse {
 class Filesystem {
 public:
   virtual ~Filesystem() {}
+
+  virtual void setContext(Context&& context) = 0;
 
   //TODO Test uid/gid parameters of createAndOpenFile
   virtual int createAndOpenFile(const boost::filesystem::path &path, ::mode_t mode, ::uid_t uid, ::gid_t gid) = 0;

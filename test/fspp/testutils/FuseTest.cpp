@@ -19,7 +19,7 @@ using namespace fspp::fuse;
 MockFilesystem::MockFilesystem() {}
 MockFilesystem::~MockFilesystem() {}
 
-FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()) {
+FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()), _context(boost::none) {
   auto defaultAction = Throw(FuseErrnoException(EIO));
   ON_CALL(*fsimpl, openFile(_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, closeFile(_)).WillByDefault(defaultAction);
@@ -48,18 +48,23 @@ FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()) {
   ON_CALL(*fsimpl, readSymlink(_,_,_)).WillByDefault(defaultAction);
 
   EXPECT_CALL(*fsimpl, access(_,_)).WillRepeatedly(Return());
+
+  ON_CALL(*fsimpl, setContext(_)).WillByDefault(Invoke([this] (fspp::Context context) {
+      _context = std::move(context);
+  }));
+
   ReturnIsDirOnLstat("/");
 }
 
-unique_ref<FuseTest::TempTestFS> FuseTest::TestFS() {
-  return make_unique_ref<TempTestFS>(fsimpl);
+unique_ref<FuseTest::TempTestFS> FuseTest::TestFS(const std::vector<std::string>& fuseOptions) {
+  return make_unique_ref<TempTestFS>(fsimpl, fuseOptions);
 }
 
-FuseTest::TempTestFS::TempTestFS(shared_ptr<MockFilesystem> fsimpl)
+FuseTest::TempTestFS::TempTestFS(shared_ptr<MockFilesystem> fsimpl, const std::vector<std::string>& fuseOptions)
  :_mountDir(),
   _fuse([fsimpl] (Fuse*) {return fsimpl;}, []{}, "fusetest", boost::none), _fuse_thread(&_fuse) {
 
-  _fuse_thread.start(_mountDir.path(), {});
+  _fuse_thread.start(_mountDir.path(), fuseOptions);
 }
 
 FuseTest::TempTestFS::~TempTestFS() {
