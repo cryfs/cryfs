@@ -15,11 +15,11 @@ references:
     restore_cache:
       keys:
         # Find the most recent cache from any branch
-        - v5_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+        - v6_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   container_setup_post: &container_setup_post
     save_cache:
       # Add _aptcache_contents to cache key so that it is re-uploaded each time the cache changes.
-      key: v5_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
+      key: v6_container_setup_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ checksum "/tmp/_aptcache_contents" }}
       paths:
       - /tmp/aptcache
   container_setup: &container_setup
