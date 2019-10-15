@@ -1,0 +1,18 @@
+include(../cmake/ranges_diagnostics.cmake)
+
+set(CMAKE_FOLDER "test")
+
+add_subdirectory(action)
+add_subdirectory(algorithm)
+add_subdirectory(iterator)
+add_subdirectory(numeric)
+add_subdirectory(range)
+add_subdirectory(utility)
+add_subdirectory(view)
+add_subdirectory(experimental)
+
+rv3_add_test(test.config config config.cpp)
+rv3_add_test(test.constexpr_core constexpr_core constexpr_core.cpp)
+rv3_add_test(test.multiple multiple multiple1.cpp multiple2.cpp)
+rv3_add_test(test.bug474 bug474 bug474.cpp)
+rv3_add_test(test.bug566 bug566 bug566.cpp)

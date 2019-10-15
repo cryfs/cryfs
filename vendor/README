@@ -4,3 +4,4 @@ spdlog: https://github.com/gabime/spdlog/tree/v1.4.2/include/spdlog
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_2_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
+range-v3: https://github.com/ericniebler/range-v3/tree/0.9.1
