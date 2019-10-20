@@ -135,7 +135,7 @@ public:
   uint32_t traversalBeginIndex;
   Data ZEROES;
 };
-INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeByTraversing_P,
+INSTANTIATE_TEST_SUITE_P(DataTreeTest_ResizeByTraversing_P, DataTreeTest_ResizeByTraversing_P,
   Combine(
     //Tree we're starting with
     Values<function<unique_ref<DataTree>(DataTreeTest_ResizeByTraversing*, uint32_t)>>(

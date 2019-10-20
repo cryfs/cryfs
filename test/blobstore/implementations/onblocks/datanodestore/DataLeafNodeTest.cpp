@@ -160,7 +160,7 @@ public:
     return leaf->blockId();
   }
 };
-INSTANTIATE_TEST_CASE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataNodeLayout(DataLeafNodeTest::BLOCKSIZE_BYTES).maxBytesPerLeaf()));
+INSTANTIATE_TEST_SUITE_P(DataLeafNodeSizeTest, DataLeafNodeSizeTest, Values(0, 1, 5, 16, 32, 512, DataNodeLayout(DataLeafNodeTest::BLOCKSIZE_BYTES).maxBytesPerLeaf()));
 
 TEST_P(DataLeafNodeSizeTest, ResizeNode_ReadSizeImmediately) {
   leaf->resize(GetParam());
@@ -305,7 +305,7 @@ public:
     EXPECT_DATA_READS_AS_OUTSIDE_OF(ZEROES, leaf, start, count);
   }
 };
-INSTANTIATE_TEST_CASE_P(DataLeafNodeDataTest, DataLeafNodeDataTest, Values(
+INSTANTIATE_TEST_SUITE_P(DataLeafNodeDataTest, DataLeafNodeDataTest, Values(
   DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()},     // full size leaf, access beginning to end
   DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     100, DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-200}, // full size leaf, access middle to middle
   DataRange{DataLeafNodeTest::LAYOUT.maxBytesPerLeaf(),     0,   DataLeafNodeTest::LAYOUT.maxBytesPerLeaf()-100}, // full size leaf, access beginning to middle

@@ -9,7 +9,7 @@ private:
     stat->st_gid = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnGidTest, FuseLstatReturnGidTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnGidTest, FuseLstatReturnGidTest, Values(
     0,
     10
 ));

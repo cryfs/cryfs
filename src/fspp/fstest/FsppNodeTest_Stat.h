@@ -21,7 +21,7 @@ public:
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Stat_FileOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
-TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly);
+TYPED_TEST_SUITE_P(FsppNodeTest_Stat_FileOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, CreatedFileIsEmpty) {
     this->CreateFile("/myfile");
@@ -41,7 +41,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_FileOnly, FileIsFile) {
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Stat_DirOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
-TYPED_TEST_CASE_P(FsppNodeTest_Stat_DirOnly);
+TYPED_TEST_SUITE_P(FsppNodeTest_Stat_DirOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
     this->CreateDir("/mydir");
@@ -55,7 +55,7 @@ TYPED_TEST_P(FsppNodeTest_Stat_DirOnly, DirIsDir) {
 template<class ConcreteFileSystemTestFixture>
 class FsppNodeTest_Stat_SymlinkOnly: public FileSystemTest<ConcreteFileSystemTestFixture>, public FsppNodeTestHelper {};
 
-TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly);
+TYPED_TEST_SUITE_P(FsppNodeTest_Stat_SymlinkOnly);
 
 TYPED_TEST_P(FsppNodeTest_Stat_SymlinkOnly, SymlinkIsSymlink) {
     this->CreateSymlink("/mysymlink");
@@ -65,20 +65,20 @@ TYPED_TEST_P(FsppNodeTest_Stat_SymlinkOnly, SymlinkIsSymlink) {
     });
 }
 
-REGISTER_NODE_TEST_CASE(FsppNodeTest_Stat,
+REGISTER_NODE_TEST_SUITE(FsppNodeTest_Stat,
     Nlink
 );
 
-REGISTER_TYPED_TEST_CASE_P(FsppNodeTest_Stat_FileOnly,
+REGISTER_TYPED_TEST_SUITE_P(FsppNodeTest_Stat_FileOnly,
     CreatedFileIsEmpty,
     FileIsFile
 );
 
-REGISTER_TYPED_TEST_CASE_P(FsppNodeTest_Stat_DirOnly,
+REGISTER_TYPED_TEST_SUITE_P(FsppNodeTest_Stat_DirOnly,
     DirIsDir
 );
 
-REGISTER_TYPED_TEST_CASE_P(FsppNodeTest_Stat_SymlinkOnly,
+REGISTER_TYPED_TEST_SUITE_P(FsppNodeTest_Stat_SymlinkOnly,
     SymlinkIsSymlink
 );
 

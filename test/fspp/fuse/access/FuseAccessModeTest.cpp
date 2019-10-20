@@ -7,7 +7,7 @@ using ::testing::Values;
 
 class FuseAccessModeTest: public FuseAccessTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseAccessModeTest, FuseAccessModeTest, Values(0, F_OK, R_OK, W_OK, X_OK, R_OK|W_OK, W_OK|X_OK, R_OK|X_OK, R_OK|W_OK|X_OK));
+INSTANTIATE_TEST_SUITE_P(FuseAccessModeTest, FuseAccessModeTest, Values(0, F_OK, R_OK, W_OK, X_OK, R_OK|W_OK, W_OK|X_OK, R_OK|X_OK, R_OK|W_OK|X_OK));
 
 
 TEST_P(FuseAccessModeTest, AccessFile) {

@@ -41,9 +41,9 @@ private:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_FakeCipher, BlockStoreTest, EncryptedBlockStoreTestFixture<FakeAuthenticatedCipher>);
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_AES256_GCM, BlockStoreTest, EncryptedBlockStoreTestFixture<AES256_GCM>);
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_AES256_CFB, BlockStoreTest, EncryptedBlockStoreTestFixture<AES256_CFB>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_FakeCipher, BlockStoreTest, EncryptedBlockStoreTestFixture<FakeAuthenticatedCipher>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_AES256_GCM, BlockStoreTest, EncryptedBlockStoreTestFixture<AES256_GCM>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_AES256_CFB, BlockStoreTest, EncryptedBlockStoreTestFixture<AES256_CFB>);
 
 template<class Cipher>
 class EncryptedBlockStore2TestFixture: public BlockStore2TestFixture {
@@ -60,6 +60,6 @@ private:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_FakeCipher, BlockStore2Test, EncryptedBlockStore2TestFixture<FakeAuthenticatedCipher>);
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_AES256_GCM, BlockStore2Test, EncryptedBlockStore2TestFixture<AES256_GCM>);
-INSTANTIATE_TYPED_TEST_CASE_P(Encrypted_AES256_CFB, BlockStore2Test, EncryptedBlockStore2TestFixture<AES256_CFB>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_FakeCipher, BlockStore2Test, EncryptedBlockStore2TestFixture<FakeAuthenticatedCipher>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_AES256_GCM, BlockStore2Test, EncryptedBlockStore2TestFixture<AES256_GCM>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Encrypted_AES256_CFB, BlockStore2Test, EncryptedBlockStore2TestFixture<AES256_CFB>);

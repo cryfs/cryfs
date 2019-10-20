@@ -10,7 +10,7 @@ using namespace fspp::fuse;
 
 class FuseFsyncErrorTest: public FuseFsyncTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseFsyncErrorTest, FuseFsyncErrorTest, Values(EBADF, EIO, EROFS, EINVAL));
+INSTANTIATE_TEST_SUITE_P(FuseFsyncErrorTest, FuseFsyncErrorTest, Values(EBADF, EIO, EROFS, EINVAL));
 
 TEST_P(FuseFsyncErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);

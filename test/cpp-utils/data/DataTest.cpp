@@ -57,7 +57,7 @@ public:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(DataTestWithSizeParam, DataTestWithSizeParam, Values(0, 1, 2, 1024, 4096, 10*1024*1024));
+INSTANTIATE_TEST_SUITE_P(DataTestWithSizeParam, DataTestWithSizeParam, Values(0, 1, 2, 1024, 4096, 10*1024*1024));
 
 TEST_P(DataTestWithSizeParam, ZeroInitializedDataIsDifferentToRandomData) {
   if (GetParam() != 0) {
@@ -215,7 +215,7 @@ TEST_F(DataTest, LoadingNonexistingFile) {
 }
 
 class DataTestWithStringParam: public DataTest, public WithParamInterface<string> {};
-INSTANTIATE_TEST_CASE_P(DataTestWithStringParam, DataTestWithStringParam, Values("", "2898B4B8A13C0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
+INSTANTIATE_TEST_SUITE_P(DataTestWithStringParam, DataTestWithStringParam, Values("", "2898B4B8A13C0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
 
 TEST_P(DataTestWithStringParam, FromAndToString) {
   Data data = Data::FromString(GetParam());

@@ -13,7 +13,7 @@ using fspp::fuse::FuseErrnoException;
 class FuseStatfsErrorTest: public FuseStatfsTest, public WithParamInterface<int> {
 public:
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsErrorTest, FuseStatfsErrorTest, Values(EACCES, EBADF, EFAULT, EINTR, EIO, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOSYS, ENOTDIR, EOVERFLOW));
+INSTANTIATE_TEST_SUITE_P(FuseStatfsErrorTest, FuseStatfsErrorTest, Values(EACCES, EBADF, EFAULT, EINTR, EIO, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOSYS, ENOTDIR, EOVERFLOW));
 
 TEST_F(FuseStatfsErrorTest, ReturnNoError) {
   ReturnIsFileOnLstat(FILENAME);

@@ -31,7 +31,7 @@ public:
 
 class DataNodeViewDepthTest: public DataNodeViewTest, public WithParamInterface<uint8_t> {
 };
-INSTANTIATE_TEST_CASE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 1, 3, 10, 100));
+INSTANTIATE_TEST_SUITE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 1, 3, 10, 100));
 
 TEST_P(DataNodeViewDepthTest, DepthIsStored) {
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
@@ -46,7 +46,7 @@ TEST_P(DataNodeViewDepthTest, DepthIsStored) {
 
 class DataNodeViewSizeTest: public DataNodeViewTest, public WithParamInterface<uint32_t> {
 };
-INSTANTIATE_TEST_CASE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50, 64, 1024, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50, 64, 1024, 1024*1024*1024));
 
 TEST_P(DataNodeViewSizeTest, SizeIsStored) {
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));

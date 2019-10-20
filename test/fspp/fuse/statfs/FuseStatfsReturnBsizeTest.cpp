@@ -9,7 +9,7 @@ private:
     stat->f_bsize = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnBsizeTest, FuseStatfsReturnBsizeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBsizeTest, FuseStatfsReturnBsizeTest, Values(
     0,
     10,
     256,

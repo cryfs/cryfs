@@ -124,7 +124,7 @@ public:
   uint64_t newSize;
   Data ZEROES;
 };
-INSTANTIATE_TEST_CASE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumBytes_P,
+INSTANTIATE_TEST_SUITE_P(DataTreeTest_ResizeNumBytes_P, DataTreeTest_ResizeNumBytes_P,
   Combine(
     //Tree we're starting with
     Values<function<unique_ref<DataTree>(DataTreeTest_ResizeNumBytes*, uint32_t)>>(

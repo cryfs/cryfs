@@ -10,7 +10,7 @@ using namespace fspp::fuse;
 
 class FuseRmdirErrorTest: public FuseRmdirTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseRmdirErrorTest, FuseRmdirErrorTest, Values(EACCES, EBUSY, EFAULT, EINVAL, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, ENOTEMPTY, EPERM, EROFS));
+INSTANTIATE_TEST_SUITE_P(FuseRmdirErrorTest, FuseRmdirErrorTest, Values(EACCES, EBUSY, EFAULT, EINVAL, ELOOP, ENAMETOOLONG, ENOENT, ENOMEM, ENOTDIR, ENOTEMPTY, EPERM, EROFS));
 
 TEST_P(FuseRmdirErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsDirOnLstat(DIRNAME);

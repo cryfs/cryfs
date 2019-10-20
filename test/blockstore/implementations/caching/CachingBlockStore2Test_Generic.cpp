@@ -24,7 +24,7 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Caching2, BlockStoreTest, CachingBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(Caching2, BlockStoreTest, CachingBlockStoreTestFixture);
 
 
 class CachingBlockStore2TestFixture: public BlockStore2TestFixture {
@@ -34,4 +34,4 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Caching, BlockStore2Test, CachingBlockStore2TestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(Caching, BlockStore2Test, CachingBlockStore2TestFixture);

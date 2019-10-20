@@ -13,7 +13,7 @@ using namespace fspp::fuse;
 
 class FuseAccessErrorTest: public FuseAccessTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseAccessErrorTest, FuseAccessErrorTest, Values(EACCES, ELOOP, ENAMETOOLONG, ENOENT, ENOTDIR, EROFS, EFAULT, EINVAL, EIO, ENOMEM, ETXTBSY));
+INSTANTIATE_TEST_SUITE_P(FuseAccessErrorTest, FuseAccessErrorTest, Values(EACCES, ELOOP, ENAMETOOLONG, ENOENT, ENOTDIR, EROFS, EFAULT, EINVAL, EIO, ENOMEM, ETXTBSY));
 
 TEST_P(FuseAccessErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);

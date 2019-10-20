@@ -70,7 +70,7 @@ public:
   }
 };
 
-TYPED_TEST_CASE_P(BlockStoreTest);
+TYPED_TEST_SUITE_P(BlockStoreTest);
 
 TYPED_TEST_P(BlockStoreTest, TwoCreatedBlocksHaveDifferentBlockIds) {
   auto blockStore = this->fixture.createBlockStore();
@@ -341,7 +341,7 @@ TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndBothNullSize) {
 #include "BlockStoreTest_Data.h"
 
 
-REGISTER_TYPED_TEST_CASE_P(BlockStoreTest,
+REGISTER_TYPED_TEST_SUITE_P(BlockStoreTest,
     CreatedBlockHasCorrectSize,
     LoadingUnchangedBlockHasCorrectSize,
     CreatedBlockData,

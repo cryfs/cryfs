@@ -9,7 +9,7 @@ private:
     stat->st_nlink = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnNlinkTest, FuseLstatReturnNlinkTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnNlinkTest, FuseLstatReturnNlinkTest, Values(
     1,
     2,
     5,

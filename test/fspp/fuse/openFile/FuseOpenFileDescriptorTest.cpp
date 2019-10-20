@@ -30,7 +30,7 @@ private:
     EXPECT_EQ(1, retval) << "Reading file failed";
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseOpenFileDescriptorTest, FuseOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseOpenFileDescriptorTest, FuseOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnIsFileOnLstatWithSize(FILENAME, fspp::num_bytes_t(1));

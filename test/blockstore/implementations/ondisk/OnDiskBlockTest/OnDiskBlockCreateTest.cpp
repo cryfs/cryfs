@@ -60,7 +60,7 @@ public:
     ZEROES.FillWithZeroes();
   }
 };
-INSTANTIATE_TEST_CASE_P(OnDiskBlockCreateSizeTest, OnDiskBlockCreateSizeTest, Values(0, 1, 5, 1024, 10*1024*1024));
+INSTANTIATE_TEST_SUITE_P(OnDiskBlockCreateSizeTest, OnDiskBlockCreateSizeTest, Values(0, 1, 5, 1024, 10*1024*1024));
 
 TEST_P(OnDiskBlockCreateSizeTest, OnDiskSizeIsCorrect) {
   Data fileContent = Data::LoadFromFile(file.path()).value();

@@ -9,7 +9,7 @@ private:
     stat->f_files = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseStatfsReturnFilesTest, FuseStatfsReturnFilesTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnFilesTest, FuseStatfsReturnFilesTest, Values(
     0,
     10,
     256,

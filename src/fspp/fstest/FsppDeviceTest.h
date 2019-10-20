@@ -22,12 +22,12 @@ public:
   }
 };
 
-//Unfortunately, googletest only allows 50 test cases per REGISTER_TYPED_TEST_CASE_P, so we have to split it.
+//Unfortunately, googletest only allows 50 test cases per REGISTER_TYPED_TEST_SUITE_P, so we have to split it.
 template<class ConcreteFileSystemTestFixture> class FsppDeviceTest_One: public FsppDeviceTest<ConcreteFileSystemTestFixture> {};
 template<class ConcreteFileSystemTestFixture> class FsppDeviceTest_Two: public FsppDeviceTest<ConcreteFileSystemTestFixture> {};
 
-TYPED_TEST_CASE_P(FsppDeviceTest_One);
-TYPED_TEST_CASE_P(FsppDeviceTest_Two);
+TYPED_TEST_SUITE_P(FsppDeviceTest_One);
+TYPED_TEST_SUITE_P(FsppDeviceTest_Two);
 
 TYPED_TEST_P(FsppDeviceTest_One, InitFilesystem) {
   //fixture->createDevice() is called in the FileSystemTest constructor
@@ -410,7 +410,7 @@ TYPED_TEST_P(FsppDeviceTest_Two, LoadSymlinkFromDir_Nesting2_LoadDir) {
 
 //TODO Test statfs
 
-REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest_One,
+REGISTER_TYPED_TEST_SUITE_P(FsppDeviceTest_One,
   InitFilesystem,
   LoadRootDir_Load,
   LoadRootDir_LoadDir,
@@ -462,7 +462,7 @@ REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest_One,
   LoadSymlinkFromDir_Nesting1_LoadDir
 );
 
-REGISTER_TYPED_TEST_CASE_P(FsppDeviceTest_Two,
+REGISTER_TYPED_TEST_SUITE_P(FsppDeviceTest_Two,
   LoadFileFromDir_Nesting2_Load,
   LoadFileFromDir_Nesting2_LoadFile,
   LoadFileFromDir_Nesting2_LoadDir,

@@ -22,4 +22,4 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(LowToHighLevel, BlockStoreTest, LowToHighLevelBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(LowToHighLevel, BlockStoreTest, LowToHighLevelBlockStoreTestFixture);

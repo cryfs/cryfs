@@ -17,4 +17,4 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Mock, BlockStoreTest, MockBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(Mock, BlockStoreTest, MockBlockStoreTestFixture);

@@ -23,7 +23,7 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(InMemory, BlockStoreTest, InMemoryBlockStoreTestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(InMemory, BlockStoreTest, InMemoryBlockStoreTestFixture);
 
 class InMemoryBlockStore2TestFixture: public BlockStore2TestFixture {
 public:
@@ -32,4 +32,4 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(InMemory, BlockStore2Test, InMemoryBlockStore2TestFixture);
+INSTANTIATE_TYPED_TEST_SUITE_P(InMemory, BlockStore2Test, InMemoryBlockStore2TestFixture);

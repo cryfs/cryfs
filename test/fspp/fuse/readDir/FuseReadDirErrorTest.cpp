@@ -13,7 +13,7 @@ using namespace fspp::fuse;
 
 class FuseReadDirErrorTest: public FuseReadDirTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseReadDirErrorTest, FuseReadDirErrorTest, Values(EACCES, EBADF, EMFILE, ENFILE, ENOMEM, ENOTDIR, EFAULT, EINVAL));
+INSTANTIATE_TEST_SUITE_P(FuseReadDirErrorTest, FuseReadDirErrorTest, Values(EACCES, EBADF, EMFILE, ENFILE, ENOMEM, ENOTDIR, EFAULT, EINVAL));
 
 //TODO On ENOENT, libfuse doesn't return the ENOENT error, but returns a success response with an empty directory. Why?
 

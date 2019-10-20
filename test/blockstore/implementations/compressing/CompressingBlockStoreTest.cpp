@@ -23,5 +23,5 @@ public:
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Compressing_Gzip, BlockStoreTest, CompressingBlockStoreTestFixture<Gzip>);
-INSTANTIATE_TYPED_TEST_CASE_P(Compressing_RunLengthEncoding, BlockStoreTest, CompressingBlockStoreTestFixture<RunLengthEncoding>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Compressing_Gzip, BlockStoreTest, CompressingBlockStoreTestFixture<Gzip>);
+INSTANTIATE_TYPED_TEST_SUITE_P(Compressing_RunLengthEncoding, BlockStoreTest, CompressingBlockStoreTestFixture<RunLengthEncoding>);

@@ -23,7 +23,7 @@ public:
     OnOpenReturnFileDescriptor(FILENAME, 0);
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseReadErrorTest, FuseReadErrorTest, Values(EAGAIN, EBADF, EFAULT, EINTR, EINVAL, EIO, EISDIR, EOVERFLOW, ESPIPE, ENXIO));
+INSTANTIATE_TEST_SUITE_P(FuseReadErrorTest, FuseReadErrorTest, Values(EAGAIN, EBADF, EFAULT, EINTR, EINVAL, EIO, EISDIR, EOVERFLOW, ESPIPE, ENXIO));
 
 
 TEST_P(FuseReadErrorTest, ReturnErrorOnFirstReadCall) {

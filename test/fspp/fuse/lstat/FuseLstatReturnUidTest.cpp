@@ -9,7 +9,7 @@ private:
     stat->st_uid = value;
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnUidTest, FuseLstatReturnUidTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnUidTest, FuseLstatReturnUidTest, Values(
     0,
     10
 ));

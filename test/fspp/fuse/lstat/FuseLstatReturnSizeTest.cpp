@@ -9,7 +9,7 @@ private:
     stat->st_size = value.value();
   }
 };
-INSTANTIATE_TEST_CASE_P(FuseLstatReturnSizeTest, FuseLstatReturnSizeTest, Values(
+INSTANTIATE_TEST_SUITE_P(FuseLstatReturnSizeTest, FuseLstatReturnSizeTest, Values(
   fspp::num_bytes_t(0),
   fspp::num_bytes_t(1),
   fspp::num_bytes_t(4096),

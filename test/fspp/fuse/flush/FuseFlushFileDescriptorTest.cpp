@@ -22,7 +22,7 @@ using std::string;
 
 class FuseFlushFileDescriptorTest: public FuseFlushTest, public WithParamInterface<int> {
 };
-INSTANTIATE_TEST_CASE_P(FuseFlushFileDescriptorTest, FuseFlushFileDescriptorTest, Values(0, 1, 2, 100, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(FuseFlushFileDescriptorTest, FuseFlushFileDescriptorTest, Values(0, 1, 2, 100, 1024*1024*1024));
 
 TEST_P(FuseFlushFileDescriptorTest, FlushOnCloseFile) {
   ReturnIsFileOnLstat(FILENAME);

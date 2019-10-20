@@ -17,9 +17,9 @@ TEST_F(DataTreeTest_NumStoredBytes, CreatedTreeIsEmpty) {
 }
 
 class DataTreeTest_NumStoredBytes_P: public DataTreeTest_NumStoredBytes, public WithParamInterface<uint32_t> {};
-INSTANTIATE_TEST_CASE_P(EmptyLastLeaf, DataTreeTest_NumStoredBytes_P, Values(0u));
-INSTANTIATE_TEST_CASE_P(HalfFullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(5u, 10u));
-INSTANTIATE_TEST_CASE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(static_cast<uint32_t>(DataNodeLayout(DataTreeTest_NumStoredBytes::BLOCKSIZE_BYTES).maxBytesPerLeaf())));
+INSTANTIATE_TEST_SUITE_P(EmptyLastLeaf, DataTreeTest_NumStoredBytes_P, Values(0u));
+INSTANTIATE_TEST_SUITE_P(HalfFullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(5u, 10u));
+INSTANTIATE_TEST_SUITE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(static_cast<uint32_t>(DataNodeLayout(DataTreeTest_NumStoredBytes::BLOCKSIZE_BYTES).maxBytesPerLeaf())));
 
 //TODO Test numLeaves() and numNodes() also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
 

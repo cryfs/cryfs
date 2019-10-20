@@ -14,7 +14,7 @@ public:
         return file;
     }
 };
-TYPED_TEST_CASE_P(FsppFileTest_Timestamps);
+TYPED_TEST_SUITE_P(FsppFileTest_Timestamps);
 
 TYPED_TEST_P(FsppFileTest_Timestamps, open_nomode) {
     auto file = this->CreateFile("/myfile");
@@ -88,7 +88,7 @@ TYPED_TEST_P(FsppFileTest_Timestamps, truncate_nonempty_to_nonempty_grow) {
     this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
 }
 
-REGISTER_TYPED_TEST_CASE_P(FsppFileTest_Timestamps,
+REGISTER_TYPED_TEST_SUITE_P(FsppFileTest_Timestamps,
     open_nomode,
     open_rdonly,
     open_wronly,

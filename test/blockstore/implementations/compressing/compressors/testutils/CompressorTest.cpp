@@ -17,7 +17,7 @@ public:
     }
 };
 
-TYPED_TEST_CASE_P(CompressorTest);
+TYPED_TEST_SUITE_P(CompressorTest);
 
 TYPED_TEST_P(CompressorTest, Empty) {
   Data empty(0);
@@ -77,7 +77,7 @@ TYPED_TEST_P(CompressorTest, LargeRunsAndArbitrary) {
     this->EXPECT_COMPRESS_AND_DECOMPRESS_IS_IDENTITY(data);
 }
 
-REGISTER_TYPED_TEST_CASE_P(CompressorTest,
+REGISTER_TYPED_TEST_SUITE_P(CompressorTest,
         Empty,
         ArbitraryData,
         Zeroes,
@@ -88,5 +88,5 @@ REGISTER_TYPED_TEST_CASE_P(CompressorTest,
         LargeRunsAndArbitrary
 );
 
-INSTANTIATE_TYPED_TEST_CASE_P(Gzip, CompressorTest, Gzip);
-INSTANTIATE_TYPED_TEST_CASE_P(RunLengthEncoding, CompressorTest, RunLengthEncoding);
+INSTANTIATE_TYPED_TEST_SUITE_P(Gzip, CompressorTest, Gzip);
+INSTANTIATE_TYPED_TEST_SUITE_P(RunLengthEncoding, CompressorTest, RunLengthEncoding);

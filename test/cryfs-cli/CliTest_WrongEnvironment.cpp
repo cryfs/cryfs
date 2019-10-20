@@ -72,14 +72,14 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(DefaultParams, CliTest_WrongEnvironment, Values(TestConfig({false, false, false})));
-INSTANTIATE_TEST_CASE_P(ExternalConfigfile, CliTest_WrongEnvironment, Values(TestConfig({true, false, false})));
-INSTANTIATE_TEST_CASE_P(LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({false, true, false})));
-INSTANTIATE_TEST_CASE_P(ExternalConfigfile_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({true, true, false})));
-INSTANTIATE_TEST_CASE_P(RunningInForeground, CliTest_WrongEnvironment, Values(TestConfig({false, false, true})));
-INSTANTIATE_TEST_CASE_P(RunningInForeground_ExternalConfigfile, CliTest_WrongEnvironment, Values(TestConfig({true, false, true})));
-INSTANTIATE_TEST_CASE_P(RunningInForeground_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({false, true, true})));
-INSTANTIATE_TEST_CASE_P(RunningInForeground_ExternalConfigfile_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({true, true, true})));
+INSTANTIATE_TEST_SUITE_P(DefaultParams, CliTest_WrongEnvironment, Values(TestConfig({false, false, false})));
+INSTANTIATE_TEST_SUITE_P(ExternalConfigfile, CliTest_WrongEnvironment, Values(TestConfig({true, false, false})));
+INSTANTIATE_TEST_SUITE_P(LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({false, true, false})));
+INSTANTIATE_TEST_SUITE_P(ExternalConfigfile_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({true, true, false})));
+INSTANTIATE_TEST_SUITE_P(RunningInForeground, CliTest_WrongEnvironment, Values(TestConfig({false, false, true})));
+INSTANTIATE_TEST_SUITE_P(RunningInForeground_ExternalConfigfile, CliTest_WrongEnvironment, Values(TestConfig({true, false, true})));
+INSTANTIATE_TEST_SUITE_P(RunningInForeground_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({false, true, true})));
+INSTANTIATE_TEST_SUITE_P(RunningInForeground_ExternalConfigfile_LogIsNotStderr, CliTest_WrongEnvironment, Values(TestConfig({true, true, true})));
 
 //Counter-Test. Test that it doesn't fail if we call it without an error condition.
 TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
