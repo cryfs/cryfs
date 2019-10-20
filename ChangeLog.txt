@@ -1,3 +1,9 @@
+Version 0.11.0 (unreleased)
+---------------
+Build changes:
+* Switch to Conan package manager
+
+
 Version 0.10.2
 ---------------
 Fixed bugs:

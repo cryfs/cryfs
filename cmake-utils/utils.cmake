@@ -106,26 +106,8 @@ endfunction(target_enable_style_warnings)
 #  target_add_boost(buildtarget system filesystem) # list all libraries to link against in the dependencies
 ##################################################
 function(target_add_boost TARGET)
-    # Load boost libraries
-    if(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
-        # Many supported systems don't have boost >= 1.65.1. Better link it statically.
-        message(STATUS "Boost will be statically linked")
-        set(Boost_USE_STATIC_LIBS ON)
-    else(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
-        message(STATUS "Boost will be dynamically linked")
-        set(Boost_USE_STATIC_LIBS OFF)
-    endif(NOT DEFINED Boost_USE_STATIC_LIBS OR Boost_USE_STATIC_LIBS)
-    set(BOOST_THREAD_VERSION 4)
-    find_package(Boost 1.65.1
-            REQUIRED
-            COMPONENTS ${ARGN})
-    target_include_directories(${TARGET} SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
-    target_link_libraries(${TARGET} PUBLIC ${Boost_LIBRARIES})
+    target_link_libraries(${TARGET} PUBLIC CONAN_PKG::boost)
     target_compile_definitions(${TARGET} PUBLIC BOOST_THREAD_VERSION=4)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-      # Also link to rt, because boost thread needs that.
-      target_link_libraries(${TARGET} PUBLIC rt)
-    endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endfunction(target_add_boost)
 
 ##################################################
