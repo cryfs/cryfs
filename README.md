@@ -44,7 +44,7 @@ Requirements
 ------------
   - Git (for getting the source code)
   - GCC version >= 5.0 or Clang >= 4.0
-  - CMake version >= 3.0 
+  - CMake version >= 3.1
   - libcurl4 (including development headers)
   - Boost libraries version >= 1.65.1 (including development headers)
     - filesystem
