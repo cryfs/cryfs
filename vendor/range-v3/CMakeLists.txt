@@ -1,8 +1,2 @@
-project (range-v3)
-
-set(SOURCES
-    dummy.cpp
-)
-
-add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCES})
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/range-v3/include)
+add_library(range-v3 INTERFACE)
+target_include_directories(range-v3 SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/range-v3/include)

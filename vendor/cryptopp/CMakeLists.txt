@@ -1,11 +1,11 @@
 project(mycryptopp)
 
-add_library(cryptopp dummy.cpp)
+add_library(cryptopp INTERFACE)
 # note: include directory is called vendor_cryptopp instead of cryptopp to avoid include clashes with system headers
 target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Forward debug build info (i.e. set CRYPTOPP_DEBUG variable if building in debug mode)
-target_compile_definitions(cryptopp PUBLIC $<$<CONFIG:Debug>:CRYPTOPP_DEBUG>) # add to all targets depending on this
+target_compile_definitions(cryptopp INTERFACE $<$<CONFIG:Debug>:CRYPTOPP_DEBUG>) # add to all targets depending on this
 add_compile_options($<$<CONFIG:Debug>:-DCRYPTOPP_DEBUG>) # add to stuff built in subdirectories (like the actual library)
 
 if(NOT DISABLE_OPENMP)
@@ -68,8 +68,8 @@ if(NOT DISABLE_OPENMP)
         target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS} ${Additional_OpenMP_Libraries_Workaround})
     endif()
 
-    target_link_libraries(cryptopp PUBLIC ${OpenMP_CXX_FLAGS}) # Workaround for Ubuntu 18.04 that otherwise doesn't set -fopenmp for linking
-    target_link_libraries(cryptopp PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(cryptopp INTERFACE ${OpenMP_CXX_FLAGS}) # Workaround for Ubuntu 18.04 that otherwise doesn't set -fopenmp for linking
+    target_link_libraries(cryptopp INTERFACE OpenMP::OpenMP_CXX)
 
     # also add these flags to the third party Crypto++ build setup that is built in a subdirectory
     message(STATUS "OpenMP flags: ${OpenMP_CXX_FLAGS}")
@@ -87,4 +87,4 @@ set(BUILD_STATIC ON CACHE BOOL "")
 set(cryptocpp_DISPLAY_CMAKE_SUPPORT_WARNING OFF CACHE BOOL "")
 add_subdirectory(vendor_cryptopp EXCLUDE_FROM_ALL)
 
-target_link_libraries(cryptopp PRIVATE cryptopp-static)
+target_link_libraries(cryptopp INTERFACE cryptopp-static)
