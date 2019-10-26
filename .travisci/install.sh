@@ -2,6 +2,8 @@
 
 set -e
 
+export HOMEBREW_NO_AUTO_UPDATE=1
+
 # Install newer GCC if we're running on GCC
 if [ "${CXX}" == "g++" ]; then
     # We need to uninstall oclint because it creates a /usr/local/include/c++ symlink that clashes with the gcc5 package
