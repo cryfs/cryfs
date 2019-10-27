@@ -22,13 +22,13 @@ using testing::_;
 
 class MockCallable {
 public:
-  MOCK_METHOD0(call, std::string());
+  MOCK_METHOD(std::string, call, ());
 };
 
 class MockKDF : public PasswordBasedKDF {
 public:
-  MOCK_METHOD3(deriveExistingKey, EncryptionKey(size_t keySize, const string& password, const Data& kdfParameters));
-  MOCK_METHOD2(deriveNewKey, KeyResult(size_t keySize, const string& password));
+  MOCK_METHOD(EncryptionKey, deriveExistingKey, (size_t keySize, const string& password, const Data& kdfParameters), (override));
+  MOCK_METHOD(KeyResult, deriveNewKey, (size_t keySize, const string& password), (override));
 };
 
 class CryPasswordBasedKeyProviderTest : public ::testing::Test {

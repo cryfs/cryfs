@@ -2,7 +2,7 @@
 #include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::_;
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -15,7 +15,7 @@ INSTANTIATE_TEST_SUITE_P(FuseUtimensErrorTest, FuseUtimensErrorTest, Values(EACC
 
 TEST_P(FuseUtimensErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, utimens(StrEq(FILENAME), _, _))
+  EXPECT_CALL(*fsimpl, utimens(Eq(FILENAME), _, _))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = UtimensReturnError(FILENAME, TIMEVALUE, TIMEVALUE);

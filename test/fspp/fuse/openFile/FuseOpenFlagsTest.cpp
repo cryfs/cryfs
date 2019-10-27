@@ -1,6 +1,6 @@
 #include "testutils/FuseOpenTest.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Return;
@@ -11,7 +11,7 @@ INSTANTIATE_TEST_SUITE_P(FuseOpenFlagsTest, FuseOpenFlagsTest, Values(O_RDWR, O_
 
 TEST_P(FuseOpenFlagsTest, testFlags) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), OpenFlagsEq(GetParam())))
+  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), OpenFlagsEq(GetParam())))
     .Times(1).WillOnce(Return(0));
 
   OpenFile(FILENAME, GetParam());

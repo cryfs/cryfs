@@ -91,7 +91,7 @@ namespace fspp {
                 throw std::logic_error("Filesystem not initialized yet");
             }
 
-            cpputils::unique_ref<std::vector<Dir::Entry>> readDir(const boost::filesystem::path &) override {
+            std::vector<Dir::Entry> readDir(const boost::filesystem::path &) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }
 

@@ -1,6 +1,6 @@
 #include "testutils/FuseAccessTest.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Return;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -12,7 +12,7 @@ INSTANTIATE_TEST_SUITE_P(FuseAccessModeTest, FuseAccessModeTest, Values(0, F_OK,
 
 TEST_P(FuseAccessModeTest, AccessFile) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, access(StrEq(FILENAME), GetParam()))
+  EXPECT_CALL(*fsimpl, access(Eq(FILENAME), GetParam()))
     .Times(1).WillOnce(Return());
 
   AccessFile(FILENAME, GetParam());

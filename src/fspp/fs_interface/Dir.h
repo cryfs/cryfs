@@ -7,7 +7,6 @@
 #include <boost/filesystem/path.hpp>
 #include "Types.h"
 
-
 namespace fspp {
 class Device;
 class OpenFile;
@@ -35,8 +34,8 @@ public:
   virtual void removeChildEntryByName(const std::string& name) = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
-  //virtual std::unique_ptr<std::vector<std::string>> children() const = 0;
-  virtual cpputils::unique_ref<std::vector<Entry>> children() = 0;
+  //virtual std::vector<std::string> children() const = 0;
+  virtual std::vector<Entry> children() = 0;
   virtual void updateAccessTimestamp() = 0;
   virtual void updateModificationTimestamp() = 0;
 };

@@ -1,7 +1,7 @@
 #include "testutils/FuseRmdirTest.h"
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -14,7 +14,7 @@ INSTANTIATE_TEST_SUITE_P(FuseRmdirErrorTest, FuseRmdirErrorTest, Values(EACCES, 
 
 TEST_P(FuseRmdirErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(*fsimpl, rmdir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, rmdir(Eq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = RmdirReturnError(DIRNAME);

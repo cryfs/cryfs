@@ -79,7 +79,7 @@ INSTANTIATE_TEST_SUITE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024
   Barrier barrier;
 
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, openFile(StrEq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), _)).WillOnce(Return(GetParam()));
   {
     //InSequence fileCloseSequence;
     EXPECT_CALL(*fsimpl, flush(Eq(GetParam()))).Times(1);

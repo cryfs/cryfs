@@ -20,8 +20,8 @@ using std::make_shared;
 
 class TraversorMock {
 public:
-  MOCK_METHOD3(calledExistingLeaf, void(DataLeafNode*, bool, uint32_t));
-  MOCK_METHOD1(calledCreateLeaf, shared_ptr<Data>(uint32_t));
+  MOCK_METHOD(void, calledExistingLeaf, (DataLeafNode*, bool, uint32_t));
+  MOCK_METHOD(shared_ptr<Data>, calledCreateLeaf, (uint32_t));
 };
 
 MATCHER_P(KeyEq, expected, "node blockId equals") {

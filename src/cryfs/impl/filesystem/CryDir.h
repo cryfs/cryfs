@@ -20,7 +20,7 @@ public:
   void createLink(const boost::filesystem::path &target, const std::string& name);
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
-  cpputils::unique_ref<std::vector<fspp::Dir::Entry>> children() override;
+  std::vector<fspp::Dir::Entry> children() override;
 
   fspp::Dir::NodeType getType() const override;
 

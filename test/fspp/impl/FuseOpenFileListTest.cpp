@@ -17,13 +17,13 @@ public:
 
   ~MockOpenFile() {destructed = true;}
 
-  MOCK_CONST_METHOD0(stat, OpenFile::stat_info());
-  MOCK_CONST_METHOD1(truncate, void(fspp::num_bytes_t));
-  MOCK_CONST_METHOD3(read, fspp::num_bytes_t(void*, fspp::num_bytes_t, fspp::num_bytes_t));
-  MOCK_METHOD3(write, void(const void*, fspp::num_bytes_t, fspp::num_bytes_t));
-  MOCK_METHOD0(flush, void());
-  MOCK_METHOD0(fsync, void());
-  MOCK_METHOD0(fdatasync, void());
+  MOCK_METHOD(OpenFile::stat_info, stat, (), (const, override));
+  MOCK_METHOD(void, truncate, (fspp::num_bytes_t), (const, override));
+  MOCK_METHOD(fspp::num_bytes_t, read, (void*, fspp::num_bytes_t, fspp::num_bytes_t), (const, override));
+  MOCK_METHOD(void, write, (const void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
+  MOCK_METHOD(void, flush, (), (override));
+  MOCK_METHOD(void, fsync, (), (override));
+  MOCK_METHOD(void, fdatasync, (), (override));
 };
 
 struct FuseOpenFileListTest: public ::testing::Test {

@@ -22,9 +22,9 @@ public:
 
   void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
 	std::vector<fspp::Dir::Entry> expectedChildren = expected;
-	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, "."));
-	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, ".."));
-	EXPECT_UNORDERED_EQ(expectedChildren, *dir->children());
+	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
+	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
+	EXPECT_UNORDERED_EQ(expectedChildren, dir->children());
   }
 
   template<class Entry>

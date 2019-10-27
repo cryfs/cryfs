@@ -1,6 +1,6 @@
 #include "FuseTest.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::_;
 using ::testing::Return;
 using ::testing::Throw;
@@ -70,8 +70,8 @@ const bf::path &FuseTest::TempTestFS::mountDir() const {
   return _mountDir.path();
 }
 
-Action<void(const char*, fspp::fuse::STAT*)> FuseTest::ReturnIsFileWithSize(fspp::num_bytes_t size) {
-  return Invoke([size](const char*, fspp::fuse::STAT* result) {
+Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnIsFileWithSize(fspp::num_bytes_t size) {
+  return Invoke([size](const boost::filesystem::path&, fspp::fuse::STAT* result) {
     result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     result->st_nlink = 1;
     result->st_size = size.value();
@@ -79,7 +79,7 @@ Action<void(const char*, fspp::fuse::STAT*)> FuseTest::ReturnIsFileWithSize(fspp
 }
 
 //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
-Action<void(const char*, fspp::fuse::STAT*)> FuseTest::ReturnIsFile = ReturnIsFileWithSize(fspp::num_bytes_t(0));
+Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnIsFile = ReturnIsFileWithSize(fspp::num_bytes_t(0));
 
 Action<void(int, fspp::fuse::STAT*)> FuseTest::ReturnIsFileFstat =
   Invoke([](int, fspp::fuse::STAT* result) {
@@ -95,32 +95,32 @@ Action<void(int, fspp::fuse::STAT*)> FuseTest::ReturnIsFileFstatWithSize(fspp::n
   });
 }
 
-Action<void(const char*, fspp::fuse::STAT*)> FuseTest::ReturnIsDir =
-  Invoke([](const char*, fspp::fuse::STAT* result) {
+Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnIsDir =
+  Invoke([](const boost::filesystem::path&, fspp::fuse::STAT* result) {
     result->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
     result->st_nlink = 1;
   });
 
-Action<void(const char*, fspp::fuse::STAT*)> FuseTest::ReturnDoesntExist = Throw(fspp::fuse::FuseErrnoException(ENOENT));
+Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnDoesntExist = Throw(fspp::fuse::FuseErrnoException(ENOENT));
 
 void FuseTest::OnOpenReturnFileDescriptor(const char *filename, int descriptor) {
-  EXPECT_CALL(*fsimpl, openFile(StrEq(filename), _)).Times(1).WillOnce(Return(descriptor));
+  EXPECT_CALL(*fsimpl, openFile(Eq(filename), _)).Times(1).WillOnce(Return(descriptor));
 }
 
 void FuseTest::ReturnIsFileOnLstat(const bf::path &path) {
-  EXPECT_CALL(*fsimpl, lstat(::testing::StrEq(path.string().c_str()), ::testing::_)).WillRepeatedly(ReturnIsFile);
+  EXPECT_CALL(*fsimpl, lstat(Eq(path), ::testing::_)).WillRepeatedly(ReturnIsFile);
 }
 
 void FuseTest::ReturnIsFileOnLstatWithSize(const bf::path &path, const fspp::num_bytes_t size) {
-  EXPECT_CALL(*fsimpl, lstat(::testing::StrEq(path.string().c_str()), ::testing::_)).WillRepeatedly(ReturnIsFileWithSize(size));
+  EXPECT_CALL(*fsimpl, lstat(Eq(path), ::testing::_)).WillRepeatedly(ReturnIsFileWithSize(size));
 }
 
 void FuseTest::ReturnIsDirOnLstat(const bf::path &path) {
-  EXPECT_CALL(*fsimpl, lstat(::testing::StrEq(path.string().c_str()), ::testing::_)).WillRepeatedly(ReturnIsDir);
+  EXPECT_CALL(*fsimpl, lstat(Eq(path), ::testing::_)).WillRepeatedly(ReturnIsDir);
 }
 
 void FuseTest::ReturnDoesntExistOnLstat(const bf::path &path) {
-  EXPECT_CALL(*fsimpl, lstat(::testing::StrEq(path.string().c_str()), ::testing::_)).WillRepeatedly(ReturnDoesntExist);
+  EXPECT_CALL(*fsimpl, lstat(Eq(path), ::testing::_)).WillRepeatedly(ReturnDoesntExist);
 }
 
 void FuseTest::ReturnIsFileOnFstat(int descriptor) {

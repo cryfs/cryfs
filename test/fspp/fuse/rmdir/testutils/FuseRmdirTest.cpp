@@ -20,8 +20,8 @@ int FuseRmdirTest::RmdirReturnError(const char *dirname) {
   }
 }
 
-Action<void(const char*)> FuseRmdirTest::FromNowOnReturnDoesntExistOnLstat() {
-  return Invoke([this](const char *dirname) {
+Action<void(const boost::filesystem::path&)> FuseRmdirTest::FromNowOnReturnDoesntExistOnLstat() {
+  return Invoke([this](const boost::filesystem::path& dirname) {
     ReturnDoesntExistOnLstat(dirname);
   });
 }

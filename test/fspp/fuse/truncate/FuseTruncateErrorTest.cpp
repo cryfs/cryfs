@@ -2,7 +2,7 @@
 #include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::_;
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -15,7 +15,7 @@ INSTANTIATE_TEST_SUITE_P(FuseTruncateErrorTest, FuseTruncateErrorTest, Values(EA
 
 TEST_P(FuseTruncateErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, truncate(StrEq(FILENAME), _))
+  EXPECT_CALL(*fsimpl, truncate(Eq(FILENAME), _))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = TruncateFileReturnError(FILENAME, fspp::num_bytes_t(0));

@@ -1,6 +1,6 @@
 #include "testutils/FuseUtimensTest.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Return;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -23,7 +23,7 @@ INSTANTIATE_TEST_SUITE_P(FuseUtimensTimeParameterTest, FuseUtimensTimeParameterT
 
 TEST_P(FuseUtimensTimeParameterTest, Utimens) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, utimens(StrEq(FILENAME), TimeSpecEq(GetParam()[0]), TimeSpecEq(GetParam()[1])))
+  EXPECT_CALL(*fsimpl, utimens(Eq(FILENAME), TimeSpecEq(GetParam()[0]), TimeSpecEq(GetParam()[1])))
     .Times(1).WillOnce(Return());
 
   Utimens(FILENAME, GetParam()[0], GetParam()[1]);

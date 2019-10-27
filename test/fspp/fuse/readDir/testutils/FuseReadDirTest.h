@@ -10,10 +10,10 @@ class FuseReadDirTest: public FuseTest {
 public:
   const char *DIRNAME = "/mydir";
 
-  cpputils::unique_ref<std::vector<std::string>> ReadDir(const char *dirname);
+  std::vector<std::string> ReadDir(const char *dirname);
   int ReadDirReturnError(const char *dirname);
 
-  static ::testing::Action<std::vector<fspp::Dir::Entry>*(const char*)> ReturnDirEntries(std::vector<std::string> entries);
+  static ::testing::Action<std::vector<fspp::Dir::Entry>(const boost::filesystem::path&)> ReturnDirEntries(std::vector<std::string> entries);
 
 private:
   DIR *openDir(TempTestFS *fs, const char *dirname);

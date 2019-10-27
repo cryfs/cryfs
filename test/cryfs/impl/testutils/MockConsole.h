@@ -7,10 +7,10 @@
 
 class MockConsole: public cpputils::Console {
 public:
-    MOCK_METHOD1(print, void(const std::string&));
-    MOCK_METHOD2(ask, unsigned int(const std::string&, const std::vector<std::string>&));
-    MOCK_METHOD2(askYesNo, bool(const std::string&, bool));
-    MOCK_METHOD1(askPassword, std::string(const std::string&));
+    MOCK_METHOD(void, print, (const std::string&), (override));
+    MOCK_METHOD(unsigned int, ask, (const std::string&, const std::vector<std::string>&), (override));
+    MOCK_METHOD(bool, askYesNo, (const std::string&, bool), (override));
+    MOCK_METHOD(std::string, askPassword, (const std::string&), (override));
 };
 
 ACTION_P(ChooseCipher, cipherName) {

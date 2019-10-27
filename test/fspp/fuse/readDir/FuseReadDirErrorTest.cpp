@@ -2,7 +2,7 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::StrEq;
+using ::testing::Eq;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -19,7 +19,7 @@ INSTANTIATE_TEST_SUITE_P(FuseReadDirErrorTest, FuseReadDirErrorTest, Values(EACC
 
 TEST_F(FuseReadDirErrorTest, NoError) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(*fsimpl, readDir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, readDir(Eq(DIRNAME)))
     .Times(1).WillOnce(ReturnDirEntries({}));
 
   int error = ReadDirReturnError(DIRNAME);
@@ -28,7 +28,7 @@ TEST_F(FuseReadDirErrorTest, NoError) {
 
 TEST_P(FuseReadDirErrorTest, ReturnedErrorCodeIsCorrect) {
   ReturnIsDirOnLstat(DIRNAME);
-  EXPECT_CALL(*fsimpl, readDir(StrEq(DIRNAME)))
+  EXPECT_CALL(*fsimpl, readDir(Eq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
   int error = ReadDirReturnError(DIRNAME);

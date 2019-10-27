@@ -1120,7 +1120,7 @@ TEST(EitherTest, givenLeftAndRightWithSameType_thenAreUnequal) {
 namespace {
 class DestructorCallback {
 public:
-  MOCK_CONST_METHOD0(call, void());
+  MOCK_METHOD(void, call, (), (const));
 
   void EXPECT_CALLED(int times = 1) {
     EXPECT_CALL(*this, call()).Times(times);

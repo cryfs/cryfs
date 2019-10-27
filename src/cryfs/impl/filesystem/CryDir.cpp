@@ -67,14 +67,14 @@ unique_ref<DirBlobRef> CryDir::LoadBlob() const {
   return std::move(*dir_blob);
 }
 
-unique_ref<vector<fspp::Dir::Entry>> CryDir::children() {
+vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
   updateAccessTimestamp();
-  auto children = make_unique_ref<vector<fspp::Dir::Entry>>();
-  children->push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, "."));
-  children->push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, ".."));
+  vector<fspp::Dir::Entry> children;
+  children.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, "."));
+  children.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, ".."));
   auto blob = LoadBlob();
-  blob->AppendChildrenTo(children.get());
+  blob->AppendChildrenTo(&children);
   return children;
 }
 

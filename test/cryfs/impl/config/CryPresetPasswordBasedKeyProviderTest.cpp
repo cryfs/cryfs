@@ -17,8 +17,8 @@ using testing::_;
 
 class MockKDF : public PasswordBasedKDF {
 public:
-    MOCK_METHOD3(deriveExistingKey, EncryptionKey(size_t keySize, const string& password, const Data& kdfParameters));
-    MOCK_METHOD2(deriveNewKey, KeyResult(size_t keySize, const string& password));
+    MOCK_METHOD(EncryptionKey, deriveExistingKey, (size_t keySize, const string& password, const Data& kdfParameters), (override));
+    MOCK_METHOD(KeyResult, deriveNewKey, (size_t keySize, const string& password), (override));
 };
 
 TEST(CryPresetPasswordBasedKeyProviderTest, requestKeyForNewFilesystem) {
