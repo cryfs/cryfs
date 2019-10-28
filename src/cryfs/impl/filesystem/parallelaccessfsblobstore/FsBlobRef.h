@@ -10,7 +10,7 @@ namespace parallelaccessfsblobstore {
 
 class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::BlockId>::ResourceRefBase {
 public:
-    virtual ~FsBlobRef() = default;
+    ~FsBlobRef() override = default;
     virtual const blockstore::BlockId &blockId() const = 0;
     virtual const FsBlobView::Metadata& metaData() = 0;
     virtual void updateAccessTimestamp() const = 0;

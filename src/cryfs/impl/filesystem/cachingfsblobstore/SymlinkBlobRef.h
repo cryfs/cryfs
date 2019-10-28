@@ -40,7 +40,7 @@ public:
       return _base->stat();
     }
 
-    void utimens(timespec atime, timespec mtime) {
+    void utimens(timespec atime, timespec mtime) override {
       return _base->utimens(atime, mtime);
     }
 

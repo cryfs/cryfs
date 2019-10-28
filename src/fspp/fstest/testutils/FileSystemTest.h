@@ -19,7 +19,7 @@
 
 class FileSystemTestFixture {
 public:
-  virtual ~FileSystemTestFixture() {}
+  virtual ~FileSystemTestFixture() = default;
   virtual cpputils::unique_ref<fspp::Device> createDevice() = 0;
 };
 
@@ -92,22 +92,22 @@ public:
   bool IsFileInDir(const boost::filesystem::path &path) {
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
-    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children->end() && it->type == fspp::Dir::NodeType::FILE);
+    auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children.end() && it->type == fspp::Dir::NodeType::FILE);
   }
 
   bool IsDirInDir(const boost::filesystem::path &path) {
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
-    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children->end() && it->type == fspp::Dir::NodeType::DIR);
+    auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children.end() && it->type == fspp::Dir::NodeType::DIR);
   }
 
   bool IsSymlinkInDir(const boost::filesystem::path &path) {
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
-    auto it = std::find_if(children->begin(), children->end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children->end() && it->type == fspp::Dir::NodeType::SYMLINK);
+    auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
+    return (it != children.end() && it->type == fspp::Dir::NodeType::SYMLINK);
   }
 
   void EXPECT_IS_FILE(const cpputils::unique_ref<fspp::Node> &node) {

@@ -106,7 +106,7 @@ public:
       return _base->updateModificationTimestamp();
     }
 
-    void updateChangeTimestamp() {
+    void updateChangeTimestamp() override {
       return _base->updateChangeTimestamp();
     }
 

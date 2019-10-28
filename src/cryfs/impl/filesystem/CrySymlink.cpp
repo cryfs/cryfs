@@ -2,7 +2,6 @@
 
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
-#include "CrySymlink.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
 #include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
@@ -14,11 +13,9 @@ using std::string;
 
 using blockstore::BlockId;
 using boost::none;
-using boost::optional;
 using cpputils::unique_ref;
 using cpputils::dynamic_pointer_move;
 using cryfs::parallelaccessfsblobstore::SymlinkBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
@@ -27,10 +24,9 @@ CrySymlink::CrySymlink(CryDevice *device,
         : CryNode(device, blockId) {
 }
 
-CrySymlink::~CrySymlink() {
-}
+CrySymlink::~CrySymlink() = default;
 
-unique_ref<SymlinkBlobRef> CrySymlink::LoadBlob() const {
+unique_ref<SymlinkBlobRef> CrySymlink::LoadSymlinkBlob() const {
   auto blob = CryNode::LoadBlob();
   auto symlink_blob = dynamic_pointer_move<SymlinkBlobRef>(blob);
   ASSERT(symlink_blob != none, "Blob does not store a symlink");
@@ -44,7 +40,7 @@ fspp::Dir::NodeType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+  auto blob = LoadSymlinkBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }
 

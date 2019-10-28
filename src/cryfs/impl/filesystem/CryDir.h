@@ -11,13 +11,13 @@ namespace cryfs {
 class CryDir final: public fspp::Dir, public CryNode {
 public:
   CryDir(CryDevice *device, const blockstore::BlockId &blockId);
-  ~CryDir();
+  ~CryDir() override;
 
   //TODO return type variance to CryFile/CryDir?
   cpputils::unique_ref<fspp::OpenFile> createAndOpenFile(const std::string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) override;
   void createDir(const std::string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) override;
   void createSymlink(const std::string &name, const boost::filesystem::path &target, fspp::uid_t uid, fspp::gid_t gid) override;
-  void createLink(const boost::filesystem::path &target, const std::string& name);
+  void createLink(const boost::filesystem::path &target, const std::string& name) override;
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
   std::vector<fspp::Dir::Entry> children() override;

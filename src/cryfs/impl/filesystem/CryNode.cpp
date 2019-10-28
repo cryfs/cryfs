@@ -13,11 +13,8 @@ namespace bf = boost::filesystem;
 
 using blockstore::BlockId;
 using cpputils::unique_ref;
-using boost::optional;
 using boost::none;
-using std::shared_ptr;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using namespace cpputils::logging;
 
 //TODO Get rid of this in favor of an exception hierarchy

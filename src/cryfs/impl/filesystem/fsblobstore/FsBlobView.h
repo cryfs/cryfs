@@ -30,7 +30,7 @@ namespace cryfs {
         using Lock = std::lock_guard<std::mutex>;
 
 
-        explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)) {
+        explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)), _blobType(BlobType::DIR) {  // blob type overwritten by _loadMetadata, needed for clang-tidy
             _checkHeader(*_baseBlob);
             _loadMetadata();
         }

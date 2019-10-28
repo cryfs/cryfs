@@ -1,16 +1,11 @@
 #include "CryOpenFile.h"
 
-#include <sys/types.h>
-#include <fcntl.h>
-
 #include "CryDevice.h"
 #include <fspp/fs_interface/FuseErrnoException.h>
 
 
-using std::shared_ptr;
 using cpputils::unique_ref;
 using cryfs::parallelaccessfsblobstore::FileBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 //TODO Get rid of this in favor of a exception hierarchy
 
@@ -20,9 +15,7 @@ CryOpenFile::CryOpenFile(const CryDevice *device, unique_ref<FileBlobRef> fileBl
 : _device(device),  _fileBlob(std::move(fileBlob)) {
 }
 
-CryOpenFile::~CryOpenFile() {
-  //TODO
-} // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+CryOpenFile::~CryOpenFile() = default;
 
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();
