@@ -22,8 +22,8 @@ using boost::none;
 namespace cryfs {
 namespace fsblobstore {
 
-DirBlob::DirBlob(unique_ref<Blob> blob) :
-    FsBlob(std::move(blob)), _entries(), _entriesAndChangedMutex(), _changed(false) {
+DirBlob::DirBlob(unique_ref<Blob> blob, const TimestampUpdateBehavior& behav) :
+    FsBlob(std::move(blob), behav), _entries(), _entriesAndChangedMutex(), _changed(false) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -43,9 +43,9 @@ void DirBlob::utimens(timespec atime, timespec mtime) {
 return baseBlob().utimens(atime, mtime);
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, const FsBlobView::Metadata &meta) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, const FsBlobView::Metadata &meta, const TimestampUpdateBehavior& updateBehavior) {
   InitializeBlob(blob.get(), meta, FsBlobView::BlobType::DIR);
-  return make_unique_ref<DirBlob>(std::move(blob));
+  return make_unique_ref<DirBlob>(std::move(blob), updateBehavior);
 }
 
 void DirBlob::_writeEntriesToBlob() {

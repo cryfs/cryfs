@@ -23,18 +23,19 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
     }
     FsBlobView::BlobType blobType = FsBlobView::blobType(**blob);
     if (blobType == FsBlobView::BlobType::FILE) {
-        return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob)));
+        return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else if (blobType == FsBlobView::BlobType::DIR) {
-        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob)));
+        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else if (blobType == FsBlobView::BlobType::SYMLINK) {
-        return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob)));
+        return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else {
         ASSERT(false, "Unknown magic number");
     }
 }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-    unique_ref<FsBlobStore> FsBlobStore::migrate(unique_ref<BlobStore> blobStore, const blockstore::BlockId &rootBlobId) {
+    unique_ref<FsBlobStore> FsBlobStore::migrate(unique_ref<BlobStore> blobStore, const blockstore::BlockId &rootBlobId,
+            const TimestampUpdateBehavior& behavior) {
         SignalCatcher signalCatcher;
 
         auto rootBlob = blobStore->load(rootBlobId);
@@ -42,7 +43,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
             throw std::runtime_error("Could not load root blob");
         }
 
-        auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+        auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore), behavior);
 
         uint64_t migratedBlocks = 0;
         cpputils::ProgressBar progressbar("Migrating file system for conflict resolution features. This can take a while...", fsBlobStore->numBlocks());

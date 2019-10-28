@@ -9,9 +9,9 @@ namespace cryfs {
 
         class FileBlob final: public FsBlob {
         public:
-            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob, const FsBlobView::Metadata &meta);
+            static cpputils::unique_ref<FileBlob> InitializeEmptyFile(cpputils::unique_ref<blobstore::Blob> blob, const FsBlobView::Metadata &meta, const TimestampUpdateBehavior& behavior);
 
-            explicit FileBlob(cpputils::unique_ref<blobstore::Blob> blob);
+            explicit FileBlob(cpputils::unique_ref<blobstore::Blob> blob, const TimestampUpdateBehavior& behavior);
 
             fspp::num_bytes_t read(void *target, fspp::num_bytes_t offset, fspp::num_bytes_t count) const;
 

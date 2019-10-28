@@ -12,16 +12,16 @@ namespace cryfs {
 namespace parallelaccessfsblobstore {
 
 optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &blockId) {
-    return _parallelAccessStore.load(blockId, [this] (cachingfsblobstore::FsBlobRef *blob) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
-        cachingfsblobstore::FileBlobRef *fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(blob);
+    return _parallelAccessStore.load(blockId, [] (cachingfsblobstore::FsBlobRef *blob) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+        auto fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(blob);
         if (fileBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<FileBlobRef>(fileBlob));
         }
-        cachingfsblobstore::DirBlobRef *dirBlob = dynamic_cast<cachingfsblobstore::DirBlobRef*>(blob);
+        auto dirBlob = dynamic_cast<cachingfsblobstore::DirBlobRef*>(blob);
         if (dirBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<DirBlobRef>(dirBlob));
         }
-        cachingfsblobstore::SymlinkBlobRef *symlinkBlob = dynamic_cast<cachingfsblobstore::SymlinkBlobRef*>(blob);
+        auto symlinkBlob = dynamic_cast<cachingfsblobstore::SymlinkBlobRef*>(blob);
         if (symlinkBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<SymlinkBlobRef>(symlinkBlob));
         }

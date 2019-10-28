@@ -6,6 +6,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/system/time.h>
 #include <fspp/fs_interface/Types.h>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 #include "utils/DirEntry.h"
 
 namespace cryfs {
@@ -30,7 +31,7 @@ namespace cryfs {
         using Lock = std::lock_guard<std::mutex>;
 
 
-        explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)), _blobType(BlobType::DIR) {  // blob type overwritten by _loadMetadata, needed for clang-tidy
+        explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob, const fsblobstore::TimestampUpdateBehavior behav): _timestampUpdateBehavior(behav), _baseBlob(std::move(baseBlob)), _blobType(BlobType::DIR) {  // blob type overwritten by _loadMetadata, needed for clang-tidy
             _checkHeader(*_baseBlob);
             _loadMetadata();
         }
@@ -129,7 +130,10 @@ namespace cryfs {
 
         }
 
+
         static BlobType _metadataToBlobtype(const Metadata& metadata);
+
+      const cryfs::fsblobstore::TimestampUpdateBehavior _timestampUpdateBehavior;
 
         // by having this mutable we can make updateAccessTimePoint const.
         // by the locking used in the public methods all const methods become threadsafe.

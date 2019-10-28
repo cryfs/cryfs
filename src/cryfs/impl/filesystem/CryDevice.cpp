@@ -52,19 +52,20 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
-: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), configFile.get(), localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation))),
+CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, const std::function<void()>& onIntegrityViolation, const fsblobstore::TimestampUpdateBehavior& behavior)
+: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), configFile.get(), localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, onIntegrityViolation, behavior)),
   _rootBlobId(GetOrCreateRootBlobId(configFile.get())), _configFile(std::move(configFile)),
   _onFsAction() {
 }
 
-unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
+unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir,
+        uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation, const fsblobstore::TimestampUpdateBehavior& behavior) {
   auto blobStore = CreateBlobStore(std::move(blockStore), localStateDir, configFile, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
 
 #ifndef CRYFS_NO_COMPATIBILITY
-  auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile);
+  auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile, behavior);
 #else
-  auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+  auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore), behavior);
 #endif
 
   return make_unique_ref<ParallelAccessFsBlobStore>(
@@ -75,19 +76,19 @@ unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::Crea
 }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(unique_ref<BlobStore> blobStore, CryConfigFile *configFile) {
+unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(unique_ref<BlobStore> blobStore, CryConfigFile *configFile, const fsblobstore::TimestampUpdateBehavior& behavior) {
   string rootBlobId = configFile->config()->RootBlob();
-  if ("" == rootBlobId) {
-    return make_unique_ref<FsBlobStore>(std::move(blobStore));
+  if (rootBlobId.empty()) {
+    return make_unique_ref<FsBlobStore>(std::move(blobStore), behavior);
   }
   if (!configFile->config()->HasMetadataInBlobs()) {
-    auto result = FsBlobStore::migrate(std::move(blobStore), BlockId::FromString(rootBlobId));
+    auto result = FsBlobStore::migrate(std::move(blobStore), BlockId::FromString(rootBlobId), behavior);
     // Don't migrate again if it was successful
     configFile->config()->SetHasMetadataInBlobs(true);
     configFile->save();
     return result;
   }
-  return make_unique_ref<FsBlobStore>(std::move(blobStore));
+  return make_unique_ref<FsBlobStore>(std::move(blobStore), behavior);
 }
 #endif
 
@@ -338,7 +339,7 @@ cpputils::unique_ref<blockstore::BlockStore2> CryDevice::CreateEncryptedBlockSto
 }
 
 void CryDevice::onFsAction(std::function<void()> callback) {
-  _onFsAction.push_back(callback);
+  _onFsAction.push_back(std::move(callback));
 }
 
 void CryDevice::callFsActionCallbacks() const {

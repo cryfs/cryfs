@@ -54,7 +54,7 @@ namespace cryfs {
             }
 
         protected:
-            FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob);
+            FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob, const fsblobstore::TimestampUpdateBehavior& behavior);
 
             FsBlobView &baseBlob();
             const FsBlobView &baseBlob() const;
@@ -76,12 +76,11 @@ namespace cryfs {
         // Inline function definitions
         // ---------------------------
 
-        inline FsBlob::FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob)
-                : _baseBlob(std::move(baseBlob)) {
+        inline FsBlob::FsBlob(cpputils::unique_ref<blobstore::Blob> baseBlob, const fsblobstore::TimestampUpdateBehavior& behavior)
+                : _baseBlob(std::move(baseBlob), behavior) {
         }
 
-        inline FsBlob::~FsBlob() {
-        }
+        inline FsBlob::~FsBlob() = default;
 
         inline const blockstore::BlockId &FsBlob::blockId() const {
             return _baseBlob.blockId();

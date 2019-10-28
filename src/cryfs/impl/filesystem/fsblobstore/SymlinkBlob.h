@@ -11,9 +11,9 @@ namespace cryfs {
         class SymlinkBlob final: public FsBlob {
         public:
             static cpputils::unique_ref<SymlinkBlob> InitializeSymlink(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                       const boost::filesystem::path &target, const FsBlobView::Metadata &meta);
+                                                                       const boost::filesystem::path &target, const FsBlobView::Metadata &meta, const TimestampUpdateBehavior& behavior);
 
-            SymlinkBlob(cpputils::unique_ref<blobstore::Blob> blob);
+            SymlinkBlob(cpputils::unique_ref<blobstore::Blob> blob, const TimestampUpdateBehavior& behavior);
 
             const boost::filesystem::path &target() const;
 

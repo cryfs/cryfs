@@ -7,6 +7,7 @@
 #include "CryConfig.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/either.h>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 #include "cryfs/impl/config/crypto/CryConfigEncryptorFactory.h"
 
 namespace cryfs {

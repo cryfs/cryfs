@@ -11,14 +11,14 @@ using blockstore::BlockId;
 namespace cryfs {
 namespace fsblobstore {
 
-FileBlob::FileBlob(unique_ref<Blob> blob)
-: FsBlob(std::move(blob)) {
+FileBlob::FileBlob(unique_ref<Blob> blob, const TimestampUpdateBehavior& behavior)
+: FsBlob(std::move(blob), behavior) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::FILE, "Loaded blob is not a file");
 }
 
-unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const FsBlobView::Metadata &metadata) {
+unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const FsBlobView::Metadata &metadata, const TimestampUpdateBehavior& behavior) {
   InitializeBlob(blob.get(), metadata, FsBlobView::BlobType::FILE);
-  return make_unique_ref<FileBlob>(std::move(blob));
+  return make_unique_ref<FileBlob>(std::move(blob), behavior);
 }
 
 fspp::num_bytes_t FileBlob::read(void *target, fspp::num_bytes_t offset, fspp::num_bytes_t count) const {

@@ -12,18 +12,18 @@ namespace bf = boost::filesystem;
 namespace cryfs {
 namespace fsblobstore {
 
-SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob)
-: FsBlob(std::move(blob)), _target(_readTargetFromBlob(baseBlob())) {
+SymlinkBlob::SymlinkBlob(unique_ref<Blob> blob, const TimestampUpdateBehavior& behavior)
+: FsBlob(std::move(blob), behavior), _target(_readTargetFromBlob(baseBlob())) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::SYMLINK, "Loaded blob is not a symlink");
 }
 
-unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const FsBlobView::Metadata &meta) {
+unique_ref<SymlinkBlob> SymlinkBlob::InitializeSymlink(unique_ref<Blob> blob, const bf::path &target, const FsBlobView::Metadata &meta, const TimestampUpdateBehavior& behavior) {
   InitializeBlob(blob.get(),  meta, FsBlobView::BlobType::SYMLINK);
-  FsBlobView symlinkBlobView(std::move(blob));
+  FsBlobView symlinkBlobView(std::move(blob), behavior);
   const string& targetStr = target.string();
   symlinkBlobView.resize(targetStr.size());
   symlinkBlobView.write(targetStr.c_str(), 0, targetStr.size());
-  return make_unique_ref<SymlinkBlob>(symlinkBlobView.releaseBaseBlob());
+  return make_unique_ref<SymlinkBlob>(symlinkBlobView.releaseBaseBlob(), behavior);
 }
 
 bf::path SymlinkBlob::_readTargetFromBlob(const FsBlobView &blob) {

@@ -18,9 +18,9 @@ namespace cryfs {
         public:
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                    const FsBlobView::Metadata &meta);
+                                                                    const FsBlobView::Metadata &meta, const TimestampUpdateBehavior&);
 
-            explicit DirBlob(cpputils::unique_ref<blobstore::Blob> blob);
+            explicit DirBlob(cpputils::unique_ref<blobstore::Blob> blob, const TimestampUpdateBehavior& behav);
 
             ~DirBlob() override;
 

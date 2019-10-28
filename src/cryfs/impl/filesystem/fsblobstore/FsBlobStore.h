@@ -18,7 +18,7 @@ namespace cryfs {
 
         class FsBlobStore final {
         public:
-            explicit FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore);
+            explicit FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore, const TimestampUpdateBehavior&);
 
             cpputils::unique_ref<FileBlob> createFileBlob(const FsBlobView::Metadata &meta);
             cpputils::unique_ref<DirBlob> createDirBlob(const FsBlobView::Metadata &meta);
@@ -32,7 +32,7 @@ namespace cryfs {
             uint64_t virtualBlocksizeBytes() const;
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            static cpputils::unique_ref<FsBlobStore> migrate(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId);
+            static cpputils::unique_ref<FsBlobStore> migrate(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId, const TimestampUpdateBehavior&);
 #endif
 
         private:
@@ -42,27 +42,28 @@ namespace cryfs {
 #endif
 
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
+            const TimestampUpdateBehavior _timestampUpdateBehavior;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlobStore);
         };
 
-        inline FsBlobStore::FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore)
-                : _baseBlobStore(std::move(baseBlobStore)) {
+        inline FsBlobStore::FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore, const TimestampUpdateBehavior& behavior)
+                : _baseBlobStore(std::move(baseBlobStore)), _timestampUpdateBehavior(behavior) {
         }
 
         inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob(const FsBlobView::Metadata& meta) {
             auto blob = _baseBlobStore->create();
-            return FileBlob::InitializeEmptyFile(std::move(blob), meta);
+            return FileBlob::InitializeEmptyFile(std::move(blob), meta, _timestampUpdateBehavior);
         }
 
         inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const FsBlobView::Metadata &meta) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(std::move(blob), meta);
+            return DirBlob::InitializeEmptyDir(std::move(blob), meta, _timestampUpdateBehavior);
         }
 
         inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const FsBlobView::Metadata &meta) {
             auto blob = _baseBlobStore->create();
-            return SymlinkBlob::InitializeSymlink(std::move(blob), target, meta);
+            return SymlinkBlob::InitializeSymlink(std::move(blob), target, meta, _timestampUpdateBehavior);
         }
 
         inline uint64_t FsBlobStore::numBlocks() const {

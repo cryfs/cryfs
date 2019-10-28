@@ -74,9 +74,9 @@ namespace cryfs_cli {
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false), _idleUnmounter(none), _device(none) {
         _noninteractive = Environment::isNoninteractive();
         if (_noninteractive) {
-            _console = make_shared<NoninteractiveConsole>(console);
+            _console = make_shared<NoninteractiveConsole>(std::move(console));
         } else {
-            _console = console;
+            _console = std::move(console);
         }
     }
 
@@ -120,14 +120,14 @@ namespace cryfs_cli {
     }
 
     bool Cli::_checkPassword(const string &password) {
-        if (password == "") {
+        if (password.empty()) {
             std::cerr << "Empty password not allowed. Please try again." << std::endl;
             return false;
         }
         return true;
     }
 
-    function<string()> Cli::_askPasswordForExistingFilesystem(std::shared_ptr<cpputils::Console> console) {
+    function<string()> Cli::_askPasswordForExistingFilesystem(const std::shared_ptr<cpputils::Console>& console) {
         return [console] () {
             string password = console->askPassword("Password: ");
             while (!_checkPassword(password)) {
@@ -135,25 +135,22 @@ namespace cryfs_cli {
             }
             return password;
         };
-    };
+    }
 
-    function<string()> Cli::_askPasswordForNewFilesystem(std::shared_ptr<cpputils::Console> console) {
+    function<string()> Cli::_askPasswordForNewFilesystem(const std::shared_ptr<cpputils::Console>& console) {
         //TODO Ask confirmation if using insecure password (<8 characters)
         return [console] () {
             string password;
-            bool again = false;
-            do {
+            while(true) {
                 password = console->askPassword("Password: ");
                 if (!_checkPassword(password)) {
-                    again = true;
                     continue;
                 }
                 if (!_confirmPassword(console.get(), password)) {
-                    again = true;
                     continue;
                 }
-                again = false;
-            } while (again);
+                break;
+            }
             return password;
         };
     }
@@ -167,7 +164,7 @@ namespace cryfs_cli {
         return true;
     }
 
-    function<string()> Cli::_askPasswordNoninteractive(std::shared_ptr<cpputils::Console> console) {
+    function<string()> Cli::_askPasswordNoninteractive(const std::shared_ptr<cpputils::Console>& console) {
         //TODO Test
         return [console] () {
             string password = console->askPassword("Password: ");
@@ -231,7 +228,7 @@ namespace cryfs_cli {
             bool stoppedBecauseOfIntegrityViolation = false;
 
             auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
-              if (fuse.get() != nullptr) {
+              if (fuse != nullptr) {
                 LOG(ERR, "Integrity violation detected. Unmounting.");
                 stoppedBecauseOfIntegrityViolation = true;
                 fuse->stop();
@@ -252,7 +249,7 @@ namespace cryfs_cli {
                 ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
 
                 //TODO Test auto unmounting after idle timeout
-                const boost::optional<double> idle_minutes = options.unmountAfterIdleMinutes();
+                const boost::optional<double>& idle_minutes = options.unmountAfterIdleMinutes();
                 _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes] {
                     LOG(INFO, "Unmounting because file system was idle for {} minutes", *idle_minutes);
                     fs->stop();
@@ -307,7 +304,7 @@ namespace cryfs_cli {
             return none;
         }
         uint64_t millis = std::llround(60000 * (*minutes));
-        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback, "idlecallback");
+        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), std::move(callback), "idlecallback");
     }
 
     void Cli::_initLogfile(const ProgramOptions &options) {
@@ -364,7 +361,7 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_checkDirReadable(const bf::path &dir, shared_ptr<TempFile> tempfile, const std::string &name, ErrorCode errorCode) {
+    void Cli::_checkDirReadable(const bf::path &dir, const shared_ptr<TempFile>& tempfile, const std::string &name, ErrorCode errorCode) {
         ASSERT(bf::equivalent(dir, tempfile->path().parent_path()), "This function should be called with a file inside the directory");
         try {
             bool found = false;
