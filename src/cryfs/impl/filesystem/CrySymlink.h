@@ -16,7 +16,7 @@ public:
 
   boost::filesystem::path target() override;
 
-  fspp::Dir::NodeType getType() const override;
+  fspp::Dir::EntryType getType() const override;
 
   void remove() override;
 

@@ -44,7 +44,7 @@ public:
         return _base->flush();
     }
 
-    void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType type,
+    void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
                   const std::function<void (const fsblobstore::DirEntry &entry)>& onOverwritten) {
         return _base->AddOrOverwriteChild(name, blobId, type, onOverwritten);
     }
@@ -65,7 +65,7 @@ public:
         return _base->AddChildSymlink(name, blobId);
     }
 
-    void AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, fspp::Dir::NodeType type) {
+    void AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type) {
       return _base->AddChildHardlink(name, blobId, type);
     }
 

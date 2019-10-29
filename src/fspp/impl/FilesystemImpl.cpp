@@ -283,7 +283,7 @@ void FilesystemImpl::rmdir(const bf::path &path) {
     throw fuse::FuseErrnoException(ENOENT);
   }
 
-  if ((*node)->getType() != fspp::Dir::NodeType::DIR) {
+  if ((*node)->getType() != fspp::Dir::EntryType::DIR) {
     throw fuse::FuseErrnoException(ENOTDIR);
   }
   PROFILE(_rmdirNanosec_withoutLoading);
@@ -302,7 +302,7 @@ void FilesystemImpl::unlink(const bf::path &path) {
   }
 
   //Don't allow removing directories with this
-  if ((*node)->getType() == fspp::Dir::NodeType::DIR) {
+  if ((*node)->getType() == fspp::Dir::EntryType::DIR) {
     // TODO (joka921): what is the correct exception for this
     throw fuse::FuseErrnoException(EBUSY);
   }

@@ -1,6 +1,7 @@
 #include "DirBlob.h"
 
 //TODO Remove and replace with exception hierarchy
+#include <shared_mutex>
 #include <fspp/fs_interface/FuseErrnoException.h>
 
 #include <blobstore/implementations/onblocks/utils/Math.h>
@@ -29,12 +30,12 @@ DirBlob::DirBlob(unique_ref<Blob> blob, const TimestampUpdateBehavior& behav) :
 }
 
 DirBlob::~DirBlob() {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _writeEntriesToBlob();
 }
 
 void DirBlob::flush() {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _writeEntriesToBlob();
   baseBlob().flush();
 }
@@ -64,22 +65,22 @@ void DirBlob::_readEntriesFromBlob() {
 }
 
 void DirBlob::AddChildDir(const std::string &name, const BlockId &blobId) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
-  _addChild(name, blobId, fspp::Dir::NodeType::DIR);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
+  _addChild(name, blobId, fspp::Dir::EntryType::DIR);
 }
 
 void DirBlob::AddChildFile(const std::string &name, const BlockId &blobId) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
-  _addChild(name, blobId, fspp::Dir::NodeType::FILE);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
+  _addChild(name, blobId, fspp::Dir::EntryType::FILE);
 }
 
 void DirBlob::AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
-  _addChild(name, blobId, fspp::Dir::NodeType::SYMLINK);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
+  _addChild(name, blobId, fspp::Dir::EntryType::SYMLINK);
 }
 
-void DirBlob::AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, const fspp::Dir::NodeType type) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+void DirBlob::AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, const fspp::Dir::EntryType type) {
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   auto existingChild = _entries.get(name);
   if (existingChild != none) {
     throw fspp::fuse::FuseErrnoException(EEXIST);
@@ -89,14 +90,14 @@ void DirBlob::AddChildHardlink(const std::string& name, const blockstore::BlockI
 }
 
 void DirBlob::_addChild(const std::string &name, const BlockId &blobId,
-    fspp::Dir::NodeType entryType) {
+    fspp::Dir::EntryType entryType) {
   _entries.add(name, blobId, entryType);
   _changed = true;
 }
 
-void DirBlob::AddOrOverwriteChild(const std::string &name, const BlockId &blobId, fspp::Dir::NodeType entryType,
+void DirBlob::AddOrOverwriteChild(const std::string &name, const BlockId &blobId, fspp::Dir::EntryType entryType,
                                   const std::function<void (const DirEntry &entry)>& onOverwritten) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   auto res = _entries.addOrOverwrite(name, blobId, entryType, onOverwritten);
   if (res == DirEntryList::AddOver::ADD) {
     link();
@@ -107,7 +108,7 @@ void DirBlob::AddOrOverwriteChild(const std::string &name, const BlockId &blobId
 }
 
 void DirBlob::RenameChild(const blockstore::BlockId &blockId, const std::string &newName, const std::function<void (const DirEntry &entry)>& onOverwritten) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _entries.rename(blockId, newName, onOverwritten);
   updateModificationTimestamp();
   updateChangeTimestamp();
@@ -116,23 +117,23 @@ void DirBlob::RenameChild(const blockstore::BlockId &blockId, const std::string 
 }
 
 boost::optional<const DirEntry&> DirBlob::GetChild(const string &name) const {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::shared_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   return _entries.get(name);
 }
 
 boost::optional<const DirEntry&> DirBlob::GetChild(const BlockId &blockId) const {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::shared_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   return _entries.get(blockId);
 }
 
 void DirBlob::RemoveChild(const string &name) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _entries.remove(name);
   _changed = true;
 }
 
 void DirBlob::RemoveChild(const BlockId &blockId) {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _entries.remove(blockId);
   unlink();
   updateModificationTimestamp();
@@ -141,7 +142,7 @@ void DirBlob::RemoveChild(const BlockId &blockId) {
 }
 
 void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::shared_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   result->reserve(result->size() + _entries.size());
   for (const auto &entry : _entries) {
     result->emplace_back(entry.type(), entry.name());
@@ -149,7 +150,7 @@ void DirBlob::AppendChildrenTo(vector<fspp::Dir::Entry> *result) const {
 }
 
 cpputils::unique_ref<blobstore::Blob> DirBlob::releaseBaseBlob() {
-  std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
+  std::unique_lock<std::shared_timed_mutex> lock(_entriesAndChangedMutex);
   _writeEntriesToBlob();
   return FsBlob::releaseBaseBlob();
 }

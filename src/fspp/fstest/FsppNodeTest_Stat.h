@@ -12,7 +12,7 @@ public:
         this->CreateNode("/mynode");
         auto node = this->Load("/mynode");
         // Directories start with two links.
-        unsigned int expectedLinks = node->getType()==fspp::Dir::NodeType::DIR ? 2 : 1;
+        unsigned int expectedLinks = node->getType()==fspp::Dir::EntryType::DIR ? 2 : 1;
         this->IN_STAT(node.get(), [expectedLinks] (const fspp::Node::stat_info& st) {
             EXPECT_EQ(expectedLinks, st.nlink);
         });

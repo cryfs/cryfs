@@ -9,6 +9,8 @@
 #include "FsBlob.h"
 #include "cryfs/impl/filesystem/fsblobstore/utils/DirEntryList.h"
 #include <mutex>
+#include <shared_mutex>
+
 
 namespace cryfs {
     namespace fsblobstore {
@@ -40,9 +42,9 @@ namespace cryfs {
 
             void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId);
 
-            void AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, fspp::Dir::NodeType type);
+            void AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type);
 
-            void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType type,
+            void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
                           const std::function<void (const DirEntry &entry)>& onOverwritten);
 
             void RenameChild(const blockstore::BlockId &blockId, const std::string &newName, const std::function<void (const DirEntry &entry)>& onOverwritten);
@@ -58,14 +60,15 @@ namespace cryfs {
 
         private:
 
-            void _addChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType type);
+            void _addChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type);
             void _readEntriesFromBlob();
             void _writeEntriesToBlob();
 
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
 
             DirEntryList _entries;
-            mutable std::mutex _entriesAndChangedMutex;
+            // TODO: switch to c++17 and use shared_mutex
+            mutable std::shared_timed_mutex _entriesAndChangedMutex;
             bool _changed;
 
             DISALLOW_COPY_AND_ASSIGN(DirBlob);

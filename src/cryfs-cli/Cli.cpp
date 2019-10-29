@@ -127,8 +127,8 @@ namespace cryfs_cli {
         return true;
     }
 
-    function<string()> Cli::_askPasswordForExistingFilesystem(const std::shared_ptr<cpputils::Console>& console) {
-        return [console] () {
+    function<string()> Cli::_askPasswordForExistingFilesystem(shared_ptr<Console> console) {
+        return [console = std::move(console)] () {
             string password = console->askPassword("Password: ");
             while (!_checkPassword(password)) {
                 password = console->askPassword("Password: ");
@@ -137,9 +137,9 @@ namespace cryfs_cli {
         };
     }
 
-    function<string()> Cli::_askPasswordForNewFilesystem(const std::shared_ptr<cpputils::Console>& console) {
+    function<string()> Cli::_askPasswordForNewFilesystem(shared_ptr<Console> console) {
         //TODO Ask confirmation if using insecure password (<8 characters)
-        return [console] () {
+        return [console = std::move(console)] () {
             string password;
             while(true) {
                 password = console->askPassword("Password: ");
@@ -164,9 +164,9 @@ namespace cryfs_cli {
         return true;
     }
 
-    function<string()> Cli::_askPasswordNoninteractive(const std::shared_ptr<cpputils::Console>& console) {
+    function<string()> Cli::_askPasswordNoninteractive(shared_ptr<Console> console) {
         //TODO Test
-        return [console] () {
+        return [console = std::move(console)] () {
             string password = console->askPassword("Password: ");
             if (!_checkPassword(password)) {
                 throw CryfsException("Invalid password. Password cannot be empty.", ErrorCode::EmptyPassword);
@@ -349,7 +349,7 @@ namespace cryfs_cli {
             throw CryfsException(name+" is not a directory.", errorCode);
         }
         auto file = _checkDirWriteable(dir, name, errorCode);
-        _checkDirReadable(dir, file, name, errorCode);
+        _checkDirReadable(dir, *file, name, errorCode);
     }
 
     shared_ptr<TempFile> Cli::_checkDirWriteable(const bf::path &dir, const std::string &name, ErrorCode errorCode) {
@@ -361,13 +361,13 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_checkDirReadable(const bf::path &dir, const shared_ptr<TempFile>& tempfile, const std::string &name, ErrorCode errorCode) {
-        ASSERT(bf::equivalent(dir, tempfile->path().parent_path()), "This function should be called with a file inside the directory");
+    void Cli::_checkDirReadable(const bf::path &dir, const TempFile &tempfile, const std::string &name, ErrorCode errorCode) {
+        ASSERT(bf::equivalent(dir, tempfile.path().parent_path()), "This function should be called with a file inside the directory");
         try {
             bool found = false;
             bf::directory_iterator end;
             for (auto iter = bf::directory_iterator(dir); iter != end; ++iter) {
-                if (bf::equivalent(*iter, tempfile->path())) {
+                if (bf::equivalent(*iter, tempfile.path())) {
                     found = true;
                 }
             }

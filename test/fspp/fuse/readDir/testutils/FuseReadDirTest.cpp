@@ -78,7 +78,7 @@ void FuseReadDirTest::closeDir(DIR *dir) {
 }
 
 Action<vector<fspp::Dir::Entry>(const boost::filesystem::path&)> FuseReadDirTest::ReturnDirEntries(vector<std::string> entries) {
-  vector<fspp::Dir::Entry> direntries(entries.size(), fspp::Dir::Entry(fspp::Dir::NodeType::FILE, ""));
+  vector<fspp::Dir::Entry> direntries(entries.size(), fspp::Dir::Entry(fspp::Dir::EntryType::FILE, ""));
   for(size_t i = 0; i < entries.size(); ++i) {
     direntries[i].name = entries[i];
   }

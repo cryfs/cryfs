@@ -13,7 +13,7 @@ namespace cryfs {
 class CryDir;
 class CryNode: public fspp::Node {
 public:
-  virtual ~CryNode();
+  ~CryNode() override;
 
   CryNode(CryDevice *device, const blockstore::BlockId &blockId);
   void access(int mask) const override;
@@ -26,17 +26,16 @@ public:
   void link() override;
   bool unlink() override;
 
-  virtual fspp::Dir::NodeType getType() const override = 0;
+  fspp::Dir::EntryType getType() const override = 0;
   const blockstore::BlockId &blockId() const override;
 protected:
-  CryNode();
 
   CryDevice *device();
   const CryDevice *device() const;
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob() const;
   bool isRootDir() const;
 
-  void updateChangeTimestamp();
+  virtual void updateChangeTimestamp();
 
 
 

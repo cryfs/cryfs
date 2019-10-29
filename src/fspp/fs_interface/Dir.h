@@ -13,17 +13,17 @@ class OpenFile;
 
 class Dir {
 public:
-  virtual ~Dir() {}
+  virtual ~Dir() = default;
 
-  enum class NodeType: uint8_t {
+  enum class EntryType: uint8_t {
     DIR = 0x00,
     FILE = 0x01,
     SYMLINK = 0x02
   };
 
   struct Entry {
-    Entry(NodeType type_, const std::string &name_): type(type_), name(name_) {}
-    NodeType type;
+    Entry(EntryType type_, std::string name_): type(type_), name(std::move(name_)) {}
+    EntryType type;
     std::string name;
   };
 

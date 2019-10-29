@@ -8,6 +8,7 @@
 #include <fspp/fs_interface/Types.h>
 #include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
 #include "utils/DirEntry.h"
+#include <shared_mutex>
 
 namespace cryfs {
 
@@ -27,8 +28,9 @@ namespace cryfs {
 
         };
         //TODO Rename to "Type" or similar
-        using BlobType = fspp::Dir::NodeType;
-        using Lock = std::lock_guard<std::mutex>;
+        using BlobType = fspp::Dir::EntryType;
+        using Lock = std::unique_lock<std::shared_timed_mutex>;
+        using SharedLock = std::shared_lock<std::shared_timed_mutex>;
 
 
         explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob, const fsblobstore::TimestampUpdateBehavior behav): _timestampUpdateBehavior(behav), _baseBlob(std::move(baseBlob)), _blobType(BlobType::DIR) {  // blob type overwritten by _loadMetadata, needed for clang-tidy
@@ -140,7 +142,7 @@ namespace cryfs {
         mutable cpputils::unique_ref<blobstore::Blob> _baseBlob;
 
         mutable Metadata _metadata;
-        mutable std::mutex _mutex;
+        mutable std::shared_timed_mutex _mutex;
 
         // this never changes, so we can load it during initialization.
         BlobType _blobType;

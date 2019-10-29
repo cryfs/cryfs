@@ -9,8 +9,8 @@
 
 namespace blockstore {
 
-// Tag is used to distinguish different concrete IdWrappers
-template<class Tag>
+// Template parameter is used to distinguish different concrete IdWrappers (unused otherwise, thus unnamed)
+template<class>
 class IdWrapper final {
 private:
   using IdData = cpputils::FixedSizeData<16>;
@@ -38,17 +38,9 @@ private:
 
   IdData id_;
   friend struct std::hash<IdWrapper>;
-  friend struct std::less<IdWrapper>;
-  friend struct std::less_equal<IdWrapper>;
   template<class Tag2> friend bool operator==(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
   template<class Tag2> friend bool operator!=(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
 };
-
-template<class Tag>
-constexpr size_t IdWrapper<Tag>::BINARY_LENGTH;
-
-template<class Tag>
-constexpr size_t IdWrapper<Tag>::STRING_LENGTH;
 
 template<class Tag>
 inline IdWrapper<Tag>::IdWrapper(const IdData& id): id_(id) {}

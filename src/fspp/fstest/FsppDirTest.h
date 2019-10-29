@@ -22,8 +22,8 @@ public:
 
   void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
 	std::vector<fspp::Dir::Entry> expectedChildren = expected;
-	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, "."));
-	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::NodeType ::DIR, ".."));
+	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
+	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType ::DIR, ".."));
 	EXPECT_UNORDERED_EQ(expectedChildren, dir->children());
   }
 
@@ -49,11 +49,11 @@ public:
 TYPED_TEST_SUITE_P(FsppDirTest);
 
 inline fspp::Dir::Entry DirEntry(const std::string &name) {
-  return fspp::Dir::Entry(fspp::Dir::NodeType::DIR, name);
+  return fspp::Dir::Entry(fspp::Dir::EntryType::DIR, name);
 }
 
 inline fspp::Dir::Entry FileEntry(const std::string &name) {
-  return fspp::Dir::Entry(fspp::Dir::NodeType::FILE, name);
+  return fspp::Dir::Entry(fspp::Dir::EntryType::FILE, name);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_Empty) {

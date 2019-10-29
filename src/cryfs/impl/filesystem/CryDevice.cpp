@@ -204,11 +204,11 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   const auto &entry = *optEntry;
 
   switch(entry.type()) {
-    case fspp::Dir::NodeType::DIR:
+    case fspp::Dir::EntryType::DIR:
       return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, entry.blockId()));
-    case fspp::Dir::NodeType::FILE:
+    case fspp::Dir::EntryType::FILE:
       return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, entry.blockId()));
-    case  fspp::Dir::NodeType::SYMLINK:
+    case  fspp::Dir::EntryType::SYMLINK:
 	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, entry.blockId()));
   }
   ASSERT(false, "Switch/case not exhaustive");

@@ -99,7 +99,7 @@ void FsBlobView::resize(uint64_t numBytes) {
 }
 
 cpputils::Data FsBlobView::readAll() const {
-  Lock l(_mutex);
+  SharedLock l(_mutex);
   cpputils::Data data = _baseBlob->readAll();
   cpputils::Data dataWithoutHeader(data.size() - HEADER_SIZE);
   //Can we avoid this memcpy? Maybe by having Data::subdata() that returns a reference to the same memory region? Should we?
@@ -108,13 +108,13 @@ return dataWithoutHeader;
 }
 
 void FsBlobView::read(void *target, uint64_t offset, uint64_t size) const {
-  Lock l(_mutex);
+  SharedLock l(_mutex);
   _updateAccessTimestamp();
   _baseBlob->read(target, offset + HEADER_SIZE, size);
 }
 
 uint64_t FsBlobView::tryRead(void *target, uint64_t offset, uint64_t size) const {
-  Lock l(_mutex);
+  SharedLock l(_mutex);
   _updateAccessTimestamp();
   return _baseBlob->tryRead(target, offset + HEADER_SIZE, size);
 }

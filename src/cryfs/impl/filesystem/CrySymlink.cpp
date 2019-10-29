@@ -33,9 +33,9 @@ unique_ref<SymlinkBlobRef> CrySymlink::LoadSymlinkBlob() const {
   return std::move(*symlink_blob);
 }
 
-fspp::Dir::NodeType CrySymlink::getType() const {
+fspp::Dir::EntryType CrySymlink::getType() const {
   device()->callFsActionCallbacks();
-  return fspp::Dir::NodeType::SYMLINK;
+  return fspp::Dir::EntryType::SYMLINK;
 }
 
 bf::path CrySymlink::target() {

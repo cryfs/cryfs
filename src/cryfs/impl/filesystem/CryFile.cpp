@@ -43,9 +43,9 @@ void CryFile::truncate(fspp::num_bytes_t size) {
   blob->resize(size);  // includes updating of the timestamps
 }
 
-fspp::Dir::NodeType CryFile::getType() const {
+fspp::Dir::EntryType CryFile::getType() const {
   device()->callFsActionCallbacks();
-  return fspp::Dir::NodeType::FILE;
+  return fspp::Dir::EntryType::FILE;
 }
 
 void CryFile::remove() {

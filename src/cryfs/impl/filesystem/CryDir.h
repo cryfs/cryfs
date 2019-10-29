@@ -22,14 +22,14 @@ public:
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
   std::vector<fspp::Dir::Entry> children() override;
 
-  fspp::Dir::NodeType getType() const override;
+  fspp::Dir::EntryType getType() const override;
 
   void remove() override;
 
   void removeChildEntryByName(const string& name) override;
   void updateAccessTimestamp() override;
   void updateModificationTimestamp() override;
-  void updateChangeTimestamp();
+  void updateChangeTimestamp() override;
 
 private:
   cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob() const;

@@ -1,15 +1,10 @@
 #include "CryDir.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
 #include <cpp-utils/system/time.h>
-#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::FuseErrnoException;
@@ -42,8 +37,6 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::m
   auto child = device()->CreateFileBlob(metaData);
   blob->AddChildFile(name, child->blockId());
   blob->link();
-  blob->updateModificationTimestamp();
-  blob->updateChangeTimestamp();
   return make_unique_ref<CryOpenFile>(device(), std::move(child));
 }
 
@@ -55,8 +48,6 @@ void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, f
   auto child = device()->CreateDirBlob(metaData);
   blob->AddChildDir(name, child->blockId());
   blob->link();
-  blob->updateModificationTimestamp();
-  blob->updateChangeTimestamp();
 }
 
 unique_ref<DirBlobRef> CryDir::LoadDirBlob() const {
@@ -70,23 +61,21 @@ vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
   updateAccessTimestamp();
   vector<fspp::Dir::Entry> children;
-  children.emplace_back(fspp::Dir::NodeType::DIR, ".");
-  children.emplace_back(fspp::Dir::NodeType::DIR, "..");
+  children.emplace_back(fspp::Dir::EntryType::DIR, ".");
+  children.emplace_back(fspp::Dir::EntryType::DIR, "..");
   auto blob = LoadDirBlob();
   blob->AppendChildrenTo(&children);
   return children;
 }
 
-fspp::Dir::NodeType CryDir::getType() const {
+fspp::Dir::EntryType CryDir::getType() const {
   device()->callFsActionCallbacks();
-  return fspp::Dir::NodeType::DIR;
+  return fspp::Dir::EntryType::DIR;
 }
 
 void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
   auto blob = LoadDirBlob();
-  blob->updateChangeTimestamp();
-  blob->updateModificationTimestamp();
   auto now = cpputils::time::now();
   fspp::mode_t mode(0120777);
   FsBlobView::Metadata metaData(uint32_t {1}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
@@ -144,15 +133,13 @@ void CryDir::createLink(const boost::filesystem::path &target, const std::string
     throw FuseErrnoException(ENOENT);
   }
   auto type = (*targetBlob)->getType();
-  if (type == fspp::Dir::NodeType::DIR) {
+  if (type == fspp::Dir::EntryType::DIR) {
     throw FuseErrnoException(EPERM);
   }
-  (*targetBlob)->link(); // now we are save
+  (*targetBlob)->link(); // now we are save from deletion
 
-  // TODO: this whole business has to be withing the DirBlob classes and locked to be threadsafe
-  auto dirBlob = LoadDirBlob();
   try {
-    dirBlob->AddChildHardlink(name, (*targetBlob)->blockId(), (*targetBlob)->getType());
+    LoadDirBlob()->AddChildHardlink(name, (*targetBlob)->blockId(), (*targetBlob)->getType());
   } catch (const FuseErrnoException& e) {
     (*targetBlob)->unlink();
     throw;

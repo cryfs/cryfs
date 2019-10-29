@@ -27,8 +27,8 @@ namespace cryfs {
             static cpputils::Data serializeExternal(const std::vector<DirEntry>& entries);
             void deserializeFrom(const void *data, uint64_t size);
 
-            void add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType entryType);
-            AddOver addOrOverwrite(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType entryType,
+            void add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType);
+            AddOver addOrOverwrite(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType,
                      const std::function<void (const DirEntry &entry)>& onOverwritten);
             void rename(const blockstore::BlockId &blockId, const std::string &name, const std::function<void (const DirEntry &entry)>& onOverwritten);
             boost::optional<const DirEntry&> get(const std::string &name) const;
@@ -51,9 +51,9 @@ namespace cryfs {
 
           std::vector<DirEntry>::iterator _findLowerBound(const blockstore::BlockId &blockId);
             std::vector<DirEntry>::iterator _findFirst(const blockstore::BlockId &hint, const std::function<bool (const DirEntry&)>& pred);
-            void _add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType entryType);
-            void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::NodeType entryType);
-            static void _checkAllowedOverwrite(fspp::Dir::NodeType oldType, fspp::Dir::NodeType newType);
+            void _add(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType);
+            void _overwrite(std::vector<DirEntry>::iterator entry, const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType entryType);
+            static void _checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType);
 
             std::vector<DirEntry> _entries;
 

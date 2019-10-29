@@ -93,21 +93,21 @@ public:
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
     auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children.end() && it->type == fspp::Dir::NodeType::FILE);
+    return (it != children.end() && it->type == fspp::Dir::EntryType::FILE);
   }
 
   bool IsDirInDir(const boost::filesystem::path &path) {
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
     auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children.end() && it->type == fspp::Dir::NodeType::DIR);
+    return (it != children.end() && it->type == fspp::Dir::EntryType::DIR);
   }
 
   bool IsSymlinkInDir(const boost::filesystem::path &path) {
     auto dir = LoadDir(path.parent_path());
     auto children = dir->children();
     auto it = std::find_if(children.begin(), children.end(), [path](const fspp::Dir::Entry& e) {return e.name == path.filename().string();});
-    return (it != children.end() && it->type == fspp::Dir::NodeType::SYMLINK);
+    return (it != children.end() && it->type == fspp::Dir::EntryType::SYMLINK);
   }
 
   void EXPECT_IS_FILE(const cpputils::unique_ref<fspp::Node> &node) {

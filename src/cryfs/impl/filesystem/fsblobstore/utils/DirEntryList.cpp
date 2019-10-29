@@ -58,20 +58,20 @@ bool DirEntryList::_hasChild(const string &name) const {
     return _entries.end() != _findByName(name);
 }
 
-void DirEntryList::add(const string &name, const BlockId &blobId, fspp::Dir::NodeType entryType) {
+void DirEntryList::add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType) {
     if (_hasChild(name)) {
         throw fspp::fuse::FuseErrnoException(EEXIST);
     }
     _add(name, blobId, entryType);
 }
 
-void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::NodeType entryType) {
+void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType) {
     //auto insert_pos = _findUpperBound(blobId);
       auto insert_pos = std::upper_bound(_entries.begin(), _entries.end(), blobId, [](const BlockId& value, const DirEntry& entry){return std::less<BlockId>()(value, entry.blockId());});
       _entries.emplace(insert_pos, entryType, name, blobId);
   }
 
-  DirEntryList::AddOver DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fspp::Dir::NodeType entryType,
+  DirEntryList::AddOver DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType,
                          const std::function<void (const DirEntry &entry)>& onOverwritten) {
       auto found = _findByName(name);
       if (found != _entries.end()) {
@@ -95,20 +95,20 @@ void DirEntryList::_add(const string &name, const BlockId &blobId, fspp::Dir::No
     _findById(blockId)->setName(name);
 }
 
-void DirEntryList::_checkAllowedOverwrite(fspp::Dir::NodeType oldType, fspp::Dir::NodeType newType) {
+void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType) {
     if (oldType != newType) {
-        if (oldType == fspp::Dir::NodeType::DIR) {
+        if (oldType == fspp::Dir::EntryType::DIR) {
             // new path is an existing directory, but old path is not a directory
             throw fspp::fuse::FuseErrnoException(EISDIR);
         }
-        if (newType == fspp::Dir::NodeType::DIR) {
+        if (newType == fspp::Dir::EntryType::DIR) {
             // oldpath is a directory, and newpath exists but is not a directory.
             throw fspp::fuse::FuseErrnoException(ENOTDIR);
         }
     }
 }
 
-void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const BlockId &blobId, fspp::Dir::NodeType entryType) {
+void DirEntryList::_overwrite(vector<DirEntry>::iterator entry, const string &name, const BlockId &blobId, fspp::Dir::EntryType entryType) {
     _checkAllowedOverwrite(entry->type(), entryType);
     // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
     // That's why we remove-and-add instead of just modifying the existing entry.

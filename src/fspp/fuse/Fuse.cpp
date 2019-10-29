@@ -1058,11 +1058,11 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
       //but it doesn't help performance since fuse ignores everything in stbuf
       //except for file-type bits in st_mode and (if used) st_ino.
       //It does getattr() calls on all entries nevertheless.
-      if (entry.type == Dir::NodeType::DIR) {
+      if (entry.type == Dir::EntryType::DIR) {
         stbuf.st_mode = S_IFDIR;
-      } else if (entry.type == Dir::NodeType::FILE) {
+      } else if (entry.type == Dir::EntryType::FILE) {
         stbuf.st_mode = S_IFREG;
-      } else if (entry.type == Dir::NodeType::SYMLINK) {
+      } else if (entry.type == Dir::EntryType::SYMLINK) {
         stbuf.st_mode = S_IFLNK;
       } else {
         ASSERT(false, "Unknown entry type");

@@ -140,7 +140,7 @@ public:
         auto child = this->CreateNode("/mydir/childname");
         auto type = child->getType();
         auto operation = [this, type]() {
-          if (type == fspp::Dir::NodeType::DIR) {
+          if (type == fspp::Dir::EntryType::DIR) {
             this->filesystem.rmdir("/mydir/childname");
           } else {
             this->filesystem.unlink("/mydir/childname");

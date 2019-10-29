@@ -57,7 +57,7 @@ namespace cryfs {
         }
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
-            auto type = static_cast<fspp::Dir::NodeType>(_deserialize<uint8_t>(&pos));
+            auto type = static_cast<fspp::Dir::EntryType>(_deserialize<uint8_t>(&pos));
             string name = _deserializeString(&pos);
             BlockId blockId = _deserializeBlockId(&pos);
 
@@ -72,7 +72,7 @@ namespace cryfs {
         }
 
         const char *DirEntryWithMetaData::deserializeAndAddToVector(const char *pos, vector<DirEntryWithMetaData> *result) {
-          auto type = static_cast<fspp::Dir::NodeType>(_deserialize<uint8_t>(&pos));
+          auto type = static_cast<fspp::Dir::EntryType>(_deserialize<uint8_t>(&pos));
           fspp::mode_t mode = fspp::mode_t(_deserialize<uint32_t>(&pos));
           fspp::uid_t uid = fspp::uid_t(_deserialize<uint32_t>(&pos));
           fspp::gid_t gid = fspp::gid_t(_deserialize<uint32_t>(&pos));

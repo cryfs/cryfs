@@ -64,7 +64,7 @@ void CryNode::rename(const bf::path &from, const bf::path &to) {
 
   class HardlinkToSameException : public std::exception {};
 
-  bool isDir = getType() == fspp::Dir::NodeType::DIR;
+  bool isDir = getType() == fspp::Dir::EntryType::DIR;
 
   // basically reimplement unlink() here.
   auto onOverwritten = [this, isDir](const fsblobstore::DirEntry &entry) {
@@ -73,7 +73,7 @@ void CryNode::rename(const bf::path &from, const bf::path &to) {
     }
 
     // trying to overwrite a directory
-    if (entry.type() == fspp::Dir::NodeType::DIR) {
+    if (entry.type() == fspp::Dir::EntryType::DIR) {
       if (!isDir) throw FuseErrnoException(EISDIR);
       // only allowed if target is empty
       auto remove = device()->LoadDirBlob(entry.blockId())->NumChildren() == 0;

@@ -27,7 +27,7 @@ public:
   virtual void remove() = 0;
   virtual void link() = 0;
   virtual bool unlink() = 0; // return true iff the last link was removed
-  virtual Dir::NodeType getType() const = 0;
+  virtual Dir::EntryType getType() const = 0;
 
   virtual const blockstore::BlockId& blockId() const = 0;
 

@@ -16,7 +16,7 @@ public:
 
   cpputils::unique_ref<fspp::OpenFile> open(fspp::openflags_t flags) override;
   void truncate(fspp::num_bytes_t size) override;
-  fspp::Dir::NodeType getType() const override;
+  fspp::Dir::EntryType getType() const override;
   void remove() override;
 
 private:

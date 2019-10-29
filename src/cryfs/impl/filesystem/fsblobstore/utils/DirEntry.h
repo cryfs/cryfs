@@ -13,14 +13,14 @@ namespace cryfs {
 
         class DirEntry final {
         public:
-            DirEntry(fspp::Dir::NodeType type, std::string name, const blockstore::BlockId &blockId) :
+            DirEntry(fspp::Dir::EntryType type, std::string name, const blockstore::BlockId &blockId) :
             _type(type), _name(std::move(name)), _blockId(blockId) {};
 
             void serialize(uint8_t* dest) const;
             size_t serializedSize() const;
             static const char *deserializeAndAddToVector(const char *pos, std::vector<DirEntry> *result);
 
-            fspp::Dir::NodeType type() const;
+            fspp::Dir::EntryType type() const;
 
             const std::string &name() const;
             void setName(const std::string &value);
@@ -29,13 +29,13 @@ namespace cryfs {
 
         private:
 
-            fspp::Dir::NodeType _type;
+            fspp::Dir::EntryType _type;
             std::string _name;
             blockstore::BlockId _blockId;
         };
 
 
-        inline fspp::Dir::NodeType DirEntry::type() const {
+        inline fspp::Dir::EntryType DirEntry::type() const {
             return _type;
         }
 
@@ -54,17 +54,17 @@ namespace cryfs {
 
         struct DirEntryWithMetaData {
 
-          DirEntryWithMetaData(fspp::Dir::NodeType type, const std::string &name, const blockstore::BlockId &blockId, fspp::mode_t mode,
-          fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
-          timespec lastMetadataChangeTime)
+          DirEntryWithMetaData(fspp::Dir::EntryType type, const std::string &name, const blockstore::BlockId &blockId, fspp::mode_t mode,
+                               fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
+                               timespec lastMetadataChangeTime)
             : _type(type), _name(name), _blockId(blockId), _mode(mode), _uid(uid), _gid(gid), _lastAccessTime(lastAccessTime),
                     _lastModificationTime(lastModificationTime), _lastMetadataChangeTime(lastMetadataChangeTime) {
-              ASSERT((_mode.hasFileFlag() && _type == fspp::Dir::NodeType::FILE) ||
-                     (_mode.hasDirFlag() && _type == fspp::Dir::NodeType::DIR) ||
-                     (_mode.hasSymlinkFlag() && _type == fspp::Dir::NodeType::SYMLINK), "Unknown mode in entry");
+              ASSERT((_mode.hasFileFlag() && _type == fspp::Dir::EntryType::FILE) ||
+                     (_mode.hasDirFlag() && _type == fspp::Dir::EntryType::DIR) ||
+                     (_mode.hasSymlinkFlag() && _type == fspp::Dir::EntryType::SYMLINK), "Unknown mode in entry");
             }
 
-          fspp::Dir::NodeType _type;
+          fspp::Dir::EntryType _type;
           std::string _name;
           blockstore::BlockId _blockId;
           fspp::mode_t _mode;
