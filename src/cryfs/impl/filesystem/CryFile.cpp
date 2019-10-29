@@ -9,11 +9,9 @@
 
 using blockstore::BlockId;
 using boost::none;
-using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
@@ -22,10 +20,9 @@ CryFile::CryFile(CryDevice *device, const BlockId &blockId)
 : CryNode(device, blockId) {
 }
 
-CryFile::~CryFile() {
-}
+CryFile::~CryFile() = default;
 
-unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
+unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadFileBlob() const {
   auto blob = CryNode::LoadBlob();
   auto file_blob = dynamic_pointer_move<FileBlobRef>(blob);
   ASSERT(file_blob != none, "Blob does not store a file");
@@ -36,13 +33,13 @@ unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
   // TODO Should we honor open flags?
   UNUSED(flags);
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob();
+  auto blob = LoadFileBlob();
   return make_unique_ref<CryOpenFile>(device(), std::move(blob));
 }
 
 void CryFile::truncate(fspp::num_bytes_t size) {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+  auto blob = LoadFileBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   blob->resize(size);  // includes updating of the timestamps
 }
 

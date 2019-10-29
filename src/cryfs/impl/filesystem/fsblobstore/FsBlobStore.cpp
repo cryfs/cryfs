@@ -11,7 +11,6 @@ using cpputils::SignalCatcher;
 using blobstore::BlobStore;
 using blockstore::BlockId;
 using boost::none;
-using std::vector;
 
 namespace cryfs {
 namespace fsblobstore {

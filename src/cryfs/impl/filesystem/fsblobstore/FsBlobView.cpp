@@ -53,8 +53,8 @@ std::vector<cryfs::fsblobstore::DirEntryWithMetaData> FsBlobView::migrate(blobst
     std::vector<cryfs::fsblobstore::DirEntryWithMetaData> entries;
     const char *pos = static_cast<const char*>(data.dataOffset(readHeaderSize));
     while (pos < static_cast<const char*>(data.data()) + data.size()) {
-      pos = cryfs::fsblobstore::DirEntryWithMetaData::deserializeAndAddToVector(pos, &entries);
-      ASSERT(entries.size() == 1 || std::less<blockstore::BlockId>()(entries[entries.size()-2]._blockId, entries[entries.size()-1]._blockId), "Invariant hurt: Directory entries should be ordered by blockId and unique in the old version format.");
+      cryfs::fsblobstore::DirEntryWithMetaData::deserializeAndAddToVector(pos, &entries);
+      ASSERT(entries.size() == 1 || (entries[entries.size()-2]._blockId < entries[entries.size()-1]._blockId), "Invariant hurt: Directory entries should be ordered by blockId and unique in the old version format.");
     }
     std::vector<cryfs::fsblobstore::DirEntry> convertedEntries;
     for (const auto& e : entries) {
@@ -158,7 +158,10 @@ void FsBlobView::utimens(timespec atime, timespec mtime) {
 
 void FsBlobView::updateAccessTimestamp() const {
   Lock l(_mutex);
-  _updateAccessTimestamp();
+  // TODO: proper implementation
+  if (_timestampUpdateBehavior != fsblobstore::TimestampUpdateBehavior::NOATIME) {
+    _updateAccessTimestamp();
+  }
 }
 
 void FsBlobView::_updateAccessTimestamp() const {

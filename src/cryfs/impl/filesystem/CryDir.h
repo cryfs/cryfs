@@ -32,7 +32,7 @@ public:
   void updateChangeTimestamp();
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadBlob() const;
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

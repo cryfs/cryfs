@@ -23,7 +23,6 @@ using blockstore::BlockId;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using boost::optional;
 using boost::none;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
@@ -37,7 +36,7 @@ CryDir::~CryDir() = default;
 
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   auto now = cpputils::time::now();
   FsBlobView::Metadata metaData(uint32_t{1}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
   auto child = device()->CreateFileBlob(metaData);
@@ -50,7 +49,7 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::m
 
 void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   auto now = cpputils::time::now();
   FsBlobView::Metadata metaData(uint32_t{2}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
   auto child = device()->CreateDirBlob(metaData);
@@ -60,7 +59,7 @@ void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, f
   blob->updateChangeTimestamp();
 }
 
-unique_ref<DirBlobRef> CryDir::LoadBlob() const {
+unique_ref<DirBlobRef> CryDir::LoadDirBlob() const {
   auto blob = CryNode::LoadBlob();
   auto dir_blob = dynamic_pointer_move<DirBlobRef>(blob);
   ASSERT(dir_blob != none, "Blob does not store a directory");
@@ -71,9 +70,9 @@ vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
   updateAccessTimestamp();
   vector<fspp::Dir::Entry> children;
-  children.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, "."));
-  children.push_back(fspp::Dir::Entry(fspp::Dir::NodeType::DIR, ".."));
-  auto blob = LoadBlob();
+  children.emplace_back(fspp::Dir::NodeType::DIR, ".");
+  children.emplace_back(fspp::Dir::NodeType::DIR, "..");
+  auto blob = LoadDirBlob();
   blob->AppendChildrenTo(&children);
   return children;
 }
@@ -85,7 +84,7 @@ fspp::Dir::NodeType CryDir::getType() const {
 
 void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   blob->updateChangeTimestamp();
   blob->updateModificationTimestamp();
   auto now = cpputils::time::now();
@@ -99,7 +98,7 @@ void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid
 void CryDir::remove() {
   device()->callFsActionCallbacks();
   {
-    auto blob = LoadBlob();
+    auto blob = LoadDirBlob();
     if (0 != blob->NumChildren()) {
       throw FuseErrnoException(ENOTEMPTY);
     }
@@ -109,26 +108,26 @@ void CryDir::remove() {
 }
 
 void CryDir::updateAccessTimestamp() {
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   (*blob).updateAccessTimestamp();
 }
 
 void CryDir::updateModificationTimestamp() {
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   (*blob).updateModificationTimestamp();
 }
 
 void CryDir::updateChangeTimestamp() {
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   (*blob).updateChangeTimestamp();
 }
 
 void CryDir::removeChildEntryByName(const string &name) {
-  auto blob = LoadBlob();
+  auto blob = LoadDirBlob();
   blob->updateChangeTimestamp();
   blob->updateModificationTimestamp();
   blob->unlink();
-  LoadBlob() ->RemoveChild(name);
+  LoadDirBlob() ->RemoveChild(name);
 }
 
 void CryDir::createLink(const boost::filesystem::path &target, const std::string& name) {
@@ -151,7 +150,7 @@ void CryDir::createLink(const boost::filesystem::path &target, const std::string
   (*targetBlob)->link(); // now we are save
 
   // TODO: this whole business has to be withing the DirBlob classes and locked to be threadsafe
-  auto dirBlob = LoadBlob();
+  auto dirBlob = LoadDirBlob();
   try {
     dirBlob->AddChildHardlink(name, (*targetBlob)->blockId(), (*targetBlob)->getType());
   } catch (const FuseErrnoException& e) {

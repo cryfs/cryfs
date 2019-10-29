@@ -31,6 +31,9 @@ public:
   static IdWrapper FromBinary(const void *source);
   void ToBinary(void *target) const;
 
+  bool operator<(const IdWrapper& rhs) const;
+  bool operator<=(const IdWrapper& rhs) const;
+
 private:
 
   IdData id_;
@@ -95,29 +98,26 @@ inline bool operator!=(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
   return !operator==(lhs, rhs);
 }
 
+template <class Tag>
+inline bool IdWrapper<Tag>::operator<(const IdWrapper<Tag>& rhs) const {
+  return 0 > std::memcmp(id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);
 }
 
-#define DEFINE_IDWRAPPER(IdWrapper)                                                                                    \
-  namespace std {                                                                                                      \
-    /*Allow using IdWrapper in std::unordered_map / std::unordered_set */                                              \
-    template <> struct hash<IdWrapper> {                                                                               \
-      size_t operator()(const IdWrapper &idWrapper) const {                                                            \
-        /*Ids are random, so it is enough to use the first few bytes as a hash */                                      \
-        return cpputils::deserialize<size_t>(idWrapper.id_.data());                                                    \
-      }                                                                                                                \
-    };                                                                                                                 \
-    /*Allow using IdWrapper in std::map / std::set */                                                                  \
-    template <> struct less<IdWrapper> {                                                                               \
-      bool operator()(const IdWrapper &lhs, const IdWrapper &rhs) const {                                              \
-        return 0 > std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);                              \
-      }                                                                                                                \
-    };                                                                                                                 \
-    /*Allow using IdWrapper in std::map / std::set */                                                                  \
-    template <> struct less_equal<IdWrapper> {                                                                         \
-      bool operator()(const IdWrapper &lhs, const IdWrapper &rhs) const {                                              \
-        return 0 >= std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);                             \
-      }                                                                                                                \
-    };                                                                                                                 \
-  }                                                                                                                    \
+template <class Tag>
+inline bool IdWrapper<Tag>::operator<=(const IdWrapper<Tag>& rhs) const {
+  return 0 >= std::memcmp(id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);
+}
+
+}
+
+namespace std {
+template <class Tag>
+struct hash<blockstore::IdWrapper<Tag>> {
+  size_t operator()(const blockstore::IdWrapper<Tag> &idWrapper) const {                                                            \
+        /*Ids are random, so it is enough to use the first few bytes as a hash */
+        return cpputils::deserialize<size_t>(idWrapper.id_.data());
+      }
+};
+}
 
 #endif

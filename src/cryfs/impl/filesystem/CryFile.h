@@ -20,7 +20,7 @@ public:
   void remove() override;
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> LoadBlob() const;
+  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> LoadFileBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryFile);
 };
