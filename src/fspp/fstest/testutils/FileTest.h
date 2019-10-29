@@ -40,8 +40,15 @@ public:
 		EXPECT_EQ(expectedSize, st.size);
 	});
 
-	EXPECT_NUMBYTES_READABLE(expectedSize, file);
+    EXPECT_NUMBYTES_READABLE(expectedSize, file);
   }
+
+  void EXPECT_NLINKS(uint32_t expectedNlinks, fspp::File *file, fspp::Node *node) {
+    IN_STAT(file, node, [expectedNlinks](const fspp::Node::stat_info &st) {
+      EXPECT_EQ(expectedNlinks, st.nlink);
+    });
+  }
+
 
   void EXPECT_NUMBYTES_READABLE(fspp::num_bytes_t expectedSize, fspp::File *file) {
 	auto openFile = file->open(fspp::openflags_t::RDONLY());

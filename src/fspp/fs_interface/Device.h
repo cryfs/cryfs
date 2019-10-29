@@ -4,6 +4,7 @@
 
 #include <boost/filesystem.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
+#include <blockstore/utils/BlockId.h>
 #include "Types.h"
 
 namespace fspp {
@@ -14,12 +15,13 @@ class Symlink;
 
 class Device {
 public:
-	virtual ~Device() {}
+	virtual ~Device() = default;
 
 	using statvfs = fspp::statvfs;
 
 	virtual statvfs statfs() = 0;
 	virtual boost::optional<cpputils::unique_ref<Node>> Load(const boost::filesystem::path &path) = 0;
+  virtual bool BlobExists(const blockstore::BlockId& id) = 0;
 
 	//TODO Test default implementation (Device.cpp)
 	//TODO Test client implementation (fstest)
@@ -27,6 +29,7 @@ public:
 	virtual boost::optional<cpputils::unique_ref<File>> LoadFile(const boost::filesystem::path &path) = 0;
 	virtual boost::optional<cpputils::unique_ref<Dir>> LoadDir(const boost::filesystem::path &path) = 0;
 	virtual boost::optional<cpputils::unique_ref<Symlink>> LoadSymlink(const boost::filesystem::path &path) = 0;
+
 
 };
 

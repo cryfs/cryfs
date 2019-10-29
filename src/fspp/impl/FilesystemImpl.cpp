@@ -109,6 +109,15 @@ unique_ref<Dir> FilesystemImpl::LoadDir(const bf::path &path) {
   return std::move(*dir);
 }
 
+unique_ref<Node> FilesystemImpl::Load(const bf::path &path) {
+  PROFILE(_loadDirNanosec);
+  auto node = _device->Load(path);
+  if (node == none) {
+    throw fuse::FuseErrnoException(EIO);
+  }
+  return std::move(*node);
+}
+
 unique_ref<Symlink> FilesystemImpl::LoadSymlink(const bf::path &path) {
   PROFILE(_loadSymlinkNanosec);
   auto lnk = _device->LoadSymlink(path);
@@ -247,7 +256,11 @@ int FilesystemImpl::createAndOpenFile(const bf::path &path, ::mode_t mode, ::uid
   PROFILE(_createAndOpenFileNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_createAndOpenFileNanosec_withoutLoading);
-  auto file = dir->createAndOpenFile(path.filename().string(), fspp::mode_t(mode), fspp::uid_t(uid), fspp::gid_t(gid));
+  auto modeConv = fspp::mode_t(mode);
+  if (! modeConv.hasFileFlag()) {
+    modeConv.addFileFlag();
+  }
+  auto file = dir->createAndOpenFile(path.filename().string(), modeConv, fspp::uid_t(uid), fspp::gid_t(gid));
   return _open_files.open(std::move(file));
 }
 
@@ -255,29 +268,54 @@ void FilesystemImpl::mkdir(const bf::path &path, ::mode_t mode, ::uid_t uid, ::g
   PROFILE(_mkdirNanosec);
   auto dir = LoadDir(path.parent_path());
   PROFILE(_mkdirNanosec_withoutLoading);
-  dir->createDir(path.filename().string(), fspp::mode_t(mode), fspp::uid_t(uid), fspp::gid_t(gid));
+  auto modeConv = fspp::mode_t(mode);
+  if (! modeConv.hasDirFlag()) {
+    modeConv.addDirFlag();
+  }
+
+  dir->createDir(path.filename().string(), modeConv, fspp::uid_t(uid), fspp::gid_t(gid));
 }
 
 void FilesystemImpl::rmdir(const bf::path &path) {
-  //TODO Don't allow removing files/symlinks with this
   PROFILE(_rmdirNanosec);
   auto node = _device->Load(path);
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   }
+
+  if ((*node)->getType() != fspp::Dir::EntryType::DIR) {
+    throw fuse::FuseErrnoException(ENOTDIR);
+  }
   PROFILE(_rmdirNanosec_withoutLoading);
+
   (*node)->remove();
+  auto parentNode = _device->LoadDir(path.parent_path());
+  (*parentNode)->removeChildEntryByName(path.filename().string());
+  (*parentNode)->updateModificationTimestamp();
 }
 
 void FilesystemImpl::unlink(const bf::path &path) {
-  //TODO Don't allow removing directories with this
   PROFILE(_unlinkNanosec);
   auto node = _device->Load(path);
   if (node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   }
+
+  //Don't allow removing directories with this
+  if ((*node)->getType() == fspp::Dir::EntryType::DIR) {
+    // TODO (joka921): what is the correct exception for this
+    throw fuse::FuseErrnoException(EBUSY);
+  }
+
   PROFILE(_unlinkNanosec_withoutLoading);
-  (*node)->remove();
+
+
+  auto parentNode = _device->LoadDir(path.parent_path());
+  (*parentNode)->removeChildEntryByName(path.filename().string());
+  // TODO(joka921): This should probably be atomic from here on
+  if ((*node)->unlink()) {
+    (*node)->remove();
+  }
 }
 
 void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {
@@ -286,7 +324,7 @@ void FilesystemImpl::rename(const bf::path &from, const bf::path &to) {
   if(node == none) {
     throw fuse::FuseErrnoException(ENOENT);
   } else {
-    (*node)->rename(to);
+    (*node)->rename(from, to);
   }
 }
 
@@ -327,8 +365,17 @@ void FilesystemImpl::statfs(struct ::statvfs *fsstat) {
 void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, ::uid_t uid, ::gid_t gid) {
   PROFILE(_createSymlinkNanosec);
   auto parent = LoadDir(from.parent_path());
+
   PROFILE(_createSymlinkNanosec_withoutLoading);
   parent->createSymlink(from.filename().string(), to, fspp::uid_t(uid), fspp::gid_t(gid));
+  parent->updateModificationTimestamp();
+}
+
+void FilesystemImpl::link(const bf::path &to, const bf::path &from) {
+  // TODO: what to profile here?
+  auto parent = LoadDir(from.parent_path());
+  PROFILE(_createSymlinkNanosec_withoutLoading);
+  parent->createLink(to, from.filename().string());
 }
 
 void FilesystemImpl::readSymlink(const bf::path &path, char *buf, fspp::num_bytes_t size) {

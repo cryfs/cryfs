@@ -13,7 +13,7 @@ class OpenFile;
 
 class Dir {
 public:
-  virtual ~Dir() {}
+  virtual ~Dir() = default;
 
   enum class EntryType: uint8_t {
     DIR = 0x00,
@@ -22,7 +22,7 @@ public:
   };
 
   struct Entry {
-    Entry(EntryType type_, const std::string &name_): type(type_), name(name_) {}
+    Entry(EntryType type_, std::string name_): type(type_), name(std::move(name_)) {}
     EntryType type;
     std::string name;
   };
@@ -30,10 +30,14 @@ public:
   virtual cpputils::unique_ref<OpenFile> createAndOpenFile(const std::string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) = 0;
   virtual void createDir(const std::string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) = 0;
   virtual void createSymlink(const std::string &name, const boost::filesystem::path &target, fspp::uid_t uid, fspp::gid_t gid) = 0;
+  virtual void createLink(const boost::filesystem::path &target, const std::string& name) = 0;
+  virtual void removeChildEntryByName(const std::string& name) = 0;
 
   //TODO Allow alternative implementation returning only children names without more information
   //virtual std::vector<std::string> children() const = 0;
   virtual std::vector<Entry> children() = 0;
+  virtual void updateAccessTimestamp() = 0;
+  virtual void updateModificationTimestamp() = 0;
 };
 
 }

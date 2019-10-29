@@ -87,7 +87,7 @@ private:
 
 class ProgressBar final {
 public:
-    ProgressBar(size_t numBlocks): _currentBlock(0), _numBlocks(numBlocks) {}
+    explicit ProgressBar(size_t numBlocks): _currentBlock(0), _numBlocks(numBlocks) {}
 
     auto callback() {
         return [this] (const BlockId&) {
@@ -101,7 +101,8 @@ private:
 
 std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
-    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
+    // TODO: does a custom timestamp behavior make sense here?
+    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()), fsblobstore::TimestampUpdateBehavior::NOATIME);
 
     std::vector<BlockId> result;
     AccumulateBlockIds knownBlobIds;
@@ -173,7 +174,7 @@ int main(int argc, char* argv[]) {
     const auto& config_ = config->configFile->config();
     std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
 #ifndef CRYFS_NO_COMPATIBILITY
-    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && config_->HasParentPointers() && config_->HasVersionNumbers();
+    const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && config_->HasParentPointers() && config_->HasVersionNumbers() && config_->HasMetadataInBlobs();
 #else
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion;
 #endif

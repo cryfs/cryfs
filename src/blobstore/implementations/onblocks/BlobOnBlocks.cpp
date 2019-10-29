@@ -21,8 +21,7 @@ BlobOnBlocks::BlobOnBlocks(unique_ref<DataTreeRef> datatree)
 : _datatree(std::move(datatree)) {
 }
 
-BlobOnBlocks::~BlobOnBlocks() {
-} // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+BlobOnBlocks::~BlobOnBlocks() = default;
 
 uint64_t BlobOnBlocks::size() const {
   return _datatree->numBytes();

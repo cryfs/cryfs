@@ -12,7 +12,7 @@ namespace cryfs {
 
 class CryConfig final {
 public:
-  static constexpr const char* FilesystemFormatVersion = "0.10";
+  static constexpr const char* FilesystemFormatVersion = "0.11";
 
   //TODO No default constructor, pass in config values instead!
   CryConfig();
@@ -61,6 +61,12 @@ public:
   // Version numbers cannot be disabled, but the file system will be migrated to version numbers automatically.
   bool HasParentPointers() const;
   void SetHasParentPointers(bool value);
+
+  // This is a trigger to recognize old file systems that had the Blob metadata in the directories and not in the blobs.
+  // The file system will be migrated to the new format automatically.
+
+  bool HasMetadataInBlobs() const;
+  void SetHasMetadataInBlobs(bool value);
 #endif
 
   static CryConfig load(const cpputils::Data &data);
@@ -79,6 +85,7 @@ private:
 #ifndef CRYFS_NO_COMPATIBILITY
   bool _hasVersionNumbers;
   bool _hasParentPointers;
+  bool _hasMetadataInBlobs;
 #endif
 
   CryConfig &operator=(const CryConfig &rhs) = delete;

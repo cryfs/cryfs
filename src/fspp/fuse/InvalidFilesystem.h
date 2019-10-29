@@ -98,6 +98,10 @@ namespace fspp {
             void createSymlink(const boost::filesystem::path &, const boost::filesystem::path &, ::uid_t , ::gid_t ) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }
+            void link(const boost::filesystem::path&, const boost::filesystem::path&) override {
+                throw std::logic_error("Filesystem not initialized yet");
+            }
+
 
             void readSymlink(const boost::filesystem::path &, char *, fspp::num_bytes_t ) override {
                 throw std::logic_error("Filesystem not initialized yet");

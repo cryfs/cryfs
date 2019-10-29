@@ -14,6 +14,8 @@ include(utils)
 
 require_gcc_version(5.0)
 require_clang_version(4.0)
+set (CMAKE_CXX_STANDARD 14) # implicitly guaranteed by the minimum compiler versions, but makes it easier to reason for developers and tools
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Default value is not to build test cases
 option(BUILD_TESTING "build test cases" OFF)
@@ -53,5 +55,6 @@ endif()
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 add_subdirectory(doc)
+enable_testing()
 add_subdirectory(test)
 add_subdirectory(cpack)

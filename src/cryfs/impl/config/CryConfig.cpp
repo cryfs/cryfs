@@ -33,6 +33,7 @@ CryConfig::CryConfig()
 #ifndef CRYFS_NO_COMPATIBILITY
 , _hasVersionNumbers(true)
 , _hasParentPointers(true)
+, _hasMetadataInBlobs(true)
 #endif
 {
 }
@@ -56,6 +57,7 @@ CryConfig CryConfig::load(const Data &data) {
 #ifndef CRYFS_NO_COMPATIBILITY
   cfg._hasVersionNumbers = pt.get<bool>("cryfs.migrations.hasVersionNumbers", false);
   cfg._hasParentPointers = pt.get<bool>("cryfs.migrations.hasParentPointers", false);
+  cfg._hasMetadataInBlobs = pt.get<bool>("cryfs.migrations.hasMetadataInBlobs", false);
 #endif
 
   optional<string> filesystemIdOpt = pt.get_optional<string>("cryfs.filesystemId");
@@ -85,6 +87,7 @@ Data CryConfig::save() const {
 #ifndef CRYFS_NO_COMPATIBILITY
   pt.put<bool>("cryfs.migrations.hasVersionNumbers", _hasVersionNumbers);
   pt.put<bool>("cryfs.migrations.hasParentPointers", _hasParentPointers);
+  pt.put<bool>("cryfs.migrations.hasMetadataInBlobs", _hasMetadataInBlobs);
 #endif
 
   stringstream stream;
@@ -183,6 +186,14 @@ bool CryConfig::HasParentPointers() const {
 
 void CryConfig::SetHasParentPointers(bool value) {
   _hasParentPointers = value;
+}
+
+bool CryConfig::HasMetadataInBlobs() const {
+  return _hasMetadataInBlobs;
+}
+
+void CryConfig::SetHasMetadataInBlobs(bool value) {
+  _hasMetadataInBlobs = value;
 }
 #endif
 

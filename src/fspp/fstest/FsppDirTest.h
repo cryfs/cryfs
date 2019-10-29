@@ -23,7 +23,7 @@ public:
   void EXPECT_CHILDREN_ARE(fspp::Dir *dir, const std::initializer_list<fspp::Dir::Entry> expected) {
 	std::vector<fspp::Dir::Entry> expectedChildren = expected;
 	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
-	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
+	expectedChildren.push_back(fspp::Dir::Entry(fspp::Dir::EntryType ::DIR, ".."));
 	EXPECT_UNORDERED_EQ(expectedChildren, dir->children());
   }
 
@@ -58,6 +58,7 @@ inline fspp::Dir::Entry FileEntry(const std::string &name) {
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_Empty) {
   this->EXPECT_CHILDREN_ARE("/", {});
+  this->EXCPECT_NLINKS("/", 2);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_Directly) {
@@ -66,6 +67,7 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_Directly) {
   this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     FileEntry("myfile")
   });
+  this->EXCPECT_NLINKS("/", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_AfterReloadingDir) {
@@ -73,6 +75,8 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneFile_AfterReloadingDir) {
   this->EXPECT_CHILDREN_ARE("/", {
     FileEntry("myfile")
   });
+  this->EXCPECT_NLINKS("/", 3);
+
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_Directly) {
@@ -81,6 +85,7 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_Directly) {
   this->EXPECT_CHILDREN_ARE(rootdir.get(), {
     DirEntry("mydir")
   });
+  this->EXCPECT_NLINKS("/", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_AfterReloadingDir) {
@@ -88,6 +93,7 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_OneDir_AfterReloadingDir) {
   this->EXPECT_CHILDREN_ARE("/", {
     DirEntry("mydir")
   });
+  this->EXCPECT_NLINKS("/", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_RootDir_LargerStructure) {
@@ -97,11 +103,13 @@ TYPED_TEST_P(FsppDirTest, Children_RootDir_LargerStructure) {
 	DirEntry("mydir"),
 	DirEntry("myemptydir")
   });
+  this->EXCPECT_NLINKS("/", 5);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_Empty) {
   this->LoadDir("/")->createDir("myemptydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->EXPECT_CHILDREN_ARE("/myemptydir", {});
+  this->EXCPECT_NLINKS("/myemptydir", 2);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_Directly) {
@@ -111,6 +119,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_Directly) {
   this->EXPECT_CHILDREN_ARE(dir.get(), {
     FileEntry("myfile")
   });
+  this->EXCPECT_NLINKS("/mydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_AfterReloadingDir) {
@@ -119,6 +128,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneFile_AfterReloadingDir) {
   this->EXPECT_CHILDREN_ARE("/mydir", {
     FileEntry("myfile")
   });
+  this->EXCPECT_NLINKS("/mydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_Directly) {
@@ -128,6 +138,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_Directly) {
   this->EXPECT_CHILDREN_ARE(dir.get(), {
     DirEntry("mysubdir")
   });
+  this->EXCPECT_NLINKS("/mydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_AfterReloadingDir) {
@@ -136,11 +147,13 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_OneDir_AfterReloadingDir) {
   this->EXPECT_CHILDREN_ARE("/mydir", {
     DirEntry("mysubdir")
   });
+  this->EXCPECT_NLINKS("/mydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_LargerStructure_Empty) {
   this->InitDirStructure();
   this->EXPECT_CHILDREN_ARE("/myemptydir", {});
+  this->EXCPECT_NLINKS("/myemptydir", 2);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested_LargerStructure) {
@@ -150,6 +163,7 @@ TYPED_TEST_P(FsppDirTest, Children_Nested_LargerStructure) {
 	FileEntry("myfile2"),
 	DirEntry("mysubdir")
   });
+  this->EXCPECT_NLINKS("/mydir", 5);
 }
 
 TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
@@ -158,12 +172,14 @@ TYPED_TEST_P(FsppDirTest, Children_Nested2_LargerStructure) {
 	FileEntry("myfile"),
 	DirEntry("mysubsubdir")
   });
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 4);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyRoot) {
   this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->LoadFile("/myfile");
   this->Load("/myfile"); // Test that we can also load the file node
+  this->EXCPECT_NLINKS("/", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
@@ -175,6 +191,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyRoot) {
 	DirEntry("myemptydir"),
 	FileEntry("mynewfile")
   });
+  this->EXCPECT_NLINKS("/", 6);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyNestedDir) {
@@ -183,6 +200,7 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InEmptyNestedDir) {
   this->EXPECT_CHILDREN_ARE("/myemptydir", {
 	FileEntry("mynewfile")
   });
+  this->EXCPECT_NLINKS("/myemptydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyNestedDir) {
@@ -194,20 +212,25 @@ TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_InNonemptyNestedDir) {
 	DirEntry("mysubdir"),
 	FileEntry("mynewfile")
   });
+  this->EXCPECT_NLINKS("/mydir", 6);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateAndOpenFile_AlreadyExisting) {
   this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+  this->EXCPECT_NLINKS("/", 3);
   //TODO Change, once we know which way of error reporting we want for such errors
   EXPECT_ANY_THROW(
     this->LoadDir("/")->createAndOpenFile("myfile", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   );
+  this->EXCPECT_NLINKS("/", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyRoot) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   this->LoadDir("/mydir");
   this->Load("/mydir"); // Test we can also load the dir node
+  this->EXCPECT_NLINKS("/", 3);
+  this->EXCPECT_NLINKS("/mydir", 2);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
@@ -219,6 +242,7 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyRoot) {
 	DirEntry("myemptydir"),
 	DirEntry("mynewdir")
   });
+  this->EXCPECT_NLINKS("/", 6);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyNestedDir) {
@@ -227,6 +251,7 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InEmptyNestedDir) {
   this->EXPECT_CHILDREN_ARE("/myemptydir", {
 	DirEntry("mynewdir")
   });
+  this->EXCPECT_NLINKS("/myemptydir", 3);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyNestedDir) {
@@ -238,23 +263,43 @@ TYPED_TEST_P(FsppDirTest, CreateDir_InNonemptyNestedDir) {
 	DirEntry("mysubdir"),
 	DirEntry("mynewdir")
   });
+  this->EXCPECT_NLINKS("/mydir", 6);
 }
 
 TYPED_TEST_P(FsppDirTest, CreateDir_AlreadyExisting) {
   this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+  this->EXCPECT_NLINKS("/", 3);
   //TODO Change, once we know which way of error reporting we want for such errors
   EXPECT_ANY_THROW(
     this->LoadDir("/")->createDir("mydir", this->MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
   );
+  this->EXCPECT_NLINKS("/", 3);
 }
 
-TYPED_TEST_P(FsppDirTest, Remove) {
+TYPED_TEST_P(FsppDirTest, Remove_Only_Node) {
   this->CreateDir("/mytestdir");
+  this->EXCPECT_NLINKS("/", 3);
   EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
   EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir"));
-  this->Load("/mytestdir")->remove();
-  EXPECT_EQ(boost::none, this->device->Load("/mytestdir"));
-  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir"));
+  auto node = this->Load("/mytestdir");
+  auto id = node->blockId();
+  node->remove();
+  EXPECT_TRUE(this->IsDirInDir("/mytestdir"));
+  EXPECT_FALSE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/", 3);
+}
+
+TYPED_TEST_P(FsppDirTest, Remove_Properly) {
+  this->CreateDir("/mytestdir");
+  this->EXCPECT_NLINKS("/", 3);
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir"));
+  EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir"));
+  auto node = this->Load("/mytestdir");
+  auto id = node->blockId();
+  this->filesystem.rmdir("/mytestdir");
+  EXPECT_FALSE(this->IsDirInDir("/mytestdir"));
+  EXPECT_FALSE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/", 2);
 }
 
 TYPED_TEST_P(FsppDirTest, Remove_Nested) {
@@ -262,10 +307,42 @@ TYPED_TEST_P(FsppDirTest, Remove_Nested) {
   this->CreateDir("/mytestdir/mydir");
   EXPECT_NE(boost::none, this->device->Load("/mytestdir/mydir"));
   EXPECT_NE(boost::none, this->device->LoadDir("/mytestdir/mydir"));
-  this->Load("/mytestdir/mydir")->remove();
-  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/mydir"));
-  EXPECT_EQ(boost::none, this->device->LoadDir("/mytestdir/mydir"));
+  this->EXCPECT_NLINKS("/mytestdir", 3);
+
+  auto id = this->Load("/mytestdir/mydir")->blockId();
+  this->filesystem.rmdir("/mytestdir/mydir");
+  EXPECT_FALSE(this->IsDirInDir("/mytestdir/mydir"));
+  EXPECT_FALSE(this->BlobExists(id));
+  this->EXCPECT_NLINKS("/mytestdir", 2);
 }
+
+TYPED_TEST_P(FsppDirTest, Hardlink_Illegal) {
+  this->CreateDir("/mytestdir");
+  this->CreateDir("/mydir");
+  this->CreateDir("/mydir/mysubdir");
+
+  this->EXCPECT_NLINKS("/mytestdir", 2);
+  this->EXCPECT_NLINKS("/mydir", 3);
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 2);
+  EXPECT_ANY_THROW(this->filesystem.link("/mytestdir", "/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestdir", 2);
+  this->EXCPECT_NLINKS("/mydir", 3);
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 2);
+  EXPECT_ANY_THROW(this->filesystem.link("/mytestdir", "/mysubdir/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestdir", 2);
+  this->EXCPECT_NLINKS("/mydir", 3);
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 2);
+  EXPECT_ANY_THROW(this->filesystem.link("/mydir/mysubdir", "/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestdir", 2);
+  this->EXCPECT_NLINKS("/mydir", 3);
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 2);
+  EXPECT_ANY_THROW(this->filesystem.link("/mydir/mysubdir", "/mydir/myhardlink"));
+  this->EXCPECT_NLINKS("/mytestdir", 2);
+  this->EXCPECT_NLINKS("/mydir", 3);
+  this->EXCPECT_NLINKS("/mydir/mysubdir", 2);
+
+}
+
 
 REGISTER_TYPED_TEST_SUITE_P(FsppDirTest,
   Children_RootDir_Empty,
@@ -292,8 +369,10 @@ REGISTER_TYPED_TEST_SUITE_P(FsppDirTest,
   CreateDir_InEmptyNestedDir,
   CreateDir_InNonemptyNestedDir,
   CreateDir_AlreadyExisting,
-  Remove,
-  Remove_Nested
+  Remove_Only_Node,
+  Remove_Properly,
+  Remove_Nested,
+  Hardlink_Illegal
 );
 
 

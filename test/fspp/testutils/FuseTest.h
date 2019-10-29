@@ -36,6 +36,7 @@ public:
   MOCK_METHOD(void, mkdir, (const boost::filesystem::path&, mode_t, uid_t, gid_t), (override));
   MOCK_METHOD(void, rmdir, (const boost::filesystem::path&), (override));
   MOCK_METHOD(void, unlink, (const boost::filesystem::path&), (override));
+  MOCK_METHOD(void, link, (const boost::filesystem::path&, const boost::filesystem::path&), (override));
   MOCK_METHOD(void, rename, (const boost::filesystem::path&, const boost::filesystem::path&), (override));
   MOCK_METHOD(std::vector<fspp::Dir::Entry>, readDir, (const boost::filesystem::path &path), (override));
   MOCK_METHOD(void, utimens, (const boost::filesystem::path&, timespec, timespec), (override));

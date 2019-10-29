@@ -11,7 +11,7 @@ public:
     void Test_Error_TargetParentDirDoesntExist() {
         auto node = this->CreateNode("/oldname");
         try {
-            node->rename("/notexistingdir/newname");
+            node->rename("/oldname", "/notexistingdir/newname");
             EXPECT_TRUE(false); // Expect it throws an exception
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOENT, e.getErrno());
@@ -24,7 +24,7 @@ public:
         this->CreateNode("/oldname");
         this->CreateFile("/somefile");
         try {
-            this->Load("/somefile")->rename("/somefile/newname");
+            this->Load("/somefile")->rename("/somefile", "/somefile/newname");
             EXPECT_TRUE(false); // Expect it throws an exception
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
@@ -37,7 +37,7 @@ public:
     void Test_Error_RootDir() {
         auto rootDirNode = this->Load("/");
         try {
-            rootDirNode->rename("/newname");
+            rootDirNode->rename("/", "/newname");
             EXPECT_TRUE(false); // expect throws
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EBUSY, e.getErrno());
@@ -46,7 +46,7 @@ public:
 
     void Test_InRoot() {
         auto node = this->CreateNode("/oldname");
-        node->rename("/newname");
+        node->rename("/oldname", "/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -54,7 +54,7 @@ public:
     void Test_InNested() {
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
-        node->rename("/mydir/newname");
+        node->rename("/mydir/oldname", "/mydir/newname");
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
@@ -62,7 +62,7 @@ public:
     void Test_RootToNested_SameName() {
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
-        node->rename("/mydir/oldname");
+        node->rename("/oldname", "/mydir/oldname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/oldname"));
     }
@@ -70,7 +70,7 @@ public:
     void Test_RootToNested_NewName() {
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/oldname");
-        node->rename("/mydir/newname");
+        node->rename("/oldname", "/mydir/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir/newname"));
     }
@@ -78,7 +78,7 @@ public:
     void Test_NestedToRoot_SameName() {
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
-        node->rename("/oldname");
+        node->rename("/mydir/oldname", "/oldname");
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
@@ -86,7 +86,7 @@ public:
     void Test_NestedToRoot_NewName() {
         this->CreateDir("/mydir");
         auto node = this->CreateNode("/mydir/oldname");
-        node->rename("/newname");
+        node->rename("/mydir/oldname", "/newname");
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -95,7 +95,7 @@ public:
         this->CreateDir("/mydir");
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir/oldname");
-        node->rename("/mydir2/oldname");
+        node->rename("/mydir/oldname", "/mydir2/oldname");
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/oldname"));
     }
@@ -104,21 +104,21 @@ public:
         this->CreateDir("/mydir");
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/mydir/oldname");
-        node->rename("/mydir2/newname");
+        node->rename("/mydir/oldname", "/mydir2/newname");
         EXPECT_EQ(boost::none, this->device->Load("/mydir/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/newname"));
     }
 
     void Test_ToItself() {
         auto node = this->CreateNode("/oldname");
-        node->rename("/oldname");
+        node->rename("/oldname", "/oldname");
         EXPECT_NE(boost::none, this->device->Load("/oldname"));
     }
 
     void Test_Overwrite_InSameDir() {
         auto node = this->CreateNode("/oldname");
         this->CreateNode("/newname");
-        node->rename("/newname");
+        node->rename("/oldname", "/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/newname"));
     }
@@ -128,7 +128,7 @@ public:
         this->CreateDir("/parent2");
         auto node = this->CreateNode("/parent1/oldname");
         this->CreateNode("/parent2/newname");
-        node->rename("/parent2/newname");
+        node->rename("/parent1/oldname", "/parent2/newname");
         EXPECT_EQ(boost::none, this->device->Load("/parent1/oldname"));
         EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
@@ -137,7 +137,7 @@ public:
         auto node = this->CreateNode("/oldname");
         this->CreateNode("/newname");
         EXPECT_EQ(4u, this->LoadDir("/")->children().size()); // 4, because of '.' and '..'
-        node->rename("/newname");
+        node->rename("oldname", "/newname");
         EXPECT_EQ(3u, this->LoadDir("/")->children().size()); // 3, because of '.' and '..'
     }
 
@@ -145,7 +145,7 @@ public:
         this->CreateFile("/oldname");
         this->CreateDir("/newname");
         try {
-            this->Load("/oldname")->rename("/newname");
+            this->Load("/oldname")->rename("/oldname", "/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EISDIR, e.getErrno());
@@ -160,7 +160,7 @@ public:
         this->CreateFile("/parent1/oldname");
         this->CreateDir("/parent2/newname");
         try {
-            this->Load("/parent1/oldname")->rename("/parent2/newname");
+            this->Load("/parent1/oldname")->rename("/parent1/oldname", "/parent2/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(EISDIR, e.getErrno());
@@ -173,7 +173,7 @@ public:
         this->CreateDir("/oldname");
         this->CreateFile("/newname");
         try {
-            this->Load("/oldname")->rename("/newname");
+            this->Load("/oldname")->rename("/oldname", "/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
@@ -188,7 +188,7 @@ public:
         this->CreateDir("/parent1/oldname");
         this->CreateFile("/parent2/newname");
         try {
-            this->Load("/parent1/oldname")->rename("/parent2/newname");
+            this->Load("/parent1/oldname")->rename("/parent1/oldname", "/parent2/newname");
             EXPECT_TRUE(false); // expect throw
         } catch (const fspp::fuse::FuseErrnoException &e) {
             EXPECT_EQ(ENOTDIR, e.getErrno());
@@ -197,13 +197,29 @@ public:
         EXPECT_NE(boost::none, this->device->Load("/parent2/newname"));
     }
 
+  void Test_Overwrite_Error_Dir_To_Nonempty_Dir() {
+    this->CreateDir("/parent1");
+    this->CreateDir("/parent2");
+    this->CreateFile("/parent2/somefile");
+    try {
+      this->Load("/parent1")->rename("/parent1", "/parent2");
+      EXPECT_TRUE(false); // expect throw
+    } catch (const fspp::fuse::FuseErrnoException &e) {
+      EXPECT_EQ(ENOTEMPTY, e.getErrno());
+    }
+
+    EXPECT_NE(boost::none, this->device->Load("/parent1"));
+    EXPECT_NE(boost::none, this->device->Load("/parent2/somefile"));
+  }
+
+
     void Test_CanRenameTwice() {
         // Test that the node object stays valid after a rename, even if it now points to an entry of a different parent directory.
         this->CreateDir("/mydir1");
         this->CreateDir("/mydir2");
         auto node = this->CreateNode("/oldname");
-        node->rename("/mydir1/newname");
-        node->rename("/mydir2/newname");
+        node->rename("/oldname", "/mydir1/newname");
+        node->rename("/mydir1/newname", "/mydir2/newname");
         EXPECT_EQ(boost::none, this->device->Load("/oldname"));
         EXPECT_EQ(boost::none, this->device->Load("/mydir1/newname"));
         EXPECT_NE(boost::none, this->device->Load("/mydir2/newname"));
@@ -230,6 +246,7 @@ REGISTER_NODE_TEST_SUITE(FsppNodeTest_Rename,
     Overwrite_Error_DirWithFile_InDifferentDir,
     Overwrite_Error_FileWithDir_InSameDir,
     Overwrite_Error_FileWithDir_InDifferentDir,
+    Overwrite_Error_Dir_To_Nonempty_Dir,
     CanRenameTwice
 );
 

@@ -11,8 +11,10 @@ public:
     void Test_Nlink() {
         this->CreateNode("/mynode");
         auto node = this->Load("/mynode");
-        this->IN_STAT(node.get(), [] (const fspp::Node::stat_info& st) {
-            EXPECT_EQ(1u, st.nlink);
+        // Directories start with two links.
+        unsigned int expectedLinks = node->getType()==fspp::Dir::EntryType::DIR ? 2 : 1;
+        this->IN_STAT(node.get(), [expectedLinks] (const fspp::Node::stat_info& st) {
+            EXPECT_EQ(expectedLinks, st.nlink);
         });
     }
 };

@@ -19,14 +19,23 @@ namespace cryfs {
 
 class CryDevice final: public fspp::Device {
 public:
-  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void ()> onIntegrityViolation);
+  // TODO: integrate custom Timestamp behavior
+  CryDevice(std::shared_ptr<CryConfigFile> config, cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, const std::function<void ()>& onIntegrityViolation, const fsblobstore::TimestampUpdateBehavior& behavior=fsblobstore::TimestampUpdateBehavior::RELATIME);
 
   statvfs statfs() override;
 
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const blockstore::BlockId &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const blockstore::BlockId &parent);
-  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> CreateFileBlob(const FsBlobView::Metadata &meta);
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> CreateDirBlob(const FsBlobView::Metadata &meta);
+  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> CreateSymlinkBlob(const boost::filesystem::path &target, const FsBlobView::Metadata &meta);
   cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> LoadBlob(const blockstore::BlockId &blockId);
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob(const boost::filesystem::path &path);
+
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadDirBlob(const blockstore::BlockId& blockId) {
+    auto blob = LoadBlob(blockId);
+    auto dir_blob = cpputils::dynamic_pointer_move<parallelaccessfsblobstore::DirBlobRef>(blob);
+    ASSERT(dir_blob != boost::none, "Blob does not store a directory");
+    return std::move(*dir_blob);
+  }
   struct DirBlobWithParent {
       cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
       boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
@@ -37,6 +46,8 @@ public:
   void onFsAction(std::function<void()> callback);
 
   boost::optional<cpputils::unique_ref<fspp::Node>> Load(const boost::filesystem::path &path) override;
+  bool BlobExists(const blockstore::BlockId &id) override;
+
   boost::optional<cpputils::unique_ref<fspp::File>> LoadFile(const boost::filesystem::path &path) override;
   boost::optional<cpputils::unique_ref<fspp::Dir>> LoadDir(const boost::filesystem::path &path) override;
   boost::optional<cpputils::unique_ref<fspp::Symlink>> LoadSymlink(const boost::filesystem::path &path) override;
@@ -45,6 +56,9 @@ public:
   void callFsActionCallbacks() const;
 
   uint64_t numBlocks() const;
+
+  // This must only be called after the initialization
+  const blockstore::BlockId& rootBlobId() const { return _rootBlobId;}
 
 private:
 
@@ -56,9 +70,10 @@ private:
 
   blockstore::BlockId GetOrCreateRootBlobId(CryConfigFile *config);
   blockstore::BlockId CreateRootBlobAndReturnId();
-  static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation);
+  static cpputils::unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CreateFsBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation,
+          std::function<void()> onIntegrityViolation, const fsblobstore::TimestampUpdateBehavior&);
 #ifndef CRYFS_NO_COMPATIBILITY
-  static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile);
+  static cpputils::unique_ref<fsblobstore::FsBlobStore> MigrateOrCreateFsBlobStore(cpputils::unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile, const fsblobstore::TimestampUpdateBehavior& behavior);
 #endif
   static cpputils::unique_ref<blobstore::BlobStore> CreateBlobStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation);
   static cpputils::unique_ref<blockstore::BlockStore2> CreateIntegrityEncryptedBlockStore(cpputils::unique_ref<blockstore::BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation);

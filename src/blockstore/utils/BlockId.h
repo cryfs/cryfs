@@ -12,6 +12,4 @@ using BlockId = IdWrapper<_BlockIdTag>;
 
 }
 
-DEFINE_IDWRAPPER(blockstore::BlockId);
-
 #endif

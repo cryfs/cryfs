@@ -38,9 +38,9 @@ public:
   int mkdir(const boost::filesystem::path &path, ::mode_t mode);
   int unlink(const boost::filesystem::path &path);
   int rmdir(const boost::filesystem::path &path);
-  int symlink(const boost::filesystem::path &from, const boost::filesystem::path &to);
+  int symlink(const boost::filesystem::path &to, const boost::filesystem::path &from);
   int rename(const boost::filesystem::path &from, const boost::filesystem::path &to);
-  int link(const boost::filesystem::path &from, const boost::filesystem::path &to);
+  int link(const boost::filesystem::path &to, const boost::filesystem::path &from);
   int chmod(const boost::filesystem::path &path, ::mode_t mode);
   int chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid);
   int truncate(const boost::filesystem::path &path, int64_t size);

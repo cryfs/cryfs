@@ -8,7 +8,8 @@ namespace fsblobstore {
 
 enum class TimestampUpdateBehavior : uint8_t {
     // currently only relatime supported
-    RELATIME
+    RELATIME,
+    NOATIME
 };
 
 }

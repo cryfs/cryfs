@@ -4,49 +4,50 @@
 
 #include <blobstore/interface/Blob.h>
 #include <cpp-utils/pointer/unique_ref.h>
+#include <cpp-utils/system/time.h>
+#include <fspp/fs_interface/Types.h>
+#include <cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h>
+#include "utils/DirEntry.h"
+#include <shared_mutex>
 
 namespace cryfs {
 
     //TODO Test
     class FsBlobView final : public blobstore::Blob {
     public:
-        //TODO Rename to "Type" or similar
-        enum class BlobType : uint8_t {
-            DIR = 0x00,
-            FILE = 0x01,
-            SYMLINK = 0x02
+
+        //using Metadata = fspp::stat_info;
+        struct Metadata  {
+          fspp::stat_info _info;
+
+          Metadata()  = default;
+          Metadata(uint32_t nlink, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, fspp::num_bytes_t size, timespec atime, timespec mtime, timespec ctime);
+
+        static Metadata rootMetaData();
+
+
         };
+        //TODO Rename to "Type" or similar
+        using BlobType = fspp::Dir::EntryType;
+        using Lock = std::unique_lock<std::shared_timed_mutex>;
+        using SharedLock = std::shared_lock<std::shared_timed_mutex>;
 
-        FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob): _baseBlob(std::move(baseBlob)), _parentPointer(blockstore::BlockId::Null()) {
+
+        explicit FsBlobView(cpputils::unique_ref<blobstore::Blob> baseBlob, const fsblobstore::TimestampUpdateBehavior behav): _timestampUpdateBehavior(behav), _baseBlob(std::move(baseBlob)), _blobType(BlobType::DIR) {  // blob type overwritten by _loadMetadata, needed for clang-tidy
             _checkHeader(*_baseBlob);
-            _loadParentPointer();
+            _loadMetadata();
         }
 
-        static void InitializeBlob(blobstore::Blob *baseBlob, BlobType blobType, const blockstore::BlockId &parent) {
-            baseBlob->resize(HEADER_SIZE);
-            baseBlob->write(&FORMAT_VERSION_HEADER, 0, sizeof(FORMAT_VERSION_HEADER));
-            uint8_t blobTypeInt = static_cast<uint8_t>(blobType);
-            baseBlob->write(&blobTypeInt, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
-            baseBlob->write(parent.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
-            static_assert(HEADER_SIZE == sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::BlockId::BINARY_LENGTH, "If this fails, the header is not initialized correctly in this function.");
-        }
+        // Whoever calls us, we will correctly set the type in our metadata.
+        static void InitializeBlob(blobstore::Blob *baseBlob, Metadata metadata, BlobType type);
 
         static BlobType blobType(const blobstore::Blob &blob) {
             _checkHeader(blob);
-            return _blobType(blob);
+            return _getBlobType(blob);
         }
 
         BlobType blobType() const {
-            return _blobType(*_baseBlob);
-        }
-
-        const blockstore::BlockId &parentPointer() const {
-            return _parentPointer;
-        }
-
-        void setParentPointer(const blockstore::BlockId &parentId) {
-            _parentPointer = parentId;
-            _storeParentPointer();
+          return _blobType;
         }
 
         const blockstore::BlockId &blockId() const override {
@@ -57,31 +58,30 @@ namespace cryfs {
             return _baseBlob->size() - HEADER_SIZE;
         }
 
-        void resize(uint64_t numBytes) override {
-            return _baseBlob->resize(numBytes + HEADER_SIZE);
-        }
+        void resize(uint64_t numBytes) override;
+        cpputils::Data readAll() const override;
+        void read(void *target, uint64_t offset, uint64_t size) const override;
+        uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const override;
+        void write(const void *source, uint64_t offset, uint64_t size) override;
 
-        cpputils::Data readAll() const override {
-            cpputils::Data data = _baseBlob->readAll();
-            cpputils::Data dataWithoutHeader(data.size() - HEADER_SIZE);
-            //Can we avoid this memcpy? Maybe by having Data::subdata() that returns a reference to the same memory region? Should we?
-            std::memcpy(dataWithoutHeader.data(), data.dataOffset(HEADER_SIZE), dataWithoutHeader.size());
-            return dataWithoutHeader;
-        }
+        void chown(fspp::uid_t uid, fspp::gid_t gid);
+        void chmod(fspp::mode_t mode);
+        void utimens(timespec atime, timespec mtime);
 
-        void read(void *target, uint64_t offset, uint64_t size) const override {
-            return _baseBlob->read(target, offset + HEADER_SIZE, size);
-        }
+        // increase link count by one
+        void link();
+        // decrease link count by one and return true iff this was the last link and the node has
+        // to be removed. Not that the removal must be done externally;
+        bool unlink();
 
-        uint64_t tryRead(void *target, uint64_t offset, uint64_t size) const override {
-            return _baseBlob->tryRead(target, offset + HEADER_SIZE, size);
-        }
+        fspp::stat_info stat();
 
-        void write(const void *source, uint64_t offset, uint64_t size) override {
-            return _baseBlob->write(source, offset + HEADER_SIZE, size);
-        }
+        void updateModificationTimestamp();
+        void updateAccessTimestamp() const;
+        void updateChangeTimestamp();
 
         void flush() override {
+            _storeMetadata();
             return _baseBlob->flush();
         }
 
@@ -93,47 +93,59 @@ namespace cryfs {
             return std::move(_baseBlob);
         }
 
-        static uint16_t getFormatVersionHeader(const blobstore::Blob &blob) {
-            static_assert(sizeof(uint16_t) == sizeof(FORMAT_VERSION_HEADER), "Wrong type used to read format version header");
-            uint16_t actualFormatVersion;
-            blob.read(&actualFormatVersion, 0, sizeof(FORMAT_VERSION_HEADER));
-            return actualFormatVersion;
-        }
+      const Metadata& metadata() {
+        return _metadata;
+      }
+
+
+        //void setMetadata(const Metadata& metadata);
+        static uint16_t getFormatVersionHeader(const blobstore::Blob &blob);
 
 #ifndef CRYFS_NO_COMPATIBILITY
-        static void migrate(blobstore::Blob *blob, const blockstore::BlockId &parentId);
+        static std::vector<cryfs::fsblobstore::DirEntryWithMetaData> migrate(blobstore::Blob *blob, Metadata metadata, BlobType type);
 #endif
 
     private:
-        static constexpr uint16_t FORMAT_VERSION_HEADER = 1;
-        static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::BlockId::BINARY_LENGTH;
+        static constexpr uint16_t FORMAT_VERSION_HEADER = 2;
+        static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(Metadata);
+        constexpr static fspp::num_bytes_t DIR_LSTAT_SIZE = fspp::num_bytes_t(4096);
 
-        static void _checkHeader(const blobstore::Blob &blob) {
-            uint16_t actualFormatVersion = getFormatVersionHeader(blob);
-            if (FORMAT_VERSION_HEADER != actualFormatVersion) {
-                throw std::runtime_error("This file system entity has the wrong format. Was it created with a newer version of CryFS?");
-            }
+        void _updateModificationTimestamp();
+        void _updateAccessTimestamp() const;
+        void _updateChangeTimestamp();
+
+        static void _checkHeader(const blobstore::Blob &blob);
+
+        static BlobType _getBlobType(const blobstore::Blob &blob) {
+            Metadata result;
+            blob.read(&result, sizeof(FORMAT_VERSION_HEADER), sizeof(Metadata));
+            return _metadataToBlobtype(result);
         }
 
-        static BlobType _blobType(const blobstore::Blob &blob) {
-            uint8_t result;
-            blob.read(&result, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
-            return static_cast<BlobType>(result);
+        void _storeMetadata() const {
+          _baseBlob->write(&_metadata, sizeof(FORMAT_VERSION_HEADER), sizeof(_metadata));
         }
 
-        void _loadParentPointer() {
-            auto idData = cpputils::FixedSizeData<blockstore::BlockId::BINARY_LENGTH>::Null();
-            _baseBlob->read(idData.data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
-            _parentPointer = blockstore::BlockId(idData);
-        }
+        void _loadMetadata() {
+          _baseBlob->read(&_metadata, sizeof(FORMAT_VERSION_HEADER), sizeof(_metadata));
+          _blobType = _metadataToBlobtype(_metadata);
 
-        void _storeParentPointer() {
-            _baseBlob->write(_parentPointer.data().data(), sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t), blockstore::BlockId::BINARY_LENGTH);
         }
 
 
-        cpputils::unique_ref<blobstore::Blob> _baseBlob;
-        blockstore::BlockId _parentPointer;
+        static BlobType _metadataToBlobtype(const Metadata& metadata);
+
+      const cryfs::fsblobstore::TimestampUpdateBehavior _timestampUpdateBehavior;
+
+        // by having this mutable we can make updateAccessTimePoint const.
+        // by the locking used in the public methods all const methods become threadsafe.
+        mutable cpputils::unique_ref<blobstore::Blob> _baseBlob;
+
+        mutable Metadata _metadata;
+        mutable std::shared_timed_mutex _mutex;
+
+        // this never changes, so we can load it during initialization.
+        BlobType _blobType;
 
         DISALLOW_COPY_AND_ASSIGN(FsBlobView);
     };

@@ -1,15 +1,10 @@
 #include "CryDir.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CryFile.h"
 #include "CryOpenFile.h"
 #include <cpp-utils/system/time.h>
-#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::FuseErrnoException;
@@ -23,45 +18,39 @@ using blockstore::BlockId;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using boost::optional;
 using boost::none;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryDir::CryDir(CryDevice *device, const BlockId &blockId)
+: CryNode(device, blockId) {
 }
 
-CryDir::~CryDir() {
-}
+CryDir::~CryDir() = default;
 
 unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  if (!isRootDir()) {
-    //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
-  }
-  auto child = device()->CreateFileBlob(blockId());
+  auto blob = LoadDirBlob();
   auto now = cpputils::time::now();
-  auto dirBlob = LoadBlob();
-  dirBlob->AddChildFile(name, child->blockId(), mode, uid, gid, now, now);
-  return make_unique_ref<CryOpenFile>(device(), std::move(dirBlob), std::move(child));
+  FsBlobView::Metadata metaData(uint32_t{1}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
+  auto child = device()->CreateFileBlob(metaData);
+  blob->AddChildFile(name, child->blockId());
+  blob->link();
+  return make_unique_ref<CryOpenFile>(device(), std::move(child));
 }
 
 void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  if (!isRootDir()) {
-    //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
-  }
-  auto blob = LoadBlob();
-  auto child = device()->CreateDirBlob(blockId());
+  auto blob = LoadDirBlob();
   auto now = cpputils::time::now();
-  blob->AddChildDir(name, child->blockId(), mode, uid, gid, now, now);
+  FsBlobView::Metadata metaData(uint32_t{2}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
+  auto child = device()->CreateDirBlob(metaData);
+  blob->AddChildDir(name, child->blockId());
+  blob->link();
 }
 
-unique_ref<DirBlobRef> CryDir::LoadBlob() const {
+unique_ref<DirBlobRef> CryDir::LoadDirBlob() const {
   auto blob = CryNode::LoadBlob();
   auto dir_blob = dynamic_pointer_move<DirBlobRef>(blob);
   ASSERT(dir_blob != none, "Blob does not store a directory");
@@ -70,14 +59,11 @@ unique_ref<DirBlobRef> CryDir::LoadBlob() const {
 
 vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
-  if (!isRootDir()) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
-    //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
-  }
+  updateAccessTimestamp();
   vector<fspp::Dir::Entry> children;
-  children.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
-  children.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, ".."));
-  auto blob = LoadBlob();
+  children.emplace_back(fspp::Dir::EntryType::DIR, ".");
+  children.emplace_back(fspp::Dir::EntryType::DIR, "..");
+  auto blob = LoadDirBlob();
   blob->AppendChildrenTo(&children);
   return children;
 }
@@ -89,30 +75,75 @@ fspp::Dir::EntryType CryDir::getType() const {
 
 void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  if (!isRootDir()) {
-    //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
-  }
-  auto blob = LoadBlob();
-  auto child = device()->CreateSymlinkBlob(target, blockId());
+  auto blob = LoadDirBlob();
   auto now = cpputils::time::now();
-  blob->AddChildSymlink(name, child->blockId(), uid, gid, now, now);
+  fspp::mode_t mode(0120777);
+  FsBlobView::Metadata metaData(uint32_t {1}, mode, uid, gid, fspp::num_bytes_t{0}, now, now, now);
+  auto child = device()->CreateSymlinkBlob(target, metaData);
+  blob->AddChildSymlink(name, child->blockId());
+  blob->link();
 }
 
 void CryDir::remove() {
   device()->callFsActionCallbacks();
-  if (grandparent() != none) {
-    //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
-  }
   {
-    auto blob = LoadBlob();
+    auto blob = LoadDirBlob();
     if (0 != blob->NumChildren()) {
       throw FuseErrnoException(ENOTEMPTY);
     }
   }
   //TODO removeNode() calls CryDevice::RemoveBlob, which loads the blob again. So we're loading it twice. Should be optimized.
   removeNode();
+}
+
+void CryDir::updateAccessTimestamp() {
+  auto blob = LoadDirBlob();
+  (*blob).updateAccessTimestamp();
+}
+
+void CryDir::updateModificationTimestamp() {
+  auto blob = LoadDirBlob();
+  (*blob).updateModificationTimestamp();
+}
+
+void CryDir::updateChangeTimestamp() {
+  auto blob = LoadDirBlob();
+  (*blob).updateChangeTimestamp();
+}
+
+void CryDir::removeChildEntryByName(const string &name) {
+  auto blob = LoadDirBlob();
+  blob->updateChangeTimestamp();
+  blob->updateModificationTimestamp();
+  blob->unlink();
+  LoadDirBlob() ->RemoveChild(name);
+}
+
+void CryDir::createLink(const boost::filesystem::path &target, const std::string& name) {
+  device()->callFsActionCallbacks();
+
+  // TODO: before, or after, or only on reset?
+  updateChangeTimestamp();
+  updateModificationTimestamp();
+
+  // TODO(joka921) Implement LoadAndLink to save blobs from deletion while we are doing something
+  // with them?
+  auto targetBlob = device()->Load(target);
+  if (targetBlob == none) {
+    throw FuseErrnoException(ENOENT);
+  }
+  auto type = (*targetBlob)->getType();
+  if (type == fspp::Dir::EntryType::DIR) {
+    throw FuseErrnoException(EPERM);
+  }
+  (*targetBlob)->link(); // now we are save from deletion
+
+  try {
+    LoadDirBlob()->AddChildHardlink(name, (*targetBlob)->blockId(), (*targetBlob)->getType());
+  } catch (const FuseErrnoException& e) {
+    (*targetBlob)->unlink();
+    throw;
+  }
 }
 
 }

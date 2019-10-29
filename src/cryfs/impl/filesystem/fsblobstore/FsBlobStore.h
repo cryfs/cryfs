@@ -18,11 +18,11 @@ namespace cryfs {
 
         class FsBlobStore final {
         public:
-            FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore);
+            explicit FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore, const TimestampUpdateBehavior&);
 
-            cpputils::unique_ref<FileBlob> createFileBlob(const blockstore::BlockId &parent);
-            cpputils::unique_ref<DirBlob> createDirBlob(const blockstore::BlockId &parent);
-            cpputils::unique_ref<SymlinkBlob> createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent);
+            cpputils::unique_ref<FileBlob> createFileBlob(const FsBlobView::Metadata &meta);
+            cpputils::unique_ref<DirBlob> createDirBlob(const FsBlobView::Metadata &meta);
+            cpputils::unique_ref<SymlinkBlob> createSymlinkBlob(const boost::filesystem::path &target, const FsBlobView::Metadata &meta);
             boost::optional<cpputils::unique_ref<FsBlob>> load(const blockstore::BlockId &blockId);
             void remove(cpputils::unique_ref<FsBlob> blob);
             void remove(const blockstore::BlockId &blockId);
@@ -32,39 +32,38 @@ namespace cryfs {
             uint64_t virtualBlocksizeBytes() const;
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            static cpputils::unique_ref<FsBlobStore> migrate(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId);
+            static cpputils::unique_ref<FsBlobStore> migrate(cpputils::unique_ref<blobstore::BlobStore> blobStore, const blockstore::BlockId &blockId, const TimestampUpdateBehavior&);
 #endif
 
         private:
 
 #ifndef CRYFS_NO_COMPATIBILITY
-            void _migrate(cpputils::unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, cpputils::SignalCatcher* signalCatcher, std::function<void(uint32_t numNodes)> perBlobCallback);
+        void _migrate(cpputils::unique_ref<blobstore::Blob> node, const FsBlobView::Metadata& metadata, FsBlobView::BlobType type, cpputils::SignalCatcher* signalCatcher, const std::function<void(uint32_t numNodes)>& perBlobCallback);
 #endif
 
-            std::function<fspp::num_bytes_t(const blockstore::BlockId &)> _getLstatSize();
-
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
+            const TimestampUpdateBehavior _timestampUpdateBehavior;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlobStore);
         };
 
-        inline FsBlobStore::FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore)
-                : _baseBlobStore(std::move(baseBlobStore)) {
+        inline FsBlobStore::FsBlobStore(cpputils::unique_ref<blobstore::BlobStore> baseBlobStore, const TimestampUpdateBehavior& behavior)
+                : _baseBlobStore(std::move(baseBlobStore)), _timestampUpdateBehavior(behavior) {
         }
 
-        inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob(const blockstore::BlockId &parent) {
+        inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob(const FsBlobView::Metadata& meta) {
             auto blob = _baseBlobStore->create();
-            return FileBlob::InitializeEmptyFile(std::move(blob), parent);
+            return FileBlob::InitializeEmptyFile(std::move(blob), meta, _timestampUpdateBehavior);
         }
 
-        inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
+        inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const FsBlobView::Metadata &meta) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(std::move(blob), parent, _getLstatSize());
+            return DirBlob::InitializeEmptyDir(std::move(blob), meta, _timestampUpdateBehavior);
         }
 
-        inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent) {
+        inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const FsBlobView::Metadata &meta) {
             auto blob = _baseBlobStore->create();
-            return SymlinkBlob::InitializeSymlink(std::move(blob), target, parent);
+            return SymlinkBlob::InitializeSymlink(std::move(blob), target, meta, _timestampUpdateBehavior);
         }
 
         inline uint64_t FsBlobStore::numBlocks() const {
@@ -81,14 +80,6 @@ namespace cryfs {
 
         inline void FsBlobStore::remove(const blockstore::BlockId &blockId) {
             _baseBlobStore->remove(blockId);
-        }
-
-        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &)> FsBlobStore::_getLstatSize() {
-            return [this] (const blockstore::BlockId &blockId) {
-                auto blob = load(blockId);
-                ASSERT(blob != boost::none, "Blob not found");
-                return (*blob)->lstat_size();
-            };
         }
 
         inline uint64_t FsBlobStore::virtualBlocksizeBytes() const {

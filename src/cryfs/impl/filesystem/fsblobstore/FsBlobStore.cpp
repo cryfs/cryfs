@@ -2,7 +2,6 @@
 #include "FileBlob.h"
 #include "DirBlob.h"
 #include "SymlinkBlob.h"
-#include <cryfs/impl/config/CryConfigFile.h>
 #include <cpp-utils/io/ProgressBar.h>
 #include <cpp-utils/process/SignalCatcher.h>
 
@@ -12,7 +11,6 @@ using cpputils::SignalCatcher;
 using blobstore::BlobStore;
 using blockstore::BlockId;
 using boost::none;
-using std::vector;
 
 namespace cryfs {
 namespace fsblobstore {
@@ -24,18 +22,19 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
     }
     FsBlobView::BlobType blobType = FsBlobView::blobType(**blob);
     if (blobType == FsBlobView::BlobType::FILE) {
-        return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob)));
+        return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else if (blobType == FsBlobView::BlobType::DIR) {
-        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _getLstatSize()));
+        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else if (blobType == FsBlobView::BlobType::SYMLINK) {
-        return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob)));
+        return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob), _timestampUpdateBehavior));
     } else {
         ASSERT(false, "Unknown magic number");
     }
 }
 
 #ifndef CRYFS_NO_COMPATIBILITY
-    unique_ref<FsBlobStore> FsBlobStore::migrate(unique_ref<BlobStore> blobStore, const blockstore::BlockId &rootBlobId) {
+    unique_ref<FsBlobStore> FsBlobStore::migrate(unique_ref<BlobStore> blobStore, const blockstore::BlockId &rootBlobId,
+            const TimestampUpdateBehavior& behavior) {
         SignalCatcher signalCatcher;
 
         auto rootBlob = blobStore->load(rootBlobId);
@@ -43,11 +42,11 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
             throw std::runtime_error("Could not load root blob");
         }
 
-        auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore));
+        auto fsBlobStore = make_unique_ref<FsBlobStore>(std::move(blobStore), behavior);
 
         uint64_t migratedBlocks = 0;
         cpputils::ProgressBar progressbar("Migrating file system for conflict resolution features. This can take a while...", fsBlobStore->numBlocks());
-        fsBlobStore->_migrate(std::move(*rootBlob), blockstore::BlockId::Null(), &signalCatcher, [&] (uint32_t numNodes) {
+        fsBlobStore->_migrate(std::move(*rootBlob), FsBlobView::Metadata::rootMetaData(), FsBlobView::BlobType::DIR, &signalCatcher, [&] (uint32_t numNodes) {
             migratedBlocks += numNodes;
             progressbar.update(migratedBlocks);
         });
@@ -55,24 +54,16 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
         return fsBlobStore;
     }
 
-    void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, SignalCatcher* signalCatcher, std::function<void(uint32_t numNodes)> perBlobCallback) {
-        FsBlobView::migrate(node.get(), parentId);
+    void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const FsBlobView::Metadata& metadata, FsBlobView::BlobType type, SignalCatcher* signalCatcher, const std::function<void(uint32_t numNodes)>& perBlobCallback) {
+        auto childEntries = FsBlobView::migrate(node.get(), metadata, type);
         perBlobCallback(node->numNodes());
-        if (FsBlobView::blobType(*node) == FsBlobView::BlobType::DIR) {
-            DirBlob dir(std::move(node), _getLstatSize());
-            vector<fspp::Dir::Entry> children;
-            dir.AppendChildrenTo(&children);
-            for (const auto &child : children) {
-                if (signalCatcher->signal_occurred()) {
-                    // on a SIGINT or SIGTERM, cancel migration but gracefully shutdown, i.e. call destructors.
-                    throw std::runtime_error("Caught signal");
-                }
-                auto childEntry = dir.GetChild(child.name);
-                ASSERT(childEntry != none, "Couldn't load child, although it was returned as a child in the list.");
-                auto childBlob = _baseBlobStore->load(childEntry->blockId());
-                ASSERT(childBlob != none, "Couldn't load child blob");
-                _migrate(std::move(*childBlob), dir.blockId(), signalCatcher, perBlobCallback);
-            }
+        for (const auto& e : childEntries) {
+          auto childBlob = _baseBlobStore->load(e._blockId);
+          ASSERT(childBlob != none, "Couldn't load child blob");
+          // we start with 1 link, directories will be handled inside the _migrate function and
+          // the size of 0 bytes will always be set dynamically.
+          FsBlobView::Metadata m(1u, e._mode, e._uid, e._gid, fspp::num_bytes_t(0), e._lastAccessTime, e._lastModificationTime, e._lastMetadataChangeTime);
+          _migrate(std::move(*childBlob), m, e._type, signalCatcher, perBlobCallback);
         }
     }
 #endif

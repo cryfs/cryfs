@@ -45,69 +45,78 @@ public:
     }
 
     void AddOrOverwriteChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
-                  fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime,
-                  std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
-        return _base->AddOrOverwriteChild(name, blobId, type, mode, uid, gid, lastAccessTime, lastModificationTime, onOverwritten);
+                  const std::function<void (const fsblobstore::DirEntry &entry)>& onOverwritten) {
+        return _base->AddOrOverwriteChild(name, blobId, type, onOverwritten);
     }
 
-    void RenameChild(const blockstore::BlockId &blockId, const std::string &newName, std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
+    void RenameChild(const blockstore::BlockId &blockId, const std::string &newName, const std::function<void (const fsblobstore::DirEntry &)>& onOverwritten) {
         return _base->RenameChild(blockId, newName, onOverwritten);
     }
 
-    fspp::Node::stat_info statChild(const blockstore::BlockId &blockId) const {
-        return _base->statChild(blockId);
+    void AddChildDir(const std::string &name, const blockstore::BlockId &blobId) {
+        return _base->AddChildDir(name, blobId);
     }
 
-    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const {
-        return _base->statChildWithKnownSize(blockId, size);
+    void AddChildFile(const std::string &name, const blockstore::BlockId &blobId) {
+        return _base->AddChildFile(name, blobId);
     }
 
-    void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fsblobstore::TimestampUpdateBehavior timestampUpdateBehavior) {
-        return _base->updateAccessTimestampForChild(blockId, timestampUpdateBehavior);
+    void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId) {
+        return _base->AddChildSymlink(name, blobId);
     }
 
-    void updateModificationTimestampForChild(const blockstore::BlockId &blockId) {
-        return _base->updateModificationTimestampForChild(blockId);
-    }
-
-    void chmodChild(const blockstore::BlockId &blockId, fspp::mode_t mode) {
-        return _base->chmodChild(blockId, mode);
-    }
-
-    void chownChild(const blockstore::BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid) {
-        return _base->chownChild(blockId, uid, gid);
-    }
-
-    void utimensChild(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->utimensChild(blockId, lastAccessTime, lastModificationTime);
-    }
-
-    void AddChildDir(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildDir(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
-    }
-
-    void AddChildFile(const std::string &name, const blockstore::BlockId &blobId, fspp::mode_t mode, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildFile(name, blobId, mode, uid, gid, lastAccessTime, lastModificationTime);
-    }
-
-    void AddChildSymlink(const std::string &name, const blockstore::BlockId &blobId, fspp::uid_t uid, fspp::gid_t gid, timespec lastAccessTime, timespec lastModificationTime) {
-        return _base->AddChildSymlink(name, blobId, uid, gid, lastAccessTime, lastModificationTime);
+    void AddChildHardlink(const std::string& name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type) {
+      return _base->AddChildHardlink(name, blobId, type);
     }
 
     void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const {
         return _base->AppendChildrenTo(result);
     }
 
-    const blockstore::BlockId &blockId() const {
+    const blockstore::BlockId &blockId() const override {
         return _base->blockId();
     }
 
-    fspp::num_bytes_t lstat_size() const {
-        return _base->lstat_size();
+
+    const FsBlobView::Metadata& metaData() {
+      return _base->metaData();
     }
 
-    void setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
-        return _base->setLstatSizeGetter(getLstatSize);
+    void chown(fspp::uid_t uid, fspp::gid_t gid) {
+      return _base->chown(uid, gid);
+    }
+    void chmod(fspp::mode_t mode) {
+      return _base->chmod(mode);
+    }
+
+    fspp::stat_info stat() {
+      return _base->stat();
+    }
+
+    // increase link count by one
+    void link() {
+      return _base->link();
+    }
+    // decrease link count by one and return if this was the last link and the node has
+    // to be removed. Not that the removal must be done externally;
+    bool unlink() {
+      return _base->unlink();
+    }
+
+    void updateAccessTimestamp() const override {
+      return _base->updateAccessTimestamp();
+    }
+
+    void updateModificationTimestamp() override {
+      return _base->updateModificationTimestamp();
+    }
+    
+    void updateChangeTimestamp() {
+      return _base->updateChangeTimestamp();
+    }
+
+    void utimens(timespec atime, timespec mtime) override {
+      return _base->utimens(atime, mtime);
     }
 
 private:
