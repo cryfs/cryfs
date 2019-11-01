@@ -128,7 +128,7 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 #else
 TEST(BacktraceTest, ContainsBacktrace) {
 	string backtrace = cpputils::backtrace();
-	EXPECT_THAT(backtrace, HasSubstr("#1"));
+	EXPECT_THAT(backtrace, HasSubstr("#0"));
 }
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();

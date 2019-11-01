@@ -6,22 +6,13 @@ include(CheckCXXCompilerFlag)
 #  Uses: target_activate_cpp14(buildtarget)
 ###################################################
 function(target_activate_cpp14 TARGET)
-    if("${CMAKE_VERSION}" VERSION_GREATER "3.1")
+    if(MSVC)
+        # Required by range-v3, see its README.md
+        set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 17)
+    else()
         set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 14)
-        set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD_REQUIRED ON)
-    else("${CMAKE_VERSION}" VERSION_GREATER "3.1")
-        check_cxx_compiler_flag("-std=c++14" COMPILER_HAS_CPP14_SUPPORT)
-        if (COMPILER_HAS_CPP14_SUPPORT)
-            target_compile_options(${TARGET} PRIVATE -std=c++14)
-        else(COMPILER_HAS_CPP14_SUPPORT)
-            check_cxx_compiler_flag("-std=c++1y" COMPILER_HAS_CPP14_PARTIAL_SUPPORT)
-            if (COMPILER_HAS_CPP14_PARTIAL_SUPPORT)
-                target_compile_options(${TARGET} PRIVATE -std=c++1y)
-            else()
-                message(FATAL_ERROR "Compiler doesn't support C++14")
-            endif()
-        endif(COMPILER_HAS_CPP14_SUPPORT)
-    endif("${CMAKE_VERSION}" VERSION_GREATER "3.1")
+    endif()
+    set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD_REQUIRED ON)
     # Ideally, we'd like to use libc++ on linux as well, but:
     #    - http://stackoverflow.com/questions/37096062/get-a-basic-c-program-to-compile-using-clang-on-ubuntu-16
     #    - https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=808086

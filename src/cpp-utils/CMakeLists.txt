@@ -89,8 +89,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog cryptopp CONAN_PKG::range-v3)
 
 target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+
+if(MSVC)
+    # Required by range-v3, see its README.md
+    target_compile_options(${PROJECT_NAME} PUBLIC /experimental:preprocessor /permissive- /Zc:twoPhase-)
+endif()
