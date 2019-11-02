@@ -205,30 +205,6 @@ references:
         only: /.*/
 
 jobs:
-  gcc_5_debug:
-    <<: *job_definition
-    environment:
-      CC: gcc-5
-      CXX: g++-5
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-5"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  gcc_5_release:
-    <<: *job_definition
-    environment:
-      CC: gcc-5
-      CXX: g++-5
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-5"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
   gcc_6_debug:
     <<: *job_definition
     environment:
@@ -580,10 +556,6 @@ workflows:
 
   build_and_test:
     jobs:
-    - gcc_5_debug:
-        <<: *enable_for_tags
-    - gcc_5_release:
-        <<: *enable_for_tags
     - gcc_6_debug:
         <<: *enable_for_tags
     - gcc_6_release:
