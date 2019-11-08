@@ -3,6 +3,7 @@
 #define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_CACHING_CACHE_QUEUEMAP_H_
 
 #include <memory>
+#include <array>
 #include <unordered_map>
 #include <cassert>
 #include <boost/optional.hpp>
