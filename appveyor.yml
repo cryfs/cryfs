@@ -25,7 +25,20 @@ init:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\%VisualStudioVersion%\Community\VC\Auxiliary\Build\vcvars%arch%.bat"
 
 install:
+  # Install DokanY
   - choco install -y dokany --version 1.2.1.2000 --installargs INSTALLDEVFILES=1
+  # Install Clcache
+  - curl -L https://github.com/frerich/clcache/releases/download/v4.2.0/clcache.4.2.0.nupkg --output clcache.4.2.0.nupkg
+  - choco install clcache --source=.
+  # TODO: The CXX=, CC= approach seems to not work with Conan. Let's use the PATH approach instead, see "Generic integration" in https://github.com/frerich/clcache/wiki/Integration
+  - where clcache
+  - echo %PATH%
+  - move C:\ProgramData\chocolatey\bin\clcache.exe C:\ProgramData\chocolatey\bin\cl.exe
+  - set PATH=C:\ProgramData\chocolatey\bin\:%PATH%
+  - echo %PATH%
+#  - set CXX=clcache
+#  - set CC=clcache
+  # Install Conan
   - pip install conan
   - conan --version
   - cmake --version
@@ -35,6 +48,15 @@ install:
   - if "%PLATFORM%"=="x86" ( conan profile update settings.arch_build=x86 default )
 
 build_script:
+  - cmd: clcache -M 536870912
+  - cmd: clcache -s
+  - cmd: set CLCACHE_HARDLINK=1
+  # TODO CLCACHE_SERVER: 1
+  - cmd: echo %CXX%
+  - cmd: echo %CC%
+  # TODO Re-setting CC/CXX here needed? It's already set in install. Should only be set either there or here.
+  - cmd: set CC=clcache
+  - cmd: set CXX=clcache
   - cmd: mkdir build
   - cmd: cd build
   # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
@@ -50,8 +72,8 @@ build_script:
   - cmd: .\test\blobstore\%CONFIGURATION%\blobstore-test.exe
   - cmd: .\test\cryfs\%CONFIGURATION%\cryfs-test.exe
   #- cmd: .\test\cryfs-cli\%CONFIGURATION%\cryfs-cli-test.exe
-
   - cmd: cpack -C %CONFIGURATION% --verbose -G WIX
+  - cmd: clcache -s
 
 on_failure:
   - cmd: type C:\projects\cryfs\build\_CPack_Packages\win64\WIX\wix.log
