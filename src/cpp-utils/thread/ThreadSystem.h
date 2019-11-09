@@ -13,6 +13,10 @@ namespace cpputils {
     class ThreadSystem final {
     private:
         struct RunningThread {
+            RunningThread(RunningThread&&) = default;
+            RunningThread(const RunningThread&) = delete;
+            RunningThread& operator=(const RunningThread&) = delete;
+
             std::string threadName;
             std::function<bool()> loopIteration;  // The loopIteration callback returns true, if more iterations should be run, and false, if the thread should be terminated.
             boost::thread thread;  // boost::thread because we need it to be interruptible.
