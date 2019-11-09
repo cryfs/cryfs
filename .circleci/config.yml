@@ -233,7 +233,7 @@ references:
         mkdir cmake
         cd cmake
         cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS} ${CMAKE_FLAGS}
-        make -j$NUMCORES
+        make VERBOSE=on
 
         ccache --show-stats
   test: &test
