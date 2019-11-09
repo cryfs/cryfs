@@ -110,6 +110,13 @@ references:
         sudo cp -R /var/cache/apt/archives/* /tmp/aptcache/
         ls /tmp/aptcache > /tmp/_aptcache_contents
 
+        # set up core dumps
+        ulimit -c unlimited
+        mkdir -p /tmp/core_dumps
+        cat /proc/sys/kernel/core_pattern
+        echo "/tmp/core_dumps/%p_%s_%c_%P" | sudo tee /proc/sys/kernel/core_pattern
+        cat /proc/sys/kernel/core_pattern
+
         echo
         echo System Info:
         cat /etc/issue
@@ -234,6 +241,7 @@ references:
       name: Test
       no_output_timeout: 120m
       command: |
+        ulimit -c unlimited
         if "${RUN_TESTS}"; then
           cd cmake
           ./test/gitversion/gitversion-test ${GTEST_ARGS}
@@ -245,6 +253,15 @@ references:
           ./test/cryfs/cryfs-test ${GTEST_ARGS}
           ./test/cryfs-cli/cryfs-cli-test ${GTEST_ARGS}
         fi
+  show_dump: &shop_dump
+    run:
+      name: Show Core Dump
+      command: |
+        ls -l /tmp/core_dumps
+      when: on_fail
+  upload_coredump: &upload_coredump
+    store_artifacts:
+      path: /tmp/core_dumps
   job_definition: &job_definition
     <<: *container_config
     steps:
@@ -257,6 +274,7 @@ references:
     - <<: *build
     - <<: *build_post
     - <<: *test
+    - <<: *upload_coredump
   enable_for_tags: &enable_for_tags
     filters:
       tags:
