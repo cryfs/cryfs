@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 # TODO Remove this deprecated policy switch once we're on cmake 3.4 or later
 cmake_policy(SET CMP0065 OLD)
+cmake_policy(SET CMP0074 NEW)
 
 # TODO Perf test:
 #  - try if setting CRYPTOPP_NATIVE_ARCH=ON and adding -march=native to the compile commands for cryfs source files makes a difference

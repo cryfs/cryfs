@@ -15,14 +15,21 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
                                optional<uint32_t> blocksizeBytes,
                                bool allowIntegrityViolations,
                                boost::optional<bool> missingBlockIsIntegrityViolation,
-                               vector<string> fuseOptions)
+                               vector<string> fuseOptions,
+                               bool ondemand,
+                               bool delaymount,
+                               boost::optional<std::string> extpass
+                               )
     : _configFile(std::move(configFile)), _baseDir(bf::absolute(std::move(baseDir))), _mountDir(std::move(mountDir)),
       _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)),
 	  _foreground(foreground),
 	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
       _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
       _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)),
-      _fuseOptions(std::move(fuseOptions)) {
+      _fuseOptions(std::move(fuseOptions)),
+      _ondemand(ondemand),
+      _delaymount(delaymount),
+      _extpass(std::move(extpass)) {
 	if (!_mountDirIsDriveLetter) {
 		_mountDir = bf::absolute(std::move(_mountDir));
 	}
@@ -82,4 +89,16 @@ const optional<bool> &ProgramOptions::missingBlockIsIntegrityViolation() const {
 
 const vector<string> &ProgramOptions::fuseOptions() const {
     return _fuseOptions;
+}
+
+bool ProgramOptions::ondemand() const {
+    return _ondemand;
+}
+
+bool ProgramOptions::delaymount() const {
+    return _delaymount;
+}
+
+const boost::optional<std::string> ProgramOptions::extpass() const {
+    return _extpass;
 }

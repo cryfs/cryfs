@@ -90,7 +90,31 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         }
     }
 
-    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, allowReplacedFilesystem, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, allowIntegrityViolations, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions));
+    bool ondemand = vm.count("ondemand");
+    bool delaymount = vm.count("delaymount");
+
+    optional<string> extpass = none;
+    if (vm.count("extpass")) {
+        extpass = vm["extpass"].as<string>();
+    }
+
+    _checkOnDemand(ondemand, delaymount, extpass, unmountAfterIdleMinutes);
+
+    return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, allowReplacedFilesystem, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, allowIntegrityViolations, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions), ondemand, delaymount, std::move(extpass));
+}
+
+void Parser::_checkOnDemand(bool onDemand, bool delayMount, const boost::optional<std::string> & extPass, const boost::optional<double> & unmountAfterIdleMinutes) {
+    if (onDemand) {
+        if (!extPass.has_value() || extPass->length() == 0) {
+            throw CryfsException("ondemand need a extpass for password input", ErrorCode::InvalidArguments);
+        }
+
+        if (!unmountAfterIdleMinutes.has_value() || (*unmountAfterIdleMinutes) == 0) {
+            throw CryfsException("ondemand need unmount-idle", ErrorCode::InvalidArguments);
+        }
+    } else if (delayMount) {
+        throw CryfsException("delaymount need work with ondemand option", ErrorCode::InvalidArguments);
+    }
 }
 
 void Parser::_checkValidCipher(const string &cipher, const vector<string> &supportedCiphers) {
@@ -169,6 +193,11 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
             ("unmount-idle", po::value<double>(), "Automatically unmount after specified number of idle minutes.")
             ("logfile", po::value<string>(), "Specify the file to write log messages to. If this is not specified, log messages will go to stdout, or syslog if CryFS is running in the background.")
             ("version", "Show CryFS version number")
+            ("extpass", po::value<string>(), "Using external password program to get password")
+            ("ondemand,m", "Mount the filesystem on-demand.  This currently only makes sense in combination with --unmount-idle and --extpass options.  When the filesystem becomes idle, instead of exiting, Cryfs stops allowing access to the filesystem"
+             " by internally dropping its reference to it.  If someone attempts to access the filesystem again, the extpass program is used to prompt the user for the password.  If this succeeds, then the filesystem becomes"
+             " available again.")
+            ("delaymount", "Do not mount the filesystem when encfs starts; instead, delay mounting until first use. This option only makes sense with --ondemand.")
             ;
     desc->add(options);
 }

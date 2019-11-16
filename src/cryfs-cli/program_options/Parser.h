@@ -27,6 +27,7 @@ namespace cryfs_cli {
             static boost::program_options::variables_map _parseOptionsOrShowHelp(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static boost::program_options::variables_map _parseOptions(const std::vector<std::string> &options, const std::vector<std::string> &supportedCiphers);
             static void _checkValidCipher(const std::string &cipher, const std::vector<std::string> &supportedCiphers);
+            static void _checkOnDemand(bool onDemand, bool delayMount, const boost::optional<std::string> & extPass, const boost::optional<double> & unmountAfterIdleMinutes);
 
             std::vector<std::string> _options;
 

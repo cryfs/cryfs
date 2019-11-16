@@ -20,7 +20,10 @@ namespace cryfs_cli {
                            boost::optional<uint32_t> blocksizeBytes,
                            bool allowIntegrityViolations,
                            boost::optional<bool> missingBlockIsIntegrityViolation,
-                           std::vector<std::string> fuseOptions);
+                           std::vector<std::string> fuseOptions,
+                           bool ondemand,
+                           bool delaymount,
+                           boost::optional<std::string> extpass);
             ProgramOptions(ProgramOptions &&rhs) = default;
 
             const boost::filesystem::path &baseDir() const;
@@ -38,6 +41,10 @@ namespace cryfs_cli {
             const boost::optional<boost::filesystem::path> &logFile() const;
             const std::vector<std::string> &fuseOptions() const;
 
+            bool ondemand() const;
+            bool delaymount() const;
+            const boost::optional<std::string> extpass() const;
+
         private:
 			boost::optional<boost::filesystem::path> _configFile;
             boost::filesystem::path _baseDir; // this is always absolute
@@ -53,6 +60,9 @@ namespace cryfs_cli {
             boost::optional<bool> _missingBlockIsIntegrityViolation;
             boost::optional<boost::filesystem::path> _logFile;
             std::vector<std::string> _fuseOptions;
+            bool _ondemand;
+            bool _delaymount;
+            boost::optional<std::string> _extpass;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);
         };
