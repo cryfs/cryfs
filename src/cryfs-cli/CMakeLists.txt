@@ -15,6 +15,11 @@ add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC cryfs cpp-utils gitversion fspp-fuse)
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
+if (APPLE)
+target_compile_options(${PROJECT_NAME} PRIVATE
+				       "-Wno-old-style-cast"
+				       )
+endif(APPLE)
 
 if(NOT CRYFS_UPDATE_CHECKS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DCRYFS_NO_UPDATE_CHECKS)

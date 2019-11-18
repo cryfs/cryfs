@@ -23,6 +23,7 @@ set(SOURCES
         io/DontEchoStdinToStdoutRAII.cpp
         io/IOStreamConsole.cpp
         io/NoninteractiveConsole.cpp
+        io/ExtPassConsole.cpp
         io/pipestream.cpp
         io/ProgressBar.cpp
         thread/LoopThread.cpp

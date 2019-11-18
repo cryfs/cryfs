@@ -65,6 +65,10 @@ if(MSVC)
   add_definitions(/bigobj)
 endif()
 
+if (APPLE)
+   add_compile_options ( -Wno-old-style-cast )
+endif(APPLE)
+
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 add_subdirectory(doc)

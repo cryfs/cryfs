@@ -22,6 +22,7 @@
 #include "VersionChecker.h"
 #include <gitversion/VersionCompare.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cpp-utils/io/ExtPassConsole.h>
 #include <cryfs/impl/localstate/LocalStateDir.h>
 #include <cryfs/impl/localstate/BasedirMetadata.h>
 #include "Environment.h"
@@ -41,6 +42,7 @@ using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;
 using cpputils::NoninteractiveConsole;
+using cpputils::ExtPassConsole;
 using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
@@ -411,6 +413,13 @@ namespace cryfs_cli {
             _showVersion(std::move(httpClient));
             ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
+
+            const auto & extpass = options.extpass();
+
+            if (!Environment::isNoninteractive() && extpass.has_value()) {
+                _console = make_shared<ExtPassConsole>(*extpass, _console);
+            }
+
             _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {
             if (e.what() != string()) {

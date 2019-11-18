@@ -112,8 +112,14 @@ void Parser::_checkOnDemand(bool onDemand, bool delayMount, const boost::optiona
         if (!unmountAfterIdleMinutes.has_value() || (*unmountAfterIdleMinutes) == 0) {
             throw CryfsException("ondemand need unmount-idle", ErrorCode::InvalidArguments);
         }
-    } else if (delayMount) {
-        throw CryfsException("delaymount need work with ondemand option", ErrorCode::InvalidArguments);
+    } else {
+        if (delayMount) {
+            throw CryfsException("delaymount need work with ondemand option", ErrorCode::InvalidArguments);
+        }
+    }
+
+    if (extPass.has_value() && extPass->length() == 0) {
+        throw CryfsException("extpass for password input can not be empty", ErrorCode::InvalidArguments);
     }
 }
 
