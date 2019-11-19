@@ -11,6 +11,7 @@
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/OnDemandDevice.h>
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include "program_options/Parser.h"
@@ -226,27 +227,41 @@ namespace cryfs_cli {
 
     void Cli::_runFilesystem(const ProgramOptions &options, std::function<void()> onMounted) {
         try {
-            LocalStateDir localStateDir(Environment::localStateDir());
-            auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
-            auto config = _loadOrCreateConfig(options, localStateDir);
             unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
             bool stoppedBecauseOfIntegrityViolation = false;
 
             auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
-              if (fuse.get() != nullptr) {
-                LOG(ERR, "Integrity violation detected. Unmounting.");
-                stoppedBecauseOfIntegrityViolation = true;
-                fuse->stop();
-              } else {
-                // Usually on an integrity violation, the file system is unmounted.
-                // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
-                // setting up _device before running initFilesystem.
-                // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
-                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
-              }
-            };
-            const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
-            _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId, options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
+                                            if (fuse.get() != nullptr) {
+                                                LOG(ERR, "Integrity violation detected. Unmounting.");
+                                                stoppedBecauseOfIntegrityViolation = true;
+                                                fuse->stop();
+                                            } else {
+                                                // Usually on an integrity violation, the file system is unmounted.
+                                                // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
+                                                // setting up _device before running initFilesystem.
+                                                // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
+                                                throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
+                                            }
+                                        };
+            auto device_creator =
+                    [&onIntegrityViolation, &options, this]() {
+                        LocalStateDir localStateDir(Environment::localStateDir());
+                        auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
+                        auto config = _loadOrCreateConfig(options, localStateDir);
+
+                        const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
+                        auto device = make_unique_ref<CryDevice>(std::move(config.configFile), std::move(blockStore), std::move(localStateDir), config.myClientId, options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
+
+                        return device;
+                    };
+
+            _device = optional<cpputils::unique_ref<cryfs::OnDemandDevice>>(
+                make_unique_ref<cryfs::OnDemandDevice>(options.delaymount(),
+                                                       options.ondemand(),
+                                                       std::move(device_creator)
+                                                       )
+                                                                            );
+
             _sanityCheckFilesystem(_device->get());
 
             auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
@@ -254,9 +269,15 @@ namespace cryfs_cli {
 
                 //TODO Test auto unmounting after idle timeout
                 const boost::optional<double> idle_minutes = options.unmountAfterIdleMinutes();
-                _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes] {
+                _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes, &options, this] {
                     LOG(INFO, "Unmounting because file system was idle for {} minutes", *idle_minutes);
-                    fs->stop();
+
+                    if (options.ondemand()) {
+                        LOG(INFO, "OnDemand is true, unreference file system instead unmount");
+                        _device->get()->DerefFileSystem();
+                    } else {
+                        fs->stop();
+                    }
                 });
                 if (_idleUnmounter != none) {
                     (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
@@ -290,7 +311,7 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_sanityCheckFilesystem(CryDevice *device) {
+void Cli::_sanityCheckFilesystem(cryfs::OnDemandDevice *device) {
         //Try to list contents of base directory
         auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
         if (_rootDir == none) {

@@ -10,6 +10,7 @@
 #include <cpp-utils/random/RandomGenerator.h>
 #include <cpp-utils/network/HttpClient.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/OnDemandDevice.h>
 #include "CallAfterTimeout.h"
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/ErrorCodes.h>
@@ -41,7 +42,7 @@ namespace cryfs_cli {
         std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name, cryfs::ErrorCode errorCode);
         void _checkDirReadable(const boost::filesystem::path &dir, std::shared_ptr<cpputils::TempFile> tempfile, const std::string &name, cryfs::ErrorCode errorCode);
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _createIdleCallback(boost::optional<double> minutes, std::function<void()> callback);
-        void _sanityCheckFilesystem(cryfs::CryDevice *device);
+        void _sanityCheckFilesystem(cryfs::OnDemandDevice *device);
 
 
         cpputils::RandomGenerator &_keyGenerator;
@@ -49,7 +50,7 @@ namespace cryfs_cli {
         std::shared_ptr<cpputils::Console> _console;
         bool _noninteractive;
         boost::optional<cpputils::unique_ref<CallAfterTimeout>> _idleUnmounter;
-        boost::optional<cpputils::unique_ref<cryfs::CryDevice>> _device;
+        boost::optional<cpputils::unique_ref<cryfs::OnDemandDevice>> _device;
 
         DISALLOW_COPY_AND_ASSIGN(Cli);
     };

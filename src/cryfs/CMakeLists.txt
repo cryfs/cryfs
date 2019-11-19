@@ -44,6 +44,7 @@ set(LIB_SOURCES
         impl/filesystem/cachingfsblobstore/SymlinkBlobRef.cpp
         impl/filesystem/CryFile.cpp
         impl/filesystem/CryDevice.cpp
+        impl/filesystem/OnDemandDevice.cpp
         impl/localstate/LocalStateDir.cpp
         impl/localstate/LocalStateMetadata.cpp
         impl/localstate/BasedirMetadata.cpp
