@@ -105,11 +105,11 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
 
 void Parser::_checkOnDemand(bool onDemand, bool delayMount, const boost::optional<std::string> & extPass, const boost::optional<double> & unmountAfterIdleMinutes) {
     if (onDemand) {
-        if (!extPass.has_value() || extPass->length() == 0) {
+        if (!extPass || extPass->length() == 0) {
             throw CryfsException("ondemand need a extpass for password input", ErrorCode::InvalidArguments);
         }
 
-        if (!unmountAfterIdleMinutes.has_value() || (*unmountAfterIdleMinutes) == 0) {
+        if (!unmountAfterIdleMinutes || (*unmountAfterIdleMinutes) == 0) {
             throw CryfsException("ondemand need unmount-idle", ErrorCode::InvalidArguments);
         }
     } else {
@@ -118,7 +118,7 @@ void Parser::_checkOnDemand(bool onDemand, bool delayMount, const boost::optiona
         }
     }
 
-    if (extPass.has_value() && extPass->length() == 0) {
+    if (extPass && extPass->length() == 0) {
         throw CryfsException("extpass for password input can not be empty", ErrorCode::InvalidArguments);
     }
 }

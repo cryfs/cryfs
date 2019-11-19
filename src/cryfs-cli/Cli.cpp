@@ -416,7 +416,7 @@ namespace cryfs_cli {
 
             const auto & extpass = options.extpass();
 
-            if (!Environment::isNoninteractive() && extpass.has_value()) {
+            if (!Environment::isNoninteractive() && extpass) {
                 _console = make_shared<ExtPassConsole>(*extpass, _console);
             }
 
