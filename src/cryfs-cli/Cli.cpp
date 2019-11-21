@@ -269,12 +269,12 @@ namespace cryfs_cli {
 
                 //TODO Test auto unmounting after idle timeout
                 const boost::optional<double> idle_minutes = options.unmountAfterIdleMinutes();
-                _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes, &options, this] {
+                _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes, &options] {
                     LOG(INFO, "Unmounting because file system was idle for {} minutes", *idle_minutes);
 
                     if (options.ondemand()) {
                         LOG(INFO, "OnDemand is true, unreference file system instead unmount");
-                        _device->get()->DerefFileSystem();
+                        fs->deref();
                     } else {
                         fs->stop();
                     }

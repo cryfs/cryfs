@@ -1283,3 +1283,7 @@ int Fuse::create(const bf::path &path, ::mode_t mode, fuse_file_info *fileinfo) 
     return -EIO;
   }
 }
+
+void Fuse::deref() {
+    _fs->deref();
+}

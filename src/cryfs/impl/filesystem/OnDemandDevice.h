@@ -22,7 +22,7 @@ public:
     boost::optional<cpputils::unique_ref<fspp::Dir>> LoadDir(const boost::filesystem::path &path) override;
     boost::optional<cpputils::unique_ref<fspp::Symlink>> LoadSymlink(const boost::filesystem::path &path) override;
 
-    void DerefFileSystem();
+    void deref() override;
 private:
     bool _delayMount;
     bool _onDemand;

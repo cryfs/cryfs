@@ -29,6 +29,7 @@ public:
 	virtual boost::optional<cpputils::unique_ref<File>> LoadFile(const boost::filesystem::path &path) = 0;
 	virtual boost::optional<cpputils::unique_ref<Dir>> LoadDir(const boost::filesystem::path &path) = 0;
 	virtual boost::optional<cpputils::unique_ref<Symlink>> LoadSymlink(const boost::filesystem::path &path) = 0;
+    virtual void deref() = 0;
 
     const Context& getContext() const {
         ASSERT(_context != boost::none, "Tried to call getContext() but file system isn't running yet.");

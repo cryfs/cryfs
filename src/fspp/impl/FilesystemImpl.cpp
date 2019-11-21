@@ -342,3 +342,7 @@ void FilesystemImpl::readSymlink(const bf::path &path, char *buf, fspp::num_byte
   std::memcpy(buf, target.c_str(), std::min(static_cast<int64_t>(target.size()+1), size.value()));
   buf[size.value()-1] = '\0';
 }
+
+void FilesystemImpl::deref() {
+    _device->deref();
+}

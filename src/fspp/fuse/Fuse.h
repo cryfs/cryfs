@@ -29,6 +29,7 @@ public:
   void runInForeground(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
   bool running() const;
   void stop();
+    void deref();
 
   static void unmount(const boost::filesystem::path &mountdir, bool force = false);
 

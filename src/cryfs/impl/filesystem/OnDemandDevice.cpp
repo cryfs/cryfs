@@ -74,7 +74,7 @@ void OnDemandDevice::CreateDevice() {
     }
 }
 
-void OnDemandDevice::DerefFileSystem() {
+void OnDemandDevice::deref() {
     if (!_onDemand) return;
 
     _device = none;

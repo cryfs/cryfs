@@ -98,23 +98,15 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
         extpass = vm["extpass"].as<string>();
     }
 
-    _checkOnDemand(ondemand, delaymount, extpass, unmountAfterIdleMinutes);
+    _checkOnDemand(ondemand, extpass);
 
     return ProgramOptions(std::move(baseDir), std::move(mountDir), std::move(configfile), foreground, allowFilesystemUpgrade, allowReplacedFilesystem, std::move(unmountAfterIdleMinutes), std::move(logfile), std::move(cipher), blocksizeBytes, allowIntegrityViolations, std::move(missingBlockIsIntegrityViolation), std::move(fuseOptions), ondemand, delaymount, std::move(extpass));
 }
 
-void Parser::_checkOnDemand(bool onDemand, bool delayMount, const boost::optional<std::string> & extPass, const boost::optional<double> & unmountAfterIdleMinutes) {
+void Parser::_checkOnDemand(bool onDemand,const boost::optional<std::string> & extPass) {
     if (onDemand) {
         if (!extPass || extPass->length() == 0) {
             throw CryfsException("ondemand need a extpass for password input", ErrorCode::InvalidArguments);
-        }
-
-        if (!unmountAfterIdleMinutes || (*unmountAfterIdleMinutes) == 0) {
-            throw CryfsException("ondemand need unmount-idle", ErrorCode::InvalidArguments);
-        }
-    } else {
-        if (delayMount) {
-            throw CryfsException("delaymount need work with ondemand option", ErrorCode::InvalidArguments);
         }
     }
 

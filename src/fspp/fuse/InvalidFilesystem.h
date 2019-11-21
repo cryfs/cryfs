@@ -107,6 +107,9 @@ namespace fspp {
                 throw std::logic_error("Filesystem not initialized yet");
             }
 
+            void deref() override {
+                throw std::logic_error("Filesystem not initialized yet");
+            }
         };
     }
 }

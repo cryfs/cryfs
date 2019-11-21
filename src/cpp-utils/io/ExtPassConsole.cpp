@@ -26,8 +26,15 @@ unsigned int ExtPassConsole::ask(const string &question, const vector<string> &o
 }
 
 string ExtPassConsole::askPassword(const string &question) {
-    auto result = cpputils::Subprocess::call(_extpass + " " + question);
-    return result.output;
+    (void)question;
+    auto result = cpputils::Subprocess::call(_extpass);
+
+    string output = result.output;
+
+    while(output.back() == '\n' || output.back() == '\r')
+        output.erase(output.back());
+
+    return output;
 }
 
 }

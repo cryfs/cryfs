@@ -53,6 +53,8 @@ public:
   virtual void createSymlink(const boost::filesystem::path &to, const boost::filesystem::path &from, ::uid_t uid, ::gid_t gid) = 0;
   //TODO Test readSymlink
   virtual void readSymlink(const boost::filesystem::path &path, char *buf, fspp::num_bytes_t size) = 0;
+
+    virtual void deref() = 0;
 };
 
 }
