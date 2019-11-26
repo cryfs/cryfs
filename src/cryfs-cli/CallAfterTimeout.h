@@ -11,6 +11,7 @@ namespace cryfs_cli {
     public:
         CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName);
         void resetTimer();
+        void restartTimer();
     private:
         bool _checkTimeoutThreadIteration();
         boost::chrono::time_point<boost::chrono::steady_clock> _targetTime();
@@ -21,12 +22,18 @@ namespace cryfs_cli {
         boost::chrono::time_point<boost::chrono::steady_clock> _start;
         cpputils::LoopThread _checkTimeoutThread;
         std::mutex _mutex;
+        bool _timed_out;
 
         DISALLOW_COPY_AND_ASSIGN(CallAfterTimeout);
     };
 
     inline CallAfterTimeout::CallAfterTimeout(boost::chrono::milliseconds timeout, std::function<void()> callback, const std::string& timeoutName)
-        :_callback(std::move(callback)), _timeout(timeout), _start(), _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this), "timeout_" + timeoutName) {
+        : _callback(std::move(callback))
+        , _timeout(timeout)
+        , _start()
+        , _checkTimeoutThread(std::bind(&CallAfterTimeout::_checkTimeoutThreadIteration, this), "timeout_" + timeoutName)
+        , _mutex{}
+        , _timed_out {false} {
         resetTimer();
         _checkTimeoutThread.start();
     }
@@ -50,10 +57,20 @@ namespace cryfs_cli {
         std::unique_lock<std::mutex> lock(_mutex);
         if (boost::chrono::steady_clock::now() >= _start + _timeout) {
             _callback();
+            _timed_out = true;
             return false; // Stop thread
         }
         return true; // Continue thread
     }
+
+inline void CallAfterTimeout::restartTimer() {
+    resetTimer();
+
+    if (!_timed_out) return;
+
+    _checkTimeoutThread.start();
+    _timed_out = false;
+}
 }
 
 #endif

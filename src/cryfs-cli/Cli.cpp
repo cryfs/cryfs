@@ -281,6 +281,7 @@ namespace cryfs_cli {
                 });
                 if (_idleUnmounter != none) {
                     (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
+                    (*_device)->setTimerRestartFunc(std::bind(&CallAfterTimeout::restartTimer, _idleUnmounter->get()));
                 }
 
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));

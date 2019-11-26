@@ -31,14 +31,14 @@ public:
 	virtual boost::optional<cpputils::unique_ref<Symlink>> LoadSymlink(const boost::filesystem::path &path) = 0;
     virtual void deref() = 0;
 
-    const Context& getContext() const {
+    virtual const Context& getContext() const {
         ASSERT(_context != boost::none, "Tried to call getContext() but file system isn't running yet.");
         return *_context;
     }
 
     // called by fspp system on file system init. Don't call this manually.
     // TODO Is there a better way to do this?
-    void setContext(Context&& context) {
+    virtual void setContext(Context&& context) {
         _context = std::move(context);
     }
 
