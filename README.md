@@ -59,7 +59,7 @@ You can use the following commands to install these requirements
         $ sudo pip install conan
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python
+        $ sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python
         $ sudo pip install conan
 
         # Macintosh
