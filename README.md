@@ -151,6 +151,7 @@ There are additional requirements if you want to create packages. They are:
  2. Build
 
         $ mkdir cmake && cd cmake
+        $ conan install .. --build=missing
         $ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=off
         $ make package
 
