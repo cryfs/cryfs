@@ -17,10 +17,17 @@ You can also use CryFS on older versions of these distributions by following the
 OSX
 ----
 
-CryFS is distributed via Homebrew. Just do
+CryFS is distributed via Homebrew and MacPorts.
+
+If you use Homebrew:
 
     brew cask install osxfuse
     brew install cryfs
+
+If you use MacPorts (not available for OSX 10.15 at the moment):
+
+    port install cryfs
+
     
 Windows (experimental)
 ----------------------
