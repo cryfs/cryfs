@@ -139,9 +139,11 @@ On most systems, CMake should find the libraries automatically. However, that do
 Creating .deb and .rpm packages
 -------------------------------
 
+It is recommended to install CryFS using packages, because that allows for an easy way to uninstall it again once you don't need it anymore.
+
 There are additional requirements if you want to create packages. They are:
  - CMake version >= 3.3
- - rpmbuild for creating .rpm package
+ - rpmbuild if you're creating a .rpm package
 
  1. Clone repository
 
