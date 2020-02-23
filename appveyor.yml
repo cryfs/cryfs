@@ -39,7 +39,8 @@ build_script:
   - cmd: cd build
   # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
   - cmd: conan install .. -s build_type=%CONFIGURATION% --build=missing
-  - cmd: cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.1"
+  # note: The CMAKE_SYSTEM_VERSION variable is set to 10.0.18362.0 because as of this writing, appveyor uses 10.0.17763.0 and that has a bug, see https://developercommunity.visualstudio.com/content/problem/343296/sdk-and-experimentalpreprocessor.html
+  - cmd: cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.1" -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
   - cmd: cmake --build . --config %CONFIGURATION%
   - cmd: .\bin\gitversion-test.exe
   # cpp-utils-test disables ThreadDebuggingTest_ThreadName.*_thenIsCorrect because the appveyor image is too old to support the API needed for that
