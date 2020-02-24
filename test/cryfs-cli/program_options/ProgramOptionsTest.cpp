@@ -137,4 +137,3 @@ TEST_F(ProgramOptionsTest, SomeFuseOptions) {
     //Fuse should have the mount dir as first parameter
     EXPECT_VECTOR_EQ({"-f", "--longoption"}, testobj.fuseOptions());
 }
-

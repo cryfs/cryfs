@@ -4,6 +4,7 @@
 
 #include <vendor_cryptopp/hex.h>
 #include <string>
+#include <array>
 #include <cstring>
 #include "../assert/assert.h"
 

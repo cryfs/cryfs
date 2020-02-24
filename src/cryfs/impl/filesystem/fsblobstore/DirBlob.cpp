@@ -173,7 +173,7 @@ fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, fs
   return result;
 }
 
-void DirBlob::updateAccessTimestampForChild(const BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior) {
+void DirBlob::updateAccessTimestampForChild(const BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
   std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
   if (_entries.updateAccessTimestampForChild(blockId, timestampUpdateBehavior)) {
     _changed = true;

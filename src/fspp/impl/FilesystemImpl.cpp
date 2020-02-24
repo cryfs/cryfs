@@ -91,6 +91,10 @@ FilesystemImpl::~FilesystemImpl() {
 #endif
 }
 
+void FilesystemImpl::setContext(Context&& context) {
+    _device->setContext(std::move(context));
+}
+
 unique_ref<File> FilesystemImpl::LoadFile(const bf::path &path) {
   PROFILE(_loadFileNanosec);
   auto file = _device->LoadFile(path);

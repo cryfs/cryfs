@@ -12,6 +12,7 @@ export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl
 echo Using ${NUMCORES} cores
 
 # Run cmake in current working directory, but on source that is in the same directory as this script file
+conan install .. --build=missing
 cmake -DBUILD_TESTING=on -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "${0%/*}"
 
 # Filter all third party code from the compilation database

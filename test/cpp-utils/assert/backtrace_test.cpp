@@ -91,7 +91,7 @@ TEST(BacktraceTest, ContainsBacktrace) {
 }
 
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
-	auto output = call_process_exiting_with_nullptr_violation();
+    auto output = call_process_exiting_with_nullptr_violation();
 #if defined(_MSC_VER)
     EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
@@ -120,7 +120,7 @@ TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
 TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 	auto output = call_process_exiting_with_sigill();
 #if defined(_MSC_VER)
-	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
     EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
@@ -128,7 +128,7 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 #else
 TEST(BacktraceTest, ContainsBacktrace) {
 	string backtrace = cpputils::backtrace();
-	EXPECT_THAT(backtrace, HasSubstr("#1"));
+	EXPECT_THAT(backtrace, HasSubstr("#0"));
 }
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
 	auto output = call_process_exiting_with_nullptr_violation();
@@ -153,8 +153,8 @@ TEST(BacktraceTest, ShowBacktraceOnSigIll) {
 
 #if !defined(_MSC_VER)
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
-	auto output = call_process_exiting_with_sigabrt();
-	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+    auto output = call_process_exiting_with_sigabrt();
+    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 }
 
 TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {

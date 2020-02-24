@@ -228,22 +228,30 @@ void DirEntryList::setAccessTimes(const blockstore::BlockId &blockId, timespec l
     found->setLastModificationTime(lastModificationTime);
 }
 
-bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior) {
-    ASSERT(timestampUpdateBehavior == TimestampUpdateBehavior::RELATIME, "Currently only relatime supported");
+bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
     auto found = _findById(blockId);
+
     const timespec lastAccessTime = found->lastAccessTime();
     const timespec lastModificationTime = found->lastModificationTime();
     const timespec now = cpputils::time::now();
-    const timespec yesterday {
-        /*.tv_sec = */ now.tv_sec - 60*60*24,
-        /*.tv_nsec = */ now.tv_nsec
-    };
-    bool changed = false;
-    if (lastAccessTime < lastModificationTime || lastAccessTime < yesterday) {
-        found->setLastAccessTime(now);
-        changed = true;
+
+    switch (found->type()) {
+        case fspp::Dir::EntryType::FILE:
+            // fallthrough
+        case fspp::Dir::EntryType::SYMLINK:
+            if (timestampUpdateBehavior->shouldUpdateATimeOnFileRead(lastAccessTime, lastModificationTime, now)) {
+                found->setLastAccessTime(now);
+                return true;
+            }
+            return false;
+        case fspp::Dir::EntryType::DIR:
+            if (timestampUpdateBehavior->shouldUpdateATimeOnDirectoryRead(lastAccessTime, lastModificationTime, now)) {
+                found->setLastAccessTime(now);
+                return true;
+            }
+            return false;
     }
-    return changed;
+    throw std::logic_error("Unhandled case");
 }
 
 void DirEntryList::updateModificationTimestampForChild(const blockstore::BlockId &blockId) {

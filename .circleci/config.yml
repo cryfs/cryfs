@@ -55,7 +55,14 @@ references:
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libssl-dev libfuse-dev
+
+        # install conan
+        pyenv global 3.7.0
+        python3 -m pip install -U pip
+        python3 -m pip install conan
+        source ~/.profile
+
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
 
@@ -67,14 +74,25 @@ references:
           sudo ln -s /usr/bin/run-clang-tidy-8.py /usr/bin/run-clang-tidy.py
         fi
 
+        # Setup build cache
+        sudo mkdir -p /build_cache/ccache
+        sudo mkdir -p /build_cache/conan
+        sudo chown -R circleci:circleci /build_cache
+
+        # Setup conan cache
+        echo 'export CONAN_USER_HOME=/build_cache/conan' >> $BASH_ENV
+        if [[ "${CXX}" == *"g++"* ]]; then
+          # Conan uses old gcc ABI by default but we can only build with the cxx11 ABI.
+          conan profile new default --detect
+          conan profile update settings.compiler.libcxx=libstdc++11 default
+        fi
+
         # Setup ccache
         sudo ln -s /usr/bin/ccache /usr/local/bin/$CC
         sudo ln -s /usr/bin/ccache /usr/local/bin/$CXX
-        sudo mkdir /ccache_data
-        sudo chown circleci:circleci /ccache_data
         echo 'export CCACHE_COMPILERCHECK=content' >> $BASH_ENV
         echo 'export CCACHE_COMPRESS=1' >> $BASH_ENV
-        echo 'export CCACHE_DIR=/ccache_data' >> $BASH_ENV
+        echo 'export CCACHE_DIR=/build_cache/ccache' >> $BASH_ENV
         echo 'export CCACHE_SLOPPINESS=include_file_mtime' >> $BASH_ENV
 
         sudo mkdir -p /tmp/aptcache
@@ -88,60 +106,20 @@ references:
         cmake --version
         /usr/local/bin/$CC --version
         /usr/local/bin/$CXX --version
-  upgrade_boost_pre: &upgrade_boost_pre
-    restore_cache:
-      keys:
-        # Find the most recent cache from any branch
-        - v5_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
-  upgrade_boost_post: &upgrade_boost_post
-    save_cache:
-      key: v5_upgrade_boost_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
-      paths:
-      - /tmp/boost_1_65_1
-  upgrade_boost: &upgrade_boost
-    run:
-      name: Upgrade Boost
-      command: |
-        # Detect number of CPU cores
-        export NUMCORES=`nproc`
-        echo Using $NUMCORES cores
-        # Download and prepare boost (only if not already present from cache)
-        if [ ! -d "/tmp/boost_1_65_1" ]; then
-          echo "Didn't find boost in cache. Downloading and building."
-          wget -O /tmp/boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.65.1/boost_1_65_1.tar.bz2/download
-          if [ $(sha512sum /tmp/boost.tar.bz2 | awk '{print $1;}') == "a9e6866d3bb3e7c198f442ff09f5322f58064dca79bc420f2f0168eb63964226dfbc4f034a5a5e5958281fdf7518a1b057c894fbda0b61fced59c1661bf30f1a" ]; then
-            echo Correct sha512sum
-          else
-            echo Wrong sha512sum
-            sha512sum boost.tar.bz2
-            exit 1
-          fi
-          echo Extracting...
-          tar -xf /tmp/boost.tar.bz2 -C /tmp
-          rm -rf boost.tar.bz2
-          cd /tmp/boost_1_65_1
-          ./bootstrap.sh --with-toolset=${BUILD_TOOLSET} --with-libraries=filesystem,thread,chrono,program_options
-          cd ..
-        else
-          echo Found boost in cache. Use cache and build.
-        fi
-        # Compile and install boost (if cached, this should be fast)
-        cd /tmp/boost_1_65_1
-        sudo ./b2 toolset=${BUILD_TOOLSET} link=static cxxflags=-fPIC -d0 -j$NUMCORES install
   build_pre: &build_pre
     restore_cache:
       keys:
         # Find most recent cache from any revision on the same branch (cache keys are prefix matched)
         # CIRCLE_PR_NUMBER is only set if this is a pull request.
-        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}
+        - v6_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}
         # Fallback to less specific caches if the one above wasn't found
-        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}
-        - v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
+        - v6_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}
+        - v6_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}
   build_post: &build_post
     save_cache:
-      key: v4_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}_{{ .Revision }}
+      key: v6_build_cache_{{ checksum "/tmp/_build_env_vars" }}_{{ arch }}_{{ .Branch }}_{{ .Environment.CIRCLE_PR_NUMBER }}_{{ .Revision }}
       paths:
-      - /ccache_data
+      - /build_cache
   build: &build
     run:
       name: Build
@@ -164,6 +142,7 @@ references:
         # Build
         mkdir cmake
         cd cmake
+        conan install .. -s build_type=${BUILD_TYPE} --build=missing
         cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS} ${CMAKE_FLAGS}
         make -j$NUMCORES
 
@@ -175,14 +154,14 @@ references:
       command: |
         if "${RUN_TESTS}"; then
           cd cmake
-          ./test/gitversion/gitversion-test ${GTEST_ARGS}
-          ./test/cpp-utils/cpp-utils-test ${GTEST_ARGS}
-          if [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./test/fspp/fspp-test ${GTEST_ARGS} ; fi
-          ./test/parallelaccessstore/parallelaccessstore-test ${GTEST_ARGS}
-          ./test/blockstore/blockstore-test ${GTEST_ARGS}
-          ./test/blobstore/blobstore-test ${GTEST_ARGS}
-          ./test/cryfs/cryfs-test ${GTEST_ARGS}
-          ./test/cryfs-cli/cryfs-cli-test ${GTEST_ARGS}
+          ./bin/gitversion-test ${GTEST_ARGS}
+          ./bin/cpp-utils-test ${GTEST_ARGS}
+          if [ ! "$DISABLE_BROKEN_ASAN_TESTS" = true ] ; then ./bin/fspp-test ${GTEST_ARGS} ; fi
+          ./bin/parallelaccessstore-test ${GTEST_ARGS}
+          ./bin/blockstore-test ${GTEST_ARGS}
+          ./bin/blobstore-test ${GTEST_ARGS}
+          ./bin/cryfs-test ${GTEST_ARGS}
+          ./bin/cryfs-cli-test ${GTEST_ARGS}
         fi
   job_definition: &job_definition
     <<: *container_config
@@ -191,9 +170,6 @@ references:
     - <<: *container_setup_pre
     - <<: *container_setup
     - <<: *container_setup_post
-    - <<: *upgrade_boost_pre
-    - <<: *upgrade_boost
-    - <<: *upgrade_boost_post
     - checkout
     - <<: *build_pre
     - <<: *build
@@ -205,30 +181,6 @@ references:
         only: /.*/
 
 jobs:
-  gcc_5_debug:
-    <<: *job_definition
-    environment:
-      CC: gcc-5
-      CXX: g++-5
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-5"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  gcc_5_release:
-    <<: *job_definition
-    environment:
-      CC: gcc-5
-      CXX: g++-5
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-5"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
   gcc_6_debug:
     <<: *job_definition
     environment:
@@ -551,9 +503,6 @@ jobs:
     - <<: *container_setup_pre
     - <<: *container_setup
     - <<: *container_setup_post
-    - <<: *upgrade_boost_pre
-    - <<: *upgrade_boost
-    - <<: *upgrade_boost_post
     - checkout
     - run:
         name: clang-tidy
@@ -580,10 +529,6 @@ workflows:
 
   build_and_test:
     jobs:
-    - gcc_5_debug:
-        <<: *enable_for_tags
-    - gcc_5_release:
-        <<: *enable_for_tags
     - gcc_6_debug:
         <<: *enable_for_tags
     - gcc_6_release:

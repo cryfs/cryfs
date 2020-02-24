@@ -32,19 +32,20 @@ cmake --version
 
 # Build
 echo Build target: ${BUILD_TARGET}
+conan install ..  -s build_type=${BUILD_TARGET} --build=missing
 cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TARGET}
 make -j$NUMCORES
 
 ccache --show-stats
 
 # Test
-./test/gitversion/gitversion-test
-./test/cpp-utils/cpp-utils-test
-./test/parallelaccessstore/parallelaccessstore-test
-./test/blockstore/blockstore-test
-./test/blobstore/blobstore-test
-./test/cryfs/cryfs-test
+./bin/gitversion-test
+./bin/cpp-utils-test
+./bin/parallelaccessstore-test
+./bin/blockstore-test
+./bin/blobstore-test
+./bin/cryfs-test
 
 # TODO Also run once fixed
-# ./test/fspp/fspp-test
-# ./test/cryfs-cli/cryfs-cli-test
+# ./bin/fspp-test
+# ./bin/cryfs-cli-test

@@ -15,6 +15,7 @@
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
 
+
 namespace cryfs {
 
 class CryDevice final: public fspp::Device {

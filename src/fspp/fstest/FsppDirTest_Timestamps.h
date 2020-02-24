@@ -11,225 +11,501 @@ public:
 TYPED_TEST_SUITE_P(FsppDirTest_Timestamps);
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile) {
-    auto dir = this->CreateDir("/mydir");
-    auto operation = [&dir] () {
-        dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        return [dir = std::move(dir)] {
+            dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_inRootDir) {
-    auto dir = this->LoadDir("/");
-    auto operation = [&dir] () {
-        dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+     auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        return [dir = std::move(dir)] {
+            dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
 }*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createAndOpenFile_TimestampsOfCreatedFile) {
-    auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = cpputils::time::now();
-    dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = cpputils::time::now();
-    auto child = this->Load("/mydir/childname");
-    this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
-    this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
-    this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    this->testBuilder().withAnyAtimeConfig([&] {
+        auto dir = this->CreateDir("/mydir");
+        timespec lowerBound = cpputils::time::now();
+        dir->createAndOpenFile("childname", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        timespec upperBound = cpputils::time::now();
+        auto child = this->Load("/mydir/childname");
+        this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
+        this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
+        this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    });
 }
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir) {
-    auto dir = this->CreateDir("/mydir");
-    auto operation = [&dir] () {
-        dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        return [dir = std::move(dir)] {
+            dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_inRootDir) {
-    auto dir = this->LoadDir("/");
-    auto operation = [&dir] () {
-        dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+     auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        return [dir = std::move(dir)] {
+            dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-}*/
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
+}
+*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createDir_TimestampsOfCreatedDir) {
-    auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = cpputils::time::now();
-    dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = cpputils::time::now();
-    auto child = this->Load("/mydir/childname");
-    this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
-    this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
-    this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    this->testBuilder().withAnyAtimeConfig([&] {
+        auto dir = this->CreateDir("/mydir");
+        timespec lowerBound = cpputils::time::now();
+        dir->createDir("childname", fspp::mode_t().addDirFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        timespec upperBound = cpputils::time::now();
+        auto child = this->Load("/mydir/childname");
+        this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
+        this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
+        this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    });
 }
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink) {
-    auto dir = this->CreateDir("/mydir");
-    auto operation = [&dir] () {
-        dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        return [dir = std::move(dir)] {
+            dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_inRootDir) {
-    auto dir = this->LoadDir("/");
-    auto operation = [&dir] () {
-        dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
+     auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        return [dir = std::move(dir)] {
+            dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-}*/
+    this->testBuilder().withAnyAtimeConfig([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+    });
+}
+*/
 
 TYPED_TEST_P(FsppDirTest_Timestamps, createSymlink_TimestampsOfCreatedSymlink) {
-    auto dir = this->CreateDir("/mydir");
-    timespec lowerBound = cpputils::time::now();
-    dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
-    timespec upperBound = cpputils::time::now();
-    auto child = this->Load("/mydir/childname");
-    this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
-    this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
-    this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    this->testBuilder().withAnyAtimeConfig([&] {
+        auto dir = this->CreateDir("/mydir");
+        timespec lowerBound = cpputils::time::now();
+        dir->createSymlink("childname", "/target", fspp::uid_t(1000), fspp::gid_t(1000));
+        timespec upperBound = cpputils::time::now();
+        auto child = this->Load("/mydir/childname");
+        this->EXPECT_ACCESS_TIMESTAMP_BETWEEN        (lowerBound, upperBound, *child);
+        this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN  (lowerBound, upperBound, *child);
+        this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *child);
+    });
 }
 
-TYPED_TEST_P(FsppDirTest_Timestamps, children_empty) {
-    auto dir = this->CreateDir("/mydir");
-    this->setModificationTimestampLaterThanAccessTimestamp("/mydir"); // to make sure that even in relatime behavior, the read access below changes the access timestamp
-    auto operation = [&dir] () {
-        dir->children();
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeOlderThanMtime_children_empty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        this->setAtimeOlderThanMtime("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtime_children_empty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        this->setAtimeNewerThanMtime("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_children_empty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        this->setAtimeNewerThanMtimeButBeforeYesterday("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
-TYPED_TEST_P(FsppDirTest_Timestamps, children_empty_inRootDir) {
-    auto dir = this->LoadDir("/");
-    auto operation = [&dir] () {
-        dir->children();
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeOlderThanMtime_children_empty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        this->setAtimeOlderThanMtime("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
-}*/
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
 
-TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty) {
-    auto dir = this->CreateDir("/mydir");
-    dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    auto operation = [&dir] () {
-        dir->children();
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtime_children_empty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        this->setAtimeNewerThanMtime("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_children_empty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        this->setAtimeNewerThanMtimeButBeforeYesterday("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+*/
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeOlderThanMtime_children_nonempty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeOlderThanMtime("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtime_children_nonempty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeNewerThanMtime("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_children_nonempty) {
+    auto operation = [this] {
+        auto dir = this->CreateDir("/mydir");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeNewerThanMtimeButBeforeYesterday("/mydir");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
 }
 
 /* TODO Re-enable this test once the root dir handles timestamps correctly
-TYPED_TEST_P(FsppDirTest_Timestamps, children_nonempty_inRootDir) {
-    auto dir = this->LoadDir("/");
-    dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
-    auto operation = [&dir] () {
-        dir->children();
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeOlderThanMtime_children_nonempty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeOlderThanMtime("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
     };
-    this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
-}*/
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtime_children_nonempty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeNewerThanMtime("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+
+TYPED_TEST_P(FsppDirTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_children_nonempty_inRootDir) {
+    auto operation = [this] {
+        auto dir = this->LoadDir("/");
+        dir->createAndOpenFile("filename", fspp::mode_t().addFileFlag(), fspp::uid_t(1000), fspp::gid_t(1000));
+        this->setAtimeNewerThanMtimeButBeforeYesterday("/");
+        return [dir = std::move(dir)] {
+            dir->children();
+        };
+    };
+    this->testBuilder().withNoatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+    }).withNodiratimeRelatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    }).withNodiratimeStrictatime([&] {
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAnyTimestamps});
+    });
+}
+*/
 
 template<class ConcreteFileSystemTestFixture>
 class FsppDirTest_Timestamps_Entries: public FsppNodeTest<ConcreteFileSystemTestFixture>, public TimestampTestUtils<ConcreteFileSystemTestFixture> {
 public:
-
     void Test_deleteChild() {
-        auto dir = this->CreateDir("/mydir");
-        auto child = this->CreateNode("/mydir/childname");
-        auto operation = [&child]() {
-            child->remove();
+        auto operation = [this] {
+            auto dir = this->CreateDir("/mydir");
+            auto child = this->CreateNode("/mydir/childname");
+            return [child = std::move(child)] {
+                child->remove();
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
-            this->ExpectDoesntUpdateAccessTimestamp,
-            this->ExpectUpdatesModificationTimestamp,
-            this->ExpectUpdatesMetadataTimestamp
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
         });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
     void Test_deleteChild_inRootDir() {
-        auto dir = this->LoadDir("/");
-        auto child = this->CreateNode("/childname");
-        auto operation = [&child] () {
-            child->remove();
+        auto operation = [this] {
+            auto dir = this->LoadDir("/");
+            auto child = this->CreateNode("/mydir/childname");
+            return [child = std::move(child)] {
+                child->remove();
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    }*/
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        });
+    }
+    */
 
     void Test_renameChild() {
-        auto dir = this->CreateDir("/mydir");
-        auto child = this->CreateNode("/mydir/childname");
-        auto operation = [&child]() {
-            child->rename("/mydir/mychild");
+        auto operation = [this] {
+            auto dir = this->CreateDir("/mydir");
+            auto child = this->CreateNode("/mydir/childname");
+            return [child = std::move(child)] {
+                child->rename("/mydir/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
-            this->ExpectDoesntUpdateAccessTimestamp,
-            this->ExpectUpdatesModificationTimestamp,
-            this->ExpectUpdatesMetadataTimestamp
+        this->testBuilder().withAnyAtimeConfig([&]{
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
         });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
     void Test_renameChild_inRootDir() {
-        auto dir = this->LoadDir("/");
-        auto child = this->CreateNode("/childname");
-        auto operation = [&child] () {
-            child->rename("/mydir/mychild");
+        auto operation = [this] {
+            auto dir = this->LoadDir("/");
+            auto child = this->CreateNode("/childname");
+            return [child = std::move(child)] {
+                child->rename("/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    }*/
+        this->testBuilder().withAnyAtimeConfig([&]{
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        });
+    }
+    */
 
     void Test_moveChildIn() {
-        auto sourceDir = this->CreateDir("/sourcedir");
-        auto child = this->CreateNode("/sourcedir/childname");
-        auto dir = this->CreateDir("/mydir");
-        auto operation = [&child]() {
-            child->rename("/mydir/mychild");
+        auto operation = [this] {
+            auto sourceDir = this->CreateDir("/sourcedir");
+            auto child = this->CreateNode("/sourcedir/childname");
+            auto dir = this->CreateDir("/mydir");
+            return [child = std::move(child)] {
+                child->rename("/mydir/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
-            this->ExpectDoesntUpdateAccessTimestamp,
-            this->ExpectUpdatesModificationTimestamp,
-            this->ExpectUpdatesMetadataTimestamp
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
         });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
     void Test_moveChildIn_inRootDir() {
-        auto sourceDir = this->CreateDir("/sourcedir");
-        auto child = this->CreateNode("/sourcedir/childname");
-        auto dir = this->LoadDir("/");
-        auto operation = [&child] () {
-            child->rename("/mychild");
+        auto operation = [this] {
+            auto sourceDir = this->CreateDir("/sourcedir");
+            auto child = this->CreateNode("/sourcedir/childname");
+            auto dir = this->LoadDir("/");
+            return [child = std::move(child)] {
+                child->rename("/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    }*/
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        });
+    }
+    */
 
     void Test_moveChildOut() {
-        auto dir = this->CreateDir("/mydir");
-        auto child = this->CreateNode("/mydir/childname");
-        this->CreateDir("/targetdir");
-        auto operation = [&child]() {
-            child->rename("/targetdir/mychild");
+        auto operation = [this] {
+            auto dir = this->CreateDir("/mydir");
+            auto child = this->CreateNode("/mydir/childname");
+            this->CreateDir("/targetdir");
+            return [child = std::move(child)] {
+                child->rename("/targetdir/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation, {
-            this->ExpectDoesntUpdateAccessTimestamp,
-            this->ExpectUpdatesModificationTimestamp,
-            this->ExpectUpdatesMetadataTimestamp
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
         });
     }
 
     /* TODO Re-enable this test once the root dir handles timestamps correctly
     void Test_moveChildOut_inRootDir() {
-        auto dir = this->LoadDir("/");
-        auto child = this->CreateNode("/childname");
-        this->CreateDir("/targetdir");
-        auto operation = [&child] () {
-            child->rename("/targetdir/mychild");
+        auto operation = [this] {
+            auto dir = this->LoadDir("/");
+            auto child = this->CreateNode("/childname");
+            this->CreateDir("/targetdir");
+            return [child = std::move(child)] {
+                child->rename("/targetdir/mychild");
+            };
         };
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/", operation, {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    }*/
+        this->testBuilder().withAnyAtimeConfig([&] {
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/mydir", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        });
+    }
+    */
 };
 
 REGISTER_TYPED_TEST_SUITE_P(FsppDirTest_Timestamps,
@@ -239,8 +515,12 @@ REGISTER_TYPED_TEST_SUITE_P(FsppDirTest_Timestamps,
    createDir_TimestampsOfCreatedDir,
    createSymlink,
    createSymlink_TimestampsOfCreatedSymlink,
-   children_empty,
-   children_nonempty
+   givenAtimeNewerThanMtime_children_empty,
+   givenAtimeOlderThanMtime_children_empty,
+   givenAtimeNewerThanMtimeButBeforeYesterday_children_empty,
+   givenAtimeNewerThanMtime_children_nonempty,
+   givenAtimeOlderThanMtime_children_nonempty,
+   givenAtimeNewerThanMtimeButBeforeYesterday_children_nonempty
 );
 
 REGISTER_NODE_TEST_SUITE(FsppDirTest_Timestamps_Entries,

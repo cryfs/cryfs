@@ -3,10 +3,10 @@
 #define MESSMER_CRYFS_FILESYSTEM_FSBLOBSTORE_UTILS_DIRENTRYLIST_H
 
 #include <cpp-utils/data/Data.h>
+#include <fspp/fs_interface/Context.h>
 #include "DirEntry.h"
 #include <vector>
 #include <string>
-#include "TimestampUpdateBehavior.h"
 
 //TODO Address elements by name instead of by blockId when accessing them. Who knows whether there is two hard links for the same blob.
 
@@ -40,7 +40,7 @@ namespace cryfs {
             void setMode(const blockstore::BlockId &blockId, fspp::mode_t mode);
             bool setUidGid(const blockstore::BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid);
             void setAccessTimes(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
-            bool updateAccessTimestampForChild(const blockstore::BlockId &blockId, TimestampUpdateBehavior timestampUpdateBehavior);
+            bool updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior);
             void updateModificationTimestampForChild(const blockstore::BlockId &blockId);
 
         private:

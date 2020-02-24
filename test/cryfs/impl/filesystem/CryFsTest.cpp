@@ -65,8 +65,10 @@ auto failOnIntegrityViolation() {
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
     CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    dev.setContext(fspp::Context {fspp::relatime()});
   }
   CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+  dev.setContext(fspp::Context {fspp::relatime()});
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
 }
@@ -74,10 +76,12 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
     CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    dev.setContext(fspp::Context {fspp::relatime()});
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
     CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    dev.setContext(fspp::Context {fspp::relatime()});
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);

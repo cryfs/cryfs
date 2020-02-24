@@ -7,6 +7,10 @@
 namespace fspp {
     namespace fuse {
         class InvalidFilesystem final : public Filesystem {
+            void setContext(Context&&) override {
+                throw std::logic_error("Filesystem not initialized yet");
+            }
+
             int createAndOpenFile(const boost::filesystem::path &, ::mode_t , ::uid_t , ::gid_t ) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }

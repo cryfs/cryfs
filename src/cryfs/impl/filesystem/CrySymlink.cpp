@@ -4,7 +4,6 @@
 #include "CryDevice.h"
 #include "CrySymlink.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
-#include "cryfs/impl/filesystem/fsblobstore/utils/TimestampUpdateBehavior.h"
 
 //TODO Get rid of this in favor of exception hierarchy
 
@@ -43,7 +42,7 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->updateAccessTimestampForChild(blockId(), fsblobstore::TimestampUpdateBehavior::RELATIME);
+  parent()->updateAccessTimestampForChild(blockId(), timestampUpdateBehavior());
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }

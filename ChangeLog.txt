@@ -1,3 +1,12 @@
+Version 0.11.0 (unreleased)
+---------------
+Build changes:
+* Switch to Conan package manager
+
+New features:
+* Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime). As before, relatime is the default.
+
+
 Version 0.10.2
 ---------------
 Fixed bugs:

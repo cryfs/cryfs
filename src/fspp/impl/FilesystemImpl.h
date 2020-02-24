@@ -24,6 +24,8 @@ public:
   explicit FilesystemImpl(cpputils::unique_ref<Device> device);
 	virtual ~FilesystemImpl();
 
+    void setContext(Context&& context) override;
+
 	int openFile(const boost::filesystem::path &path, int flags) override;
 	void flush(int descriptor) override;
 	void closeFile(int descriptor) override;

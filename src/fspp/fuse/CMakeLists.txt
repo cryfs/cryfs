@@ -39,6 +39,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(CMAKE_FIND_FRAMEWORK LAST)
   find_library_with_path(FUSE "osxfuse" FUSE_LIB_PATH)
   target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
+  target_include_directories(${PROJECT_NAME} PUBLIC /usr/local/include/osxfuse/)
 else() # Linux
   find_library_with_path(FUSE "fuse" FUSE_LIB_PATH)
   target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})

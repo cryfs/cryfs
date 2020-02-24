@@ -43,15 +43,10 @@ Building from source
 Requirements
 ------------
   - Git (for getting the source code)
-  - GCC version >= 5.0 or Clang >= 4.0
+  - GCC version >= 6.5 or Clang >= 4.0
   - CMake version >= 3.1
+  - Conan package manager
   - libcurl4 (including development headers)
-  - Boost libraries version >= 1.65.1 (including development headers)
-    - filesystem
-    - system
-    - chrono
-    - program_options
-    - thread
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
   - Python >= 2.7
@@ -60,13 +55,16 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libboost-filesystem-dev libboost-system-dev libboost-chrono-dev libboost-program-options-dev libboost-thread-dev libssl-dev libfuse-dev python
+        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python
+        $ sudo pip install conan
 
         # Fedora
-        sudo dnf install git gcc-c++ cmake make libcurl-devel boost-devel boost-static openssl-devel fuse-devel python
+        $ sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python
+        $ sudo pip install conan
 
         # Macintosh
-        brew install cmake boost openssl libomp
+        $ brew install cmake openssl libomp
+        $ sudo pip install conan
 
 Build & Install
 ---------------
@@ -79,6 +77,7 @@ Build & Install
  2. Build
 
         $ mkdir cmake && cd cmake
+        $ conan install .. --build=missing
         $ cmake ..
         $ make
 
@@ -97,7 +96,6 @@ Building on Windows (experimental)
 Build with Visual Studio 2019 and pass in the following flags to CMake:
 
     -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.1"]
-    -DBOOST_ROOT=[path to root of boost installation]
 
 If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2019.
 
@@ -106,35 +104,25 @@ Troubleshooting
 
 On most systems, CMake should find the libraries automatically. However, that doesn't always work.
 
-1. **Boost headers not found**
-
-    Pass in the boost include path with
-
-        cmake .. -DBoost_INCLUDE_DIRS=/path/to/boost/headers
-
-    If you want to link boost dynamically (e.g. you don't have the static libraries), use the following:
-
-        cmake .. -DBoost_USE_STATIC_LIBS=off
-
-2. **Fuse/Osxfuse library not found**
+1. **Fuse/Osxfuse library not found**
 
     Pass in the library path with
 
         cmake .. -DFUSE_LIB_PATH=/path/to/fuse/or/osxfuse
 
-3. **Fuse/Osxfuse headers not found**
+2. **Fuse/Osxfuse headers not found**
 
     Pass in the include path with
 
         cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/osxfuse/headers"
 
-4. **Openssl headers not found**
+3. **Openssl headers not found**
 
     Pass in the include path with
 
         cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
 
-5. **OpenMP not found (osx)**
+4. **OpenMP not found (osx)**
 
     Either build it without OpenMP
 
@@ -151,9 +139,11 @@ On most systems, CMake should find the libraries automatically. However, that do
 Creating .deb and .rpm packages
 -------------------------------
 
+It is recommended to install CryFS using packages, because that allows for an easy way to uninstall it again once you don't need it anymore.
+
 There are additional requirements if you want to create packages. They are:
  - CMake version >= 3.3
- - rpmbuild for creating .rpm package
+ - rpmbuild if you're creating a .rpm package
 
  1. Clone repository
 
@@ -163,6 +153,7 @@ There are additional requirements if you want to create packages. They are:
  2. Build
 
         $ mkdir cmake && cd cmake
+        $ conan install .. --build=missing
         $ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=off
         $ make package
 
