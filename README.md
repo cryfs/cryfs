@@ -28,7 +28,7 @@ Windows (experimental)
 CryFS has experimental Windows support since the 0.10 release series. To install it, do:
 
 1. Install [DokanY](https://github.com/dokan-dev/dokany/releases)
-2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2017](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
 3. Install [CryFS](https://www.cryfs.org/#download)
 
 GUI
@@ -94,12 +94,12 @@ You can pass the following variables to the *cmake* command (using *-Dvariablena
 Building on Windows (experimental)
 ----------------------------------
 
-Build with Visual Studio 2017 and pass in the following flags to CMake:
+Build with Visual Studio 2019 and pass in the following flags to CMake:
 
     -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.1"]
     -DBOOST_ROOT=[path to root of boost installation]
 
-If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2017.
+If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2019.
 
 Troubleshooting
 ---------------

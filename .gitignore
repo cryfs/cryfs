@@ -5,6 +5,7 @@ umltest.status
 /cmake-build-*
 /.idea
 *~
+/.vs
 
 src/gitversion/*.pyc
 src/gitversion/__pycache__
