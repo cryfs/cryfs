@@ -1,3 +1,8 @@
+Version 0.10.3 (unreleased)
+---------------
+Fixed bugs:
+* A comma in the base directory name would make the file system fail to mount, https://github.com/cryfs/cryfs/issues/326
+
 Version 0.10.2
 ---------------
 Fixed bugs:
