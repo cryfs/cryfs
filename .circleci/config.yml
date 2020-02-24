@@ -142,7 +142,6 @@ references:
         # Build
         mkdir cmake
         cd cmake
-        conan install .. -s build_type=${BUILD_TYPE} --build=missing
         cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${OPENMP_PARAMS} ${CMAKE_FLAGS}
         make -j$NUMCORES
 

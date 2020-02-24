@@ -32,7 +32,6 @@ cmake --version
 
 # Build
 echo Build target: ${BUILD_TARGET}
-conan install ..  -s build_type=${BUILD_TARGET} --build=missing
 cmake .. -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${BUILD_TARGET}
 make -j$NUMCORES
 

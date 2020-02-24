@@ -26,20 +26,6 @@ option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
 option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
-set(CONAN_BUILD_INFO_FILE ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-
-if(EXISTS ${CONAN_BUILD_INFO_FILE})
-    include(${CONAN_BUILD_INFO_FILE})
-else()
-    message(WARNING "The file ${CONAN_BUILD_INFO_FILE} doesn't exist, you have to run conan install first")
-endif()
-conan_basic_setup(TARGETS SKIP_STD)
-
-if(CONAN_SETTINGS_COMPILER_LIBCXX STREQUAL "libstdc++")
-    # TODO Test this warning works correctly and that the proposed solution in the warning message works.
-    message(FATAL_ERROR "Conan is set up to build against libstdc++ (i.e. the legacy GCC ABI). We only support libstdc++11 (i.e. the new GCC ABI).\nPlease add the '-s compiler.libcxx=libstdc++11' argument when running 'conan install'.")
-endif()
-
 if(USE_IWYU)
     # note: for iwyu, we need cmake 3.3
     cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
@@ -63,6 +49,9 @@ endif(NOT CMAKE_BUILD_TYPE)
 if(MSVC)
   add_definitions(/bigobj)
 endif()
+
+include (cmake-utils/conan-setup.cmake)
+setup_conan()
 
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
