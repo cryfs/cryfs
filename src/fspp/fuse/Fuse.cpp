@@ -1,3 +1,8 @@
+// NOMINMAX works around an MSVC issue, see https://github.com/microsoft/cppwinrt/issues/479
+#if defined(_MSC_VER)
+#define NOMINMAX
+#endif
+
 #include "Fuse.h"
 #include <memory>
 #include <cassert>
@@ -18,7 +23,6 @@
 #include <range/v3/view/filter.hpp>
 
 #if defined(_MSC_VER)
-#include <codecvt>
 #include <dokan/dokan.h>
 #endif
 
