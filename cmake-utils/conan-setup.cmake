@@ -1,9 +1,16 @@
 macro(setup_conan)
     include(cmake-utils/conan.cmake)
 
-    conan_cmake_run(
-        CONANFILE conanfile.py
-        BUILD missing)
+    if(MSVC)
+        conan_cmake_run(
+            CONANFILE conanfile.py
+            BUILD missing)
+    else()
+        conan_cmake_run(
+            CONANFILE conanfile.py
+            BUILD missing
+            SETTINGS compiler.libcxx=libstdc++11)
+    endif()
     conan_basic_setup(TARGETS SKIP_STD)
 
     if(CONAN_SETTINGS_COMPILER_LIBCXX STREQUAL "libstdc++")
