@@ -14,7 +14,7 @@ class CryFSConan(ConanFile):
 		"boost:without_container": True,
 		"boost:without_exception": True,
 		"boost:without_graph": True,
-		"boost:without_iostreams": True,
+		"boost:without_iostreams": False,
 		"boost:without_locale": True,
 		"boost:without_log": True,
 		"boost:without_random": True,

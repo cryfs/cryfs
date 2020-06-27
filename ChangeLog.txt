@@ -7,6 +7,9 @@ Build changes:
 Other changes:
 * Now requires CMake 3.6 or later
 
+Improvements:
+* Use atomic file writes to write cipher blocks. This improves resiliency against data corruption when the CryFS process is killed in the middle of a write operation.
+
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime).
 * The new default is now *noatime* (in 0.10.x is was relatime).

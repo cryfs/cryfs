@@ -172,17 +172,6 @@ inline Data &&Data::FillWithZeroes() && {
     return std::move(FillWithZeroes());
 }
 
-inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
-  std::ofstream file(filepath.string().c_str(), std::ios::binary | std::ios::trunc);
-  if (!file.good()) {
-    throw std::runtime_error("Could not open file for writing");
-  }
-  StoreToStream(file);
-  if (!file.good()) {
-    throw std::runtime_error("Error writing to file");
-  }
-}
-
 inline void Data::StoreToStream(std::ostream &stream) const {
   stream.write(static_cast<const char*>(_data), _size);
 }
