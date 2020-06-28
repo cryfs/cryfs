@@ -5,3 +5,4 @@ spdlog: https://github.com/gabime/spdlog/tree/v0.16.3/include/spdlog
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_2_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
+ - changed: In CMakeLists.txt, rename BUILD_TESTING to CRYPTOPP_BUILD_TESTING so it doesn't clash with our BUILD_TESTING
