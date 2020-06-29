@@ -3,6 +3,9 @@ Version 0.11.0 (unreleased)
 Build changes:
 * Switch to Conan package manager
 
+Other changes:
+* Now requires CMake 3.6 or later
+
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime). As before, relatime is the default.
 

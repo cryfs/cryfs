@@ -55,7 +55,21 @@ references:
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
-        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE cmake make libcurl4-openssl-dev libssl-dev libfuse-dev
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE make libcurl4-openssl-dev libssl-dev libfuse-dev
+
+        # install cmake
+        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.6.3/cmake-3.6.3-Linux-x86_64.sh
+        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "a512fc991abf51ee8d309312e106daf11d1e6c9bd7dd1c15c2bd5f9ca820fa0f" ]; then
+          echo Correct sha256sum
+        else
+          echo Wrong sha256sum
+          sha256sum /tmp/cmake.sh
+          exit 1
+        fi
+        sudo mkdir /opt/cmake
+        sudo sh /tmp/cmake.sh --prefix=/opt/cmake --skip-license
+        sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+        cmake --version
 
         # install conan
         pyenv global 3.7.0

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
 
 # TODO Remove this deprecated policy switch once we're on cmake 3.4 or later
 cmake_policy(SET CMP0065 OLD)
@@ -26,10 +26,6 @@ option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
 option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
-if(USE_IWYU)
-    # note: for iwyu, we need cmake 3.3
-    cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
-endif()
 if(USE_CLANG_TIDY)
     # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
     cmake_minimum_required(VERSION 3.8 FATAL_ERROR)

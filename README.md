@@ -13,7 +13,7 @@ This only works for Ubuntu 17.04 and later, and Debian Stretch and later.
 You can also use CryFS on older versions of these distributions by following the **Building from source** instructions below.
 
     sudo apt install cryfs
-    
+
 OSX
 ----
 
@@ -21,7 +21,7 @@ CryFS is distributed via Homebrew. Just do
 
     brew cask install osxfuse
     brew install cryfs
-    
+
 Windows (experimental)
 ----------------------
 
@@ -44,7 +44,7 @@ Requirements
 ------------
   - Git (for getting the source code)
   - GCC version >= 6.5 or Clang >= 4.0
-  - CMake version >= 3.1
+  - CMake version >= 3.6
   - Conan package manager
   - libcurl4 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
