@@ -8,7 +8,9 @@ macro(setup_conan)
     else()
         conan_cmake_run(
             CONANFILE conanfile.py
-            BUILD missing
+            # We'd like to use "BUILD missing" but that doesn't work because conan sometimes seems to download prebuilt packages with compiler.libcxx=libstdc++ even though we specify compiler.libcxx=libstdc++11.
+            # see https://github.com/cryfs/cryfs/issues/336 and https://github.com/conan-io/conan/issues/7264
+            BUILD all
             SETTINGS compiler.libcxx=libstdc++11)
     endif()
     conan_basic_setup(TARGETS SKIP_STD)
