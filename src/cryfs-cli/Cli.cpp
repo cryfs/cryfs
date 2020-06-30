@@ -101,6 +101,7 @@ namespace cryfs_cli {
         }
 #else
 # warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
+        UNUSED(httpClient);
 #endif
         cout << endl;
     }
