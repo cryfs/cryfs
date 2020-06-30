@@ -71,7 +71,7 @@ set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cxx)
 
 option(BUILD_STATIC "Build static library" ON)
 option(BUILD_SHARED "Build shared library" ON)
-option(BUILD_TESTING "Build library tests" ON)
+option(CRYPTOPP_BUILD_TESTING "Build library tests" ON)
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
 option(USE_INTERMEDIATE_OBJECTS_TARGET "Use a common intermediate objects target for the static and shared library targets" ON)
 
@@ -1105,7 +1105,7 @@ endif ()
 #============================================================================
 
 enable_testing()
-if (BUILD_TESTING)
+if (CRYPTOPP_BUILD_TESTING)
   add_executable(cryptest ${cryptopp_SOURCES_TEST})
   target_link_libraries(cryptest cryptopp-static)
 
@@ -1186,7 +1186,7 @@ if (NOT CMAKE_VERSION VERSION_LESS 2.8.8)
 endif ()
 
 # Tests
-if (BUILD_TESTING)
+if (CRYPTOPP_BUILD_TESTING)
   install(TARGETS cryptest DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(DIRECTORY ${SRC_DIR}/TestData DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cryptopp)
   install(DIRECTORY ${SRC_DIR}/TestVectors DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cryptopp)
