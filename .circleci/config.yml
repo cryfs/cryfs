@@ -51,6 +51,8 @@ references:
         deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
         deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
         deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
+        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
+        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
         EOF
         sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
@@ -429,6 +431,30 @@ jobs:
       GTEST_ARGS: ""
       CMAKE_FLAGS: ""
       RUN_TESTS: true
+  clang_10_debug:
+    <<: *job_definition
+    environment:
+      CC: clang-10
+      CXX: clang++-10
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-10
+      CXXFLAGS: ""
+      BUILD_TYPE: "Debug"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
+  clang_10_release:
+    <<: *job_definition
+    environment:
+      CC: clang-10
+      CXX: clang++-10
+      BUILD_TOOLSET: clang
+      APT_COMPILER_PACKAGE: clang-10
+      CXXFLAGS: ""
+      BUILD_TYPE: "Release"
+      GTEST_ARGS: ""
+      CMAKE_FLAGS: ""
+      RUN_TESTS: true
   clang_werror:
     <<: *job_definition
     environment:
@@ -576,6 +602,10 @@ workflows:
     - clang_9_debug:
         <<: *enable_for_tags
     - clang_9_release:
+        <<: *enable_for_tags
+    - clang_10_debug:
+        <<: *enable_for_tags
+    - clang_10_release:
         <<: *enable_for_tags
     - clang_werror:
         <<: *enable_for_tags
