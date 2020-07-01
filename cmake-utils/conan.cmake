@@ -1,6 +1,6 @@
 # Taken from https://github.com/conan-io/cmake-conan/blob/v0.15/conan.cmake
 # Changes:
-# - Add a "Please install conan" sentence to the error message when conan wasn't found.
+# - https://github.com/conan-io/cmake-conan/pull/259: Add a "Please install conan" sentence to the error message when conan wasn't found.
 
 # The MIT License (MIT)
 
