@@ -95,11 +95,6 @@ references:
 
         # Setup conan cache
         echo 'export CONAN_USER_HOME=/build_cache/conan' >> $BASH_ENV
-        if [[ "${CXX}" == *"g++"* ]]; then
-          # Conan uses old gcc ABI by default but we can only build with the cxx11 ABI.
-          conan profile new default --detect
-          conan profile update settings.compiler.libcxx=libstdc++11 default
-        fi
 
         # Setup ccache
         sudo ln -s /usr/bin/ccache /usr/local/bin/$CC
