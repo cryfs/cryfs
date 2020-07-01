@@ -26,11 +26,7 @@ option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
 option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
-if(USE_CLANG_TIDY)
-    # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
-    cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-endif()
-
+set(DEPENDENCY_CONFIG "cmake-utils/DependenciesFromConan.cmake" CACHE FILEPATH "cmake configuration file defining how to get dependencies")
 
 if (MSVC)
     option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-1.1.0" "")
@@ -41,13 +37,17 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
+if(USE_CLANG_TIDY)
+    # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
+    cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+endif()
+
 # The MSVC version on AppVeyor CI needs this
 if(MSVC)
   add_definitions(/bigobj)
 endif()
 
-include (cmake-utils/conan-setup.cmake)
-setup_conan()
+include(${DEPENDENCY_CONFIG})
 
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)

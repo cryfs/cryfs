@@ -97,7 +97,7 @@ endfunction(target_enable_style_warnings)
 #  target_add_boost(buildtarget system filesystem) # list all libraries to link against in the dependencies
 ##################################################
 function(target_add_boost TARGET)
-    target_link_libraries(${TARGET} PUBLIC CONAN_PKG::boost)
+    target_link_libraries(${TARGET} PUBLIC CryfsDependencies_boost)
     target_compile_definitions(${TARGET} PUBLIC BOOST_THREAD_VERSION=4)
 endfunction(target_add_boost)
 
