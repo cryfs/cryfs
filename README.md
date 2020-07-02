@@ -140,9 +140,7 @@ Creating .deb and .rpm packages
 
 It is recommended to install CryFS using packages, because that allows for an easy way to uninstall it again once you don't need it anymore.
 
-There are additional requirements if you want to create packages. They are:
- - CMake version >= 3.3
- - rpmbuild if you're creating a .rpm package
+If you want to create a .rpm package, you need to install rpmbuild.
 
  1. Clone repository
 
@@ -159,4 +157,4 @@ There are additional requirements if you want to create packages. They are:
 Disclaimer
 ----------------------
 
-On the event of a password leak, you are strongly advised to create a new filesystem and copy all the data over from the previous one. Done this, all copies of the compromised filesystem and config file must be removed (e.g, from the "previous versions" feature of your cloud system) to prevent access to the key (and, as a result, your data) using the leaked password.
+In the event of a password leak, you are strongly advised to create a new filesystem and copy all the data over from the previous one. Done this, all copies of the compromised filesystem and config file must be removed (e.g, from the "previous versions" feature of your cloud system) to prevent access to the key (and, as a result, your data) using the leaked password.
