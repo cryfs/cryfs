@@ -55,16 +55,16 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python
-        $ sudo pip install conan
+        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python python3-pip
+        $ sudo pip3 install conan
 
         # Fedora
-        $ sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python
-        $ sudo pip install conan
+        $ sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python python3-pip
+        $ sudo pip3 install conan
 
         # Macintosh
         $ brew install cmake openssl libomp
-        $ sudo pip install conan
+        $ sudo pip3 install conan
 
 Build & Install
 ---------------
