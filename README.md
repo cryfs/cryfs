@@ -49,7 +49,7 @@ Requirements
   - libcurl4 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
-  - Python >= 2.7
+  - Python >= 3.5
   - OpenMP
 
 You can use the following commands to install these requirements
