@@ -41,15 +41,15 @@ build_script:
   # note: The CMAKE_SYSTEM_VERSION variable is set to 10.0.18362.0 because as of this writing, appveyor uses 10.0.17763.0 and that has a bug, see https://developercommunity.visualstudio.com/content/problem/343296/sdk-and-experimentalpreprocessor.html
   - cmd: cmake .. -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.1" -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
   - cmd: cmake --build . --config %CONFIGURATION%
-  - cmd: .\bin\gitversion-test.exe
+  - cmd: .\test\gitversion\%CONFIGURATION%\gitversion-test.exe
   # cpp-utils-test disables ThreadDebuggingTest_ThreadName.*_thenIsCorrect because the appveyor image is too old to support the API needed for that
-  - cmd: .\bin\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect
-  #- cmd: .\bin\fspp-test.exe
-  - cmd: .\bin\parallelaccessstore-test.exe
-  - cmd: .\bin\blockstore-test.exe
-  - cmd: .\bin\blobstore-test.exe
-  - cmd: .\bin\cryfs-test.exe
-  #- cmd: .\bin\cryfs-cli-test.exe
+  - cmd: .\test\cpp-utils\%CONFIGURATION%\cpp-utils-test.exe --gtest_filter=-ThreadDebuggingTest_ThreadName.*_thenIsCorrect
+  #- cmd: .\test\fspp\fspp-test.exe
+  - cmd: .\test\parallelaccessstore\%CONFIGURATION%\parallelaccessstore-test.exe
+  - cmd: .\test\blockstore\%CONFIGURATION%\blockstore-test.exe
+  - cmd: .\test\blobstore\%CONFIGURATION%\blobstore-test.exe
+  - cmd: .\test\cryfs\%CONFIGURATION%\cryfs-test.exe
+  #- cmd: .\test\cryfs-cli\%CONFIGURATION%\cryfs-cli-test.exe
 
   - cmd: cpack -C %CONFIGURATION% --verbose -G WIX
 

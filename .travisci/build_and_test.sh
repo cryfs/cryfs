@@ -38,13 +38,13 @@ make -j$NUMCORES
 ccache --show-stats
 
 # Test
-./bin/gitversion-test
-./bin/cpp-utils-test
-./bin/parallelaccessstore-test
-./bin/blockstore-test
-./bin/blobstore-test
-./bin/cryfs-test
+./test/gitversion/gitversion-test
+./test/cpp-utils/cpp-utils-test
+./test/parallelaccessstore/parallelaccessstore-test
+./test/blockstore/blockstore-test
+./test/blobstore/blobstore-test
+./test/cryfs/cryfs-test
 
 # TODO Also run once fixed
-# ./bin/fspp-test
-# ./bin/cryfs-cli-test
+# ./test/fspp/fspp-test
+# ./test/cryfs-cli/cryfs-cli-test
