@@ -6,6 +6,7 @@ umltest.status
 /.idea
 *~
 /.vs
+/.vscode
 
 src/gitversion/*.pyc
 src/gitversion/__pycache__
