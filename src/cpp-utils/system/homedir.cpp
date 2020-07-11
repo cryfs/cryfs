@@ -9,13 +9,13 @@ using std::string;
 #include <pwd.h>
 namespace {
 	bf::path _get_home_directory() {
-		struct passwd* pwd = getpwuid(getuid());
-		string homedir;
-		if (pwd) {
-			homedir = pwd->pw_dir;
-		} else {
-			// try the $HOME environment variable
-			homedir = getenv("HOME");
+		string homedir = getenv("HOME");
+		if (homedir == "") {
+			// try the /etc/passwd entry
+			struct passwd* pwd = getpwuid(getuid());
+			if (pwd) {
+				homedir = pwd->pw_dir;
+			}
 		}
 		if (homedir == "") {
 			throw std::runtime_error("Couldn't determine home directory for user");
