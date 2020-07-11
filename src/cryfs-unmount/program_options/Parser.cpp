@@ -36,8 +36,9 @@ ProgramOptions Parser::parse() const {
 		_showHelpAndExit("Please specify a mount directory.", ErrorCode::InvalidArguments);
 	}
 	bf::path mountDir = vm["mount-dir"].as<string>();
+	bool immediate = vm.count("immediate");
 
-	return ProgramOptions(std::move(mountDir));
+	return ProgramOptions(std::move(mountDir), immediate);
 }
 
 po::variables_map Parser::_parseOptionsOrShowHelp(const vector<string> &options) {
@@ -95,8 +96,9 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
 	string blocksize_description = "The block size used when storing ciphertext blocks (in bytes). Default: ";
 	blocksize_description += std::to_string(CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES);
 	options.add_options()
+		("immediate", "unmount immediately without waiting for processes that currently access the file system to finish their file system operations. With this flag, unmounting can fail if there's processes having a lock on the file system.")
 		("help,h", "show help message")
-		("version", "Show CryFS version number")
+		("version", "show CryFS version number")
 		;
 	desc->add(options);
 }

@@ -25,12 +25,33 @@ void Cli::main(int argc, const char **argv) {
     if (!boost::filesystem::exists(options.mountDir())) {
         throw cryfs::CryfsException("Given mountdir doesn't exist", cryfs::ErrorCode::InaccessibleMountDir);
     }
+
+    bool immediate = options.immediate();
+#if defined(__APPLE__)
+    if (options.immediate()) {
+        std::cerr << "Warning: OSX doesn't support the --immediate flag. Ignoring it.";
+        immediate = false;
+    }
+#elif defined(_MSC_VER)
+    if (options.immediate()) {
+        std::cerr << "Warning: Windows doesn't support the --immediate flag. Ignoring it.";
+        immediate = false;
+    }
+#endif
+
     // TODO This doesn't seem to work with relative paths
     std::cout << "Unmounting CryFS filesystem at " << options.mountDir() << "." << std::endl;
-    Fuse::unmount(options.mountDir());
+    if (immediate) {
+        Fuse::unmount(options.mountDir(), true);
 
-    // TODO Wait until it is actually unmounted and then show a better success message?
-    std::cout << "Filesystem is unmounting now." << std::endl;
+        // TODO Wait until it is actually unmounted and then show a better success message?
+        std::cout << "Filesystem is unmounting." << std::endl;
+    } else {
+        Fuse::unmount(options.mountDir(), false);
+
+        // TODO Wait until it is actually unmounted and then show a better success message?
+        std::cout << "Filesystem will unmount as soon as nothing is accessing it anymore." << std::endl;
+    }
 }
 
 }

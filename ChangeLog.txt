@@ -9,6 +9,7 @@ Other changes:
 
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime). As before, relatime is the default.
+* Add an --immediate flag to cryfs-unmount that tries to unmount immediately and doesn't wait for processes to release their locks on the file system.
 
 
 Version 0.10.3 (unreleased)
