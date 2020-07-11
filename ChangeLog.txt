@@ -2,6 +2,7 @@ Version 0.10.3 (unreleased)
 ---------------
 Fixed bugs:
 * A comma in the base directory name would make the file system fail to mount, https://github.com/cryfs/cryfs/issues/326
+* Fixed determining the user's homedir: If $HOME and the /etc/passwd entry for the current user contradict each other, now $HOME takes preference over /etc/passwd.
 
 Version 0.10.2
 ---------------
