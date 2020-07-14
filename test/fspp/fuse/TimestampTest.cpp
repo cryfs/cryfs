@@ -10,7 +10,7 @@ typedef FuseTest FuseTimestampTest;
 
 TEST_F(FuseTimestampTest, whenCalledWithoutAnyAtimeFlag_thenHasRelatimeBehavior) {
     auto fs = TestFS({});
-    EXPECT_EQ(fspp::relatime().get(), context().timestampUpdateBehavior().get());
+    EXPECT_EQ(fspp::noatime().get(), context().timestampUpdateBehavior().get());
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeFlag_thenHasNoatimeBehavior) {
@@ -33,9 +33,10 @@ TEST_F(FuseTimestampTest, whenCalledWithAtimeFlag_thenHasRelatimeBehavior) {
     EXPECT_EQ(fspp::relatime().get(), context().timestampUpdateBehavior().get());
 }
 
-TEST_F(FuseTimestampTest, whenCalledWithNodiratimeFlag_thenHasNodiratimeRelatimeBehavior) {
+TEST_F(FuseTimestampTest, whenCalledWithNodiratimeFlag_thenHasNoatimeBehavior) {
+    // note: this behavior is correct because "noatime" is default and adding "nodiratime" doesn't change anything.
     auto fs = TestFS({"-o", "nodiratime"});
-    EXPECT_EQ(fspp::nodiratime_relatime().get(), context().timestampUpdateBehavior().get());
+    EXPECT_EQ(fspp::noatime().get(), context().timestampUpdateBehavior().get());
 }
 
 
@@ -302,12 +303,14 @@ TEST_F(FuseTimestampTest, whenCalledWithNodiratimeStrictatimeFlag_withSeparateFl
     EXPECT_EQ(fspp::nodiratime_strictatime().get(), context().timestampUpdateBehavior().get());
 }
 
-TEST_F(FuseTimestampTest, whenCalledWithNodiratimeNodiratimeFlag_withCsv_thenHasNodiratimeRelatimeBehavior) {
+TEST_F(FuseTimestampTest, whenCalledWithNodiratimeNodiratimeFlag_withCsv_thenHasNoatimeBehavior) {
+    // note: this behavior is correct because "noatime" is default and adding "nodiratime" doesn't change anything.
     auto fs = TestFS({"-o", "nodiratime,nodiratime"});
-    EXPECT_EQ(fspp::nodiratime_relatime().get(), context().timestampUpdateBehavior().get());
+    EXPECT_EQ(fspp::noatime().get(), context().timestampUpdateBehavior().get());
 }
 
-TEST_F(FuseTimestampTest, whenCalledWithNodiratimeNodiratimeFlag_withSeparateFlags_thenHasNodiratimeRelatimeBehavior) {
+TEST_F(FuseTimestampTest, whenCalledWithNodiratimeNodiratimeFlag_withSeparateFlags_thenHasNoatimeBehavior) {
+    // note: this behavior is correct because "noatime" is default and adding "nodiratime" doesn't change anything.
     auto fs = TestFS({"-o", "nodiratime", "-o", "nodiratime"});
-    EXPECT_EQ(fspp::nodiratime_relatime().get(), context().timestampUpdateBehavior().get());
+    EXPECT_EQ(fspp::noatime().get(), context().timestampUpdateBehavior().get());
 }

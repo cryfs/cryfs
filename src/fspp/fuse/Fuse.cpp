@@ -371,8 +371,8 @@ void Fuse::_createContext(const vector<string> &fuseOptions) {
     const bool has_strictatime_flag = fuseOptions.end() != std::find(fuseOptions.begin(), fuseOptions.end(), "strictatime");
     const bool has_nodiratime_flag = fuseOptions.end() != std::find(fuseOptions.begin(), fuseOptions.end(), "nodiratime");
 
-    // Default is RELATIME
-    _context = Context(relatime());
+    // Default is NOATIME, this reduces the probability for synchronization conflicts
+    _context = Context(noatime());
 
     if (has_noatime_flag) {
         ASSERT(!has_atime_flag, "Cannot have both, noatime and atime flags set.");
@@ -412,7 +412,7 @@ void Fuse::_createContext(const vector<string> &fuseOptions) {
         ASSERT(!has_atime_flag, "This shouldn't happen, or we would have hit a case above");
         ASSERT(!has_relatime_flag, "This shouldn't happen, or we would have hit a case above");
         ASSERT(!has_strictatime_flag, "This shouldn't happen, or we would have hit a case above");
-        _context->setTimestampUpdateBehavior(nodiratime_relatime()); // use relatime by default
+        _context->setTimestampUpdateBehavior(noatime()); // use noatime by default
     }
 }
 

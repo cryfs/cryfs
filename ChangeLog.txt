@@ -8,7 +8,10 @@ Other changes:
 * Now requires CMake 3.6 or later
 
 New features:
-* Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime). As before, relatime is the default.
+* Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime).
+* The default is atime behavior is now *noatime* (in 0.10.x is was relatime).
+  Noatime reduces the amount of write necessary and with that reduces the probability for synchronization conflicts
+  or corrupted file systems if a power outage happens while writing.
 * Add an --immediate flag to cryfs-unmount that tries to unmount immediately and doesn't wait for processes to release their locks on the file system.
 
 
