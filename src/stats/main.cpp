@@ -143,6 +143,33 @@ set<BlockId> _getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigL
     return set<BlockId>(allBlockIds.blockIds().begin(), allBlockIds.blockIds().end());
 }
 
+void printConfig(const CryConfig& config) {
+    std::cout
+        << "----------------------------------------------------"
+        << "\nFilesystem configuration:"
+        << "\n----------------------------------------------------"
+        << "\n- Filesystem format version: " << config.Version()
+        << "\n- Created with: CryFS " << config.CreatedWithVersion()
+        << "\n- Last opened with: CryFS " << config.LastOpenedWithVersion()
+        << "\n- Cipher: " << config.Cipher()
+        << "\n- Blocksize: " << config.BlocksizeBytes() << " bytes"
+        << "\n- Filesystem Id: " << config.FilesystemId().ToString()
+        << "\n- Root Blob Id: " << config.RootBlob();
+    if (config.missingBlockIsIntegrityViolation()) {
+        ASSERT(config.ExclusiveClientId() != boost::none, "ExclusiveClientId must be set if missingBlockIsIntegrityViolation");
+        std::cout << "\n- Extended integrity measures: enabled."
+               "\n  - Exclusive client id: " << *config.ExclusiveClientId();
+    } else {
+        ASSERT(config.ExclusiveClientId() == boost::none, "ExclusiveClientId must be unset if !missingBlockIsIntegrityViolation");
+        std::cout << "\n- Extended integrity measures: disabled.";
+    }
+#ifndef CRYFS_NO_COMPATIBILITY
+    std::cout << "\n- Has parent pointers: " << (config.HasParentPointers() ? "yes" : "no");
+    std::cout << "\n- Has version numbers: " << (config.HasVersionNumbers() ? "yes" : "no");
+#endif
+    std::cout << "\n----------------------------------------------------\n";
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cerr << "Usage: cryfs-stats [basedir]" << std::endl;
@@ -178,7 +205,8 @@ int main(int argc, char* argv[]) {
         }
     }
     const auto& config_ = config.right().configFile->config();
-    std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
+    std::cout << "Loading filesystem" << std::endl;
+    printConfig(*config_);
 #ifndef CRYFS_NO_COMPATIBILITY
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && config_->HasParentPointers() && config_->HasVersionNumbers();
 #else
