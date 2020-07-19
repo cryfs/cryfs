@@ -223,11 +223,28 @@ namespace cryfs_cli {
                                cipher, blocksizeBytes, missingBlockIsIntegrityViolation).loadOrCreate(std::move(configFilePath), allowFilesystemUpgrade, allowReplacedFilesystem);
     }
 
+    namespace {
+        void printConfig(const CryConfig& config) {
+            std::cout
+                << "\n----------------------------------------------------"
+                << "\nFilesystem configuration:"
+                << "\n----------------------------------------------------"
+                << "\n- Filesystem format version: " << config.Version()
+                << "\n- Created with: CryFS " << config.CreatedWithVersion()
+                << "\n- Last opened with: CryFS " << config.LastOpenedWithVersion()
+                << "\n- Cipher: " << config.Cipher()
+                << "\n- Blocksize: " << config.BlocksizeBytes() << " bytes"
+                << "\n- Filesystem Id: " << config.FilesystemId().ToString()
+                << "\n----------------------------------------------------\n";
+        }
+    }
+
     void Cli::_runFilesystem(const ProgramOptions &options, std::function<void()> onMounted) {
         try {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
+            printConfig(*config.configFile->config());
             unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
             bool stoppedBecauseOfIntegrityViolation = false;
 
