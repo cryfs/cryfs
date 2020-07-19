@@ -3,6 +3,7 @@
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
+#include <blockstore/implementations/readonly/ReadOnlyBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
@@ -31,6 +32,7 @@ using namespace cryfs;
 using namespace cpputils;
 using namespace blockstore;
 using namespace blockstore::ondisk;
+using namespace blockstore::readonly;
 using namespace blockstore::integrity;
 using namespace blockstore::lowtohighlevel;
 using namespace blobstore::onblocks;
@@ -55,7 +57,8 @@ void printNode(unique_ref<DataNode> node) {
 
 unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>(basedir);
-    auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(onDiskBlockStore), config.configFile->config()->EncryptionKey());
+    auto readOnlyBlockStore = make_unique_ref<ReadOnlyBlockStore2>(std::move(onDiskBlockStore));
+    auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(readOnlyBlockStore), config.configFile->config()->EncryptionKey());
     auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
     auto integrityFilePath = statePath / "integritydata";
     auto onIntegrityViolation = [] () {
@@ -165,12 +168,16 @@ int main(int argc, char* argv[]) {
     LocalStateDir localStateDir(cpputils::system::HomeDirectory::getXDGDataDir() / "cryfs");
     CryConfigLoader config_loader(console, Random::OSRandom(), std::move(keyProvider), localStateDir, boost::none, boost::none, boost::none);
 
-    auto config = config_loader.load(config_path, false, true);
-    if (config == boost::none) {
-        // TODO Show more info about error
-        throw std::runtime_error("Error loading config file.");
+    auto config = config_loader.load(config_path, false, true, CryConfigFile::Access::ReadOnly);
+    if (config.is_left()) {
+        switch (config.left()) {
+            case CryConfigFile::LoadError::ConfigFileNotFound:
+                throw std::runtime_error("Error loading config file: Config file not found. Are you sure this is a valid CryFS file system?");
+            case CryConfigFile::LoadError::DecryptionFailed:
+                throw std::runtime_error("Error loading config file: Decryption failed. Did you maybe enter a wrong password?");
+        }
     }
-    const auto& config_ = config->configFile->config();
+    const auto& config_ = config.right().configFile->config();
     std::cout << "Loading filesystem of version " << config_->Version() << std::endl;
 #ifndef CRYFS_NO_COMPATIBILITY
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion && config_->HasParentPointers() && config_->HasVersionNumbers();
@@ -178,16 +185,15 @@ int main(int argc, char* argv[]) {
     const bool is_correct_format = config_->Version() == CryConfig::FilesystemFormatVersion;
 #endif
     if (!is_correct_format) {
-        // TODO At this point, the cryfs.config file was already switched to 0.10 format. We should probably not do that.
         std::cerr << "The filesystem is not in the 0.10 format. It needs to be migrated. The cryfs-stats tool unfortunately can't handle this, please mount and unmount the filesystem once." << std::endl;
         exit(1);
     }
 
     cout << "Listing all blocks..." << flush;
-    set<BlockId> unaccountedBlocks = _getAllBlockIds(basedir, *config, localStateDir);
+    set<BlockId> unaccountedBlocks = _getAllBlockIds(basedir, config.right(), localStateDir);
     cout << "done" << endl;
 
-    vector<BlockId> accountedBlocks = _getKnownBlockIds(basedir, *config, localStateDir);
+    vector<BlockId> accountedBlocks = _getKnownBlockIds(basedir, config.right(), localStateDir);
     for (const BlockId& blockId : accountedBlocks) {
         auto num_erased = unaccountedBlocks.erase(blockId);
         ASSERT(1 == num_erased, "Blob id referenced by directory entry but didn't found it on disk? This can't happen.");
@@ -195,8 +201,8 @@ int main(int argc, char* argv[]) {
 
     console->print("Calculate statistics\n");
 
-    auto blockStore = makeBlockStore(basedir, *config, localStateDir);
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config->configFile->config()->BlocksizeBytes());
+    auto blockStore = makeBlockStore(basedir, config.right(), localStateDir);
+    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.right().configFile->config()->BlocksizeBytes());
 
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;

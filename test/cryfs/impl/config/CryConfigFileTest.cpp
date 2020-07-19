@@ -47,7 +47,7 @@ public:
 
     optional<unique_ref<CryConfigFile>> Load(unsigned char keySeed = 0) {
         FakeCryKeyProvider keyProvider(keySeed);
-        return CryConfigFile::load(file.path(), &keyProvider).right_opt();
+        return CryConfigFile::load(file.path(), &keyProvider, CryConfigFile::Access::ReadWrite).right_opt();
     }
 
     void CreateWithCipher(const string &cipher) {

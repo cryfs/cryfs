@@ -14,6 +14,7 @@ namespace bf = boost::filesystem;
 using cpputils::Console;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
+using cpputils::either;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
@@ -31,10 +32,10 @@ CryConfigLoader::CryConfigLoader(shared_ptr<Console> console, RandomGenerator &k
       _localStateDir(std::move(localStateDir)) {
 }
 
-optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
-  auto config = CryConfigFile::load(std::move(filename), _keyProvider.get());
+either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, CryConfigFile::Access access) {
+  auto config = CryConfigFile::load(std::move(filename), _keyProvider.get(), access);
   if (config.is_left()) {
-    return none;
+    return config.left();
   }
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.7 and 0.9.8 set their own version to cryfs.version instead of the filesystem format version (which is 0.9.6), overwrite it
@@ -45,11 +46,15 @@ optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::_loadConfig(bf::pat
   _checkVersion(*config.right()->config(), allowFilesystemUpgrade);
   if (config.right()->config()->Version() != CryConfig::FilesystemFormatVersion) {
     config.right()->config()->SetVersion(CryConfig::FilesystemFormatVersion);
-    config.right()->save();
+    if (access == CryConfigFile::Access::ReadWrite) {
+      config.right()->save();
+    }
   }
   if (config.right()->config()->LastOpenedWithVersion() != gitversion::VersionString()) {
     config.right()->config()->SetLastOpenedWithVersion(gitversion::VersionString());
-    config.right()->save();
+    if (access == CryConfigFile::Access::ReadWrite) {
+      config.right()->save();
+    }
   }
   _checkCipher(*config.right()->config());
   auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.right()->config()->FilesystemId()), cpputils::Data::FromString(config.right()->config()->EncryptionKey()), allowReplacedFilesystem);
@@ -99,13 +104,13 @@ void CryConfigLoader::_checkMissingBlocksAreIntegrityViolations(CryConfigFile *c
   }
 }
 
-optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::load(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
-  return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem);
+either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoader::load(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, CryConfigFile::Access access) {
+  return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem, access);
 }
 
-optional<CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
+either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoader::loadOrCreate(bf::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem) {
   if (bf::exists(filename)) {
-    return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem);
+    return _loadConfig(std::move(filename), allowFilesystemUpgrade, allowReplacedFilesystem, CryConfigFile::Access::ReadWrite);
   } else {
     return _createConfig(std::move(filename), allowReplacedFilesystem);
   }

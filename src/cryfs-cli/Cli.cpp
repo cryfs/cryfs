@@ -45,6 +45,7 @@ using cpputils::TempFile;
 using cpputils::RandomGenerator;
 using cpputils::unique_ref;
 using cpputils::SCrypt;
+using cpputils::either;
 using cpputils::SCryptSettings;
 using cpputils::Console;
 using cpputils::HttpClient;
@@ -203,14 +204,19 @@ namespace cryfs_cli {
     CryConfigLoader::ConfigLoadResult Cli::_loadOrCreateConfig(const ProgramOptions &options, const LocalStateDir& localStateDir) {
         auto configFile = _determineConfigFile(options);
         auto config = _loadOrCreateConfigFile(std::move(configFile), localStateDir, options.cipher(), options.blocksizeBytes(), options.allowFilesystemUpgrade(), options.missingBlockIsIntegrityViolation(), options.allowReplacedFilesystem());
-        if (config == none) {
-          throw CryfsException("Could not load config file. Did you enter the correct password?", ErrorCode::WrongPassword);
+        if (config.is_left()) {
+            switch(config.left()) {
+                case CryConfigFile::LoadError::DecryptionFailed:
+                    throw CryfsException("Failed to decrypt the config file. Did you enter the correct password?", ErrorCode::WrongPassword);
+                case CryConfigFile::LoadError::ConfigFileNotFound:
+                    throw CryfsException("Could not find the cryfs.config file. Are you sure this is a valid CryFS file system?", ErrorCode::InvalidFilesystem);
+            }
         }
-        _checkConfigIntegrity(options.baseDir(), localStateDir, *config->configFile, options.allowReplacedFilesystem());
-        return std::move(*config);
+        _checkConfigIntegrity(options.baseDir(), localStateDir, *config.right().configFile, options.allowReplacedFilesystem());
+        return std::move(config.right());
     }
 
-    optional<CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
+    either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> Cli::_loadOrCreateConfigFile(bf::path configFilePath, LocalStateDir localStateDir, const optional<string> &cipher, const optional<uint32_t> &blocksizeBytes, bool allowFilesystemUpgrade, const optional<bool> &missingBlockIsIntegrityViolation, bool allowReplacedFilesystem) {
         // TODO Instead of passing in _askPasswordXXX functions to KeyProvider, only pass in console and move logic to the key provider,
         //      for example by having a separate CryPasswordBasedKeyProvider / CryNoninteractivePasswordBasedKeyProvider.
         auto keyProvider = make_unique_ref<CryPasswordBasedKeyProvider>(

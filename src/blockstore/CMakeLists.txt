@@ -11,6 +11,7 @@ set(SOURCES
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp
+  implementations/readonly/ReadOnlyBlockStore2.cpp
   implementations/compressing/CompressingBlockStore.cpp
   implementations/compressing/CompressedBlock.cpp
   implementations/compressing/compressors/RunLengthEncoding.cpp

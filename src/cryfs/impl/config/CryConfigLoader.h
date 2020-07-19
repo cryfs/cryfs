@@ -4,6 +4,7 @@
 
 #include <cpp-utils/pointer/unique_ref.h>
 #include <boost/filesystem.hpp>
+#include <cpp-utils/either.h>
 #include "CryConfigFile.h"
 #include "CryCipher.h"
 #include "CryConfigCreator.h"
@@ -22,11 +23,11 @@ public:
       uint32_t myClientId;
   };
 
-  boost::optional<ConfigLoadResult> loadOrCreate(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
-  boost::optional<ConfigLoadResult> load(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
+  cpputils::either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> loadOrCreate(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
+  cpputils::either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> load(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, CryConfigFile::Access access);
 
 private:
-    boost::optional<ConfigLoadResult> _loadConfig(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem);
+    cpputils::either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> _loadConfig(boost::filesystem::path filename, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, CryConfigFile::Access access);
     ConfigLoadResult _createConfig(boost::filesystem::path filename, bool allowReplacedFilesystem);
     void _checkVersion(const CryConfig &config, bool allowFilesystemUpgrade);
     void _checkCipher(const CryConfig &config) const;

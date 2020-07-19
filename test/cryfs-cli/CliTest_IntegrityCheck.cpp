@@ -69,14 +69,14 @@ class CliTest_IntegrityCheck : public CliTest {
 public:
   void modifyFilesystemId() {
     FakeCryKeyProvider keyProvider;
-    auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider).right_opt().value();
+    auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider, CryConfigFile::Access::ReadWrite).right_opt().value();
     configFile->config()->SetFilesystemId(CryConfig::FilesystemID::FromString("0123456789ABCDEF0123456789ABCDEF"));
     configFile->save();
   }
 
   void modifyFilesystemKey() {
     FakeCryKeyProvider keyProvider;
-    auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider).right_opt().value();
+    auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider, CryConfigFile::Access::ReadWrite).right_opt().value();
     configFile->config()->SetEncryptionKey("0123456789ABCDEF0123456789ABCDEF");
     configFile->save();
   }

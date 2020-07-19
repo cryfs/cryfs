@@ -29,7 +29,7 @@ public:
     unique_ref<CryConfigFile> loadConfigFromHex(const string &configFileContentHex) {
         storeHexToFile(configFileContentHex);
         CryPresetPasswordBasedKeyProvider keyProvider("mypassword", make_unique_ref<SCrypt>(SCrypt::DefaultSettings));
-        return CryConfigFile::load(file.path(), &keyProvider).right();
+        return CryConfigFile::load(file.path(), &keyProvider, CryConfigFile::Access::ReadWrite).right();
     }
 
 private:
