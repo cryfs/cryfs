@@ -7,6 +7,9 @@ Build changes:
 Other changes:
 * Now requires CMake 3.6 or later
 
+Improvements:
+* Display the file system configuration when mounting a file system
+
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime).
 * The new default is now *noatime* (in 0.10.x is was relatime).
