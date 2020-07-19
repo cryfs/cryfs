@@ -10,7 +10,9 @@ using boost::optional;
 namespace bf = boost::filesystem;
 
 ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf::path> configFile,
-                               bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, optional<double> unmountAfterIdleMinutes,
+                               bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, 
+                               bool createMissingMountpoint,
+                               optional<double> unmountAfterIdleMinutes,
                                optional<bf::path> logFile, optional<string> cipher,
                                optional<uint32_t> blocksizeBytes,
                                bool allowIntegrityViolations,
@@ -19,7 +21,9 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
     : _configFile(std::move(configFile)), _baseDir(bf::absolute(std::move(baseDir))), _mountDir(std::move(mountDir)),
       _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)),
 	  _foreground(foreground),
-	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem), _allowIntegrityViolations(allowIntegrityViolations),
+	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem),
+      _createMissingMountpoint(createMissingMountpoint),
+      _allowIntegrityViolations(allowIntegrityViolations),
       _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
       _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)),
       _fuseOptions(std::move(fuseOptions)) {
@@ -50,6 +54,10 @@ bool ProgramOptions::foreground() const {
 
 bool ProgramOptions::allowFilesystemUpgrade() const {
   return _allowFilesystemUpgrade;
+}
+
+bool ProgramOptions::createMissingMountpoint() const {
+    return _createMissingMountpoint;
 }
 
 const optional<double> &ProgramOptions::unmountAfterIdleMinutes() const {
