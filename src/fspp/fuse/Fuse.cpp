@@ -6,6 +6,7 @@
 #include "Fuse.h"
 #include <memory>
 #include <cassert>
+#include <set>
 
 #include "../fs_interface/FuseErrnoException.h"
 #include "Filesystem.h"
