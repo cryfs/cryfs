@@ -9,6 +9,7 @@ public:
   CopyableMovableValueType(const CopyableMovableValueType &rhs): CopyableMovableValueType(rhs._value) {
     ++numCopyConstructorCalled;
   }
+  // NOLINTNEXTLINE(cert-oop54-cpp)
   CopyableMovableValueType &operator=(const CopyableMovableValueType &rhs) {
     _value = rhs._value;
     ++numCopyConstructorCalled;

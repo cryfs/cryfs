@@ -89,8 +89,7 @@ references:
           # They aren't set automatically unfortunately
           sudo ln -s /usr/bin/$CC /usr/bin/clang
           sudo ln -s /usr/bin/$CXX /usr/bin/clang++
-          sudo ln -s /usr/bin/clang-tidy-8 /usr/bin/clang-tidy
-          sudo ln -s /usr/bin/run-clang-tidy-8.py /usr/bin/run-clang-tidy.py
+          sudo ln -s /usr/bin/clang-tidy-9 /usr/bin/clang-tidy
         fi
 
         # Setup build cache
@@ -652,10 +651,10 @@ jobs:
     - store_artifacts:
         path: /tmp/clang-tidy-fixes
     environment:
-      CC: clang-8
-      CXX: clang++-8
+      CC: clang-9
+      CXX: clang++-9
       BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: "clang-8 clang-tidy-8"
+      APT_COMPILER_PACKAGE: "clang-9 clang-tidy-9"
 
 workflows:
   version: 2

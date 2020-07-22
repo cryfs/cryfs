@@ -70,8 +70,8 @@ public:
         return *this;
     }
     constexpr IdValueType& operator=(const IdValueType& rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() = rhs.value_)) {
-        value_ = rhs.value_;
-        return *this;
+        // NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
+        return operator=(IdValueType(rhs));
     }
 
 protected:

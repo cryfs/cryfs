@@ -26,6 +26,10 @@ namespace cpputils {
         SCryptParameters(SCryptParameters &&rhs) = default;
 
         SCryptParameters &operator=(const SCryptParameters &rhs) {
+            if (this == &rhs) {
+                return *this;
+            }
+
             _salt = rhs._salt.copy();
             _N = rhs._N;
             _r = rhs._r;

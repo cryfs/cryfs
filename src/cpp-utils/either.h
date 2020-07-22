@@ -47,7 +47,12 @@ namespace cpputils {
         }
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
+        // NOLINTNEXTLINE(cert-oop54-cpp)
         either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right))) {
+            if (this == &rhs) {
+                return *this;
+            }
+
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {
@@ -59,6 +64,10 @@ namespace cpputils {
         }
 
         either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {
+            if (this == &rhs) {
+                return *this;
+            }
+
             _destruct();
             _side = rhs._side;
             if (_side == Side::left) {

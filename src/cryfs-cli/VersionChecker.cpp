@@ -37,6 +37,7 @@ namespace cryfs_cli {
         if (warnings == none) {
             return none;
         }
+        // NOLINTNEXTLINE(bugprone-branch-clone)
         BOOST_FOREACH(const ptree::value_type &v, *warnings) {
             if(v.first == version) {
                 return v.second.get_value<std::string>();

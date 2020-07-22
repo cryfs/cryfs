@@ -19,4 +19,4 @@ cat compile_commands.json|jq "map(select(.file | test(\"^$(realpath ${0%/*})/(sr
 rm compile_commands.json
 mv compile_commands2.json compile_commands.json
 
-run-clang-tidy.py -j${NUMCORES} -quiet -header-filter "$(realpath ${0%/*})/(src|test)/.*" $@
+run-clang-tidy-9.py -j${NUMCORES} -quiet -header-filter "$(realpath ${0%/*})/(src|test)/.*" $@
