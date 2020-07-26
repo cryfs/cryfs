@@ -129,6 +129,26 @@ TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_True) {
     EXPECT_TRUE(options.allowFilesystemUpgrade());
 }
 
+TEST_F(ProgramOptionsParserTest, CreateMissingBasedir_False) {
+    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    EXPECT_FALSE(options.createMissingBasedir());
+}
+
+TEST_F(ProgramOptionsParserTest, CreateMissingBasedir_True) {
+    ProgramOptions options = parse({"./myExecutable", "--create-missing-basedir",  basedir, "mountdir"});
+    EXPECT_TRUE(options.createMissingBasedir());
+}
+
+TEST_F(ProgramOptionsParserTest, CreateMissingMountpoint_False) {
+    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    EXPECT_FALSE(options.createMissingMountpoint());
+}
+
+TEST_F(ProgramOptionsParserTest, CreateMissingMountpoint_True) {
+    ProgramOptions options = parse({"./myExecutable", "--create-missing-mountpoint",  basedir, "mountdir"});
+    EXPECT_TRUE(options.createMissingMountpoint());
+}
+
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
     ProgramOptions options = parse({"./myExecutable", basedir, "--logfile", logfile, mountdir});
     EXPECT_EQ(logfile, options.logFile().value());

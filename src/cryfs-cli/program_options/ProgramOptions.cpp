@@ -11,7 +11,7 @@ namespace bf = boost::filesystem;
 
 ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf::path> configFile,
                                bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, 
-                               bool createMissingMountpoint,
+                               bool createMissingBasedir, bool createMissingMountpoint,
                                optional<double> unmountAfterIdleMinutes,
                                optional<bf::path> logFile, optional<string> cipher,
                                optional<uint32_t> blocksizeBytes,
@@ -22,7 +22,7 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
       _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)),
 	  _foreground(foreground),
 	  _allowFilesystemUpgrade(allowFilesystemUpgrade), _allowReplacedFilesystem(allowReplacedFilesystem),
-      _createMissingMountpoint(createMissingMountpoint),
+      _createMissingBasedir(createMissingBasedir), _createMissingMountpoint(createMissingMountpoint),
       _allowIntegrityViolations(allowIntegrityViolations),
       _cipher(std::move(cipher)), _blocksizeBytes(std::move(blocksizeBytes)), _unmountAfterIdleMinutes(std::move(unmountAfterIdleMinutes)),
       _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)), _logFile(std::move(logFile)),
@@ -54,6 +54,10 @@ bool ProgramOptions::foreground() const {
 
 bool ProgramOptions::allowFilesystemUpgrade() const {
   return _allowFilesystemUpgrade;
+}
+
+bool ProgramOptions::createMissingBasedir() const {
+    return _createMissingBasedir;
 }
 
 bool ProgramOptions::createMissingMountpoint() const {

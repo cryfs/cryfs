@@ -324,7 +324,7 @@ namespace cryfs_cli {
     }
 
 	void Cli::_sanityChecks(const ProgramOptions &options) {
-		_checkDirAccessible(bf::absolute(options.baseDir()), "base directory", options.createMissingMountpoint(), ErrorCode::InaccessibleBaseDir);
+		_checkDirAccessible(bf::absolute(options.baseDir()), "base directory", options.createMissingBasedir(), ErrorCode::InaccessibleBaseDir);
 
 		if (!options.mountDirIsDriveLetter()) {
 			_checkDirAccessible(options.mountDir(), "mount directory", options.createMissingMountpoint(), ErrorCode::InaccessibleMountDir);
@@ -336,11 +336,11 @@ namespace cryfs_cli {
 		}
     }
 
-    void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name, bool createMissingMountpoint, ErrorCode errorCode) {
+    void Cli::_checkDirAccessible(const bf::path &dir, const std::string &name, bool createMissingDir, ErrorCode errorCode) {
         if (!bf::exists(dir)) {
-            bool create = createMissingMountpoint;
+            bool create = createMissingDir;
             if (create) {
-                cout << "Automatically creating " + name << endl;
+                LOG(INFO, "Automatically creating {}", name);
             } else {
                 create = _console->askYesNo("Could not find " + name + ". Do you want to create it?", false);
             }

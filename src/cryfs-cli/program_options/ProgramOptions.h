@@ -15,7 +15,7 @@ namespace cryfs_cli {
             ProgramOptions(boost::filesystem::path baseDir, boost::filesystem::path mountDir,
                            boost::optional<boost::filesystem::path> configFile,
                            bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem,
-                           bool createMissingMountpoint,
+                           bool createMissingBasedir, bool createMissingMountpoint,
                            boost::optional<double> unmountAfterIdleMinutes,
                            boost::optional<boost::filesystem::path> logFile,
                            boost::optional<std::string> cipher,
@@ -32,6 +32,7 @@ namespace cryfs_cli {
             bool foreground() const;
             bool allowFilesystemUpgrade() const;
             bool allowReplacedFilesystem() const;
+            bool createMissingBasedir() const;
             bool createMissingMountpoint() const;
             const boost::optional<std::string> &cipher() const;
             const boost::optional<uint32_t> &blocksizeBytes() const;
@@ -50,6 +51,7 @@ namespace cryfs_cli {
             bool _allowFilesystemUpgrade;
             bool _allowReplacedFilesystem;
             bool _allowIntegrityViolations;
+            bool _createMissingBasedir;
             bool _createMissingMountpoint;
             boost::optional<std::string> _cipher;
             boost::optional<uint32_t> _blocksizeBytes;
