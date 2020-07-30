@@ -79,34 +79,34 @@ TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
 }
 
 TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_Empty) {
-  int value;
+  int value = 0;
   blob->write(&value, 0, 4);
   EXPECT_EQ(4u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_Empty) {
-  int value;
+  int value = 0;
   blob->write(&value, 2, 4);
   EXPECT_EQ(6u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingOverEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
-  int value;
+  int value = 0;
   blob->write(&value, 0, 4);
   EXPECT_EQ(4u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAtEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
-  int value;
+  int value = 0;
   blob->write(&value, 1, 4);
   EXPECT_EQ(5u, blob->size());
 }
 
 TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
   blob->resize(1);
-  int value;
+  int value = 0;
   blob->write(&value, 2, 4);
   EXPECT_EQ(6u, blob->size());
 }

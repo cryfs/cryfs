@@ -25,7 +25,7 @@ private:
     return fd;
   }
   void ReadFile(int fd) {
-    uint8_t buf;
+    uint8_t buf = 0;
     int retval = ::read(fd, &buf, 1);
     EXPECT_EQ(1, retval) << "Reading file failed";
   }

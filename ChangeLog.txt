@@ -13,6 +13,7 @@ New features:
   Noatime reduces the amount of write necessary and with that reduces the probability for synchronization conflicts
   or corrupted file systems if a power outage happens while writing.
 * Add an --immediate flag to cryfs-unmount that tries to unmount immediately and doesn't wait for processes to release their locks on the file system.
+* Add a --create-missing-basedir and --create-missing-mountpoint flag to create the base directory and mount directory respectively, if they don't exist, skipping the confirmation prompt.
 
 
 Version 0.10.3 (unreleased)
