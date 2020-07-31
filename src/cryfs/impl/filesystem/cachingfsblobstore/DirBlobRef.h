@@ -98,11 +98,11 @@ public:
         return _base->AppendChildrenTo(result);
     }
 
-    const blockstore::BlockId &blockId() const override override {
+    const blockstore::BlockId &blockId() const override {
         return _base->blockId();
     }
 
-    fspp::num_bytes_t lstat_size() const override override {
+    fspp::num_bytes_t lstat_size() const override {
         return _base->lstat_size();
     }
 
