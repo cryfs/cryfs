@@ -14,7 +14,9 @@ namespace cryfs_cli {
         public:
             ProgramOptions(boost::filesystem::path baseDir, boost::filesystem::path mountDir,
                            boost::optional<boost::filesystem::path> configFile,
-                           bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem, boost::optional<double> unmountAfterIdleMinutes,
+                           bool foreground, bool allowFilesystemUpgrade, bool allowReplacedFilesystem,
+                           bool createMissingBasedir, bool createMissingMountpoint,
+                           boost::optional<double> unmountAfterIdleMinutes,
                            boost::optional<boost::filesystem::path> logFile,
                            boost::optional<std::string> cipher,
                            boost::optional<uint32_t> blocksizeBytes,
@@ -25,34 +27,38 @@ namespace cryfs_cli {
 
             const boost::filesystem::path &baseDir() const;
             const boost::filesystem::path &mountDir() const;
-			bool mountDirIsDriveLetter() const;
             const boost::optional<boost::filesystem::path> &configFile() const;
             bool foreground() const;
             bool allowFilesystemUpgrade() const;
             bool allowReplacedFilesystem() const;
+            bool createMissingBasedir() const;
+            bool createMissingMountpoint() const;
+            const boost::optional<double> &unmountAfterIdleMinutes() const;
+            const boost::optional<boost::filesystem::path> &logFile() const;
             const boost::optional<std::string> &cipher() const;
             const boost::optional<uint32_t> &blocksizeBytes() const;
-            const boost::optional<double> &unmountAfterIdleMinutes() const;
             bool allowIntegrityViolations() const;
             const boost::optional<bool> &missingBlockIsIntegrityViolation() const;
-            const boost::optional<boost::filesystem::path> &logFile() const;
             const std::vector<std::string> &fuseOptions() const;
+			bool mountDirIsDriveLetter() const;
 
         private:
-			boost::optional<boost::filesystem::path> _configFile;
             boost::filesystem::path _baseDir; // this is always absolute
             boost::filesystem::path _mountDir; // this is absolute iff !_mountDirIsDriveLetter
-			bool _mountDirIsDriveLetter;
+			boost::optional<boost::filesystem::path> _configFile;
             bool _foreground;
             bool _allowFilesystemUpgrade;
             bool _allowReplacedFilesystem;
-            bool _allowIntegrityViolations;
+            bool _createMissingBasedir;
+            bool _createMissingMountpoint;
+            boost::optional<double> _unmountAfterIdleMinutes;
+            boost::optional<boost::filesystem::path> _logFile;
             boost::optional<std::string> _cipher;
             boost::optional<uint32_t> _blocksizeBytes;
-            boost::optional<double> _unmountAfterIdleMinutes;
+            bool _allowIntegrityViolations;
             boost::optional<bool> _missingBlockIsIntegrityViolation;
-            boost::optional<boost::filesystem::path> _logFile;
             std::vector<std::string> _fuseOptions;
+			bool _mountDirIsDriveLetter;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);
         };

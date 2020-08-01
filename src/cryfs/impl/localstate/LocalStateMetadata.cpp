@@ -58,7 +58,7 @@ void LocalStateMetadata::_save(const bf::path &metadataFilePath) const {
 
 namespace {
 uint32_t _generateClientId() {
-  uint32_t result;
+  uint32_t result = 0;
   do {
     result = cpputils::deserialize<uint32_t>(Random::PseudoRandom().getFixedSize<sizeof(uint32_t)>().data());
   } while(result == KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK); // Safety check - CLIENT_ID_FOR_DELETED_BLOCK shouldn't be used by any valid client.
@@ -73,7 +73,7 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
     return none;
   }
 
-  uint32_t value;
+  uint32_t value = 0;
   file >> value;
   file.close();
   bf::remove(myClientIdFile);

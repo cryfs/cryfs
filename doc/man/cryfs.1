@@ -180,6 +180,18 @@ By default, CryFS remembers file systems it has seen in this base directory and 
 .
 .
 .TP
+\fB\-\-create-missing-basedir\fI
+.
+Creates the base directory even if there is no directory currently there, skipping the normal confirmation message to create it later.
+.
+.
+.TP
+\fB\-\-create-missing-mountpoint\fI
+.
+Creates the mountpoint even if there is no directory currently there, skipping the normal confirmation message to create it later.
+.
+.
+.TP
 \fB\-\-missing-block-is-integrity-violation\fR=true
 .
 When CryFS encounters a missing ciphertext block, it cannot cannot (yet) know if it was deleted by an unauthorized adversary or by a second authorized client. This is one of the restrictions of the integrity checks currently in place. You can enable this flag to treat missing ciphertext blocks as integrity violations, but then your file system will not be usable by multiple clients anymore. By default, this flag is disabled.

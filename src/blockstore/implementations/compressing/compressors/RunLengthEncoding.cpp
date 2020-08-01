@@ -114,7 +114,7 @@ namespace blockstore {
         }
 
         void RunLengthEncoding::_decodeArbitraryWords(istringstream *stream, ostringstream *decompressed) {
-            uint16_t size;
+            uint16_t size = 0;
             stream->read(reinterpret_cast<char*>(&size), sizeof(uint16_t));
             ASSERT(stream->good(), "Premature end of stream");
             Data run(size);
@@ -124,10 +124,10 @@ namespace blockstore {
         }
 
         void RunLengthEncoding::_decodeIdenticalWords(istringstream *stream, ostringstream *decompressed) {
-            uint16_t size;
+            uint16_t size = 0;
             stream->read(reinterpret_cast<char*>(&size), sizeof(uint16_t));
             ASSERT(stream->good(), "Premature end of stream");
-            uint8_t value;
+            uint8_t value = 0;
             stream->read(reinterpret_cast<char*>(&value), 1);
             ASSERT(stream->good(), "Premature end of stream");
             Data run(size);

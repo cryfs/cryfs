@@ -95,7 +95,7 @@ namespace cryfs {
 
         static uint16_t getFormatVersionHeader(const blobstore::Blob &blob) {
             static_assert(sizeof(uint16_t) == sizeof(FORMAT_VERSION_HEADER), "Wrong type used to read format version header");
-            uint16_t actualFormatVersion;
+            uint16_t actualFormatVersion = 0;
             blob.read(&actualFormatVersion, 0, sizeof(FORMAT_VERSION_HEADER));
             return actualFormatVersion;
         }
@@ -116,7 +116,7 @@ namespace cryfs {
         }
 
         static BlobType _blobType(const blobstore::Blob &blob) {
-            uint8_t result;
+            uint8_t result = 0;
             blob.read(&result, sizeof(FORMAT_VERSION_HEADER), sizeof(uint8_t));
             return static_cast<BlobType>(result);
         }
