@@ -106,7 +106,6 @@ std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
 
-    std::vector<BlockId> result;
     AccumulateBlockIds knownBlobIds;
     cout << "Listing all file system entities (i.e. blobs)..." << flush;
     auto rootId = BlockId::FromString(config.configFile->config()->RootBlob());
