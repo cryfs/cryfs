@@ -60,8 +60,8 @@ references:
         DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE make libcurl4-openssl-dev libssl-dev libfuse-dev
 
         # install cmake
-        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.6.3/cmake-3.6.3-Linux-x86_64.sh
-        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "a512fc991abf51ee8d309312e106daf11d1e6c9bd7dd1c15c2bd5f9ca820fa0f" ]; then
+        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.9.6/cmake-3.9.6-Linux-x86_64.sh
+        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "57cd1dc4857e4d3689d006faf6ff56d5e3635c64d456e34596476db5e9ba8031" ]; then
           echo Correct sha256sum
         else
           echo Wrong sha256sum
