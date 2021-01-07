@@ -131,6 +131,7 @@ function(require_clang_version VERSION)
 endfunction(require_clang_version)
 
 include(cmake-utils/TargetArch.cmake)
+
 function(get_target_architecture output_var)
 	target_architecture(local_output_var)
 	set(${output_var} ${local_output_var} PARENT_SCOPE)
