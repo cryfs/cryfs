@@ -30,6 +30,7 @@ endif()
 message( STATUS "CMake version ${CMAKE_VERSION}" )
 
 cmake_minimum_required(VERSION 2.8.6)
+cmake_policy(SET CMP0069 NEW)
 if (${CMAKE_VERSION} VERSION_LESS "3.0.0")
   project(cryptopp)
   set(cryptopp_VERSION_MAJOR 8)

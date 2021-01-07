@@ -3,9 +3,8 @@ Version 0.11.0 (unreleased)
 Build changes:
 * Switch to Conan package manager
 * Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers.
-
-Other changes:
-* Now requires CMake 3.6 or later
+* Build with LTO if the compiler supports it
+* Now requires CMake 3.9 or later
 
 Improvements:
 * Display the file system configuration when mounting a file system
