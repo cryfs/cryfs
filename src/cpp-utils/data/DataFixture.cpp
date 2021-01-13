@@ -16,7 +16,7 @@ namespace cpputils {
     val += 1442695040888963407;
     unsigned char *remainingBytes = reinterpret_cast<unsigned char*>(&val);
     //Fill remaining bytes
-    for(size_t i=0; i<sizeof(unsigned long long int); ++i) {
+    for(size_t i=0; i<size-alreadyWritten; ++i) {
       serialize<unsigned char>(result.dataOffset(alreadyWritten + i), remainingBytes[i]);
     }
     return result;
