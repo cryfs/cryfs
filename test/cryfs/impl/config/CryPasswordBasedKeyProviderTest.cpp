@@ -20,6 +20,8 @@ using testing::StrEq;
 using testing::NiceMock;
 using testing::_;
 
+namespace {
+
 class MockCallable {
 public:
   MOCK_METHOD(std::string, call, ());
@@ -82,4 +84,6 @@ TEST_F(CryPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
   EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
 
   EXPECT_EQ(key.ToString(), returned_key.ToString());
+}
+
 }
