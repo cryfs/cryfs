@@ -1,7 +1,7 @@
-// simon-simd.cpp - written and placed in the public domain by Jeffrey Walton
+// simon_simd.cpp - written and placed in the public domain by Jeffrey Walton
 //
 //    This source file uses intrinsics and built-ins to gain access to
-//    SSSE3, ARM NEON and ARMv8a, and Power7 Altivec instructions. A separate
+//    SSSE3, ARM NEON and ARMv8a, and Altivec instructions. A separate
 //    source file is needed because additional CXXFLAGS are required to enable
 //    the appropriate instructions sets in some build configurations.
 
@@ -12,7 +12,7 @@
 #include "misc.h"
 
 // Uncomment for benchmarking C++ against SSE or NEON.
-// Do so in both simon.cpp and simon-simd.cpp.
+// Do so in both simon.cpp and simon_simd.cpp.
 // #undef CRYPTOPP_SSSE3_AVAILABLE
 // #undef CRYPTOPP_ARM_NEON_AVAILABLE
 
@@ -24,27 +24,26 @@
 
 #if defined(__XOP__)
 # include <ammintrin.h>
-#endif
-
-#if defined(__AVX512F__)
-# define CRYPTOPP_AVX512_ROTATE 1
-# include <immintrin.h>
-#endif
-
-// C1189: error: This header is specific to ARM targets
-#if (CRYPTOPP_ARM_NEON_AVAILABLE)
-# include "adv_simd.h"
-# ifndef _M_ARM64
-#  include <arm_neon.h>
+# if defined(__GNUC__)
+#  include <x86intrin.h>
 # endif
 #endif
 
-#if (CRYPTOPP_ARM_ACLE_AVAILABLE)
+#if (CRYPTOPP_ARM_NEON_HEADER)
+# include "adv_simd.h"
+# include <arm_neon.h>
+#endif
+
+#if (CRYPTOPP_ARM_ACLE_HEADER)
 # include <stdint.h>
 # include <arm_acle.h>
 #endif
 
-#if defined(CRYPTOPP_POWER8_AVAILABLE)
+#if defined(_M_ARM64)
+# include "adv_simd.h"
+#endif
+
+#if (CRYPTOPP_ALTIVEC_AVAILABLE)
 # include "adv_simd.h"
 # include "ppc_simd.h"
 #endif
@@ -67,7 +66,7 @@ using CryptoPP::vec_swap;  // SunCC
 #if defined(_MSC_VER) && !defined(_M_ARM64)
 inline uint64x2_t vld1q_dup_u64(const uint64_t* ptr)
 {
-	return vmovq_n_u64(*ptr);
+    return vmovq_n_u64(*ptr);
 }
 #endif
 
@@ -140,7 +139,7 @@ inline void SIMON128_Enc_Block(uint64x2_t &block0, uint64x2_t &block1,
     uint64x2_t x1 = UnpackHigh64(block0, block1);
     uint64x2_t y1 = UnpackLow64(block0, block1);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1)-1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1)-1; i += 2)
     {
         const uint64x2_t rk1 = vld1q_dup_u64(subkeys+i);
         y1 = veorq_u64(veorq_u64(y1, SIMON128_f(x1)), rk1);
@@ -174,7 +173,7 @@ inline void SIMON128_Enc_6_Blocks(uint64x2_t &block0, uint64x2_t &block1,
     uint64x2_t x3 = UnpackHigh64(block4, block5);
     uint64x2_t y3 = UnpackLow64(block4, block5);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1) - 1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1) - 1; i += 2)
     {
         const uint64x2_t rk1 = vld1q_dup_u64(subkeys+i);
         y1 = veorq_u64(veorq_u64(y1, SIMON128_f(x1)), rk1);
@@ -285,9 +284,9 @@ inline void SIMON128_Dec_6_Blocks(uint64x2_t &block0, uint64x2_t &block1,
 
 // ***************************** IA-32 ***************************** //
 
-#if defined(CRYPTOPP_SSSE3_AVAILABLE)
+#if (CRYPTOPP_SSSE3_AVAILABLE)
 
-// Clang __m128i casts, http://bugs.llvm.org/show_bug.cgi?id=20670
+// Clang intrinsic casts, http://bugs.llvm.org/show_bug.cgi?id=20670
 #ifndef M128_CAST
 # define M128_CAST(x) ((__m128i *)(void *)(x))
 #endif
@@ -317,9 +316,7 @@ inline void Swap128(__m128i& a,__m128i& b)
 template <unsigned int R>
 inline __m128i RotateLeft64(const __m128i& val)
 {
-#if defined(CRYPTOPP_AVX512_ROTATE)
-    return _mm_rol_epi64(val, R);
-#elif defined(__XOP__)
+#if defined(__XOP__)
     return _mm_roti_epi64(val, R);
 #else
     return _mm_or_si128(
@@ -330,9 +327,7 @@ inline __m128i RotateLeft64(const __m128i& val)
 template <unsigned int R>
 inline __m128i RotateRight64(const __m128i& val)
 {
-#if defined(CRYPTOPP_AVX512_ROTATE)
-    return _mm_ror_epi64(val, R);
-#elif defined(__XOP__)
+#if defined(__XOP__)
     return _mm_roti_epi64(val, 64-R);
 #else
     return _mm_or_si128(
@@ -377,21 +372,20 @@ inline void SIMON128_Enc_Block(__m128i &block0, __m128i &block1,
     __m128i x1 = _mm_unpackhi_epi64(block0, block1);
     __m128i y1 = _mm_unpacklo_epi64(block0, block1);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1)-1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1)-1; i += 2)
     {
-        const __m128i rk1 = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys+i)));
+        // Round keys are pre-splated in forward direction
+        const __m128i rk1 = _mm_load_si128(CONST_M128_CAST(subkeys+i*2));
         y1 = _mm_xor_si128(_mm_xor_si128(y1, SIMON128_f(x1)), rk1);
 
-        const __m128i rk2 = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys+i+1)));
+        const __m128i rk2 = _mm_load_si128(CONST_M128_CAST(subkeys+(i+1)*2));
         x1 = _mm_xor_si128(_mm_xor_si128(x1, SIMON128_f(y1)), rk2);
     }
 
     if (rounds & 1)
     {
-        const __m128i rk = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys+rounds-1)));
+        // Round keys are pre-splated in forward direction
+        const __m128i rk = _mm_load_si128(CONST_M128_CAST(subkeys+(rounds-1)*2));
 
         y1 = _mm_xor_si128(_mm_xor_si128(y1, SIMON128_f(x1)), rk);
         Swap128(x1, y1);
@@ -414,16 +408,16 @@ inline void SIMON128_Enc_6_Blocks(__m128i &block0, __m128i &block1,
     __m128i x3 = _mm_unpackhi_epi64(block4, block5);
     __m128i y3 = _mm_unpacklo_epi64(block4, block5);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1) - 1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1) - 1; i += 2)
     {
-        const __m128i rk1 = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys + i)));
+        // Round keys are pre-splated in forward direction
+        const __m128i rk1 = _mm_load_si128(CONST_M128_CAST(subkeys+i*2));
         y1 = _mm_xor_si128(_mm_xor_si128(y1, SIMON128_f(x1)), rk1);
         y2 = _mm_xor_si128(_mm_xor_si128(y2, SIMON128_f(x2)), rk1);
         y3 = _mm_xor_si128(_mm_xor_si128(y3, SIMON128_f(x3)), rk1);
 
-        const __m128i rk2 = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys + i + 1)));
+        // Round keys are pre-splated in forward direction
+        const __m128i rk2 = _mm_load_si128(CONST_M128_CAST(subkeys+(i+1)*2));
         x1 = _mm_xor_si128(_mm_xor_si128(x1, SIMON128_f(y1)), rk2);
         x2 = _mm_xor_si128(_mm_xor_si128(x2, SIMON128_f(y2)), rk2);
         x3 = _mm_xor_si128(_mm_xor_si128(x3, SIMON128_f(y3)), rk2);
@@ -431,8 +425,8 @@ inline void SIMON128_Enc_6_Blocks(__m128i &block0, __m128i &block1,
 
     if (rounds & 1)
     {
-        const __m128i rk = _mm_castpd_si128(
-            _mm_loaddup_pd(CONST_DOUBLE_CAST(subkeys + rounds - 1)));
+        // Round keys are pre-splated in forward direction
+        const __m128i rk = _mm_load_si128(CONST_M128_CAST(subkeys+(rounds-1)*2));
         y1 = _mm_xor_si128(_mm_xor_si128(y1, SIMON128_f(x1)), rk);
         y2 = _mm_xor_si128(_mm_xor_si128(y2, SIMON128_f(x2)), rk);
         y3 = _mm_xor_si128(_mm_xor_si128(y3, SIMON128_f(x3)), rk);
@@ -531,38 +525,51 @@ inline void SIMON128_Dec_6_Blocks(__m128i &block0, __m128i &block1,
 
 #endif  // CRYPTOPP_SSSE3_AVAILABLE
 
-// ***************************** Power8 ***************************** //
+// ***************************** Altivec ***************************** //
 
-#if defined(CRYPTOPP_POWER8_AVAILABLE)
+#if (CRYPTOPP_ALTIVEC_AVAILABLE)
+
+// Altivec uses native 64-bit types on 64-bit environments, or 32-bit types
+// in 32-bit environments. Speck128 will use the appropriate type for the
+// environment. Functions like VecAdd64 have two overloads, one for each
+// environment. The 32-bit overload treats uint32x4_p like a 64-bit type,
+// and does things like perform a add with carry or subtract with borrow.
+
+// Speck128 on Power8 performed as expected because of 64-bit environment.
+// Performance sucked on old PowerPC machines because of 32-bit environments.
+// At Crypto++ 8.3 we added an implementation that operated on 32-bit words.
+// Native 64-bit Speck128 performance dropped from about 4.1 to 6.3 cpb, but
+// 32-bit Speck128 improved from 66.5 cpb to 10.4 cpb. Overall it was a
+// good win even though we lost some performance in 64-bit environments.
 
 using CryptoPP::uint8x16_p;
 using CryptoPP::uint32x4_p;
+#if defined(_ARCH_PWR8)
 using CryptoPP::uint64x2_p;
+#endif
 
-using CryptoPP::VecAnd;
-using CryptoPP::VecXor;
+using CryptoPP::VecAdd64;
+using CryptoPP::VecSub64;
+using CryptoPP::VecAnd64;
+using CryptoPP::VecOr64;
+using CryptoPP::VecXor64;
+using CryptoPP::VecRotateLeft64;
+using CryptoPP::VecRotateRight64;
+using CryptoPP::VecSplatElement64;
+using CryptoPP::VecLoad;
+using CryptoPP::VecLoadAligned;
 using CryptoPP::VecPermute;
 
-// Rotate left by bit count
-template<unsigned int C>
-inline uint64x2_p RotateLeft64(const uint64x2_p val)
-{
-    const uint64x2_p m = {C, C};
-    return vec_rl(val, m);
-}
+#if defined(_ARCH_PWR8)
+#define simon128_t uint64x2_p
+#else
+#define simon128_t uint32x4_p
+#endif
 
-// Rotate right by bit count
-template<unsigned int C>
-inline uint64x2_p RotateRight64(const uint64x2_p val)
+inline simon128_t SIMON128_f(const simon128_t val)
 {
-    const uint64x2_p m = {64-C, 64-C};
-    return vec_rl(val, m);
-}
-
-inline uint64x2_p SIMON128_f(const uint64x2_p val)
-{
-    return VecXor(RotateLeft64<2>(val),
-        VecAnd(RotateLeft64<1>(val), RotateLeft64<8>(val)));
+    return (simon128_t)VecXor64(VecRotateLeft64<2>(val),
+        VecAnd64(VecRotateLeft64<1>(val), VecRotateLeft64<8>(val)));
 }
 
 inline void SIMON128_Enc_Block(uint32x4_p &block, const word64 *subkeys, unsigned int rounds)
@@ -576,22 +583,29 @@ inline void SIMON128_Enc_Block(uint32x4_p &block, const word64 *subkeys, unsigne
 #endif
 
     // [A1 A2][B1 B2] ... => [A1 B1][A2 B2] ...
-    uint64x2_p x1 = (uint64x2_p)VecPermute(block, block, m1);
-    uint64x2_p y1 = (uint64x2_p)VecPermute(block, block, m2);
+    simon128_t x1 = (simon128_t)VecPermute(block, block, m1);
+    simon128_t y1 = (simon128_t)VecPermute(block, block, m2);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1)-1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1)-1; i += 2)
     {
-        const uint64x2_p rk1 = vec_splats((unsigned long long)subkeys[i]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk1);
+        // Round keys are pre-splated in forward direction
+        const word32* ptr1 = reinterpret_cast<const word32*>(subkeys+i*2);
+        const simon128_t rk1 = (simon128_t)VecLoadAligned(ptr1);
+        const word32* ptr2 = reinterpret_cast<const word32*>(subkeys+(i+1)*2);
+        const simon128_t rk2 = (simon128_t)VecLoadAligned(ptr2);
 
-        const uint64x2_p rk2 = vec_splats((unsigned long long)subkeys[i+1]);
-        x1 = VecXor(VecXor(x1, SIMON128_f(y1)), rk2);
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk1);
+        x1 = VecXor64(VecXor64(x1, SIMON128_f(y1)), rk2);
     }
 
     if (rounds & 1)
     {
-        const uint64x2_p rk = vec_splats((unsigned long long)subkeys[rounds-1]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk);
+        // Round keys are pre-splated in forward direction
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+(rounds-1)*2);
+        const simon128_t rk = (simon128_t)VecLoadAligned(ptr);
+
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk);
+
         std::swap(x1, y1);
     }
 
@@ -618,24 +632,30 @@ inline void SIMON128_Dec_Block(uint32x4_p &block, const word64 *subkeys, unsigne
 #endif
 
     // [A1 A2][B1 B2] ... => [A1 B1][A2 B2] ...
-    uint64x2_p x1 = (uint64x2_p)VecPermute(block, block, m1);
-    uint64x2_p y1 = (uint64x2_p)VecPermute(block, block, m2);
+    simon128_t x1 = (simon128_t)VecPermute(block, block, m1);
+    simon128_t y1 = (simon128_t)VecPermute(block, block, m2);
 
     if (rounds & 1)
     {
         std::swap(x1, y1);
-        const uint64x2_p rk = vec_splats((unsigned long long)subkeys[rounds-1]);
-        y1 = VecXor(VecXor(y1, rk), SIMON128_f(x1));
+
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+rounds-1);
+        const simon128_t tk = (simon128_t)VecLoad(ptr);
+        const simon128_t rk = (simon128_t)VecSplatElement64<0>(tk);
+
+        y1 = VecXor64(VecXor64(y1, rk), SIMON128_f(x1));
         rounds--;
     }
 
     for (int i = static_cast<int>(rounds-2); i >= 0; i -= 2)
     {
-        const uint64x2_p rk1 = vec_splats((unsigned long long)subkeys[i+1]);
-        x1 = VecXor(VecXor(x1, SIMON128_f(y1)), rk1);
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+i);
+        const simon128_t tk = (simon128_t)VecLoad(ptr);
+        const simon128_t rk1 = (simon128_t)VecSplatElement64<1>(tk);
+        const simon128_t rk2 = (simon128_t)VecSplatElement64<0>(tk);
 
-        const uint64x2_p rk2 = vec_splats((unsigned long long)subkeys[i]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk2);
+        x1 = VecXor64(VecXor64(x1, SIMON128_f(y1)), rk1);
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk2);
     }
 
 #if (CRYPTOPP_BIG_ENDIAN)
@@ -663,32 +683,41 @@ inline void SIMON128_Enc_6_Blocks(uint32x4_p &block0, uint32x4_p &block1,
 #endif
 
     // [A1 A2][B1 B2] ... => [A1 B1][A2 B2] ...
-    uint64x2_p x1 = (uint64x2_p)VecPermute(block0, block1, m1);
-    uint64x2_p y1 = (uint64x2_p)VecPermute(block0, block1, m2);
-    uint64x2_p x2 = (uint64x2_p)VecPermute(block2, block3, m1);
-    uint64x2_p y2 = (uint64x2_p)VecPermute(block2, block3, m2);
-    uint64x2_p x3 = (uint64x2_p)VecPermute(block4, block5, m1);
-    uint64x2_p y3 = (uint64x2_p)VecPermute(block4, block5, m2);
+    simon128_t x1 = (simon128_t)VecPermute(block0, block1, m1);
+    simon128_t y1 = (simon128_t)VecPermute(block0, block1, m2);
+    simon128_t x2 = (simon128_t)VecPermute(block2, block3, m1);
+    simon128_t y2 = (simon128_t)VecPermute(block2, block3, m2);
+    simon128_t x3 = (simon128_t)VecPermute(block4, block5, m1);
+    simon128_t y3 = (simon128_t)VecPermute(block4, block5, m2);
 
-    for (int i = 0; i < static_cast<int>(rounds & ~1)-1; i += 2)
+    for (size_t i = 0; i < static_cast<size_t>(rounds & ~1)-1; i += 2)
     {
-        const uint64x2_p rk1 = vec_splats((unsigned long long)subkeys[i]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk1);
-        y2 = VecXor(VecXor(y2, SIMON128_f(x2)), rk1);
-        y3 = VecXor(VecXor(y3, SIMON128_f(x3)), rk1);
+        // Round keys are pre-splated in forward direction
+        const word32* ptr1 = reinterpret_cast<const word32*>(subkeys+i*2);
+        const simon128_t rk1 = (simon128_t)VecLoadAligned(ptr1);
 
-        const uint64x2_p rk2 = vec_splats((unsigned long long)subkeys[i+1]);
-        x1 = VecXor(VecXor(x1, SIMON128_f(y1)), rk2);
-        x2 = VecXor(VecXor(x2, SIMON128_f(y2)), rk2);
-        x3 = VecXor(VecXor(x3, SIMON128_f(y3)), rk2);
+        const word32* ptr2 = reinterpret_cast<const word32*>(subkeys+(i+1)*2);
+        const simon128_t rk2 = (simon128_t)VecLoadAligned(ptr2);
+
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk1);
+        y2 = VecXor64(VecXor64(y2, SIMON128_f(x2)), rk1);
+        y3 = VecXor64(VecXor64(y3, SIMON128_f(x3)), rk1);
+
+        x1 = VecXor64(VecXor64(x1, SIMON128_f(y1)), rk2);
+        x2 = VecXor64(VecXor64(x2, SIMON128_f(y2)), rk2);
+        x3 = VecXor64(VecXor64(x3, SIMON128_f(y3)), rk2);
     }
 
     if (rounds & 1)
     {
-        const uint64x2_p rk = vec_splats((unsigned long long)subkeys[rounds-1]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk);
-        y2 = VecXor(VecXor(y2, SIMON128_f(x2)), rk);
-        y3 = VecXor(VecXor(y3, SIMON128_f(x3)), rk);
+        // Round keys are pre-splated in forward direction
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+(rounds-1)*2);
+        const simon128_t rk = (simon128_t)VecLoadAligned(ptr);
+
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk);
+        y2 = VecXor64(VecXor64(y2, SIMON128_f(x2)), rk);
+        y3 = VecXor64(VecXor64(y3, SIMON128_f(x3)), rk);
+
         std::swap(x1, y1); std::swap(x2, y2); std::swap(x3, y3);
     }
 
@@ -722,34 +751,41 @@ inline void SIMON128_Dec_6_Blocks(uint32x4_p &block0, uint32x4_p &block1,
 #endif
 
     // [A1 A2][B1 B2] ... => [A1 B1][A2 B2] ...
-    uint64x2_p x1 = (uint64x2_p)VecPermute(block0, block1, m1);
-    uint64x2_p y1 = (uint64x2_p)VecPermute(block0, block1, m2);
-    uint64x2_p x2 = (uint64x2_p)VecPermute(block2, block3, m1);
-    uint64x2_p y2 = (uint64x2_p)VecPermute(block2, block3, m2);
-    uint64x2_p x3 = (uint64x2_p)VecPermute(block4, block5, m1);
-    uint64x2_p y3 = (uint64x2_p)VecPermute(block4, block5, m2);
+    simon128_t x1 = (simon128_t)VecPermute(block0, block1, m1);
+    simon128_t y1 = (simon128_t)VecPermute(block0, block1, m2);
+    simon128_t x2 = (simon128_t)VecPermute(block2, block3, m1);
+    simon128_t y2 = (simon128_t)VecPermute(block2, block3, m2);
+    simon128_t x3 = (simon128_t)VecPermute(block4, block5, m1);
+    simon128_t y3 = (simon128_t)VecPermute(block4, block5, m2);
 
     if (rounds & 1)
     {
         std::swap(x1, y1); std::swap(x2, y2); std::swap(x3, y3);
-        const uint64x2_p rk = vec_splats((unsigned long long)subkeys[rounds-1]);
-        y1 = VecXor(VecXor(y1, rk), SIMON128_f(x1));
-        y2 = VecXor(VecXor(y2, rk), SIMON128_f(x2));
-        y3 = VecXor(VecXor(y3, rk), SIMON128_f(x3));
+
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+rounds-1);
+        const simon128_t tk = (simon128_t)VecLoad(ptr);
+        const simon128_t rk = (simon128_t)VecSplatElement64<0>(tk);
+
+        y1 = VecXor64(VecXor64(y1, rk), SIMON128_f(x1));
+        y2 = VecXor64(VecXor64(y2, rk), SIMON128_f(x2));
+        y3 = VecXor64(VecXor64(y3, rk), SIMON128_f(x3));
         rounds--;
     }
 
     for (int i = static_cast<int>(rounds-2); i >= 0; i -= 2)
     {
-        const uint64x2_p rk1 = vec_splats((unsigned long long)subkeys[i+1]);
-        x1 = VecXor(VecXor(x1, SIMON128_f(y1)), rk1);
-        x2 = VecXor(VecXor(x2, SIMON128_f(y2)), rk1);
-        x3 = VecXor(VecXor(x3, SIMON128_f(y3)), rk1);
+        const word32* ptr = reinterpret_cast<const word32*>(subkeys+i);
+        const simon128_t tk = (simon128_t)VecLoad(ptr);
+        const simon128_t rk1 = (simon128_t)VecSplatElement64<1>(tk);
+        const simon128_t rk2 = (simon128_t)VecSplatElement64<0>(tk);
 
-        const uint64x2_p rk2 = vec_splats((unsigned long long)subkeys[i]);
-        y1 = VecXor(VecXor(y1, SIMON128_f(x1)), rk2);
-        y2 = VecXor(VecXor(y2, SIMON128_f(x2)), rk2);
-        y3 = VecXor(VecXor(y3, SIMON128_f(x3)), rk2);
+        x1 = VecXor64(VecXor64(x1, SIMON128_f(y1)), rk1);
+        x2 = VecXor64(VecXor64(x2, SIMON128_f(y2)), rk1);
+        x3 = VecXor64(VecXor64(x3, SIMON128_f(y3)), rk1);
+
+        y1 = VecXor64(VecXor64(y1, SIMON128_f(x1)), rk2);
+        y2 = VecXor64(VecXor64(y2, SIMON128_f(x2)), rk2);
+        y3 = VecXor64(VecXor64(y3, SIMON128_f(x3)), rk2);
     }
 
 #if (CRYPTOPP_BIG_ENDIAN)
@@ -769,7 +805,7 @@ inline void SIMON128_Dec_6_Blocks(uint32x4_p &block0, uint32x4_p &block1,
     block5 = (uint32x4_p)VecPermute(x3, y3, m4);
 }
 
-#endif  // CRYPTOPP_POWER8_AVAILABLE
+#endif  // CRYPTOPP_ALTIVEC_AVAILABLE
 
 ANONYMOUS_NAMESPACE_END
 
@@ -797,7 +833,7 @@ size_t SIMON128_Dec_AdvancedProcessBlocks_NEON(const word64* subKeys, size_t rou
 
 // ***************************** IA-32 ***************************** //
 
-#if defined(CRYPTOPP_SSSE3_AVAILABLE)
+#if (CRYPTOPP_SSSE3_AVAILABLE)
 size_t SIMON128_Enc_AdvancedProcessBlocks_SSSE3(const word64* subKeys, size_t rounds,
     const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags)
 {
@@ -813,22 +849,22 @@ size_t SIMON128_Dec_AdvancedProcessBlocks_SSSE3(const word64* subKeys, size_t ro
 }
 #endif  // CRYPTOPP_SSSE3_AVAILABLE
 
-// ***************************** Power8 ***************************** //
+// ***************************** Altivec ***************************** //
 
-#if defined(CRYPTOPP_POWER8_AVAILABLE)
-size_t SIMON128_Enc_AdvancedProcessBlocks_POWER8(const word64* subKeys, size_t rounds,
+#if (CRYPTOPP_ALTIVEC_AVAILABLE)
+size_t SIMON128_Enc_AdvancedProcessBlocks_ALTIVEC(const word64* subKeys, size_t rounds,
     const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags)
 {
     return AdvancedProcessBlocks128_6x1_ALTIVEC(SIMON128_Enc_Block, SIMON128_Enc_6_Blocks,
         subKeys, rounds, inBlocks, xorBlocks, outBlocks, length, flags);
 }
 
-size_t SIMON128_Dec_AdvancedProcessBlocks_POWER8(const word64* subKeys, size_t rounds,
+size_t SIMON128_Dec_AdvancedProcessBlocks_ALTIVEC(const word64* subKeys, size_t rounds,
     const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags)
 {
     return AdvancedProcessBlocks128_6x1_ALTIVEC(SIMON128_Dec_Block, SIMON128_Dec_6_Blocks,
         subKeys, rounds, inBlocks, xorBlocks, outBlocks, length, flags);
 }
-#endif  // CRYPTOPP_POWER8_AVAILABLE
+#endif  // CRYPTOPP_ALTIVEC_AVAILABLE
 
 NAMESPACE_END

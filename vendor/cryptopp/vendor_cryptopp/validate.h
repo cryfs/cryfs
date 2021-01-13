@@ -83,6 +83,7 @@ bool ValidateARC4();
 
 bool ValidateRC5();
 bool ValidateBlowfish();
+bool ValidateBlowfishCompat();
 bool ValidateThreeWay();
 bool ValidateGOST();
 bool ValidateSHARK();
@@ -116,6 +117,7 @@ bool ValidateSosemanuk();
 bool ValidateVMAC();
 bool ValidateCCM();
 bool ValidateGCM();
+bool ValidateXTS();
 bool ValidateCMAC();
 
 bool ValidateBBS();
@@ -151,7 +153,7 @@ bool ValidateEd25519();
 bool ValidateNaCl();
 
 // If CRYPTOPP_DEBUG or CRYPTOPP_COVERAGE is in effect, then perform additional tests
-#if (defined(CRYPTOPP_DEBUG) || defined(CRYPTOPP_COVERAGE) || defined(CRYPTOPP_VALGRIND)) && !defined(CRYPTOPP_IMPORTS)
+#if (defined(CRYPTOPP_DEBUG) || defined(CRYPTOPP_COVERAGE)) && !defined(CRYPTOPP_IMPORTS)
 # define CRYPTOPP_EXTENDED_VALIDATION 1
 #endif
 
@@ -200,7 +202,7 @@ private:
 inline std::string TimeToString(const time_t& t)
 {
 #if (CRYPTOPP_MSC_VERSION >= 1400)
-	tm localTime = {};
+	tm localTime;
 	char timeBuf[64];
 	errno_t err;
 
@@ -209,9 +211,18 @@ inline std::string TimeToString(const time_t& t)
 	err = ::asctime_s(timeBuf, sizeof(timeBuf), &localTime);
 	CRYPTOPP_ASSERT(err == 0);
 
-	std::string str(timeBuf);
+	std::string str(err == 0 ? timeBuf : "");
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+	char* timeString = ::asctime(::localtime(&t));
+	std::string str(timeString ? timeString : "");
+#elif (_POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || defined(_POSIX_SOURCE))
+	tm localTime;
+	char timeBuf[64];
+	char* timeString = ::asctime_r(::localtime_r(&t, &localTime), timeBuf);
+	std::string str(timeString ? timeString : "");
 #else
-	std::string str(::asctime(::localtime(&t)));
+	char* timeString = ::asctime(::localtime(&t));
+	std::string str(timeString ? timeString : "");
 #endif
 
 	// Cleanup whitespace
@@ -311,7 +322,7 @@ inline std::string DataDir(const std::string& filename)
 	std::string name;
 	std::ifstream file;
 
-#if CRYPTOPP_CXX11_DYNAMIC_INIT
+#if CRYPTOPP_CXX11_STATIC_INIT
 	static std::string path = AddSeparator(GetDataDir());
 	name = path + filename;
 	file.open(name.c_str());
@@ -338,6 +349,7 @@ bool RunTestDataFile(const char *filename, const NameValuePairs &overrideParamet
 // Definitions in validat6.cpp
 bool CryptoSystemValidate(PK_Decryptor &priv, PK_Encryptor &pub, bool thorough = false);
 bool SimpleKeyAgreementValidate(SimpleKeyAgreementDomain &d);
+bool AuthenticatedKeyAgreementWithRolesValidate(AuthenticatedKeyAgreementDomain &initiator, AuthenticatedKeyAgreementDomain &recipient);
 bool AuthenticatedKeyAgreementValidate(AuthenticatedKeyAgreementDomain &d);
 bool SignatureValidate(PK_Signer &priv, PK_Verifier &pub, bool thorough = false);
 
@@ -365,6 +377,10 @@ bool ValidateECP();
 bool ValidateECP_Agreement();
 bool ValidateECP_Encrypt();
 bool ValidateECP_Sign();
+
+bool ValidateECP_Legacy_Encrypt();
+bool ValidateEC2N_Legacy_Encrypt();
+bool ValidateECP_NULLDigest_Encrypt();
 
 bool ValidateEC2N();
 bool ValidateEC2N_Agreement();

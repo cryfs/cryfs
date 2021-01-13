@@ -30,7 +30,7 @@ NAMESPACE_BEGIN(CryptoPP)
 ///   <pre>  Keccack_192 : public Keccack
 ///   {
 ///     public:
-///       CRYPTOPP_CONSTANT(DIGESTSIZE = 24)
+///       CRYPTOPP_CONSTANT(DIGESTSIZE = 24);
 ///       Keccack_192() : Keccack(DIGESTSIZE) {}
 ///   };
 ///   </pre>
@@ -72,8 +72,8 @@ template<unsigned int T_DigestSize>
 class Keccak_Final : public Keccak
 {
 public:
-    CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize)
-    CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE)
+    CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize);
+    CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE);
     static std::string StaticAlgorithmName()
         { return "Keccak-" + IntToString(DIGESTSIZE * 8); }
 
@@ -94,8 +94,6 @@ private:
 #if !defined(__BORLANDC__)
     // ensure there was no underflow in the math
     CRYPTOPP_COMPILE_ASSERT(BLOCKSIZE < 200);
-    // this is a general expectation by HMAC
-    CRYPTOPP_COMPILE_ASSERT((int)BLOCKSIZE > (int)DIGESTSIZE);
 #endif
 };
 

@@ -3,7 +3,7 @@
 # Allows you to use test.cxx and
 # avoid getting in the way of things
 ####################################
-*.cxx
+#*.cxx
 
 ####################
 ## Crypto++ specific
@@ -37,6 +37,18 @@ a.out
 ## changed a behavior somewhere along the lines
 
 *.o
+
+#################
+## Emacs
+#################
+*~
+\#*\#
+
+#################
+## Vi swap
+#################
+*.swp
+*.swo
 
 #################
 ## Eclipse
@@ -85,7 +97,10 @@ local.properties
 
 [Dd]ebug/
 [Rr]elease/
+Win32/
 x64/
+Arm/
+Arm64/
 build/
 [Bb]in/
 [Oo]bj/

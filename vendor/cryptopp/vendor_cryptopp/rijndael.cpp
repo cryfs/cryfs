@@ -105,7 +105,7 @@ NAMESPACE_BEGIN(CryptoPP)
 # define CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS 1
 #endif
 
-// Clang __m128i casts
+// Clang intrinsic casts
 #define M128I_CAST(x) ((__m128i *)(void *)(x))
 #define CONST_M128I_CAST(x) ((const __m128i *)(const void *)(x))
 
@@ -250,19 +250,21 @@ unsigned int Rijndael::Base::OptimalDataAlignment() const
 {
 #if (CRYPTOPP_AESNI_AVAILABLE)
 	if (HasAESNI())
-		return 1;
+		return 16;  // load __m128i
 #endif
 #if (CRYPTOPP_ARM_AES_AVAILABLE)
 	if (HasAES())
-		return 1;
+		return 4;  // load uint32x4_t
 #endif
 #if (CRYPTOGAMS_ARM_AES)
+	// Must use 1 here for Cryptogams AES. Also see
+	// https://github.com/weidai11/cryptopp/issues/683
 	if (HasARMv7())
 		return 1;
 #endif
 #if (CRYPTOPP_POWER8_AES_AVAILABLE)
 	if (HasAES())
-		return 1;
+		return 16;  // load uint32x4_p
 #endif
 	return BlockTransformation::OptimalDataAlignment();
 }
@@ -299,7 +301,7 @@ void Rijndael::Base::FillDecTable()
 		word32 y = word32(fd(x))<<8 | word32(f9(x))<<16 | word32(fe(x))<<24;
 		Td[i] = word64(y | fb(x))<<32 | y | x;
 #else
-		word32 y = fb(x) | word32(fd(x))<<8 | word32(f9(x))<<16 | word32(fe(x))<<24;;
+		word32 y = fb(x) | word32(fd(x))<<8 | word32(f9(x))<<16 | word32(fe(x))<<24;
 		for (int j=0; j<4; j++)
 		{
 			Td[i+j*256] = y;
@@ -328,10 +330,10 @@ extern size_t Rijndael_Dec_AdvancedProcessBlocks_ARMV8(const word32 *subkeys, si
 #endif
 
 #if (CRYPTOGAMS_ARM_AES)
-extern "C" int AES_set_encrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
-extern "C" int AES_set_decrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
-extern "C" void AES_encrypt(const unsigned char in[16], unsigned char out[16], const word32 *rkey);
-extern "C" void AES_decrypt(const unsigned char in[16], unsigned char out[16], const word32 *rkey);
+extern "C" int cryptogams_AES_set_encrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
+extern "C" int cryptogams_AES_set_decrypt_key(const unsigned char *userKey, const int bitLen, word32 *rkey);
+extern "C" void cryptogams_AES_encrypt_block(const unsigned char *in, unsigned char *out, const word32 *rkey);
+extern "C" void cryptogams_AES_decrypt_block(const unsigned char *in, unsigned char *out, const word32 *rkey);
 #endif
 
 #if (CRYPTOPP_POWER8_AES_AVAILABLE)
@@ -347,21 +349,21 @@ extern size_t Rijndael_Dec_AdvancedProcessBlocks128_6x1_ALTIVEC(const word32 *su
 #if (CRYPTOGAMS_ARM_AES)
 int CRYPTOGAMS_set_encrypt_key(const byte *userKey, const int bitLen, word32 *rkey)
 {
-	return AES_set_encrypt_key(userKey, bitLen, rkey);
+	return cryptogams_AES_set_encrypt_key(userKey, bitLen, rkey);
 }
 int CRYPTOGAMS_set_decrypt_key(const byte *userKey, const int bitLen, word32 *rkey)
 {
-	return AES_set_decrypt_key(userKey, bitLen, rkey);
+	return cryptogams_AES_set_decrypt_key(userKey, bitLen, rkey);
 }
 void CRYPTOGAMS_encrypt(const byte *inBlock, const byte *xorBlock, byte *outBlock, const word32 *rkey)
 {
-	AES_encrypt(inBlock, outBlock, rkey);
+	cryptogams_AES_encrypt_block(inBlock, outBlock, rkey);
 	if (xorBlock)
 		xorbuf (outBlock, xorBlock, 16);
 }
 void CRYPTOGAMS_decrypt(const byte *inBlock, const byte *xorBlock, byte *outBlock, const word32 *rkey)
 {
-	AES_decrypt(inBlock, outBlock, rkey);
+	cryptogams_AES_decrypt_block(inBlock, outBlock, rkey);
 	if (xorBlock)
 		xorbuf (outBlock, xorBlock, 16);
 }
@@ -400,7 +402,7 @@ void Rijndael::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLen, c
 	if (HasARMv7())
 	{
 		m_rounds = keyLen/4 + 6;
-		m_key.New(4*(15+1)+4);
+		m_key.New(4*(14+1)+4);
 
 		if (IsForwardTransformation())
 			CRYPTOGAMS_set_encrypt_key(userKey, keyLen*8, m_key.begin());

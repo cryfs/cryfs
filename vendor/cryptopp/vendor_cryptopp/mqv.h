@@ -94,10 +94,11 @@ public:
 	CryptoParameters & AccessCryptoParameters() {return AccessAbstractGroupParameters();}
 
 	/// \brief Provides the size of the agreed value
-	/// \return size of agreed value produced  in this domain
-	/// \details The length is calculated using <tt>GetEncodedElementSize(false)</tt>, which means the
-	///   element is encoded in a non-reversible format. A non-reversible format means its a raw byte array,
-	///   and it lacks presentation format like an ASN.1 BIT_STRING or OCTET_STRING.
+	/// \return size of agreed value produced in this domain
+	/// \details The length is calculated using <tt>GetEncodedElementSize(false)</tt>,
+	///  which means the element is encoded in a non-reversible format. A
+	///  non-reversible format means its a raw byte array, and it lacks presentation
+	///  format like an ASN.1 BIT_STRING or OCTET_STRING.
 	unsigned int AgreedValueLength() const {return GetAbstractGroupParameters().GetEncodedElementSize(false);}
 
 	/// \brief Provides the size of the static private key
@@ -107,15 +108,17 @@ public:
 
 	/// \brief Provides the size of the static public key
 	/// \return size of static public keys in this domain
-	/// \details The length is calculated using <tt>GetEncodedElementSize(true)</tt>, which means the
-	///   element is encoded in a reversible format. A reversible format means it has a presentation format,
-	///   and its an ANS.1 encoded element or point.
+	/// \details The length is calculated using <tt>GetEncodedElementSize(true)</tt>,
+	///  which means the element is encoded in a reversible format. A reversible
+	///  format means it has a presentation format, and its an ANS.1 encoded element
+	///  or point.
 	unsigned int StaticPublicKeyLength() const {return GetAbstractGroupParameters().GetEncodedElementSize(true);}
 
 	/// \brief Generate static private key in this domain
 	/// \param rng a RandomNumberGenerator derived class
 	/// \param privateKey a byte buffer for the generated private key in this domain
-	/// \details The private key is a random scalar used as an exponent in the range <tt>[1,MaxExponent()]</tt>.
+	/// \details The private key is a random scalar used as an exponent in the range
+	///  <tt>[1,MaxExponent()]</tt>.
 	/// \pre <tt>COUNTOF(privateKey) == PrivateStaticKeyLength()</tt>
 	void GenerateStaticPrivateKey(RandomNumberGenerator &rng, byte *privateKey) const
 	{
@@ -127,8 +130,9 @@ public:
 	/// \param rng a RandomNumberGenerator derived class
 	/// \param privateKey a byte buffer with the previously generated private key
 	/// \param publicKey a byte buffer for the generated public key in this domain
-	/// \details The public key is an element or point on the curve, and its stored in a revrsible format.
-	///    A reversible format means it has a presentation format, and its an ANS.1 encoded element or point.
+	/// \details The public key is an element or point on the curve, and its stored
+	///  in a revrsible format. A reversible format means it has a presentation
+	///  format, and its an ANS.1 encoded element or point.
 	/// \pre <tt>COUNTOF(publicKey) == PublicStaticKeyLength()</tt>
 	void GenerateStaticPublicKey(RandomNumberGenerator &rng, const byte *privateKey, byte *publicKey) const
 	{
@@ -139,9 +143,22 @@ public:
 		params.EncodeElement(true, y, publicKey);
 	}
 
+	/// \brief Provides the size of the ephemeral private key
+	/// \return size of ephemeral private keys in this domain
+	/// \details An ephemeral private key is a private key and public key.
+	///  The serialized size is different than a static private key.
 	unsigned int EphemeralPrivateKeyLength() const {return StaticPrivateKeyLength() + StaticPublicKeyLength();}
+
+	/// \brief Provides the size of the ephemeral public key
+	/// \return size of ephemeral public keys in this domain
+	/// \details An ephemeral public key is a public key.
+	///  The serialized size is the same as a static public key.
 	unsigned int EphemeralPublicKeyLength() const {return StaticPublicKeyLength();}
 
+	/// \brief Generate ephemeral private key in this domain
+	/// \param rng a RandomNumberGenerator derived class
+	/// \param privateKey a byte buffer for the generated private key in this domain
+	/// \pre <tt>COUNTOF(privateKey) == EphemeralPrivateKeyLength()</tt>
 	void GenerateEphemeralPrivateKey(RandomNumberGenerator &rng, byte *privateKey) const
 	{
 		const DL_GroupParameters<Element> &params = GetAbstractGroupParameters();
@@ -151,12 +168,40 @@ public:
 		params.EncodeElement(true, y, privateKey+StaticPrivateKeyLength());
 	}
 
+	/// \brief Generate ephemeral public key from a private key in this domain
+	/// \param rng a RandomNumberGenerator derived class
+	/// \param privateKey a byte buffer with the previously generated private key
+	/// \param publicKey a byte buffer for the generated public key in this domain
+	/// \pre <tt>COUNTOF(publicKey) == EphemeralPublicKeyLength()</tt>
 	void GenerateEphemeralPublicKey(RandomNumberGenerator &rng, const byte *privateKey, byte *publicKey) const
 	{
 		CRYPTOPP_UNUSED(rng);
 		memcpy(publicKey, privateKey+StaticPrivateKeyLength(), EphemeralPublicKeyLength());
 	}
 
+	/// \brief Derive agreed value or shared secret
+	/// \param agreedValue the shared secret
+	/// \param staticPrivateKey your long term private key
+	/// \param ephemeralPrivateKey your ephemeral private key
+	/// \param staticOtherPublicKey couterparty's long term public key
+	/// \param ephemeralOtherPublicKey couterparty's ephemeral public key
+	/// \param validateStaticOtherPublicKey flag indicating validation
+	/// \return true upon success, false in case of failure
+	/// \details Agree() performs the authenticated key agreement. Agree()
+	///  derives a shared secret from your private keys and couterparty's
+	///  public keys. Each instance or run of the protocol should use a new
+	///  ephemeral key pair.
+	/// \details The other's ephemeral public key will always be validated at
+	///  Level 1 to ensure it is a point on the curve.
+	///  <tt>validateStaticOtherPublicKey</tt> determines how thoroughly other's
+	///  static public key is validated. If you have previously validated the
+	///  couterparty's static public key, then use
+	///  <tt>validateStaticOtherPublicKey=false</tt> to save time.
+	/// \pre <tt>COUNTOF(agreedValue) == AgreedValueLength()</tt>
+	/// \pre <tt>COUNTOF(staticPrivateKey) == StaticPrivateKeyLength()</tt>
+	/// \pre <tt>COUNTOF(ephemeralPrivateKey) == EphemeralPrivateKeyLength()</tt>
+	/// \pre <tt>COUNTOF(staticOtherPublicKey) == StaticPublicKeyLength()</tt>
+	/// \pre <tt>COUNTOF(ephemeralOtherPublicKey) == EphemeralPublicKeyLength()</tt>
 	bool Agree(byte *agreedValue,
 		const byte *staticPrivateKey, const byte *ephemeralPrivateKey,
 		const byte *staticOtherPublicKey, const byte *ephemeralOtherPublicKey,

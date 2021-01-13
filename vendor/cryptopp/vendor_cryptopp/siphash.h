@@ -39,7 +39,7 @@ class SipHash_Info : public FixedKeyLength<16>
 {
 public:
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "SipHash";}
-	CRYPTOPP_CONSTANT(DIGESTSIZE = (T_128bit ? 16 : 8))
+	CRYPTOPP_CONSTANT(DIGESTSIZE = (T_128bit ? 16 : 8));
 };
 
 /// \brief SipHash message authentication code base class
@@ -148,7 +148,8 @@ public:
 	/// \param key a byte array used to key the cipher
 	/// \param length the size of the byte array, in bytes
 	SipHash(const byte *key, unsigned int length)
-		{this->UncheckedSetKey(key, length, g_nullNameValuePairs);}
+		{this->ThrowIfInvalidKeyLength(length);
+		 this->UncheckedSetKey(key, length, g_nullNameValuePairs);}
 };
 
 template <unsigned int C, unsigned int D, bool T_128bit>

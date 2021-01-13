@@ -55,13 +55,17 @@ public:
 #endif
 
 	/// \brief Retrieves the internal stream
-	/// \returns the internal stream pointer
+	/// \return the internal stream pointer
 	std::istream* GetStream() {return m_stream;}
 
 	/// \brief Retrieves the internal stream
-	/// \returns the internal stream pointer
+	/// \return the internal stream pointer
 	const std::istream* GetStream() const {return m_stream;}
 
+	/// \brief Provides the number of bytes ready for retrieval
+	/// \return the number of bytes ready for retrieval
+	/// \details All retrieval functions return the actual number of bytes retrieved, which is
+	///  the lesser of the request number and  MaxRetrievable()
 	lword MaxRetrievable() const;
 	size_t TransferTo2(BufferedTransformation &target, lword &transferBytes, const std::string &channel=DEFAULT_CHANNEL, bool blocking=true);
 	size_t CopyRangeTo2(BufferedTransformation &target, lword &begin, lword end=LWORD_MAX, const std::string &channel=DEFAULT_CHANNEL, bool blocking=true) const;
@@ -117,7 +121,7 @@ public:
 #endif
 
 	/// \brief Retrieves the internal stream
-	/// \returns the internal stream pointer
+	/// \return the internal stream pointer
 	std::istream* GetStream() {return m_store.GetStream();}
 };
 
@@ -160,7 +164,7 @@ public:
 #endif
 
 	/// \brief Retrieves the internal stream
-	/// \returns the internal stream pointer
+	/// \return the internal stream pointer
 	std::ostream* GetStream() {return m_stream;}
 
 	void IsolatedInitialize(const NameValuePairs &parameters);

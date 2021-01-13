@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 
-# ====================================================================
-# Sets the cross compile environment for ARM Embedded
+#############################################################################
 #
-# Written by Jeffrey Walton, noloader gmail account
+# This script sets the cross-compile environment for ARM embedded.
+#
+# Based upon OpenSSL's setenv-android.sh by TH, JW, and SM.
+# Heavily modified by JWW for Crypto++.
 #
 # Crypto++ Library is copyrighted as a compilation and (as of version 5.6.2)
 # licensed under the Boost Software License 1.0, while the individual files
 # in the compilation are all public domain.
 #
-# This script only supports Ubuntu at the moment. It does not support Fedora.
 # See http://www.cryptopp.com/wiki/ARM_Embedded_(Command_Line) for details.
-# ====================================================================
+#############################################################################
 
-# set -eu
+# cryptest-embedded.sh may run this script without sourcing.
+if [ "$0" = "${BASH_SOURCE[0]}" ]; then
+    echo "setenv-embedded.sh is usually sourced, but not this time."
+fi
 
 # Unset old options
 
@@ -24,12 +28,12 @@ unset IS_ANDROID
 unset IS_ARM_EMBEDDED
 
 if [ -z "${ARM_EMBEDDED_TOOLCHAIN-}" ]; then
-	ARM_EMBEDDED_TOOLCHAIN="/usr/bin"
+    ARM_EMBEDDED_TOOLCHAIN="/usr/bin"
 fi
 
 if [ ! -d "$ARM_EMBEDDED_TOOLCHAIN" ]; then
-	echo "ARM_EMBEDDED_TOOLCHAIN is not valid"
-	[ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+    echo "ARM_EMBEDDED_TOOLCHAIN is not valid"
+    [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 # Fedora
@@ -50,37 +54,37 @@ export RANLIB="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-ranlib"
 # Test a few of the tools
 if [ ! -e "$CPP" ]; then
   echo "ERROR: CPP is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$CC" ]; then
   echo "ERROR: CC is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$CXX" ]; then
   echo "ERROR: CXX is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$AR" ]; then
   echo "ERROR: AR is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$AS" ]; then
   echo "ERROR: AS is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$RANLIB" ]; then
   echo "ERROR: RANLIB is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -e "$LD" ]; then
   echo "ERROR: LD is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 # The Crypto++ Makefile uses these to disable host settings like
@@ -94,7 +98,7 @@ fi
 
 if [ ! -d "$ARM_EMBEDDED_SYSROOT" ]; then
   echo "ERROR: ARM_EMBEDDED_SYSROOT is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 # Fix C++ header paths for Ubuntu
@@ -104,12 +108,12 @@ ARM_EMBEDDED_CXX_HEADERS="$ARM_EMBEDDED_SYSROOT/include/c++/$ARM_EMBEDDED_TOOLCH
 
 if [ ! -d "$ARM_EMBEDDED_CXX_HEADERS" ]; then
   echo "ERROR: ARM_EMBEDDED_CXX_HEADERS is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 if [ ! -d "$ARM_EMBEDDED_CXX_HEADERS/arm-linux-gnueabi" ]; then
   echo "ERROR: ARM_EMBEDDED_CXX_HEADERS is not valid"
-  [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+  [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
 # Finally, the flags...
@@ -121,8 +125,8 @@ if [ -z "$ARM_EMBEDDED_FLAGS" ]; then
 fi
 
 # And print stuff to wow the user...
-VERBOSE=1
-if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -ne 0 ]; then
+VERBOSE=${VERBOSE:-1}
+if [ "$VERBOSE" -gt 0 ]; then
   echo "CPP: $CPP"
   echo "CXX: $CXX"
   echo "AR: $AR"
@@ -137,9 +141,8 @@ fi
 echo
 echo "*******************************************************************************"
 echo "It looks the the environment is set correctly. Your next step is build"
-echo "the library with 'make -f GNUmakefile-cross'. You can create a versioned"
-echo "shared object using 'HAS_SOLIB_VERSION=1 make -f GNUmakefile-cross'"
+echo "the library with 'make -f GNUmakefile-cross'."
 echo "*******************************************************************************"
 echo
 
-[ "$0" = "$BASH_SOURCE" ] && exit 0 || return 0
+[ "$0" = "${BASH_SOURCE[0]}" ] && exit 0 || return 0

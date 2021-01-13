@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 
-PWD_DIR=$(pwd)
-function cleanup {
-    cd "$PWD_DIR"
-}
-trap cleanup EXIT
+#############################################################################
+#
+# This script tests the CMake gear.
+#
+# Written and placed in public domain by Jeffrey Walton.
+#
+# Crypto++ Library is copyrighted as a compilation and (as of version 5.6.2)
+# licensed under the Boost Software License 1.0, while the individual files
+# in the compilation are all public domain.
+#
+# See https://www.cryptopp.com/wiki/CMake for more details
+#
+#############################################################################
 
 # Fixup ancient Bash
 # https://unix.stackexchange.com/q/468579/56041
@@ -24,50 +32,69 @@ if [[ -z "$CMAKE" ]]; then
 	CMAKE=cmake
 fi
 
-# Feth the three required files
-if ! wget --no-check-certificate https://raw.githubusercontent.com/noloader/cryptopp-cmake/master/CMakeLists.txt -O CMakeLists.txt; then
-	echo "CMakeLists.txt download failed"
-	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+#############################################################################
+
+if [[ -z $(command -v "$CMAKE") ]]; then
+	echo "Cannot find $CMAKE. Things may fail."
 fi
 
-if ! wget --no-check-certificate https://github.com/noloader/cryptopp-cmake/blob/master/cryptopp-config.cmake -O cryptopp-config.cmake; then
-	echo "cryptopp-config.cmake download failed"
-	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+if [[ -z $(command -v curl) ]]; then
+	echo "Cannot find cURL. Things may fail."
 fi
 
-rm -rf "$PWD_DIR/cmake_build"
-mkdir -p "$PWD_DIR/cmake_build"
-cd "$PWD_DIR/cmake_build"
+#############################################################################
 
-if [[ ! -z "$CXX" ]];
+files=(CMakeLists.txt cryptopp-config.cmake)
+
+for file in "${files[@]}"; do
+	echo "Downloading $file"
+	if ! curl -L -s -o "$file" "https://raw.githubusercontent.com/noloader/cryptopp-cmake/master/$file"; then
+		echo "$file download failed"
+		exit 1
+	fi
+    # Throttle
+    sleep 1
+done
+
+rm -rf "$(pwd)/cmake_build"
+mkdir -p "$(pwd)/cmake_build"
+cd "$(pwd)/cmake_build" || exit 1
+
+#############################################################################
+
+echo ""
+echo "Building test artifacts"
+echo ""
+
+if [[ -n "$CXX" ]];
 then
 	if ! CXX="$CXX" "$CMAKE" -DCMAKE_CXX_COMPILER="$CXX" ../; then
 		echo "cmake failed"
-		[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+		exit 1
 	fi
 else
 	if ! "$CMAKE" ../; then
 		echo "cmake failed"
-		[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+		exit 1
 	fi
 fi
 
-"$MAKE" clean 2>/dev/null
+"$MAKE" clean &>/dev/null
 
 if ! "$MAKE" -j2 -f Makefile VERBOSE=1; then
 	echo "make failed"
-	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+	exit 1
 fi
 
 if ! ./cryptest.exe v; then
 	echo "cryptest.exe v failed"
-	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+	exit 1
 fi
 
 if ! ./cryptest.exe tv all; then
 	echo "cryptest.exe v failed"
-	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+	exit 1
 fi
 
 # Return success
-[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 0 || return 0
+exit 0

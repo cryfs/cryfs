@@ -56,11 +56,11 @@ class MACBadErr : public DataDecryptorErr
 template <unsigned int BlockSize, unsigned int KeyLength, unsigned int DigestSize, unsigned int SaltSize, unsigned int Iterations>
 struct DataParametersInfo
 {
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = BlockSize)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = KeyLength)
-	CRYPTOPP_CONSTANT(SALTLENGTH = SaltSize)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = DigestSize)
-	CRYPTOPP_CONSTANT(ITERATIONS = Iterations)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = BlockSize);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = KeyLength);
+	CRYPTOPP_CONSTANT(SALTLENGTH = SaltSize);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = DigestSize);
+	CRYPTOPP_CONSTANT(ITERATIONS = Iterations);
 };
 
 typedef DataParametersInfo<LegacyBlockCipher::BLOCKSIZE, LegacyBlockCipher::DEFAULT_KEYLENGTH, LegacyHashModule::DIGESTSIZE, 8, 200> LegacyParametersInfo;
@@ -78,11 +78,11 @@ template <class BC, class H, class Info>
 class DataEncryptor : public ProxyFilter, public Info
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Construct a DataEncryptor
 	/// \param passphrase a C-String password
@@ -116,23 +116,23 @@ template <class BC, class H, class Info>
 class DataDecryptor : public ProxyFilter, public Info
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a C-String password
 	/// \param attachment a BufferedTransformation to attach to this object
-	/// \param throwException a flag specifiying whether an Exception should be thrown on error
+	/// \param throwException a flag specifying whether an Exception should be thrown on error
 	DataDecryptor(const char *passphrase, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a byte string password
 	/// \param passphraseLength the length of the byte string password
 	/// \param attachment a BufferedTransformation to attach to this object
-	/// \param throwException a flag specifiying whether an Exception should be thrown on error
+	/// \param throwException a flag specifying whether an Exception should be thrown on error
 	DataDecryptor(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	enum State {WAITING_FOR_KEYCHECK, KEY_GOOD, KEY_BAD};
@@ -173,11 +173,11 @@ template <class BC, class H, class MAC, class Info>
 class DataEncryptorWithMAC : public ProxyFilter
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataEncryptorWithMAC
 	/// \param passphrase a C-String password
@@ -218,23 +218,23 @@ template <class BC, class H, class MAC, class Info>
 class DataDecryptorWithMAC : public ProxyFilter
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a C-String password
 	/// \param attachment a BufferedTransformation to attach to this object
-	/// \param throwException a flag specifiying whether an Exception should be thrown on error
+	/// \param throwException a flag specifying whether an Exception should be thrown on error
 	DataDecryptorWithMAC(const char *passphrase, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a byte string password
 	/// \param passphraseLength the length of the byte string password
 	/// \param attachment a BufferedTransformation to attach to this object
-	/// \param throwException a flag specifiying whether an Exception should be thrown on error
+	/// \param throwException a flag specifying whether an Exception should be thrown on error
 	DataDecryptorWithMAC(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	typename DataDecryptor<BC,H,Info>::State CurrentState() const;

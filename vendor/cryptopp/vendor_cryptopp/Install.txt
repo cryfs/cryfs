@@ -2,6 +2,7 @@ CONTENTS OF THIS FILE
 ---------------------
 
 * Introduction
+* Prerequisites
 * Building the Library
 * Alternate Build Systems
 * Installing the Library
@@ -16,27 +17,34 @@ INTRODUCTION
 
 Crypto++ Library is a free C++ class library of cryptographic algorithms and schemes. The library was originally written and placed in public domain by Wei Dai, but it is now maintained by the community. The library homepage is at http://www.cryptopp.com/. The latest library source code can be found at http://github.com/weidai11/cryptopp. For licensing and copyright information, please see License.txt.
 
-These are general instructions for the AIX, BSDs, Linux, OS X, Solaris and Unix. The library uses a GNU makefile, which combines configuration and a non-anemic make. On AIX, BSD and Solaris you will likely have to use `gmake` to build the library. On Linux, OS X and Unix, the system's make should be OK. On Windows, Crypto++ provides Visual Studio solutions.
+These are general instructions for AIX, BSDs, Linux, OS X, Solaris and Unix. The library uses GNU Make and a GNUmakefile to avoid anemic make. On AIX, BSD and Solaris you will likely have to use `gmake` to build the library. On Linux and OS X, the system's make should be OK. On Windows, Crypto++ provides Visual Studio solutions.
 
 You should look through the GNUmakefile and config.h to ensure settings look reasonable before building. There are two wiki pages that help explain them at http://www.cryptopp.com/wiki/GNUmakefile and http://www.cryptopp.com/wiki/Config.h.
 
 Wiki pages are available for some platforms with specific build instructions. The pages include Android, ARM, iOS, MSBuild and Solaris. Solaris users should visit the wiki for important information on compiling the library with different versions of SunCC and options, and information on improving library performance and features.
 
-Crypto++ does not depend upon other tools or libraries. It does not use Autotools, does not use CMake, and does not use Boost. If you use an alternate build system, like Autotools or CMake, then see the warning below about CXXFLAGS and lack of -DNDEBUG. CMake is available in Master as a matter of convenience, but its not officially supported.
+Crypto++ does not depend upon other tools or libraries. The library only needs GNU Make 3.80 on Unix & Linux; or Visual Studio 2010 and above build tools on Windows. The library does not use Autotools, does not use CMake, and does not use Boost.
 
-There is a partially complete CmakeList.txt available on the wiki at http://www.cryptopp.com/wiki/CMake. It is not recommended for use because it is not in a good state. If you have CMake expertise and can work some problems, then please see the wiki page for tasks related to CMake.
+Autotools and CMake projects are not officially supported. The build systems take too much time and effort. Unofficial projects are available at https://github.com/noloader/cryptopp-autotools and https://github.com/noloader/cryptopp-cmake. The projects provide a central location to support Autotools and CMake. Collaborators for Autotools and CMake are welcomed.
 
+
+PREREQUISITES
+-------------
+
+The library requires a semi-modern C++ compiler and GNU Make 3.81 or above. The compiler must support 64-bit words, C++03, namespaces, RTTI and exceptions.
+
+The library does not depend on other build systems, like Autotools or CMake. The library does not depend on other libraries, like Boost.
 
 BUILDING THE LIBRARY
 --------------------
 
-In general, all you should have to do is open a terminal, and then:
+In general, all you should have to do is open a terminal, cd to the cryptopp directory, and then:
 
     make
     make test
     sudo make install
 
-The command above builds the static library and cryptest.exe program. It also uses a sane set of default flags, which are usually "-DNDEBUG -g2 -O3 -fPIC".
+The command above builds the static library and cryptest.exe program. It also uses a sane default flags, which are usually "-DNDEBUG -g2 -O3 -fPIC".
 
 If you want to build the shared object, then issue:
 
@@ -70,7 +78,16 @@ LLVM's libc++ is also supported, so you can:
     export CXXFLAGS="-std=c++11 -stdlib=libc++"
     make
 
-If you target 32-bit IA-32 machines (i386, i586 or i686), then the makefile forgoes -fPIC due to register pressures. You should add -fPIC yourself in this case:
+If you are using the library on OS X with XCode then you should add LLVM's libc++. You can do so by modifying CXXFLAGS, or you can modify the GNUmakefile. To modify the GNUmakefile, open it and find the line for OS X builds around line 150:
+
+    ifneq ($(IS_DARWIN),0)
+      CXX ?= c++
+      CRYPTOPP_CXXFLAGS += -stdlib=libc++
+      AR = libtool
+      ARFLAGS = -static -o
+    endif
+
+If you target 32-bit IA-32 machines (i386, i586 or i686), then the makefile forgoes -fPIC due to register pressures. You should add -fPIC yourself, if needed:
 
     CXXFLAGS="-DNDEBUG -g2 -O3 -fPIC" make
 
@@ -78,9 +95,26 @@ You can also override a variable so that only your flags are present. That is, t
 
     make CXXFLAGS="-std=c++11"
 
-Crypto++ does not enagage Specter remediations at this time. You can build with Specter resistance with the following flags:
+Crypto++ does not engage Specter remediations at this time. You can build with Specter resistance with the following flags:
 
     CXXFLAGS="-DNDEBUG -g2 -O3 -mfunction-return=thunk -mindirect-branch=thunk" make
+
+The library does not support out-of-tree builds. You must cd to the Crypto++ directory before building. `make distclean` will return the Crypto++ directory to a pristine state.
+
+
+BUILDING WITH VCPKG
+-------------------
+
+You can download and install cryptopp using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    ./vcpkg install cryptopp
+
+The cryptopp port in vcpkg is kept up to date by Microsoft team members and community contributors.
+If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 
 ALTERNATE BUILD SYSTEMS
@@ -124,7 +158,7 @@ The following are some of the targets provided by the GNU makefile.
 
 `make cryptest.exe` builds the library test harness.
 
-`make test` and `make check` are the same recipe and invoke the test harness with the the validation option. That is, it executes `cryptest.exe v`.
+`make test` and `make check` are the same recipe and invoke the test harness with the validation option. That is, it executes `cryptest.exe v`.
 
 `make install` installs the library. By default, the makefile copies into `/usr/local` by default.
 
@@ -147,18 +181,16 @@ The Crypto++ embraces tools like Undefined Behavior sanitizer (UBsan), Address s
 UBsan and Asan are mutually exclusive options, so you can perform only one of these at a time:
 
     make ubsan
-    ./cryptest.exe v 2>&1 | egrep "(error|FAILED)"
-    ./cryptest.exe tv all 2>&1 | egrep "(error|FAILED)"
+    ./cryptest.exe v 2>&1 | grep -E "(error:|FAILED)"
+    ./cryptest.exe tv all 2>&1 | grep -E "(error:|FAILED)"
 
 Or:
 
     make asan
-    ./cryptest.exe v 2>&1 | egrep "(error|FAILED)"
-    ./cryptest.exe tv all 2>&1 | egrep "(error|FAILED)"
+    ./cryptest.exe v 2>&1 | grep -E "(error:|FAILED)"
+    ./cryptest.exe tv all 2>&1 | grep -E "(error:|FAILED)"
 
-If you experience self test failures or see reports of undefined behavior, then you should ensure CRYPTOPP_NO_UNALIGNED_DATA_ACCESS is defined in config.h. CRYPTOPP_NO_UNALIGNED_DATA_ACCESS is not defined due to historical purposes.
-
-If you experience failures under Asan, then gather more information with:
+If you experience failures under Asan, then gather more information with asan_symbolize. You may not need asan_symbolize nowadays:
 
     ./cryptest.exe v 2>&1 | asan_symbolize
 
@@ -185,25 +217,25 @@ Fifth, the test harness provides a "validation" option which performs basic syst
     ./cryptest.exe v
     ...
 
-    All tests passed!
-    Test ended at Sun Jul 26 02:10:57 2015
-    Seed used was: 1437891055
+    Seed used was 1612313449
+    Test started at Tue Feb 2 19:50:49 2021
+    Test ended at Tue Feb 2 19:50:52 2021
 
 Sixth, the test harness provides a "test vector" option which uses many known test vectors, even those published by other people (like Brian Gladman for AES). You run the test vectors as shown below. The tail of the output should indicate 0 failed tests.
 
     ./cryptest.exe tv all
     ...
 
-    Testing SymmetricCipher algorithm MARS/ECB.
-    .................
-    Tests complete. Total tests = 4094. Failed tests = 0.
+    Testing SymmetricCipher algorithm AES/XTS.
+    .....................
+    Tests complete. Total tests = 11260. Failed tests = 0.
 
-The library also offers its test script for those who want to use it. The test script is names cryptest.sh, and it repeatedly builds the library and exectues the tests under various configurations. It takes 2 to 4 hours to run on a semi-modern desktop or server; and days to run on an IoT gadget. Also see http://github.com/weidai11/cryptopp/blob/master/cryptest.sh and http://cryptopp.com/wiki/Cryptest.sh.
+The library also offers its test script for those who want to use it. The test script is names cryptest.sh, and it repeatedly builds the library and exectues the tests under various configurations. It takes about 4 hours to run on a semi-modern desktop or server; and several days to run on an IoT gadget. Also see http://github.com/weidai11/cryptopp/blob/master/cryptest.sh and http://cryptopp.com/wiki/Cryptest.sh.
 
 
 REPORTING PROBLEMS
 ------------------
 
-Dirty compiles and failures in the validation suite or test vectors should be reported at the Crypto++ User Group. The User Group is located at http://groups.google.com/forum/#!forum/cryptopp-users.
+Build failures, dirty compiles and failures in the validation suite or test vectors should be reported at the Crypto++ User Group. The User Group is located at http://groups.google.com/forum/#!forum/cryptopp-users.
 
 The library uses Wei Dai's GitHub to track issues. The tracker is located at http://github.com/weidai11/cryptopp/issues. Please do not ask questions in the bug tracker; ask questions on the mailing list instead. Also see http://www.cryptopp.com/wiki/Bug_Report.

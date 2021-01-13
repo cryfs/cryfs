@@ -15,18 +15,20 @@
 ANONYMOUS_NAMESPACE_BEGIN
 
 using CryptoPP::ECP;
+using CryptoPP::Integer;
 using CryptoPP::ModularArithmetic;
 
 #if defined(HAVE_GCC_INIT_PRIORITY)
-  const ECP::Point g_identity __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 51))) = ECP::Point();
+	#define INIT_ATTRIBUTE __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 50)))
+	const ECP::Point g_identity INIT_ATTRIBUTE = ECP::Point();
 #elif defined(HAVE_MSC_INIT_PRIORITY)
-  #pragma warning(disable: 4075)
-  #pragma init_seg(".CRT$XCU")
-  const ECP::Point g_identity;
-  #pragma warning(default: 4075)
+	#pragma warning(disable: 4075)
+	#pragma init_seg(".CRT$XCU")
+	const ECP::Point g_identity;
+	#pragma warning(default: 4075)
 #elif defined(HAVE_XLC_INIT_PRIORITY)
-  #pragma priority(290)
-  const ECP::Point g_identity;
+	#pragma priority(290)
+	const ECP::Point g_identity;
 #endif
 
 inline ECP::Point ToMontgomery(const ModularArithmetic &mr, const ECP::Point &P)
@@ -38,6 +40,20 @@ inline ECP::Point FromMontgomery(const ModularArithmetic &mr, const ECP::Point &
 {
 	return P.identity ? P : ECP::Point(mr.ConvertOut(P.x), mr.ConvertOut(P.y));
 }
+
+inline Integer IdentityToInteger(bool val)
+{
+	return val ? Integer::One() : Integer::Zero();
+}
+
+struct ProjectivePoint
+{
+	ProjectivePoint() {}
+	ProjectivePoint(const Integer &x, const Integer &y, const Integer &z)
+		: x(x), y(y), z(z)	{}
+
+	Integer x, y, z;
+};
 
 ANONYMOUS_NAMESPACE_END
 
@@ -220,7 +236,7 @@ const ECP::Point& ECP::Identity() const
 {
 #if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
 	return g_identity;
-#elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
+#elif defined(CRYPTOPP_CXX11_STATIC_INIT)
 	static const ECP::Point g_identity;
 	return g_identity;
 #else
@@ -310,20 +326,11 @@ template <class T, class Iterator> void ParallelInvert(const AbstractRing<T> &ri
 	}
 }
 
-struct ProjectivePoint
-{
-	ProjectivePoint() {}
-	ProjectivePoint(const Integer &x, const Integer &y, const Integer &z)
-		: x(x), y(y), z(z)	{}
-
-	Integer x,y,z;
-};
-
 class ProjectiveDoubling
 {
 public:
 	ProjectiveDoubling(const ModularArithmetic &m_mr, const Integer &m_a, const Integer &m_b, const ECPPoint &Q)
-		: mr(m_mr), firstDoubling(true), negated(false)
+		: mr(m_mr)
 	{
 		CRYPTOPP_UNUSED(m_b);
 		if (Q.identity)
@@ -360,7 +367,6 @@ public:
 
 	const ModularArithmetic &mr;
 	ProjectivePoint P;
-	bool firstDoubling, negated;
 	Integer sixteenY4, aZ4, twoY, fourY2, S, M;
 };
 

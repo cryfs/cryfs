@@ -300,7 +300,7 @@ void BenchMarkKeyAgreement(const char *filename, const char *name, double timeTo
 	BenchMarkAgreement(name, d, timeTotal);
 }
 
-void Benchmark3(double t, double hertz)
+void BenchmarkPublicKeyAlgorithms(double t, double hertz)
 {
 	g_allocatedTime = t;
 	g_hertz = hertz;
@@ -365,21 +365,29 @@ void Benchmark3(double t, double hertz)
 		BenchMarkKeyAgreement<LUC_DH>("TestData/lucd1024.dat", "LUCDIF 1024", t);
 		BenchMarkKeyAgreement<MQV>("TestData/mqv1024.dat", "MQV 1024", t);
 		BenchMarkKeyAgreement<MQV>("TestData/mqv2048.dat", "MQV 2048", t);
-
-#if 0
-		BenchMarkKeyAgreement<ECHMQV160>("TestData/hmqv160.dat", "HMQV P-160", t);
-		BenchMarkKeyAgreement<ECHMQV256>("TestData/hmqv256.dat", "HMQV P-256", t);
-		BenchMarkKeyAgreement<ECHMQV384>("TestData/hmqv384.dat", "HMQV P-384", t);
-		BenchMarkKeyAgreement<ECHMQV512>("TestData/hmqv512.dat", "HMQV P-512", t);
-
-		BenchMarkKeyAgreement<ECFHMQV160>("TestData/fhmqv160.dat", "FHMQV P-160", t);
-		BenchMarkKeyAgreement<ECFHMQV256>("TestData/fhmqv256.dat", "FHMQV P-256", t);
-		BenchMarkKeyAgreement<ECFHMQV384>("TestData/fhmqv384.dat", "FHMQV P-384", t);
-		BenchMarkKeyAgreement<ECFHMQV512>("TestData/fhmqv512.dat", "FHMQV P-512", t);
-#endif
 	}
 
-	std::cout << "\n<TBODY style=\"background: yellow;\">";
+	std::cout << "\n</TABLE>" << std::endl;
+}
+
+void BenchmarkEllipticCurveAlgorithms(double t, double hertz)
+{
+	g_allocatedTime = t;
+	g_hertz = hertz;
+
+	const char *mco;
+	if (g_hertz > 1.0f)
+		mco = "<TH>Megacycles/Operation";
+	else
+		mco = "";
+
+	std::cout << "\n<TABLE>";
+	std::cout << "\n<COLGROUP><COL style=\"text-align: left;\"><COL style=";
+	std::cout << "\"text-align: right;\"><COL style=\"text-align: right;\">";
+	std::cout << "\n<THEAD style=\"background: #F0F0F0\">";
+	std::cout << "\n<TR><TH>Operation<TH>Milliseconds/Operation" << mco;
+
+	std::cout << "\n<TBODY style=\"background: white;\">";
 	{
 		ed25519::Signer sign(Test::GlobalRNG());
 		ed25519::Verifier verify(sign);
@@ -391,14 +399,34 @@ void Benchmark3(double t, double hertz)
 		BenchMarkAgreement("x25519", agree, t);
 	}
 
-	std::cout << "\n<TBODY style=\"background: white;\">";
+#if 0
+	std::cout << "\n<TBODY style=\"background: yellow;\">";
+	{
+		BenchMarkKeyAgreement<ECMQV160>("TestData/mqv160.dat", "MQV P-160", t);
+		BenchMarkKeyAgreement<ECMQV256>("TestData/mqv256.dat", "MQV P-256", t);
+		BenchMarkKeyAgreement<ECMQV384>("TestData/mqv384.dat", "MQV P-384", t);
+		BenchMarkKeyAgreement<ECMQV512>("TestData/mqv512.dat", "MQV P-521", t);
+
+		BenchMarkKeyAgreement<ECHMQV160>("TestData/hmqv160.dat", "HMQV P-160", t);
+		BenchMarkKeyAgreement<ECHMQV256>("TestData/hmqv256.dat", "HMQV P-256", t);
+		BenchMarkKeyAgreement<ECHMQV384>("TestData/hmqv384.dat", "HMQV P-384", t);
+		BenchMarkKeyAgreement<ECHMQV512>("TestData/hmqv512.dat", "HMQV P-521", t);
+
+		BenchMarkKeyAgreement<ECFHMQV160>("TestData/fhmqv160.dat", "FHMQV P-160", t);
+		BenchMarkKeyAgreement<ECFHMQV256>("TestData/fhmqv256.dat", "FHMQV P-256", t);
+		BenchMarkKeyAgreement<ECFHMQV384>("TestData/fhmqv384.dat", "FHMQV P-384", t);
+		BenchMarkKeyAgreement<ECFHMQV512>("TestData/fhmqv512.dat", "FHMQV P-521", t);
+	}
+#endif
+
+	std::cout << "\n<TBODY style=\"background: yellow;\">";
 	{
 		ECIES<ECP>::Decryptor cpriv(Test::GlobalRNG(), ASN1::secp256k1());
 		ECIES<ECP>::Encryptor cpub(cpriv);
 		ECDSA<ECP, SHA1>::Signer spriv(cpriv);
 		ECDSA<ECP, SHA1>::Verifier spub(spriv);
 		ECDSA_RFC6979<ECP, SHA1>::Signer spriv2(cpriv);
-		ECDSA_RFC6979<ECP, SHA1>::Verifier spub2(spriv);
+		ECDSA_RFC6979<ECP, SHA1>::Verifier spub2(spriv2);
 		ECGDSA<ECP, SHA1>::Signer spriv3(Test::GlobalRNG(), ASN1::secp256k1());
 		ECGDSA<ECP, SHA1>::Verifier spub3(spriv3);
 		ECDH<ECP>::Domain ecdhc(ASN1::secp256k1());
@@ -418,14 +446,14 @@ void Benchmark3(double t, double hertz)
 		BenchMarkAgreement("ECMQVC over GF(p) 256", ecmqvc, t);
 	}
 
-	std::cout << "\n<TBODY style=\"background: yellow;\">";
+	std::cout << "\n<TBODY style=\"background: white;\">";
 	{
 		ECIES<EC2N>::Decryptor cpriv(Test::GlobalRNG(), ASN1::sect233r1());
 		ECIES<EC2N>::Encryptor cpub(cpriv);
 		ECDSA<EC2N, SHA1>::Signer spriv(cpriv);
 		ECDSA<EC2N, SHA1>::Verifier spub(spriv);
 		ECDSA_RFC6979<EC2N, SHA1>::Signer spriv2(cpriv);
-		ECDSA_RFC6979<EC2N, SHA1>::Verifier spub2(spriv);
+		ECDSA_RFC6979<EC2N, SHA1>::Verifier spub2(spriv2);
 		ECGDSA<EC2N, SHA1>::Signer spriv3(Test::GlobalRNG(), ASN1::sect233r1());
 		ECGDSA<EC2N, SHA1>::Verifier spub3(spriv3);
 		ECDH<EC2N>::Domain ecdhc(ASN1::sect233r1());

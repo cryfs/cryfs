@@ -9,6 +9,9 @@ Security:
   able to access those two blocks (i.e. 64KB of the stored data) is bad enough. See Section 8.3 in https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
   XChaCha20-Poly1305 does not suffer from this constraint and stays secure even if the filesystem gets very large.
 
+New platforms:
+* CryFS should now work on devices with Apple M1 silicon
+
 Build changes:
 * Switch to Conan package manager
 * Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers.
@@ -18,7 +21,7 @@ Build changes:
 
 Improvements:
 * Display the file system configuration when mounting a file system
-* Now shows a better error message when failing to load the config file and distinguishes between "wrong password" and "config file not found".
+* Now shows a better error message when failing to load the config file that distinguishes between "wrong password" and "config file not found".
 
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime).
@@ -32,6 +35,8 @@ Other:
 * Updated to spdlog 1.8.5
 * Updated to ranges-v3 0.11.0
 * Updated to boost 1.75
+* Updated to crypto++ 8.5
+
 
 Version 0.10.3
 ---------------

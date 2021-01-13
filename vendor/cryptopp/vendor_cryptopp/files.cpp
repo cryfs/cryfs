@@ -6,7 +6,38 @@
 
 #include "files.h"
 
+#include <iostream>
+#include <fstream>
 #include <limits>
+
+ANONYMOUS_NAMESPACE_BEGIN
+
+/// \brief Disable badbit, failbit and eof exceptions
+/// \sa https://github.com/weidai11/cryptopp/pull/968 and
+///  https://www.cplusplus.com/reference/ios/ios/exceptions
+class IosExceptionMask
+{
+public:
+	IosExceptionMask(std::istream& stream) : m_stream(stream) {
+		m_mask = m_stream.exceptions();
+		m_stream.exceptions(static_cast<std::ios::iostate>(0));
+	}
+
+	IosExceptionMask(std::istream& stream, std::ios::iostate newMask) : m_stream(stream) {
+		m_mask = m_stream.exceptions();
+		m_stream.exceptions(newMask);
+	}
+
+	~IosExceptionMask() {
+		m_stream.exceptions(m_mask);
+	}
+
+private:
+	std::istream& m_stream;
+	std::ios::iostate m_mask;
+};
+
+ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -65,9 +96,22 @@ lword FileStore::MaxRetrievable() const
 	if (!m_stream)
 		return 0;
 
+	// Disable badbit, failbit and eof exceptions
+	IosExceptionMask guard(*m_stream);
+
+	// Clear error bits due to seekg(). Also see
+	// https://github.com/weidai11/cryptopp/pull/968
 	std::streampos current = m_stream->tellg();
 	std::streampos end = m_stream->seekg(0, std::ios::end).tellg();
+	m_stream->clear();
 	m_stream->seekg(current);
+	m_stream->clear();
+
+	// Return max for a non-seekable stream
+	// https://www.cplusplus.com/reference/istream/istream/tellg
+	if (end == static_cast<std::streampos>(-1))
+		return LWORD_MAX;
+
 	return end-current;
 }
 
@@ -85,16 +129,14 @@ size_t FileStore::TransferTo2(BufferedTransformation &target, lword &transferByt
 	if (m_waiting)
 		goto output;
 
+	size_t spaceSize, blockedBytes;
 	while (size && m_stream->good())
 	{
-		{
-		size_t spaceSize = 1024;
+		spaceSize = 1024;
 		m_space = HelpCreatePutSpace(target, channel, 1, UnsignedMin(size_t(SIZE_MAX), size), spaceSize);
-
-		m_stream->read((char *)m_space, (unsigned int)STDMIN(size, (lword)spaceSize));
-		}
+		m_stream->read((char *)m_space, (std::streamsize)STDMIN(size, (lword)spaceSize));
 		m_len = (size_t)m_stream->gcount();
-		size_t blockedBytes;
+
 output:
 		blockedBytes = target.ChannelPutModifiable2(channel, m_space, m_len, 0, blocking);
 		m_waiting = blockedBytes > 0;

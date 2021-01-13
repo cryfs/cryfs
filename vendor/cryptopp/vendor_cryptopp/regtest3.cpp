@@ -1,6 +1,6 @@
 // regtest3.cpp - originally written and placed in the public domain by Wei Dai
 //                regtest.cpp split into 3 files due to OOM kills by JW
-//                in April 2017. A second split occured in July 2018.
+//                in April 2017. A second split occurred in July 2018.
 
 #define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 
@@ -21,6 +21,7 @@
 #include "ccm.h"
 #include "gcm.h"
 #include "eax.h"
+#include "xts.h"
 #include "twofish.h"
 #include "serpent.h"
 #include "cast.h"
@@ -67,6 +68,7 @@ void RegisterFactories4()
 	RegisterSymmetricCipherDefaultFactories<CFB_Mode<AES> >();
 	RegisterSymmetricCipherDefaultFactories<OFB_Mode<AES> >();
 	RegisterSymmetricCipherDefaultFactories<CTR_Mode<AES> >();
+	RegisterSymmetricCipherDefaultFactories<XTS_Mode<AES> >();
 
 	RegisterAuthenticatedSymmetricCipherDefaultFactories<CCM<AES> >();
 	RegisterAuthenticatedSymmetricCipherDefaultFactories<GCM<AES> >();

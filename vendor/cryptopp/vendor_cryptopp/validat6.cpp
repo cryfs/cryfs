@@ -41,7 +41,7 @@ bool CryptoSystemValidate(PK_Decryptor &priv, PK_Encryptor &pub, bool thorough)
 	std::cout << (fail ? "FAILED    " : "passed    ");
 	std::cout << "cryptosystem key validation\n";
 
-	const byte *message = (byte *)"test message";
+	const byte message[] = "test message";
 	const int messageLen = 12;
 	SecByteBlock ciphertext(priv.CiphertextLength(messageLen));
 	SecByteBlock plaintext(priv.MaxPlaintextLength(ciphertext.size()));
@@ -117,9 +117,13 @@ bool AuthenticatedKeyAgreementValidate(AuthenticatedKeyAgreementDomain &d)
 	memset(val1.begin(), 0x10, val1.size());
 	memset(val2.begin(), 0x11, val2.size());
 
-	if (!(d.Agree(val1, spriv1, epriv1, spub2, epub2) && d.Agree(val2, spriv2, epriv2, spub1, epub1)))
+	if (d.Agree(val1, spriv1, epriv1, spub2, epub2) && d.Agree(val2, spriv2, epriv2, spub1, epub1))
 	{
-		std::cout << "FAILED    authenticated key agreement failed" << std::endl;
+		std::cout << "passed    authenticated key agreement protocol execution" << std::endl;
+	}
+	else
+	{
+		std::cout << "FAILED    authenticated key agreement protocol execution" << std::endl;
 		return false;
 	}
 
@@ -130,6 +134,72 @@ bool AuthenticatedKeyAgreementValidate(AuthenticatedKeyAgreementDomain &d)
 	}
 
 	std::cout << "passed    authenticated key agreement" << std::endl;
+	return true;
+}
+
+bool AuthenticatedKeyAgreementWithRolesValidate(AuthenticatedKeyAgreementDomain &initiator, AuthenticatedKeyAgreementDomain &recipient)
+{
+	if (initiator.GetCryptoParameters().Validate(GlobalRNG(), 3))
+		std::cout << "passed    authenticated key agreement domain parameters validation (initiator)" << std::endl;
+	else
+	{
+		std::cout << "FAILED    authenticated key agreement domain parameters invalid (initiator)" << std::endl;
+		return false;
+	}
+
+	if (recipient.GetCryptoParameters().Validate(GlobalRNG(), 3))
+		std::cout << "passed    authenticated key agreement domain parameters validation (recipient)" << std::endl;
+	else
+	{
+		std::cout << "FAILED    authenticated key agreement domain parameters invalid (recipient)" << std::endl;
+		return false;
+	}
+
+	if (initiator.StaticPrivateKeyLength() != recipient.StaticPrivateKeyLength() ||
+	    initiator.EphemeralPrivateKeyLength() != recipient.EphemeralPrivateKeyLength() ||
+	    initiator.StaticPublicKeyLength() != recipient.StaticPublicKeyLength() ||
+	    initiator.EphemeralPublicKeyLength() != recipient.EphemeralPublicKeyLength() ||
+	    initiator.AgreedValueLength() != recipient.AgreedValueLength())
+	{
+		std::cout << "FAILED    authenticated key agreement domain parameter consistency" << std::endl;
+		return false;
+	}
+	else
+	{
+		std::cout << "passed    authenticated key agreement domain parameter consistency" << std::endl;
+	}
+
+	SecByteBlock spriv1(initiator.StaticPrivateKeyLength()), spriv2(recipient.StaticPrivateKeyLength());
+	SecByteBlock epriv1(initiator.EphemeralPrivateKeyLength()), epriv2(recipient.EphemeralPrivateKeyLength());
+	SecByteBlock spub1(initiator.StaticPublicKeyLength()), spub2(recipient.StaticPublicKeyLength());
+	SecByteBlock epub1(initiator.EphemeralPublicKeyLength()), epub2(recipient.EphemeralPublicKeyLength());
+	SecByteBlock val1(initiator.AgreedValueLength()), val2(recipient.AgreedValueLength());
+
+	initiator.GenerateStaticKeyPair(GlobalRNG(), spriv1, spub1);
+	recipient.GenerateStaticKeyPair(GlobalRNG(), spriv2, spub2);
+	initiator.GenerateEphemeralKeyPair(GlobalRNG(), epriv1, epub1);
+	recipient.GenerateEphemeralKeyPair(GlobalRNG(), epriv2, epub2);
+
+	memset(val1.begin(), 0x10, val1.size());
+	memset(val2.begin(), 0x11, val2.size());
+
+	if (initiator.Agree(val1, spriv1, epriv1, spub2, epub2) && recipient.Agree(val2, spriv2, epriv2, spub1, epub1))
+	{
+		std::cout << "passed    authenticated key agreement protocol execution" << std::endl;
+	}
+	else
+	{
+		std::cout << "FAILED    authenticated key agreement protocol execution" << std::endl;
+		return false;
+	}
+
+	if (memcmp(val1.begin(), val2.begin(), initiator.AgreedValueLength()))
+	{
+		std::cout << "FAILED    authenticated agreed values not equal" << std::endl;
+		return false;
+	}
+
+	std::cout << "passed    authenticated key agreement shared secret" << std::endl;
 	return true;
 }
 
@@ -248,13 +318,29 @@ bool ValidateECP()
 	while (!(oid = DL_GroupParameters_EC<ECP>::GetNextRecommendedParametersOID(oid)).GetValues().empty())
 	{
 		DL_GroupParameters_EC<ECP> params(oid);
-		bool fail = !params.Validate(GlobalRNG(), 2);
-		std::cout << (fail ? "FAILED" : "passed") << "    " << std::dec << params.GetCurve().GetField().MaxElementBitLength() << " bits\n";
-		pass = pass && !fail;
+		pass = params.Validate(GlobalRNG(), 2);
+
+		// Test addition of identity element
+		DL_GroupParameters_EC<ECP>::Element e1;
+		e1 = params.GetCurve().Add(e1, e1);
+		pass = params.IsIdentity(e1) && pass;
+
+		// Test doubling of identity element
+		DL_GroupParameters_EC<ECP>::Element e2;
+		e2 = params.GetCurve().Double(e2);
+		pass = params.IsIdentity(e2) && pass;
+
+		// Test multiplication of identity element
+		DL_GroupParameters_EC<ECP>::Element e3;
+		Integer two = Integer::Two();
+		e3 = params.GetCurve().Multiply(two, e3);
+		pass = params.IsIdentity(e3) && pass;
+
+		std::cout << (pass ? "passed" : "FAILED") << "    " << std::dec << params.GetCurve().GetField().MaxElementBitLength() << " bits\n";
 	}
 
 	std::cout << "\nECP validation suite running...\n\n";
-	return ValidateECP_Agreement() && ValidateECP_Encrypt() && ValidateECP_Sign() && pass;
+	return ValidateECP_Agreement() && ValidateECP_Encrypt() && ValidateECP_NULLDigest_Encrypt() && ValidateECP_Sign() && pass;
 }
 
 bool ValidateEC2N()
@@ -268,9 +354,25 @@ bool ValidateEC2N()
 	while (!(oid = DL_GroupParameters_EC<EC2N>::GetNextRecommendedParametersOID(oid)).GetValues().empty())
 	{
 		DL_GroupParameters_EC<EC2N> params(oid);
-		bool fail = !params.Validate(GlobalRNG(), 2);
-		std::cout << (fail ? "FAILED" : "passed") << "    " << params.GetCurve().GetField().MaxElementBitLength() << " bits\n";
-		pass = pass && !fail;
+		pass = params.Validate(GlobalRNG(), 2);
+
+		// Test addition of identity element
+		DL_GroupParameters_EC<EC2N>::Element e1;
+		e1 = params.GetCurve().Add(e1, e1);
+		pass = params.IsIdentity(e1) && pass;
+
+		// Test doubling of identity element
+		DL_GroupParameters_EC<EC2N>::Element e2;
+		e2 = params.GetCurve().Double(e2);
+		pass = params.IsIdentity(e2) && pass;
+
+		// Test multiplication of identity element
+		DL_GroupParameters_EC<EC2N>::Element e3;
+		Integer two = Integer::Two();
+		e3 = params.GetCurve().Multiply(two, e3);
+		pass = params.IsIdentity(e3) && pass;
+
+		std::cout << (pass ? "passed" : "FAILED") << "    " << params.GetCurve().GetField().MaxElementBitLength() << " bits\n";
 	}
 #endif
 

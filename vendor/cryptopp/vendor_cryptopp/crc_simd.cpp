@@ -14,12 +14,11 @@
 # include <nmmintrin.h>
 #endif
 
-// C1189: error: This header is specific to ARM targets
-#if (CRYPTOPP_ARM_NEON_AVAILABLE) && !defined(_M_ARM64)
+#if (CRYPTOPP_ARM_NEON_HEADER)
 # include <arm_neon.h>
 #endif
 
-#if (CRYPTOPP_ARM_ACLE_AVAILABLE)
+#if (CRYPTOPP_ARM_ACLE_HEADER)
 # include <stdint.h>
 # include <arm_acle.h>
 #endif
@@ -88,7 +87,10 @@ bool CPU_ProbeCRC32()
 
     volatile sigset_t oldMask;
     if (sigprocmask(0, NULLPTR, (sigset_t*)&oldMask))
+    {
+        signal(SIGILL, oldHandler);
         return false;
+    }
 
     if (setjmp(s_jmpSIGILL))
         result = false;

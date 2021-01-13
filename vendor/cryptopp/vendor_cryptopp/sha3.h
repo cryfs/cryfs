@@ -60,8 +60,8 @@ template<unsigned int T_DigestSize>
 class SHA3_Final : public SHA3
 {
 public:
-    CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize)
-    CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE)
+    CRYPTOPP_CONSTANT(DIGESTSIZE = T_DigestSize);
+    CRYPTOPP_CONSTANT(BLOCKSIZE = 200 - 2 * DIGESTSIZE);
     static std::string StaticAlgorithmName()
         { return "SHA3-" + IntToString(DIGESTSIZE * 8); }
 
@@ -82,8 +82,6 @@ private:
 #if !defined(__BORLANDC__)
     // ensure there was no underflow in the math
     CRYPTOPP_COMPILE_ASSERT(BLOCKSIZE < 200);
-    // this is a general expectation by HMAC
-    CRYPTOPP_COMPILE_ASSERT((int)BLOCKSIZE > (int)DIGESTSIZE);
 #endif
 };
 

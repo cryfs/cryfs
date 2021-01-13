@@ -171,6 +171,7 @@
     <ClCompile Include="adler32.cpp" />
     <ClCompile Include="algebra.cpp" />
     <ClCompile Include="algparam.cpp" />
+    <ClCompile Include="allocate.cpp" />
     <ClCompile Include="arc4.cpp" />
     <ClCompile Include="aria.cpp" />
     <ClCompile Include="aria_simd.cpp" />
@@ -314,9 +315,7 @@
     <ClCompile Include="shark.cpp" />
     <ClCompile Include="sharkbox.cpp" />
     <ClCompile Include="simeck.cpp" />
-    <ClCompile Include="simeck_simd.cpp" />
     <ClCompile Include="simon.cpp" />
-    <ClCompile Include="simon64_simd.cpp" />
     <ClCompile Include="simon128_simd.cpp" />
     <ClCompile Include="simple.cpp" />
     <ClCompile Include="skipjack.cpp" />
@@ -325,7 +324,6 @@
     <ClCompile Include="sm4_simd.cpp" />
     <ClCompile Include="sosemanuk.cpp" />
     <ClCompile Include="speck.cpp" />
-    <ClCompile Include="speck64_simd.cpp" />
     <ClCompile Include="speck128_simd.cpp" />
     <ClCompile Include="square.cpp" />
     <ClCompile Include="squaretb.cpp" />
@@ -345,6 +343,7 @@
     <ClCompile Include="xed25519.cpp" />
     <ClCompile Include="xtr.cpp" />
     <ClCompile Include="xtrcrypt.cpp" />
+    <ClCompile Include="xts.cpp" />
     <ClCompile Include="zdeflate.cpp" />
     <ClCompile Include="zinflate.cpp" />
     <ClCompile Include="zlib.cpp" />
@@ -373,6 +372,16 @@
       <Command>ml64.exe /c /nologo /D_M_X64 /W3 /Cx /Zi /Fo"$(IntDir)rdrand-x64.obj" "%(FullPath)"</Command>
       <Outputs>$(IntDir)\rdrand-x64.obj;%(Outputs)</Outputs>
     </CustomBuild>
+    <CustomBuild Condition="'$(Platform)'=='Win32'" Include="rdseed.asm">
+      <Message>Building and assembling rdseed.asm</Message>
+      <Command>ml.exe /c /nologo /D_M_X86 /W3 /Cx /Zi /safeseh /Fo"$(IntDir)rdseed-x86.obj" "%(FullPath)"</Command>
+      <Outputs>$(IntDir)\rdseed-x86.obj;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Condition="'$(Platform)'=='x64'" Include="rdseed.asm">
+      <Message>Building and assembling rdseed.asm</Message>
+      <Command>ml64.exe /c /nologo /D_M_X64 /W3 /Cx /Zi /Fo"$(IntDir)rdseed-x64.obj" "%(FullPath)"</Command>
+      <Outputs>$(IntDir)\rdseed-x64.obj;%(Outputs)</Outputs>
+    </CustomBuild>
     <CustomBuild Condition="'$(Platform)'=='x64' AND ('$(Configuration)'=='Debug' Or '$(Configuration)'=='Release')" Include="x64dll.asm">
       <Message>Building and assembling x64dll.asm</Message>
       <Command>ml64.exe /c /nologo /D_M_X64 /W3 /Zi /Fo"$(IntDir)x64dll.obj" "%(FullPath)"</Command>
@@ -391,6 +400,7 @@
     <ClInclude Include="aes.h" />
     <ClInclude Include="algebra.h" />
     <ClInclude Include="algparam.h" />
+    <ClInclude Include="allocate.h" />
     <ClInclude Include="arc4.h" />
     <ClInclude Include="aria.h" />
     <ClInclude Include="argnames.h" />
@@ -412,6 +422,16 @@
     <ClInclude Include="channels.h" />
     <ClInclude Include="cmac.h" />
     <ClInclude Include="config.h" />
+    <ClInclude Include="config_align.h" />
+    <ClInclude Include="config_asm.h" />
+    <ClInclude Include="config_cpu.h" />
+    <ClInclude Include="config_cxx.h" />
+    <ClInclude Include="config_dll.h" />
+    <ClInclude Include="config_int.h" />
+    <ClInclude Include="config_misc.h" />
+    <ClInclude Include="config_ns.h" />
+    <ClInclude Include="config_os.h" />
+    <ClInclude Include="config_ver.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="crc.h" />
     <ClInclude Include="cryptlib.h" />
@@ -509,6 +529,7 @@
     <ClInclude Include="scrypt.h" />
     <ClInclude Include="seal.h" />
     <ClInclude Include="secblock.h" />
+    <ClInclude Include="secblockfwd.h" />
     <ClInclude Include="seckey.h" />
     <ClInclude Include="seed.h" />
     <ClInclude Include="serpent.h" />
@@ -545,6 +566,7 @@
     <ClInclude Include="xed25519.h" />
     <ClInclude Include="xtr.h" />
     <ClInclude Include="xtrcrypt.h" />
+    <ClInclude Include="xts.h" />
     <ClInclude Include="zdeflate.h" />
     <ClInclude Include="zinflate.h" />
     <ClInclude Include="zlib.h" />

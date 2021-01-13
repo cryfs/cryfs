@@ -177,13 +177,28 @@ NAMESPACE_BEGIN(CryptoPP)
 
 size_t Scrypt::GetValidDerivedLength(size_t keylength) const
 {
-    if (keylength > MaxDerivedLength())
-        return MaxDerivedLength();
+    if (keylength > MaxDerivedKeyLength())
+        return MaxDerivedKeyLength();
     return keylength;
 }
 
 void Scrypt::ValidateParameters(size_t derivedLen, word64 cost, word64 blockSize, word64 parallelization) const
 {
+    // https://github.com/weidai11/cryptopp/issues/842
+    CRYPTOPP_ASSERT(derivedLen != 0);
+    CRYPTOPP_ASSERT(cost != 0);
+    CRYPTOPP_ASSERT(blockSize != 0);
+    CRYPTOPP_ASSERT(parallelization != 0);
+
+    if (cost == 0)
+        throw InvalidArgument("Scrypt: cost cannot be 0");
+
+    if (blockSize == 0)
+        throw InvalidArgument("Scrypt: block size cannot be 0");
+
+    if (parallelization == 0)
+        throw InvalidArgument("Scrypt: parallelization cannot be 0");
+
     // Optimizer should remove this on 32-bit platforms
     if (std::numeric_limits<size_t>::max() > std::numeric_limits<word32>::max())
     {
@@ -196,7 +211,7 @@ void Scrypt::ValidateParameters(size_t derivedLen, word64 cost, word64 blockSize
     }
 
     // https://github.com/weidai11/cryptopp/issues/787
-    CRYPTOPP_ASSERT(parallelization <= std::numeric_limits<int>::max());
+    CRYPTOPP_ASSERT(parallelization <= static_cast<word64>(std::numeric_limits<int>::max()));
     if (parallelization > static_cast<word64>(std::numeric_limits<int>::max()))
     {
         std::ostringstream oss;
@@ -246,7 +261,7 @@ size_t Scrypt::DeriveKey(byte*derived, size_t derivedLen,
 {
     CRYPTOPP_ASSERT(secret /*&& secretLen*/);
     CRYPTOPP_ASSERT(derived && derivedLen);
-    CRYPTOPP_ASSERT(derivedLen <= MaxDerivedLength());
+    CRYPTOPP_ASSERT(derivedLen <= MaxDerivedKeyLength());
 
     word64 cost=0, blockSize=0, parallelization=0;
     if(params.GetValue("Cost", cost) == false)
@@ -269,12 +284,12 @@ size_t Scrypt::DeriveKey(byte*derived, size_t derivedLen, const byte*secret, siz
 {
     CRYPTOPP_ASSERT(secret /*&& secretLen*/);
     CRYPTOPP_ASSERT(derived && derivedLen);
-    CRYPTOPP_ASSERT(derivedLen <= MaxDerivedLength());
+    CRYPTOPP_ASSERT(derivedLen <= MaxDerivedKeyLength());
 
-    ThrowIfInvalidDerivedLength(derivedLen);
+    ThrowIfInvalidDerivedKeyLength(derivedLen);
     ValidateParameters(derivedLen, cost, blockSize, parallel);
 
-    AlignedSecByteBlock  B(static_cast<size_t>(blockSize * parallel * 128U));
+    AlignedSecByteBlock B(static_cast<size_t>(blockSize * parallel * 128U));
 
     // 1: (B_0 ... B_{p-1}) <-- PBKDF2(P, S, 1, p * MFLen)
     PBKDF2_SHA256(B, B.size(), secret, secretLen, salt, saltLen, 1);

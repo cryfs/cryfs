@@ -5,7 +5,7 @@
 
 // The Tweet API was added to the Crypto++ library to cross-validate results.
 // We debated over putting it in the Test namespace, but settled for the NaCl
-// namespace to segreate it from other parts of the library.
+// namespace to segregate it from other parts of the library.
 
 /// \file naclite.h
 /// \brief Crypto++ interface to TweetNaCl library (20140917)
@@ -64,85 +64,85 @@ NAMESPACE_BEGIN(NaCl)
 
 /// \brief Hash size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/hash.html">NaCl crypto_hash documentation</A>
-CRYPTOPP_CONSTANT(crypto_hash_BYTES = 64)
+CRYPTOPP_CONSTANT(crypto_hash_BYTES = 64);
 
 /// \brief Key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
-CRYPTOPP_CONSTANT(crypto_stream_KEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_stream_KEYBYTES = 32);
 /// \brief Nonce size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
-CRYPTOPP_CONSTANT(crypto_stream_NONCEBYTES = 24)
+CRYPTOPP_CONSTANT(crypto_stream_NONCEBYTES = 24);
 
 /// \brief Key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/auth.html">NaCl crypto_auth documentation</A>
-CRYPTOPP_CONSTANT(crypto_auth_KEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_auth_KEYBYTES = 32);
 /// \brief Tag size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/auth.html">NaCl crypto_auth documentation</A>
-CRYPTOPP_CONSTANT(crypto_auth_BYTES = 16)
+CRYPTOPP_CONSTANT(crypto_auth_BYTES = 16);
 
 /// \brief Key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/onetimeauth.html">NaCl crypto_onetimeauth documentation</A>
-CRYPTOPP_CONSTANT(crypto_onetimeauth_KEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_onetimeauth_KEYBYTES = 32);
 /// \brief Tag size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/onetimeauth.html">NaCl crypto_onetimeauth documentation</A>
-CRYPTOPP_CONSTANT(crypto_onetimeauth_BYTES = 16)
+CRYPTOPP_CONSTANT(crypto_onetimeauth_BYTES = 16);
 
 /// \brief Key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
-CRYPTOPP_CONSTANT(crypto_secretbox_KEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_secretbox_KEYBYTES = 32);
 /// \brief Nonce size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
-CRYPTOPP_CONSTANT(crypto_secretbox_NONCEBYTES = 24)
+CRYPTOPP_CONSTANT(crypto_secretbox_NONCEBYTES = 24);
 /// \brief Zero-padded message prefix in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
-CRYPTOPP_CONSTANT(crypto_secretbox_ZEROBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_secretbox_ZEROBYTES = 32);
 /// \brief Zero-padded message prefix in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
-CRYPTOPP_CONSTANT(crypto_secretbox_BOXZEROBYTES = 16)
+CRYPTOPP_CONSTANT(crypto_secretbox_BOXZEROBYTES = 16);
 
 /// \brief Private key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_SECRETKEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_box_SECRETKEYBYTES = 32);
 /// \brief Public key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_PUBLICKEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_box_PUBLICKEYBYTES = 32);
 /// \brief Nonce size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_NONCEBYTES = 24)
+CRYPTOPP_CONSTANT(crypto_box_NONCEBYTES = 24);
 /// \brief Message 0-byte prefix in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_ZEROBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_box_ZEROBYTES = 32);
 /// \brief Open box 0-byte prefix in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_BOXZEROBYTES = 16)
+CRYPTOPP_CONSTANT(crypto_box_BOXZEROBYTES = 16);
 /// \brief Precomputation 0-byte prefix in bytes in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_BEFORENMBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_box_BEFORENMBYTES = 32);
 /// \brief MAC size in bytes
 /// \details crypto_box_MACBYTES was missing from tweetnacl.h. Its is defined as
 ///   crypto_box_curve25519xsalsa20poly1305_MACBYTES, which is defined as 16U.
 /// \sa <A HREF="https://nacl.cr.yp.to/hash.html">NaCl crypto_box documentation</A>
-CRYPTOPP_CONSTANT(crypto_box_MACBYTES = 16)
+CRYPTOPP_CONSTANT(crypto_box_MACBYTES = 16);
 
 /// \brief Private key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
-CRYPTOPP_CONSTANT(crypto_sign_SECRETKEYBYTES = 64)
+CRYPTOPP_CONSTANT(crypto_sign_SECRETKEYBYTES = 64);
 /// \brief Public key size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
-CRYPTOPP_CONSTANT(crypto_sign_PUBLICKEYBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_sign_PUBLICKEYBYTES = 32);
 /// \brief Seed size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
-CRYPTOPP_CONSTANT(crypto_sign_SEEDBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_sign_SEEDBYTES = 32);
 /// \brief Signature size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
-CRYPTOPP_CONSTANT(crypto_sign_BYTES = 64)
+CRYPTOPP_CONSTANT(crypto_sign_BYTES = 64);
 
 /// \brief Group element size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/scalarmult.html">NaCl crypto_scalarmult documentation</A>
-CRYPTOPP_CONSTANT(crypto_scalarmult_BYTES = 32)
+CRYPTOPP_CONSTANT(crypto_scalarmult_BYTES = 32);
 /// \brief Integer size in bytes
 /// \sa <A HREF="https://nacl.cr.yp.to/scalarmult.html">NaCl crypto_scalarmult documentation</A>
-CRYPTOPP_CONSTANT(crypto_scalarmult_SCALARBYTES = 32)
+CRYPTOPP_CONSTANT(crypto_scalarmult_SCALARBYTES = 32);
 
 /// \brief Encrypt and authenticate a message
 /// \param c output byte buffer
@@ -152,7 +152,7 @@ CRYPTOPP_CONSTANT(crypto_scalarmult_SCALARBYTES = 32)
 /// \param y other's public key
 /// \param x private key
 /// \details crypto_box() uses crypto_box_curve25519xsalsa20poly1305
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box(byte *c,const byte *m,word64 d,const byte *n,const byte *y,const byte *x);
@@ -165,7 +165,7 @@ int crypto_box(byte *c,const byte *m,word64 d,const byte *n,const byte *y,const 
 /// \param y other's public key
 /// \param x private key
 /// \details crypto_box_open() uses crypto_box_curve25519xsalsa20poly1305
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box_open(byte *m,const byte *c,word64 d,const byte *n,const byte *y,const byte *x);
@@ -173,7 +173,7 @@ int crypto_box_open(byte *m,const byte *c,word64 d,const byte *n,const byte *y,c
 /// \brief Generate a keypair for encryption
 /// \param y public key byte buffer
 /// \param x private key byte buffer
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box_keypair(byte *y,byte *x);
@@ -184,7 +184,7 @@ int crypto_box_keypair(byte *y,byte *x);
 /// \param x private key
 /// \details crypto_box_beforenm() performs message-independent precomputation to derive the key.
 ///   Once the key is derived multiple calls to crypto_box_afternm() can be made to process the message.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box_beforenm(byte *k,const byte *y,const byte *x);
@@ -198,7 +198,7 @@ int crypto_box_beforenm(byte *k,const byte *y,const byte *x);
 /// \details crypto_box_afternm() performs message-dependent computation using the derived the key.
 ///   Once the key is derived using crypto_box_beforenm() multiple calls to crypto_box_afternm()
 ///   can be made to process the message.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box_afternm(byte *c,const byte *m,word64 d,const byte *n,const byte *k);
@@ -212,7 +212,7 @@ int crypto_box_afternm(byte *c,const byte *m,word64 d,const byte *n,const byte *
 /// \details crypto_box_afternm() performs message-dependent computation using the derived the key.
 ///   Once the key is derived using crypto_box_beforenm() multiple calls to crypto_box_open_afternm()
 ///   can be made to process the message.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>
 /// \since Crypto++ 6.0
 int crypto_box_open_afternm(byte *m,const byte *c,word64 d,const byte *n,const byte *k);
@@ -230,7 +230,7 @@ int crypto_box_open_afternm(byte *m,const byte *c,word64 d,const byte *n,const b
 ///   interop with early versions of NaCl, libsodium and other libraries does not exist. The
 ///   downlevel interop may also be needed of cryptocurrencies like Bitcoin, Ethereum, Monero
 ///   and Zcash.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \warning This version of crypto_box() does not check for small order elements. It should not
 ///   be used in new software.
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>,
@@ -254,7 +254,7 @@ int crypto_box_unchecked(byte *c,const byte *m,word64 d,const byte *n,const byte
 ///   interop with early versions of NaCl, libsodium and other libraries does not exist. The
 ///   downlevel interop may also be needed of cryptocurrencies like Bitcoin, Ethereum, Monero
 ///   and Zcash.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \warning This version of crypto_box_open() does not check for small order elements. It should not
 ///   be used in new software.
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>,
@@ -276,7 +276,7 @@ int crypto_box_open_unchecked(byte *m,const byte *c,word64 d,const byte *n,const
 ///   interop with early versions of NaCl, libsodium and other libraries does not exist. The
 ///   downlevel interop may also be needed of cryptocurrencies like Bitcoin, Ethereum, Monero
 ///   and Zcash.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \warning This version of crypto_box_beforenm() does not check for small order elements. It should not
 ///   be used in new software.
 /// \sa <A HREF="https://nacl.cr.yp.to/box.html">NaCl crypto_box documentation</A>,
@@ -291,60 +291,60 @@ int crypto_box_beforenm_unchecked(byte *k,const byte *y,const byte *x);
 int crypto_core_salsa20(byte *out,const byte *in,const byte *k,const byte *c);
 
 /// \brief TODO
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \since Crypto++ 6.0
 int crypto_core_hsalsa20(byte *out,const byte *in,const byte *k,const byte *c);
 
 /// \brief Hash multiple blocks
 /// \details crypto_hashblocks() uses crypto_hashblocks_sha512.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/hash.html">NaCl crypto_hash documentation</A>
 /// \since Crypto++ 6.0
 int crypto_hashblocks(byte *x,const byte *m,word64 n);
 
 /// \brief Hash a message
 /// \details crypto_hash() uses crypto_hash_sha512.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/hash.html">NaCl crypto_hash documentation</A>
 /// \since Crypto++ 6.0
 int crypto_hash(byte *out,const byte *m,word64 n);
 
 /// \brief Create an authentication tag for a message
 /// \details crypto_onetimeauth() uses crypto_onetimeauth_poly1305.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/onetimeauth.html">NaCl crypto_onetimeauth documentation</A>
 /// \since Crypto++ 6.0
 int crypto_onetimeauth(byte *out,const byte *m,word64 n,const byte *k);
 
 /// \brief Verify an authentication tag on a message
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/onetimeauth.html">NaCl crypto_onetimeauth documentation</A>
 /// \since Crypto++ 6.0
 int crypto_onetimeauth_verify(const byte *h,const byte *m,word64 n,const byte *k);
 
 /// \brief Scalar multiplication of a point
 /// \details crypto_scalarmult() uses crypto_scalarmult_curve25519
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/scalarmult.html">NaCl crypto_scalarmult documentation</A>
 /// \since Crypto++ 6.0
 int crypto_scalarmult(byte *q,const byte *n,const byte *p);
 
 /// \brief Scalar multiplication of base point
 /// \details crypto_scalarmult_base() uses crypto_scalarmult_curve25519
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/scalarmult.html">NaCl crypto_scalarmult documentation</A>
 /// \since Crypto++ 6.0
 int crypto_scalarmult_base(byte *q,const byte *n);
 
 /// \brief Encrypt and authenticate a message
 /// \details crypto_secretbox() uses a symmetric key to encrypt and authenticate a message.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
 /// \since Crypto++ 6.0
 int crypto_secretbox(byte *c,const byte *m,word64 d,const byte *n,const byte *k);
 
 /// \brief Verify and decrypt a message
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/secretbox.html">NaCl crypto_secretbox documentation</A>
 /// \since Crypto++ 6.0
 int crypto_secretbox_open(byte *m,const byte *c,word64 d,const byte *n,const byte *k);
@@ -356,7 +356,7 @@ int crypto_secretbox_open(byte *m,const byte *c,word64 d,const byte *n,const byt
 /// \param n size of the input byte buffer
 /// \param sk private key
 /// \details crypto_sign() uses crypto_sign_ed25519.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
 /// \since Crypto++ 6.0
 int crypto_sign(byte *sm,word64 *smlen,const byte *m,word64 n,const byte *sk);
@@ -367,7 +367,7 @@ int crypto_sign(byte *sm,word64 *smlen,const byte *m,word64 n,const byte *sk);
 /// \param sm input byte buffer
 /// \param n size of the input byte buffer
 /// \param pk public key
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
 /// \since Crypto++ 6.0
 int crypto_sign_open(byte *m,word64 *mlen,const byte *sm,word64 n,const byte *pk);
@@ -376,7 +376,7 @@ int crypto_sign_open(byte *m,word64 *mlen,const byte *sm,word64 n,const byte *pk
 /// \param pk public key byte buffer
 /// \param sk private key byte buffer
 /// \details crypto_sign_keypair() creates an ed25519 keypair.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
 /// \since Crypto++ 6.0
 int crypto_sign_keypair(byte *pk, byte *sk);
@@ -389,44 +389,44 @@ int crypto_sign_keypair(byte *pk, byte *sk);
 ///   secret key with the calculated public key.
 /// \details crypto_sign_sk2pk() is not part of libsodium or Tweet API. It was
 ///   added for interop with some anonymous routing protocols.
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/sign.html">NaCl crypto_sign documentation</A>
 /// \since Crypto++ 8.0
 int crypto_sign_sk2pk(byte *pk, const byte *sk);
 
 /// \brief Produce a keystream using XSalsa20
 /// \details crypto_stream() uses crypto_stream_xsalsa20
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
 /// \since Crypto++ 6.0
 int crypto_stream(byte *c,word64 d,const byte *n,const byte *k);
 
 /// \brief Encrypt a message using XSalsa20
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
 /// \since Crypto++ 6.0
 int crypto_stream_xor(byte *c,const byte *m,word64 d,const byte *n,const byte *k);
 
 /// \brief Produce a keystream using Salsa20
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
 /// \since Crypto++ 6.0
 int crypto_stream_salsa20(byte *c,word64 d,const byte *n,const byte *k);
 
 /// \brief Encrypt a message using Salsa20
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/stream.html">NaCl crypto_stream documentation</A>
 /// \since Crypto++ 6.0
 int crypto_stream_salsa20_xor(byte *c,const byte *m,word64 b,const byte *n,const byte *k);
 
 /// \brief Compare 16-byte buffers
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/verify.html">NaCl crypto_verify documentation</A>
 /// \since Crypto++ 6.0
 int crypto_verify_16(const byte *x,const byte *y);
 
 /// \brief Compare 32-byte buffers
-/// \returns 0 on success, non-0 otherwise
+/// \return 0 on success, non-0 otherwise
 /// \sa <A HREF="https://nacl.cr.yp.to/verify.html">NaCl crypto_verify documentation</A>
 /// \since Crypto++ 6.0
 int crypto_verify_32(const byte *x,const byte *y);

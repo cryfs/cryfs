@@ -156,7 +156,7 @@ bool TestCompressors()
 
     try
     {
-        // Gzip uses Adler32 checksums. We expect a failure to to happen on occasion.
+        // Gzip uses Adler32 checksums. We expect a failure to happen on occasion.
         // If we see more than 2 failures in a run of 128, then we need to investigate.
         unsigned int truncatedCount=0;
         for (unsigned int i = 0; i<COMP_COUNT; ++i)
@@ -1262,11 +1262,11 @@ struct ASN1_TestTuple
     }
 
     const byte* Data() const {
-        return reinterpret_cast<const byte*>(&m_data[0]);
+        return ConstBytePtr(m_data);
     }
 
     size_t Size() const {
-        return m_data.size();
+        return BytePtrSize(m_data);
     }
 
     int Tag() const {

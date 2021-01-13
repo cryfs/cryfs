@@ -2,10 +2,10 @@
 //                RFC 8439, Section 2.8, AEAD Construction, http://tools.ietf.org/html/rfc8439
 
 /// \file chachapoly.h
-/// \brief ChaCha20/Poly1305-TLS AEAD scheme
+/// \brief IETF ChaCha20/Poly1305 AEAD scheme
 /// \details ChaCha20Poly1305 is an authenticated encryption scheme that combines
 ///  ChaCha20TLS and Poly1305TLS. The scheme is defined in RFC 8439, section 2.8,
-///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha
+///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha20
 ///  and Poly1305.
 /// \sa <A HREF="http://tools.ietf.org/html/rfc8439">RFC 8439, ChaCha20 and Poly1305
 ///  for IETF Protocols</A>.
@@ -23,18 +23,17 @@ NAMESPACE_BEGIN(CryptoPP)
 
 ////////////////////////////// IETF ChaChaTLS //////////////////////////////
 
-/// \brief ChaCha20Poly1305 cipher base implementation
+/// \brief IETF ChaCha20Poly1305 cipher base implementation
 /// \details Base implementation of the AuthenticatedSymmetricCipher interface
 /// \since Crypto++ 8.1
 class ChaCha20Poly1305_Base : public AuthenticatedSymmetricCipherBase
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName()
+		{return "ChaCha20/Poly1305";}
+
 	virtual ~ChaCha20Poly1305_Base() {}
 
-	virtual const MessageAuthenticationCode & GetMAC() const = 0;
-	virtual MessageAuthenticationCode & AccessMAC() = 0;
-
-public:
 	// AuthenticatedSymmetricCipher
 	std::string AlgorithmName() const
 		{return std::string("ChaCha20/Poly1305");}
@@ -111,18 +110,21 @@ protected:
 	void AuthenticateLastConfidentialBlock();
 	void AuthenticateLastFooterBlock(byte *mac, size_t macSize);
 
-protected:
 	// See comments in chachapoly.cpp
 	void RekeyCipherAndMac(const byte *userKey, size_t userKeyLength, const NameValuePairs &params);
 
+	virtual const MessageAuthenticationCode & GetMAC() const = 0;
+	virtual MessageAuthenticationCode & AccessMAC() = 0;
+
+private:
 	SecByteBlock m_userKey;
 };
 
-/// \brief ChaCha20Poly1305 cipher final implementation
+/// \brief IETF ChaCha20Poly1305 cipher final implementation
 /// \tparam T_IsEncryption flag indicating cipher direction
 /// \details ChaCha20Poly1305 is an authenticated encryption scheme that combines
 ///  ChaCha20TLS and Poly1305TLS. The scheme is defined in RFC 8439, section 2.8,
-///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha
+///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha20
 ///  and Poly1305.
 /// \sa <A HREF="http://tools.ietf.org/html/rfc8439">RFC 8439, ChaCha20 and Poly1305
 ///  for IETF Protocols</A>.
@@ -131,8 +133,7 @@ template <bool T_IsEncryption>
 class ChaCha20Poly1305_Final : public ChaCha20Poly1305_Base
 {
 public:
-	static std::string StaticAlgorithmName()
-		{return std::string("ChaCha20/Poly1305");}
+	virtual ~ChaCha20Poly1305_Final() {}
 
 protected:
 	const SymmetricCipher & GetSymmetricCipher()
@@ -152,10 +153,10 @@ private:
 	Poly1305TLS m_mac;
 };
 
-/// \brief ChaCha20/Poly1305-TLS AEAD scheme
+/// \brief IETF ChaCha20/Poly1305 AEAD scheme
 /// \details ChaCha20Poly1305 is an authenticated encryption scheme that combines
 ///  ChaCha20TLS and Poly1305TLS. The scheme is defined in RFC 8439, section 2.8,
-///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha
+///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha20
 ///  and Poly1305.
 /// \sa <A HREF="http://tools.ietf.org/html/rfc8439">RFC 8439, ChaCha20 and Poly1305
 ///  for IETF Protocols</A>.
@@ -170,18 +171,17 @@ struct ChaCha20Poly1305 : public AuthenticatedSymmetricCipherDocumentation
 
 ////////////////////////////// IETF XChaCha20 draft //////////////////////////////
 
-/// \brief XChaCha20Poly1305 cipher base implementation
+/// \brief IETF XChaCha20Poly1305 cipher base implementation
 /// \details Base implementation of the AuthenticatedSymmetricCipher interface
 /// \since Crypto++ 8.1
 class XChaCha20Poly1305_Base : public AuthenticatedSymmetricCipherBase
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName()
+		{return "XChaCha20/Poly1305";}
+
 	virtual ~XChaCha20Poly1305_Base() {}
 
-	virtual const MessageAuthenticationCode & GetMAC() const = 0;
-	virtual MessageAuthenticationCode & AccessMAC() = 0;
-
-public:
 	// AuthenticatedSymmetricCipher
 	std::string AlgorithmName() const
 		{return std::string("XChaCha20/Poly1305");}
@@ -258,18 +258,21 @@ protected:
 	void AuthenticateLastConfidentialBlock();
 	void AuthenticateLastFooterBlock(byte *mac, size_t macSize);
 
-protected:
 	// See comments in chachapoly.cpp
 	void RekeyCipherAndMac(const byte *userKey, size_t userKeyLength, const NameValuePairs &params);
 
+	virtual const MessageAuthenticationCode & GetMAC() const = 0;
+	virtual MessageAuthenticationCode & AccessMAC() = 0;
+
+private:
 	SecByteBlock m_userKey;
 };
 
-/// \brief XChaCha20Poly1305 cipher final implementation
+/// \brief IETF XChaCha20Poly1305 cipher final implementation
 /// \tparam T_IsEncryption flag indicating cipher direction
 /// \details XChaCha20Poly1305 is an authenticated encryption scheme that combines
 ///  XChaCha20 and Poly1305-TLS. The scheme is defined in RFC 8439, section 2.8,
-///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha
+///  AEAD_CHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha20
 ///  and Poly1305.
 /// \sa <A HREF="http://tools.ietf.org/html/rfc8439">RFC 8439, ChaCha20 and Poly1305
 ///  for IETF Protocols</A>.
@@ -278,8 +281,7 @@ template <bool T_IsEncryption>
 class XChaCha20Poly1305_Final : public XChaCha20Poly1305_Base
 {
 public:
-	static std::string StaticAlgorithmName()
-		{return std::string("XChaCha20/Poly1305");}
+	virtual ~XChaCha20Poly1305_Final() {}
 
 protected:
 	const SymmetricCipher & GetSymmetricCipher()
@@ -299,10 +301,10 @@ private:
 	Poly1305TLS m_mac;
 };
 
-/// \brief XChaCha20/Poly1305-TLS AEAD scheme
+/// \brief IETF XChaCha20/Poly1305 AEAD scheme
 /// \details XChaCha20Poly1305 is an authenticated encryption scheme that combines
 ///  XChaCha20 and Poly1305-TLS. The scheme is defined in RFC 8439, section 2.8,
-///  AEAD_XCHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha
+///  AEAD_XCHACHA20_POLY1305 construction, and uses the IETF versions of ChaCha20
 ///  and Poly1305.
 /// \sa <A HREF="http://tools.ietf.org/html/rfc8439">RFC 8439, ChaCha20 and Poly1305
 ///  for IETF Protocols</A>.

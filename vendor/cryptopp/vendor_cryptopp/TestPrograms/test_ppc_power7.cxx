@@ -1,41 +1,44 @@
+#if defined(__GNUC__)
+# define GNUC_VERSION (__GNUC__*1000 + __GNUC_MINOR__*10)
+#endif
+
+#if defined(__clang__) && defined(__apple_build_version__)
+# undef GNUC_VERSION
+# define APPLE_VERSION (__clang_major__*1000 + __clang_minor__*10)
+#elif defined(__clang__)
+# undef GNUC_VERSION
+# define LLVM_VERSION (__clang_major__*1000 + __clang_minor__*10)
+#endif
+
+#if (GNUC_VERSION >= 4060) || (LLVM_VERSION >= 1070) || (APPLE_VERSION >= 2000)
+# pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
+// XL C++ on AIX does not define VSX and does not
+// provide an option to set it. We have to set it
+// for the code below. This define must stay in
+// sync with the define in test_ppc_power7.cxx.
+#if defined(_AIX) && defined(_ARCH_PWR7) && defined(__xlC__)
+# define __VSX__ 1
+#endif
+
 #include <altivec.h>
-
-// This follows ppc_simd.h. XLC compilers for POWER7 use vec_xlw4 and
-// vec_xstw4. Some XLC compilers for POWER7 and above use vec_xl and
-// vec_xst. The way to tell the difference is, XLC compilers version
-// 13.0 and earlier use use vec_xlw4 and vec_xstw4 XLC compilers 13.1
-// and later are use vec_xl and vec_xst. The open question is, how to
-// handle early Clang compilers for POWER7. We know the latest Clang
-// compilers support vec_xl and vec_xst. Also see
-// https://www-01.ibm.com/support/docview.wss?uid=swg21683541
-
-#if defined(__xlc__) && (__xlc__ < 0x0d01)
-# define __early_xlc__ 1
-#endif
-
-#if defined(__xlC__) && (__xlC__ < 0x0d01)
-# define __early_xlC__ 1
-#endif
-
 int main(int argc, char* argv[])
 {
-	__vector unsigned char x;
-	unsigned char res[16];
+#if defined(_ARCH_PWR7) && defined(__VSX__)
+    // PWR7
+    __vector unsigned int a = {1,2,3,4};
+    __vector unsigned int b = vec_ld(0, (unsigned int*)argv[0]);
+    __vector unsigned int c = vec_xor(a, b);
 
-#if defined(_ARCH_PWR7) && (defined(__early_xlc__) || defined(__early_xlC__))
-    x=vec_xlw4(0, (unsigned char*)argv[0]);
-	x=vec_add(x,x);
-	vec_xstw4(x, 0, res);
-#elif defined(_ARCH_PWR7) && (defined(__xlc__) || defined(__xlC__) || defined(__clang__))
-	x=vec_xl(0, (unsigned char*)argv[0]);
-	x=vec_add(x,x);
-	vec_xst(x, 0, res);
-#elif defined(_ARCH_PWR7) && defined(__GNUC__)
-	x=vec_vsx_ld(0, (unsigned char*)argv[0]);
-	x=vec_add(x,x);
-	vec_vsx_st(x, 0, res);
+    // VSX
+    __vector unsigned int x = {5,6,7,8};
+    __vector unsigned int y = vec_xl(0, (unsigned int*)argv[0]);
+    __vector unsigned int z = vec_xor(x, y);
+    __vector unsigned long long xx = {1,2};
+    __vector unsigned long long yy = (__vector unsigned long long)y;
 #else
-	int XXX[-1];
+    int x[-1];
 #endif
-	return 0;
+    return 0;
 }

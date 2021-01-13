@@ -349,8 +349,14 @@ void BenchmarkWithCommand(int argc, const char* const argv[])
 	float cpuFreq(argc >= 4 ? Test::StringToValue<float, true>(argv[3])*float(1e9) : 0.0f);
 	std::string algoName(argc >= 5 ? argv[4] : "");
 
+	// https://github.com/weidai11/cryptopp/issues/983
+	if (runningTime > 10.0f)
+		runningTime = 10.0f;
+
 	if (command == "b")  // All benchmarks
 		Benchmark(Test::All, runningTime, cpuFreq);
+	else if (command == "b4")  // Public key algorithms over EC
+		Test::Benchmark(Test::PublicKeyEC, runningTime, cpuFreq);
 	else if (command == "b3")  // Public key algorithms
 		Test::Benchmark(Test::PublicKey, runningTime, cpuFreq);
 	else if (command == "b2")  // Shared key algorithms
@@ -364,6 +370,9 @@ void Benchmark(Test::TestClass suites, double t, double hertz)
 	g_allocatedTime = t;
 	g_hertz = hertz;
 
+	// Add <br> in between tables
+	size_t count_breaks = 0;
+
 	AddHtmlHeader();
 
 	g_testBegin = ::time(NULLPTR);
@@ -374,22 +383,41 @@ void Benchmark(Test::TestClass suites, double t, double hertz)
 	// Unkeyed algorithms
 	if (suites & Test::Unkeyed)
 	{
-		std::cout << "\n<BR>";
-		Benchmark1(t, hertz);
+		if (count_breaks)
+			std::cout << "\n<BR>";
+		count_breaks++;
+
+		BenchmarkUnkeyedAlgorithms(t, hertz);
 	}
 
 	// Shared key algorithms
 	if (suites & Test::SharedKey)
 	{
-		std::cout << "\n<BR>";
-		Benchmark2(t, hertz);
+		if (count_breaks)
+			std::cout << "\n<BR>";
+		count_breaks++;
+
+		BenchmarkSharedKeyedAlgorithms(t, hertz);
 	}
 
 	// Public key algorithms
 	if (suites & Test::PublicKey)
 	{
-		std::cout << "\n<BR>";
-		Benchmark3(t, hertz);
+		if (count_breaks)
+			std::cout << "\n<BR>";
+		count_breaks++;
+
+		BenchmarkPublicKeyAlgorithms(t, hertz);
+	}
+
+	// Public key algorithms over EC
+	if (suites & Test::PublicKeyEC)
+	{
+		if (count_breaks)
+			std::cout << "\n<BR>";
+		count_breaks++;
+
+		BenchmarkEllipticCurveAlgorithms(t, hertz);
 	}
 
 	g_testEnd = ::time(NULLPTR);
@@ -406,7 +434,7 @@ void Benchmark(Test::TestClass suites, double t, double hertz)
 	AddHtmlFooter();
 }
 
-void Benchmark1(double t, double hertz)
+void BenchmarkUnkeyedAlgorithms(double t, double hertz)
 {
 	g_allocatedTime = t;
 	g_hertz = hertz;

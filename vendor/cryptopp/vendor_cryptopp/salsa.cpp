@@ -26,6 +26,18 @@
 # undef CRYPTOPP_SSSE3_ASM_AVAILABLE
 #endif
 
+ANONYMOUS_NAMESPACE_BEGIN
+
+// Can't use GetAlignmentOf<word32>() because of C++11 and constexpr
+// Can use 'const unsigned int' because of MSVC 2013
+#if (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
+# define ALIGN_SPEC 16
+#else
+# define ALIGN_SPEC 4
+#endif
+
+ANONYMOUS_NAMESPACE_END
+
 NAMESPACE_BEGIN(CryptoPP)
 
 #if defined(CRYPTOPP_DEBUG) && !defined(CRYPTOPP_DOXYGEN_PROCESSING)
@@ -41,7 +53,7 @@ void Salsa20_Core(word32* data, unsigned int rounds)
 	CRYPTOPP_ASSERT(data != NULLPTR);
 	CRYPTOPP_ASSERT(rounds % 2 == 0);
 
-	CRYPTOPP_ALIGN_DATA(16) word32 x[16];
+	CRYPTOPP_ALIGN_DATA(ALIGN_SPEC) word32 x[16];
 
 	for (size_t i = 0; i < 16; ++i)
 		x[i] = data[i];

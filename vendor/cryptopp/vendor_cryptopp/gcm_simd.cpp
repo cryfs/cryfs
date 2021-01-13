@@ -29,12 +29,11 @@
 # include <wmmintrin.h>
 #endif
 
-// C1189: error: This header is specific to ARM targets
-#if (CRYPTOPP_ARM_NEON_AVAILABLE) && !defined(_M_ARM64)
+#if (CRYPTOPP_ARM_NEON_HEADER)
 # include <arm_neon.h>
 #endif
 
-#if (CRYPTOPP_ARM_ACLE_AVAILABLE)
+#if (CRYPTOPP_ARM_ACLE_HEADER)
 # include <stdint.h>
 # include <arm_acle.h>
 #endif
@@ -56,13 +55,11 @@
 # define EXCEPTION_EXECUTE_HANDLER 1
 #endif
 
-// Clang __m128i casts, http://bugs.llvm.org/show_bug.cgi?id=20670
+// Clang intrinsic casts, http://bugs.llvm.org/show_bug.cgi?id=20670
 #define M128_CAST(x) ((__m128i *)(void *)(x))
 #define CONST_M128_CAST(x) ((const __m128i *)(const void *)(x))
-
-// GCC cast warning
-#define UINT64X2_CAST(x) ((uint64x2_t *)(void *)(x))
-#define CONST_UINT64X2_CAST(x) ((const uint64x2_t *)(const void *)(x))
+#define UINT64_CAST(x) ((uint64_t *)(void *)(x))
+#define CONST_UINT64_CAST(x) ((const uint64_t *)(const void *)(x))
 
 // Squash MS LNK4221 and libtool warnings
 extern const char GCM_SIMD_FNAME[] = __FILE__;
@@ -128,7 +125,10 @@ bool CPU_ProbePMULL()
 
     volatile sigset_t oldMask;
     if (sigprocmask(0, NULLPTR, (sigset_t*)&oldMask))
+    {
+        signal(SIGILL, oldHandler);
         return false;
+    }
 
     if (setjmp(s_jmpSIGILL))
         result = false;
@@ -179,7 +179,10 @@ bool CPU_ProbePMULL()
 
     volatile sigset_t oldMask;
     if (sigprocmask(0, NULLPTR, (sigset_t*)&oldMask))
+    {
+        signal(SIGILL, oldHandler);
         return false;
+    }
 
     if (setjmp(s_jmpSIGILL))
         result = false;
@@ -195,8 +198,8 @@ bool CPU_ProbePMULL()
                              0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0,0xe0};
         const uint32x4_p a2=VecLoad(wa2), b2=VecLoad(wb2);
 
-        const uint64x2_p r1 = VecPolyMultiply00LE(a1, b1);
-        const uint64x2_p r2 = VecPolyMultiply11LE((uint64x2_p)a2, (uint64x2_p)b2);
+        const uint64x2_p r1 = VecIntelMultiply11(a1, b1);
+        const uint64x2_p r2 = VecIntelMultiply11((uint64x2_p)a2, (uint64x2_p)b2);
 
         const uint64_t wc1[]={W64LIT(0x5300530053005300), W64LIT(0x5300530053005300)},
                        wc2[]={W64LIT(0x6c006c006c006c00), W64LIT(0x6c006c006c006c00)};
@@ -219,10 +222,7 @@ bool CPU_ProbePMULL()
 #if CRYPTOPP_ARM_NEON_AVAILABLE
 void GCM_Xor16_NEON(byte *a, const byte *b, const byte *c)
 {
-    CRYPTOPP_ASSERT(IsAlignedOn(a,GetAlignmentOf<uint64x2_t>()));
-    CRYPTOPP_ASSERT(IsAlignedOn(b,GetAlignmentOf<uint64x2_t>()));
-    CRYPTOPP_ASSERT(IsAlignedOn(c,GetAlignmentOf<uint64x2_t>()));
-    *UINT64X2_CAST(a) = veorq_u64(*CONST_UINT64X2_CAST(b), *CONST_UINT64X2_CAST(c));
+	vst1q_u8(a, veorq_u8(vld1q_u8(b), vld1q_u8(c)));
 }
 #endif  // CRYPTOPP_ARM_NEON_AVAILABLE
 
@@ -270,18 +270,18 @@ void GCM_SetKeyWithoutResync_PMULL(const byte *hashKey, byte *mulTable, unsigned
     for (i=0; i<tableSize-32; i+=32)
     {
         const uint64x2_t h1 = GCM_Multiply_PMULL(h, h0, r);
-        vst1_u64((uint64_t *)(mulTable+i), vget_low_u64(h));
-        vst1q_u64((uint64_t *)(mulTable+i+16), h1);
-        vst1q_u64((uint64_t *)(mulTable+i+8), h);
-        vst1_u64((uint64_t *)(mulTable+i+8), vget_low_u64(h1));
+        vst1_u64(UINT64_CAST(mulTable+i), vget_low_u64(h));
+        vst1q_u64(UINT64_CAST(mulTable+i+16), h1);
+        vst1q_u64(UINT64_CAST(mulTable+i+8), h);
+        vst1_u64(UINT64_CAST(mulTable+i+8), vget_low_u64(h1));
         h = GCM_Multiply_PMULL(h1, h0, r);
     }
 
     const uint64x2_t h1 = GCM_Multiply_PMULL(h, h0, r);
-    vst1_u64((uint64_t *)(mulTable+i), vget_low_u64(h));
-    vst1q_u64((uint64_t *)(mulTable+i+16), h1);
-    vst1q_u64((uint64_t *)(mulTable+i+8), h);
-    vst1_u64((uint64_t *)(mulTable+i+8), vget_low_u64(h1));
+    vst1_u64(UINT64_CAST(mulTable+i), vget_low_u64(h));
+    vst1q_u64(UINT64_CAST(mulTable+i+16), h1);
+    vst1q_u64(UINT64_CAST(mulTable+i+8), h);
+    vst1_u64(UINT64_CAST(mulTable+i+8), vget_low_u64(h1));
 }
 
 size_t GCM_AuthenticateBlocks_PMULL(const byte *data, size_t len, const byte *mtable, byte *hbuffer)
@@ -299,8 +299,8 @@ size_t GCM_AuthenticateBlocks_PMULL(const byte *data, size_t len, const byte *mt
 
         while (true)
         {
-            const uint64x2_t h0 = vld1q_u64((const uint64_t*)(mtable+(i+0)*16));
-            const uint64x2_t h1 = vld1q_u64((const uint64_t*)(mtable+(i+1)*16));
+            const uint64x2_t h0 = vld1q_u64(CONST_UINT64_CAST(mtable+(i+0)*16));
+            const uint64x2_t h1 = vld1q_u64(CONST_UINT64_CAST(mtable+(i+1)*16));
             const uint64x2_t h2 = veorq_u64(h0, h1);
 
             if (++i == s)
@@ -347,7 +347,7 @@ size_t GCM_AuthenticateBlocks_PMULL(const byte *data, size_t len, const byte *mt
         x = GCM_Reduce_PMULL(c0, c1, c2, r);
     }
 
-    vst1q_u64(reinterpret_cast<uint64_t *>(hbuffer), x);
+    vst1q_u64(UINT64_CAST(hbuffer), x);
     return len;
 }
 
@@ -583,9 +583,9 @@ uint64x2_p GCM_Reduce_VMULL(uint64x2_p c0, uint64x2_p c1, uint64x2_p c2, uint64x
     const uint64x2_p m1 = {1,1}, m63 = {63,63};
 
     c1 = VecXor(c1, VecShiftRightOctet<8>(c0));
-    c1 = VecXor(c1, VecPolyMultiply10LE(c0, r));
+    c1 = VecXor(c1, VecIntelMultiply10(c0, r));
     c0 = VecXor(c1, VecShiftLeftOctet<8>(c0));
-    c0 = VecPolyMultiply00LE(vec_sl(c0, m1), r);
+    c0 = VecIntelMultiply00(vec_sl(c0, m1), r);
     c2 = VecXor(c2, c0);
     c2 = VecXor(c2, VecShiftLeftOctet<8>(c1));
     c1 = vec_sr(vec_mergeh(c1, c2), m63);
@@ -596,9 +596,9 @@ uint64x2_p GCM_Reduce_VMULL(uint64x2_p c0, uint64x2_p c1, uint64x2_p c2, uint64x
 
 inline uint64x2_p GCM_Multiply_VMULL(uint64x2_p x, uint64x2_p h, uint64x2_p r)
 {
-    const uint64x2_p c0 = VecPolyMultiply00LE(x, h);
-    const uint64x2_p c1 = VecXor(VecPolyMultiply01LE(x, h), VecPolyMultiply10LE(x, h));
-    const uint64x2_p c2 = VecPolyMultiply11LE(x, h);
+    const uint64x2_p c0 = VecIntelMultiply00(x, h);
+    const uint64x2_p c1 = VecXor(VecIntelMultiply01(x, h), VecIntelMultiply10(x, h));
+    const uint64x2_p c2 = VecIntelMultiply11(x, h);
 
     return GCM_Reduce_VMULL(c0, c1, c2, r);
 }
@@ -693,35 +693,35 @@ size_t GCM_AuthenticateBlocks_VMULL(const byte *data, size_t len, const byte *mt
             {
                 d1 = LoadBuffer2(data);
                 d1 = VecXor(d1, x);
-                c0 = VecXor(c0, VecPolyMultiply00LE(d1, h0));
-                c2 = VecXor(c2, VecPolyMultiply01LE(d1, h1));
+                c0 = VecXor(c0, VecIntelMultiply00(d1, h0));
+                c2 = VecXor(c2, VecIntelMultiply01(d1, h1));
                 d1 = VecXor(d1, SwapWords(d1));
-                c1 = VecXor(c1, VecPolyMultiply00LE(d1, h2));
+                c1 = VecXor(c1, VecIntelMultiply00(d1, h2));
                 break;
             }
 
             d1 = LoadBuffer1(data+(s-i)*16-8);
-            c0 = VecXor(c0, VecPolyMultiply01LE(d2, h0));
-            c2 = VecXor(c2, VecPolyMultiply01LE(d1, h1));
+            c0 = VecXor(c0, VecIntelMultiply01(d2, h0));
+            c2 = VecXor(c2, VecIntelMultiply01(d1, h1));
             d2 = VecXor(d2, d1);
-            c1 = VecXor(c1, VecPolyMultiply01LE(d2, h2));
+            c1 = VecXor(c1, VecIntelMultiply01(d2, h2));
 
             if (++i == s)
             {
                 d1 = LoadBuffer2(data);
                 d1 = VecXor(d1, x);
-                c0 = VecXor(c0, VecPolyMultiply10LE(d1, h0));
-                c2 = VecXor(c2, VecPolyMultiply11LE(d1, h1));
+                c0 = VecXor(c0, VecIntelMultiply10(d1, h0));
+                c2 = VecXor(c2, VecIntelMultiply11(d1, h1));
                 d1 = VecXor(d1, SwapWords(d1));
-                c1 = VecXor(c1, VecPolyMultiply10LE(d1, h2));
+                c1 = VecXor(c1, VecIntelMultiply10(d1, h2));
                 break;
             }
 
             d2 = LoadBuffer2(data+(s-i)*16-8);
-            c0 = VecXor(c0, VecPolyMultiply10LE(d1, h0));
-            c2 = VecXor(c2, VecPolyMultiply10LE(d2, h1));
+            c0 = VecXor(c0, VecIntelMultiply10(d1, h0));
+            c2 = VecXor(c2, VecIntelMultiply10(d2, h1));
             d1 = VecXor(d1, d2);
-            c1 = VecXor(c1, VecPolyMultiply10LE(d1, h2));
+            c1 = VecXor(c1, VecIntelMultiply10(d1, h2));
         }
         data += s*16;
         len -= s*16;

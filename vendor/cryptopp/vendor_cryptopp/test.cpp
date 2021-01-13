@@ -34,6 +34,7 @@
 #include <iostream>
 #include <sstream>
 #include <locale>
+#include <cstdlib>
 #include <ctime>
 
 #ifdef CRYPTOPP_WIN32_AVAILABLE
@@ -89,7 +90,8 @@ int (*AdhocTest)(int argc, char *argv[]) = NULLPTR;
 NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
-const int MAX_PHRASE_LENGTH=250;
+const int MAX_PHRASE_LENGTH = 250;
+const int GLOBAL_SEED_LENGTH = 16;
 std::string g_argvPathHint="";
 
 void GenerateRSAKey(unsigned int keyLength, const char *privFilename, const char *pubFilename, const char *seed);
@@ -125,7 +127,8 @@ void HexDecode(const char *infile, const char *outfile);
 
 void FIPS140_GenerateRandomFiles();
 
-bool Validate(int, bool, const char *);
+bool Validate(int, bool);
+bool SetGlobalSeed(int argc, char* argv[], std::string& seed);
 void SetArgvPathHint(const char* argv0, std::string& pathHint);
 
 ANONYMOUS_NAMESPACE_BEGIN
@@ -166,23 +169,25 @@ int scoped_main(int argc, char *argv[])
 	cin.set_safe_flag(stream_MT::unsafe_object);
 #endif
 
-	// A hint to help locate TestData/ and TestVectors/ after install.
-	SetArgvPathHint(argv[0], g_argvPathHint);
-
 	try
 	{
 		RegisterFactories(All);
 
-		// Some editors have problems with the '\0' character when redirecting output.
-		s_globalSeed = IntToString(time(NULLPTR));
-		s_globalSeed.resize(16, ' ');
+		// A hint to help locate TestData/ and TestVectors/ after install.
+		SetArgvPathHint(argv[0], g_argvPathHint);
+
+		// Set a seed for reproducible results. If the seed is too short then
+		// it is padded with spaces. If the seed is missing then time() is used.
+		// For example:
+		//   ./cryptest.exe v seed=abcdefg
+		SetGlobalSeed(argc, argv, s_globalSeed);
 
 #if (CRYPTOPP_USE_AES_GENERATOR)
 		// Fetch the SymmetricCipher interface, not the RandomNumberGenerator
 		//  interface, to key the underlying cipher. If CRYPTOPP_USE_AES_GENERATOR is 1
 		//  then AES/OFB based is used. Otherwise the OS random number generator is used.
 		SymmetricCipher& cipher = dynamic_cast<SymmetricCipher&>(GlobalRNG());
-		cipher.SetKeyWithIV((byte *)s_globalSeed.data(), 16, (byte *)s_globalSeed.data());
+		cipher.SetKeyWithIV((byte *)s_globalSeed.data(), s_globalSeed.size(), (byte *)s_globalSeed.data());
 #endif
 
 		std::string command, executableName, macFilename;
@@ -393,7 +398,7 @@ int scoped_main(int argc, char *argv[])
 		else if (command == "ir")
 			InformationRecoverFile(argc-3, argv[2], argv+3);
 		else if (command == "v" || command == "vv")
-			return !Validate(argc>2 ? StringToValue<int, true>(argv[2]) : 0, argv[1][1] == 'v', argc>3 ? argv[3] : NULLPTR);
+			return !Validate(argc>2 ? StringToValue<int, true>(argv[2]) : 0, argv[1][1] == 'v');
 		else if (command.substr(0,1) == "b") // "b", "b1", "b2", ...
 			BenchmarkWithCommand(argc, argv);
 		else if (command == "z")
@@ -446,6 +451,35 @@ int scoped_main(int argc, char *argv[])
 	}
 } // main()
 
+bool SetGlobalSeed(int argc, char* argv[], std::string& seed)
+{
+	bool ret = false;
+
+	for (int i=0; i<argc; ++i)
+	{
+		std::string arg(argv[i]);
+		std::string::size_type pos = arg.find("seed=");
+
+		if (pos != std::string::npos)
+		{
+			// length of "seed=" is 5
+			seed = arg.substr(pos+5);
+			ret = true; goto finish;
+		}
+	}
+
+	// Use a random seed if none is provided
+	if (s_globalSeed.empty())
+		s_globalSeed = IntToString(time(NULLPTR));
+
+finish:
+
+	// Some editors have problems with '\0' fill characters when redirecting output.
+	s_globalSeed.resize(GLOBAL_SEED_LENGTH, ' ');
+
+	return ret;
+}
+
 void SetArgvPathHint(const char* argv0, std::string& pathHint)
 {
 # if (PATH_MAX > 0)  // Posix
@@ -473,11 +507,18 @@ void SetArgvPathHint(const char* argv0, std::string& pathHint)
 #if defined(AT_EXECFN)
 	if (getauxval(AT_EXECFN))
 		pathHint = getauxval(AT_EXECFN);
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && (_MSC_VER > 1310)
 	char* pgmptr = NULLPTR;
 	errno_t err = _get_pgmptr(&pgmptr);
 	if (err == 0 && pgmptr != NULLPTR)
 		pathHint = pgmptr;
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+	std::string t(path_max, (char)0);
+	if (_fullpath(&t[0], pathHint.c_str(), path_max))
+	{
+		t.resize(strlen(t.c_str()));
+		std::swap(pathHint, t);
+	}
 #elif defined(CRYPTOPP_OSX_AVAILABLE)
 	std::string t(path_max, (char)0);
 	unsigned int len = (unsigned int)t.size();
@@ -491,7 +532,10 @@ void SetArgvPathHint(const char* argv0, std::string& pathHint)
 		pathHint = getexecname();
 #endif
 
-#if (_POSIX_C_SOURCE >= 200809L) || (_XOPEN_SOURCE >= 700)
+#if defined(__MINGW32__) || defined(__MINGW64__)
+	// This path exists to stay out of the Posix paths that follow
+	;;
+#elif (_POSIX_C_SOURCE >= 200809L) || (_XOPEN_SOURCE >= 700)
 	char* resolved = realpath (pathHint.c_str(), NULLPTR);
 	if (resolved != NULLPTR)
 	{
@@ -886,25 +930,9 @@ void HexDecode(const char *in, const char *out)
 	FileSource(in, true, new HexDecoder(new FileSink(out)));
 }
 
-bool Validate(int alg, bool thorough, const char *seedInput)
+bool Validate(int alg, bool thorough)
 {
 	bool result;
-
-	// Some editors have problems with the '\0' character when redirecting output.
-	//   seedInput is argv[3] when issuing 'cryptest.exe v all <seed>'
-	if (seedInput != NULLPTR)
-	{
-		s_globalSeed = seedInput;
-		s_globalSeed.resize(16, ' ');
-	}
-
-#if (CRYPTOPP_USE_AES_GENERATOR)
-		// Fetch the OFB_Mode<AES> interface, not the RandomNumberGenerator
-		//  interface, to key the underlying cipher. If CRYPTOPP_USE_AES_GENERATOR is 1
-		//  then AES/OFB based is used. Otherwise the OS random number generator is used.
-		SymmetricCipher& cipher = dynamic_cast<SymmetricCipher&>(GlobalRNG());
-		cipher.SetKeyWithIV((byte *)s_globalSeed.data(), 16, (byte *)s_globalSeed.data());
-#endif
 
 	g_testBegin = ::time(NULLPTR);
 	PrintSeedAndThreads();
@@ -992,15 +1020,17 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 80: result = ValidateVMAC(); break;
 	case 81: result = ValidateCCM(); break;
 	case 82: result = ValidateGCM(); break;
-	case 83: result = ValidateCMAC(); break;
-	case 84: result = ValidateSM3(); break;
-	case 85: result = ValidateBLAKE2s(); break;
-	case 86: result = ValidateBLAKE2b(); break;
-	case 87: result = ValidatePoly1305(); break;
-	case 88: result = ValidateSipHash(); break;
-	case 89: result = ValidateHashDRBG(); break;
-	case 90: result = ValidateHmacDRBG(); break;
-	case 91: result = ValidateNaCl(); break;
+	case 83: result = ValidateXTS(); break;
+	case 84: result = ValidateCMAC(); break;
+	case 85: result = ValidateSM3(); break;
+	case 86: result = ValidateBLAKE2s(); break;
+	case 87: result = ValidateBLAKE2b(); break;
+	case 88: result = ValidatePoly1305(); break;
+	case 89: result = ValidateSipHash(); break;
+	case 90: result = ValidateHashDRBG(); break;
+	case 91: result = ValidateHmacDRBG(); break;
+	case 92: result = ValidateNaCl(); break;
+
 	case 100: result = ValidateCHAM(); break;
 	case 101: result = ValidateSIMECK(); break;
 	case 102: result = ValidateSIMON(); break;
@@ -1009,6 +1039,10 @@ bool Validate(int alg, bool thorough, const char *seedInput)
 	case 110: result = ValidateSHA3(); break;
 	case 111: result = ValidateSHAKE(); break;
 	case 112: result = ValidateSHAKE_XOF(); break;
+
+	case 120: result = ValidateMQV(); break;
+	case 121: result = ValidateHMQV(); break;
+	case 122: result = ValidateFHMQV(); break;
 
 #if defined(CRYPTOPP_EXTENDED_VALIDATION)
 	// http://github.com/weidai11/cryptopp/issues/92

@@ -38,6 +38,9 @@
 # include "ppc_simd.h"
 #endif
 
+// Squash MS LNK4221 and libtool warnings
+extern const char GF2N_SIMD_FNAME[] = __FILE__;
+
 ANONYMOUS_NAMESPACE_BEGIN
 
 // ************************** ARMv8 ************************** //
@@ -305,7 +308,7 @@ GF2NT_233_Reduce_CLMUL(__m128i& c3, __m128i& c2, __m128i& c1, __m128i& c0)
 
 // ************************* Power8 ************************* //
 
-#if (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+#if (CRYPTOPP_POWER8_VMULL_AVAILABLE) && 0
 
 using CryptoPP::byte;
 using CryptoPP::word;
@@ -325,8 +328,8 @@ using CryptoPP::VecMergeHigh;
 using CryptoPP::VecShiftLeft;
 using CryptoPP::VecShiftRight;
 
-using CryptoPP::VecPolyMultiply00LE;
-using CryptoPP::VecPolyMultiply11LE;
+using CryptoPP::VecIntelMultiply00;
+using CryptoPP::VecIntelMultiply11;
 
 // c1c0 = a * b
 inline void
@@ -335,13 +338,13 @@ F2N_Multiply_128x128_POWER8(uint64x2_p& c1, uint64x2_p& c0, const uint64x2_p& a,
     uint64x2_p t1, t2;
     const uint64x2_p z0={0};
 
-    c0 = VecPolyMultiply00LE(a, b);
-    c1 = VecPolyMultiply11LE(a, b);
+    c0 = VecIntelMultiply00(a, b);
+    c1 = VecIntelMultiply11(a, b);
     t1 = VecMergeLow(a, a);
     t1 = VecXor(a, t1);
     t2 = VecMergeLow(b, b);
     t2 = VecXor(b, t2);
-    t1 = VecPolyMultiply00LE(t1, t2);
+    t1 = VecIntelMultiply00(t1, t2);
     t1 = VecXor(c0, t1);
     t1 = VecXor(c1, t1);
     t2 = t1;
@@ -380,10 +383,10 @@ inline void
 F2N_Square_256_POWER8(uint64x2_p& c3, uint64x2_p& c2, uint64x2_p& c1,
     uint64x2_p& c0, const uint64x2_p& a1, const uint64x2_p& a0)
 {
-    c0 = VecPolyMultiply00LE(a0, a0);
-    c1 = VecPolyMultiply11LE(a0, a0);
-    c2 = VecPolyMultiply00LE(a1, a1);
-    c3 = VecPolyMultiply11LE(a1, a1);
+    c0 = VecIntelMultiply00(a0, a0);
+    c1 = VecIntelMultiply11(a0, a0);
+    c2 = VecIntelMultiply00(a1, a1);
+    c3 = VecIntelMultiply11(a1, a1);
 }
 
 // x = (x << n), z = 0
@@ -465,36 +468,33 @@ NAMESPACE_BEGIN(CryptoPP)
 void
 GF2NT_233_Multiply_Reduce_CLMUL(const word* pA, const word* pB, word* pC)
 {
-    const __m128i* pAA = reinterpret_cast<const __m128i*>(pA);
-    const __m128i* pBB = reinterpret_cast<const __m128i*>(pB);
-    __m128i a0 = _mm_loadu_si128(pAA+0);
-    __m128i a1 = _mm_loadu_si128(pAA+1);
-    __m128i b0 = _mm_loadu_si128(pBB+0);
-    __m128i b1 = _mm_loadu_si128(pBB+1);
+    enum {S=sizeof(__m128i)/sizeof(word)};
+    __m128i a0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pA+0*S));
+    __m128i a1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pA+1*S));
+    __m128i b0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pB+0*S));
+    __m128i b1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pB+1*S));
 
     __m128i c0, c1, c2, c3;
     F2N_Multiply_256x256_CLMUL(c3, c2, c1, c0, a1, a0, b1, b0);
     GF2NT_233_Reduce_CLMUL(c3, c2, c1, c0);
 
-    __m128i* pCC = reinterpret_cast<__m128i*>(pC);
-    _mm_storeu_si128(pCC+0, c0);
-    _mm_storeu_si128(pCC+1, c1);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(pC+0*S), c0);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(pC+1*S), c1);
 }
 
 void
 GF2NT_233_Square_Reduce_CLMUL(const word* pA, word* pC)
 {
-    const __m128i* pAA = reinterpret_cast<const __m128i*>(pA);
-    __m128i a0 = _mm_loadu_si128(pAA+0);
-    __m128i a1 = _mm_loadu_si128(pAA+1);
+    enum {S=sizeof(__m128i)/sizeof(word)};
+    __m128i a0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pA+0*S));
+    __m128i a1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pA+1*S));
 
     __m128i c0, c1, c2, c3;
     F2N_Square_256_CLMUL(c3, c2, c1, c0, a1, a0);
     GF2NT_233_Reduce_CLMUL(c3, c2, c1, c0);
 
-    __m128i* pCC = reinterpret_cast<__m128i*>(pC);
-    _mm_storeu_si128(pCC+0, c0);
-    _mm_storeu_si128(pCC+1, c1);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(pC+0*S), c0);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(pC+1*S), c1);
 }
 
 #elif (CRYPTOPP_ARM_PMULL_AVAILABLE)
@@ -539,7 +539,7 @@ GF2NT_233_Square_Reduce_ARMv8(const word* pA, word* pC)
     vst1q_u32(pCC+4, vreinterpretq_u32_u64(c1));
 }
 
-#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE) && 0
 
 void
 GF2NT_233_Multiply_Reduce_POWER8(const word* pA, const word* pB, word* pC)

@@ -47,6 +47,7 @@ void PadlockRNG::GenerateBlock(byte *output, size_t size)
 			"movl %2, %%edx          ;\n"
 #endif
 
+			// xstore-rng
 			".byte 0x0f, 0xa7, 0xc0  ;\n"
 			"movl %%eax, %0          ;\n"
 

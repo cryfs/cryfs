@@ -52,7 +52,7 @@ extern void GF2NT_233_Multiply_Reduce_ARMv8(const word* pA, const word* pB, word
 extern void GF2NT_233_Square_Reduce_ARMv8(const word* pA, word* pC);
 #endif
 
-#if (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+#if (CRYPTOPP_POWER8_VMULL_AVAILABLE) && 0
 extern void GF2NT_233_Multiply_Reduce_POWER8(const word* pA, const word* pB, word* pC);
 extern void GF2NT_233_Square_Reduce_POWER8(const word* pA, word* pC);
 #endif
@@ -166,7 +166,7 @@ const PolynomialMod2 &PolynomialMod2::Zero()
 {
 #if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
 	return g_zero;
-#elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
+#elif defined(CRYPTOPP_CXX11_STATIC_INIT)
 	static const PolynomialMod2 g_zero;
 	return g_zero;
 #else
@@ -178,7 +178,7 @@ const PolynomialMod2 &PolynomialMod2::One()
 {
 #if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
 	return g_one;
-#elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
+#elif defined(CRYPTOPP_CXX11_STATIC_INIT)
 	static const PolynomialMod2 g_one(1);
 	return g_one;
 #else
@@ -999,7 +999,7 @@ const GF2NT::Element& GF2NT233::Multiply(const Element &a, const Element &b) con
 		return result;
 	}
 	else
-#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE) && 0
 	if (HasPMULL())
 	{
 		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
@@ -1047,7 +1047,7 @@ const GF2NT::Element& GF2NT233::Square(const Element &a) const
 		return result;
 	}
 	else
-#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE) && 0
 	if (HasPMULL())
 	{
 		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);

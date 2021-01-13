@@ -45,11 +45,11 @@ using CryptoPP::rotrConstant;
 template <unsigned int RR, unsigned int KW, class T>
 inline void CHAM_EncRound(T x[4], const T k[KW], unsigned int i)
 {
-    CRYPTOPP_CONSTANT(IDX0 = (RR+0) % 4)
-    CRYPTOPP_CONSTANT(IDX1 = (RR+1) % 4)
-    CRYPTOPP_CONSTANT(IDX3 = (RR+3+1) % 4)
-    CRYPTOPP_CONSTANT(R1 = (RR % 2 == 0) ? 1 : 8)
-    CRYPTOPP_CONSTANT(R2 = (RR % 2 == 0) ? 8 : 1)
+    CRYPTOPP_CONSTANT(IDX0 = (RR+0) % 4);
+    CRYPTOPP_CONSTANT(IDX1 = (RR+1) % 4);
+    CRYPTOPP_CONSTANT(IDX3 = (RR+3+1) % 4);
+    CRYPTOPP_CONSTANT(R1 = (RR % 2 == 0) ? 1 : 8);
+    CRYPTOPP_CONSTANT(R2 = (RR % 2 == 0) ? 8 : 1);
 
     // Follows conventions in the ref impl
     const T kk = k[i % KW];
@@ -79,11 +79,11 @@ inline void CHAM_EncRound(T x[4], const T k[KW], unsigned int i)
 template <unsigned int RR, unsigned int KW, class T>
 inline void CHAM_DecRound(T x[4], const T k[KW], unsigned int i)
 {
-    CRYPTOPP_CONSTANT(IDX0 = (RR+0) % 4)
-    CRYPTOPP_CONSTANT(IDX1 = (RR+1) % 4)
-    CRYPTOPP_CONSTANT(IDX3 = (RR+3+1) % 4)
-    CRYPTOPP_CONSTANT(R1 = (RR % 2 == 0) ? 8 : 1)
-    CRYPTOPP_CONSTANT(R2 = (RR % 2 == 0) ? 1 : 8)
+    CRYPTOPP_CONSTANT(IDX0 = (RR+0) % 4);
+    CRYPTOPP_CONSTANT(IDX1 = (RR+1) % 4);
+    CRYPTOPP_CONSTANT(IDX3 = (RR+3+1) % 4);
+    CRYPTOPP_CONSTANT(R1 = (RR % 2 == 0) ? 8 : 1);
+    CRYPTOPP_CONSTANT(R2 = (RR % 2 == 0) ? 1 : 8);
 
     // Follows conventions in the ref impl
     const T kk = k[i % KW];
@@ -96,7 +96,7 @@ ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
-#if CRYPTOPP_CHAM_ADVANCED_PROCESS_BLOCKS
+#if CRYPTOPP_CHAM128_ADVANCED_PROCESS_BLOCKS
 # if (CRYPTOPP_SSSE3_AVAILABLE)
 extern size_t CHAM64_Enc_AdvancedProcessBlocks_SSSE3(const word16* subKeys, size_t rounds,
     const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags);
@@ -110,18 +110,7 @@ extern size_t CHAM128_Enc_AdvancedProcessBlocks_SSSE3(const word32* subKeys, siz
 extern size_t CHAM128_Dec_AdvancedProcessBlocks_SSSE3(const word32* subKeys, size_t rounds,
     const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags);
 # endif  // CRYPTOPP_SSSE3_AVAILABLE
-#endif  // CRYPTOPP_CHAM_ADVANCED_PROCESS_BLOCKS
-
-std::string CHAM64::Base::AlgorithmProvider() const
-{
-#if (CRYPTOPP_CHAM_ADVANCED_PROCESS_BLOCKS)
-# if defined(CRYPTOPP_SSSE3_AVAILABLE)
-    if (HasSSSE3())
-        return "SSSE3";
-# endif
-#endif
-    return "C++";
-}
+#endif  // CRYPTOPP_CHAM128_ADVANCED_PROCESS_BLOCKS
 
 void CHAM64::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params)
 {
@@ -129,12 +118,20 @@ void CHAM64::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLength, 
     m_kw = keyLength/sizeof(word16);
     m_rk.New(2*m_kw);
 
-    for (size_t i = 0; i < m_kw; ++i, userKey += sizeof(word16))
+    for (size_t i = 0; i < m_kw; userKey += sizeof(word32))
     {
         // Do not cast the buffer. It will SIGBUS on some ARM and SPARC.
-        const word16 rk = GetWord<word16>(false, BIG_ENDIAN_ORDER, userKey);
-        m_rk[i] = rk ^ rotlConstant<1>(rk) ^ rotlConstant<8>(rk);
-        m_rk[(i + m_kw) ^ 1] = rk ^ rotlConstant<1>(rk) ^ rotlConstant<11>(rk);
+        const word32 rk = GetWord<word32>(false, BIG_ENDIAN_ORDER, userKey);
+
+        const word16 rk1 = rk >> 16;
+        m_rk[i] = rk1 ^ rotlConstant<1>(rk1) ^ rotlConstant<8>(rk1);
+        m_rk[(i + m_kw) ^ 1] = rk1 ^ rotlConstant<1>(rk1) ^ rotlConstant<11>(rk1);
+        i++;
+
+        const word16 rk2 = rk & 0xffff;
+        m_rk[i] = rk2 ^ rotlConstant<1>(rk2) ^ rotlConstant<8>(rk2);
+        m_rk[(i + m_kw) ^ 1] = rk2 ^ rotlConstant<1>(rk2) ^ rotlConstant<11>(rk2);
+        i++;
     }
 }
 
@@ -215,12 +212,13 @@ void CHAM128::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLength,
     m_kw = keyLength/sizeof(word32);
     m_rk.New(2*m_kw);
 
-    for (size_t i = 0; i < m_kw; ++i, userKey += sizeof(word32))
+    for (size_t i = 0; i < m_kw; userKey += sizeof(word32))
     {
         // Do not cast the buffer. It will SIGBUS on some ARM and SPARC.
         const word32 rk = GetWord<word32>(false, BIG_ENDIAN_ORDER, userKey);
         m_rk[i] = rk ^ rotlConstant<1>(rk) ^ rotlConstant<8>(rk);
         m_rk[(i + m_kw) ^ 1] = rk ^ rotlConstant<1>(rk) ^ rotlConstant<11>(rk);
+        i++;
     }
 }
 
@@ -273,7 +271,7 @@ void CHAM128::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock,
         break;
     }
     default:
-        CRYPTOPP_ASSERT(0);;
+        CRYPTOPP_ASSERT(0);
     }
 
     PutBlock<word32, BigEndian> oblock(xorBlock, outBlock);
@@ -329,38 +327,14 @@ void CHAM128::Dec::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock,
         break;
     }
     default:
-        CRYPTOPP_ASSERT(0);;
+        CRYPTOPP_ASSERT(0);
     }
 
     PutBlock<word32, BigEndian> oblock(xorBlock, outBlock);
     oblock(m_x[0])(m_x[1])(m_x[2])(m_x[3]);
 }
 
-#if CRYPTOPP_CHAM_ADVANCED_PROCESS_BLOCKS
-size_t CHAM64::Enc::AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks,
-        byte *outBlocks, size_t length, word32 flags) const
-{
-# if (CRYPTOPP_SSSE3_AVAILABLE)
-    if (HasSSSE3()) {
-        return CHAM64_Enc_AdvancedProcessBlocks_SSSE3(m_rk, 80,
-            inBlocks, xorBlocks, outBlocks, length, flags);
-    }
-# endif  // CRYPTOPP_SSSE3_AVAILABLE
-    return BlockTransformation::AdvancedProcessBlocks(inBlocks, xorBlocks, outBlocks, length, flags);
-}
-
-size_t CHAM64::Dec::AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks,
-        byte *outBlocks, size_t length, word32 flags) const
-{
-# if (CRYPTOPP_SSSE3_AVAILABLE)
-    if (HasSSSE3()) {
-        return CHAM64_Dec_AdvancedProcessBlocks_SSSE3(m_rk, 80,
-            inBlocks, xorBlocks, outBlocks, length, flags);
-    }
-# endif  // CRYPTOPP_SSSE3_AVAILABLE
-    return BlockTransformation::AdvancedProcessBlocks(inBlocks, xorBlocks, outBlocks, length, flags);
-}
-
+#if CRYPTOPP_CHAM128_ADVANCED_PROCESS_BLOCKS
 size_t CHAM128::Enc::AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks,
         byte *outBlocks, size_t length, word32 flags) const
 {
@@ -386,6 +360,6 @@ size_t CHAM128::Dec::AdvancedProcessBlocks(const byte *inBlocks, const byte *xor
 # endif  // CRYPTOPP_SSSE3_AVAILABLE
     return BlockTransformation::AdvancedProcessBlocks(inBlocks, xorBlocks, outBlocks, length, flags);
 }
-#endif  // CRYPTOPP_CHAM_ADVANCED_PROCESS_BLOCKS
+#endif  // CRYPTOPP_CHAM128_ADVANCED_PROCESS_BLOCKS
 
 NAMESPACE_END

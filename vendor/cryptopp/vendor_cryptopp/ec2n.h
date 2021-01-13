@@ -3,7 +3,6 @@
 /// \file ec2n.h
 /// \brief Classes for Elliptic Curves over binary fields
 
-
 #ifndef CRYPTOPP_EC2N_H
 #define CRYPTOPP_EC2N_H
 
@@ -45,7 +44,7 @@ public:
 
 	/// \brief Construct an EC2N from BER encoded parameters
 	/// \param bt BufferedTransformation derived object
-	/// \details This constructor will decode and extract the the fields fieldID and curve of the sequence ECParameters
+	/// \details This constructor will decode and extract the fields fieldID and curve of the sequence ECParameters
 	EC2N(BufferedTransformation &bt);
 
 	/// \brief Encode the fields fieldID and curve of the sequence ECParameters
@@ -120,7 +119,7 @@ public:
 	void SetCurve(const EC2N &ec) {m_ec = ec;}
 
 	/// \brief Get the elliptic curve
-	/// \returns EC2N curve
+	/// \return EC2N curve
 	/// \details GetCurve() is not inherited
 	const EC2N & GetCurve() const {return m_ec;}
 

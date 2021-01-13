@@ -34,7 +34,7 @@ NAMESPACE_BEGIN(CryptoPP)
 struct LEA_Info : public FixedBlockSize<16>, public VariableKeyLength<16,16,32,8>
 {
     /// \brief The algorithm name
-    /// \returns the algorithm name
+    /// \return the algorithm name
     /// \details StaticAlgorithmName returns the algorithm's name as a static
     ///   member function.
     static const std::string StaticAlgorithmName()
@@ -82,7 +82,7 @@ public:
 #endif
     };
 
-    /// \brief Encryption transformation
+    /// \brief Decryption transformation
     /// \details Dec provides implementation for decryption transformation. All key and block
     ///   sizes are supported.
     /// \since Crypto++ 8.0

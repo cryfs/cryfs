@@ -6,7 +6,7 @@
 #ifndef CRYPTOPP_FILTERS_H
 #define CRYPTOPP_FILTERS_H
 
-#include "cryptlib.h"
+#include "config.h"
 
 #if CRYPTOPP_MSC_VERSION
 # pragma warning(push)
@@ -26,12 +26,12 @@ NAMESPACE_BEGIN(CryptoPP)
 
 /// \brief Implementation of BufferedTransformation's attachment interface
 /// \details Filter is a cornerstone of the Pipeline trinitiy. Data flows from
-///   Sources, through Filters, and then terminates in Sinks. The difference
-///   between a Source and Filter is a Source \a pumps data, while a Filter does
-///   not. The difference between a Filter and a Sink is a Filter allows an
-///   attached transformation, while a Sink does not.
+///  Sources, through Filters, and then terminates in Sinks. The difference
+///  between a Source and Filter is a Source \a pumps data, while a Filter does
+///  not. The difference between a Filter and a Sink is a Filter allows an
+///  attached transformation, while a Sink does not.
 /// \details See the discussion of BufferedTransformation in cryptlib.h for
-///   more details.
+///  more details.
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE Filter : public BufferedTransformation, public NotCopyable
 {
 public:
@@ -42,38 +42,48 @@ public:
 
 	/// \brief Construct a Filter
 	/// \param attachment an optional attached transformation
-	/// \details attachment can be \p NULL.
+	/// \details attachment can be NULL.
 	Filter(BufferedTransformation *attachment = NULLPTR);
 
 	/// \brief Determine if attachable
-	/// \returns \p true if the object allows attached transformations, \p false otherwise.
+	/// \return true if the object allows attached transformations, false otherwise.
 	/// \note Source and Filter offer attached transformations; while Sink does not.
 	bool Attachable() {return true;}
 
 	/// \brief Retrieve attached transformation
-	/// \returns pointer to a BufferedTransformation if there is an attached transformation, \p NULL otherwise.
+	/// \return pointer to a BufferedTransformation if there is an attached transformation, NULL otherwise.
 	BufferedTransformation *AttachedTransformation();
 
 	/// \brief Retrieve attached transformation
-	/// \returns pointer to a BufferedTransformation if there is an attached transformation, \p NULL otherwise.
+	/// \return pointer to a BufferedTransformation if there is an attached transformation, NULL otherwise.
 	const BufferedTransformation *AttachedTransformation() const;
 
 	/// \brief Replace an attached transformation
 	/// \param newAttachment an optional attached transformation
-	/// \details newAttachment can be a single filter, a chain of filters or \p NULL.
-	///    Pass \p NULL to remove an existing BufferedTransformation or chain of filters
+	/// \details newAttachment can be a single filter, a chain of filters or NULL.
+	///  Pass NULL to remove an existing BufferedTransformation or chain of filters
 	void Detach(BufferedTransformation *newAttachment = NULLPTR);
 
 	//@}
 
-	// See the documentation for BufferedTransformation in cryptlib.h
+	///	\name RETRIEVAL OF ONE MESSAGE
+	//@{
+
+	// BufferedTransformation in cryptlib.h
 	size_t TransferTo2(BufferedTransformation &target, lword &transferBytes, const std::string &channel=DEFAULT_CHANNEL, bool blocking=true);
 	size_t CopyRangeTo2(BufferedTransformation &target, lword &begin, lword end=LWORD_MAX, const std::string &channel=DEFAULT_CHANNEL, bool blocking=true) const;
 
-	// See the documentation for BufferedTransformation in cryptlib.h
+	//@}
+
+	///	\name SIGNALS
+	//@{
+
+	// BufferedTransformation in cryptlib.h
 	void Initialize(const NameValuePairs &parameters=g_nullNameValuePairs, int propagation=-1);
 	bool Flush(bool hardFlush, int propagation=-1, bool blocking=true);
 	bool MessageSeriesEnd(int propagation=-1, bool blocking=true);
+
+	//@}
 
 protected:
 	virtual BufferedTransformation * NewDefaultAttachment() const;
@@ -91,7 +101,8 @@ protected:
 	/// \param messageEnd means how many filters to signal MessageEnd() to, including this one
 	/// \param blocking specifies whether the object should block when processing input
 	/// \param channel the channel to process the data
-	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \return the number of bytes that remain to be processed (i.e., bytes not processed).
+	///  0 indicates all bytes were processed.
 	size_t Output(int outputSite, const byte *inString, size_t length, int messageEnd, bool blocking, const std::string &channel=DEFAULT_CHANNEL);
 
 	/// \brief Output multiple bytes that may be modified by callee.
@@ -101,7 +112,8 @@ protected:
 	/// \param messageEnd means how many filters to signal MessageEnd() to, including this one
 	/// \param blocking specifies whether the object should block when processing input
 	/// \param channel the channel to process the data
-	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \return the number of bytes that remain to be processed (i.e., bytes not processed).
+	///  0 indicates all bytes were processed.
 	size_t OutputModifiable(int outputSite, byte *inString, size_t length, int messageEnd, bool blocking, const std::string &channel=DEFAULT_CHANNEL);
 
 	/// \brief Signals the end of messages to the object
@@ -109,9 +121,9 @@ protected:
 	/// \param propagation the number of attached transformations the  MessageEnd() signal should be passed
 	/// \param blocking specifies whether the object should block when processing input
 	/// \param channel the channel to process the data
-	/// \returns TODO
+	/// \return true is the MessageEnd signal was successful, false otherwise.
 	/// \details propagation count includes this object. Setting  propagation to <tt>1</tt> means this
-	///   object only. Setting propagation to <tt>-1</tt> means unlimited propagation.
+	///  object only. Setting propagation to <tt>-1</tt> means unlimited propagation.
 	bool OutputMessageEnd(int outputSite, int propagation, bool blocking, const std::string &channel=DEFAULT_CHANNEL);
 
 	/// \brief Flush buffered input and/or output, with signal propagation
@@ -120,17 +132,17 @@ protected:
 	/// \param propagation the number of attached transformations the  Flush() signal should be passed
 	/// \param blocking specifies whether the object should block when processing input
 	/// \param channel the channel to process the data
-	/// \returns TODO
+	/// \return true is the Flush signal was successful, false otherwise.
 	/// \details propagation count includes this object. Setting  propagation to <tt>1</tt> means this
-	///   object only. Setting  propagation to <tt>-1</tt> means unlimited propagation.
+	///  object only. Setting  propagation to <tt>-1</tt> means unlimited propagation.
 	/// \note Hard flushes must be used with care. It means try to process and output everything, even if
-	///   there may not be enough data to complete the action. For example, hard flushing a  HexDecoder
-	///   would cause an error if you do it after inputing an odd number of hex encoded characters.
+	///  there may not be enough data to complete the action. For example, hard flushing a  HexDecoder
+	///  would cause an error if you do it after inputing an odd number of hex encoded characters.
 	/// \note For some types of filters, like  ZlibDecompressor, hard flushes can only
-	///   be done at "synchronization points". These synchronization points are positions in the data
-	///   stream that are created by hard flushes on the corresponding reverse filters, in this
-	///   example ZlibCompressor. This is useful when zlib compressed data is moved across a
-	///   network in packets and compression state is preserved across packets, as in the SSH2 protocol.
+	///  be done at "synchronization points". These synchronization points are positions in the data
+	///  stream that are created by hard flushes on the corresponding reverse filters, in this
+	///  example ZlibCompressor. This is useful when zlib compressed data is moved across a
+	///  network in packets and compression state is preserved across packets, as in the SSH2 protocol.
 	bool OutputFlush(int outputSite, bool hardFlush, int propagation, bool blocking, const std::string &channel=DEFAULT_CHANNEL);
 
 	/// \brief Marks the end of a series of messages, with signal propagation
@@ -138,11 +150,11 @@ protected:
 	/// \param propagation the number of attached transformations the  MessageSeriesEnd() signal should be passed
 	/// \param blocking specifies whether the object should block when processing input
 	/// \param channel the channel to process the data
-	/// \returns TODO
+	/// \return true is the MessageEnd signal was successful, false otherwise.
 	/// \details Each object that receives the signal will perform its processing, decrement
-	///    propagation, and then pass the signal on to attached transformations if the value is not 0.
+	///  propagation, and then pass the signal on to attached transformations if the value is not 0.
 	/// \details propagation count includes this object. Setting  propagation to <tt>1</tt> means this
-	///   object only. Setting  propagation to <tt>-1</tt> means unlimited propagation.
+	///  object only. Setting  propagation to <tt>-1</tt> means unlimited propagation.
 	/// \note There should be a MessageEnd() immediately before MessageSeriesEnd().
 	bool OutputMessageSeriesEnd(int outputSite, int propagation, bool blocking, const std::string &channel=DEFAULT_CHANNEL);
 
@@ -166,12 +178,12 @@ struct CRYPTOPP_DLL FilterPutSpaceHelper
 	/// \param desiredSize preferred size of the allocation, in bytes
 	/// \param bufferSize actual size of the allocation, in bytes
 	/// \pre <tt>desiredSize >= minSize</tt> and <tt>bufferSize >= minSize</tt>.
-	/// \details \p bufferSize is an IN and OUT parameter. If HelpCreatePutSpace() returns a non-NULL value, then
-	///    bufferSize is valid and provides the size of the working space created for the caller.
+	/// \details bufferSize is an IN and OUT parameter. If HelpCreatePutSpace() returns a non-NULL value, then
+	///  bufferSize is valid and provides the size of the working space created for the caller.
 	/// \details Internally, HelpCreatePutSpace() calls \ref BufferedTransformation::ChannelCreatePutSpace
-	///   "ChannelCreatePutSpace()" using \p desiredSize. If the target returns \p desiredSize with a size less
-	///   than \p minSize (i.e., the request could not be fulfilled), then an internal SecByteBlock
-	///   called \p m_tempSpace is resized and used for the caller.
+	///  "ChannelCreatePutSpace()" using desiredSize. If the target returns desiredSize with a size less
+	///  than minSize (i.e., the request could not be fulfilled), then an internal SecByteBlock
+	///  called m_tempSpace is resized and used for the caller.
 	byte *HelpCreatePutSpace(BufferedTransformation &target, const std::string &channel, size_t minSize, size_t desiredSize, size_t &bufferSize)
 	{
 		CRYPTOPP_ASSERT(desiredSize >= minSize && bufferSize >= minSize);
@@ -194,7 +206,9 @@ struct CRYPTOPP_DLL FilterPutSpaceHelper
 	/// \param target the BufferedTransformation for the working space
 	/// \param channel channel for the working space
 	/// \param minSize minimum size of the allocation, in bytes
-	/// \details Internally, the overload calls HelpCreatePutSpace(BufferedTransformation &target, const std::string &channel, size_t minSize, size_t desiredSize, size_t &bufferSize) using \p minSize for missing arguments.
+	/// \return pointer to the created space
+	/// \details Internally, the overload calls HelpCreatePutSpace() using minSize for missing arguments.
+	/// \details The filter will delete the space. The caller does not need to delete the space.
 	byte *HelpCreatePutSpace(BufferedTransformation &target, const std::string &channel, size_t minSize)
 		{return HelpCreatePutSpace(target, channel, minSize, minSize, minSize);}
 
@@ -203,7 +217,8 @@ struct CRYPTOPP_DLL FilterPutSpaceHelper
 	/// \param channel channel for the working space
 	/// \param minSize minimum size of the allocation, in bytes
 	/// \param bufferSize the actual size of the allocation, in bytes
-	/// \details Internally, the overload calls HelpCreatePutSpace(BufferedTransformation &target, const std::string &channel, size_t minSize, size_t desiredSize, size_t &bufferSize) using \p minSize for missing arguments.
+	/// \details Internally, the overload calls HelpCreatePutSpace() using minSize for missing arguments.
+	/// \details The filter will delete the space. The caller does not need to delete the space.
 	byte *HelpCreatePutSpace(BufferedTransformation &target, const std::string &channel, size_t minSize, size_t bufferSize)
 		{return HelpCreatePutSpace(target, channel, minSize, minSize, bufferSize);}
 
@@ -213,7 +228,7 @@ struct CRYPTOPP_DLL FilterPutSpaceHelper
 
 /// \brief Measure how many bytes and messages pass through the filter
 /// \details measure how many bytes and messages pass through the filter. The filter also serves as valve by
-///   maintaining a list of ranges to skip during processing.
+///  maintaining a list of ranges to skip during processing.
 class CRYPTOPP_DLL MeterFilter : public Bufferless<Filter>
 {
 public:
@@ -222,8 +237,8 @@ public:
 	/// \brief Construct a MeterFilter
 	/// \param attachment an optional attached transformation
 	/// \param transparent flag indicating if the filter should function transparently
-	/// \details \p attachment can be \p NULL. The filter is transparent by default. If the filter is
-	///   transparent, then PutMaybeModifiable() does not process a request and always returns 0.
+	/// \details attachment can be NULL. The filter is transparent by default. If the filter is
+	///  transparent, then PutMaybeModifiable() does not process a request and always returns 0.
 	MeterFilter(BufferedTransformation *attachment=NULLPTR, bool transparent=true)
 		: m_transparent(transparent), m_currentMessageBytes(0), m_totalBytes(0)
 		, m_currentSeriesMessages(0), m_totalMessages(0), m_totalMessageSeries(0)
@@ -239,25 +254,40 @@ public:
 	/// \param size the length of the range
 	/// \param sortNow flag indicating whether the range should be sorted
 	/// \details Internally, MeterFilter maitains a deque of ranges to skip. As messages are processed,
-	///   ranges of bytes are skipped according to the list of ranges.
+	///  ranges of bytes are skipped according to the list of ranges.
 	void AddRangeToSkip(unsigned int message, lword position, lword size, bool sortNow = true);
 
 	/// \brief Resets the meter
 	/// \details ResetMeter() reinitializes the meter by setting counters to 0 and removing previous
-	///   skip ranges.
+	///  skip ranges.
 	void ResetMeter();
 
+	// BufferedTransformation in cryptlib.h
 	void IsolatedInitialize(const NameValuePairs &parameters)
 		{CRYPTOPP_UNUSED(parameters); ResetMeter();}
 
+	/// \brief Number of bytes in the current message
+	/// \return the number of bytes in the current message
 	lword GetCurrentMessageBytes() const {return m_currentMessageBytes;}
+
+	/// \brief Number of bytes processed by the filter
+	/// \return the number of bytes processed by the filter
 	lword GetTotalBytes() const {return m_totalBytes;}
+
+	/// \brief Message number in the series
+	/// \return the message number in the series
 	unsigned int GetCurrentSeriesMessages() const {return m_currentSeriesMessages;}
+
+	/// \brief Number of messages in the message series
+	/// \return the number of messages in the message series
 	unsigned int GetTotalMessages() const {return m_totalMessages;}
+
+	/// \brief Number of messages processed by the filter
+	/// \return the number of messages processed by the filter
 	unsigned int GetTotalMessageSeries() const {return m_totalMessageSeries;}
 
-	byte * CreatePutSpace(size_t &size)
-		{return AttachedTransformation()->CreatePutSpace(size);}
+	// BufferedTransformation in cryptlib.h
+	byte * CreatePutSpace(size_t &size) {return AttachedTransformation()->CreatePutSpace(size);}
 	size_t Put2(const byte *inString, size_t length, int messageEnd, bool blocking);
 	size_t PutModifiable2(byte *inString, size_t length, int messageEnd, bool blocking);
 	bool IsolatedMessageSeriesEnd(bool blocking);
@@ -304,10 +334,10 @@ public:
 
 /// \brief Divides an input stream into discrete blocks
 /// \details FilterWithBufferedInput divides the input stream into a first block, a number of
-///   middle blocks, and a last block. First and last blocks are optional, and middle blocks may
-///   be a stream instead (i.e. <tt>blockSize == 1</tt>).
+///  middle blocks, and a last block. First and last blocks are optional, and middle blocks may
+///  be a stream instead (i.e. <tt>blockSize == 1</tt>).
 /// \sa AuthenticatedEncryptionFilter, AuthenticatedDecryptionFilter, HashVerificationFilter,
-///   SignatureVerificationFilter, StreamTransformationFilter
+///  SignatureVerificationFilter, StreamTransformationFilter
 class CRYPTOPP_DLL FilterWithBufferedInput : public Filter
 {
 public:
@@ -322,7 +352,7 @@ public:
 	/// \param blockSize the size of middle blocks
 	/// \param lastSize the size of the last block
 	/// \param attachment an attached transformation
-	/// \details \p firstSize and \p lastSize may be 0. \p blockSize must be at least 1.
+	/// \details firstSize and lastSize may be 0. blockSize must be at least 1.
 	FilterWithBufferedInput(size_t firstSize, size_t blockSize, size_t lastSize, BufferedTransformation *attachment);
 
 	void IsolatedInitialize(const NameValuePairs &parameters);
@@ -339,13 +369,14 @@ public:
 	/// \brief Flushes data buffered by this object, without signal propagation
 	/// \param hardFlush indicates whether all data should be flushed
 	/// \param blocking specifies whether the object should block when processing input
+	/// \return true if the Flush was successful, false otherwise
 	/// \details IsolatedFlush() calls ForceNextPut() if hardFlush is true
 	/// \note  hardFlush must be used with care
 	bool IsolatedFlush(bool hardFlush, bool blocking);
 
 	/// \brief Flushes data buffered by this object
 	/// \details The input buffer may contain more than blockSize bytes if <tt>lastSize != 0</tt>.
-	///   ForceNextPut() forces a call to NextPut() if this is the case.
+	///  ForceNextPut() forces a call to NextPut() if this is the case.
 	void ForceNextPut();
 
 protected:
@@ -375,7 +406,7 @@ protected:
 	/// \param inString the input byte buffer
 	/// \param length the size of the input buffer, in bytes
 	/// \details LastPut() processes the last block of data and signals attached filters to do the same.
-	///   LastPut() is always called. The pseudo algorithm for the logic is:
+	///  LastPut() is always called. The pseudo algorithm for the logic is:
 	/// <pre>
 	///     if totalLength < firstSize then length == totalLength
 	///     else if totalLength <= firstSize+lastSize then length == totalLength-firstSize
@@ -421,8 +452,8 @@ protected:
 
 /// \brief A filter that buffers input using a ByteQueue
 /// \details FilterWithInputQueue will buffer input using a ByteQueue. When the filter receives
-///   a \ref BufferedTransformation::MessageEnd() "MessageEnd()" signal it will pass the data
-///   on to its attached transformation.
+///  a \ref BufferedTransformation::MessageEnd() "MessageEnd()" signal it will pass the data
+///  on to its attached transformation.
 class CRYPTOPP_DLL FilterWithInputQueue : public Filter
 {
 public:
@@ -462,10 +493,10 @@ struct BlockPaddingSchemeDef
 	/// \enum BlockPaddingScheme
 	/// \brief Padding schemes used for block ciphers.
 	/// \details DEFAULT_PADDING means PKCS_PADDING if <tt>cipher.MandatoryBlockSize() > 1 &&
-	///   cipher.MinLastBlockSize() == 0</tt>, which holds for ECB or CBC mode. Otherwise,
-	///   NO_PADDING for modes like OFB, CFB, CTR, CBC-CTS.
+	///  cipher.MinLastBlockSize() == 0</tt>, which holds for ECB or CBC mode. Otherwise,
+	///  NO_PADDING for modes like OFB, CFB, CTR, CBC-CTS.
 	/// \sa <A HREF="http://www.weidai.com/scan-mirror/csp.html">Block Cipher Padding</A> for
-	///   additional details.
+	///  additional details.
 	/// \since Crypto++ 5.0
 	enum BlockPaddingScheme {
 		/// \brief No padding added to a block
@@ -482,7 +513,7 @@ struct BlockPaddingSchemeDef
 		ONE_AND_ZEROS_PADDING,
 		/// \brief W3C padding added to a block
 		/// \sa <A HREF="http://www.w3.org/TR/2002/REC-xmlenc-core-20021210/Overview.html">XML
-		///   Encryption Syntax and Processing</A>
+		///  Encryption Syntax and Processing</A>
 		/// \since Crypto++ 6.0
 		W3C_PADDING,
 		/// \brief Default padding scheme
@@ -493,9 +524,9 @@ struct BlockPaddingSchemeDef
 
 /// \brief Filter wrapper for StreamTransformation
 /// \details StreamTransformationFilter() is a filter wrapper for StreamTransformation(). It is used when
-///   pipelining data for stream ciphers and confidentiality-only block ciphers. The filter will optionally
-///   handle padding and unpadding when needed. If you are using an authenticated encryption mode of operation,
-///   then use AuthenticatedEncryptionFilter() and AuthenticatedDecryptionFilter()
+///  pipelining data for stream ciphers and confidentiality-only block ciphers. The filter will optionally
+///  handle padding and unpadding when needed. If you are using an authenticated encryption mode of operation,
+///  then use AuthenticatedEncryptionFilter() and AuthenticatedDecryptionFilter()
 /// \since Crypto++ 5.0
 class CRYPTOPP_DLL StreamTransformationFilter : public FilterWithBufferedInput, public BlockPaddingSchemeDef, private FilterPutSpaceHelper
 {
@@ -507,9 +538,9 @@ public:
 	/// \param attachment an optional attached transformation
 	/// \param padding the \ref BlockPaddingSchemeDef "padding scheme"
 	/// \details This contructor creates a StreamTransformationFilter() for stream ciphers and
-	///   confidentiality-only block cipher modes of operation. If you are using an authenticated
-	///   encryption mode of operation, then use either AuthenticatedEncryptionFilter() or
-	///   AuthenticatedDecryptionFilter().
+	///  confidentiality-only block cipher modes of operation. If you are using an authenticated
+	///  encryption mode of operation, then use either AuthenticatedEncryptionFilter() or
+	///  AuthenticatedDecryptionFilter().
 	/// \sa AuthenticatedEncryptionFilter() and AuthenticatedDecryptionFilter()
 	StreamTransformationFilter(StreamTransformation &c, BufferedTransformation *attachment = NULLPTR, BlockPaddingScheme padding = DEFAULT_PADDING);
 
@@ -526,7 +557,7 @@ protected:
 	/// \param padding the \ref BlockPaddingSchemeDef "padding scheme"
 	/// \param authenticated flag indicating whether the filter should allow authenticated encryption schemes
 	/// \details This constructor is used for authenticated encryption mode of operation and by
-	///   AuthenticatedEncryptionFilter() and AuthenticatedDecryptionFilter().
+	///  AuthenticatedEncryptionFilter() and AuthenticatedDecryptionFilter().
 	StreamTransformationFilter(StreamTransformation &c, BufferedTransformation *attachment, BlockPaddingScheme padding, bool authenticated);
 
 	void InitializeDerivedAndReturnNewSizes(const NameValuePairs &parameters, size_t &firstSize, size_t &blockSize, size_t &lastSize);
@@ -593,19 +624,19 @@ public:
 	/// \brief Flags controlling filter behavior.
 	/// \details The flags are a bitmask and can be OR'd together.
 	enum Flags {
-		/// \brief Indicates the hash is at the end of the message (i.e., concatenation of message+hash)
+		/// \brief The hash is at the end of the message (i.e., concatenation of message+hash)
 		HASH_AT_END=0,
-		/// \brief Indicates the hash is at the beginning of the message (i.e., concatenation of hash+message)
+		/// \brief The hash is at the beginning of the message (i.e., concatenation of hash+message)
 		HASH_AT_BEGIN=1,
-		/// \brief Indicates the message should be passed to an attached transformation
+		/// \brief The message should be passed to an attached transformation
 		PUT_MESSAGE=2,
-		/// \brief Indicates the hash should be passed to an attached transformation
+		/// \brief The hash should be passed to an attached transformation
 		PUT_HASH=4,
-		/// \brief Indicates the result of the verification should be passed to an attached transformation
+		/// \brief The result of the verification should be passed to an attached transformation
 		PUT_RESULT=8,
-		/// \brief Indicates the filter should throw a HashVerificationFailed if a failure is encountered
+		/// \brief The filter should throw a HashVerificationFailed if a failure is encountered
 		THROW_EXCEPTION=16,
-		/// \brief Default flags using \p HASH_AT_BEGIN and \p PUT_RESULT
+		/// \brief Default flags using HASH_AT_BEGIN and PUT_RESULT
 		DEFAULT_FLAGS = HASH_AT_BEGIN | PUT_RESULT
 	};
 
@@ -637,9 +668,16 @@ private:
 };
 
 /// \brief Filter wrapper for encrypting with AuthenticatedSymmetricCipher
-/// \details AuthenticatedEncryptionFilter() is a wrapper for encrypting with AuthenticatedSymmetricCipher(),
-///   optionally handling padding/unpadding when needed.
-/// \sa AuthenticatedDecryptionFilter, EAX, CCM, GCM, AuthenticatedSymmetricCipher
+/// \details AuthenticatedEncryptionFilter() is a wrapper for encrypting with
+///  AuthenticatedSymmetricCipher(), optionally handling padding/unpadding when needed.
+/// \details AuthenticatedDecryptionFilter() for Crypto++ 8.2 and earlier
+///  had a bug where a FileSource() would cause an exception, but a StringSource()
+///  was OK. Also see <A HREF=
+///  "https://github.com/weidai11/cryptopp/issues/817">Issue 817</A> and <A HREF=
+///  "https://github.com/weidai11/cryptopp/commit/ff110c6e183e">Commit ff110c6e183e</A>.
+/// \sa AuthenticatedSymmetricCipher, AuthenticatedDecryptionFilter, EAX, CCM, GCM,
+///  and <A HREF="https://www.cryptopp.com/wiki/AadSource">AadSource</A> on the
+///  Crypto++ wiki.
 /// \since Crypto++ 5.6.0
 class CRYPTOPP_DLL AuthenticatedEncryptionFilter : public StreamTransformationFilter
 {
@@ -665,7 +703,7 @@ public:
 	/// \param inString the input byte buffer
 	/// \param length the size of the input buffer, in bytes
 	/// \details LastPut() processes the last block of data and signals attached filters to do the same.
-	///   LastPut() is always called. The pseudo algorithm for the logic is:
+	///  LastPut() is always called. The pseudo algorithm for the logic is:
 	/// <pre>
 	///     if totalLength < firstSize then length == totalLength
 	///     else if totalLength <= firstSize+lastSize then length == totalLength-firstSize
@@ -678,9 +716,17 @@ protected:
 };
 
 /// \brief Filter wrapper for decrypting with AuthenticatedSymmetricCipher
-/// \details AuthenticatedDecryptionFilter() is a wrapper for decrypting with AuthenticatedSymmetricCipher(),
-///   optionally handling padding/unpadding when needed.
-/// \sa AuthenticatedEncryptionFilter, EAX, CCM, GCM, AuthenticatedSymmetricCipher
+/// \details AuthenticatedDecryptionFilter() is a wrapper for decrypting with
+///  AuthenticatedSymmetricCipher(), optionally handling padding/unpadding when
+///  needed.
+/// \details AuthenticatedDecryptionFilter() for Crypto++ 8.2 and earlier
+///  had a bug where a FileSource() would cause an exception, but a StringSource()
+///  was OK. Also see <A HREF=
+///  "https://github.com/weidai11/cryptopp/issues/817">Issue 817</A> and <A HREF=
+///  "https://github.com/weidai11/cryptopp/commit/ff110c6e183e">Commit ff110c6e183e</A>.
+/// \sa AuthenticatedSymmetricCipher, AuthenticatedEncryptionFilter, EAX, CCM, GCM,
+///  and <A HREF="https://www.cryptopp.com/wiki/AadSource">AadSource</A> on the
+///  Crypto++ wiki.
 /// \since Crypto++ 5.6.0
 class CRYPTOPP_DLL AuthenticatedDecryptionFilter : public FilterWithBufferedInput, public BlockPaddingSchemeDef
 {
@@ -689,13 +735,13 @@ public:
 	/// \brief Flags controlling filter behavior.
 	/// \details The flags are a bitmask and can be OR'd together.
 	enum Flags {
-		/// \brief Indicates the MAC is at the end of the message (i.e., concatenation of message+mac)
+		/// \brief The MAC is at the end of the message (i.e., concatenation of message+mac)
 		MAC_AT_END=0,
-		/// \brief Indicates the MAC is at the beginning of the message (i.e., concatenation of mac+message)
+		/// \brief The MAC is at the beginning of the message (i.e., concatenation of mac+message)
 		MAC_AT_BEGIN=1,
-		/// \brief Indicates the filter should throw a HashVerificationFailed if a failure is encountered
+		/// \brief The filter should throw a HashVerificationFailed if a failure is encountered
 		THROW_EXCEPTION=16,
-		/// \brief Default flags using \p THROW_EXCEPTION
+		/// \brief Default flags using THROW_EXCEPTION
 		DEFAULT_FLAGS = THROW_EXCEPTION
 	};
 
@@ -715,6 +761,10 @@ public:
 	std::string AlgorithmName() const {return m_hashVerifier.AlgorithmName();}
 	byte * ChannelCreatePutSpace(const std::string &channel, size_t &size);
 	size_t ChannelPut2(const std::string &channel, const byte *begin, size_t length, int messageEnd, bool blocking);
+	size_t ChannelPutModifiable2(const std::string &channel, byte *begin, size_t length, int messageEnd, bool blocking)
+		{ return ChannelPut2(channel, begin, length, messageEnd, blocking); }
+	/// \brief Get verifier result
+	/// \return true if the digest on the previosus message was valid, false otherwise
 	bool GetLastResult() const {return m_hashVerifier.GetLastResult();}
 
 protected:
@@ -726,7 +776,7 @@ protected:
 	/// \param inString the input byte buffer
 	/// \param length the size of the input buffer, in bytes
 	/// \details LastPut() processes the last block of data and signals attached filters to do the same.
-	///   LastPut() is always called. The pseudo algorithm for the logic is:
+	///  LastPut() is always called. The pseudo algorithm for the logic is:
 	/// <pre>
 	///     if totalLength < firstSize then length == totalLength
 	///     else if totalLength <= firstSize+lastSize then length == totalLength-firstSize
@@ -784,19 +834,19 @@ public:
 	/// \brief Flags controlling filter behavior.
 	/// \details The flags are a bitmask and can be OR'd together.
 	enum Flags {
-		/// \brief Indicates the signature is at the end of the message (i.e., concatenation of message+signature)
+		/// \brief The signature is at the end of the message (i.e., concatenation of message+signature)
 		SIGNATURE_AT_END=0,
-		/// \brief Indicates the signature is at the beginning of the message (i.e., concatenation of signature+message)
+		/// \brief The signature is at the beginning of the message (i.e., concatenation of signature+message)
 		SIGNATURE_AT_BEGIN=1,
-		/// \brief Indicates the message should be passed to an attached transformation
+		/// \brief The message should be passed to an attached transformation
 		PUT_MESSAGE=2,
-		/// \brief Indicates the signature should be passed to an attached transformation
+		/// \brief The signature should be passed to an attached transformation
 		PUT_SIGNATURE=4,
-		/// \brief Indicates the result of the verification should be passed to an attached transformation
+		/// \brief The result of the verification should be passed to an attached transformation
 		PUT_RESULT=8,
-		/// \brief Indicates the filter should throw a HashVerificationFailed if a failure is encountered
+		/// \brief The filter should throw a HashVerificationFailed if a failure is encountered
 		THROW_EXCEPTION=16,
-		/// \brief Default flags using \p SIGNATURE_AT_BEGIN and \p PUT_RESULT
+		/// \brief Default flags using SIGNATURE_AT_BEGIN and PUT_RESULT
 		DEFAULT_FLAGS = SIGNATURE_AT_BEGIN | PUT_RESULT
 	};
 
@@ -811,7 +861,7 @@ public:
 	std::string AlgorithmName() const {return m_verifier.AlgorithmName();}
 
 	/// \brief Retrieves the result of the last verification
-	/// \returns true if the signature on the previosus message was valid, false otherwise
+	/// \return true if the signature on the previosus message was valid, false otherwise
 	bool GetLastResult() const {return m_verified;}
 
 protected:
@@ -865,11 +915,23 @@ public:
 	/// \brief Stop redirecting input
 	void StopRedirection() {m_target = NULLPTR;}
 
+	/// \brief Retrieve signal propagation behavior
+	/// \return the current signal propagation behavior
 	Behavior GetBehavior() {return static_cast<Behavior>(m_behavior);}
+	/// \brief Set signal propagation behavior
+	/// \param behavior the new signal propagation behavior
 	void SetBehavior(Behavior behavior) {m_behavior=behavior;}
+	/// \brief Retrieve signal propagation behavior
+	/// \return true if the Redirector passes signals, false otherwise.
 	bool GetPassSignals() const {return (m_behavior & PASS_SIGNALS) != 0;}
+	/// \brief Set signal propagation behavior
+	/// \param pass flag indicating if the Redirector should pass signals
 	void SetPassSignals(bool pass) { if (pass) m_behavior |= PASS_SIGNALS; else m_behavior &= ~static_cast<word32>(PASS_SIGNALS); }
+	/// \brief Retrieve signal propagation behavior
+	/// \return true if the Redirector passes wait objects, false otherwise.
 	bool GetPassWaitObjects() const {return (m_behavior & PASS_WAIT_OBJECTS) != 0;}
+	/// \brief Set signal propagation behavior
+	/// \param pass flag indicating if the Redirector should pass wait objects
 	void SetPassWaitObjects(bool pass) { if (pass) m_behavior |= PASS_WAIT_OBJECTS; else m_behavior &= ~static_cast<word32>(PASS_WAIT_OBJECTS); }
 
 	bool CanModifyInput() const
@@ -936,7 +998,7 @@ public:
 	OutputProxy(BufferedTransformation &owner, bool passSignal) : m_owner(owner), m_passSignal(passSignal) {}
 
 	/// \brief Retrieve passSignal flag
-	/// \returns flag indicating if signals should be passed
+	/// \return flag indicating if signals should be passed
 	bool GetPassSignal() const {return m_passSignal;}
 	/// \brief Set passSignal flag
 	/// \param passSignal flag indicating if signals should be passed
@@ -1015,7 +1077,7 @@ public:
 	/// \param inString the input byte buffer
 	/// \param length the size of the input buffer, in bytes
 	/// \details LastPut() processes the last block of data and signals attached filters to do the same.
-	///   LastPut() is always called. The pseudo algorithm for the logic is:
+	///  LastPut() is always called. The pseudo algorithm for the logic is:
 	/// <pre>
 	///     if totalLength < firstSize then length == totalLength
 	///     else if totalLength <= firstSize+lastSize then length == totalLength-firstSize
@@ -1027,7 +1089,7 @@ public:
 
 /// \brief Filter wrapper for PK_Encryptor
 /// \details PK_DecryptorFilter is a proxy for the filter created by PK_Encryptor::CreateEncryptionFilter.
-///   This class provides symmetry with VerifierFilter.
+///  This class provides symmetry with VerifierFilter.
 /// \since Crypto++ 5.0
 class CRYPTOPP_DLL PK_EncryptorFilter : public SimpleProxyFilter
 {
@@ -1042,7 +1104,7 @@ public:
 
 /// \brief Filter wrapper for PK_Decryptor
 /// \details PK_DecryptorFilter is a proxy for the filter created by PK_Decryptor::CreateDecryptionFilter.
-///   This class provides symmetry with SignerFilter.
+///  This class provides symmetry with SignerFilter.
 /// \since Crypto++ 5.0
 class CRYPTOPP_DLL PK_DecryptorFilter : public SimpleProxyFilter
 {
@@ -1095,12 +1157,13 @@ private:
 /// \details StringSink is a typedef for StringSinkTemplate<std::string>.
 /// \sa ArraySink, ArrayXorSink
 /// \since Crypto++ 4.0
-DOCUMENTED_TYPEDEF(StringSinkTemplate<std::string>, StringSink)
+DOCUMENTED_TYPEDEF(StringSinkTemplate<std::string>, StringSink);
 CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::string>;
 
 /// \brief Append input to a std::vector<byte> object
 /// \details VectorSink is a typedef for StringSinkTemplate<std::vector<byte> >.
-DOCUMENTED_TYPEDEF(StringSinkTemplate<std::vector<byte> >, VectorSink)
+/// \since Crypto++ 8.0
+DOCUMENTED_TYPEDEF(StringSinkTemplate<std::vector<byte> >, VectorSink);
 CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::vector<byte> >;
 
 /// \brief Incorporates input into RNG as additional entropy
@@ -1128,9 +1191,9 @@ private:
 
 /// \brief Copy input to a memory buffer
 /// \details ArraySink wraps a fixed size buffer. The buffer is full once Put returns non-0.
-///   When used in a pipleline, ArraySink silently discards input if the buffer is full.
-///   AvailableSize() can be used to determine how much space remains in the buffer.
-///   TotalPutLength() can be used to determine how many bytes were processed.
+///  When used in a pipleline, ArraySink silently discards input if the buffer is full.
+///  AvailableSize() can be used to determine how much space remains in the buffer.
+///  TotalPutLength() can be used to determine how many bytes were processed.
 /// \sa StringSink, ArrayXorSink
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL ArraySink : public Bufferless<Sink>
@@ -1151,11 +1214,11 @@ public:
 		: m_buf(buf), m_size(size), m_total(0) {}
 
 	/// \brief Provides the size remaining in the Sink
-	/// \returns size remaining in the Sink, in bytes
+	/// \return size remaining in the Sink, in bytes
 	size_t AvailableSize() {return SaturatingSubtract(m_size, m_total);}
 
 	/// \brief Provides the number of bytes written to the Sink
-	/// \returns number of bytes written to the Sink, in bytes
+	/// \return number of bytes written to the Sink, in bytes
 	lword TotalPutLength() {return m_total;}
 
 	void IsolatedInitialize(const NameValuePairs &parameters);
@@ -1170,9 +1233,9 @@ protected:
 
 /// \brief Xor input to a memory buffer
 /// \details ArrayXorSink wraps a fixed size buffer. The buffer is full once Put returns non-0.
-///   When used in a pipleline, ArrayXorSink silently discards input if the buffer is full.
-///   AvailableSize() can be used to determine how much space remains in the buffer.
-///   TotalPutLength() can be used to determine how many bytes were processed.
+///  When used in a pipleline, ArrayXorSink silently discards input if the buffer is full.
+///  AvailableSize() can be used to determine how much space remains in the buffer.
+///  TotalPutLength() can be used to determine how many bytes were processed.
 /// \sa StringSink, ArraySink
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL ArrayXorSink : public ArraySink
@@ -1270,12 +1333,12 @@ private:
 
 /// \brief Implementation of BufferedTransformation's attachment interface
 /// \details Source is a cornerstone of the Pipeline trinitiy. Data flows from
-///   Sources, through Filters, and then terminates in Sinks. The difference
-///   between a Source and Filter is a Source \a pumps data, while a Filter does
-///   not. The difference between a Filter and a Sink is a Filter allows an
-///   attached transformation, while a Sink does not.
+///  Sources, through Filters, and then terminates in Sinks. The difference
+///  between a Source and Filter is a Source \a pumps data, while a Filter does
+///  not. The difference between a Filter and a Sink is a Filter allows an
+///  attached transformation, while a Sink does not.
 /// \details See the discussion of BufferedTransformation in cryptlib.h for
-///   more details.
+///  more details.
 /// \sa Store and SourceTemplate
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE Source : public InputRejecting<Filter>
@@ -1293,26 +1356,27 @@ public:
 
 	/// \brief Pump data to attached transformation
 	/// \param pumpMax the maximum number of bytes to pump
-	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \return the number of bytes that remain to be processed (i.e., bytes not processed).
+	///  0 indicates all bytes were processed.
 	/// \details Internally, Pump() calls Pump2().
 	/// \note pumpMax is a <tt>lword</tt>, which is a 64-bit value that typically uses
-	///   <tt>LWORD_MAX</tt>. The default argument is <tt>SIZE_MAX</tt>, and it can be
-	///   32-bits or 64-bits.
+	///  <tt>LWORD_MAX</tt>. The default argument is <tt>SIZE_MAX</tt>, and it can be
+	///  32-bits or 64-bits.
 	/// \sa Pump2, PumpAll, AnyRetrievable, MaxRetrievable
 	lword Pump(lword pumpMax=SIZE_MAX)
 		{Pump2(pumpMax); return pumpMax;}
 
 	/// \brief Pump messages to attached transformation
 	/// \param count the maximum number of messages to pump
-	/// \returns TODO
+	/// \return TODO
 	/// \details Internally, PumpMessages() calls PumpMessages2().
 	unsigned int PumpMessages(unsigned int count=UINT_MAX)
 		{PumpMessages2(count); return count;}
 
 	/// \brief Pump all data to attached transformation
 	/// \details Pumps all data to the attached transformation and signal the end of the current
-	///   message. To avoid the MessageEnd() signal call \ref Pump "Pump(LWORD_MAX)" or \ref Pump2
-	///   "Pump2(LWORD_MAX, bool)".
+	///  message. To avoid the MessageEnd() signal call \ref Pump "Pump(LWORD_MAX)" or \ref Pump2
+	///  "Pump2(LWORD_MAX, bool)".
 	/// \details Internally, PumpAll() calls PumpAll2(), which calls PumpMessages().
 	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	void PumpAll()
@@ -1321,10 +1385,11 @@ public:
 	/// \brief Pump data to attached transformation
 	/// \param byteCount the maximum number of bytes to pump
 	/// \param blocking specifies whether the object should block when processing input
-	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \return the number of bytes that remain to be processed (i.e., bytes not processed).
+	///  0 indicates all bytes were processed.
 	/// \details byteCount is an \a IN and \a OUT parameter. When the call is made, byteCount is the
-	///   requested size of the pump. When the call returns, byteCount is the number of bytes that
-	///   were pumped.
+	///  requested size of the pump. When the call returns, byteCount is the number of bytes that
+	///  were pumped.
 	/// \sa Pump, PumpAll, AnyRetrievable, MaxRetrievable
 	virtual size_t Pump2(lword &byteCount, bool blocking=true) =0;
 
@@ -1336,12 +1401,13 @@ public:
 
 	/// \brief Pump all data to attached transformation
 	/// \param blocking specifies whether the object should block when processing input
-	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \return the number of bytes that remain to be processed (i.e., bytes not processed).
+	///  0 indicates all bytes were processed.
 	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	virtual size_t PumpAll2(bool blocking=true);
 
 	/// \brief Determines if the Source is exhausted
-	/// \returns true if the source has been exhausted
+	/// \return true if the source has been exhausted
 	virtual bool SourceExhausted() const =0;
 
 	//@}
@@ -1366,7 +1432,7 @@ public:
 
 	/// \brief Construct a SourceTemplate
 	/// \param attachment an attached transformation
-	SourceTemplate<T>(BufferedTransformation *attachment)
+	SourceTemplate(BufferedTransformation *attachment)
 		: Source(attachment) {}
 	void IsolatedInitialize(const NameValuePairs &parameters)
 		{m_store.IsolatedInitialize(parameters);}
@@ -1422,9 +1488,9 @@ public:
 
 /// \brief Pointer-based implementation of the Source interface
 /// \details ArraySource is a typedef for StringSource. Use the third constructor for an array source.
-///   The third constructor takes a pointer and length.
+///  The third constructor takes a pointer and length.
 /// \since Crypto++ 5.6.0
-DOCUMENTED_TYPEDEF(StringSource, ArraySource)
+DOCUMENTED_TYPEDEF(StringSource, ArraySource);
 
 /// \brief std::vector-based implementation of the Source interface
 /// \since Crypto++ 8.0

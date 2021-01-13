@@ -28,7 +28,7 @@ NAMESPACE_BEGIN(CryptoPP)
 
 /// \brief Inverts the cipher's direction
 /// \param dir the cipher's direction
-/// \returns DECRYPTION if \ref CipherDir "dir" is ENCRYPTION, DECRYPTION otherwise
+/// \return DECRYPTION if \ref CipherDir "dir" is ENCRYPTION, DECRYPTION otherwise
 inline CipherDir ReverseCipherDir(CipherDir dir)
 {
 	return (dir == ENCRYPTION) ? DECRYPTION : ENCRYPTION;
@@ -41,7 +41,7 @@ class FixedBlockSize
 {
 public:
 	/// \brief The block size of the algorithm provided as a constant.
-	CRYPTOPP_CONSTANT(BLOCKSIZE = N)
+	CRYPTOPP_CONSTANT(BLOCKSIZE = N);
 };
 
 // ************** rounds ***************
@@ -53,7 +53,7 @@ class FixedRounds
 {
 public:
 	/// \brief The number of rounds for the algorithm provided as a constant.
-	CRYPTOPP_CONSTANT(ROUNDS = R)
+	CRYPTOPP_CONSTANT(ROUNDS = R);
 };
 
 /// \brief Inherited by algorithms with variable number of rounds
@@ -65,11 +65,11 @@ class VariableRounds
 {
 public:
 	/// \brief The default number of rounds for the algorithm provided as a constant.
-	CRYPTOPP_CONSTANT(DEFAULT_ROUNDS = D)
+	CRYPTOPP_CONSTANT(DEFAULT_ROUNDS = D);
 	/// \brief The minimum number of rounds for the algorithm provided as a constant.
-	CRYPTOPP_CONSTANT(MIN_ROUNDS = N)
+	CRYPTOPP_CONSTANT(MIN_ROUNDS = N);
 	/// \brief The maximum number of rounds for the algorithm provided as a constant.
-	CRYPTOPP_CONSTANT(MAX_ROUNDS = M)
+	CRYPTOPP_CONSTANT(MAX_ROUNDS = M);
 	/// \brief The default number of rounds for the algorithm based on key length
 	///   provided by a static function.
 	/// \param keylength the size of the key, in bytes
@@ -83,7 +83,7 @@ protected:
 	/// \brief Validates the number of rounds for an algorithm.
 	/// \param rounds the candidate number of rounds
 	/// \param alg an Algorithm object used if the number of rounds are invalid
-	/// \throws InvalidRounds if the number of rounds are invalid
+	/// \throw InvalidRounds if the number of rounds are invalid
 	/// \details ThrowIfInvalidRounds() validates the number of rounds and throws if invalid.
 	inline void ThrowIfInvalidRounds(int rounds, const Algorithm *alg)
 	{
@@ -102,8 +102,8 @@ protected:
 	/// \brief Validates the number of rounds for an algorithm
 	/// \param param the candidate number of rounds
 	/// \param alg an Algorithm object used if the number of rounds are invalid
-	/// \returns the number of rounds for the algorithm
-	/// \throws InvalidRounds if the number of rounds are invalid
+	/// \return the number of rounds for the algorithm
+	/// \throw InvalidRounds if the number of rounds are invalid
 	/// \details GetRoundsAndThrowIfInvalid() validates the number of rounds and throws if invalid.
 	inline unsigned int GetRoundsAndThrowIfInvalid(const NameValuePairs &param, const Algorithm *alg)
 	{
@@ -126,23 +126,23 @@ class FixedKeyLength
 public:
 	/// \brief The default key length used by the algorithm provided as a constant
 	/// \details KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(KEYLENGTH=N)
+	CRYPTOPP_CONSTANT(KEYLENGTH=N);
 	/// \brief The minimum key length used by the algorithm provided as a constant
 	/// \details MIN_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=N)
+	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=N);
 	/// \brief The maximum key length used by the algorithm provided as a constant
 	/// \details MAX_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=N)
+	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=N);
 	/// \brief The default key length used by the algorithm provided as a constant
 	/// \details DEFAULT_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=N)
+	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=N);
 	/// \brief The default IV requirements for the algorithm provided as a constant
 	/// \details The default value is NOT_RESYNCHRONIZABLE. See IV_Requirement
 	///  in cryptlib.h for allowed values.
-	CRYPTOPP_CONSTANT(IV_REQUIREMENT = IV_REQ)
+	CRYPTOPP_CONSTANT(IV_REQUIREMENT = IV_REQ);
 	/// \brief The default IV length used by the algorithm provided as a constant
 	/// \details IV_LENGTH is provided in bytes, not bits. The default implementation uses 0.
-	CRYPTOPP_CONSTANT(IV_LENGTH = IV_L)
+	CRYPTOPP_CONSTANT(IV_LENGTH = IV_L);
 	/// \brief The default key length for the algorithm provided by a static function.
 	/// \param keylength the size of the key, in bytes
 	/// \details The default implementation returns KEYLENGTH. keylength is unused
@@ -175,23 +175,23 @@ class VariableKeyLength
 public:
 	/// \brief The minimum key length used by the algorithm provided as a constant
 	/// \details MIN_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=N)
+	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=N);
 	/// \brief The maximum key length used by the algorithm provided as a constant
 	/// \details MAX_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=M)
+	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=M);
 	/// \brief The default key length used by the algorithm provided as a constant
 	/// \details DEFAULT_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=D)
+	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=D);
 	/// \brief The key length multiple used by the algorithm provided as a constant
 	/// \details MAX_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(KEYLENGTH_MULTIPLE=Q)
+	CRYPTOPP_CONSTANT(KEYLENGTH_MULTIPLE=Q);
 	/// \brief The default IV requirements for the algorithm provided as a constant
 	/// \details The default value is NOT_RESYNCHRONIZABLE. See IV_Requirement
 	///  in cryptlib.h for allowed values.
-	CRYPTOPP_CONSTANT(IV_REQUIREMENT=IV_REQ)
+	CRYPTOPP_CONSTANT(IV_REQUIREMENT=IV_REQ);
 	/// \brief The default initialization vector length for the algorithm provided as a constant
 	/// \details IV_LENGTH is provided in bytes, not bits. The default implementation uses 0.
-	CRYPTOPP_CONSTANT(IV_LENGTH=IV_L)
+	CRYPTOPP_CONSTANT(IV_LENGTH=IV_L);
 	/// \brief Provides a valid key length for the algorithm provided by a static function.
 	/// \param keylength the size of the key, in bytes
 	/// \details If keylength is less than MIN_KEYLENGTH, then the function returns
@@ -219,20 +219,20 @@ class SameKeyLengthAs
 public:
 	/// \brief The minimum key length used by the algorithm provided as a constant
 	/// \details MIN_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=T::MIN_KEYLENGTH)
+	CRYPTOPP_CONSTANT(MIN_KEYLENGTH=T::MIN_KEYLENGTH);
 	/// \brief The maximum key length used by the algorithm provided as a constant
 	/// \details MIN_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=T::MAX_KEYLENGTH)
+	CRYPTOPP_CONSTANT(MAX_KEYLENGTH=T::MAX_KEYLENGTH);
 	/// \brief The default key length used by the algorithm provided as a constant
 	/// \details MIN_KEYLENGTH is provided in bytes, not bits
-	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=T::DEFAULT_KEYLENGTH)
+	CRYPTOPP_CONSTANT(DEFAULT_KEYLENGTH=T::DEFAULT_KEYLENGTH);
 	/// \brief The default IV requirements for the algorithm provided as a constant
 	/// \details The default value is NOT_RESYNCHRONIZABLE. See IV_Requirement
 	///  in cryptlib.h for allowed values.
-	CRYPTOPP_CONSTANT(IV_REQUIREMENT=IV_REQ)
+	CRYPTOPP_CONSTANT(IV_REQUIREMENT=IV_REQ);
 	/// \brief The default initialization vector length for the algorithm provided as a constant
 	/// \details IV_LENGTH is provided in bytes, not bits. The default implementation uses 0.
-	CRYPTOPP_CONSTANT(IV_LENGTH=IV_L)
+	CRYPTOPP_CONSTANT(IV_LENGTH=IV_L);
 	/// \brief Provides a valid key length for the algorithm provided by a static function.
 	/// \param keylength the size of the key, in bytes
 	/// \details If keylength is less than MIN_KEYLENGTH, then the function returns
@@ -258,23 +258,23 @@ class CRYPTOPP_NO_VTABLE SimpleKeyingInterfaceImpl : public BASE
 {
 public:
 	/// \brief The minimum key length used by the algorithm
-	/// \returns minimum key length used by the algorithm, in bytes
+	/// \return minimum key length used by the algorithm, in bytes
 	size_t MinKeyLength() const
 		{return INFO::MIN_KEYLENGTH;}
 
 	/// \brief The maximum key length used by the algorithm
-	/// \returns maximum key length used by the algorithm, in bytes
+	/// \return maximum key length used by the algorithm, in bytes
 	size_t MaxKeyLength() const
 		{return static_cast<size_t>(INFO::MAX_KEYLENGTH);}
 
 	/// \brief The default key length used by the algorithm
-	/// \returns default key length used by the algorithm, in bytes
+	/// \return default key length used by the algorithm, in bytes
 	size_t DefaultKeyLength() const
 		{return INFO::DEFAULT_KEYLENGTH;}
 
 	/// \brief Provides a valid key length for the algorithm
 	/// \param keylength the size of the key, in bytes
-	/// \returns the valid key length, in bytes
+	/// \return the valid key length, in bytes
 	/// \details keylength is provided in bytes, not bits. If keylength is less than MIN_KEYLENGTH,
 	///   then the function returns MIN_KEYLENGTH. If keylength is greater than MAX_KEYLENGTH,
 	///   then the function returns MAX_KEYLENGTH. if If keylength is a multiple of KEYLENGTH_MULTIPLE,
@@ -306,7 +306,7 @@ class CRYPTOPP_NO_VTABLE BlockCipherImpl : public AlgorithmImpl<SimpleKeyingInte
 {
 public:
 	/// Provides the block size of the algorithm
-	/// \returns the block size of the algorithm, in bytes
+	/// \return the block size of the algorithm, in bytes
 	unsigned int BlockSize() const {return this->BLOCKSIZE;}
 };
 
@@ -346,7 +346,7 @@ public:
 		{this->SetKeyWithRounds(key, length, rounds);}
 
 	/// \brief Provides the direction of the cipher
-	/// \returns true if DIR is ENCRYPTION, false otherwise
+	/// \return true if DIR is ENCRYPTION, false otherwise
 	/// \sa GetCipherDirection(), IsPermutation()
 	bool IsForwardTransformation() const {return DIR == ENCRYPTION;}
 };

@@ -2,6 +2,12 @@
 
 /// \file tiger.h
 /// \brief Classes for the Tiger message digest
+/// \details Crypto++ provides the original Tiger hash that was
+///  submitted to the NESSIE project. The implementation is different
+///  from the revised Tiger2 hash.
+/// \sa <a href="https://www.cryptopp.com/wiki/Tiger">Tiger</a> and
+///  <a href="http://www.cs.technion.ac.il/~biham/Reports/Tiger/">Tiger:
+///  A Fast New Cryptographic Hash Function</a>
 /// \since Crypto++ 2.1
 
 #ifndef CRYPTOPP_TIGER_H
@@ -19,7 +25,12 @@
 NAMESPACE_BEGIN(CryptoPP)
 
 /// \brief Tiger message digest
-/// \sa <a href="http://www.cryptolounge.org/wiki/Tiger">Tiger</a>
+/// \details Crypto++ provides the original Tiger hash that was
+///  submitted to the NESSIE project. The implementation is different
+///  from the revised Tiger2 hash.
+/// \sa <a href="https://www.cryptopp.com/wiki/Tiger">Tiger</a> and
+///  <a href="http://www.cs.technion.ac.il/~biham/Reports/Tiger/">Tiger:
+///  A Fast New Cryptographic Hash Function</a>
 /// \since Crypto++ 2.1
 class Tiger : public IteratedHashWithStaticTransform<word64, LittleEndian, 64, 24, Tiger>
 {
@@ -27,9 +38,19 @@ public:
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "Tiger";}
 	std::string AlgorithmProvider() const;
 
+	/// \brief Initialize state array
+	/// \param state the state of the hash
 	static void InitState(HashWordType *state);
+	/// \brief Operate the hash
+	/// \param digest the state of the hash
+	/// \param data the data to be digested
 	static void Transform(word64 *digest, const word64 *data);
-	void TruncatedFinal(byte *hash, size_t size);
+	/// \brief Computes the hash of the current message
+	/// \param digest a pointer to the buffer to receive the hash
+	/// \param digestSize the size of the truncated digest, in bytes
+	/// \details TruncatedFinal() call Final() and then copies digestSize bytes to digest.
+	///   The hash is restarted the hash for the next message.
+	void TruncatedFinal(byte *digest, size_t digestSize);
 
 protected:
 	static const word64 table[4*256+3];

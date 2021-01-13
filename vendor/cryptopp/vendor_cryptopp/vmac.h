@@ -52,10 +52,10 @@ protected:
 		void VHASH_Update_Template(const word64 *data, size_t blockRemainingInWord128);
 	void VHASH_Update(const word64 *data, size_t blocksRemainingInWord128);
 
-	CRYPTOPP_BLOCK_1(polyState, word64, 4*(m_is128+1))
+	CRYPTOPP_BLOCK_1(polyState, word64, (m_is128 ? 8 : 4))
 	CRYPTOPP_BLOCK_2(nhKey, word64, m_L1KeyLength/sizeof(word64) + 2*m_is128)
 	CRYPTOPP_BLOCK_3(data, byte, m_L1KeyLength)
-	CRYPTOPP_BLOCK_4(l3Key, word64, 2*(m_is128+1))
+	CRYPTOPP_BLOCK_4(l3Key, word64, (m_is128 ? 4 : 2))
 	CRYPTOPP_BLOCK_5(nonce, byte, IVSize())
 	CRYPTOPP_BLOCK_6(pad, byte, IVSize())
 	CRYPTOPP_BLOCKS_END(6)
@@ -68,10 +68,10 @@ protected:
 /// \tparam T_BlockCipher block cipher
 /// \tparam T_DigestBitSize digest size, in bits
 /// \details VMAC is a block cipher-based message authentication code algorithm
-///   using a universal hash proposed by Ted Krovetz and Wei Dai in April 2007. The
-///   algorithm was designed for high performance backed by a formal analysis.
+///  using a universal hash proposed by Ted Krovetz and Wei Dai in April 2007. The
+///  algorithm was designed for high performance backed by a formal analysis.
 /// \details The implementation is based on Ted Krovetz's public domain vmac.c
-///   and <a href="http://tools.ietf.org/html/draft-krovetz-vmac-01">draft-krovetz-vmac-01.txt</a>.
+///  and <a href="http://tools.ietf.org/html/draft-krovetz-vmac-01">draft-krovetz-vmac-01.txt</a>.
 /// \sa <a href="http://www.cryptolounge.org/wiki/VMAC">VMAC</a>.
 /// \since Crypto++ 5.5
 template <class T_BlockCipher, int T_DigestBitSize = 128>
