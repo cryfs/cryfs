@@ -63,6 +63,8 @@ bool IntegrityBlockStore2::_checkVersionHeader(const BlockId &blockId, const Dat
 }
 
 bool IntegrityBlockStore2::_checkIdHeader(const BlockId &expectedBlockId, const Data &data) const {
+  // The obvious reason for this is to prevent adversaries from renaming blocks, but storing the block id in this way also
+  // makes the authenticated cipher more robust, see https://libsodium.gitbook.io/doc/secret-key_cryptography/aead#robustness
   BlockId actualBlockId = _readBlockId(data);
   if (expectedBlockId != actualBlockId) {
     integrityViolationDetected("The block id is wrong. Did an attacker try to rename some blocks?");
