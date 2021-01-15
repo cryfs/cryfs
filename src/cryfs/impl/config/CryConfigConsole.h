@@ -16,7 +16,7 @@ namespace cryfs {
         uint32_t askBlocksizeBytes();
         bool askMissingBlockIsIntegrityViolation();
 
-        static constexpr const char *DEFAULT_CIPHER = "aes-256-gcm";
+        static constexpr const char *DEFAULT_CIPHER = "xchacha20-poly1305";
         static constexpr uint32_t DEFAULT_BLOCKSIZE_BYTES = 16 * 1024; // 16KB
         static constexpr uint32_t DEFAULT_MISSINGBLOCKISINTEGRITYVIOLATION = false;
 

@@ -262,7 +262,6 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Load_whenKeyChanged_thenFails) {
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
     auto created = Create();
-    //aes-256-gcm is the default cipher chosen by mockConsole()
     cpputils::AES256_GCM::EncryptionKey::FromString(created->config()->EncryptionKey()); // This crashes if key is invalid
 }
 
@@ -274,8 +273,8 @@ TEST_F(CryConfigLoaderTest, Cipher_Load) {
 
 TEST_F(CryConfigLoaderTest, Cipher_Create) {
     auto created = Create();
-    //aes-256-gcm is the default cipher chosen by mockConsole()
-    EXPECT_EQ("aes-256-gcm", created->config()->Cipher());
+    //xchacha20-poly1305 is the default cipher chosen by mockConsole()
+    EXPECT_EQ("xchacha20-poly1305", created->config()->Cipher());
 }
 
 TEST_F(CryConfigLoaderTest, Version_Load) {
