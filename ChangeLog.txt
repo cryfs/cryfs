@@ -4,7 +4,7 @@ Build changes:
 * Switch to Conan package manager
 * Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers.
 * Build with LTO if the compiler supports it
-* Now requires CMake 3.9 or later
+* Now requires CMake 3.10 or later
 
 Improvements:
 * Display the file system configuration when mounting a file system
@@ -18,6 +18,8 @@ New features:
 * Add an --immediate flag to cryfs-unmount that tries to unmount immediately and doesn't wait for processes to release their locks on the file system.
 * Add a --create-missing-basedir and --create-missing-mountpoint flag to create the base directory and mount directory respectively, if they don't exist, skipping the confirmation prompt.
 
+Other:
+* Updated to spdlog 1.8.2
 
 Version 0.10.3 (unreleased)
 ---------------

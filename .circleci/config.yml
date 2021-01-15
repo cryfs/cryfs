@@ -60,8 +60,8 @@ references:
         DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE make libcurl4-openssl-dev libssl-dev libfuse-dev
 
         # install cmake
-        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.9.6/cmake-3.9.6-Linux-x86_64.sh
-        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "57cd1dc4857e4d3689d006faf6ff56d5e3635c64d456e34596476db5e9ba8031" ]; then
+        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.10.2/cmake-3.10.2-Linux-x86_64.sh
+        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "9348039642fc0213f4dd4235e513adc8ffbe6424ee98f349db17ca2a523a5d1b" ]; then
           echo Correct sha256sum
         else
           echo Wrong sha256sum
@@ -153,8 +153,8 @@ references:
 
         echo Download spdlog
         cd ~
-        wget https://github.com/gabime/spdlog/archive/v1.4.2.tar.gz -O spdlog.tar.gz
-        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "886b489138a1bdf363b5eab65a7d973f570a01c399ff5b910fcfee172ad4ff4d42a45dc2ae24e77b07130df527fb13a86b3e55ac992e72c418aebb232e27eabf" ]; then
+        wget https://github.com/gabime/spdlog/archive/v1.8.2.tar.gz -O spdlog.tar.gz
+        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "7a0a2353a10187cc314253b366fc46be8f9fe2480d2cbac3a96a8e6825ee4b62b0a5ebb3add2b22b5d7ca8fe6dddd963926603e5296e3431c0a4f7ac42beda7f" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -163,7 +163,7 @@ references:
         fi
         tar -xvf spdlog.tar.gz
         rm spdlog.tar.gz
-        cd spdlog-1.4.2
+        cd spdlog-1.8.2
 
         echo Install spdlog
         mkdir build
