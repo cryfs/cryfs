@@ -1,8 +1,10 @@
 This directory contains external projects, taken from the following locations:
 googletest: https://github.com/google/googletest/tree/release-1.10.0
  - changed: https://github.com/google/googletest/pull/2514
+ - changed: In CMakeLists.txt, googletest/CMakeLists.txt and googlemock/CMakeLists.txt, add cmake_policy(SET CMP0069 NEW) to silence a warning
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_2_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
  - changed: In CMakeLists.txt, rename BUILD_TESTING to CRYPTOPP_BUILD_TESTING so it doesn't clash with our BUILD_TESTING
+ - changed: In CmakeLists.txt, add cmake_policy(SET CMP0069 NEW) to silence a warning
  - changed: Fix Android compilation using patch file https://github.com/termux/termux-root-packages/files/4664745/config.h.patch.txt from https://github.com/cryfs/cryfs/issues/345

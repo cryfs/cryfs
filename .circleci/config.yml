@@ -60,8 +60,8 @@ references:
         DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE make libcurl4-openssl-dev libssl-dev libfuse-dev
 
         # install cmake
-        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.6.3/cmake-3.6.3-Linux-x86_64.sh
-        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "a512fc991abf51ee8d309312e106daf11d1e6c9bd7dd1c15c2bd5f9ca820fa0f" ]; then
+        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.10.2/cmake-3.10.2-Linux-x86_64.sh
+        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "9348039642fc0213f4dd4235e513adc8ffbe6424ee98f349db17ca2a523a5d1b" ]; then
           echo Correct sha256sum
         else
           echo Wrong sha256sum
@@ -133,16 +133,16 @@ references:
 
         echo Download range-v3
         cd ~
-        wget https://github.com/ericniebler/range-v3/archive/0.9.1.tar.gz -O range-v3-0.9.1.tar.gz
-        if [ $(sha512sum range-v3-0.9.1.tar.gz | awk '{print $1;}') == "167db645527b769f3d375db63bb0a5c831e9c854bc729581a7d25c571cc1741eafb82812006c5bbe346222a73d5fbbd0b2f17119317038394ac15cf892088aa3" ]; then
+        wget https://github.com/ericniebler/range-v3/archive/0.11.0.tar.gz -O range-v3-0.11.0.tar.gz
+        if [ $(sha512sum range-v3-0.11.0.tar.gz | awk '{print $1;}') == "9d6cdcbc1e50104206ba731c3bdc9aab3acfcf69cd83f0e0b4de18b88df2a9e73d64e55638421768d4433c542b6619f6e5af6b17cccd3090cf8b4d4efe9863e4" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
-          sha512sum range-v3-0.9.1.tar.gz
+          sha512sum range-v3-0.11.0.tar.gz
           exit 1
         fi
-        tar -xvf range-v3-0.9.1.tar.gz
-        cd range-v3-0.9.1/
+        tar -xvf range-v3-0.11.0.tar.gz
+        cd range-v3-0.11.0/
 
         echo Install range-v3
         mkdir build
@@ -150,11 +150,14 @@ references:
         cmake .. -DRANGES_HAS_WERROR=off -DRANGE_V3_EXAMPLES=off -DRANGE_V3_TESTS=off
         make -j$NUMCORES
         sudo make install
+        cd ~
+        rm -rf range-v3-0.11.0
+        rm range-v3-0.11.0.tar.gz
 
         echo Download spdlog
         cd ~
-        wget https://github.com/gabime/spdlog/archive/v1.4.2.tar.gz -O spdlog.tar.gz
-        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "886b489138a1bdf363b5eab65a7d973f570a01c399ff5b910fcfee172ad4ff4d42a45dc2ae24e77b07130df527fb13a86b3e55ac992e72c418aebb232e27eabf" ]; then
+        wget https://github.com/gabime/spdlog/archive/v1.8.2.tar.gz -O spdlog.tar.gz
+        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "7a0a2353a10187cc314253b366fc46be8f9fe2480d2cbac3a96a8e6825ee4b62b0a5ebb3add2b22b5d7ca8fe6dddd963926603e5296e3431c0a4f7ac42beda7f" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -163,7 +166,7 @@ references:
         fi
         tar -xvf spdlog.tar.gz
         rm spdlog.tar.gz
-        cd spdlog-1.4.2
+        cd spdlog-1.8.2
 
         echo Install spdlog
         mkdir build

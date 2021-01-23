@@ -227,6 +227,9 @@ REGISTER_TYPED_TEST_SUITE_P(AuthenticatedCipherTest,
 INSTANTIATE_TYPED_TEST_SUITE_P(Fake, CipherTest, FakeAuthenticatedCipher);
 INSTANTIATE_TYPED_TEST_SUITE_P(Fake, AuthenticatedCipherTest, FakeAuthenticatedCipher);
 
+INSTANTIATE_TYPED_TEST_SUITE_P(XChaCha20Poly1305, CipherTest, XChaCha20Poly1305);
+INSTANTIATE_TYPED_TEST_SUITE_P(XChaCha20Poly1305, AuthenticatedCipherTest, XChaCha20Poly1305);
+
 INSTANTIATE_TYPED_TEST_SUITE_P(AES256_CFB, CipherTest, AES256_CFB); //CFB mode is not authenticated
 INSTANTIATE_TYPED_TEST_SUITE_P(AES256_GCM, CipherTest, AES256_GCM);
 INSTANTIATE_TYPED_TEST_SUITE_P(AES256_GCM, AuthenticatedCipherTest, AES256_GCM);
@@ -265,6 +268,8 @@ INSTANTIATE_TYPED_TEST_SUITE_P(Mars128_GCM, AuthenticatedCipherTest, Mars128_GCM
 
 // Test cipher names
 TEST(CipherNameTest, TestCipherNames) {
+  EXPECT_EQ("xchacha20-poly1305", string(XChaCha20Poly1305::NAME));
+  
   EXPECT_EQ("aes-256-gcm", string(AES256_GCM::NAME));
   EXPECT_EQ("aes-256-cfb", string(AES256_CFB::NAME));
   EXPECT_EQ("aes-128-gcm", string(AES128_GCM::NAME));

@@ -31,6 +31,8 @@ using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 
+namespace {
+
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
 class DataLeafNodeTest: public Test {
@@ -340,3 +342,4 @@ TEST_P(DataLeafNodeDataTest, OverwriteAndRead) {
   EXPECT_DATA_READS_AS_OUTSIDE_OF(this->backgroundData, *leaf, GetParam().offset, GetParam().count);
 }
 
+}

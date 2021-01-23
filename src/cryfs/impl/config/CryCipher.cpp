@@ -59,6 +59,7 @@ const string CryCiphers::INTEGRITY_WARNING = "This cipher does not ensure integr
 
 //We have to use shared_ptr instead of unique_ref, because c++ initializer_list needs copyable values
 const vector<shared_ptr<CryCipher>> CryCiphers::SUPPORTED_CIPHERS = {
+        make_shared<CryCipherInstance<XChaCha20Poly1305>>(),
         make_shared<CryCipherInstance<AES256_GCM>>(),
         make_shared<CryCipherInstance<AES256_CFB>>(INTEGRITY_WARNING),
         make_shared<CryCipherInstance<AES128_GCM>>(),

@@ -15,6 +15,8 @@ using testing::Eq;
 using testing::StrEq;
 using testing::_;
 
+namespace {
+
 class MockKDF : public PasswordBasedKDF {
 public:
     MOCK_METHOD(EncryptionKey, deriveExistingKey, (size_t keySize, const string& password, const Data& kdfParameters), (override));
@@ -53,4 +55,6 @@ TEST(CryPresetPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
     EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
 
     EXPECT_EQ(key.ToString(), returned_key.ToString());
+}
+
 }

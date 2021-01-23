@@ -22,6 +22,7 @@
 #include <range/v3/view/split.hpp>
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/filter.hpp>
+#include <range/v3/range/conversion.hpp>
 
 #if defined(_MSC_VER)
 #include <dokan/dokan.h>
@@ -310,10 +311,12 @@ void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, v
         constexpr std::array<const char*, 3> flags = {"strictatime", "relatime", "nodiratime"};
         return flags.end() != std::find(flags.begin(), flags.end(), flag);
     };
-    *csv_options = *csv_options
-        | ranges::view::split(',')
-        | ranges::view::filter(
-            [&] (const std::string& elem) {
+    *csv_options = ranges::make_subrange(csv_options->begin(), csv_options->end())
+        | ranges::views::split(',')
+        | ranges::views::filter(
+            [&] (auto&& elem_) {
+                // TODO string_view would be better
+                std::string elem(&*elem_.begin(), ranges::distance(elem_));
                 if (is_fuse_unsupported_atime_flag(elem)) {
                     result->push_back(elem);
                     return false;
@@ -323,7 +326,7 @@ void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, v
                 }
                 return true;
             })
-        | ranges::view::join(',')
+        | ranges::views::join(',')
         | ranges::to<string>();
 }
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 # TODO Remove this deprecated policy switch once we're on cmake 3.4 or later
 cmake_policy(SET CMP0065 OLD)
@@ -36,6 +36,21 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
+
+# Enable LTO if we're in a release build and LTO is supported
+string(TOUPPER ${CMAKE_BUILD_TYPE} _CMAKE_BUILD_TYPE_UPPER)
+if (_CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
+    message(STATUS "LTO disabled because we're in a debug build")
+else()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
+    if(LTO_SUPPORTED)
+        message(STATUS "LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "LTO disabled because compiler does not support it.")
+    endif()
+endif()
 
 if(USE_CLANG_TIDY)
     # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.

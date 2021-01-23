@@ -51,7 +51,7 @@ Requirements
 ------------
   - Git (for getting the source code)
   - GCC version >= 6.5 or Clang >= 4.0
-  - CMake version >= 3.6
+  - CMake version >= 3.10
   - Conan package manager
   - libcurl4 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)

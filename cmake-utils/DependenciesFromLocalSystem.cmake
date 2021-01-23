@@ -31,9 +31,9 @@ endfunction()
 
 # Setup range-v3 dependency
 find_package(range-v3 REQUIRED)
-check_target_is_not_from_conan(range-v3)
+check_target_is_not_from_conan(range-v3::range-v3)
 add_library(CryfsDependencies_range-v3 INTERFACE)
-target_link_libraries(CryfsDependencies_range-v3 INTERFACE range-v3)
+target_link_libraries(CryfsDependencies_range-v3 INTERFACE range-v3::range-v3)
 
 
 

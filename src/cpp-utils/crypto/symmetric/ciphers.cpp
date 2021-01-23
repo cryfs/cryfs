@@ -5,6 +5,8 @@
 
 namespace cpputils {
 
+    DEFINE_CIPHER(XChaCha20Poly1305);
+
     DEFINE_CIPHER(AES256_GCM);
     DEFINE_CIPHER(AES256_CFB);
     DEFINE_CIPHER(AES128_GCM);

@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <algorithm>
 #include <string>
+#include <iterator>
 
 using std::pair;
 using std::make_pair;

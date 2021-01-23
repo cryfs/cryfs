@@ -13,6 +13,8 @@ using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::DataFixture;
 
+namespace {
+
 class BlobReadWriteTest: public BlobStoreTest {
 public:
   static constexpr uint32_t LARGE_SIZE = 10 * 1024 * 1024;
@@ -249,4 +251,6 @@ TEST_P(BlobReadWriteDataTest, WritePartAndReadWhole) {
   EXPECT_EQ(0, std::memcmp(read.data(), this->backgroundData.data(), GetParam().offset));
   EXPECT_EQ(0, std::memcmp(read.dataOffset(GetParam().offset), this->foregroundData.data(), GetParam().count));
   EXPECT_EQ(0, std::memcmp(read.dataOffset(GetParam().offset+GetParam().count), this->backgroundData.dataOffset(GetParam().offset+GetParam().count), GetParam().blobsize-GetParam().count-GetParam().offset));
+}
+
 }

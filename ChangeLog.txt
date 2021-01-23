@@ -1,11 +1,19 @@
 Version 0.11.0 (unreleased)
 ---------------
+Security:
+* Added the XChaCha20-Poly1305 encryption cipher. For new filesystems, this will be the default, but you're still able to create a filesystem with the previous default of AES-256-GCM
+  by saying "no" to the "use default settings?" question when creating the file system. Also, old filesystems will not be automatically converted and will keep using AES-256-GCM.
+  XChaCha20-Poly1305 is significantly slower than AES-256-GCM on modern CPUs, but it is more secure for large filesystems (>64GB).
+  For AES-256-GCM, it is recommended to encrypt at most 2^32 blocks, which at the CryFS default block size of 16KB would be 64GB. The more the filesystem grows above that, the
+  more likely it gets that a nonce gets reused and the two corresponding blocks become decryptable by an adversary. Other blocks would not be affected, but an adversary being
+  able to access those two blocks (i.e. 64KB of the stored data) is bad enough. See Section 8.3 in https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
+  XChaCha20-Poly1305 does not suffer from this constraint and stays secure even if the filesystem gets very large.
+
 Build changes:
 * Switch to Conan package manager
 * Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers.
-
-Other changes:
-* Now requires CMake 3.6 or later
+* Build with LTO if the compiler supports it
+* Now requires CMake 3.10 or later
 
 Improvements:
 * Display the file system configuration when mounting a file system
@@ -14,11 +22,14 @@ Improvements:
 New features:
 * Add support for atime mount options (noatime, strictatime, relatime, atime, nodiratime).
 * The new default is now *noatime* (in 0.10.x is was relatime).
-  Noatime reduces the amount of write necessary and with that reduces the probability for synchronization conflicts
-  or corrupted file systems if a power outage happens while writing.
+  Noatime reduces the amount of writes necessary and with that reduces the probability of synchronization conflicts,
+  and the probability of corrupted file systems if a power outage happens while writing.
 * Add an --immediate flag to cryfs-unmount that tries to unmount immediately and doesn't wait for processes to release their locks on the file system.
 * Add a --create-missing-basedir and --create-missing-mountpoint flag to create the base directory and mount directory respectively, if they don't exist, skipping the confirmation prompt.
 
+Other:
+* Updated to spdlog 1.8.2
+* Updated to ranges-v3 0.11.0
 
 Version 0.10.3 (unreleased)
 ---------------

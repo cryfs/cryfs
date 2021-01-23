@@ -9,7 +9,7 @@ namespace cpputils {
 
 class DataFixture final {
 public:
-  static Data generate(size_t size, long long int seed = 1);
+  static Data generate(size_t size, unsigned long long int seed = 1);
 
   //TODO Test
   template<size_t SIZE> static FixedSizeData<SIZE> generateFixedSize(long long int seed = 1);
