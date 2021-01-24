@@ -44,6 +44,25 @@ Theres some GUI applications with CryFS support. You usually have to install the
 - [SiriKali](https://mhogomchungu.github.io/sirikali/)
 - [Plasma Vault](https://www.kde.org/announcements/plasma-5.11.0.php) in KDE Plasma >= 5.11
 
+Stability / Production readiness
+====================
+CryFS 0.10 or later is stable for most use cases, but has a couple of known issues that can corrupt your file system.
+They don't happen in normal day to day use, but can happen if you don't pay attention or aren't aware of them.
+This is why the version number hasn't reached 1.0 yet.
+
+- If you kill the CryFS process while it was in the middle of writing data (either intentionally or unintentionally by losing power to your PC), your file system could get corrupted.
+  CryFS does not do journaling. Note that in 0.10.x, read accesses into a CryFS file system can cause writes because file timestamps get updated. So if you're unlucky, your file system
+  could get corrupted if you lose power while you were reading files as well. Read accesses aren't an issue in CryFS 0.11.x anymore, because it mounts the filesystem with `noatime` by default.
+- The same corruption mentioned above can happen when CryFS is trying to write data but your disk ran out of space, causing the write to fail.
+- CryFS does not currently support concurrent access, i.e. accessing a file system from multiple devices at the same time.
+  CryFS works very well for storing data in a cloud and using it from multiple devices, but you need to make sure to only have one CryFS process active at any point in time, and you also need
+  to make sure that the cloud synchronization client (e.g. Dropbox) finished is synchronization before you switch devices. There's some ideas on how concurrent access could be supported in
+  future versions, but it's a hard problem to solve. If you do happen to access the file system from multiple devices at the same time, it will likely go well most of the time, but it can corrupt your file system.
+- In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. While such a tool is in theory possible,
+  it isn't implemented yet and a corrupted file system likely means you will lose your data.
+
+If the scenarios mentioned above don't apply to you, then you can consider CryFS 0.10.x as stable. The 0.9.x versions are not recommended anymore.
+
 Building from source
 ====================
 
