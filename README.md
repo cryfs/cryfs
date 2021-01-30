@@ -55,11 +55,11 @@ This is why the version number hasn't reached 1.0 yet.
   could get corrupted if you lose power while you were reading files as well. Read accesses aren't an issue in CryFS 0.11.x anymore, because it mounts the filesystem with `noatime` by default.
 - The same corruption mentioned above can happen when CryFS is trying to write data but your disk ran out of space, causing the write to fail.
 - CryFS does not currently support concurrent access, i.e. accessing a file system from multiple devices at the same time.
-  CryFS works very well for storing data in a cloud and using it from multiple devices, but you need to make sure to only have one CryFS process active at any point in time, and you also need
-  to make sure that the cloud synchronization client (e.g. Dropbox) finished is synchronization before you switch devices. There's some ideas on how concurrent access could be supported in
+  CryFS works very well for storing data in a cloud and using it from multiple devices, but you need to make sure that only one CryFS process is active at any point in time, and you also need
+  to make sure that the cloud synchronization client (e.g. Dropbox) finishes its synchronization before you switch devices. There are some ideas on how concurrent access could be supported in
   future versions, but it's a hard problem to solve. If you do happen to access the file system from multiple devices at the same time, it will likely go well most of the time, but it can corrupt your file system.
-- In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. While such a tool is in theory possible,
-  it isn't implemented yet and a corrupted file system likely means you will lose your data.
+- In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. Although such a tool is in theory, possible,
+  it hasn't been implemented yet and a corrupted file system will most likely cause a loss of your data.
 
 If the scenarios mentioned above don't apply to you, then you can consider CryFS 0.10.x as stable. The 0.9.x versions are not recommended anymore.
 
@@ -153,8 +153,8 @@ On most systems, CMake should find the libraries automatically. However, that do
 
         cmake .. -DDISABLE_OPENMP=on
 
-    but that will cause slower file system mount times (performance after mounting will be unaffected).
-    If you installed OpenMP with homebrew or macports, it should be autodetected.
+    but this will cause slower file system mount times (performance after mounting will be unaffected).
+    If you installed OpenMP with homebrew or macports, it will be autodetected.
     If that doesn't work for some reason (or you want to use a different installation than the autodetected one),
     pass in these flags:
 
@@ -204,4 +204,4 @@ If you want to create a .rpm package, you need to install rpmbuild.
 Disclaimer
 ----------------------
 
-In the event of a password leak, you are strongly advised to create a new filesystem and copy all the data over from the previous one. Done this, all copies of the compromised filesystem and config file must be removed (e.g, from the "previous versions" feature of your cloud system) to prevent access to the key (and, as a result, your data) using the leaked password.
+In the event of a password leak, you are strongly advised to create a new filesystem and copy all the data over from the previous one. Then, remove all copies of the compromised filesystem and config file(e.g, from the "previous versions" feature of your cloud system) to prevent access to the key (and, as a result, your data) using the leaked password.
