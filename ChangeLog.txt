@@ -5,6 +5,7 @@ Fixed bugs:
 * Fixed determining the user's homedir: If $HOME and the /etc/passwd entry for the current user contradict each other, now $HOME takes preference over /etc/passwd.
 * Fix Android compilation, https://github.com/cryfs/cryfs/issues/345
 * Remove cryfs-stats tool which isn't ready yet and could destroy the file system
+* Fixed crash on startup when running in an environment that doesn't have $HOME set (e.g. an empty env), https://github.com/cryfs/cryfs/issues/374
 
 
 Version 0.10.2
