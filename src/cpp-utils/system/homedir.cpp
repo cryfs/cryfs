@@ -9,7 +9,8 @@ using std::string;
 #include <pwd.h>
 namespace {
 	bf::path _get_home_directory() {
-		string homedir = getenv("HOME");
+		const char* homedir_ = getenv("HOME");
+		string homedir = (homedir_ == nullptr) ? "" : homedir_;
 		if (homedir == "") {
 			// try the /etc/passwd entry
 			struct passwd* pwd = getpwuid(getuid());
