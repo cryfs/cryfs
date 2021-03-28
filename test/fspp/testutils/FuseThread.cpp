@@ -23,7 +23,7 @@ void FuseThread::start(const bf::path &mountDir, const vector<string> &fuseOptio
   //Wait until it is running (busy waiting is simple and doesn't hurt much here)
   while(!_fuse->running()) {}
 #ifdef __APPLE__
-  // On Mac OS X, _fuse->running() returns true too early, because osxfuse calls init() when it's not ready yet. Give it a bit time.
+  // On Mac OS X, _fuse->running() returns true too early, because macFUSE calls init() when it's not ready yet. Give it a bit time.
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #endif
 }

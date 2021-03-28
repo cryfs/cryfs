@@ -21,7 +21,7 @@ CryFS is distributed via Homebrew and MacPorts.
 
 If you use Homebrew:
 
-    brew cask install osxfuse
+    brew install osxfuse
     brew install cryfs
 
 If you use MacPorts (not available for OSX 10.15 at the moment):
@@ -74,7 +74,7 @@ Requirements
   - Conan package manager
   - libcurl4 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
-  - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install osxfuse from https://osxfuse.github.io/
+  - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
   - Python >= 3.5
   - OpenMP
 
@@ -133,13 +133,13 @@ On most systems, CMake should find the libraries automatically. However, that do
 
     Pass in the library path with
 
-        cmake .. -DFUSE_LIB_PATH=/path/to/fuse/or/osxfuse
+        cmake .. -DFUSE_LIB_PATH=/path/to/fuse/or/macFUSE
 
 2. **Fuse/Osxfuse headers not found**
 
     Pass in the include path with
 
-        cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/osxfuse/headers"
+        cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/macFUSE/headers"
 
 3. **Openssl headers not found**
 

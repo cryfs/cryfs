@@ -10,7 +10,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        brew install ninja osxfuse libomp ${{inputs.compiler_homebrew_package}}
+        brew install ninja macfuse libomp ${{inputs.compiler_homebrew_package}}
         pip3 install conan
         conan profile new default --detect
         conan profile update settings.compiler.libcxx=libstdc++11 default

@@ -35,13 +35,12 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     DESTINATION "${CMAKE_INSTALL_BINDIR}"
   )
 
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(CMAKE_FIND_FRAMEWORK LAST)
-  find_library_with_path(FUSE "osxfuse" FUSE_LIB_PATH)
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
-  target_include_directories(${PROJECT_NAME} PUBLIC /usr/local/include/osxfuse/)
-else() # Linux
+else() # Linux and macOS
   find_library_with_path(FUSE "fuse" FUSE_LIB_PATH)
+  target_include_directories(${PROJECT_NAME} PUBLIC "${FUSE_LIB_PATH}/include")
   target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(CMAKE_FIND_FRAMEWORK LAST)
+endif()

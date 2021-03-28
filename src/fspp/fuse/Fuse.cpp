@@ -435,7 +435,7 @@ vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> 
   // Make volume name default to mountdir on macOS
   _add_fuse_option_if_not_exists(&argv, "volname", mountdir.filename().string());
 #endif
-  // TODO Also set read/write size for osxfuse. The options there are called differently.
+  // TODO Also set read/write size for macFUSE. The options there are called differently.
   // large_read not necessary because reads are large anyhow. This option is only important for 2.4.
   //argv.push_back(_create_c_string("-o"));
   //argv.push_back(_create_c_string("large_read"));
