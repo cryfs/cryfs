@@ -36,9 +36,9 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   )
 
 else() # Linux and macOS
-  find_library_with_path(FUSE "fuse" FUSE_LIB_PATH)
-  target_include_directories(${PROJECT_NAME} PUBLIC "${FUSE_LIB_PATH}/include")
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${FUSE})
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(Fuse REQUIRED IMPORTED_TARGET fuse)
+  target_link_libraries(${PROJECT_NAME} PUBLIC PkgConfig::Fuse)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

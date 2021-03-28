@@ -71,6 +71,7 @@ Requirements
   - Git (for getting the source code)
   - GCC version >= 7 or Clang >= 7
   - CMake version >= 3.10
+  - pkg-config (on Unix)
   - Conan package manager
   - libcurl4 (including development headers)
   - SSL development libraries (including development headers, e.g. libssl-dev)
@@ -81,15 +82,15 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make libcurl4-openssl-dev libssl-dev libfuse-dev python python3-pip
+        $ sudo apt install git g++ cmake make pkg-config libcurl4-openssl-dev libssl-dev libfuse-dev python python3-pip
         $ sudo pip3 install conan
 
         # Fedora
-        $ sudo dnf install git gcc-c++ cmake make libcurl-devel openssl-devel fuse-devel python python3-pip
+        $ sudo dnf install git gcc-c++ cmake make pkgconf libcurl-devel openssl-devel fuse-devel python python3-pip
         $ sudo pip3 install conan
 
         # Macintosh
-        $ brew install cmake openssl libomp
+        $ brew install cmake pkg-config openssl libomp
         $ sudo pip3 install conan
 
 Build & Install
@@ -129,17 +130,17 @@ Troubleshooting
 
 On most systems, CMake should find the libraries automatically. However, that doesn't always work.
 
-1. **Fuse/Osxfuse library not found**
+1. **Fuse library not found**
 
     Pass in the library path with
 
-        cmake .. -DFUSE_LIB_PATH=/path/to/fuse/or/macFUSE
+        PKG_CONFIG_PATH=/path-to-fuse-or-macFUSE/lib/pkgconfig cmake ..
 
-2. **Fuse/Osxfuse headers not found**
+2. **Fuse headers not found**
 
     Pass in the include path with
 
-        cmake .. -DCMAKE_CXX_FLAGS="-I/path/to/fuse/or/macFUSE/headers"
+        PKG_CONFIG_PATH=/path-to-fuse-or-macFUSE/lib/pkgconfig cmake ..
 
 3. **Openssl headers not found**
 
