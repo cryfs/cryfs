@@ -28,7 +28,7 @@ New features:
 * Add a --create-missing-basedir and --create-missing-mountpoint flag to create the base directory and mount directory respectively, if they don't exist, skipping the confirmation prompt.
 
 Other:
-* Updated to spdlog 1.8.2
+* Updated to spdlog 1.8.5
 * Updated to ranges-v3 0.11.0
 
 Version 0.10.3
