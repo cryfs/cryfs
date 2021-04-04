@@ -69,7 +69,7 @@ Building from source
 Requirements
 ------------
   - Git (for getting the source code)
-  - GCC version >= 6.5 or Clang >= 4.0
+  - GCC version >= 7 or Clang >= 7
   - CMake version >= 3.10
   - Conan package manager
   - libcurl4 (including development headers)

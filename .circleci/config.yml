@@ -3,12 +3,12 @@ version: 2.0
 references:
   container_config: &container_config
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
   cache_init: &cache_init
     run:
       name: Initialize Cache
       command: |
-        echo "${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}_${CMAKE_FLAGS}_${CXXFLAGS}" > /tmp/_build_env_vars
+        echo "Ubuntu20.04_${APT_COMPILER_PACKAGE}_${BUILD_TOOLSET}_${CXX}_${CC}_${BUILD_TYPE}_${CMAKE_FLAGS}_${CXXFLAGS}" > /tmp/_build_env_vars
         echo Build env vars used for cache keys:
         cat /tmp/_build_env_vars
   container_setup_pre: &container_setup_pre
@@ -34,47 +34,21 @@ references:
           echo No apt cache found
         fi
 
-        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-        sudo touch /etc/apt/sources.list.d/clang.list
-        sudo chmod o+w /etc/apt/sources.list.d/clang.list
-        cat > /etc/apt/sources.list.d/clang.list << EOF
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-4.0 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-4.0 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main
-        deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
-        deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
-        EOF
-        sudo chmod o-w /etc/apt/sources.list.d/clang.list
+        # sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        # wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+        # sudo touch /etc/apt/sources.list.d/clang.list
+        # sudo chmod o+w /etc/apt/sources.list.d/clang.list
+        # cat > /etc/apt/sources.list.d/clang.list << EOF
+        # deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
+        #deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main
+        # EOF
+        # sudo chmod o-w /etc/apt/sources.list.d/clang.list
 
         DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq
         DEBIAN_FRONTEND=noninteractive sudo apt-get install -y git ccache $APT_COMPILER_PACKAGE make libcurl4-openssl-dev libssl-dev libfuse-dev
 
-        # install cmake
-        wget -O /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.10.2/cmake-3.10.2-Linux-x86_64.sh
-        if [ $(sha256sum /tmp/cmake.sh | awk '{print $1;}') == "9348039642fc0213f4dd4235e513adc8ffbe6424ee98f349db17ca2a523a5d1b" ]; then
-          echo Correct sha256sum
-        else
-          echo Wrong sha256sum
-          sha256sum /tmp/cmake.sh
-          exit 1
-        fi
-        sudo mkdir /opt/cmake
-        sudo sh /tmp/cmake.sh --prefix=/opt/cmake --skip-license
-        sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
-        cmake --version
-
         # install conan
-        pyenv global 3.7.0
+        pyenv global 3.8.5
         python3 -m pip install -U pip
         python3 -m pip install conan
         source ~/.profile
@@ -269,30 +243,6 @@ references:
         only: /.*/
 
 jobs:
-  gcc_6_debug:
-    <<: *job_definition
-    environment:
-      CC: gcc-6
-      CXX: g++-6
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-6"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  gcc_6_release:
-    <<: *job_definition
-    environment:
-      CC: gcc-6
-      CXX: g++-6
-      BUILD_TOOLSET: gcc
-      APT_COMPILER_PACKAGE: "g++-6"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
   gcc_7_debug:
     <<: *job_definition
     environment:
@@ -360,78 +310,6 @@ jobs:
       CXX: g++-9
       BUILD_TOOLSET: gcc
       APT_COMPILER_PACKAGE: "g++-9"
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_4_debug:
-    <<: *job_definition
-    environment:
-      CC: clang-4.0
-      CXX: clang++-4.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-4.0
-      CXXFLAGS: "-D_LIBCPP_DEBUG=1"
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_4_release:
-    <<: *job_definition
-    environment:
-      CC: clang-4.0
-      CXX: clang++-4.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-4.0
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_5_debug:
-    <<: *job_definition
-    environment:
-      CC: clang-5.0
-      CXX: clang++-5.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-5.0
-      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_5_release:
-    <<: *job_definition
-    environment:
-      CC: clang-5.0
-      CXX: clang++-5.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-5.0
-      CXXFLAGS: ""
-      BUILD_TYPE: "Release"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_6_debug:
-    <<: *job_definition
-    environment:
-      CC: clang-6.0
-      CXX: clang++-6.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-6.0
-      CXXFLAGS: "-D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
-      BUILD_TYPE: "Debug"
-      GTEST_ARGS: ""
-      CMAKE_FLAGS: ""
-      RUN_TESTS: true
-  clang_6_release:
-    <<: *job_definition
-    environment:
-      CC: clang-6.0
-      CXX: clang++-6.0
-      BUILD_TOOLSET: clang
-      APT_COMPILER_PACKAGE: clang-6.0
       CXXFLAGS: ""
       BUILD_TYPE: "Release"
       GTEST_ARGS: ""
@@ -642,8 +520,8 @@ jobs:
     - run:
         name: clang-tidy
         command: |
-                # realpath, jq are needed for run-clang-tidy.sh, g++ is needed for pyyaml
-                sudo apt-get install realpath g++ jq
+                # jq is needed for run-clang-tidy.sh, g++ is needed for pyyaml
+                sudo apt-get install g++ jq
                 pip install pyyaml
                 mkdir cmake
                 cd cmake
@@ -664,10 +542,6 @@ workflows:
 
   build_and_test:
     jobs:
-    - gcc_6_debug:
-        <<: *enable_for_tags
-    - gcc_6_release:
-        <<: *enable_for_tags
     - gcc_7_debug:
         <<: *enable_for_tags
     - gcc_7_release:
@@ -679,18 +553,6 @@ workflows:
     - gcc_9_debug:
         <<: *enable_for_tags
     - gcc_9_release:
-        <<: *enable_for_tags
-    - clang_4_debug:
-        <<: *enable_for_tags
-    - clang_4_release:
-        <<: *enable_for_tags
-    - clang_5_debug:
-        <<: *enable_for_tags
-    - clang_5_release:
-        <<: *enable_for_tags
-    - clang_6_debug:
-        <<: *enable_for_tags
-    - clang_6_release:
         <<: *enable_for_tags
     - clang_7_debug:
         <<: *enable_for_tags
