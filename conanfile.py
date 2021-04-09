@@ -34,7 +34,7 @@ class CryFSConan(ConanFile):
 	}
 
 	def requirements(self):
-		if self.settings.os == "Windows":
+		if self.settings.os == "Windows" or self.settings.os == "Macos":
 			self.requires("boost/1.69.0@conan/stable")
 		else:
 			self.requires("boost/1.65.1@conan/stable")

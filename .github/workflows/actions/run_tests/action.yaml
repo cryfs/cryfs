@@ -1,0 +1,19 @@
+name: 'Test'
+description: 'Run CryFS Tests'
+runs:
+  using: "composite"
+  steps:
+    - name: Run tests
+      shell: bash
+      run: |
+        cd build
+        ./test/gitversion/gitversion-test
+        ./test/cpp-utils/cpp-utils-test
+        ./test/parallelaccessstore/parallelaccessstore-test
+        ./test/blockstore/blockstore-test
+        ./test/blobstore/blobstore-test
+        ./test/cryfs/cryfs-test
+        
+        # TODO Also run once fixed
+        # ./test/fspp/fspp-test
+        # ./test/cryfs-cli/cryfs-cli-test

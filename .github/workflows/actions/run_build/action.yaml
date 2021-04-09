@@ -1,0 +1,42 @@
+name: 'Build'
+description: 'Compile CryFS'
+inputs:
+  cc:
+    description: "Which C compiler to use for the build"
+    required: true
+  cxx:
+    description: "Which C++ compiler to use for the build"
+    required: true
+  build_type:
+    description: "Which cmake build type to use (e.g. Release, Debug, RelWithDebInfo)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Show build system information
+      shell: bash
+      run: |
+        echo CMake version:
+        cmake --version
+        echo Ninja version:
+        ninja --version
+        echo CC: ${{inputs.cc}}
+        ${{inputs.cc}} --version
+        echo CXX: ${{inputs.cxx}}
+        ${{inputs.cxx}} --version
+        echo CCache:
+        ccache -s
+    - name: Run cmake
+      shell: bash
+      run: |
+        mkdir build
+        cd build
+        cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+    - name: Run ninja
+      shell: bash
+      run: |
+        cd build
+        ninja
+    - name: Reduce cache size
+      shell: bash
+      run: ccache --evict-older-than 7d

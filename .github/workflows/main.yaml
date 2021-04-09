@@ -1,0 +1,73 @@
+name: CI
+on: ['push', 'pull_request']
+
+jobs:
+  build:
+    name: Build and Test
+    strategy:
+      matrix:
+        os:
+          - macos-10.15
+        compiler:
+          - cxx: g++-7
+            cc: gcc-7
+            homebrew_package: gcc@7
+          - cxx: g++-8
+            cc: gcc-8
+            homebrew_package: gcc@8
+          - cxx: g++-9
+            cc: gcc-9
+            homebrew_package: gcc@9
+#           - cxx: g++-10
+#             cc: gcc-10
+#             homebrew_package: gcc@10
+        build_type:
+          - Debug
+          - Release
+          - RelWithDebInfo
+    runs-on: ${{matrix.os}}
+    env:
+      # Setting conan cache dir to a location where our Github Cache Action can find it
+      CONAN_USER_HOME: "${{ github.workspace }}/conan-cache/"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      #TODO Ideally, the Find pip cache location + Setup pip cache step would be part of the setup action that runs pip, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Find pip cache location
+        id: pip_cache_dir
+        run: |
+          echo "::set-output name=pip_cache_dir::$(pip3 cache dir)"
+        shell: bash
+      - name: Setup pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+          key: v0-${{ runner.os }}-setup-pip-${{ github.run_number }}
+          restore-keys: v0-${{ runner.os }}-setup-pip-
+      - name: Setup
+        uses: ./.github/workflows/actions/osx_setup
+        with:
+          compiler_homebrew_package: ${{ matrix.compiler.homebrew_package }}
+      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@7a464b8f54f1e1b78e7eb9d0272bc83072959235 # ccache-action@v1.0.3
+        with:
+          key: "v0-${{ runner.os }}-ccache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__"
+      - name: Configure ccache
+        shell: bash
+        run: ccache --set-config=compiler_check=content
+      # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Setup conan cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CONAN_USER_HOME }}
+          key: "v0-${{ runner.os }}-conancache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__-${{ github.run_number }}"
+          restore-keys: "v0-${{ runner.os }}-conancache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__-"
+      - name: Build
+        uses: ./.github/workflows/actions/run_build
+        with:
+          cxx: ${{ matrix.compiler.cxx }}
+          cc: ${{ matrix.compiler.cc }}
+          build_type: ${{ matrix.build_type }}
+      - name: Test
+        uses: ./.github/workflows/actions/run_tests
