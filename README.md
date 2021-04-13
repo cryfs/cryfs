@@ -24,7 +24,7 @@ If you use Homebrew:
     brew install osxfuse
     brew install cryfs
 
-If you use MacPorts (not available for OSX 10.15 at the moment):
+If you use MacPorts (only available for OSX 10.12 to 10.14 at the moment):
 
     port install cryfs
 
