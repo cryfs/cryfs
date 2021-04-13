@@ -16,6 +16,7 @@ runs:
     - name: Show build system information
       shell: bash
       run: |
+        set -v
         echo CMake version:
         cmake --version
         echo Ninja version:
@@ -29,14 +30,18 @@ runs:
     - name: Run cmake
       shell: bash
       run: |
+        set -v
         mkdir build
         cd build
         cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
     - name: Run ninja
       shell: bash
       run: |
+        set -v
         cd build
         ninja
     - name: Reduce cache size
       shell: bash
-      run: ccache --evict-older-than 7d
+      run: |
+        set -v
+        ccache --evict-older-than 7d

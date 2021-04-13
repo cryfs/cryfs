@@ -72,7 +72,9 @@ jobs:
           key: "v0-${{ runner.os }}-ccache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__"
       - name: Configure ccache
         shell: bash
-        run: ccache --set-config=compiler_check=content
+        run: |
+          set -v
+          ccache --set-config=compiler_check=content
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup conan cache
         uses: actions/cache@v2
