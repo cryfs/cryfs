@@ -90,7 +90,7 @@ You can use the following commands to install these requirements
         $ sudo pip3 install conan
 
         # Macintosh
-        $ brew install cmake pkg-config openssl libomp
+        $ brew install cmake pkg-config openssl libomp macfuse
         $ sudo pip3 install conan
 
 Build & Install
