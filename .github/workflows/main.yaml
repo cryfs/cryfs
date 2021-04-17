@@ -76,31 +76,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
-      #TODO I disabled pip cache because Github Actions have a limit for total cached data of 5GB and we're above that. Let's rather keep that space for ccache data. TODO Find a way to increase cache size and re-enable the pip cache.
-#       - name: Find pip cache location
-#         id: pip_cache_dir
-#         run: |
-#           # We need at least pip 20.1 to get the "pip cache dir" command. Ubuntu doesn't have pip 20.1 by default yet, let's upgrade it
-#           python3 -m pip install -U pip
-#           python3 -m pip --version
-#           echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
-#         shell: bash
-#       - name: Setup pip cache
-#         uses: actions/cache@v2
-#         with:
-#           path: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
-#           key: v0-${{ runner.os }}-setup-pip-${{ github.run_number }}
-#           restore-keys: v0-${{ runner.os }}-setup-pip-
       - name: Install OSX dependencies
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         run: |
-          brew install ninja macfuse libomp ${{matrix.compiler.homebrew_package}}
+          brew install ninja macfuse libomp ccache ${{matrix.compiler.homebrew_package}}
       - name: Install Linux dependencies
         if: ${{ runner.os == 'Linux' }}
         shell: bash
         run: |
-          sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ${{matrix.compiler.apt_package}}
+          sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ccache ${{matrix.compiler.apt_package}}
+      - name: Find pip cache location
+        id: pip_cache_dir
+        run: |
+          # We need at least pip 20.1 to get the "pip cache dir" command. Ubuntu doesn't have pip 20.1 by default yet, let's upgrade it
+          python3 -m pip install -U pip
+          python3 -m pip --version
+          echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
+        shell: bash
+      - name: Retrieve pip cache
+        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: get
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
       - name: Install Conan
         shell: bash
         run: |
@@ -108,28 +111,50 @@ jobs:
           python3 -m pip install conan
           conan profile new default --detect
           conan profile update settings.compiler.libcxx=libstdc++11 default
-      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@7a464b8f54f1e1b78e7eb9d0272bc83072959235 # ccache-action@v1.0.3
+      - name: Save pip cache
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
-          key: "v0-${{ runner.os }}-ccache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__"
-          # TODO We reduced the max cache size from 500M to 200M because GitHub Actions have a maximum for total cached data of 5GB and we're above that.
-          # I observed ccache sizes after a clean run to be 130-420MB, so a size of 200MB will only store partial caches for some builds, but it will
-          # also not waste much space and keep more cache instances alive within the 5GB limit. TODO Find a better way of handling this, e.g. increase
-          # GitHub Action cache space, or at least use ccache --evict-older-than to shrink the cache to its actual size like we do in the macOS builds.
-          max-size: 200M
+          action: put
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
+          artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Retrieve ccache cache
+        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: get
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       - name: Configure ccache
         shell: bash
         run: |
           set -v
           ccache --set-config=compiler_check=content
+          ccache --set-config=max_size=500M
+          ccache --set-config=cache_dir=${{github.workspace}}/.ccache
+          ccache --set-config=compression=true
+          echo CCache config:
+          ccache -p
+          echo Clearing ccache statistics
+          ccache -z
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Setup conan cache
-        uses: actions/cache@v2
+      - name: Retrieve conan cache
+        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
-          path: ${{ env.CONAN_USER_HOME }}
-          key: "v0-${{ runner.os }}-conancache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__-${{ github.run_number }}"
-          restore-keys: "v0-${{ runner.os }}-conancache__${{matrix.os}}__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__-"
+          action: get
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       - name: Build (macOS)
         if: ${{ runner.os == 'macOS' }}
         uses: ./.github/workflows/actions/run_build
@@ -144,11 +169,36 @@ jobs:
           cxx: ${{ matrix.compiler.cxx }}
           cc: ${{ matrix.compiler.cc }}
           build_type: ${{ matrix.build_type }}
-      - name: Test
-        uses: ./.github/workflows/actions/run_tests
-      - name: Reduce cache size
+      - name: Show ccache statistics
+        shell: bash
+        run: |
+          set -v
+          ccache -s
+      - name: Reduce ccache size
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         run: |
           set -v
           ccache --evict-older-than 7d
+      - name: Save ccache cache
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: put
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          artifacts: ${{ github.workspace }}/.ccache
+      - name: Save conan cache
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: put
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          artifacts: ${{ env.CONAN_USER_HOME }}
+      - name: Test
+        uses: ./.github/workflows/actions/run_tests
