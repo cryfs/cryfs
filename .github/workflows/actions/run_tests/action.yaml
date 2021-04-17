@@ -6,6 +6,8 @@ runs:
     - name: Run tests
       shell: bash
       run: |
+        set -v
+        echo Running on ${{runner.os}}
         cd build
         ./test/gitversion/gitversion-test
         ./test/cpp-utils/cpp-utils-test
@@ -14,6 +16,10 @@ runs:
         ./test/blobstore/blobstore-test
         ./test/cryfs/cryfs-test
         
-        # TODO Also run once fixed
-        # ./test/fspp/fspp-test
-        # ./test/cryfs-cli/cryfs-cli-test
+        # TODO Also run on macOS once fixed
+        if [[ "${{runner.os}}" == "macOS" ]]; then
+          echo Skipping some tests because they are not fixed for macOS yet
+        else
+          ./test/fspp/fspp-test
+          ./test/cryfs-cli/cryfs-cli-test
+        fi

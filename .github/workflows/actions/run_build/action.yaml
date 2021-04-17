@@ -26,6 +26,7 @@ runs:
         echo CXX: ${{inputs.cxx}}
         ${{inputs.cxx}} --version
         echo CCache:
+        ccache --version
         ccache -s
     - name: Run cmake
       shell: bash
@@ -40,8 +41,3 @@ runs:
         set -v
         cd build
         ninja
-    - name: Reduce cache size
-      shell: bash
-      run: |
-        set -v
-        ccache --evict-older-than 7d
