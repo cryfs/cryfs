@@ -180,6 +180,7 @@ jobs:
         run: |
           set -v
           ccache --evict-older-than 7d
+          ccache -s
       - name: Save ccache cache
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
