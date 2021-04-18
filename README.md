@@ -21,8 +21,8 @@ CryFS is distributed via Homebrew and MacPorts.
 
 If you use Homebrew:
 
-    brew install osxfuse
-    brew install cryfs
+    brew install --cask osxfuse
+    brew install cryfs/tap/cryfs
 
 If you use MacPorts (only available for OSX 10.12 to 10.14 at the moment):
 
