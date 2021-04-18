@@ -106,6 +106,13 @@ jobs:
           fi
           sudo apt-get update
           sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ccache ${{matrix.compiler.apt_package}}
+      - name: Speed up random generator
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          set -v
+          # Use /dev/urandom when /dev/random is accessed to use less entropy
+          sudo cp -a /dev/urandom /dev/random
+        shell: bash
       - name: Find pip cache location
         id: pip_cache_dir
         run: |
