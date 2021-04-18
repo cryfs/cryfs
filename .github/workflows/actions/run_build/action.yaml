@@ -10,6 +10,9 @@ inputs:
   build_type:
     description: "Which cmake build type to use (e.g. Release, Debug, RelWithDebInfo)"
     required: true
+  cmake_flags:
+    description: "Extra flags to add to the cmake command"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -34,7 +37,7 @@ runs:
         set -v
         mkdir build
         cd build
-        cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache ${{inputs.cmake_flags}}
     - name: Run ninja
       shell: bash
       run: |

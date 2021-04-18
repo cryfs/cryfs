@@ -151,8 +151,8 @@ references:
 
         echo Download boost
         cd ~
-        wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "63bbd1743e7c904b2e69fdc2eafd1c2a8a30fd70d960dcd366059d0100f000cb605d56cbd9397bb18421631f1c9552a772c434d0f0caddbe56302273f51fd1f6" ]; then
+        wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.75.0/boost_1_75_0.tar.bz2/download
+        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "d86f060245e98dca5c7f3f831c98ea9ccbfa8310f20830dd913d9d4c939fbe7cb94accd35f1128e7c4faf6c27adb6f4bb54e5477a6bde983dfc7aa33c4eed03a" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -162,7 +162,7 @@ references:
         echo Extracting boost
         tar -xf boost.tar.bz2
         rm boost.tar.bz2
-        cd boost_1_72_0
+        cd boost_1_75_0
 
         echo Install boost
         ./bootstrap.sh --with-libraries=filesystem,system,thread,chrono,program_options
