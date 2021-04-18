@@ -121,17 +121,6 @@ jobs:
           bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
           artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
-      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Retrieve ccache cache
-        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
-        with:
-          action: get
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
-          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       - name: Configure ccache
         shell: bash
         run: |
@@ -144,6 +133,17 @@ jobs:
           ccache -p
           echo Clearing ccache statistics
           ccache -z
+      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Retrieve ccache cache
+        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: get
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CACHE_AWS_REGION }}
+          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
