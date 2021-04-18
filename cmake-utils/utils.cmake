@@ -93,8 +93,7 @@ endfunction(target_enable_style_warnings)
 # Add boost to the project
 #
 # Uses:
-#  target_add_boost(buildtarget) # if you're only using header-only boost libs
-#  target_add_boost(buildtarget system filesystem) # list all libraries to link against in the dependencies
+#  target_add_boost(buildtarget)
 ##################################################
 function(target_add_boost TARGET)
     target_link_libraries(${TARGET} PUBLIC CryfsDependencies_boost)

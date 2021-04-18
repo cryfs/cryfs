@@ -91,7 +91,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryptopp CryfsDependencies_range-v3)
 
-target_add_boost(${PROJECT_NAME} filesystem system thread chrono)
+target_add_boost(${PROJECT_NAME})
 target_enable_style_warnings(${PROJECT_NAME})
 target_activate_cpp14(${PROJECT_NAME})
 
