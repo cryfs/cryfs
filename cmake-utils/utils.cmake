@@ -71,6 +71,7 @@ function(target_enable_style_warnings TARGET)
     endif()
 
     if (USE_WERROR)
+        message(STATUS Building ${TARGET} with -Werror)
         target_compile_options(${TARGET} PRIVATE -Werror)
     endif()
 

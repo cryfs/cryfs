@@ -70,10 +70,10 @@ jobs:
           - Debug
           - Release
           - RelWithDebInfo
-        cmake_flags:
-          - ""
-        install_dependencies_manually:
-          - false
+        extra_cmake_flags: [""]
+        extra_cxxflags: [""]
+        install_dependencies_manually: [false]
+        run_tests: [true]
         include:
           - name: Local dependencies
             os: ubuntu-18.04
@@ -82,8 +82,10 @@ jobs:
               cc: clang-11
               apt_package: clang-11
             build_type: RelWithDebInfo
-            cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+            extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+            extra_cxxflags: ""
             install_dependencies_manually: true
+            run_tests: true
           - name: Local dependencies
             os: ubuntu-20.04
             compiler:
@@ -91,10 +93,43 @@ jobs:
               cc: clang-11
               apt_package: clang-11
             build_type: RelWithDebInfo
-            cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+            extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+            extra_cxxflags: ""
             install_dependencies_manually: true
-          
-          
+            run_tests: true
+          - name: Werror gcc
+            os: ubuntu-20.04
+            compiler:
+              cxx: g++-9
+              cc: gcc-9
+              apt_package: g++-9
+            build_type: RelWithDebInfo
+            extra_cmake_flags: -DUSE_WERROR=on
+            extra_cxxflags: ""
+            install_dependencies_manually: false
+            run_tests: false
+          - name: Werror clang
+            os: ubuntu-20.04
+            compiler:
+              cxx: clang++-11
+              cc: clang-11
+              apt_package: clang++-11
+            build_type: RelWithDebInfo
+            extra_cmake_flags: -DUSE_WERROR=on
+            extra_cxxflags: ""
+            install_dependencies_manually: false
+            run_tests: false
+          - name: No compatibility
+            os: ubuntu-20.04
+            compiler:
+              cxx: clang++-11
+              cc: clang-11
+              apt_package: clang++-11
+            build_type: RelWithDebInfo
+            extra_cmake_flags: ""
+            extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
+            install_dependencies_manually: false
+            run_tests: false
     runs-on: ${{matrix.os}}
     env:
       # Setting conan cache dir to a location where our Github Cache Action can find it
@@ -187,7 +222,7 @@ jobs:
       - name: Hash flags
         id: hash_flags
         run: |
-          echo "::set-output name=hash_flags::$(echo ${{matrix.cmake_flags}} | md5sum)"
+          echo "::set-output name=hash_flags::$(echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum)"
         shell: bash
       - name: Retrieve ccache cache
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
@@ -229,7 +264,8 @@ jobs:
           cxx: ${{ matrix.compiler.cxx }}
           cc: ${{ matrix.compiler.cc }}
           build_type: ${{ matrix.build_type }}
-          cmake_flags: ${{ matrix.cmake_flags }}
+          extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
+          extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Show ccache statistics
         shell: bash
         run: |
@@ -263,4 +299,5 @@ jobs:
           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
           artifacts: ${{ env.CONAN_USER_HOME }}
       - name: Test
+        if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
