@@ -30,6 +30,7 @@ jobs:
             macos_cc: gcc-9
             apt_package: g++-9
             homebrew_package: gcc@9
+#         TODO gcc 10 doesn't work, potentially because cmake doesn't know yet that the STL now depends on pthread. See https://github.com/pothosware/SoapySDRPlay3/issues/5
 #           - cxx: g++-10
 #             cc: gcc-10
 #             macos_cxx: g++-10
