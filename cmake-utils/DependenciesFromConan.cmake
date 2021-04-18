@@ -1,9 +1,12 @@
 include(cmake-utils/conan.cmake)
 
-conan_cmake_run(
-    CONANFILE conanfile.py
-    BUILD missing)
+conan_cmake_autodetect(settings)
+conan_cmake_install(
+    PATH_OR_REFERENCE ${CMAKE_CURRENT_SOURCE_DIR}/conanfile.py
+    BUILD missing
+    SETTINGS ${settings})
 
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS SKIP_STD NO_OUTPUT_DIRS)
 
 add_library(CryfsDependencies_range-v3 INTERFACE)

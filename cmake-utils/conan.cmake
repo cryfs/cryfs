@@ -1,8 +1,4 @@
-# Taken from https://github.com/conan-io/cmake-conan/blob/v0.15/conan.cmake
-# Changes:
-# - https://github.com/conan-io/cmake-conan/pull/259 (commit 285082078488592d3ca6ec3b718fe54bf5804951): Add a "Please install conan" sentence to the error message when conan wasn't found.
-# - https://github.com/conan-io/cmake-conan/pull/258 (commit 3df8d20b401528629d0486e577b6c9b4e22b3ae4): Make "SETTINGS compiler.libcxx=libstdc++11" do the right thing (see https://github.com/conan-io/cmake-conan/issues/255)
-
+# Taken from https://github.com/conan-io/cmake-conan/blob/v0.16.1/conan.cmake
 
 # The MIT License (MIT)
 
@@ -39,7 +35,7 @@
 # but it is only necessary on the end-user side. It is not necessary to create conan
 # packages, in fact it shouldn't be use for that. Check the project documentation.
 
-# version: 0.15.0
+# version: 0.16.1
 
 include(CMakeParseArguments)
 
@@ -66,19 +62,8 @@ function(_get_msvc_ide_version result)
     endif()
 endfunction()
 
-function(conan_cmake_settings result)
-    #message(STATUS "COMPILER " ${CMAKE_CXX_COMPILER})
-    #message(STATUS "COMPILER " ${CMAKE_CXX_COMPILER_ID})
-    #message(STATUS "VERSION " ${CMAKE_CXX_COMPILER_VERSION})
-    #message(STATUS "FLAGS " ${CMAKE_LANG_FLAGS})
-    #message(STATUS "LIB ARCH " ${CMAKE_CXX_LIBRARY_ARCHITECTURE})
-    #message(STATUS "BUILD TYPE " ${CMAKE_BUILD_TYPE})
-    #message(STATUS "GENERATOR " ${CMAKE_GENERATOR})
-    #message(STATUS "GENERATOR WIN64 " ${CMAKE_CL_64})
-
-    message(STATUS "Conan: Automatic detection of conan settings from cmake")
-
-    parse_arguments(${ARGV})
+macro(_conan_detect_build_type)
+    conan_parse_arguments(${ARGV})
 
     if(ARGUMENTS_BUILD_TYPE)
         set(_CONAN_SETTING_BUILD_TYPE ${ARGUMENTS_BUILD_TYPE})
@@ -98,18 +83,20 @@ function(conan_cmake_settings result)
     elseif(_CONAN_SETTING_BUILD_TYPE_UPPER STREQUAL "MINSIZEREL")
         set(_CONAN_SETTING_BUILD_TYPE "MinSizeRel")
     endif()
+endmacro()
 
-    if(ARGUMENTS_ARCH)
-        set(_CONAN_SETTING_ARCH ${ARGUMENTS_ARCH})
-    endif()
+macro(_conan_check_system_name)
     #handle -s os setting
-    if(CMAKE_SYSTEM_NAME)
+    if(CMAKE_SYSTEM_NAME AND NOT CMAKE_SYSTEM_NAME STREQUAL "Generic")
         #use default conan os setting if CMAKE_SYSTEM_NAME is not defined
         set(CONAN_SYSTEM_NAME ${CMAKE_SYSTEM_NAME})
         if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
             set(CONAN_SYSTEM_NAME Macos)
         endif()
-        set(CONAN_SUPPORTED_PLATFORMS Windows Linux Macos Android iOS FreeBSD WindowsStore)
+        if(${CMAKE_SYSTEM_NAME} STREQUAL "QNX")
+            set(CONAN_SYSTEM_NAME Neutrino)
+        endif()        
+        set(CONAN_SUPPORTED_PLATFORMS Windows Linux Macos Android iOS FreeBSD WindowsStore WindowsCE watchOS tvOS FreeBSD SunOS AIX Arduino Emscripten Neutrino)
         list (FIND CONAN_SUPPORTED_PLATFORMS "${CONAN_SYSTEM_NAME}" _index)
         if (${_index} GREATER -1)
             #check if the cmake system is a conan supported one
@@ -118,7 +105,9 @@ function(conan_cmake_settings result)
             message(FATAL_ERROR "cmake system ${CONAN_SYSTEM_NAME} is not supported by conan. Use one of ${CONAN_SUPPORTED_PLATFORMS}")
         endif()
     endif()
+endmacro()
 
+macro(_conan_check_language)
     get_property(_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     if (";${_languages};" MATCHES ";CXX;")
         set(LANGUAGE CXX)
@@ -128,6 +117,15 @@ function(conan_cmake_settings result)
         set(USING_CXX 0)
     else ()
         message(FATAL_ERROR "Conan: Neither C or C++ was detected as a language for the project. Unabled to detect compiler version.")
+    endif()
+endmacro()
+
+macro(_conan_detect_compiler)
+
+    conan_parse_arguments(${ARGV})
+
+    if(ARGUMENTS_ARCH)
+        set(_CONAN_SETTING_ARCH ${ARGUMENTS_ARCH})
     endif()
 
     if (${CMAKE_${LANGUAGE}_COMPILER_ID} STREQUAL GNU)
@@ -141,6 +139,17 @@ function(conan_cmake_settings result)
             set(COMPILER_VERSION ${MAJOR})
         endif()
         set(_CONAN_SETTING_COMPILER gcc)
+        set(_CONAN_SETTING_COMPILER_VERSION ${COMPILER_VERSION})
+        if (USING_CXX)
+            conan_cmake_detect_unix_libcxx(_LIBCXX)
+            set(_CONAN_SETTING_COMPILER_LIBCXX ${_LIBCXX})
+        endif ()
+    elseif (${CMAKE_${LANGUAGE}_COMPILER_ID} STREQUAL Intel)
+        string(REPLACE "." ";" VERSION_LIST ${CMAKE_${LANGUAGE}_COMPILER_VERSION})
+        list(GET VERSION_LIST 0 MAJOR)
+        list(GET VERSION_LIST 1 MINOR)
+        set(COMPILER_VERSION ${MAJOR}.${MINOR})
+        set(_CONAN_SETTING_COMPILER intel)
         set(_CONAN_SETTING_COMPILER_VERSION ${COMPILER_VERSION})
         if (USING_CXX)
             conan_cmake_detect_unix_libcxx(_LIBCXX)
@@ -200,7 +209,7 @@ function(conan_cmake_settings result)
             endif()
         endif()
 
-        conan_cmake_detect_vs_runtime(_vs_runtime)
+        conan_cmake_detect_vs_runtime(_vs_runtime ${ARGV})
         message(STATUS "Conan: Detected VS runtime: ${_vs_runtime}")
         set(_CONAN_SETTING_COMPILER_RUNTIME ${_vs_runtime})
 
@@ -209,9 +218,33 @@ function(conan_cmake_settings result)
         elseif(CMAKE_VS_PLATFORM_TOOLSET AND (CMAKE_GENERATOR STREQUAL "Ninja"))
             set(_CONAN_SETTING_COMPILER_TOOLSET ${CMAKE_VS_PLATFORM_TOOLSET})
         endif()
-    else()
+        else()
         message(FATAL_ERROR "Conan: compiler setup not recognized")
     endif()
+
+endmacro()
+
+function(conan_cmake_settings result)
+    #message(STATUS "COMPILER " ${CMAKE_CXX_COMPILER})
+    #message(STATUS "COMPILER " ${CMAKE_CXX_COMPILER_ID})
+    #message(STATUS "VERSION " ${CMAKE_CXX_COMPILER_VERSION})
+    #message(STATUS "FLAGS " ${CMAKE_LANG_FLAGS})
+    #message(STATUS "LIB ARCH " ${CMAKE_CXX_LIBRARY_ARCHITECTURE})
+    #message(STATUS "BUILD TYPE " ${CMAKE_BUILD_TYPE})
+    #message(STATUS "GENERATOR " ${CMAKE_GENERATOR})
+    #message(STATUS "GENERATOR WIN64 " ${CMAKE_CL_64})
+
+    message(STATUS "Conan: Automatic detection of conan settings from cmake")
+
+    conan_parse_arguments(${ARGV})
+
+    _conan_detect_build_type(${ARGV})
+
+    _conan_check_system_name()
+
+    _conan_check_language()
+
+    _conan_detect_compiler(${ARGV})
 
     # If profile is defined it is used
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND ARGUMENTS_DEBUG_PROFILE)
@@ -228,6 +261,10 @@ function(conan_cmake_settings result)
 
     foreach(ARG ${_APPLIED_PROFILES})
         set(_SETTINGS ${_SETTINGS} -pr=${ARG})
+    endforeach()
+    foreach(ARG ${ARGUMENTS_PROFILE_BUILD})
+        conan_check(VERSION 1.24.0 REQUIRED DETECT_QUIET)
+        set(_SETTINGS ${_SETTINGS} -pr:b=${ARG})
     endforeach()
 
     if(NOT _SETTINGS OR ARGUMENTS_PROFILE_AUTO STREQUAL "ALL")
@@ -264,9 +301,12 @@ endfunction()
 function(conan_cmake_detect_unix_libcxx result)
     # Take into account any -stdlib in compile options
     get_directory_property(compile_options DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_OPTIONS)
+    string(GENEX_STRIP "${compile_options}" compile_options)
 
     # Take into account any _GLIBCXX_USE_CXX11_ABI in compile definitions
     get_directory_property(defines DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_DEFINITIONS)
+    string(GENEX_STRIP "${defines}" defines)
+
     foreach(define ${defines})
         if(define MATCHES "_GLIBCXX_USE_CXX11_ABI")
             if(define MATCHES "^-D")
@@ -277,9 +317,42 @@ function(conan_cmake_detect_unix_libcxx result)
         endif()
     endforeach()
 
+    # add additional compiler options ala cmRulePlaceholderExpander::ExpandRuleVariable
+    set(EXPAND_CXX_COMPILER ${CMAKE_CXX_COMPILER})
+    if(CMAKE_CXX_COMPILER_ARG1)
+        # CMake splits CXX="foo bar baz" into CMAKE_CXX_COMPILER="foo", CMAKE_CXX_COMPILER_ARG1="bar baz"
+        # without this, ccache, winegcc, or other wrappers might lose all their arguments
+        separate_arguments(SPLIT_CXX_COMPILER_ARG1 NATIVE_COMMAND ${CMAKE_CXX_COMPILER_ARG1})
+        list(APPEND EXPAND_CXX_COMPILER ${SPLIT_CXX_COMPILER_ARG1})
+    endif()
+
+    if(CMAKE_CXX_COMPILE_OPTIONS_TARGET AND CMAKE_CXX_COMPILER_TARGET)
+        # without --target= we may be calling the wrong underlying GCC
+        list(APPEND EXPAND_CXX_COMPILER "${CMAKE_CXX_COMPILE_OPTIONS_TARGET}${CMAKE_CXX_COMPILER_TARGET}")
+    endif()
+
+    if(CMAKE_CXX_COMPILE_OPTIONS_EXTERNAL_TOOLCHAIN AND CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
+        list(APPEND EXPAND_CXX_COMPILER "${CMAKE_CXX_COMPILE_OPTIONS_EXTERNAL_TOOLCHAIN}${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
+    endif()
+
+    if(CMAKE_CXX_COMPILE_OPTIONS_SYSROOT)
+        # without --sysroot= we may find the wrong #include <string>
+        if(CMAKE_SYSROOT_COMPILE)
+            list(APPEND EXPAND_CXX_COMPILER "${CMAKE_CXX_COMPILE_OPTIONS_SYSROOT}${CMAKE_SYSROOT_COMPILE}")
+        elseif(CMAKE_SYSROOT)
+            list(APPEND EXPAND_CXX_COMPILER "${CMAKE_CXX_COMPILE_OPTIONS_SYSROOT}${CMAKE_SYSROOT}")
+        endif()
+    endif()
+
+    separate_arguments(SPLIT_CXX_FLAGS NATIVE_COMMAND ${CMAKE_CXX_FLAGS})
+
+    if(CMAKE_OSX_SYSROOT)
+        set(xcode_sysroot_option "--sysroot=${CMAKE_OSX_SYSROOT}")
+    endif()
+
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E echo "#include <string>"
-        COMMAND ${CMAKE_CXX_COMPILER} -x c++ ${compile_options} -E -dM -
+        COMMAND ${EXPAND_CXX_COMPILER} ${SPLIT_CXX_FLAGS} -x c++ ${xcode_sysroot_option} ${compile_options} -E -dM -
         OUTPUT_VARIABLE string_defines
     )
 
@@ -309,44 +382,77 @@ function(conan_cmake_detect_unix_libcxx result)
 endfunction()
 
 function(conan_cmake_detect_vs_runtime result)
-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+
+    conan_parse_arguments(${ARGV})
+    if(ARGUMENTS_BUILD_TYPE)
+        set(build_type "${ARGUMENTS_BUILD_TYPE}")
+    elseif(CMAKE_BUILD_TYPE)
+        set(build_type "${CMAKE_BUILD_TYPE}")
+    else()
+        message(FATAL_ERROR "Please specify in command line CMAKE_BUILD_TYPE (-DCMAKE_BUILD_TYPE=Release)")
+    endif()
+
+    if(build_type)
+        string(TOUPPER "${build_type}" build_type)
+    endif() 
     set(variables CMAKE_CXX_FLAGS_${build_type} CMAKE_C_FLAGS_${build_type} CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
     foreach(variable ${variables})
         if(NOT "${${variable}}" STREQUAL "")
-            string(REPLACE " " ";" flags ${${variable}})
+            string(REPLACE " " ";" flags "${${variable}}")
             foreach (flag ${flags})
-                if(${flag} STREQUAL "/MD" OR ${flag} STREQUAL "/MDd" OR ${flag} STREQUAL "/MT" OR ${flag} STREQUAL "/MTd")
-                    string(SUBSTRING ${flag} 1 -1 runtime)
-                    set(${result} ${runtime} PARENT_SCOPE)
+                if("${flag}" STREQUAL "/MD" OR "${flag}" STREQUAL "/MDd" OR "${flag}" STREQUAL "/MT" OR "${flag}" STREQUAL "/MTd")
+                    string(SUBSTRING "${flag}" 1 -1 runtime)
+                    set(${result} "${runtime}" PARENT_SCOPE)
                     return()
                 endif()
             endforeach()
         endif()
     endforeach()
-    if(${build_type} STREQUAL "DEBUG")
+    if("${build_type}" STREQUAL "DEBUG")
         set(${result} "MDd" PARENT_SCOPE)
     else()
         set(${result} "MD" PARENT_SCOPE)
     endif()
 endfunction()
 
+function(_collect_settings result)
+    set(ARGUMENTS_PROFILE_AUTO arch build_type compiler compiler.version
+                            compiler.runtime compiler.libcxx compiler.toolset)
+    foreach(ARG ${ARGUMENTS_PROFILE_AUTO})
+        string(TOUPPER ${ARG} _arg_name)
+        string(REPLACE "." "_" _arg_name ${_arg_name})
+        if(_CONAN_SETTING_${_arg_name})
+            set(detected_setings ${detected_setings} ${ARG}=${_CONAN_SETTING_${_arg_name}})
+        endif()
+    endforeach()
+    set(${result} ${detected_setings} PARENT_SCOPE)
+endfunction()
 
-macro(parse_arguments)
+function(conan_cmake_autodetect detected_settings)
+    _conan_detect_build_type()
+    _conan_check_system_name()
+    _conan_check_language()
+    _conan_detect_compiler()
+    _collect_settings(collected_settings)
+    set(${detected_settings} ${collected_settings} PARENT_SCOPE)
+endfunction()
+
+macro(conan_parse_arguments)
   set(options BASIC_SETUP CMAKE_TARGETS UPDATE KEEP_RPATHS NO_LOAD NO_OUTPUT_DIRS OUTPUT_QUIET NO_IMPORTS SKIP_STD)
   set(oneValueArgs CONANFILE  ARCH BUILD_TYPE INSTALL_FOLDER CONAN_COMMAND)
   set(multiValueArgs DEBUG_PROFILE RELEASE_PROFILE RELWITHDEBINFO_PROFILE MINSIZEREL_PROFILE
                      PROFILE REQUIRES OPTIONS IMPORTS SETTINGS BUILD ENV GENERATORS PROFILE_AUTO
-                     INSTALL_ARGS CONFIGURATION_TYPES)
+                     INSTALL_ARGS CONFIGURATION_TYPES PROFILE_BUILD BUILD_REQUIRES)
   cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 endmacro()
 
-function(conan_cmake_install)
+function(old_conan_cmake_install)
     # Calls "conan install"
     # Argument BUILD is equivalant to --build={missing, PkgName,...} or
     # --build when argument is 'BUILD all' (which builds all packages from source)
     # Argument CONAN_COMMAND, to specify the conan path, e.g. in case of running from source
     # cmake does not identify conan as command, even if it is +x and it is in the path
-    parse_arguments(${ARGV})
+    conan_parse_arguments(${ARGV})
 
     if(CONAN_CMAKE_MULTI)
         set(ARGUMENTS_GENERATORS ${ARGUMENTS_GENERATORS} cmake_multi)
@@ -370,14 +476,17 @@ function(conan_cmake_install)
     endif()
     set(CONAN_OPTIONS "")
     if(ARGUMENTS_CONANFILE)
-      set(CONANFILE ${CMAKE_CURRENT_SOURCE_DIR}/${ARGUMENTS_CONANFILE})
-      # A conan file has been specified - apply specified options as well if provided
-      foreach(ARG ${ARGUMENTS_OPTIONS})
-          set(CONAN_OPTIONS ${CONAN_OPTIONS} -o=${ARG})
-      endforeach()
+      if(IS_ABSOLUTE ${ARGUMENTS_CONANFILE})
+          set(CONANFILE ${ARGUMENTS_CONANFILE})
+      else()
+          set(CONANFILE ${CMAKE_CURRENT_SOURCE_DIR}/${ARGUMENTS_CONANFILE})
+      endif()
     else()
       set(CONANFILE ".")
     endif()
+    foreach(ARG ${ARGUMENTS_OPTIONS})
+      set(CONAN_OPTIONS ${CONAN_OPTIONS} -o=${ARG})
+    endforeach()
     if(ARGUMENTS_UPDATE)
       set(CONAN_INSTALL_UPDATE --update)
     endif()
@@ -417,40 +526,182 @@ function(conan_cmake_install)
 
 endfunction()
 
+function(conan_cmake_install)
+    if(DEFINED CONAN_COMMAND)
+        set(CONAN_CMD ${CONAN_COMMAND})
+    else()
+        conan_check(REQUIRED)
+    endif()
+
+    set(installOptions UPDATE NO_IMPORTS OUTPUT_QUIET ERROR_QUIET)
+    set(installOneValueArgs PATH_OR_REFERENCE REFERENCE REMOTE LOCKFILE LOCKFILE_OUT LOCKFILE_NODE_ID INSTALL_FOLDER)
+    set(installMultiValueArgs GENERATOR BUILD ENV ENV_HOST ENV_BUILD OPTIONS_HOST OPTIONS OPTIONS_BUILD PROFILE
+                              PROFILE_HOST PROFILE_BUILD SETTINGS SETTINGS_HOST SETTINGS_BUILD)
+    cmake_parse_arguments(ARGS "${installOptions}" "${installOneValueArgs}" "${installMultiValueArgs}" ${ARGN})
+    foreach(arg ${installOptions})
+        if(ARGS_${arg})
+            set(${arg} ${${arg}} ${ARGS_${arg}})
+        endif()
+    endforeach()
+    foreach(arg ${installOneValueArgs})
+        if(DEFINED ARGS_${arg})
+            if("${arg}" STREQUAL "REMOTE")
+                set(flag "--remote")
+            elseif("${arg}" STREQUAL "LOCKFILE")
+                set(flag "--lockfile")
+            elseif("${arg}" STREQUAL "LOCKFILE_OUT")
+                set(flag "--lockfile-out")
+            elseif("${arg}" STREQUAL "LOCKFILE_NODE_ID")
+                set(flag "--lockfile-node-id")
+            elseif("${arg}" STREQUAL "INSTALL_FOLDER")
+                set(flag "--install-folder")
+            endif()
+            set(${arg} ${${arg}} ${flag} ${ARGS_${arg}})
+        endif()
+    endforeach()
+    foreach(arg ${installMultiValueArgs})
+        if(DEFINED ARGS_${arg})
+            if("${arg}" STREQUAL "GENERATOR")
+                set(flag "--generator")
+            elseif("${arg}" STREQUAL "BUILD")
+                set(flag "--build")
+            elseif("${arg}" STREQUAL "ENV")
+                set(flag "--env")
+            elseif("${arg}" STREQUAL "ENV_HOST")
+                set(flag "--env:host")
+            elseif("${arg}" STREQUAL "ENV_BUILD")
+                set(flag "--env:build")
+            elseif("${arg}" STREQUAL "OPTIONS")
+                set(flag "--options")
+            elseif("${arg}" STREQUAL "OPTIONS_HOST")
+                set(flag "--options:host")
+            elseif("${arg}" STREQUAL "OPTIONS_BUILD")
+                set(flag "--options:build")
+            elseif("${arg}" STREQUAL "PROFILE")
+                set(flag "--profile")
+            elseif("${arg}" STREQUAL "PROFILE_HOST")
+                set(flag "--profile:host")
+            elseif("${arg}" STREQUAL "PROFILE_BUILD")
+                set(flag "--profile:build")
+            elseif("${arg}" STREQUAL "SETTINGS")
+                set(flag "--settings")
+            elseif("${arg}" STREQUAL "SETTINGS_HOST")
+                set(flag "--settings:host")
+            elseif("${arg}" STREQUAL "SETTINGS_BUILD")
+                set(flag "--settings:build")
+            endif()
+            list(LENGTH ARGS_${arg} numargs)
+            foreach(item ${ARGS_${arg}})
+                if(${item} STREQUAL "all" AND ${arg} STREQUAL "BUILD")
+                    set(${arg} "--build")
+                    break()
+                endif()
+                set(${arg} ${${arg}} ${flag} ${item})
+            endforeach()
+        endif()
+    endforeach()
+    if(DEFINED UPDATE)
+        set(UPDATE --update)
+    endif()
+    if(DEFINED NO_IMPORTS)
+        set(NO_IMPORTS --no-imports)
+    endif()
+    set(install_args install ${PATH_OR_REFERENCE} ${REFERENCE} ${UPDATE} ${NO_IMPORTS} ${REMOTE} ${LOCKFILE} ${LOCKFILE_OUT} ${LOCKFILE_NODE_ID} ${INSTALL_FOLDER}
+                                ${GENERATOR} ${BUILD} ${ENV} ${ENV_HOST} ${ENV_BUILD} ${OPTIONS} ${OPTIONS_HOST} ${OPTIONS_BUILD} 
+                                ${PROFILE} ${PROFILE_HOST} ${PROFILE_BUILD} ${SETTINGS} ${SETTINGS_HOST} ${SETTINGS_BUILD})
+
+    string(REPLACE ";" " " _install_args "${install_args}")
+    message(STATUS "Conan executing: ${CONAN_CMD} ${_install_args}")
+    
+    if(ARGS_OUTPUT_QUIET)
+      set(OUTPUT_OPT OUTPUT_QUIET)
+    endif()
+    if(ARGS_ERROR_QUIET)
+      set(ERROR_OPT ERROR_QUIET)
+    endif()
+
+    execute_process(COMMAND ${CONAN_CMD} ${install_args}
+                    RESULT_VARIABLE return_code
+                    ${OUTPUT_OPT}
+                    ${ERROR_OPT}
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+    if(NOT "${return_code}" STREQUAL "0")
+        if (ARGS_ERROR_QUIET)
+            message(WARNING "Conan install failed='${return_code}'")
+        else()
+            message(FATAL_ERROR "Conan install failed='${return_code}'")
+        endif()
+    endif()
+
+endfunction()
 
 function(conan_cmake_setup_conanfile)
-  parse_arguments(${ARGV})
+  conan_parse_arguments(${ARGV})
   if(ARGUMENTS_CONANFILE)
     get_filename_component(_CONANFILE_NAME ${ARGUMENTS_CONANFILE} NAME)
     # configure_file will make sure cmake re-runs when conanfile is updated
     configure_file(${ARGUMENTS_CONANFILE} ${CMAKE_CURRENT_BINARY_DIR}/${_CONANFILE_NAME}.junk COPYONLY)
     file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/${_CONANFILE_NAME}.junk)
   else()
-    conan_cmake_generate_conanfile(${ARGV})
+    conan_cmake_generate_conanfile(ON ${ARGV})
   endif()
 endfunction()
 
-function(conan_cmake_generate_conanfile)
-  # Generate, writing in disk a conanfile.txt with the requires, options, and imports
-  # specified as arguments
-  # This will be considered as temporary file, generated in CMAKE_CURRENT_BINARY_DIR)
-  parse_arguments(${ARGV})
-  set(_FN "${CMAKE_CURRENT_BINARY_DIR}/conanfile.txt")
+function(conan_cmake_configure)
+    conan_cmake_generate_conanfile(OFF ${ARGV})
+endfunction()
 
-  file(WRITE ${_FN} "[generators]\ncmake\n\n[requires]\n")
-  foreach(ARG ${ARGUMENTS_REQUIRES})
-    file(APPEND ${_FN} ${ARG} "\n")
-  endforeach()
+# Generate, writing in disk a conanfile.txt with the requires, options, and imports
+# specified as arguments
+# This will be considered as temporary file, generated in CMAKE_CURRENT_BINARY_DIR)
+function(conan_cmake_generate_conanfile DEFAULT_GENERATOR)
 
-  file(APPEND ${_FN} ${ARG} "\n[options]\n")
-  foreach(ARG ${ARGUMENTS_OPTIONS})
-    file(APPEND ${_FN} ${ARG} "\n")
-  endforeach()
+    conan_parse_arguments(${ARGV})
 
-  file(APPEND ${_FN} ${ARG} "\n[imports]\n")
-  foreach(ARG ${ARGUMENTS_IMPORTS})
-    file(APPEND ${_FN} ${ARG} "\n")
-  endforeach()
+    set(_FN "${CMAKE_CURRENT_BINARY_DIR}/conanfile.txt")
+    file(WRITE ${_FN} "")
+
+    if(DEFINED ARGUMENTS_REQUIRES)
+        file(APPEND ${_FN} "[requires]\n")
+        foreach(REQUIRE ${ARGUMENTS_REQUIRES})
+            file(APPEND ${_FN} ${REQUIRE} "\n")
+        endforeach()
+    endif()
+
+    if (DEFAULT_GENERATOR OR DEFINED ARGUMENTS_GENERATORS)
+        file(APPEND ${_FN} "[generators]\n")
+        if (DEFAULT_GENERATOR)
+            file(APPEND ${_FN} "cmake\n")
+        endif()
+        if (DEFINED ARGUMENTS_GENERATORS)
+            foreach(GENERATOR ${ARGUMENTS_GENERATORS})
+                file(APPEND ${_FN} ${GENERATOR} "\n")
+            endforeach()
+        endif()
+    endif()
+
+    if(DEFINED ARGUMENTS_BUILD_REQUIRES)
+        file(APPEND ${_FN} "[build_requires]\n")
+        foreach(BUILD_REQUIRE ${ARGUMENTS_BUILD_REQUIRES})
+            file(APPEND ${_FN} ${BUILD_REQUIRE} "\n")
+        endforeach()
+    endif()
+
+    if(DEFINED ARGUMENTS_IMPORTS)
+        file(APPEND ${_FN} "[imports]\n")
+        foreach(IMPORTS ${ARGUMENTS_IMPORTS})
+            file(APPEND ${_FN} ${IMPORTS} "\n")
+        endforeach()
+    endif()
+
+    if(DEFINED ARGUMENTS_OPTIONS)
+        file(APPEND ${_FN} "[options]\n")
+        foreach(OPTION ${ARGUMENTS_OPTIONS})
+            file(APPEND ${_FN} ${OPTION} "\n")
+        endforeach()
+    endif()
+
 endfunction()
 
 
@@ -477,7 +728,7 @@ endmacro()
 
 
 macro(conan_cmake_run)
-    parse_arguments(${ARGV})
+    conan_parse_arguments(${ARGV})
     
     if(ARGUMENTS_CONFIGURATION_TYPES AND NOT CMAKE_CONFIGURATION_TYPES)
         message(WARNING "CONFIGURATION_TYPES should only be specified for multi-configuration generators")
@@ -502,12 +753,12 @@ macro(conan_cmake_run)
             foreach(CMAKE_BUILD_TYPE ${ARGUMENTS_CONFIGURATION_TYPES})
                 set(ENV{CONAN_IMPORT_PATH} ${CMAKE_BUILD_TYPE})
                 conan_cmake_settings(settings ${ARGV})
-                conan_cmake_install(SETTINGS ${settings} ${ARGV})
+                old_conan_cmake_install(SETTINGS ${settings} ${ARGV})
             endforeach()
             set(CMAKE_BUILD_TYPE)
         else()
             conan_cmake_settings(settings ${ARGV})
-            conan_cmake_install(SETTINGS ${settings} ${ARGV})
+            old_conan_cmake_install(SETTINGS ${settings} ${ARGV})
         endif()
     endif()
 
@@ -531,26 +782,38 @@ endmacro()
 
 macro(conan_check)
     # Checks conan availability in PATH
-    # Arguments REQUIRED and VERSION are optional
+    # Arguments REQUIRED, DETECT_QUIET and VERSION are optional
     # Example usage:
     #    conan_check(VERSION 1.0.0 REQUIRED)
-    message(STATUS "Conan: checking conan executable")
-    set(options REQUIRED)
+    set(options REQUIRED DETECT_QUIET)
     set(oneValueArgs VERSION)
     cmake_parse_arguments(CONAN "${options}" "${oneValueArgs}" "" ${ARGN})
+    if(NOT CONAN_DETECT_QUIET)
+        message(STATUS "Conan: checking conan executable")
+    endif()
 
     find_program(CONAN_CMD conan)
     if(NOT CONAN_CMD AND CONAN_REQUIRED)
         message(FATAL_ERROR "Conan executable not found! Please install conan.")
     endif()
-    message(STATUS "Conan: Found program ${CONAN_CMD}")
+    if(NOT CONAN_DETECT_QUIET)
+        message(STATUS "Conan: Found program ${CONAN_CMD}")
+    endif()
     execute_process(COMMAND ${CONAN_CMD} --version
+                    RESULT_VARIABLE return_code
                     OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
                     ERROR_VARIABLE CONAN_VERSION_OUTPUT)
-    message(STATUS "Conan: Version found ${CONAN_VERSION_OUTPUT}")
+
+    if(NOT "${return_code}" STREQUAL "0")
+      message(FATAL_ERROR "Conan --version failed='${return_code}'")
+    endif()
+              
+    if(NOT CONAN_DETECT_QUIET)
+        message(STATUS "Conan: Version found ${CONAN_VERSION_OUTPUT}")
+    endif()
 
     if(DEFINED CONAN_VERSION)
-        string(REGEX MATCH ".*Conan version ([0-9]+\.[0-9]+\.[0-9]+)" FOO
+        string(REGEX MATCH ".*Conan version ([0-9]+\\.[0-9]+\\.[0-9]+)" FOO
             "${CONAN_VERSION_OUTPUT}")
         if(${CMAKE_MATCH_1} VERSION_LESS ${CONAN_VERSION})
             message(FATAL_ERROR "Conan outdated. Installed: ${CMAKE_MATCH_1}, \
@@ -562,24 +825,32 @@ endmacro()
 
 function(conan_add_remote)
     # Adds a remote
-    # Arguments URL and NAME are required, INDEX and COMMAND are optional
+    # Arguments URL and NAME are required, INDEX, COMMAND and VERIFY_SSL are optional
     # Example usage:
     #    conan_add_remote(NAME bincrafters INDEX 1
-    #       URL https://api.bintray.com/conan/bincrafters/public-conan)
-    set(oneValueArgs URL NAME INDEX COMMAND)
+    #       URL https://api.bintray.com/conan/bincrafters/public-conan
+    #       VERIFY_SSL True)
+    set(oneValueArgs URL NAME INDEX COMMAND VERIFY_SSL)
     cmake_parse_arguments(CONAN "" "${oneValueArgs}" "" ${ARGN})
 
     if(DEFINED CONAN_INDEX)
         set(CONAN_INDEX_ARG "-i ${CONAN_INDEX}")
     endif()
-    if(CONAN_COMMAND)
-       set(CONAN_CMD ${CONAN_COMMAND})
+    if(DEFINED CONAN_COMMAND)
+        set(CONAN_CMD ${CONAN_COMMAND})
     else()
         conan_check(REQUIRED)
     endif()
-    message(STATUS "Conan: Adding ${CONAN_NAME} remote repository (${CONAN_URL})")
-    execute_process(COMMAND ${CONAN_CMD} remote add ${CONAN_NAME} ${CONAN_URL}
-      ${CONAN_INDEX_ARG} -f)
+    set(CONAN_VERIFY_SSL_ARG "True")
+    if(DEFINED CONAN_VERIFY_SSL)
+        set(CONAN_VERIFY_SSL_ARG ${CONAN_VERIFY_SSL})
+    endif()
+    message(STATUS "Conan: Adding ${CONAN_NAME} remote repository (${CONAN_URL}) verify ssl (${CONAN_VERIFY_SSL_ARG})")
+    execute_process(COMMAND ${CONAN_CMD} remote add ${CONAN_NAME} ${CONAN_INDEX_ARG} -f ${CONAN_URL} ${CONAN_VERIFY_SSL_ARG}
+                    RESULT_VARIABLE return_code)
+    if(NOT "${return_code}" STREQUAL "0")
+      message(FATAL_ERROR "Conan remote failed='${return_code}'")
+    endif()
 endfunction()
 
 macro(conan_config_install)
@@ -591,7 +862,6 @@ macro(conan_config_install)
     set(oneValueArgs ITEM TYPE SOURCE TARGET VERIFY_SSL)
     set(multiValueArgs ARGS)
     cmake_parse_arguments(CONAN "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    set(CONAN_CONFIG_INSTALL_ARGS "")
 
     find_program(CONAN_CMD conan)
     if(NOT CONAN_CMD AND CONAN_REQUIRED)
@@ -599,25 +869,35 @@ macro(conan_config_install)
     endif()
 
     if(DEFINED CONAN_VERIFY_SSL)
-        set(CONAN_CONFIG_INSTALL_ARGS "${CONAN_CONFIG_INSTALL_ARGS} --verify-ssl ${CONAN_VERIFY_SSL}")
+	set(CONAN_VERIFY_SSL_ARG "--verify-ssl=${CONAN_VERIFY_SSL}")
     endif()
 
     if(DEFINED CONAN_TYPE)
-        set(CONAN_CONFIG_INSTALL_ARGS "${CONAN_CONFIG_INSTALL_ARGS} --type ${CONAN_TYPE}")
+	set(CONAN_TYPE_ARG "--type=${CONAN_TYPE}")
     endif()
 
     if(DEFINED CONAN_ARGS)
-        set(CONAN_CONFIG_INSTALL_ARGS "${CONAN_CONFIG_INSTALL_ARGS} --args \"${CONAN_ARGS}\"")
+	set(CONAN_ARGS_ARGS "--args=\"${CONAN_ARGS}\"")
     endif()
 
     if(DEFINED CONAN_SOURCE)
-        set(CONAN_CONFIG_INSTALL_ARGS "${CONAN_CONFIG_INSTALL_ARGS} --source-folder ${CONAN_SOURCE}")
+	set(CONAN_SOURCE_ARGS "--source-folder=${CONAN_SOURCE}")
     endif()
 
     if(DEFINED CONAN_TARGET)
-        set(CONAN_CONFIG_INSTALL_ARGS "${CONAN_CONFIG_INSTALL_ARGS} --target-folder ${CONAN_TARGET}")
+	set(CONAN_TARGET_ARGS "--target-folder=${CONAN_TARGET}")
     endif()
 
+    set (CONAN_CONFIG_INSTALL_ARGS 	${CONAN_VERIFY_SSL_ARG}
+					${CONAN_TYPE_ARG}
+					${CONAN_ARGS_ARGS}
+					${CONAN_SOURCE_ARGS}
+					${CONAN_TARGET_ARGS})
+
     message(STATUS "Conan: Installing config from ${CONAN_ITEM}")
-    execute_process(COMMAND ${CONAN_CMD} config install ${CONAN_CONFIG_INSTALL_ARGS} ${CONAN_ITEM})
+	execute_process(COMMAND ${CONAN_CMD} config install ${CONAN_ITEM} ${CONAN_CONFIG_INSTALL_ARGS}
+                  RESULT_VARIABLE return_code)
+  if(NOT "${return_code}" STREQUAL "0")
+    message(FATAL_ERROR "Conan config failed='${return_code}'")
+  endif()
 endmacro()
