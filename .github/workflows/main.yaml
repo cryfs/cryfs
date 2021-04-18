@@ -9,6 +9,7 @@ jobs:
       matrix:
         os:
           - macos-10.15
+          - ubuntu-18.04
           - ubuntu-20.04
         compiler:
           - cxx: g++-7
@@ -85,6 +86,29 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         shell: bash
         run: |
+          if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
+            echo Adding apt repositories for newer clang versions on Ubuntu 18.04
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+            # TODO Test if going back to a here doc works
+            sudo touch /etc/apt/sources.list.d/clang.list
+            sudo chmod o+w /etc/apt/sources.list.d/clang.list
+            echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" >> /etc/apt/sources.list.d/clang.list
+            sudo chmod o-w /etc/apt/sources.list.d/clang.list
+          elif [[ "${{matrix.os}}" == "ubuntu-20.04" ]]; then
+            echo Adding apt repositories for newer clang versions on Ubuntu 20.04
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+            sudo touch /etc/apt/sources.list.d/clang.list
+            sudo chmod o+w /etc/apt/sources.list.d/clang.list
+            echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main" >> /etc/apt/sources.list.d/clang.list
+            echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main" >> /etc/apt/sources.list.d/clang.list
+            sudo chmod o-w /etc/apt/sources.list.d/clang.list
+          fi
+          sudo apt-get update
           sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ccache ${{matrix.compiler.apt_package}}
       - name: Find pip cache location
         id: pip_cache_dir
@@ -108,6 +132,9 @@ jobs:
         shell: bash
         run: |
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
+          if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
+            python3 -m pip install setuptools
+          fi
           python3 -m pip install conan
           conan profile new default --detect
           conan profile update settings.compiler.libcxx=libstdc++11 default
@@ -144,6 +171,11 @@ jobs:
           aws-region: ${{ secrets.CACHE_AWS_REGION }}
           bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+      - name: Show ccache statistics
+        shell: bash
+        run: |
+          set -v
+          ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
