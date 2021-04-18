@@ -52,11 +52,6 @@ else()
     endif()
 endif()
 
-if(USE_CLANG_TIDY)
-    # note: for clang-tidy, we need cmake 3.6, or (if the return code should be handled correctly, e.g. on CI), we need 3.8.
-    cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-endif()
-
 # The MSVC version on AppVeyor CI needs this
 if(MSVC)
   add_definitions(/bigobj)
