@@ -89,13 +89,10 @@ jobs:
           if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
             echo Adding apt repositories for newer clang versions on Ubuntu 18.04
             wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-            # TODO Test if going back to a here doc works
             sudo touch /etc/apt/sources.list.d/clang.list
             sudo chmod o+w /etc/apt/sources.list.d/clang.list
             echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
             echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
-            echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" >> /etc/apt/sources.list.d/clang.list
-            echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" >> /etc/apt/sources.list.d/clang.list
             sudo chmod o-w /etc/apt/sources.list.d/clang.list
           elif [[ "${{matrix.os}}" == "ubuntu-20.04" ]]; then
             echo Adding apt repositories for newer clang versions on Ubuntu 20.04
@@ -104,8 +101,6 @@ jobs:
             sudo chmod o+w /etc/apt/sources.list.d/clang.list
             echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
             echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
-            echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main" >> /etc/apt/sources.list.d/clang.list
-            echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main" >> /etc/apt/sources.list.d/clang.list
             sudo chmod o-w /etc/apt/sources.list.d/clang.list
           fi
           sudo apt-get update
@@ -148,6 +143,7 @@ jobs:
           bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
           artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Configure ccache
         shell: bash
         run: |
@@ -160,7 +156,6 @@ jobs:
           ccache -p
           echo Clearing ccache statistics
           ccache -z
-      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve ccache cache
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
