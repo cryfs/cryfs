@@ -1,0 +1,13 @@
+name: 'Setup macOS'
+description: 'Setup macOS'
+inputs:
+  extra_homebrew_packages:
+    description: "Job-specific homebrew packages to install (e.g. the compiler)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install macOS dependencies
+      shell: bash
+      run: |
+        brew install ninja macfuse libomp ccache md5sha1sum ${{inputs.extra_homebrew_packages}}

@@ -1,0 +1,40 @@
+name: 'Setup Linux'
+description: 'Setup Linux'
+inputs:
+  os:
+    description: "Exact os (i.e. ubuntu version) this runs on"
+    required: true
+  extra_apt_packages:
+    description: "Job-specific apt packages to install (e.g. the compiler)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Linux dependencies
+      shell: bash
+      run: |
+        if [[ "${{inputs.os}}" == "ubuntu-18.04" ]]; then
+          echo Adding apt repositories for newer clang versions on Ubuntu 18.04
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo touch /etc/apt/sources.list.d/clang.list
+          sudo chmod o+w /etc/apt/sources.list.d/clang.list
+          echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
+          echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/clang.list
+          sudo chmod o-w /etc/apt/sources.list.d/clang.list
+        elif [[ "${{inputs.os}}" == "ubuntu-20.04" ]]; then
+          echo Adding apt repositories for newer clang versions on Ubuntu 20.04
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo touch /etc/apt/sources.list.d/clang.list
+          sudo chmod o+w /etc/apt/sources.list.d/clang.list
+          echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
+          echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" >> /etc/apt/sources.list.d/clang.list
+          sudo chmod o-w /etc/apt/sources.list.d/clang.list
+        fi
+        sudo apt-get update
+        sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ccache ${{inputs.extra_apt_packages}}
+    - name: Speed up random generator
+      run: |
+        set -v
+        # Use /dev/urandom when /dev/random is accessed to use less entropy
+        sudo cp -a /dev/urandom /dev/random
+      shell: bash
