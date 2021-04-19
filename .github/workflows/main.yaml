@@ -188,7 +188,7 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         run: |
-          brew install ninja macfuse libomp ccache ${{matrix.compiler.homebrew_package}}
+          brew install ninja macfuse libomp ccache md5sha1sum ${{matrix.compiler.homebrew_package}}
       - name: Install Linux dependencies
         if: ${{ runner.os == 'Linux' }}
         shell: bash
@@ -275,7 +275,10 @@ jobs:
       - name: Hash flags
         id: hash_flags
         run: |
-          echo "::set-output name=hash_flags::$(echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum)"
+          # Write it into file first so we fail if the command fails. Errors inside $() are ignored by bash unfortunately.
+          echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum > /tmp/hash_flags
+          echo "::set-output name=hash_flags::$(cat /tmp/hash_flags)"
+          rm /tmp/hash_flags
         shell: bash
       - name: Retrieve ccache cache
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
