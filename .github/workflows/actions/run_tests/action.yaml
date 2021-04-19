@@ -4,6 +4,9 @@ inputs:
   gtest_args:
     description: "Extra arguments for gtest runners, for example tests to exclude"
     required: true
+  extra_env_vars:
+    description: "Extra environment variables to set before running tests"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -13,6 +16,9 @@ runs:
         set -v
         echo Running on ${{runner.os}}
         cd build
+
+        export ${{ inputs.extra_env_vars }}
+
         ./test/gitversion/gitversion-test ${{inputs.gtest_args}}
         ./test/cpp-utils/cpp-utils-test ${{inputs.gtest_args}}
         ./test/parallelaccessstore/parallelaccessstore-test ${{inputs.gtest_args}}
