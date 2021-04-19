@@ -8,9 +8,9 @@
 
 set -e
 
-CXX=clang++-9
-CC=clang-9
-SCRIPT=run-clang-tidy-9.py
+CXX=clang++-11
+CC=clang-11
+SCRIPT=run-clang-tidy-11.py
 
 export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
 echo Using ${NUMCORES} cores
