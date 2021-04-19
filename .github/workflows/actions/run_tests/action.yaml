@@ -1,5 +1,9 @@
 name: 'Test'
 description: 'Run CryFS Tests'
+inputs:
+  gtest_args:
+    description: "Extra arguments for gtest runners, for example tests to exclude"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -9,17 +13,20 @@ runs:
         set -v
         echo Running on ${{runner.os}}
         cd build
-        ./test/gitversion/gitversion-test
-        ./test/cpp-utils/cpp-utils-test
-        ./test/parallelaccessstore/parallelaccessstore-test
-        ./test/blockstore/blockstore-test
-        ./test/blobstore/blobstore-test
-        ./test/cryfs/cryfs-test
+        ./test/gitversion/gitversion-test ${{inputs.gtest_args}}
+        ./test/cpp-utils/cpp-utils-test ${{inputs.gtest_args}}
+        ./test/parallelaccessstore/parallelaccessstore-test ${{inputs.gtest_args}}
+        ./test/blockstore/blockstore-test ${{inputs.gtest_args}}
+        ./test/blobstore/blobstore-test ${{inputs.gtest_args}}
+        ./test/cryfs/cryfs-test ${{inputs.gtest_args}}
         
         # TODO Also run on macOS once fixed
         if [[ "${{runner.os}}" == "macOS" ]]; then
           echo Skipping some tests because they are not fixed for macOS yet
         else
-          ./test/fspp/fspp-test
-          ./test/cryfs-cli/cryfs-cli-test
+          # TODO Also run with TSAN once fixed
+          if [[ "${{matrix.name}}" != "TSAN" ]]; then
+            ./test/fspp/fspp-test ${{inputs.gtest_args}}
+          fi
+          ./test/cryfs-cli/cryfs-cli-test ${{inputs.gtest_args}}
         fi

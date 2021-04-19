@@ -130,11 +130,55 @@ jobs:
             extra_cmake_flags: ""
             extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
             install_dependencies_manually: false
-            run_tests: false
+            run_tests: true
+          - name: ASAN
+            os: ubuntu-20.04
+            compiler:
+              cxx: clang++-11
+              cc: clang-11
+              apt_package: clang++-11
+            build_type: Debug
+            # OpenMP crashes under asan. Disable OpenMP.
+            # TODO is it enough to replace this with omp_num_threads: 1 ?
+            extra_cmake_flags: "-DDISABLE_OPENMP=ON"
+            extra_cxxflags: "-O1 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common -fsanitize-address-use-after-scope"
+            asan_options: "detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
+            install_dependencies_manually: false
+            run_tests: true
+          - name: UBSAN
+            os: ubuntu-20.04
+            compiler:
+              cxx: clang++-11
+              cc: clang-11
+              apt_package: clang++-11
+            build_type: Debug
+            # OpenMP crashes under ubsan. Disable OpenMP.
+            # TODO is it enough to replace this with omp_num_threads: 1 ?
+            extra_cmake_flags: "-DDISABLE_OPENMP=ON"
+            extra_cxxflags: "-O1 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
+            ubsan_options: "print_stacktrace=1"
+            install_dependencies_manually: false
+            run_tests: true
+          - name: TSAN
+            os: ubuntu-20.04
+            compiler:
+              cxx: clang++-11
+              cc: clang-11
+              apt_package: clang++-11
+            build_type: Debug
+            extra_cmake_flags: ""
+            extra_cxxflags: "-O2 -fsanitize=thread -fno-omit-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
+            install_dependencies_manually: false
+            run_tests: true
+            gtest_args: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_*:BacktraceTest.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*:CliTest.WorksWithCommasInBasedir"
+            omp_num_threads: 1
     runs-on: ${{matrix.os}}
     env:
       # Setting conan cache dir to a location where our Github Cache Action can find it
       CONAN_USER_HOME: "${{ github.workspace }}/conan-cache/"
+      ASAN_OPTIONS: ${{matrix.asan_options}}
+      UBSAN_OPTIONS: ${{matrix.ubsan_options}}
+      OMP_NUM_THREADS: ${{matrix.omp_num_threads}}
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -309,3 +353,5 @@ jobs:
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
+        with:
+          gtest_args: ${{matrix.gtest_args}}
