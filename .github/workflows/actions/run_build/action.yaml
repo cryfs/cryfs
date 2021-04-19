@@ -39,6 +39,12 @@ runs:
       run: |
         set -v
         export CXXFLAGS="$CXXFLAGS ${{inputs.extra_cxxflags}}"
+        if [[ "${{inputs.cxx}}" == clang* && "${{inputs.build_type}}" == "Debug" ]]; then
+          # TODO Our linux clang build actually use libstdc++11 instead of libc++, we need to fix this check
+          # TODO Add the corresponding libstdc++11 debug macros when building with gcc
+          echo We are doing a debug build on clang. Adding some more debug flags for libc++
+          export CXXFLAGS="$CXXFLAGS -D_LIBCPP_DEBUG=1 -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
+        fi
         mkdir build
         cd build
         cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache ${{inputs.extra_cmake_flags}}
