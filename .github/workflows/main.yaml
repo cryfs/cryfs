@@ -324,6 +324,7 @@ jobs:
           extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Run clang-tidy
+        id: clang_tidy
         if: ${{ matrix.run_clang_tidy }}
         shell: bash
         run: |
@@ -339,7 +340,7 @@ jobs:
             echo Did not find any clang-tidy fixes
           fi
       - name: Upload fixes as artifact
-        if: ${{ matrix.run_clang_tidy }}
+        if: ${{ always() && matrix.run_clang_tidy }}
         uses: actions/upload-artifact@v2
         with:
           name: clang-tidy-fixes
