@@ -3,6 +3,7 @@
 #include <gmock/gmock.h>
 #include <vector>
 #include <sstream>
+#include <boost/optional/optional_io.hpp>
 
 using std::string;
 using std::vector;
@@ -44,6 +45,10 @@ bool operator==(const MovableOnly& lhs, const MovableOnly& rhs) {
   return lhs.value() == rhs.value();
 }
 
+std::ostream& operator<<(std::ostream& str, const MovableOnly& v) {
+  return str << "MovableOnly(" << v.value() << ")";
+}
+
 template<class T>
 void test_with_matrix(std::vector<std::function<void(std::function<void(T&)>)>> setups, std::vector<std::function<void(T&)>> expectations) {
   for (const auto& setup: setups) {
@@ -73,9 +78,9 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_LEFT(const Left
     }, [&] (auto& obj) {
       EXPECT_EQ(expected, std::move(obj).left_opt().value());
     }, [&] (auto& obj) {
-      EXPECT_EQ(boost::none, obj.right_opt());
+      EXPECT_TRUE(boost::none == obj.right_opt());
     }, [&] (auto& obj) {
-      EXPECT_EQ(boost::none, std::move(obj).right_opt());
+      EXPECT_TRUE(boost::none == std::move(obj).right_opt());
     }
   };
 }
@@ -100,9 +105,9 @@ std::vector<std::function<void(either<Left, Right>&)>> EXPECT_IS_RIGHT(const Rig
       }, [&] (auto& obj) {
         EXPECT_EQ(expected, std::move(obj).right_opt().value());
       }, [&] (auto& obj) {
-        EXPECT_EQ(boost::none, obj.left_opt());
+        EXPECT_TRUE(boost::none == obj.left_opt());
       }, [&] (auto& obj) {
-        EXPECT_EQ(boost::none, std::move(obj).left_opt());
+        EXPECT_TRUE(boost::none == std::move(obj).left_opt());
       }
   };
 }

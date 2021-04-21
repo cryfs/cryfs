@@ -48,6 +48,9 @@ private:
   bool finished;
 };
 
+//TODO Figure out what's wrong and enable this test
+//Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.
+/*
 class FuseCloseTest: public FuseTest, public WithParamInterface<int> {
 public:
   const string FILENAME = "/myfile";
@@ -73,9 +76,7 @@ public:
 };
 INSTANTIATE_TEST_SUITE_P(FuseCloseTest, FuseCloseTest, Values(0, 1, 2, 100, 1024*1024*1024));
 
-//TODO Figure out what's wrong and enable this test
-//Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.
-/*TEST_P(FuseCloseTest, CloseFile) {
+TEST_P(FuseCloseTest, CloseFile) {
   Barrier barrier;
 
   ReturnIsFileOnLstat(FILENAME);

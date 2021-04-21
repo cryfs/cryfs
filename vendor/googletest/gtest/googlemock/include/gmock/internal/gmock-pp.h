@@ -1,5 +1,5 @@
-#ifndef THIRD_PARTY_GOOGLETEST_GOOGLEMOCK_INCLUDE_GMOCK_PP_H_
-#define THIRD_PARTY_GOOGLETEST_GOOGLEMOCK_INCLUDE_GMOCK_PP_H_
+#ifndef GOOGLEMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PP_H_
+#define GOOGLEMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PP_H_
 
 // Expands and concatenates the arguments. Constructed macros reevaluate.
 #define GMOCK_PP_CAT(_1, _2) GMOCK_PP_INTERNAL_CAT(_1, _2)
@@ -28,27 +28,25 @@
 // Requires: the number of arguments after expansion is at most 15.
 #define GMOCK_PP_NARG(...) \
   GMOCK_PP_INTERNAL_16TH(  \
-    (__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1))
+      (__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 // Returns 1 if the expansion of arguments has an unprotected comma. Otherwise
 // returns 0. Requires no more than 15 unprotected commas.
 #define GMOCK_PP_HAS_COMMA(...) \
   GMOCK_PP_INTERNAL_16TH(       \
-    (__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0))
+      (__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0))
 
 // Returns the first argument.
-#define GMOCK_PP_HEAD(...) \
-  GMOCK_PP_INTERNAL_HEAD((__VA_ARGS__))
+#define GMOCK_PP_HEAD(...) GMOCK_PP_INTERNAL_HEAD((__VA_ARGS__, unusedArg))
 
 // Returns the tail. A variadic list of all arguments minus the first. Requires
 // at least one argument.
-#define GMOCK_PP_TAIL(...) \
-  GMOCK_PP_INTERNAL_TAIL((__VA_ARGS__))
+#define GMOCK_PP_TAIL(...) GMOCK_PP_INTERNAL_TAIL((__VA_ARGS__))
 
 // Calls CAT(_Macro, NARG(__VA_ARGS__))(__VA_ARGS__)
 #define GMOCK_PP_VARIADIC_CALL(_Macro, ...) \
   GMOCK_PP_IDENTITY(                        \
-    GMOCK_PP_CAT(_Macro,  GMOCK_PP_NARG(__VA_ARGS__))(__VA_ARGS__))
+      GMOCK_PP_CAT(_Macro, GMOCK_PP_NARG(__VA_ARGS__))(__VA_ARGS__))
 
 // If the arguments after expansion have no tokens, evaluates to `1`. Otherwise
 // evaluates to `0`.
@@ -88,6 +86,14 @@
 #define GMOCK_PP_IF(_Cond, _Then, _Else) \
   GMOCK_PP_CAT(GMOCK_PP_INTERNAL_IF_, _Cond)(_Then, _Else)
 
+// Similar to GMOCK_PP_IF but takes _Then and _Else in parentheses.
+//
+// GMOCK_PP_GENERIC_IF(1, (a, b, c), (d, e, f)) => a, b, c
+// GMOCK_PP_GENERIC_IF(0, (a, b, c), (d, e, f)) => d, e, f
+//
+#define GMOCK_PP_GENERIC_IF(_Cond, _Then, _Else) \
+  GMOCK_PP_REMOVE_PARENS(GMOCK_PP_IF(_Cond, _Then, _Else))
+
 // Evaluates to the number of arguments after expansion. Identifies 'empty' as
 // 0.
 //
@@ -106,10 +112,9 @@
 
 // Expands to 1 if the first argument starts with something in parentheses,
 // otherwise to 0.
-#define GMOCK_PP_IS_BEGIN_PARENS(...)                    \
-  GMOCK_PP_HEAD(                                         \
-      GMOCK_PP_CAT(GMOCK_PP_INTERNAL_IBP_IS_VARIADIC_R_, \
-                   GMOCK_PP_INTERNAL_IBP_IS_VARIADIC_C __VA_ARGS__))
+#define GMOCK_PP_IS_BEGIN_PARENS(...)                              \
+  GMOCK_PP_HEAD(GMOCK_PP_CAT(GMOCK_PP_INTERNAL_IBP_IS_VARIADIC_R_, \
+                             GMOCK_PP_INTERNAL_IBP_IS_VARIADIC_C __VA_ARGS__))
 
 // Expands to 1 is there is only one argument and it is enclosed in parentheses.
 #define GMOCK_PP_IS_ENCLOSED_PARENS(...)             \
@@ -154,11 +159,11 @@
 #define GMOCK_PP_INTERNAL_IF_1(_Then, _Else) _Then
 #define GMOCK_PP_INTERNAL_IF_0(_Then, _Else) _Else
 
-// Because of MSVC treating a token with a comma in it as a single token when passed
-// to another macro, we need to force it to evaluate it as multiple tokens. We do that
-// by using a "IDENTITY(MACRO PARENTHESIZED_ARGS)" macro.
-// We define one per possible macro that relies on this behavior.
-// Note "_Args" must be parenthesized.
+// Because of MSVC treating a token with a comma in it as a single token when
+// passed to another macro, we need to force it to evaluate it as multiple
+// tokens. We do that by using a "IDENTITY(MACRO PARENTHESIZED_ARGS)" macro. We
+// define one per possible macro that relies on this behavior. Note "_Args" must
+// be parenthesized.
 #define GMOCK_PP_INTERNAL_INTERNAL_16TH(_1, _2, _3, _4, _5, _6, _7, _8, _9, \
                                         _10, _11, _12, _13, _14, _15, _16,  \
                                         ...)                                \
@@ -271,4 +276,4 @@
   GMOCK_PP_INTERNAL_FOR_EACH_IMPL_14(GMOCK_PP_INC(_i), _Macro, _Data,   \
                                      (GMOCK_PP_TAIL _Tuple))
 
-#endif  // THIRD_PARTY_GOOGLETEST_GOOGLEMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PP_H_
+#endif  // GOOGLEMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_PP_H_

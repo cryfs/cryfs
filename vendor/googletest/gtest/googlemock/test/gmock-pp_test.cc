@@ -22,11 +22,11 @@ static_assert(GMOCK_PP_NARG(x, y, z, w) == 4, "");
 static_assert(!GMOCK_PP_HAS_COMMA(), "");
 static_assert(GMOCK_PP_HAS_COMMA(b, ), "");
 static_assert(!GMOCK_PP_HAS_COMMA((, )), "");
+static_assert(GMOCK_PP_HAS_COMMA(GMOCK_TEST_REPLACE_comma_WITH_COMMA(comma)),
+              "");
 static_assert(
-  GMOCK_PP_HAS_COMMA(GMOCK_TEST_REPLACE_comma_WITH_COMMA(comma)), "");
-static_assert(
-  GMOCK_PP_HAS_COMMA(GMOCK_TEST_REPLACE_comma_WITH_COMMA(comma(unrelated))),
-  "");
+    GMOCK_PP_HAS_COMMA(GMOCK_TEST_REPLACE_comma_WITH_COMMA(comma(unrelated))),
+    "");
 static_assert(!GMOCK_PP_IS_EMPTY(, ), "");
 static_assert(!GMOCK_PP_IS_EMPTY(a), "");
 static_assert(!GMOCK_PP_IS_EMPTY(()), "");

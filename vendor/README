@@ -1,7 +1,6 @@
 This directory contains external projects, taken from the following locations:
-googletest: https://github.com/google/googletest/tree/release-1.10.0
- - changed: https://github.com/google/googletest/pull/2514
- - changed: In CMakeLists.txt, googletest/CMakeLists.txt and googlemock/CMakeLists.txt, add cmake_policy(SET CMP0069 NEW) to silence a warning
+googletest: https://github.com/google/googletest/commit/eaf9a3fd77869cf95befb87455a2e2a2e85044ff
+ - changed: In googletest/cmake/internal_utils.cmake, add cmake_policy(SET CMP0069 NEW) to silence a warning
 cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_2_0
  - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_2_0
  - changed: commented out line including winapifamily.h in CMakeLists.txt
