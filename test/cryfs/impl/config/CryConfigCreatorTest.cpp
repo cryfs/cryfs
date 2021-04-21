@@ -16,7 +16,6 @@ using cpputils::NoninteractiveConsole;
 using std::string;
 using std::shared_ptr;
 using std::make_shared;
-using ::testing::_;
 using ::testing::Return;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAreArray;
@@ -29,11 +28,11 @@ using ::testing::NiceMock;
 #define EXPECT_ASK_FOR_CIPHER()                                                                                        \
   EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_CIPHER()                                                                               \
-  EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0)
+  EXPECT_CALL(*console, ask(HasSubstr("block cipher"), testing::_)).Times(0)
 #define EXPECT_ASK_FOR_BLOCKSIZE()                                                                                     \
-  EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(1)
+  EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_BLOCKSIZE()                                                                            \
-  EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(0)
+  EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).Times(0)
 #define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
   EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), false)).Times(1)
 #define EXPECT_DOES_NOT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                     \
@@ -48,8 +47,8 @@ public:
               tempLocalStateDir(), localStateDir(tempLocalStateDir.path()),
               creator(console, cpputils::Random::PseudoRandom(), localStateDir),
               noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir) {
-        EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).WillRepeatedly(ChooseAnyCipher());
-        EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).WillRepeatedly(Return(0));
+        EXPECT_CALL(*console, ask(HasSubstr("block cipher"), testing::_)).WillRepeatedly(ChooseAnyCipher());
+        EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).WillRepeatedly(Return(0));
     }
     shared_ptr<NiceMock<MockConsole>> console;
     cpputils::TempDir tempLocalStateDir;

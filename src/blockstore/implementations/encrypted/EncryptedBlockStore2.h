@@ -29,7 +29,7 @@ public:
   void forEachBlock(std::function<void (const BlockId &)> callback) const override;
 
   //This function should only be used by test cases
-  void __setKey(const typename Cipher::EncryptionKey &encKey);
+  void _setKey(const typename Cipher::EncryptionKey &encKey);
 
 private:
 
@@ -188,7 +188,7 @@ uint16_t EncryptedBlockStore2<Cipher>::_readFormatHeader(const cpputils::Data &d
 }
 
 template<class Cipher>
-void EncryptedBlockStore2<Cipher>::__setKey(const typename Cipher::EncryptionKey &encKey) {
+void EncryptedBlockStore2<Cipher>::_setKey(const typename Cipher::EncryptionKey &encKey) {
   _encKey = encKey;
 }
 

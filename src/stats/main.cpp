@@ -102,7 +102,7 @@ private:
     size_t _numBlocks;
 };
 
-std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
 
@@ -116,8 +116,8 @@ std::vector<BlockId> _getKnownBlobIds(const path& basedir, const CryConfigLoader
     return knownBlobIds.blockIds();
 }
 
-std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
-    auto knownBlobIds = _getKnownBlobIds(basedir, config, localStateDir);
+std::vector<BlockId> getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+    auto knownBlobIds = getKnownBlobIds(basedir, config, localStateDir);
 
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.configFile->config()->BlocksizeBytes());
@@ -135,7 +135,7 @@ std::vector<BlockId> _getKnownBlockIds(const path& basedir, const CryConfigLoade
     return knownBlockIds.blockIds();
 }
 
-set<BlockId> _getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+set<BlockId> getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     AccumulateBlockIds allBlockIds;
     allBlockIds.reserve(blockStore->numBlocks());
@@ -218,10 +218,10 @@ int main(int argc, char* argv[]) {
     }
 
     cout << "Listing all blocks..." << flush;
-    set<BlockId> unaccountedBlocks = _getAllBlockIds(basedir, config.right(), localStateDir);
+    set<BlockId> unaccountedBlocks = getAllBlockIds(basedir, config.right(), localStateDir);
     cout << "done" << endl;
 
-    vector<BlockId> accountedBlocks = _getKnownBlockIds(basedir, config.right(), localStateDir);
+    vector<BlockId> accountedBlocks = getKnownBlockIds(basedir, config.right(), localStateDir);
     for (const BlockId& blockId : accountedBlocks) {
         auto num_erased = unaccountedBlocks.erase(blockId);
         ASSERT(1 == num_erased, "Blob id referenced by directory entry but didn't found it on disk? This can't happen.");

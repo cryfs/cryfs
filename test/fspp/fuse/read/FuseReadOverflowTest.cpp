@@ -2,9 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
-
-
 using namespace fspp::fuse;
 
 class FuseReadOverflowTest: public FuseReadTest {
@@ -16,7 +13,7 @@ public:
   void SetUp() override {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
-    EXPECT_CALL(*fsimpl, read(0, _, _, _)).WillRepeatedly(ReturnSuccessfulReadRegardingSize(FILESIZE));
+    EXPECT_CALL(*fsimpl, read(0, testing::_, testing::_, testing::_)).WillRepeatedly(ReturnSuccessfulReadRegardingSize(FILESIZE));
   }
 };
 

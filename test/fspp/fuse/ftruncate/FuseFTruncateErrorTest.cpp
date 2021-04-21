@@ -2,7 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::Throw;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -16,7 +15,7 @@ INSTANTIATE_TEST_SUITE_P(FuseFTruncateErrorTest, FuseFTruncateErrorTest, Values(
 TEST_P(FuseFTruncateErrorTest, ReturnedErrorIsCorrect) {
   ReturnIsFileOnLstat(FILENAME);
   OnOpenReturnFileDescriptor(FILENAME, 0);
-  EXPECT_CALL(*fsimpl, ftruncate(0, _))
+  EXPECT_CALL(*fsimpl, ftruncate(0, testing::_))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
   //Needed to make ::ftruncate system call return successfully
   ReturnIsFileOnFstat(0);

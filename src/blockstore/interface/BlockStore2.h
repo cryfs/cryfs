@@ -31,12 +31,12 @@ public:
   virtual void store(const BlockId &blockId, const cpputils::Data &data) = 0;
 
   BlockId create(const cpputils::Data& data) {
-    BlockId blockId = createBlockId();
-    bool success = tryCreate(blockId, data);
-    if (success) {
-      return blockId;
-    } else {
-      return create(data);
+    while (true) {
+      BlockId blockId = createBlockId();
+      bool success = tryCreate(blockId, data);
+      if (success) {
+        return blockId;
+      }
     }
   }
 

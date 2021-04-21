@@ -14,7 +14,7 @@
 namespace cpputils {
 
 namespace details {
-class _DontEchoStdinToStdoutRAII;
+class DontEchoStdinToStdoutRAII;
 }
 
 class DontEchoStdinToStdoutRAII final {
@@ -22,7 +22,7 @@ public:
 	DontEchoStdinToStdoutRAII();
 	~DontEchoStdinToStdoutRAII();
 private:
-	cpputils::unique_ref<details::_DontEchoStdinToStdoutRAII> raii;
+	cpputils::unique_ref<details::DontEchoStdinToStdoutRAII> raii;
 
 	DISALLOW_COPY_AND_ASSIGN(DontEchoStdinToStdoutRAII);
 };

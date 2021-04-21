@@ -32,19 +32,19 @@ TEST_F(SCryptParametersTest, Salt_SaveAndLoad) {
 
 TEST_F(SCryptParametersTest, N) {
     SCryptParameters cfg(Data(0), 1024, 0, 0);
-    EXPECT_EQ(1024u, cfg.N());
+    EXPECT_EQ(1024u, cfg.n());
 }
 
 TEST_F(SCryptParametersTest, N_Move) {
     SCryptParameters cfg(Data(0), 1024, 0, 0);
     SCryptParameters moved = std::move(cfg);
-    EXPECT_EQ(1024u, moved.N());
+    EXPECT_EQ(1024u, moved.n());
 }
 
 TEST_F(SCryptParametersTest, N_SaveAndLoad) {
     SCryptParameters cfg(Data(0), 1024, 0, 0);
     SCryptParameters loaded = SaveAndLoad(cfg);
-    EXPECT_EQ(1024u, loaded.N());
+    EXPECT_EQ(1024u, loaded.n());
 }
 
 TEST_F(SCryptParametersTest, r) {

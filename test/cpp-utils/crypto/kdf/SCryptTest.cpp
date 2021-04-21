@@ -52,7 +52,7 @@ TEST_F(SCryptTest, UsesCorrectSettings) {
     auto derivedKey = scrypt.deriveNewKey(16, "mypassword");
     auto parameters = SCryptParameters::deserialize(derivedKey.kdfParameters);
     EXPECT_EQ(SCrypt::TestSettings.SALT_LEN, parameters.salt().size());
-    EXPECT_EQ(SCrypt::TestSettings.N, parameters.N());
+    EXPECT_EQ(SCrypt::TestSettings.N, parameters.n());
     EXPECT_EQ(SCrypt::TestSettings.r, parameters.r());
     EXPECT_EQ(SCrypt::TestSettings.p, parameters.p());
 }
@@ -62,7 +62,7 @@ TEST_F(SCryptTest, UsesCorrectDefaultSettings) {
     auto derivedKey = scrypt.deriveNewKey(16, "mypassword");
     auto parameters = SCryptParameters::deserialize(derivedKey.kdfParameters);
     EXPECT_EQ(SCrypt::DefaultSettings.SALT_LEN, parameters.salt().size());
-    EXPECT_EQ(SCrypt::DefaultSettings.N, parameters.N());
+    EXPECT_EQ(SCrypt::DefaultSettings.N, parameters.n());
     EXPECT_EQ(SCrypt::DefaultSettings.r, parameters.r());
     EXPECT_EQ(SCrypt::DefaultSettings.p, parameters.p());
 }

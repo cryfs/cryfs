@@ -34,6 +34,7 @@ bool readingFileIsSuccessful(const bf::path& filename) {
   return file.good();
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void recursive_copy(const bf::path &src, const bf::path &dst) {
   if (bf::exists(dst)) {
     throw std::runtime_error(dst.generic_string() + " already exists");

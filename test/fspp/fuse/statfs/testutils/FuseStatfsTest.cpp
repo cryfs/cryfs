@@ -1,7 +1,6 @@
 #include "FuseStatfsTest.h"
 
 using std::function;
-using ::testing::_;
 using ::testing::Invoke;
 
 void FuseStatfsTest::Statfs(const std::string &path) {
@@ -33,7 +32,7 @@ int FuseStatfsTest::StatfsReturnError(const std::string &path, struct ::statvfs 
 
 struct ::statvfs FuseStatfsTest::CallStatfsWithImpl(function<void(struct ::statvfs*)> implementation) {
   ReturnIsFileOnLstat(FILENAME);
-  EXPECT_CALL(*fsimpl, statfs(_)).WillRepeatedly(Invoke([implementation](struct ::statvfs *stat) {
+  EXPECT_CALL(*fsimpl, statfs(testing::_)).WillRepeatedly(Invoke([implementation](struct ::statvfs *stat) {
     implementation(stat);
   }));
 

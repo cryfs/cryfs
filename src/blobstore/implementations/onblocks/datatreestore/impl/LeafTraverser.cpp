@@ -28,6 +28,7 @@ namespace blobstore {
                 _traverseAndUpdateRoot(root, beginIndex, endIndex, true, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
             }
 
+            // NOLINTNEXTLINE(misc-no-recursion)
             void LeafTraverser::_traverseAndUpdateRoot(unique_ref<DataNode>* root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
@@ -83,6 +84,7 @@ namespace blobstore {
                 return DataNode::convertToNewInnerNode(std::move(root), _nodeStore->layout(), *copyOfOldRoot);
             }
 
+            // NOLINTNEXTLINE(misc-no-recursion)
             void LeafTraverser::_traverseExistingSubtree(const blockstore::BlockId &blockId, uint8_t depth, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 if (depth == 0) {
                     ASSERT(beginIndex <= 1 && endIndex <= 1,
@@ -111,6 +113,7 @@ namespace blobstore {
                 }
             }
 
+            // NOLINTNEXTLINE(misc-no-recursion)
             void LeafTraverser::_traverseExistingSubtree(DataInnerNode *root, uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, bool isLeftBorderOfTraversal, bool isRightBorderNode, bool growLastLeaf, function<void (uint32_t index, bool isRightBorderLeaf, LeafHandle leaf)> onExistingLeaf, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 ASSERT(beginIndex <= endIndex, "Invalid parameters");
 
@@ -169,6 +172,7 @@ namespace blobstore {
                 }
             }
 
+            // NOLINTNEXTLINE(misc-no-recursion)
             unique_ref<DataNode> LeafTraverser::_createNewSubtree(uint32_t beginIndex, uint32_t endIndex, uint32_t leafOffset, uint8_t depth, function<Data (uint32_t index)> onCreateLeaf, function<void (DataInnerNode *node)> onBacktrackFromSubtree) {
                 ASSERT(!_readOnlyTraversal, "Can't create a new subtree in a read-only traversal");
 
@@ -242,6 +246,7 @@ namespace blobstore {
                 }
             }
 
+            // NOLINTNEXTLINE(misc-no-recursion)
             unique_ref<DataNode> LeafTraverser::_whileRootHasOnlyOneChildRemoveRootReturnChild(const blockstore::BlockId &blockId) {
                 ASSERT(!_readOnlyTraversal, "Can't decrease tree depth in a read-only traversal");
 

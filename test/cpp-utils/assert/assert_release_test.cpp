@@ -3,7 +3,7 @@
 #include <regex>
 
 #ifdef NDEBUG
-#define _REAL_NDEBUG
+#define REAL_NDEBUG_
 #endif
 
 //Include the ASSERT macro for a release build
@@ -39,7 +39,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
   }
 }
 
-#if !(defined(_MSC_VER) && defined(_REAL_NDEBUG))
+#if !(defined(_MSC_VER) && defined(REAL_NDEBUG_))
 TEST(AssertTest_ReleaseBuild, AssertMessageContainsBacktrace) {
   try {
     ASSERT(2==5, "my message");

@@ -33,7 +33,6 @@ using std::shared_ptr;
 using std::make_shared;
 using ::testing::Return;
 using ::testing::HasSubstr;
-using ::testing::_;
 
 using namespace cryfs;
 
@@ -343,7 +342,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), testing::_)).Times(0);
 
     CreateWithVersion(gitversion::VersionString(), CryConfig::FilesystemFormatVersion);
     EXPECT_TRUE(LoadOrCreate().is_right());
@@ -376,7 +375,7 @@ TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), testing::_)).Times(0);
 
     string version = olderVersion();
     CreateWithVersion(version, version);
@@ -384,7 +383,7 @@ TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramAr
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_InteractiveMode) {
-  EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), _)).Times(0);
+  EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), testing::_)).Times(0);
 
   string version = olderVersion();
   CreateWithVersion(version, version);

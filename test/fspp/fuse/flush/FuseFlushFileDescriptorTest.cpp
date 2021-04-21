@@ -1,6 +1,5 @@
 #include "testutils/FuseFlushTest.h"
 
-using ::testing::_;
 using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -26,7 +25,7 @@ INSTANTIATE_TEST_SUITE_P(FuseFlushFileDescriptorTest, FuseFlushFileDescriptorTes
 TEST_P(FuseFlushFileDescriptorTest, FlushOnCloseFile) {
   ReturnIsFileOnLstat(FILENAME);
 
-  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), _)).WillOnce(Return(GetParam()));
+  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), testing::_)).WillOnce(Return(GetParam()));
   EXPECT_CALL(*fsimpl, flush(Eq(GetParam()))).Times(1);
 
   OpenAndCloseFile(FILENAME);

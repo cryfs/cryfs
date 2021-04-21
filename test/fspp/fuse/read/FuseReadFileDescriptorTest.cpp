@@ -2,7 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;
@@ -17,7 +16,7 @@ INSTANTIATE_TEST_SUITE_P(FuseReadFileDescriptorTest, FuseReadFileDescriptorTest,
 TEST_P(FuseReadFileDescriptorTest, FileDescriptorIsCorrect) {
   ReturnIsFileOnLstatWithSize(FILENAME, fspp::num_bytes_t(1));
   OnOpenReturnFileDescriptor(FILENAME, GetParam());
-  EXPECT_CALL(*fsimpl, read(Eq(GetParam()), _, _, _))
+  EXPECT_CALL(*fsimpl, read(Eq(GetParam()), testing::_, testing::_, testing::_))
     .Times(1).WillOnce(ReturnSuccessfulRead);
 
   std::array<char, 1> buf{};

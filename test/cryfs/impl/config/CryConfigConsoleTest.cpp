@@ -14,7 +14,6 @@ using cpputils::NoninteractiveConsole;
 using std::string;
 using std::shared_ptr;
 using std::make_shared;
-using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ValuesIn;
@@ -37,16 +36,16 @@ public:
 class CryConfigConsoleTest_Cipher: public CryConfigConsoleTest {};
 
 #define EXPECT_ASK_FOR_CIPHER()                                                                                        \
-  EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(false));                        \
+  EXPECT_CALL(*console, askYesNo("Use default settings?", testing::_)).Times(1).WillOnce(Return(false));                        \
   EXPECT_CALL(*console, ask(HasSubstr("block cipher"), UnorderedElementsAreArray(CryCiphers::supportedCipherNames()))).Times(1)
 
 #define EXPECT_ASK_FOR_BLOCKSIZE()                                                                                     \
-  EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(false));                        \
-  EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(1)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", testing::_)).Times(1).WillOnce(Return(false));                        \
+  EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).Times(1)
 
 #define EXPECT_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION()                                                              \
-  EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(false));                        \
-  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), _)).Times(1)
+  EXPECT_CALL(*console, askYesNo("Use default settings?", testing::_)).Times(1).WillOnce(Return(false));                        \
+  EXPECT_CALL(*console, askYesNo(HasSubstr("missing block"), testing::_)).Times(1)
 
 TEST_F(CryConfigConsoleTest_Cipher, AsksForCipher) {
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseAnyCipher());
@@ -54,15 +53,15 @@ TEST_F(CryConfigConsoleTest_Cipher, AsksForCipher) {
 }
 
 TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipher) {
-    EXPECT_CALL(*console, askYesNo("Use default settings?", _)).Times(1).WillOnce(Return(true));
-    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo("Use default settings?", testing::_)).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), testing::_)).Times(0);
     string cipher = cryconsole.askCipher();
     EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
 }
 
 TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultCipherWhenNoninteractiveEnvironment) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("default"), _)).Times(0);
-    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("default"), testing::_)).Times(0);
+    EXPECT_CALL(*console, ask(HasSubstr("block cipher"), testing::_)).Times(0);
     string cipher = noninteractiveCryconsole.askCipher();
     EXPECT_EQ(CryConfigConsole::DEFAULT_CIPHER, cipher);
 }
@@ -78,8 +77,8 @@ TEST_F(CryConfigConsoleTest_Cipher, AsksForMissingBlockIsIntegrityViolation) {
 }
 
 TEST_F(CryConfigConsoleTest_Cipher, ChooseDefaultBlocksizeWhenNoninteractiveEnvironment) {
-    EXPECT_CALL(*console, askYesNo(HasSubstr("default"), _)).Times(0);
-    EXPECT_CALL(*console, ask(HasSubstr("block size"), _)).Times(0);
+    EXPECT_CALL(*console, askYesNo(HasSubstr("default"), testing::_)).Times(0);
+    EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).Times(0);
     uint32_t blocksize = noninteractiveCryconsole.askBlocksizeBytes();
     EXPECT_EQ(CryConfigConsole::DEFAULT_BLOCKSIZE_BYTES, blocksize);
 }
@@ -90,11 +89,11 @@ public:
     optional<string> cipherWarning = CryCiphers::find(cipherName).warning();
 
     void EXPECT_DONT_SHOW_WARNING() {
-        EXPECT_CALL(*console, askYesNo(_, _)).Times(0);
+        EXPECT_CALL(*console, askYesNo(testing::_, testing::_)).Times(0);
     }
 
     void EXPECT_SHOW_WARNING(const string &warning) {
-        EXPECT_CALL(*console, askYesNo(HasSubstr(warning), _)).WillOnce(Return(true));
+        EXPECT_CALL(*console, askYesNo(HasSubstr(warning), testing::_)).WillOnce(Return(true));
     }
 };
 

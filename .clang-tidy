@@ -29,6 +29,7 @@ Checks: |
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-macro-usage,
   -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-avoid-non-const-global-variables,
   -clang-analyzer-optin.cplusplus.VirtualCall,
   -clang-analyzer-cplusplus.NewDeleteLeaks,
   -misc-macro-parentheses,

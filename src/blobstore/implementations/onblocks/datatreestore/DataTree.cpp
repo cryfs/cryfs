@@ -101,6 +101,7 @@ uint32_t DataTree::forceComputeNumLeaves() const {
   return numLeaves();
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 DataTree::SizeCache DataTree::_computeSizeCache(const DataNode &node) const {
   const DataLeafNode *leaf = dynamic_cast<const DataLeafNode*>(&node);
   if (leaf != nullptr) {

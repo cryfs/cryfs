@@ -78,14 +78,14 @@ TEST_F(EncryptedBlockStoreTest, LoadingWithSameKeyWorks_WriteSeparately) {
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteOnCreate) {
   auto blockId = CreateBlockDirectlyWithFixtureAndReturnKey();
-  blockStore->__setKey(FakeAuthenticatedCipher::Key2());
+  blockStore->_setKey(FakeAuthenticatedCipher::Key2());
   auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }
 
 TEST_F(EncryptedBlockStoreTest, LoadingWithDifferentKeyDoesntWork_WriteSeparately) {
   auto blockId = CreateBlockWriteFixtureToItAndReturnKey();
-  blockStore->__setKey(FakeAuthenticatedCipher::Key2());
+  blockStore->_setKey(FakeAuthenticatedCipher::Key2());
   auto loaded = blockStore->load(blockId);
   EXPECT_EQ(boost::none, loaded);
 }

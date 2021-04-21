@@ -39,6 +39,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(misc-no-recursion)
   int ForEachLeaf(blobstore::onblocks::datanodestore::DataNode *node, int firstLeafIndex, int endLeafIndex, std::function<void (blobstore::onblocks::datanodestore::DataLeafNode*, int)> action) {
     if (firstLeafIndex == endLeafIndex) {
       return firstLeafIndex;

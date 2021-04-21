@@ -10,7 +10,6 @@ using ::testing::Test;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Return;
-using ::testing::_;
 
 using cpputils::TempFile;
 
@@ -276,7 +275,7 @@ TEST_F(DataTestWithMockAllocator, whenMoveAssigning_thenOnlyFreesOnce) {
 
 TEST_F(DataTestWithMockAllocator, whenMoveConstructing_thenOnlyFreesWhenSecondIsDestructed) {
     EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
-    EXPECT_CALL(*allocator_ptr, free(_, _)).Times(0);
+    EXPECT_CALL(*allocator_ptr, free(testing::_, testing::_)).Times(0);
 
     auto data = std::make_unique<Data>(5, std::move(allocator));
     Data data2 = std::move(*data);
@@ -287,7 +286,7 @@ TEST_F(DataTestWithMockAllocator, whenMoveConstructing_thenOnlyFreesWhenSecondIs
 
 TEST_F(DataTestWithMockAllocator, whenMoveAssigning_thenOnlyFreesWhenSecondIsDestructed) {
     EXPECT_CALL(*allocator, allocate(5)).Times(1).WillOnce(Return(&ptr_target));
-    EXPECT_CALL(*allocator_ptr, free(_, _)).Times(0);
+    EXPECT_CALL(*allocator_ptr, free(testing::_, testing::_)).Times(0);
 
     auto data = std::make_unique<Data>(5, std::move(allocator));
     Data data2(3);

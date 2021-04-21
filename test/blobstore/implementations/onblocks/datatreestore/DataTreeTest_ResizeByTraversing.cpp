@@ -64,6 +64,7 @@ public:
     return CreateTree(CreateFourLevelMinDataWithLastLeafSize(size));
   }
 
+  // NOLINTNEXTLINE(misc-no-recursion)
   void EXPECT_IS_LEFTMAXDATA_TREE(const BlockId &blockId) {
     auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
@@ -75,6 +76,7 @@ public:
     }
   }
 
+  // NOLINTNEXTLINE(misc-no-recursion)
   void EXPECT_IS_MAXDATA_TREE(const BlockId &blockId) {
     auto root = nodeStore->load(blockId).value();
     DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
@@ -118,6 +120,7 @@ public:
     tree->flush();
   }
 
+  // NOLINTNEXTLINE(misc-no-recursion)
   unique_ref<DataLeafNode> LastLeaf(const BlockId &blockId) {
     auto root = nodeStore->load(blockId).value();
     auto leaf = dynamic_pointer_move<DataLeafNode>(root);

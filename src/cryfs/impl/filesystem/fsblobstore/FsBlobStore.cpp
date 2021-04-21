@@ -54,7 +54,8 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
 
         return fsBlobStore;
     }
-
+    
+    // NOLINTNEXTLINE(misc-no-recursion)
     void FsBlobStore::_migrate(unique_ref<blobstore::Blob> node, const blockstore::BlockId &parentId, SignalCatcher* signalCatcher, std::function<void(uint32_t numNodes)> perBlobCallback) {
         FsBlobView::migrate(node.get(), parentId);
         perBlobCallback(node->numNodes());

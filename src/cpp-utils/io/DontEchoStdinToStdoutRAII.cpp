@@ -8,23 +8,23 @@
 namespace cpputils {
 namespace details {
 
-class _DontEchoStdinToStdoutRAII final {
+class DontEchoStdinToStdoutRAII final {
 public:
-    _DontEchoStdinToStdoutRAII() : _old_state() {
+    DontEchoStdinToStdoutRAII() : _old_state() {
         tcgetattr(STDIN_FILENO, &_old_state);
         termios new_state = _old_state;
         new_state.c_lflag &= ~ECHO;
         tcsetattr(STDIN_FILENO, TCSANOW, &new_state);
     }
 
-    ~_DontEchoStdinToStdoutRAII() {
+    ~DontEchoStdinToStdoutRAII() {
         tcsetattr(STDIN_FILENO, TCSANOW, &_old_state);
     }
 
 private:
     termios _old_state;
 
-    DISALLOW_COPY_AND_ASSIGN(_DontEchoStdinToStdoutRAII);
+    DISALLOW_COPY_AND_ASSIGN(DontEchoStdinToStdoutRAII);
 };
 
 }
@@ -66,7 +66,7 @@ using cpputils::make_unique_ref;
 namespace cpputils {
 
 DontEchoStdinToStdoutRAII::DontEchoStdinToStdoutRAII()
-    : raii(make_unique_ref<details::_DontEchoStdinToStdoutRAII>()) {}
+    : raii(make_unique_ref<details::DontEchoStdinToStdoutRAII>()) {}
 
 DontEchoStdinToStdoutRAII::~DontEchoStdinToStdoutRAII() {}
 

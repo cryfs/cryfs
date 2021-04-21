@@ -79,12 +79,12 @@ private:
 public:
 
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
-  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFile;
-  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFileWithSize(fspp::num_bytes_t size);
-  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstat;
-  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size);
-  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsDir;
-  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnDoesntExist;
+  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFile; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFileWithSize(fspp::num_bytes_t size); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstat; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsDir; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnDoesntExist; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
   void ReturnIsFileOnLstat(const boost::filesystem::path &path);
   void ReturnIsFileOnLstatWithSize(const boost::filesystem::path &path, fspp::num_bytes_t size);

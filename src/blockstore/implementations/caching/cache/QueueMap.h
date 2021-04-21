@@ -80,11 +80,11 @@ public:
 private:
   class Entry final {
   public:
-    Entry(Entry *prev_, Entry *next_): prev(prev_), next(next_), key(nullptr), __value() {
+    Entry(Entry *prev_, Entry *next_): prev(prev_), next(next_), key(nullptr), _value_() {
     }
     void init(const Key *key_, Value value_) {
       key = key_;
-      new(__value.data()) Value(std::move(value_));
+      new(_value_.data()) Value(std::move(value_));
     }
     Value release() {
       Value value = std::move(*_value());
@@ -99,9 +99,9 @@ private:
     const Key *key;
   private:
     Value *_value() {
-      return reinterpret_cast<Value*>(__value.data());
+      return reinterpret_cast<Value*>(_value_.data());
     }
-    alignas(Value) std::array<char, sizeof(Value)> __value;
+    alignas(Value) std::array<char, sizeof(Value)> _value_;
     DISALLOW_COPY_AND_ASSIGN(Entry);
   };
 

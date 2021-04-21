@@ -6,9 +6,9 @@
 
 namespace blockstore {
 
-struct _BlockIdTag final {};
+struct BlockIdTag final {};
 // TODO Split from a BlobId (i.e. IdWrapper<BlobIdTag>)
-using BlockId = IdWrapper<_BlockIdTag>;
+using BlockId = IdWrapper<BlockIdTag>;
 
 }
 

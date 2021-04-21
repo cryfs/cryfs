@@ -13,7 +13,6 @@ using cryfs::CryPresetPasswordBasedKeyProvider;
 using testing::Invoke;
 using testing::Eq;
 using testing::StrEq;
-using testing::_;
 
 namespace {
 
@@ -46,7 +45,7 @@ TEST(CryPresetPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
     auto kdf = make_unique_ref<MockKDF>();
     const Data kdfParameters = DataFixture::generate(100);
 
-    EXPECT_CALL(*kdf, deriveExistingKey(Eq(keySize), StrEq(password), _)).Times(1).WillOnce(Invoke([&] (auto, auto, const auto& kdfParams) {
+    EXPECT_CALL(*kdf, deriveExistingKey(Eq(keySize), StrEq(password), testing::_)).Times(1).WillOnce(Invoke([&] (auto, auto, const auto& kdfParams) {
         EXPECT_EQ(kdfParameters, kdfParams);
         return key;
     }));

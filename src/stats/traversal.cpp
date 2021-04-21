@@ -24,6 +24,7 @@ void forEachBlock(BlockStore* blockStore, const vector<function<void (const Bloc
     });
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void forEachReachableBlob(FsBlobStore* blobStore, const BlockId& rootId, const vector<function<void (const BlockId& blobId)>>& callbacks) {
     for (const auto& callback : callbacks) {
         callback(rootId);
@@ -47,6 +48,7 @@ void forEachReachableBlob(FsBlobStore* blobStore, const BlockId& rootId, const v
     }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void forEachReachableBlockInBlob(DataNodeStore* nodeStore, const BlockId& rootId, const vector<function<void (const BlockId& blockId)>>& callbacks) {
     for (const auto& callback : callbacks) {
         callback(rootId);

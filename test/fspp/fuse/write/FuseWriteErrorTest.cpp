@@ -2,7 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;
@@ -27,7 +26,7 @@ INSTANTIATE_TEST_SUITE_P(FuseWriteErrorTest, FuseWriteErrorTest, Values(EAGAIN, 
 
 
 TEST_P(FuseWriteErrorTest, ReturnErrorOnFirstWriteCall) {
-  EXPECT_CALL(*fsimpl, write(0, _, _, _))
+  EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, testing::_))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT.value()];
@@ -41,13 +40,13 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnSecondWriteCall) {
   // We store the number of bytes the first call could successfully write and check later that our
   // write syscall returns exactly this number of bytes
   fspp::num_bytes_t successfullyWrittenBytes = fspp::num_bytes_t(-1);
-  EXPECT_CALL(*fsimpl, write(0, _, _, Eq(fspp::num_bytes_t(0))))
+  EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, Eq(fspp::num_bytes_t(0))))
     .Times(1)
     .WillOnce(Invoke([&successfullyWrittenBytes](int, const void*, fspp::num_bytes_t count, fspp::num_bytes_t) {
       // Store the number of successfully written bytes
       successfullyWrittenBytes = count;
     }));
-  EXPECT_CALL(*fsimpl, write(0, _, _, Ne(fspp::num_bytes_t(0))))
+  EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, Ne(fspp::num_bytes_t(0))))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
   char *buf = new char[WRITECOUNT.value()];

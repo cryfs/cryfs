@@ -228,6 +228,7 @@ void DataTreeTest::EXPECT_IS_FULL_THREELEVEL_TREE(const BlockId &blockId) {
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void DataTreeTest::CHECK_DEPTH(int depth, const BlockId &blockId) {
   if (depth == 0) {
     EXPECT_IS_LEAF_NODE(blockId);

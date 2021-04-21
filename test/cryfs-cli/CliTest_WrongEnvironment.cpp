@@ -6,7 +6,6 @@ namespace bf = boost::filesystem;
 using ::testing::Values;
 using ::testing::WithParamInterface;
 using ::testing::Return;
-using ::testing::_;
 using std::vector;
 using cpputils::TempFile;
 using cryfs::ErrorCode;
@@ -122,7 +121,7 @@ TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist) {
     _basedir.remove();
     // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
-    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(false));
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", testing::_)).WillByDefault(Return(false));
     Test_Run_Error("Error 16: base directory not found", ErrorCode::InaccessibleBaseDir);
 }
 
@@ -130,7 +129,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
     _basedir.remove();
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
-    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("Error 16: base directory not found", ErrorCode::InaccessibleBaseDir);
     cpputils::unsetenv("CRYFS_FRONTEND");
@@ -139,7 +138,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
     _basedir.remove();
-    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
     EXPECT_TRUE(bf::exists(_basedir.path()) && bf::is_directory(_basedir.path()));
 }
@@ -183,7 +182,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_NoPermission) {
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist) {
     _mountdir.remove();
     // ON_CALL and not EXPECT_CALL, because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
-    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", _)).WillByDefault(Return(false));
+    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", testing::_)).WillByDefault(Return(false));
     Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
 }
 
@@ -191,7 +190,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
     _mountdir.remove();
     // We can't set an EXPECT_CALL().Times(0), because this is a death test (i.e. it is forked) and gmock EXPECT_CALL in fork children don't report to parents.
     // So we set a default answer that shouldn't crash and check it's not called by checking that it crashes.
-    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", _)).WillByDefault(Return(true));
+    ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     cpputils::setenv("CRYFS_FRONTEND", "noninteractive");
     Test_Run_Error("mount directory not found", ErrorCode::InaccessibleMountDir);
     cpputils::unsetenv("CRYFS_FRONTEND");
@@ -200,7 +199,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
     _mountdir.remove();
-    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", _)).WillByDefault(Return(true));
+    ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
     EXPECT_TRUE(bf::exists(_mountdir.path()) && bf::is_directory(_mountdir.path()));
 }

@@ -2,6 +2,10 @@
 #include "../../testutils/OpenFileHandle.h"
 #include <condition_variable>
 
+//TODO Figure out what's wrong and enable this test
+//Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.
+/*
+
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
@@ -48,9 +52,6 @@ private:
   bool finished;
 };
 
-//TODO Figure out what's wrong and enable this test
-//Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.
-/*
 class FuseCloseTest: public FuseTest, public WithParamInterface<int> {
 public:
   const string FILENAME = "/myfile";

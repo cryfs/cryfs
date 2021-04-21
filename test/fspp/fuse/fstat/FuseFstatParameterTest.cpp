@@ -2,7 +2,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Eq;
@@ -28,7 +27,7 @@ TEST_P(FuseFstatParameterTest, FileDescriptorIsCorrect) {
   ReturnDoesntExistOnLstat(FILENAME);
   OnCreateAndOpenReturnFileDescriptor(FILENAME, GetParam());
 
-  EXPECT_CALL(*fsimpl, fstat(Eq(GetParam()), _)).Times(1).WillOnce(ReturnIsFileFstat);
+  EXPECT_CALL(*fsimpl, fstat(Eq(GetParam()), testing::_)).Times(1).WillOnce(ReturnIsFileFstat);
 
   CallFstat(FILENAME);
 }

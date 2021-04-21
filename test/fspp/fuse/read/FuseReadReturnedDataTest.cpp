@@ -9,7 +9,6 @@
 #include <tuple>
 #include <cstdlib>
 
-using ::testing::_;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Combine;
@@ -52,7 +51,7 @@ public:
     testFile = std::make_unique<InMemoryFile>(DataFixture::generate(testData.fileSize().value()));
     ReturnIsFileOnLstatWithSize(FILENAME, testData.fileSize());
     OnOpenReturnFileDescriptor(FILENAME, 0);
-    EXPECT_CALL(*fsimpl, read(0, _, _, _))
+    EXPECT_CALL(*fsimpl, read(0, testing::_, testing::_, testing::_))
       .WillRepeatedly(ReadFromFile);
   }
 

@@ -2,7 +2,6 @@
 #include <blobstore/implementations/onblocks/datatreestore/impl/LeafTraverser.h>
 #include <gmock/gmock.h>
 
-using ::testing::_;
 using ::testing::Invoke;
 using ::testing::Eq;
 
@@ -68,8 +67,8 @@ public:
   }
 
   void EXPECT_DONT_TRAVERSE_ANY_LEAVES() {
-    EXPECT_CALL(traversor, calledExistingLeaf(_, _, _)).Times(0);
-    EXPECT_CALL(traversor, calledCreateLeaf(_)).Times(0);
+    EXPECT_CALL(traversor, calledExistingLeaf(testing::_, testing::_, testing::_)).Times(0);
+    EXPECT_CALL(traversor, calledCreateLeaf(testing::_)).Times(0);
   }
 
   void TraverseLeaves(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool expectReadOnly) {

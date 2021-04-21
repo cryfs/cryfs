@@ -18,7 +18,6 @@ using testing::Invoke;
 using testing::Eq;
 using testing::StrEq;
 using testing::NiceMock;
-using testing::_;
 
 namespace {
 
@@ -76,7 +75,7 @@ TEST_F(CryPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
 
   EXPECT_CALL(askPasswordForNewFilesystem, call()).Times(0);
   EXPECT_CALL(askPasswordForExistingFilesystem, call()).Times(1).WillOnce(Return(password));
-  EXPECT_CALL(*kdf, deriveExistingKey(Eq(keySize), StrEq(password), _)).Times(1).WillOnce(Invoke([&] (auto, auto, const auto& kdfParams) {
+  EXPECT_CALL(*kdf, deriveExistingKey(Eq(keySize), StrEq(password), testing::_)).Times(1).WillOnce(Invoke([&] (auto, auto, const auto& kdfParams) {
     EXPECT_EQ(kdfParameters, kdfParams);
     return key;
   }));

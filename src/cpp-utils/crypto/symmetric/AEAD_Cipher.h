@@ -10,12 +10,12 @@
 
 namespace cpputils {
 
-template<class CryptoPPCipher, unsigned int _KEY_SIZE, unsigned int _IV_SIZE, unsigned int _TAG_SIZE>
+template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, unsigned int TAG_SIZE_>
 class AEADCipher {
 public:
     using EncryptionKey = cpputils::EncryptionKey;
 
-    static constexpr unsigned int KEYSIZE = _KEY_SIZE;
+    static constexpr unsigned int KEYSIZE = KEYSIZE_;
     static constexpr unsigned int STRING_KEYSIZE = 2 * KEYSIZE;
 
     static constexpr unsigned int ciphertextSize(unsigned int plaintextBlockSize) {
@@ -30,17 +30,17 @@ public:
     static boost::optional<Data> decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey);
 
 private:
-    static constexpr unsigned int IV_SIZE = _IV_SIZE;
-    static constexpr unsigned int TAG_SIZE = _TAG_SIZE;
+    static constexpr unsigned int IV_SIZE = IV_SIZE_;
+    static constexpr unsigned int TAG_SIZE = TAG_SIZE_;
 };
 
-template<class CryptoPPCipher, unsigned int _KEY_SIZE, unsigned int _IV_SIZE, unsigned int _TAG_SIZE>
-constexpr unsigned int AEADCipher<CryptoPPCipher, _KEY_SIZE, _IV_SIZE, _TAG_SIZE>::KEYSIZE;
-template<class CryptoPPCipher, unsigned int _KEY_SIZE, unsigned int _IV_SIZE, unsigned int _TAG_SIZE>
-constexpr unsigned int AEADCipher<CryptoPPCipher, _KEY_SIZE, _IV_SIZE, _TAG_SIZE>::STRING_KEYSIZE;
+template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, unsigned int TAG_SIZE_>
+constexpr unsigned int AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::KEYSIZE;
+template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, unsigned int TAG_SIZE_>
+constexpr unsigned int AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::STRING_KEYSIZE;
 
-template<class CryptoPPCipher, unsigned int _KEY_SIZE, unsigned int _IV_SIZE, unsigned int _TAG_SIZE>
-Data AEADCipher<CryptoPPCipher, _KEY_SIZE, _IV_SIZE, _TAG_SIZE>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
+template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, unsigned int TAG_SIZE_>
+Data AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
     ASSERT(encKey.binaryLength() == AEADCipher::KEYSIZE, "Wrong key size");
 
     FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
@@ -58,8 +58,8 @@ Data AEADCipher<CryptoPPCipher, _KEY_SIZE, _IV_SIZE, _TAG_SIZE>::encrypt(const C
     return ciphertext;
 }
 
-template<class CryptoPPCipher, unsigned int _KEY_SIZE, unsigned int _IV_SIZE, unsigned int _TAG_SIZE>
-boost::optional<Data> AEADCipher<CryptoPPCipher, _KEY_SIZE, _IV_SIZE, _TAG_SIZE>::decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
+template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, unsigned int TAG_SIZE_>
+boost::optional<Data> AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::decrypt(const CryptoPP::byte *ciphertext, unsigned int ciphertextSize, const EncryptionKey &encKey) {
     ASSERT(encKey.binaryLength() == AEADCipher::KEYSIZE, "Wrong key size");
 
     if (ciphertextSize < IV_SIZE + TAG_SIZE) {

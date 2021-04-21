@@ -4,7 +4,6 @@
 #include <cpp-utils/data/DataFixture.h>
 
 using ::testing::Test;
-using ::testing::_;
 using ::testing::Return;
 using ::testing::Invoke;
 using ::testing::Eq;
@@ -60,28 +59,28 @@ public:
 TEST_F(BlockStore2Test, DataIsPassedThrough0) {
     Data data = createDataWithSize(0);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, Eq(ByRef(data)))).WillOnce(Return(true));
     EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
 TEST_F(BlockStore2Test, DataIsPassedThrough1) {
     Data data = createDataWithSize(1);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, Eq(ByRef(data)))).WillOnce(Return(true));
     EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
 TEST_F(BlockStore2Test, DataIsPassedThrough1024) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data)))).WillOnce(Return(true));
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, Eq(ByRef(data)))).WillOnce(Return(true));
     EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
 TEST_F(BlockStore2Test, BlockIdIsCorrect) {
     Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
-    EXPECT_CALL(blockStoreMock, tryCreate(blockId1, _)).WillOnce(Return(true));
+    EXPECT_CALL(blockStoreMock, tryCreate(blockId1, testing::_)).WillOnce(Return(true));
     EXPECT_EQ(blockId1, blockStore.create(data));
 }
 
@@ -89,7 +88,7 @@ TEST_F(BlockStore2Test, TwoBlocksGetDifferentIds) {
     EXPECT_CALL(blockStoreMock, createBlockId())
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, _))
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, testing::_))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
                 return true;
@@ -109,7 +108,7 @@ TEST_F(BlockStore2Test, WillTryADifferentIdIfKeyAlreadyExists) {
     EXPECT_CALL(blockStoreMock, createBlockId())
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data))))
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, Eq(ByRef(data))))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
                 return false;
@@ -128,7 +127,7 @@ TEST_F(BlockStore2Test, WillTryADifferentIdIfIdAlreadyExistsTwoTimes) {
             .WillOnce(Return(blockId1))
             .WillOnce(Return(blockId2))
             .WillOnce(Return(blockId3));
-    EXPECT_CALL(blockStoreMock, tryCreate(_, Eq(ByRef(data))))
+    EXPECT_CALL(blockStoreMock, tryCreate(testing::_, Eq(ByRef(data))))
             .WillOnce(Invoke([this](const BlockId &blockId, const Data &) {
                 EXPECT_EQ(blockId1, blockId);
                 return false;

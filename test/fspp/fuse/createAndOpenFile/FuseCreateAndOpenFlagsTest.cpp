@@ -1,10 +1,11 @@
 #include "testutils/FuseCreateAndOpenTest.h"
 
+//TODO Disabled because it doesn't seem to work. Fuse doesn't seem to pass flags to create(). Why?
+/*
+
 using ::testing::WithParamInterface;
 using ::testing::Values;
 
-//TODO Disabled because it doesn't seem to work. Fuse doesn't seem to pass flags to create(). Why?
-/*
 class FuseCreateAndOpenFlagsTest: public FuseCreateAndOpenTest, public WithParamInterface<mode_t> {
 };
 INSTANTIATE_TEST_SUITE_P(FuseCreateAndOpenFlagsTest, FuseCreateAndOpenFlagsTest, Values(O_RDWR, O_RDONLY, O_WRONLY));

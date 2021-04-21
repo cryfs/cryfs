@@ -2,7 +2,7 @@
 #include <gmock/gmock.h>
 
 #ifdef NDEBUG
-#define _REAL_NDEBUG
+#define REAL_NDEBUG_
 #endif
 
 //Include the ASSERT macro for a debug build
@@ -41,7 +41,7 @@ TEST(AssertTest_DebugBuild, AssertMessage) {
     );
 }
 
-#if !(defined(_MSC_VER) && defined(_REAL_NDEBUG))
+#if !(defined(_MSC_VER) && defined(REAL_NDEBUG_))
 TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
     EXPECT_DEATH(
         ASSERT(2==5, "my message"),

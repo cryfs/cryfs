@@ -38,11 +38,11 @@ public:
         const auto &actualCipher = CryCiphers::find(cipherName);
         Data dataFixture = DataFixture::generate(1024);
         string encKey = ExpectedCipher::EncryptionKey::CreateKey(Random::PseudoRandom(), ExpectedCipher::KEYSIZE).ToString();
-        _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
+        EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE_<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
     }
 
     template<class ExpectedCipher>
-    void _EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
+    void EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE_(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
         blockstore::BlockId blockId = blockstore::BlockId::Random();
         Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, blockId, dataFixture.copy());
         Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, blockId, std::move(encrypted));

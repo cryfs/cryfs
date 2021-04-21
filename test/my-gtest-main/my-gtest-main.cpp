@@ -7,6 +7,7 @@
 #include <cpp-utils/assert/assert.h>
 
 namespace {
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 	boost::optional<boost::filesystem::path> executable;
 }
 

@@ -104,6 +104,7 @@ void DataNodeStore::removeSubtree(unique_ref<DataNode> node) {
   remove(std::move(*inner));
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void DataNodeStore::removeSubtree(uint8_t depth, const BlockId &blockId) {
   if (depth == 0) {
     remove(blockId);

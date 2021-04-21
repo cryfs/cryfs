@@ -1,6 +1,5 @@
 #include "testutils/FuseOpenTest.h"
 
-using ::testing::_;
 using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
@@ -34,9 +33,9 @@ INSTANTIATE_TEST_SUITE_P(FuseOpenFileDescriptorTest, FuseOpenFileDescriptorTest,
 
 TEST_P(FuseOpenFileDescriptorTest, TestReturnedFileDescriptor) {
   ReturnIsFileOnLstatWithSize(FILENAME, fspp::num_bytes_t(1));
-  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), _))
+  EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), testing::_))
     .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(*fsimpl, read(GetParam(), _, _, _)).Times(1).WillOnce(Return(fspp::num_bytes_t(1)));
+  EXPECT_CALL(*fsimpl, read(GetParam(), testing::_, testing::_, testing::_)).Times(1).WillOnce(Return(fspp::num_bytes_t(1)));
 
   OpenAndReadFile(FILENAME);
 }

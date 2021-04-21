@@ -1,7 +1,6 @@
 #include "FuseTest.h"
 
 using ::testing::Eq;
-using ::testing::_;
 using ::testing::Return;
 using ::testing::Throw;
 using ::testing::Action;
@@ -20,6 +19,7 @@ MockFilesystem::MockFilesystem() {}
 MockFilesystem::~MockFilesystem() {}
 
 FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()), _context(boost::none) {
+  using ::testing::_;
   auto defaultAction = Throw(FuseErrnoException(EIO));
   ON_CALL(*fsimpl, openFile(_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, closeFile(_)).WillByDefault(defaultAction);
@@ -109,7 +109,7 @@ Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::Return
 Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnDoesntExist = Throw(fspp::fuse::FuseErrnoException(ENOENT));
 
 void FuseTest::OnOpenReturnFileDescriptor(const char *filename, int descriptor) {
-  EXPECT_CALL(*fsimpl, openFile(Eq(filename), _)).Times(1).WillOnce(Return(descriptor));
+  EXPECT_CALL(*fsimpl, openFile(Eq(filename), testing::_)).Times(1).WillOnce(Return(descriptor));
 }
 
 void FuseTest::ReturnIsFileOnLstat(const bf::path &path) {
@@ -129,9 +129,9 @@ void FuseTest::ReturnDoesntExistOnLstat(const bf::path &path) {
 }
 
 void FuseTest::ReturnIsFileOnFstat(int descriptor) {
-  EXPECT_CALL(*fsimpl, fstat(descriptor, _)).WillRepeatedly(ReturnIsFileFstat);
+  EXPECT_CALL(*fsimpl, fstat(descriptor, testing::_)).WillRepeatedly(ReturnIsFileFstat);
 }
 
 void FuseTest::ReturnIsFileOnFstatWithSize(int descriptor, fspp::num_bytes_t size) {
-  EXPECT_CALL(*fsimpl, fstat(descriptor, _)).WillRepeatedly(ReturnIsFileFstatWithSize(size));
+  EXPECT_CALL(*fsimpl, fstat(descriptor, testing::_)).WillRepeatedly(ReturnIsFileFstatWithSize(size));
 }

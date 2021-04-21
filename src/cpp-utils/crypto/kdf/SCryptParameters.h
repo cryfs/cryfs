@@ -15,13 +15,13 @@ namespace cpputils {
 
     class SCryptParameters final {
     public:
-        SCryptParameters(Data salt, uint64_t N, uint32_t r, uint32_t p)
+        SCryptParameters(Data salt, uint64_t n, uint32_t r, uint32_t p)
                 : _salt(std::move(salt)),
-                  _N(N), _r(r), _p(p) { }
+                  _n(n), _r(r), _p(p) { }
 
         SCryptParameters(const SCryptParameters &rhs)
                 :_salt(rhs._salt.copy()),
-                 _N(rhs._N), _r(rhs._r), _p(rhs._p) { }
+                 _n(rhs._n), _r(rhs._r), _p(rhs._p) { }
 
         SCryptParameters(SCryptParameters &&rhs) = default;
 
@@ -31,7 +31,7 @@ namespace cpputils {
             }
 
             _salt = rhs._salt.copy();
-            _N = rhs._N;
+            _n = rhs._n;
             _r = rhs._r;
             _p = rhs._p;
             return *this;
@@ -43,8 +43,8 @@ namespace cpputils {
             return _salt;
         }
 
-        size_t N() const {
-            return _N;
+        size_t n() const {
+            return _n;
         }
 
         size_t r() const {
@@ -69,13 +69,13 @@ namespace cpputils {
         size_t _serializedSize() const;
 
         Data _salt;
-        uint64_t _N;
+        uint64_t _n;
         uint32_t _r;
         uint32_t _p;
     };
 
     inline bool operator==(const SCryptParameters &lhs, const SCryptParameters &rhs) {
-        return lhs.salt() == rhs.salt() && lhs.N() == rhs.N() && lhs.r() == rhs.r() && lhs.p() == rhs.p();
+        return lhs.salt() == rhs.salt() && lhs.n() == rhs.n() && lhs.r() == rhs.r() && lhs.p() == rhs.p();
     }
 
     inline bool operator!=(const SCryptParameters &lhs, const SCryptParameters &rhs) {

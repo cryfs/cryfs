@@ -4,7 +4,6 @@
 
 #include "fspp/fs_interface/FuseErrnoException.h"
 
-using ::testing::_;
 using ::testing::Invoke;
 using ::testing::Action;
 
@@ -26,7 +25,7 @@ public:
   : FILESIZE(filesize), WRITESIZE(writesize), OFFSET(offset), testFile(DataFixture::generate(FILESIZE.value())), writeData(DataFixture::generate(WRITESIZE.value())) {
     ReturnIsFileOnLstatWithSize(FILENAME, FILESIZE);
     OnOpenReturnFileDescriptor(FILENAME, 0);
-    EXPECT_CALL(*fsimpl, write(0, _, _, _)).WillRepeatedly(WriteToFile);
+    EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, testing::_)).WillRepeatedly(WriteToFile);
   }
 
   // This write() mock implementation writes to the stored virtual file.

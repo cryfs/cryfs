@@ -17,7 +17,7 @@ EncryptionKey _derive(size_t keySize, const std::string& password, const SCryptP
         static_cast<uint8_t*>(result.data()), result.binaryLength(),
         reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
         static_cast<const uint8_t*>(kdfParameters.salt().data()), kdfParameters.salt().size(),
-        kdfParameters.N(), kdfParameters.r(), kdfParameters.p()
+        kdfParameters.n(), kdfParameters.r(), kdfParameters.p()
     );
     if (status != 1) {
         throw std::runtime_error("Error running scrypt key derivation. Error code: "+std::to_string(status));

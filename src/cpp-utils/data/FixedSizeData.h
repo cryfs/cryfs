@@ -36,7 +36,7 @@ public:
 
 private:
   FixedSizeData(): _data() {}
-  template<size_t _SIZE> friend class FixedSizeData;
+  template<size_t SIZE_> friend class FixedSizeData;
 
   std::array<unsigned char, BINARY_LENGTH> _data;
 };
