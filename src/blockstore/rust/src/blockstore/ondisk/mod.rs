@@ -220,22 +220,14 @@ impl OnDiskBlockStore {
 }
 
 fn _check_and_remove_header(data: &[u8]) -> Result<&[u8]> {
-    if !_data_starts_with(data, FORMAT_VERSION_HEADER) {
-        if _data_starts_with(data, FORMAT_VERSION_HEADER_PREFIX) {
+    if !data.starts_with(FORMAT_VERSION_HEADER) {
+        if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
             bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS?");
         } else {
             bail!("This is not a valid block.");
         }
     }
     Ok(&data[FORMAT_VERSION_HEADER.len()..])
-}
-
-fn _data_starts_with(data: &[u8], prefix: &[u8]) -> bool {
-    if data.len() < prefix.len() {
-        false
-    } else {
-        &data[..prefix.len()] == prefix
-    }
 }
 
 // TODO Test
@@ -289,20 +281,8 @@ mod tests {
     }
 
     #[test]
-    fn test_data_starts_with() {
-        assert!(_data_starts_with(b"", b""));
-        assert!(_data_starts_with(b"abc", b""));
-        assert!(!_data_starts_with(b"", b"abc"));
-        assert!(_data_starts_with(b"abc", b"a"));
-        assert!(_data_starts_with(b"abc", b"ab"));
-        assert!(!_data_starts_with(b"abc", b"ac"));
-        assert!(!_data_starts_with(b"abc", b"abcd"));
-    }
-
-    #[test]
     fn test_prefix() {
-        assert!(_data_starts_with(
-            FORMAT_VERSION_HEADER,
+        assert!(FORMAT_VERSION_HEADER.starts_with(
             FORMAT_VERSION_HEADER_PREFIX
         ));
     }
