@@ -108,7 +108,10 @@ impl RustBlockStore2Bridge {
         self.0.estimate_num_free_bytes()
     }
     fn block_size_from_physical_block_size(&self, block_size: u64) -> u64 {
-        self.0.block_size_from_physical_block_size(block_size)
+        // In C++, the convention was to return 0 instead of an error,
+        // so let's catch errors and return 0 instead.
+        // TODO Is there a better way?
+        self.0.block_size_from_physical_block_size(block_size).unwrap_or(0)
     }
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
         Ok(self.0.all_blocks()?.collect())

@@ -7,7 +7,7 @@ pub trait Cipher : Sized {
     fn new(key: EncryptionKey<Self::KeySize>) -> Self;
 
     fn ciphertext_size(plaintext_size: usize) -> usize;
-    fn plaintext_size(ciphertext_size: usize) -> usize;
+    fn plaintext_size(ciphertext_size: usize) -> Result<usize>;
 
     fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>>;
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>>;
