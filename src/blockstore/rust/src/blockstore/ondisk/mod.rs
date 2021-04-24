@@ -282,8 +282,6 @@ mod tests {
 
     #[test]
     fn test_prefix() {
-        assert!(FORMAT_VERSION_HEADER.starts_with(
-            FORMAT_VERSION_HEADER_PREFIX
-        ));
+        assert!(FORMAT_VERSION_HEADER.starts_with(FORMAT_VERSION_HEADER_PREFIX));
     }
 }

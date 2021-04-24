@@ -5,7 +5,7 @@ use aead::{
     generic_array::{ArrayLength, GenericArray},
     Aead, NewAead, Nonce,
 };
-use anyhow::{Context, Result, ensure};
+use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
@@ -77,7 +77,10 @@ impl<C: NewAead + Aead> Cipher for AeadCipher<C> {
         let plaintext = cipher
             .decrypt(nonce.into(), cipherdata)
             .context("Decrypting data failed")?;
-        assert_eq!(Self::plaintext_size(ciphertext.len()).unwrap(), plaintext.len());
+        assert_eq!(
+            Self::plaintext_size(ciphertext.len()).unwrap(),
+            plaintext.len()
+        );
         Ok(plaintext)
     }
 }
