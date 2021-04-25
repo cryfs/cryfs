@@ -14,10 +14,14 @@ You can also use CryFS on older versions of these distributions by following the
 
     sudo apt install cryfs
 
+Additionally, the following would work for any Linux distro with the Nix package manager:
+
+    nix-env -iA nixpkgs.cryfs
+
 OSX
 ----
 
-CryFS is distributed via Homebrew and MacPorts.
+CryFS is distributed via Homebrew, MacPorts, and Nix.
 
 If you use Homebrew:
 
@@ -28,7 +32,12 @@ If you use MacPorts (only available for OSX 10.12 to 10.14 at the moment):
 
     port install cryfs
 
-    
+For Nix, the macOS build for cryfs is available in the Nixpkgs channel 21.05
+and later:
+
+    brew install --cask macfuse # or download from https://osxfuse.github.io/
+    nix-env -iA nixpkgs.cryfs
+
 Windows (experimental)
 ----------------------
 
