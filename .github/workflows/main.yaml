@@ -231,7 +231,7 @@ jobs:
           echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
         shell: bash
       - name: Retrieve pip cache
-        # Sometimes, the cache can get corrupted and the download fails with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new fixed cache as part of the regular job run.
+        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
         continue-on-error: true
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
@@ -286,7 +286,7 @@ jobs:
           rm /tmp/hash_flags
         shell: bash
       - name: Retrieve ccache cache
-        # Sometimes, the cache can get corrupted and the download fails with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new fixed cache as part of the regular job run.
+        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
         continue-on-error: true
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
@@ -305,7 +305,7 @@ jobs:
           ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
-        # Sometimes, the cache can get corrupted and the download fails with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new fixed cache as part of the regular job run.
+        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
         continue-on-error: true
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
