@@ -7,9 +7,11 @@ use crate::blockstore::BlockId;
 use crate::utils::binary::{BinaryReadDefaultExt, BinaryWriteExt};
 
 mod file_data;
+mod integrity_violation_error;
 
 use file_data::FileData;
 pub use file_data::{BlockVersion, ClientId};
+pub use integrity_violation_error::IntegrityViolationError;
 
 const CLIENT_ID_FOR_DELETED_BLOCK: ClientId = ClientId { id: 0 };
 
@@ -124,15 +126,19 @@ impl KnownBlockVersions {
                 Entry::Occupied(mut known_block_versions_entry),
                 Entry::Occupied(mut last_update_client_id_entry),
             ) => {
-                // TODO Custom error structs so that the caller can react to this message in a better way
-                if *last_update_client_id_entry.get() == client_id {
-                    // Case 1 or 2: either nothing changed or the client who created the last version created even another one.
-                    // For case 1 it is ok if the block version stays the same, for case 2 it increases.
-                    ensure!(*known_block_versions_entry.get() <= version, "Tried to roll back block {} from client {:?} from version {:?} to version {:?}.", block_id.to_hex(), client_id, known_block_versions_entry.get(), version);
-                } else {
-                    // Case 3: a different client created the newest version. Force the block number to increase.
-                    ensure!(*known_block_versions_entry.get() < version, "Tried to roll back block {} from client {:?} version {:?} to client {:?} version {:?}.", block_id.to_hex(), last_update_client_id_entry.get(), known_block_versions_entry.get(), client_id, version);
-                }
+                ensure!(
+                    //In all of the cases 1, 2, 3: the version number must not decrease
+                    (*known_block_versions_entry.get() <= version) &&
+                    // In case 3 (i.e. we see a change in client id), the version number must increase
+                    (*last_update_client_id_entry.get() == client_id || *known_block_versions_entry.get() < version),
+                    IntegrityViolationError::RollBack {
+                        block: block_id,
+                        from_client: *last_update_client_id_entry.get(),
+                        to_client: client_id,
+                        from_version: *known_block_versions_entry.get(),
+                        to_version: version,
+                    }
+                );
                 known_block_versions_entry.insert(version);
                 last_update_client_id_entry.insert(client_id);
             }
@@ -143,22 +149,25 @@ impl KnownBlockVersions {
 
     /// This function is intended to be called whenever we modify a block ourselves.
     /// It updates our internal state so the modification can't be rolled back in the future.
-    pub fn increment_version(&mut self, block_id: BlockId) {
+    pub fn increment_version(&mut self, block_id: BlockId) -> BlockVersion {
+        self.file_data
+            .last_update_client_id
+            .insert(block_id, self.my_client_id);
         match self
             .file_data
             .known_block_versions
             .entry((self.my_client_id, block_id))
         {
             Entry::Vacant(entry) => {
-                entry.insert(BlockVersion { version: 1 });
+                let new_version = BlockVersion { version: 1 };
+                entry.insert(new_version);
+                new_version
             }
             Entry::Occupied(mut entry) => {
                 entry.get_mut().increment();
+                *entry.get()
             }
         }
-        self.file_data
-            .last_update_client_id
-            .insert(block_id, self.my_client_id);
     }
 
     /// This function is intended to be called whenever we delete a block. It will set

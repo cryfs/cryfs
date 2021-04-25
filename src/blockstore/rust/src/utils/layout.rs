@@ -1,4 +1,32 @@
+use std::convert::TryFrom;
 use std::marker::PhantomData;
+
+//! This module allows the definition of data layouts based on primitive data types
+//! and then allows inplace read/write access to individual data fields in a given
+//! data slice without having to copy any of the data.
+//! 
+//! # Example
+//! ```
+//! define_layout!(block_layout, {
+//!   format_version_header: u16,
+//!   block_id: &[u8; BLOCKID_LEN],
+//!   last_update_client_id: u32,
+//!   block_version: u64,
+//!   tail_data: &[u8],
+//! });
+//! 
+//! fn main() {
+//!   let data_slice: &mut [u8] = get_some_data();
+//!   // read some data
+//!   let format_version_header: u16 = block_layout::format_version_header.read(&data_slice);
+//!   // write some data
+//!   block_layout::last_update_client_id.write(&mut data_slice, 10);
+//!   // access a data region
+//!   let tail_data = block_layout::tail_data.data(data_slice);
+//!   // and modify it
+//!   block_layout::tail_data.data_mut(&mut data_slice)[1] = 3;
+//! }
+//! ```
 
 pub struct Field<T> {
     offset: usize,
@@ -48,6 +76,7 @@ int_field!(u16);
 int_field!(u32);
 int_field!(u64);
 
+// Open ended data region (can only be the last element in a layout and will match until the end of the data, however large it happens to be)
 impl Field<&[u8]> {
     pub fn data<'a>(&self, storage: &'a [u8]) -> &'a [u8] {
         &storage[self.offset..]
@@ -58,12 +87,27 @@ impl Field<&[u8]> {
     }
 }
 
+// Fixed size data region
+impl<const N: usize> Field<&[u8; N]> {
+    pub fn data<'a>(&self, storage: &'a [u8]) -> &'a [u8; N] {
+        <&[u8; N]>::try_from(&storage[self.offset..(self.offset + N)]).unwrap()
+    }
+
+    pub fn data_mut<'a>(&self, storage: &'a mut [u8]) -> &'a mut [u8; N] {
+        <&mut [u8; N]>::try_from(&mut storage[self.offset..(self.offset + N)]).unwrap()
+    }
+
+    pub const fn size() -> usize {
+        N
+    }
+}
+
 #[macro_export]
 macro_rules! define_layout_impl {
     ($offset_accumulator: expr, {}) => {};
     ($offset_accumulator: expr, {$name: ident : $type: ty $(, $name_tail: ident : $type_tail: ty)*}) => {
-        pub const $name: $crate::util::layout::Field<$type> = $crate::util::layout::Field::at_offset($offset_accumulator);
-        define_layout_impl!($offset_accumulator + $crate::util::layout::Field::<$type>::size(), {$($name_tail : $type_tail),*});
+        pub const $name: $crate::utils::layout::Field<$type> = $crate::utils::layout::Field::at_offset($offset_accumulator);
+        define_layout_impl!($offset_accumulator + $crate::utils::layout::Field::<$type>::size(), {$($name_tail : $type_tail),*});
     };
 }
 
@@ -71,6 +115,8 @@ macro_rules! define_layout_impl {
 macro_rules! define_layout {
     ($name: ident, {$($field_name: ident : $field_type: ty),* $(,)?}) => {
         mod $name {
+            #[allow(unused_imports)]
+            use super::*;
             use $crate::define_layout_impl;
             define_layout_impl!(0, {$($field_name : $field_type),*});
         }
@@ -119,7 +165,7 @@ mod tests {
         const FIELD1: Field<i32> = Field::at_offset(5);
         const FIELD2: Field<i32> = Field::at_offset(20);
         let mut storage = vec![0; 1024];
-        FIELD1.write(&mut storage, (2i32.pow(29)));
+        FIELD1.write(&mut storage, 2i32.pow(29));
         FIELD2.write(&mut storage, -(2i32.pow(25)));
         assert_eq!(2i32.pow(29), FIELD1.read(&storage));
         assert_eq!(-2i32.pow(25), FIELD2.read(&storage));
@@ -131,7 +177,7 @@ mod tests {
         const FIELD1: Field<i64> = Field::at_offset(5);
         const FIELD2: Field<i64> = Field::at_offset(20);
         let mut storage = vec![0; 1024];
-        FIELD1.write(&mut storage, (2i64.pow(40)));
+        FIELD1.write(&mut storage, 2i64.pow(40));
         FIELD2.write(&mut storage, -(2i64.pow(50)));
         assert_eq!(2i64.pow(40), FIELD1.read(&storage));
         assert_eq!(-2i64.pow(50), FIELD2.read(&storage));
@@ -166,8 +212,8 @@ mod tests {
         const FIELD1: Field<u32> = Field::at_offset(5);
         const FIELD2: Field<u32> = Field::at_offset(20);
         let mut storage = vec![0; 1024];
-        FIELD1.write(&mut storage, (2u32.pow(29)));
-        FIELD2.write(&mut storage, (2u32.pow(25)));
+        FIELD1.write(&mut storage, 2u32.pow(29));
+        FIELD2.write(&mut storage, 2u32.pow(25));
         assert_eq!(2u32.pow(29), FIELD1.read(&storage));
         assert_eq!(2u32.pow(25), FIELD2.read(&storage));
         assert_eq!(4, Field::<u32>::size());
@@ -178,8 +224,8 @@ mod tests {
         const FIELD1: Field<u64> = Field::at_offset(5);
         const FIELD2: Field<u64> = Field::at_offset(20);
         let mut storage = vec![0; 1024];
-        FIELD1.write(&mut storage, (2u64.pow(40)));
-        FIELD2.write(&mut storage, (2u64.pow(50)));
+        FIELD1.write(&mut storage, 2u64.pow(40));
+        FIELD2.write(&mut storage, 2u64.pow(50));
         assert_eq!(2u64.pow(40), FIELD1.read(&storage));
         assert_eq!(2u64.pow(50), FIELD2.read(&storage));
         assert_eq!(8, Field::<u64>::size());
@@ -194,6 +240,19 @@ mod tests {
         FIELD2.data_mut(&mut storage)[..5].copy_from_slice(&[60, 70, 80, 90, 100]);
         assert_eq!(&[10, 20, 60, 70, 80], &FIELD1.data(&storage)[..5]);
         assert_eq!(&[60, 70, 80, 90, 100], &FIELD2.data(&storage)[..5]);
+    }
+
+    #[test]
+    fn test_array() {
+        const FIELD1: Field<&[u8; 2]> = Field::at_offset(5);
+        const FIELD2: Field<&[u8; 5]> = Field::at_offset(10);
+        let mut storage = vec![0; 1024];
+        FIELD1.data_mut(&mut storage).copy_from_slice(&[10, 20]);
+        FIELD2
+            .data_mut(&mut storage)
+            .copy_from_slice(&[60, 70, 80, 90, 100]);
+        assert_eq!(&[10, 20], FIELD1.data(&storage));
+        assert_eq!(&[60, 70, 80, 90, 100], FIELD2.data(&storage));
     }
 
     #[test]
@@ -234,6 +293,7 @@ mod tests {
 
     #[test]
     fn test_layout_withslice() {
+        // TODO Add a [u8; N] member to this test
         define_layout!(withslice, {
             first: i8,
             second: i64,

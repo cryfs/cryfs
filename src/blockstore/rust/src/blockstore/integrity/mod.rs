@@ -1,14 +1,27 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use log::warn;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter, BLOCKID_LEN};
+use crate::define_layout;
 
 mod known_block_versions;
 
-use known_block_versions::{ClientId, KnownBlockVersions};
+use known_block_versions::{BlockVersion, ClientId, IntegrityViolationError, KnownBlockVersions};
 
-const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
+const FORMAT_VERSION_HEADER: u16 = 1;
+
+define_layout!(block_layout, {
+    // TODO Use types BlockId, ClientId, ... instead of slices, probably through some LayoutAs trait
+    format_version_header: u16,
+    block_id: &[u8; BLOCKID_LEN],
+    last_update_client_id: u32,
+    block_version: u64,
+    data: &[u8],
+});
+
+const HEADER_SIZE: usize = block_layout::data.offset();
 
 pub struct IntegrityConfig {
     allow_integrity_violations: bool,
@@ -19,7 +32,7 @@ pub struct IntegrityConfig {
 pub struct IntegrityBlockStore<B> {
     underlying_block_store: B,
     config: IntegrityConfig,
-    known_block_versions: KnownBlockVersions,
+    known_block_versions: Mutex<KnownBlockVersions>,
 }
 
 impl<B> IntegrityBlockStore<B> {
@@ -29,8 +42,10 @@ impl<B> IntegrityBlockStore<B> {
         my_client_id: ClientId,
         config: IntegrityConfig,
     ) -> Result<Self> {
-        let known_block_versions = KnownBlockVersions::new(integrity_file_path, my_client_id)
-            .context("Tried to create KnownBlockVersions")?;
+        let known_block_versions = Mutex::new(
+            KnownBlockVersions::new(integrity_file_path, my_client_id)
+                .context("Tried to create KnownBlockVersions")?,
+        );
         Ok(Self {
             underlying_block_store,
             config,
@@ -47,13 +62,15 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
         match loaded {
             None => {
                 if self.config.missing_block_is_integrity_violation
-                    && self.known_block_versions.should_block_exist(&block_id)
+                    && self
+                        .known_block_versions
+                        .lock()
+                        .unwrap()
+                        .should_block_exist(&block_id)
                 {
-                    let msg = format!(
-                        "Block {} should exist but we didn't find it. Did an attacker delete it?",
-                        block_id.to_hex()
-                    );
-                    self._integrity_violation_detected(&msg)?;
+                    self._integrity_violation_detected(
+                        IntegrityViolationError::MissingBlock { block: *block_id }.into(),
+                    )?;
                 }
                 Ok(None)
             }
@@ -70,8 +87,8 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
-            .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))
+        block_size.checked_sub(HEADER_SIZE as u64)
+            .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
     }
 
     fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
@@ -94,34 +111,75 @@ impl<B: BlockStoreWriter> BlockStoreWriter for IntegrityBlockStore<B> {
 }
 
 impl<B> IntegrityBlockStore<B> {
-    fn _integrity_violation_detected(&self, reason: &str) -> Result<()> {
+    fn _integrity_violation_detected(&self, reason: Error) -> Result<()> {
+        assert!(
+            reason.is::<IntegrityViolationError>(),
+            "This should only be called with an IntegrityViolationError"
+        );
         if self.config.allow_integrity_violations {
             warn!(
-                "Integrity violation (but integrity checks are disabled): {}",
-                reason
+                "Integrity violation (but integrity checks are disabled): {:?}",
+                reason,
             );
             Ok(())
         } else {
-            todo!()
-            // self.known_block_versions
-            //     .set_integrity_violation_in_previous_run();
-            // (*self.config.on_integrity_violation)();
-            // bail!("Integrity violation detected: {}", reason);
+            self.known_block_versions
+                .lock()
+                .unwrap()
+                .set_integrity_violation_in_previous_run();
+            (*self.config.on_integrity_violation)();
+            Err(reason)
         }
     }
 
-    // fn _check_and_remove_header(data: &[u8]) -> Result<&[u8]> {
-    //     // TODO What about the data layout class we wrote somewhere?
-    //     ensure!(data.len() >= FORMAT_VERSION_HEADER + )
-    //     if !data.starts_with(FORMAT_VERSION_HEADER) {
-    //         bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Maybe it was created with a different major version of CryFS?", &data[..FORMAT_VERSION_HEADER.len()]);
-    //     }
-    //     let block_id_header =
-    //         &data[FORMAT_VERSION_HEADER.len()..(FORMAT_VERSION_HEADER.len() + BLOCKID_LEN)];
-    //     let
+    fn _check_and_remove_header<'a>(
+        &self,
+        data: &'a [u8],
+        expected_block_id: &BlockId,
+    ) -> Result<&'a [u8]> {
+        ensure!(
+            data.len() >= block_layout::data.offset(),
+            "Block size is {} but we need at least {} to store the block header",
+            data.len(),
+            block_layout::data.offset()
+        );
+        let format_version_header = block_layout::format_version_header.read(data);
+        if format_version_header != FORMAT_VERSION_HEADER {
+            bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
+        }
+        let block_id = BlockId::from_array(block_layout::block_id.data(data));
+        if block_id != *expected_block_id {
+            self._integrity_violation_detected(
+                IntegrityViolationError::WrongBlockId {
+                    id_from_filename: *expected_block_id,
+                    id_from_header: block_id,
+                }
+                .into(),
+            )?;
+        }
+        let last_update_client_id = ClientId {
+            id: block_layout::last_update_client_id.read(data),
+        };
+        let block_version = BlockVersion {
+            version: block_layout::block_version.read(data),
+        };
+        match self
+            .known_block_versions
+            .lock()
+            .unwrap()
+            .check_and_update_version(last_update_client_id, block_id, block_version)
+        {
+            Ok(()) => (),
+            Err(err) if err.is::<IntegrityViolationError>() => {
+                // IntegrityViolationErrors are channeled through _integrity_violation_detected
+                // so that we can silence them if integrity checking is disabled.
+                self._integrity_violation_detected(err)?;
+            }
+            Err(err) => Err(err)?,
+        }
 
-    //     Ok(&data[FORMAT_VERSION_HEADER.len()..])
-    // }
+        Ok(block_layout::data.data(data))
+    }
 }
 
 impl<B: BlockStore> BlockStore for IntegrityBlockStore<B> {}
