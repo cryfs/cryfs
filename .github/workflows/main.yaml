@@ -237,9 +237,6 @@ jobs:
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
@@ -252,7 +249,7 @@ jobs:
           fi
           python3 -m pip install conan
       - name: Save pip cache
-        # note: this access key has write access to the cache. This can't run on PRs.
+        # note: this S3 access key has write access to the cache. GitHub prevents the secrets from being available on PRs.
         if: ${{github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
@@ -293,8 +290,6 @@ jobs:
         with:
           action: get
           # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
@@ -311,9 +306,6 @@ jobs:
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
@@ -368,7 +360,7 @@ jobs:
           ccache --evict-older-than 7d
           ccache -s
       - name: Save ccache cache
-        # note: this access key has write access to the cache. This can't run on PRs.
+        # note: this S3 access key has write access to the cache. GitHub prevents the secrets from being available on PRs.
         if: ${{ github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
@@ -380,7 +372,7 @@ jobs:
           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           artifacts: ${{ github.workspace }}/.ccache
       - name: Save conan cache
-        # note: this access key has write access to the cache. This can't run on PRs.
+        # note: this S3 access key has write access to the cache. GitHub prevents the secrets from being available on PRs.
         if: ${{ github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
