@@ -235,10 +235,11 @@ jobs:
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: get
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+          aws-secret-access-key: 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
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
       - name: Install Conan
         shell: bash
@@ -249,13 +250,15 @@ jobs:
           fi
           python3 -m pip install conan
       - name: Save pip cache
+        # note: this access key has write access to the cache. This can't run on PRs.
+        if: ${{github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
           artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
@@ -285,10 +288,11 @@ jobs:
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: get
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+          aws-secret-access-key: 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
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Show ccache statistics
         shell: bash
@@ -301,10 +305,11 @@ jobs:
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: get
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+          aws-secret-access-key: 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
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       - name: Build (macOS)
         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
@@ -357,23 +362,27 @@ jobs:
           ccache --evict-older-than 7d
           ccache -s
       - name: Save ccache cache
+        # note: this access key has write access to the cache. This can't run on PRs.
+        if: ${{ github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           artifacts: ${{ github.workspace }}/.ccache
       - name: Save conan cache
+        # note: this access key has write access to the cache. This can't run on PRs.
+        if: ${{ github.event_name == 'push' }}
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.CACHE_AWS_REGION }}
-          bucket: ${{ secrets.CACHE_AWS_S3_BUCKET }}
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
           artifacts: ${{ env.CONAN_USER_HOME }}
       - name: Test
