@@ -10,7 +10,7 @@ Security:
   XChaCha20-Poly1305 does not suffer from this constraint and stays secure even if the filesystem gets very large.
 
 New platforms:
-* CryFS should now work on devices with Apple M1 silicon
+* CryFS now works on devices with Apple M1 silicon
 
 Build changes:
 * Switch to Conan package manager
