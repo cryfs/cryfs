@@ -37,20 +37,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE INTERNAL "CMAKE_BUILD_TYPE")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# Enable LTO if we're in a release build and LTO is supported
-string(TOUPPER ${CMAKE_BUILD_TYPE} _CMAKE_BUILD_TYPE_UPPER)
-if (_CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
-    message(STATUS "LTO disabled because we're in a debug build")
-else()
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
-    if(LTO_SUPPORTED)
-        message(STATUS "LTO enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(WARNING "LTO disabled because compiler does not support it.")
-    endif()
-endif()
+# We don't use LTO because crypto++ has problems with it, see https://github.com/weidai11/cryptopp/issues/1031 and https://www.cryptopp.com/wiki/Link_Time_Optimization
 
 # The MSVC version on AppVeyor CI needs this
 if(MSVC)
