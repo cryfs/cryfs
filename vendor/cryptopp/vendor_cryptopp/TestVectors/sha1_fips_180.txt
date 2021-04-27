@@ -1,3 +1,0 @@
-AlgorithmType: FileList
-Name: SHA1 FIPS 180 collection
-Test: TestVectors/sha1_160_fips_180.txt

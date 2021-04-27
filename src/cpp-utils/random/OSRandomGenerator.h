@@ -3,7 +3,7 @@
 #define MESSMER_CPPUTILS_RANDOM_OSRANDOMGENERATOR_H
 
 #include "RandomGenerator.h"
-#include <vendor_cryptopp/osrng.h>
+#include <cryptopp/osrng.h>
 
 namespace cpputils {
     class OSRandomGenerator final : public RandomGenerator {

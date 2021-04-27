@@ -17,3 +17,6 @@ target_link_libraries(CryfsDependencies_spdlog INTERFACE CONAN_PKG::spdlog)
 
 add_library(CryfsDependencies_boost INTERFACE)
 target_link_libraries(CryfsDependencies_boost INTERFACE CONAN_PKG::boost)
+
+add_library(CryfsDependencies_cryptopp INTERFACE)
+target_link_libraries(CryfsDependencies_cryptopp INTERFACE CONAN_PKG::cryptopp)

@@ -1,5 +1,5 @@
 #include "Scrypt.h"
-#include <vendor_cryptopp/scrypt.h>
+#include <cryptopp/scrypt.h>
 
 using std::string;
 

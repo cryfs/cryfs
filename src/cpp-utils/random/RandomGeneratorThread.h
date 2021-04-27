@@ -4,7 +4,7 @@
 
 #include "../thread/LoopThread.h"
 #include "ThreadsafeRandomDataBuffer.h"
-#include <vendor_cryptopp/osrng.h>
+#include <cryptopp/osrng.h>
 
 namespace cpputils {
     //TODO Test
