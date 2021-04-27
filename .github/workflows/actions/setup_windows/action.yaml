@@ -1,0 +1,10 @@
+name: 'Setup Windows'
+description: 'Setup Windows'
+runs:
+  using: "composite"
+  steps:
+    - name: Install Windows dependencies
+      shell: bash
+      run: |
+        choco install -y ninja
+        choco install -y dokany --version 1.2.1.2000 --installargs INSTALLDEVFILES=1

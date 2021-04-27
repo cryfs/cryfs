@@ -2,226 +2,428 @@ name: CI
 on: ['push', 'pull_request']
 
 jobs:
-  build:
-    name: CI
+#   linux_macos:
+#     name: CI (Linux/macOS)
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         name: [""]
+#         os:
+#           - macos-10.15
+#           - ubuntu-18.04
+#           - ubuntu-20.04
+#         compiler:
+#           - cxx: g++-7
+#             cc: gcc-7
+#             macos_cxx: g++-7
+#             macos_cc: gcc-7
+#             homebrew_package: gcc@7
+#             apt_package: g++-7
+#           - cxx: g++-8
+#             cc: gcc-8
+#             macos_cxx: g++-8
+#             macos_cc: gcc-8
+#             homebrew_package: gcc@8
+#             apt_package: g++-8
+#           - cxx: g++-9
+#             cc: gcc-9
+#             macos_cxx: g++-9
+#             macos_cc: gcc-9
+#             apt_package: g++-9
+#             homebrew_package: gcc@9
+# #         TODO gcc 10 doesn't work, potentially because cmake doesn't know yet that the STL now depends on pthread. See https://github.com/pothosware/SoapySDRPlay3/issues/5
+# #           - cxx: g++-10
+# #             cc: gcc-10
+# #             macos_cxx: g++-10
+# #             macos_cc: gcc-10
+# #             apt_package: g++-10
+# #             homebrew_package: gcc@10
+#           - cxx: clang++-7
+#             cc: clang-7
+#             macos_cxx: /usr/local/opt/llvm@7/bin/clang++
+#             macos_cc: /usr/local/opt/llvm@7/bin/clang
+#             apt_package: clang-7
+#             homebrew_package: llvm@7
+#           - cxx: clang++-8
+#             cc: clang-8
+#             macos_cxx: /usr/local/opt/llvm@8/bin/clang++
+#             macos_cc: /usr/local/opt/llvm@8/bin/clang
+#             apt_package: clang-8
+#             homebrew_package: llvm@8
+#           - cxx: clang++-9
+#             cc: clang-9
+#             macos_cxx: /usr/local/opt/llvm@9/bin/clang++
+#             macos_cc: /usr/local/opt/llvm@9/bin/clang
+#             apt_package: clang-9
+#             homebrew_package: llvm@9
+#           # TODO Clang-10 on linux? macos homebrew doesn't seem to have it
+#           - cxx: clang++-11
+#             cc: clang-11
+#             macos_cxx: /usr/local/opt/llvm@11/bin/clang++
+#             macos_cc: /usr/local/opt/llvm@11/bin/clang
+#             apt_package: clang-11
+#             homebrew_package: llvm@11
+#           # Apple Clang
+# #           - cxx: clang++
+# #             cc: clang
+# #             homebrew_package: ""
+#         build_type:
+#           - Debug
+#           - Release
+#           - RelWithDebInfo
+#         extra_cmake_flags: [""]
+#         extra_cxxflags: [""]
+#         extra_env_vars_for_test: [""]
+#         install_dependencies_manually: [false]
+#         run_build: [true]
+#         run_tests: [true]
+#         run_clang_tidy: [false]
+#         include:
+#           - name: Local dependencies
+#             os: ubuntu-18.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang-11
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+#             extra_cxxflags: ""
+#             extra_env_vars_for_test: ""
+#             install_dependencies_manually: true
+#             run_build: true
+#             run_tests: true
+#           - name: Local dependencies
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang-11
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
+#             extra_cxxflags: ""
+#             extra_env_vars_for_test: ""
+#             install_dependencies_manually: true
+#             run_build: true
+#             run_tests: true
+#           - name: Werror gcc
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: g++-9
+#               cc: gcc-9
+#               apt_package: g++-9
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: -DUSE_WERROR=on
+#             extra_cxxflags: ""
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: false
+#           - name: Werror clang
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: -DUSE_WERROR=on
+#             extra_cxxflags: ""
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: false
+#           - name: No compatibility
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: ""
+#             extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
+#             extra_env_vars_for_test: ""
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: true
+#           - name: ASAN
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11
+#             build_type: Debug
+#             # OpenMP crashes under asan. Disable OpenMP.
+#             # TODO is it enough to replace this with omp_num_threads: 1 ?
+#             extra_cmake_flags: "-DDISABLE_OPENMP=ON"
+#             extra_cxxflags: "-O1 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common -fsanitize-address-use-after-scope"
+#             extra_env_vars_for_test: ASAN_OPTIONS="detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: true
+#           - name: UBSAN
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11
+#             build_type: Debug
+#             # OpenMP crashes under ubsan. Disable OpenMP.
+#             # TODO is it enough to replace this with omp_num_threads: 1 ?
+#             extra_cmake_flags: "-DDISABLE_OPENMP=ON"
+#             extra_cxxflags: "-O1 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
+#             extra_env_vars_for_test: UBSAN_OPTIONS="print_stacktrace=1"
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: true
+#           - name: TSAN
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11
+#             build_type: Debug
+#             extra_cmake_flags: ""
+#             extra_cxxflags: "-O2 -fsanitize=thread -fno-omit-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
+#             install_dependencies_manually: false
+#             run_build: true
+#             run_tests: true
+#             gtest_args: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_*:BacktraceTest.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*:CliTest.WorksWithCommasInBasedir"
+#             extra_env_vars_for_test: OMP_NUM_THREADS=1
+#           - name: clang-tidy
+#             os: ubuntu-20.04
+#             compiler:
+#               cxx: clang++-11
+#               cc: clang-11
+#               apt_package: clang++-11 clang-tidy-11
+#             build_type: RelWithDebInfo
+#             extra_cmake_flags: ""
+#             extra_cxxflags: ""
+#             install_dependencies_manually: false
+#             run_build: false
+#             run_tests: false
+#             extra_env_vars_for_test: ""
+#             run_clang_tidy: true
+#     runs-on: ${{matrix.os}}
+#     env:
+#       # Setting conan cache dir to a location where our Github Cache Action can find it
+#       CONAN_USER_HOME: "${{ github.workspace }}/conan-cache/"
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v1
+#       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
+#       - name: Setup MacOS
+#         if: ${{ runner.os == 'macOS' }}
+#         uses: ./.github/workflows/actions/setup_macos
+#         with:
+#           extra_homebrew_packages: ${{ matrix.compiler.homebrew_package }}
+#       - name: Setup Linux
+#         if: ${{ runner.os == 'Linux' }}
+#         uses: ./.github/workflows/actions/setup_linux
+#         with:
+#           os: ${{ matrix.os }}
+#           extra_apt_packages: ${{ matrix.compiler.apt_package }}
+#       - name: Install local dependencies
+#         if: ${{ matrix.install_dependencies_manually }}
+#         uses: ./.github/workflows/actions/install_local_dependencies
+#       - name: Find pip cache location
+#         id: pip_cache_dir
+#         run: |
+#           # We need at least pip 20.1 to get the "pip cache dir" command. Ubuntu doesn't have pip 20.1 by default yet, let's upgrade it
+#           python3 -m pip install -U pip
+#           python3 -m pip --version
+#           echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
+#         shell: bash
+#       - name: Retrieve pip cache
+#         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+#         continue-on-error: true
+#         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: get
+#           # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+#           aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+#           aws-secret-access-key: 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
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
+#       - name: Install Conan
+#         shell: bash
+#         run: |
+#           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
+#           if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
+#             python3 -m pip install setuptools
+#           fi
+#           python3 -m pip install conan
+#       - name: Save pip cache
+#         # note: this access key has write access to the cache. This can't run on PRs.
+#         if: ${{github.event_name == 'push' }}
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: put
+#           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
+#           artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+#       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+#       - name: Configure ccache
+#         shell: bash
+#         run: |
+#           set -v
+#           ccache --set-config=compiler_check=content
+#           ccache --set-config=max_size=500M
+#           ccache --set-config=cache_dir=${{github.workspace}}/.ccache
+#           ccache --set-config=compression=true
+#           ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
+#           echo CCache config:
+#           ccache -p
+#           echo Clearing ccache statistics
+#           ccache -z
+#       - name: Hash flags
+#         id: hash_flags
+#         run: |
+#           # Write it into file first so we fail if the command fails. Errors inside $() are ignored by bash unfortunately.
+#           echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum > /tmp/hash_flags
+#           echo "::set-output name=hash_flags::$(cat /tmp/hash_flags)"
+#           rm /tmp/hash_flags
+#         shell: bash
+#       - name: Retrieve ccache cache
+#         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+#         continue-on-error: true
+#         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: get
+#           # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+#           aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+#           aws-secret-access-key: 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
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+#       - name: Show ccache statistics
+#         shell: bash
+#         run: |
+#           set -v
+#           ccache -s
+#       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+#       - name: Retrieve conan cache
+#         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+#         continue-on-error: true
+#         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: get
+#           # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+#           aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+#           aws-secret-access-key: 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
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+#       - name: Build (macOS)
+#         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
+#         uses: ./.github/workflows/actions/run_build
+#         with:
+#           cxx: ${{ matrix.compiler.macos_cxx }}
+#           cc: ${{ matrix.compiler.macos_cc }}
+#           build_type: ${{ matrix.build_type }}
+#       - name: Build (Linux)
+#         if: ${{ matrix.run_build && runner.os == 'Linux' }}
+#         uses: ./.github/workflows/actions/run_build
+#         with:
+#           cxx: ${{ matrix.compiler.cxx }}
+#           cc: ${{ matrix.compiler.cc }}
+#           build_type: ${{ matrix.build_type }}
+#           extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
+#           extra_cxxflags: ${{ matrix.extra_cxxflags }}
+#       - name: Run clang-tidy
+#         id: clang_tidy
+#         if: ${{ matrix.run_clang_tidy }}
+#         shell: bash
+#         run: |
+#           set -v
+#           mkdir cmake
+#           cd cmake
+#           if ! ../run-clang-tidy.sh -fix ; then
+#             git diff > /tmp/clang-tidy-fixes
+#             echo Found clang tidy fixes:
+#             cat /tmp/clang-tidy-fixes
+#             exit 1
+#           else
+#             echo Did not find any clang-tidy fixes
+#           fi
+#       - name: Upload fixes as artifact
+#         if: ${{ always() && matrix.run_clang_tidy }}
+#         uses: actions/upload-artifact@v2
+#         with:
+#           name: clang-tidy-fixes
+#           path: /tmp/clang-tidy-fixes
+#       - name: Show ccache statistics
+#         shell: bash
+#         run: |
+#           set -v
+#           ccache -s
+#       - name: Reduce ccache size
+#         if: ${{ runner.os == 'macOS' }}
+#         shell: bash
+#         run: |
+#           set -v
+#           ccache --evict-older-than 7d
+#           ccache -s
+#       - name: Save ccache cache
+#         # note: this access key has write access to the cache. This can't run on PRs.
+#         if: ${{ github.event_name == 'push' }}
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: put
+#           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+#           artifacts: ${{ github.workspace }}/.ccache
+#       - name: Save conan cache
+#         # note: this access key has write access to the cache. This can't run on PRs.
+#         if: ${{ github.event_name == 'push' }}
+#         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+#         with:
+#           action: put
+#           aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+#           aws-region: eu-west-1
+#           bucket: ci-cache.cryfs
+#           key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+#           artifacts: ${{ env.CONAN_USER_HOME }}
+#       - name: Test
+#         if: ${{ matrix.run_tests }}
+#         uses: ./.github/workflows/actions/run_tests
+#         with:
+#           gtest_args: ${{matrix.gtest_args}}
+#           extra_env_vars: ${{matrix.extra_env_vars_for_test}}
+          
+  windows:
+    name: CI (Windows)
     strategy:
       fail-fast: false
       matrix:
         name: [""]
         os:
-          - macos-10.15
-          - ubuntu-18.04
-          - ubuntu-20.04
-        compiler:
-          - cxx: g++-7
-            cc: gcc-7
-            macos_cxx: g++-7
-            macos_cc: gcc-7
-            homebrew_package: gcc@7
-            apt_package: g++-7
-          - cxx: g++-8
-            cc: gcc-8
-            macos_cxx: g++-8
-            macos_cc: gcc-8
-            homebrew_package: gcc@8
-            apt_package: g++-8
-          - cxx: g++-9
-            cc: gcc-9
-            macos_cxx: g++-9
-            macos_cc: gcc-9
-            apt_package: g++-9
-            homebrew_package: gcc@9
-#         TODO gcc 10 doesn't work, potentially because cmake doesn't know yet that the STL now depends on pthread. See https://github.com/pothosware/SoapySDRPlay3/issues/5
-#           - cxx: g++-10
-#             cc: gcc-10
-#             macos_cxx: g++-10
-#             macos_cc: gcc-10
-#             apt_package: g++-10
-#             homebrew_package: gcc@10
-          - cxx: clang++-7
-            cc: clang-7
-            macos_cxx: /usr/local/opt/llvm@7/bin/clang++
-            macos_cc: /usr/local/opt/llvm@7/bin/clang
-            apt_package: clang-7
-            homebrew_package: llvm@7
-          - cxx: clang++-8
-            cc: clang-8
-            macos_cxx: /usr/local/opt/llvm@8/bin/clang++
-            macos_cc: /usr/local/opt/llvm@8/bin/clang
-            apt_package: clang-8
-            homebrew_package: llvm@8
-          - cxx: clang++-9
-            cc: clang-9
-            macos_cxx: /usr/local/opt/llvm@9/bin/clang++
-            macos_cc: /usr/local/opt/llvm@9/bin/clang
-            apt_package: clang-9
-            homebrew_package: llvm@9
-          # TODO Clang-10 on linux? macos homebrew doesn't seem to have it
-          - cxx: clang++-11
-            cc: clang-11
-            macos_cxx: /usr/local/opt/llvm@11/bin/clang++
-            macos_cc: /usr/local/opt/llvm@11/bin/clang
-            apt_package: clang-11
-            homebrew_package: llvm@11
-          # Apple Clang
-#           - cxx: clang++
-#             cc: clang
-#             homebrew_package: ""
+          - windows-2019
+        arch:
+          - Win32
+          - x64
         build_type:
           - Debug
           - Release
           - RelWithDebInfo
-        extra_cmake_flags: [""]
-        extra_cxxflags: [""]
-        extra_env_vars_for_test: [""]
-        install_dependencies_manually: [false]
-        run_build: [true]
-        run_tests: [true]
-        run_clang_tidy: [false]
-        include:
-          - name: Local dependencies
-            os: ubuntu-18.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11
-            build_type: RelWithDebInfo
-            extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
-            extra_cxxflags: ""
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: true
-            run_build: true
-            run_tests: true
-          - name: Local dependencies
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11
-            build_type: RelWithDebInfo
-            extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
-            extra_cxxflags: ""
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: true
-            run_build: true
-            run_tests: true
-          - name: Werror gcc
-            os: ubuntu-20.04
-            compiler:
-              cxx: g++-9
-              cc: gcc-9
-              apt_package: g++-9
-            build_type: RelWithDebInfo
-            extra_cmake_flags: -DUSE_WERROR=on
-            extra_cxxflags: ""
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: false
-          - name: Werror clang
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11
-            build_type: RelWithDebInfo
-            extra_cmake_flags: -DUSE_WERROR=on
-            extra_cxxflags: ""
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: false
-          - name: No compatibility
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11
-            build_type: RelWithDebInfo
-            extra_cmake_flags: ""
-            extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: true
-          - name: ASAN
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11
-            build_type: Debug
-            # OpenMP crashes under asan. Disable OpenMP.
-            # TODO is it enough to replace this with omp_num_threads: 1 ?
-            extra_cmake_flags: "-DDISABLE_OPENMP=ON"
-            extra_cxxflags: "-O1 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common -fsanitize-address-use-after-scope"
-            extra_env_vars_for_test: ASAN_OPTIONS="detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: true
-          - name: UBSAN
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11
-            build_type: Debug
-            # OpenMP crashes under ubsan. Disable OpenMP.
-            # TODO is it enough to replace this with omp_num_threads: 1 ?
-            extra_cmake_flags: "-DDISABLE_OPENMP=ON"
-            extra_cxxflags: "-O1 -fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
-            extra_env_vars_for_test: UBSAN_OPTIONS="print_stacktrace=1"
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: true
-          - name: TSAN
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11
-            build_type: Debug
-            extra_cmake_flags: ""
-            extra_cxxflags: "-O2 -fsanitize=thread -fno-omit-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
-            install_dependencies_manually: false
-            run_build: true
-            run_tests: true
-            gtest_args: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_*:BacktraceTest.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*:CliTest.WorksWithCommasInBasedir"
-            extra_env_vars_for_test: OMP_NUM_THREADS=1
-          - name: clang-tidy
-            os: ubuntu-20.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang++-11 clang-tidy-11
-            build_type: RelWithDebInfo
-            extra_cmake_flags: ""
-            extra_cxxflags: ""
-            install_dependencies_manually: false
-            run_build: false
-            run_tests: false
-            extra_env_vars_for_test: ""
-            run_clang_tidy: true
     runs-on: ${{matrix.os}}
     env:
       # Setting conan cache dir to a location where our Github Cache Action can find it
-      CONAN_USER_HOME: "${{ github.workspace }}/conan-cache/"
+      CONAN_USER_HOME: "D:/.conan/f/"
+      CONAN_USER_HOME_SHORT: "D:/.conan/s/"
     steps:
       - name: Checkout
         uses: actions/checkout@v1
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Setup MacOS
-        if: ${{ runner.os == 'macOS' }}
-        uses: ./.github/workflows/actions/setup_macos
-        with:
-          extra_homebrew_packages: ${{ matrix.compiler.homebrew_package }}
-      - name: Setup Linux
-        if: ${{ runner.os == 'Linux' }}
-        uses: ./.github/workflows/actions/setup_linux
-        with:
-          os: ${{ matrix.os }}
-          extra_apt_packages: ${{ matrix.compiler.apt_package }}
-      - name: Install local dependencies
-        if: ${{ matrix.install_dependencies_manually }}
-        uses: ./.github/workflows/actions/install_local_dependencies
+      - name: Setup Windows
+        uses: ./.github/workflows/actions/setup_windows
       - name: Find pip cache location
         id: pip_cache_dir
         run: |
@@ -247,9 +449,6 @@ jobs:
         shell: bash
         run: |
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
-            python3 -m pip install setuptools
-          fi
           python3 -m pip install conan
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -264,45 +463,45 @@ jobs:
           key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
           artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Configure ccache
-        shell: bash
-        run: |
-          set -v
-          ccache --set-config=compiler_check=content
-          ccache --set-config=max_size=500M
-          ccache --set-config=cache_dir=${{github.workspace}}/.ccache
-          ccache --set-config=compression=true
-          ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
-          echo CCache config:
-          ccache -p
-          echo Clearing ccache statistics
-          ccache -z
-      - name: Hash flags
-        id: hash_flags
-        run: |
-          # Write it into file first so we fail if the command fails. Errors inside $() are ignored by bash unfortunately.
-          echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum > /tmp/hash_flags
-          echo "::set-output name=hash_flags::$(cat /tmp/hash_flags)"
-          rm /tmp/hash_flags
-        shell: bash
-      - name: Retrieve ccache cache
-        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-        continue-on-error: true
-        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
-        with:
-          action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-      - name: Show ccache statistics
-        shell: bash
-        run: |
-          set -v
-          ccache -s
+      # - name: Configure ccache
+      #   shell: bash
+      #   run: |
+      #     set -v
+      #     ccache --set-config=compiler_check=content
+      #     ccache --set-config=max_size=500M
+      #     ccache --set-config=cache_dir=${{github.workspace}}/.ccache
+      #     ccache --set-config=compression=true
+      #     ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
+      #     echo CCache config:
+      #     ccache -p
+      #     echo Clearing ccache statistics
+      #     ccache -z
+      # - name: Hash flags
+      #   id: hash_flags
+      #   run: |
+      #     # Write it into file first so we fail if the command fails. Errors inside $() are ignored by bash unfortunately.
+      #     echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum > /tmp/hash_flags
+      #     echo "::set-output name=hash_flags::$(cat /tmp/hash_flags)"
+      #     rm /tmp/hash_flags
+      #   shell: bash
+      # - name: Retrieve ccache cache
+      #   # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+      #   continue-on-error: true
+      #   # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+      #   uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      #   with:
+      #     action: get
+      #     # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+      #     aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+      #     aws-secret-access-key: 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
+      #     aws-region: eu-west-1
+      #     bucket: ci-cache.cryfs
+      #     key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      # - name: Show ccache statistics
+      #   shell: bash
+      #   run: |
+      #     set -v
+      #     ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
@@ -316,69 +515,42 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
-      - name: Build (macOS)
-        if: ${{ matrix.run_build  && runner.os == 'macOS' }}
-        uses: ./.github/workflows/actions/run_build
-        with:
-          cxx: ${{ matrix.compiler.macos_cxx }}
-          cc: ${{ matrix.compiler.macos_cc }}
-          build_type: ${{ matrix.build_type }}
-      - name: Build (Linux)
-        if: ${{ matrix.run_build && runner.os == 'Linux' }}
-        uses: ./.github/workflows/actions/run_build
-        with:
-          cxx: ${{ matrix.compiler.cxx }}
-          cc: ${{ matrix.compiler.cc }}
-          build_type: ${{ matrix.build_type }}
-          extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
-          extra_cxxflags: ${{ matrix.extra_cxxflags }}
-      - name: Run clang-tidy
-        id: clang_tidy
-        if: ${{ matrix.run_clang_tidy }}
+          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+      - name: Build
         shell: bash
         run: |
           set -v
-          mkdir cmake
-          cd cmake
-          if ! ../run-clang-tidy.sh -fix ; then
-            git diff > /tmp/clang-tidy-fixes
-            echo Found clang tidy fixes:
-            cat /tmp/clang-tidy-fixes
-            exit 1
-          else
-            echo Did not find any clang-tidy fixes
-          fi
-      - name: Upload fixes as artifact
-        if: ${{ always() && matrix.run_clang_tidy }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: clang-tidy-fixes
-          path: /tmp/clang-tidy-fixes
-      - name: Show ccache statistics
-        shell: bash
-        run: |
-          set -v
-          ccache -s
-      - name: Reduce ccache size
-        if: ${{ runner.os == 'macOS' }}
-        shell: bash
-        run: |
-          set -v
-          ccache --evict-older-than 7d
-          ccache -s
-      - name: Save ccache cache
-        # note: this access key has write access to the cache. This can't run on PRs.
-        if: ${{ github.event_name == 'push' }}
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
-        with:
-          action: put
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-          artifacts: ${{ github.workspace }}/.ccache
+          # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
+          # note: The CMAKE_SYSTEM_VERSION variable is set to 10.0.18362.0 because as of this writing, appveyor uses 10.0.17763.0 and that has a bug, see https://developercommunity.visualstudio.com/content/problem/343296/sdk-and-experimentalpreprocessor.html
+          # TODO CMAKE_SYSTEM_VERSION is probably not needed anymore
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.1" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
+          cmake --build . --config ${{matrix.build_type}}
+      # - name: Show ccache statistics
+      #   shell: bash
+      #   run: |
+      #     set -v
+      #     ccache -s
+      # - name: Reduce ccache size
+      #   if: ${{ runner.os == 'macOS' }}
+      #   shell: bash
+      #   run: |
+      #     set -v
+      #     ccache --evict-older-than 7d
+      #     ccache -s
+      # - name: Save ccache cache
+      #   # note: this access key has write access to the cache. This can't run on PRs.
+      #   if: ${{ github.event_name == 'push' }}
+      #   uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      #   with:
+      #     action: put
+      #     aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: eu-west-1
+      #     bucket: ci-cache.cryfs
+      #     key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      #     artifacts: ${{ github.workspace }}/.ccache
       - name: Save conan cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{ github.event_name == 'push' }}
@@ -389,11 +561,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
-          artifacts: ${{ env.CONAN_USER_HOME }}
+          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          artifacts: |
+            ${{ env.CONAN_USER_HOME }}
+            ${{ env.CONAN_USER_HOME_SHORT }}
       - name: Test
-        if: ${{ matrix.run_tests }}
-        uses: ./.github/workflows/actions/run_tests
+        shell: bash
+        run: |
+          set -v
+          cd build
+          ./test/gitversion/${{matrix.build_type}}/gitversion-test.exe
+          ./test/cpp-utils/${{matrix.build_type}}/cpp-utils-test.exe
+          # ./test/fspp/${{matrix.build_type}}/fspp-test.exe
+          ./test/parallelaccessstore/${{matrix.build_type}}/parallelaccessstore-test.exe
+          ./test/blockstore/${{matrix.build_type}}/blockstore-test.exe
+          ./test/blobstore/${{matrix.build_type}}/blobstore-test.exe
+          ./test/cryfs/${{matrix.build_type}}/cryfs-test.exe
+          # TODO Enable cryfs-cli-test on Windows
+          # ./test/cryfs-cli/${{matrix.build_type}}/cryfs-cli-test.exe
+      - name: CPack
+        shell: bash
+        run: |
+          set -v
+          cd build
+          cpack -C ${{matrix.build_type}} --verbose -G WIX
+      - name: Upload installers as artifact
+        uses: actions/upload-artifact@v2
         with:
-          gtest_args: ${{matrix.gtest_args}}
-          extra_env_vars: ${{matrix.extra_env_vars_for_test}}
+          name: cryfs-${{matrix.arch}}-${{matrix.build_type}}.msi
+          path: build/cryfs-*.msi

@@ -11,21 +11,25 @@
  * This can be very handy for password inputs where you don't want the password to be visible on screen.
  */
 
-namespace cpputils {
+namespace cpputils
+{
 
-namespace details {
-class DontEchoStdinToStdoutRAII;
-}
+	namespace details
+	{
+		class DontEchoStdinToStdoutRAII_;
+	}
 
-class DontEchoStdinToStdoutRAII final {
-public:
-	DontEchoStdinToStdoutRAII();
-	~DontEchoStdinToStdoutRAII();
-private:
-	cpputils::unique_ref<details::DontEchoStdinToStdoutRAII> raii;
+	class DontEchoStdinToStdoutRAII final
+	{
+	public:
+		DontEchoStdinToStdoutRAII();
+		~DontEchoStdinToStdoutRAII();
 
-	DISALLOW_COPY_AND_ASSIGN(DontEchoStdinToStdoutRAII);
-};
+	private:
+		cpputils::unique_ref<details::DontEchoStdinToStdoutRAII_> raii;
+
+		DISALLOW_COPY_AND_ASSIGN(DontEchoStdinToStdoutRAII);
+	};
 
 }
 
