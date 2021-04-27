@@ -34,5 +34,6 @@ runs:
           if [[ "${{matrix.name}}" != "TSAN" ]]; then
             ./test/fspp/fspp-test ${{inputs.gtest_args}}
           fi
-          ./test/cryfs-cli/cryfs-cli-test ${{inputs.gtest_args}}
         fi
+
+        ./test/cryfs-cli/cryfs-cli-test --gtest_filter=-CliTest_Setup.*:CallAfterTimeoutTest.*:CliTest.WorksWithCommasInBasedir:CliTest_IntegrityCheck.*:CliTest_Unmount.* ${{inputs.gtest_args}}
