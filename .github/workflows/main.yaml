@@ -501,7 +501,7 @@ jobs:
         shell: bash
         run: |
           set -v
-          clache -s
+          clcache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
@@ -531,7 +531,7 @@ jobs:
         shell: bash
         run: |
           set -v
-          clache -s
+          clcache -s
       # - name: Save ccache cache
       #   # note: this access key has write access to the cache. This can't run on PRs.
       #   if: ${{ github.event_name == 'push' }}
