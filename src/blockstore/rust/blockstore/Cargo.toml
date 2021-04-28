@@ -1,0 +1,47 @@
+[package]
+authors = ["Sebastian Messmer <messmer@cryfs.org>"]
+edition = "2018"
+name = "cryfs-blockstore"
+version = "0.1.0"
+
+[dependencies]
+aes-gcm = {version = "^0.8.0", features = ["std"]}
+anyhow = "^1.0.37"
+cxx = {version = "^1.0.27", features = ["c++14"]}
+binary-layout = "^1.0.0"
+generic-array = "^0.14.4"
+hex = "^0.4.2"
+log = "^0.4.13"
+rand = "^0.8.1"
+# TODO current release sodiumoxide 0.2.6 doesn't have aes yet, use current master
+aead = "^0.3.2"
+chacha20poly1305 = "^0.7.1"
+cipher = "^0.2.5"
+itertools = "^0.10.0"
+region = "^2.2.0"
+ring = "^0.16.19"
+sodiumoxide = {git = "https://github.com/sodiumoxide/sodiumoxide", rev = "9f6a18d40a4db253edfebac9f2ce5c22d09b1f47"}
+static_assertions = "^1.1.0"
+sysinfo = "^0.16.4"
+errno = "^0.2.7"
+binread = {version = "2.1.1", features = ["const_generics"]}
+binwrite = "0.2.1"
+common_macros = "0.1.1"
+thiserror = "1.0.24"
+paste = "1.0.5"
+
+[target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
+libc = "^0.2.92"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["fileapi"] }
+
+[build-dependencies]
+cxx-build = "^1.0.27"
+
+[dev-dependencies]
+generic-tests = "^0.1.1"
+tempdir = "^0.3.7"
+
+[lib]
+crate-type = ["staticlib"]

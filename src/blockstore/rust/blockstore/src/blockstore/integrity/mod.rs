@@ -1,10 +1,10 @@
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
+use binary_layout::{define_layout, FieldMetadata};
 use log::warn;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter, BLOCKID_LEN};
-use crate::define_layout;
 
 mod known_block_versions;
 
@@ -12,16 +12,16 @@ use known_block_versions::{BlockVersion, ClientId, IntegrityViolationError, Know
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
-define_layout!(block_layout, {
+binary_layout::define_layout!(block_layout, LittleEndian, {
     // TODO Use types BlockId, ClientId, ... instead of slices, probably through some LayoutAs trait
     format_version_header: u16,
-    block_id: &[u8; BLOCKID_LEN],
+    block_id: [u8; BLOCKID_LEN],
     last_update_client_id: u32,
     block_version: u64,
-    data: &[u8],
+    data: [u8],
 });
 
-const HEADER_SIZE: usize = block_layout::data.offset();
+const HEADER_SIZE: usize = block_layout::data::OFFSET;
 
 pub struct IntegrityConfig {
     allow_integrity_violations: bool,
@@ -137,17 +137,18 @@ impl<B> IntegrityBlockStore<B> {
         data: &'a [u8],
         expected_block_id: &BlockId,
     ) -> Result<&'a [u8]> {
+        let view = block_layout::View::new(data);
         ensure!(
-            data.len() >= block_layout::data.offset(),
+            data.len() >= block_layout::data::OFFSET,
             "Block size is {} but we need at least {} to store the block header",
             data.len(),
-            block_layout::data.offset()
+            block_layout::data::OFFSET
         );
-        let format_version_header = block_layout::format_version_header.read(data);
+        let format_version_header = view.format_version_header().read();
         if format_version_header != FORMAT_VERSION_HEADER {
             bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
         }
-        let block_id = BlockId::from_array(block_layout::block_id.data(data));
+        let block_id = BlockId::from_array(view.block_id().data());
         if block_id != *expected_block_id {
             self._integrity_violation_detected(
                 IntegrityViolationError::WrongBlockId {
@@ -158,10 +159,10 @@ impl<B> IntegrityBlockStore<B> {
             )?;
         }
         let last_update_client_id = ClientId {
-            id: block_layout::last_update_client_id.read(data),
+            id: view.last_update_client_id().read(),
         };
         let block_version = BlockVersion {
-            version: block_layout::block_version.read(data),
+            version: view.block_version().read(),
         };
         match self
             .known_block_versions
@@ -178,7 +179,7 @@ impl<B> IntegrityBlockStore<B> {
             Err(err) => Err(err)?,
         }
 
-        Ok(block_layout::data.data(data))
+        Ok(view.into_data().extract())
     }
 }
 
