@@ -3,13 +3,14 @@
 use aead::generic_array::typenum::Unsigned;
 use aead::{
     generic_array::{ArrayLength, GenericArray},
-    Aead, NewAead, Nonce,
+    AeadInPlace, NewAead, Nonce,
 };
 use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
 use super::{Cipher, EncryptionKey};
+use crate::data::Data;
 
 // TODO The aes-gcm crate currently needs
 // > RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
@@ -20,13 +21,15 @@ use super::{Cipher, EncryptionKey};
 // > RUSTFLAGS="-Ctarget-feature=+avx2"
 // or it won't use AVX2.
 
-pub struct AeadCipher<C: NewAead + Aead> {
+pub struct AeadCipher<C: NewAead + AeadInPlace> {
     encryption_key: EncryptionKey<C::KeySize>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: NewAead + Aead> Cipher for AeadCipher<C> {
+impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
     type KeySize = C::KeySize;
+
+    const CIPHERTEXT_OVERHEAD: usize = C::NonceSize::USIZE + C::TagSize::USIZE;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         Self {
@@ -35,50 +38,45 @@ impl<C: NewAead + Aead> Cipher for AeadCipher<C> {
         }
     }
 
-    fn ciphertext_size(plaintext_size: usize) -> usize {
-        plaintext_size + C::NonceSize::USIZE + C::TagSize::USIZE
-    }
-
-    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
-        ensure!(
-            ciphertext_size >= C::NonceSize::USIZE + C::TagSize::USIZE,
-            "Ciphertext size of {} bytes is too small to hold the ciphertext, even for a plaintext of 0 bytes. Ciphertext size must be at least {} bytes.",
-            ciphertext_size,
-            C::NonceSize::USIZE + C::TagSize::USIZE,
-        );
-        Ok(ciphertext_size - C::NonceSize::USIZE - C::TagSize::USIZE)
-    }
-
-    fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+    fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Move C::new call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
         // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
+        // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let ciphertext_size = Self::ciphertext_size(plaintext.len());
+        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
         let nonce = random_nonce();
-        let cipherdata = cipher
-            .encrypt(&nonce, plaintext)
+        let auth_tag = cipher
+            .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
-        let mut ciphertext = Vec::with_capacity(ciphertext_size);
-        ciphertext.extend_from_slice(&nonce);
-        ciphertext.extend(cipherdata); // TODO Is there a way to encrypt it without copying here? Or does it even matter?
+        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
+                "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        ciphertext[0..C::NonceSize::USIZE].copy_from_slice(nonce.as_ref());
+        ciphertext[C::NonceSize::USIZE..(C::NonceSize::USIZE + C::TagSize::USIZE)]
+            .copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
+    fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
         // TODO Move C::new call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let nonce = &ciphertext[..C::NonceSize::USIZE];
-        let cipherdata = &ciphertext[C::NonceSize::USIZE..];
-        let plaintext = cipher
-            .decrypt(nonce.into(), cipherdata)
+        let ciphertext_len = ciphertext.len();
+        let (nonce, rest) = ciphertext.as_mut().split_at_mut(C::NonceSize::USIZE);
+        let nonce: &[u8] = nonce;
+        let (auth_tag, cipherdata) = rest.split_at_mut(C::TagSize::USIZE);
+        let auth_tag: &[u8] = auth_tag;
+        cipher
+            .decrypt_in_place_detached(nonce.into(), &[], cipherdata.as_mut(), auth_tag.into())
             .context("Decrypting data failed")?;
+        let plaintext = ciphertext.into_subregion((C::NonceSize::USIZE + C::TagSize::USIZE)..);
         assert_eq!(
-            Self::plaintext_size(ciphertext.len()).unwrap(),
+            ciphertext_len
+                .checked_sub(Self::CIPHERTEXT_OVERHEAD)
+                .unwrap(),
             plaintext.len()
         );
         Ok(plaintext)
