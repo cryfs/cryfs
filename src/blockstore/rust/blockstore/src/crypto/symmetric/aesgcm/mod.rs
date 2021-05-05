@@ -1,6 +1,8 @@
 use anyhow::{ensure, Result};
 use generic_array::typenum::U32;
 use log::warn;
+use std::ops::Sub;
+use typenum::Unsigned;
 
 // TODO AES-GCM-SIV or XChaCha20-Poly1305 (XChaCha20-Poly1305-ietf, chacha20poly1305_ietf, chacha20poly1305) might be better than AES-GCM
 // TODO Add 128bit fixed string to the message and verify it, see https://libsodium.gitbook.io/doc/secret-key_cryptography/aead#robustness
@@ -8,7 +10,7 @@ use log::warn;
 mod libsodium;
 
 use super::{Cipher, EncryptionKey};
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 const NONCE_SIZE: usize = 12;
 const AUTH_TAG_SIZE: usize = 16;
@@ -29,7 +31,8 @@ pub struct Aes256Gcm(Aes256GcmImpl);
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD: usize = NONCE_SIZE + AUTH_TAG_SIZE;
+    // TODO Calculate as NonceSize + AuthTagSize
+    type CiphertextOverhead = typenum::U28;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         let hardware_acceleration_available = Aes256Gcm_HardwareAccelerated::is_available();
@@ -45,7 +48,11 @@ impl Cipher for Aes256Gcm {
         }
     }
 
-    fn encrypt(&self, plaintext: Data) -> Result<Data> {
+    fn encrypt<PrefixBytes: Unsigned + Sub<Self::CiphertextOverhead>>(
+        &self,
+        mut plaintext: GrowableData<PrefixBytes, typenum::U0>,
+    ) -> Result<GrowableData<<PrefixBytes as Sub<Self::CiphertextOverhead>>::Output, typenum::U0>>
+    {
         match &self.0 {
             Aes256GcmImpl::HardwareAccelerated(i) => i.encrypt(plaintext),
             Aes256GcmImpl::SoftwareImplementation(i) => i.encrypt(plaintext),

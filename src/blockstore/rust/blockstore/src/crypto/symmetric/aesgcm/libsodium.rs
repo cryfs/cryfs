@@ -5,12 +5,14 @@
 use anyhow::{anyhow, Context, Result};
 use generic_array::typenum::U32;
 use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
+use std::ops::Sub;
 use std::sync::Once;
+use typenum::Unsigned;
 
 use super::super::{Cipher, EncryptionKey};
 use super::{AUTH_TAG_SIZE, NONCE_SIZE};
 
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 static INIT_LIBSODIUM: Once = Once::new();
 
@@ -37,7 +39,7 @@ impl Aes256Gcm {
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD;
+    type CiphertextOverhead = <super::Aes256Gcm as Cipher>::CiphertextOverhead;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         init_libsodium();
@@ -49,10 +51,14 @@ impl Cipher for Aes256Gcm {
         }
     }
 
-    fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
+    fn encrypt<PrefixBytes: Unsigned + Sub<Self::CiphertextOverhead>>(
+        &self,
+        mut plaintext: GrowableData<PrefixBytes, typenum::U0>,
+    ) -> Result<GrowableData<<PrefixBytes as Sub<Self::CiphertextOverhead>>::Output, typenum::U0>>
+    {
         // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         // TODO Use binary-layout here?
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
+        let ciphertext_size = plaintext.len() + Self::CiphertextOverhead::USIZE;
         let nonce = self.cipher.gen_initial_nonce();
         let auth_tag = self
             .cipher
@@ -65,8 +71,8 @@ impl Cipher for Aes256Gcm {
                 &nonce,
                 &convert_key(&self.encryption_key),
             );
-        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
-            "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        let mut ciphertext =
+            plaintext.grow_region::<Self::CiphertextOverhead::USIZE, typenum::U0>();
         ciphertext[0..NONCE_SIZE].copy_from_slice(nonce.as_ref());
         ciphertext[NONCE_SIZE..(NONCE_SIZE + AUTH_TAG_SIZE)].copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());

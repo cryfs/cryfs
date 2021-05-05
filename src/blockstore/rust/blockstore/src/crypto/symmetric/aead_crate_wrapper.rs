@@ -8,9 +8,10 @@ use aead::{
 use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
+use std::ops::Add;
 
 use super::{Cipher, EncryptionKey};
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 // TODO The aes-gcm crate currently needs
 // > RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
@@ -26,10 +27,13 @@ pub struct AeadCipher<C: NewAead + AeadInPlace> {
     _phantom: PhantomData<C>,
 }
 
-impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
+impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C>
+where
+    C::NonceSize: Add<C::TagSize>,
+{
     type KeySize = C::KeySize;
 
-    const CIPHERTEXT_OVERHEAD: usize = C::NonceSize::USIZE + C::TagSize::USIZE;
+    type CiphertextOverhead = <C::NonceSize as Add<C::TagSize>>::Output;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         Self {
@@ -38,20 +42,23 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         }
     }
 
-    fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
+    fn encrypt<PrefixBytes: Unsigned + Add<Self::CiphertextOverhead>>(
+        &self,
+        mut plaintext: GrowableData<PrefixBytes, typenum::U0>,
+    ) -> Result<GrowableData<<PrefixBytes as Add<Self::CiphertextOverhead>>::Output, typenum::U0>>
+    {
         // TODO Move C::new call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
         // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
+        let ciphertext_size = plaintext.len() + Self::CiphertextOverhead::USIZE;
         let nonce = random_nonce();
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
-        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
-                "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        let mut ciphertext = plaintext.grow_region::<{ Self::CIPHERTEXT_OVERHEAD }, 0>();
         ciphertext[0..C::NonceSize::USIZE].copy_from_slice(nonce.as_ref());
         ciphertext[C::NonceSize::USIZE..(C::NonceSize::USIZE + C::TagSize::USIZE)]
             .copy_from_slice(auth_tag.as_ref());
@@ -75,7 +82,7 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         let plaintext = ciphertext.into_subregion((C::NonceSize::USIZE + C::TagSize::USIZE)..);
         assert_eq!(
             ciphertext_len
-                .checked_sub(Self::CIPHERTEXT_OVERHEAD)
+                .checked_sub(Self::CiphertextOverhead::USIZE)
                 .unwrap(),
             plaintext.len()
         );

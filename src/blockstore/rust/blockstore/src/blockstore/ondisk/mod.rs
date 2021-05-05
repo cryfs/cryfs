@@ -1,13 +1,16 @@
 use anyhow::{anyhow, bail, Context, Result};
+use std::convert::TryInto;
 use std::fs::{DirEntry, File};
 use std::io::{IoSlice, Write};
+use std::ops::Add;
 use std::path::{Path, PathBuf};
+use typenum::Unsigned;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
-    OptimizedBlockStoreWriter, BLOCKID_LEN,
+    OptimizedBlockStoreWriter, OptimizedBlockStoreWriterMetadata, BLOCKID_LEN,
 };
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 mod sysinfo;
 
@@ -148,28 +151,56 @@ impl BlockStoreDeleter for OnDiskBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
+impl OptimizedBlockStoreWriterMetadata for OnDiskBlockStore {
+    type RequiredPrefixBytesBase = typenum::U0;
+    // TODO assert RequiredPrefixBytesSelf == FORMAT_VERSION_HEADER.len()
+    type RequiredPrefixBytesSelf = typenum::U14;
+}
 impl OptimizedBlockStoreWriter for OnDiskBlockStore {
-    type BlockData = BlockData;
-
-    fn allocate(size: usize) -> BlockData {
-        let data = Data::from(vec![0; FORMAT_VERSION_HEADER.len() + size])
-            .into_subregion(FORMAT_VERSION_HEADER.len()..);
-        BlockData::new(data)
+    fn allocate(
+        size: usize,
+    ) -> GrowableData<
+        <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+        typenum::U0,
+    > {
+        Data::from(vec![
+            0;
+            Self::RequiredPrefixBytesBase::USIZE
+                + Self::RequiredPrefixBytesSelf::USIZE
+                + size
+        ])
+        .into_subregion(FORMAT_VERSION_HEADER.len()..)
+        .try_into()
+        .unwrap()
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<bool> {
         let path = self._block_path(id);
         if path.exists() {
             Ok(false)
         } else {
-            _store(&path, data)?;
+            Self::_store(&path, data)?;
             Ok(true)
         }
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    fn store_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<()> {
         let path = self._block_path(id);
-        _store(&path, data)
+        Self::_store(&path, data)
     }
 }
 
@@ -232,6 +263,38 @@ impl OnDiskBlockStore {
         }
         Ok(())
     }
+
+    fn _store(
+        path: &Path,
+        data: GrowableData<
+            <<Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesBase as Add<
+                <Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesSelf,
+            >>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<()> {
+        _create_dir_if_doesnt_exist(
+            path.parent()
+                .expect("Block file path should have a parent directory"),
+        )
+        .with_context(|| {
+            format!(
+                "Failed to create parent directory for block file at {}",
+                path.display()
+            )
+        })?;
+        let mut data = data
+            .extract()
+            .grow_region(FORMAT_VERSION_HEADER.len(), 0)
+            .expect("Tried to grow data region to store in OnDiskBlockStore::_store");
+        // TODO Use binary-layout here?
+        data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
+        let mut file = File::create(&path)
+            .with_context(|| format!("Failed to create block file at {}", path.display()))?;
+        file.write_all(data.as_ref())
+            .with_context(|| format!("Failed to write to block file at {}", path.display()))?;
+        Ok(())
+    }
 }
 
 fn _check_and_remove_header(data: Data) -> Result<Data> {
@@ -259,30 +322,6 @@ fn _create_dir_if_doesnt_exist(dir: &Path) -> Result<()> {
 
 fn _is_allowed_blockid_character(c: char) -> bool {
     (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
-}
-
-fn _store(path: &Path, data: BlockData) -> Result<()> {
-    _create_dir_if_doesnt_exist(
-        path.parent()
-            .expect("Block file path should have a parent directory"),
-    )
-    .with_context(|| {
-        format!(
-            "Failed to create parent directory for block file at {}",
-            path.display()
-        )
-    })?;
-    let mut data = data
-        .extract()
-        .grow_region(FORMAT_VERSION_HEADER.len(), 0)
-        .expect("Tried to grow data region to store in OnDiskBlockStore::_store");
-    // TODO Use binary-layout here?
-    data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
-    let mut file = File::create(&path)
-        .with_context(|| format!("Failed to create block file at {}", path.display()))?;
-    file.write_all(data.as_ref())
-        .with_context(|| format!("Failed to write to block file at {}", path.display()))?;
-    Ok(())
 }
 
 #[cfg(test)]

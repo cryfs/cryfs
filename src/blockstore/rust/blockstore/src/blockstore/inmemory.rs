@@ -1,12 +1,17 @@
 use anyhow::{anyhow, Result};
 use std::collections::hash_map::HashMap;
+use std::convert::TryInto;
+use std::ops::Add;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
 
-use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
+use super::{
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+    OptimizedBlockStoreWriterMetadata,
+};
 
 use super::block_data::IBlockData;
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 pub struct InMemoryBlockStore {
     blocks: RwLock<HashMap<BlockId, Data>>,
@@ -72,14 +77,28 @@ impl BlockStoreDeleter for InMemoryBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
+impl OptimizedBlockStoreWriterMetadata for InMemoryBlockStore {
+    type RequiredPrefixBytesBase = typenum::U0;
+    type RequiredPrefixBytesSelf = typenum::U0;
+}
 impl OptimizedBlockStoreWriter for InMemoryBlockStore {
-    type BlockData = BlockData;
-
-    fn allocate(size: usize) -> BlockData {
-        BlockData::new(Data::from(vec![0; size]))
+    fn allocate(
+        size: usize,
+    ) -> GrowableData<
+        <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+        typenum::U0,
+    > {
+        Data::from(vec![0; size]).try_into().unwrap()
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<bool> {
         let mut blocks = self
             .blocks
             .write()
@@ -96,7 +115,14 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         }
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    fn store_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<()> {
         let mut blocks = self
             .blocks
             .write()

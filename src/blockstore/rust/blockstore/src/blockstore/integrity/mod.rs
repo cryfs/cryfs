@@ -1,17 +1,19 @@
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use binary_layout::FieldMetadata;
 use log::warn;
+use std::ops::Add;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use typenum::Unsigned;
 
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
-    BLOCKID_LEN,
+    OptimizedBlockStoreWriterMetadata, BLOCKID_LEN,
 };
 
 mod known_block_versions;
 
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 use known_block_versions::{BlockVersion, ClientId, IntegrityViolationError, KnownBlockVersions};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
@@ -111,18 +113,42 @@ impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
 
 create_block_data_wrapper!(BlockData);
 
+impl<B: OptimizedBlockStoreWriterMetadata> OptimizedBlockStoreWriterMetadata
+    for IntegrityBlockStore<B>
+{
+    type RequiredPrefixBytesBase =
+        <B::RequiredPrefixBytesBase as Add<B::RequiredPrefixBytesSelf>>::Output;
+    type RequiredPrefixBytesSelf = typenum::U0; // TODO
+}
 impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockStore<B> {
-    type BlockData = BlockData;
-
-    fn allocate(size: usize) -> BlockData {
+    fn allocate(
+        size: usize,
+    ) -> GrowableData<
+        <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+        typenum::U0,
+    > {
         todo!()
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<bool> {
         todo!()
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    fn store_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<()> {
         todo!()
     }
 }

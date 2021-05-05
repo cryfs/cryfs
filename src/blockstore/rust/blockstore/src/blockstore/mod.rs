@@ -1,7 +1,9 @@
 use anyhow::Result;
 use std::marker::PhantomData;
+use std::ops::Add;
+use typenum::Unsigned;
 
-use crate::data::Data;
+use crate::data::{Data, GrowableData};
 
 pub use cppbridge::{BlockId, BLOCKID_LEN};
 
@@ -23,24 +25,56 @@ pub trait BlockStoreWriter {
     fn store(&self, id: &BlockId, data: &[u8]) -> Result<()>;
 }
 
-pub trait OptimizedBlockStoreWriter {
+pub trait OptimizedBlockStoreWriterMetadata {
+    type RequiredPrefixBytesBase: Unsigned;
+    type RequiredPrefixBytesSelf: Unsigned;
+}
+
+pub trait OptimizedBlockStoreWriter: OptimizedBlockStoreWriterMetadata
+where
+    Self::RequiredPrefixBytesBase: Add<Self::RequiredPrefixBytesSelf>,
+{
     /// In-memory representation of the data of a block. This can be allocated using [OptimizedBlockStoreWriter::allocate]
     /// and then can be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     ///
     /// The reason we use this class and don't use just [crate::data::Data] or `&[u8]` is for optimizations purposes.
     /// Some blockstores prepend header to the data before storing and require the block data to be set up in a way
     /// that makes sure that data can be prepended without having to copy the block data.
-    type BlockData: block_data::IBlockData;
+    // type BlockData: block_data::IBlockData;
 
     /// Allocates an in-memory representation of a data block that can be written to
     /// and that can then be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
-    fn allocate(size: usize) -> Self::BlockData;
+    fn allocate(
+        size: usize,
+    ) -> GrowableData<
+        <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+        typenum::U0,
+    >;
 
-    fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<bool>;
-    fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
+    fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<bool>;
+    fn store_optimized(
+        &self,
+        id: &BlockId,
+        data: GrowableData<
+            <Self::RequiredPrefixBytesBase as Add<Self::RequiredPrefixBytesSelf>>::Output,
+            typenum::U0,
+        >,
+    ) -> Result<()>;
 }
 
-impl<B: OptimizedBlockStoreWriter> BlockStoreWriter for B {
+impl<B: OptimizedBlockStoreWriter> BlockStoreWriter for B
+where
+    Self: OptimizedBlockStoreWriterMetadata,
+    <Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesBase:
+        Add<<Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesSelf>,
+{
     fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
         let mut block_data = Self::allocate(data.len());
         assert_eq!(block_data.as_ref().len(), data.len());
@@ -56,7 +90,13 @@ impl<B: OptimizedBlockStoreWriter> BlockStoreWriter for B {
     }
 }
 
-pub trait BlockStore: BlockStoreReader + BlockStoreWriter + BlockStoreDeleter {}
+pub trait BlockStore: BlockStoreReader + BlockStoreWriter + BlockStoreDeleter
+where
+    Self: OptimizedBlockStoreWriterMetadata,
+    <Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesBase:
+        Add<<Self as OptimizedBlockStoreWriterMetadata>::RequiredPrefixBytesSelf>,
+{
+}
 
 /// BlockData instances wrap a [Data] instance and guarantee the upholding of an
 /// important invariant for [OptimizedBlockStoreWriter], namely that the data stored

@@ -1,6 +1,10 @@
-use crate::data::Data;
 use anyhow::Result;
 use generic_array::ArrayLength;
+use std::ops::Sub;
+use typenum::Unsigned;
+
+use crate::data::Data;
+use crate::data::GrowableData;
 
 pub trait Cipher: Sized {
     type KeySize: ArrayLength<u8>;
@@ -8,10 +12,12 @@ pub trait Cipher: Sized {
     fn new(key: EncryptionKey<Self::KeySize>) -> Self;
 
     // How many bytes is a ciphertext larger than a plaintext?
-    const CIPHERTEXT_OVERHEAD: usize;
+    type CiphertextOverhead: Unsigned;
 
-    // TODO Can we make this API safer? It requires the data block passed in to have at least CIPHERTEXT_OVERHEAD prefix bytes available.
-    fn encrypt(&self, data: Data) -> Result<Data>;
+    fn encrypt<PrefixBytes: Unsigned + Sub<Self::CiphertextOverhead>>(
+        &self,
+        data: GrowableData<PrefixBytes, typenum::U0>,
+    ) -> Result<GrowableData<<PrefixBytes as Sub<Self::CiphertextOverhead>>::Output, typenum::U0>>;
 
     fn decrypt(&self, data: Data) -> Result<Data>;
 }
