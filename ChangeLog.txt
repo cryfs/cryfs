@@ -1,3 +1,8 @@
+Version 0.10.4 (unreleased)
+--------------
+Fixed bugs:
+* Fixed an issue when compiling with GCC 11, see https://github.com/cryfs/cryfs/issues/389
+
 Version 0.10.3
 ---------------
 Fixed bugs:
