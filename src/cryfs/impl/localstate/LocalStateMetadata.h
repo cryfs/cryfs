@@ -20,11 +20,11 @@ private:
   const uint32_t _myClientId;
   const cpputils::hash::Hash _encryptionKeyHash;
 
-  static boost::optional<LocalStateMetadata> _load(const boost::filesystem::path &metadataFilePath);
-  static LocalStateMetadata _deserialize(std::istream& stream);
-  static LocalStateMetadata _generate(const boost::filesystem::path &metadataFilePath, const cpputils::Data& encryptionKey);
-  void _save(const boost::filesystem::path &metadataFilePath) const;
-  void _serialize(std::ostream& stream) const;
+  static boost::optional<LocalStateMetadata> load_(const boost::filesystem::path &metadataFilePath);
+  static LocalStateMetadata deserialize_(std::istream& stream);
+  static LocalStateMetadata generate_(const boost::filesystem::path &metadataFilePath, const cpputils::Data& encryptionKey);
+  void save_(const boost::filesystem::path &metadataFilePath) const;
+  void serialize_(std::ostream& stream) const;
 
   LocalStateMetadata(uint32_t myClientId, cpputils::hash::Hash encryptionKey);
 };

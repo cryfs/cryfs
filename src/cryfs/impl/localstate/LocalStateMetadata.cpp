@@ -30,10 +30,10 @@ LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHa
 
 LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey, bool allowReplacedFilesystem) {
   auto metadataFile = statePath / "metadata";
-  auto loaded = _load(metadataFile);
+  auto loaded = load_(metadataFile);
   if (loaded == none) {
     // If it couldn't be loaded, generate a new client id.
-    return _generate(metadataFile, encryptionKey);
+    return generate_(metadataFile, encryptionKey);
   }
 
   if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
@@ -42,22 +42,22 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
   return *loaded;
 }
 
-optional<LocalStateMetadata> LocalStateMetadata::_load(const bf::path &metadataFilePath) {
+optional<LocalStateMetadata> LocalStateMetadata::load_(const bf::path &metadataFilePath) {
   ifstream file(metadataFilePath.string());
   if (!file.good()) {
     // State file doesn't exist
     return none;
   }
-  return _deserialize(file);
+  return deserialize_(file);
 }
 
-void LocalStateMetadata::_save(const bf::path &metadataFilePath) const {
+void LocalStateMetadata::save_(const bf::path &metadataFilePath) const {
   ofstream file(metadataFilePath.string(), std::ios::trunc);
-  _serialize(file);
+  serialize_(file);
 }
 
 namespace {
-uint32_t _generateClientId() {
+uint32_t generateClientId_() {
   uint32_t result = 0;
   do {
     result = cpputils::deserialize<uint32_t>(Random::PseudoRandom().getFixedSize<sizeof(uint32_t)>().data());
@@ -82,8 +82,8 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
 #endif
 }
 
-LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePath, const Data& encryptionKey) {
-  uint32_t myClientId = _generateClientId();
+LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePath, const Data& encryptionKey) {
+  uint32_t myClientId = generateClientId_();
 #ifndef CRYFS_NO_COMPATIBILITY
   // In the old format, this was stored in a "myClientId" file. If that file exists, load it from there.
   optional<uint32_t> legacy = _tryLoadClientIdFromLegacyFile(metadataFilePath);
@@ -93,11 +93,11 @@ LocalStateMetadata LocalStateMetadata::_generate(const bf::path &metadataFilePat
 #endif
 
   LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey, cpputils::hash::generateSalt()));
-  result._save(metadataFilePath);
+  result.save_(metadataFilePath);
   return result;
 }
 
-void LocalStateMetadata::_serialize(ostream& stream) const {
+void LocalStateMetadata::serialize_(ostream& stream) const {
   ptree pt;
   pt.put<uint32_t>("myClientId", myClientId());
   pt.put<string>("encryptionKey.salt", _encryptionKeyHash.salt.ToString());
@@ -106,7 +106,7 @@ void LocalStateMetadata::_serialize(ostream& stream) const {
   write_json(stream, pt);
 }
 
-LocalStateMetadata LocalStateMetadata::_deserialize(istream& stream) {
+LocalStateMetadata LocalStateMetadata::deserialize_(istream& stream) {
 	try {
 		ptree pt;
 		read_json(stream, pt);

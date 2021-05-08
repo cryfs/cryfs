@@ -67,7 +67,7 @@ public:
 
   static DataNodeView create(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
-    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    cpputils::Data serialized = serialize_(layout, formatVersion, depth, size, std::move(data));
     ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
     auto block = blockStore->create(serialized);
     return DataNodeView(std::move(block));
@@ -75,7 +75,7 @@ public:
 
   static DataNodeView initialize(cpputils::unique_ref<blockstore::Block> block, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     ASSERT(data.size() <= DataNodeLayout(block->size()).datasizeBytes(), "Data is too large for node");
-    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    cpputils::Data serialized = serialize_(layout, formatVersion, depth, size, std::move(data));
     ASSERT(serialized.size() == block->size(), "Block has wrong size");
     block->write(serialized.data(), 0, serialized.size());
     return DataNodeView(std::move(block));
@@ -83,7 +83,7 @@ public:
 
   static DataNodeView overwrite(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, const blockstore::BlockId &blockId, cpputils::Data data) {
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
-    cpputils::Data serialized = _serialize(layout, formatVersion, depth, size, std::move(data));
+    cpputils::Data serialized = serialize_(layout, formatVersion, depth, size, std::move(data));
     auto block = blockStore->overwrite(blockId, std::move(serialized));
     return DataNodeView(std::move(block));
   }
@@ -143,7 +143,7 @@ public:
   }
 
 private:
-  static cpputils::Data _serialize(const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
+  static cpputils::Data serialize_(const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     cpputils::Data result(layout.blocksizeBytes());
     cpputils::serialize<uint16_t>(result.dataOffset(layout.FORMAT_VERSION_OFFSET_BYTES), formatVersion);
     cpputils::serialize<uint8_t>(result.dataOffset(layout.DEPTH_OFFSET_BYTES), depth);
