@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::collections::hash_set::HashSet;
 
 use super::{BlockVersion, ClientId};
 use crate::blockstore::BlockId;
@@ -24,4 +25,7 @@ pub enum IntegrityViolationError {
 
     #[error("Integrity Violation: Block {block:?} should exist but we didn't find it. Did an attacker delete it?")]
     MissingBlock { block: BlockId },
+
+    #[error("Integirty Violation: Blocks {blocks:?} should exist but we didn't find them. Did an attacker delete them?")]
+    MissingBlocks {blocks: HashSet<BlockId> },
 }

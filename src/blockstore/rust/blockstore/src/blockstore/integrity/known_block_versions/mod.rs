@@ -186,7 +186,6 @@ impl KnownBlockVersions {
     /// i.e. we have seen it before and we haven't deleted it. Note that we don't know
     /// if a different client might have deleted it, so this could return true for
     /// blocks that were correctly deleted by other authorized clients.
-    // TODO Do we need this?
     pub fn should_block_exist(&self, block_id: &BlockId) -> bool {
         match self.file_data.last_update_client_id.get(block_id) {
             None => {
@@ -208,7 +207,6 @@ impl KnownBlockVersions {
     /// seen them before and we haven't deleted it. Note that, similar to
     /// [KnownBlockVersions::should_block_exist], this can return blocks that
     /// have been correctly deleted by other authorized clients.
-    // TODO Do we need this?
     pub fn existing_blocks(&self) -> impl Iterator<Item = &BlockId> {
         self.file_data
             .last_update_client_id

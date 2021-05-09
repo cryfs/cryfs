@@ -8,6 +8,7 @@ use std::path::Path;
 
 use super::{
     encrypted::EncryptedBlockStore, inmemory::InMemoryBlockStore, ondisk::OnDiskBlockStore,
+    integrity::{IntegrityBlockStore, IntegrityConfig, ClientId},
     BlockStore,
 };
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
@@ -44,6 +45,7 @@ mod ffi {
 
         fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
         fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
+        fn new_integrity_inmemory_blockstore(integrity_file_path: &str) -> Result<Box<RustBlockStore2Bridge>>;
         fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge>;
     }
 }
@@ -165,6 +167,19 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
         InMemoryBlockStore::new(),
         Aes256Gcm::new(key),
     ))))
+}
+
+fn new_integrity_inmemory_blockstore(integrity_file_path: &str) -> Result<Box<RustBlockStore2Bridge>> {
+    Ok(Box::new(RustBlockStore2Bridge(Box::new(IntegrityBlockStore::new(
+        InMemoryBlockStore::new(),
+        Path::new(integrity_file_path).to_path_buf(),
+        ClientId{id: 1},
+        IntegrityConfig {
+            allow_integrity_violations: false,
+            missing_block_is_integrity_violation: true,
+            on_integrity_violation: Box::new(|| {}),
+        },
+    )?))))
 }
 
 fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
