@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
 use std::fs::{DirEntry, File};
-use std::io::{IoSlice, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use super::{

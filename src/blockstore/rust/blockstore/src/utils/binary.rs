@@ -165,7 +165,7 @@ pub fn read_hashmap<K: BinRead<Args = ()> + Eq + Hash, V: BinRead<Args = ()>, R:
 ) -> BinResult<HashMap<K, V>> {
     let len = u64::read_options(reader, ro, ())?;
     (0..len)
-        .map(|i| {
+        .map(|_| {
             let key = K::read_options(reader, ro, ())?;
             let value = V::read_options(reader, ro, ())?;
             Ok((key, value))
@@ -213,7 +213,7 @@ pub fn write_hashmap<K: BinWrite + Eq + Hash, V: BinWrite>(
 /// ```
 pub fn read_null_string<R: Read + Seek>(
     reader: &mut R,
-    ro: &ReadOptions,
+    _ro: &ReadOptions,
     _: (),
 ) -> BinResult<Vec<NonZeroU8>> {
     let pos = reader.seek(SeekFrom::Current(0))?;

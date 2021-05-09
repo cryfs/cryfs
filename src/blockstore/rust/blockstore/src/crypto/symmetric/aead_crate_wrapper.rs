@@ -5,7 +5,7 @@ use aead::{
     generic_array::{ArrayLength, GenericArray},
     AeadInPlace, NewAead, Nonce,
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
