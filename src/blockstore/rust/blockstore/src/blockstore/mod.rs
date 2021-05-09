@@ -109,3 +109,4 @@ mod encrypted;
 mod inmemory;
 mod integrity;
 mod ondisk;
+mod caching;
