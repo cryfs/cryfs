@@ -49,14 +49,24 @@ impl<B> IntegrityBlockStore<B> {
         my_client_id: ClientId,
         config: IntegrityConfig,
     ) -> Result<Self> {
-        let known_block_versions = Mutex::new(
-            KnownBlockVersions::new(integrity_file_path, my_client_id)
-                .context("Tried to create KnownBlockVersions")?,
-        );
+        let known_block_versions =
+            KnownBlockVersions::new(integrity_file_path.clone(), my_client_id)
+                .context("Tried to create KnownBlockVersions")?;
+        if known_block_versions.integrity_violation_in_previous_run() {
+            if config.allow_integrity_violations {
+                warn!(
+                    "Integrity violation in previous run (but integrity checks are disabled)"
+                );
+            } else {
+                return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
+                    integrity_file_path: integrity_file_path.clone(),
+                }.into());
+            }
+        }
         Ok(Self {
             underlying_block_store,
             config,
-            known_block_versions,
+            known_block_versions: Mutex::new(known_block_versions),
         })
     }
 }
