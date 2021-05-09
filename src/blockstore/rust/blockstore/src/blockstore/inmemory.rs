@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use std::collections::hash_map::HashMap;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
+use async_trait::async_trait;
 
 use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
 
@@ -20,8 +21,9 @@ impl InMemoryBlockStore {
     }
 }
 
+#[async_trait]
 impl BlockStoreReader for InMemoryBlockStore {
-    fn load(&self, id: &BlockId) -> Result<Option<Data>> {
+    async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let blocks = self
             .blocks
             .read()
@@ -48,7 +50,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(block_size)
     }
 
-    fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
         let blocks = self
             .blocks
             .read()
@@ -59,8 +61,9 @@ impl BlockStoreReader for InMemoryBlockStore {
     }
 }
 
+#[async_trait]
 impl BlockStoreDeleter for InMemoryBlockStore {
-    fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<bool> {
         let mut blocks = self
             .blocks
             .write()
@@ -72,6 +75,7 @@ impl BlockStoreDeleter for InMemoryBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
+#[async_trait]
 impl OptimizedBlockStoreWriter for InMemoryBlockStore {
     type BlockData = BlockData;
 
@@ -79,7 +83,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         BlockData::new(Data::from(vec![0; size]))
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
         let mut blocks = self
             .blocks
             .write()
@@ -96,7 +100,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         }
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    async fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         let mut blocks = self
             .blocks
             .write()

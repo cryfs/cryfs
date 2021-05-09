@@ -4,6 +4,7 @@ use log::warn;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::collections::hash_set::HashSet;
+use async_trait::async_trait;
 
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
@@ -71,9 +72,10 @@ impl<B> IntegrityBlockStore<B> {
     }
 }
 
+#[async_trait]
 impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
-    fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
-        let loaded = self.underlying_block_store.load(block_id).context(
+    async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
+        let loaded = self.underlying_block_store.load(block_id).await.context(
             "IntegrityBlockStore tried to load the block from the underlying block store",
         )?;
         match loaded {
@@ -111,8 +113,8 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
     }
 
-    fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
-        let all_underlying_blocks = self.underlying_block_store.all_blocks()?;
+    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+        let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
         if self.config.missing_block_is_integrity_violation {
             let all_underlying_blocks: Vec<BlockId> = all_underlying_blocks.collect();
             let mut expected_blocks: HashSet<BlockId> = self.known_block_versions.lock().unwrap().existing_blocks().copied().collect();
@@ -129,15 +131,17 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
     }
 }
 
+#[async_trait]
 impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
-    fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<bool> {
         self.known_block_versions.lock().unwrap().mark_block_as_deleted(*id);
-        self.underlying_block_store.remove(id)
+        self.underlying_block_store.remove(id).await
     }
 }
 
 create_block_data_wrapper!(BlockData);
 
+#[async_trait]
 impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockStore<B> {
     type BlockData = BlockData;
 
@@ -148,14 +152,14 @@ impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockS
         BlockData::new(data)
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
         let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store.try_create_optimized(id, B::BlockData::new(data))
+        self.underlying_block_store.try_create_optimized(id, B::BlockData::new(data)).await
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    async fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store.store_optimized(id, B::BlockData::new(data))
+        self.underlying_block_store.store_optimized(id, B::BlockData::new(data)).await
     }
 }
 

@@ -1,27 +1,32 @@
 use anyhow::Result;
+use async_trait::async_trait;
 
 use crate::data::Data;
 
 pub use cppbridge::{BlockId, BLOCKID_LEN};
 
+#[async_trait]
 pub trait BlockStoreReader {
-    fn load(&self, id: &BlockId) -> Result<Option<Data>>;
+    async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
     fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<u64>;
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
 
-    fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>>;
+    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>>;
 }
 
+#[async_trait]
 pub trait BlockStoreDeleter {
-    fn remove(&self, id: &BlockId) -> Result<bool>;
+    async fn remove(&self, id: &BlockId) -> Result<bool>;
 }
 
+#[async_trait]
 pub trait BlockStoreWriter {
-    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool>;
-    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()>;
+    async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool>;
+    async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()>;
 }
 
+#[async_trait]
 pub trait OptimizedBlockStoreWriter {
     /// In-memory representation of the data of a block. This can be allocated using [OptimizedBlockStoreWriter::allocate]
     /// and then can be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
@@ -35,23 +40,24 @@ pub trait OptimizedBlockStoreWriter {
     /// and that can then be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     fn allocate(size: usize) -> Self::BlockData;
 
-    fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<bool>;
-    fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
+    async fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<bool>;
+    async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
 }
 
+#[async_trait]
 impl<B: OptimizedBlockStoreWriter> BlockStoreWriter for B {
-    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
+    async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
         let mut block_data = Self::allocate(data.len());
         assert_eq!(block_data.as_ref().len(), data.len());
         block_data.as_mut().copy_from_slice(data);
-        self.try_create_optimized(id, block_data)
+        self.try_create_optimized(id, block_data).await
     }
 
-    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
+    async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
         let mut block_data = Self::allocate(data.len());
         assert_eq!(block_data.as_ref().len(), data.len());
         block_data.as_mut().copy_from_slice(data);
-        self.store_optimized(id, block_data)
+        self.store_optimized(id, block_data).await
     }
 }
 
