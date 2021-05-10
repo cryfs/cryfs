@@ -1,5 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::stream::Stream;
+use std::pin::Pin;
 
 use crate::data::Data;
 
@@ -8,11 +10,11 @@ pub use cppbridge::{BlockId, BLOCKID_LEN};
 #[async_trait]
 pub trait BlockStoreReader {
     async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
-    fn num_blocks(&self) -> Result<u64>;
+    async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<u64>;
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
 
-    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>>;
+    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>>;
 }
 
 #[async_trait]
@@ -34,7 +36,7 @@ pub trait OptimizedBlockStoreWriter {
     /// The reason we use this class and don't use just [crate::data::Data] or `&[u8]` is for optimizations purposes.
     /// Some blockstores prepend header to the data before storing and require the block data to be set up in a way
     /// that makes sure that data can be prepended without having to copy the block data.
-    type BlockData: block_data::IBlockData;
+    type BlockData: block_data::IBlockData + Send;
 
     /// Allocates an in-memory representation of a data block that can be written to
     /// and that can then be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
@@ -45,7 +47,7 @@ pub trait OptimizedBlockStoreWriter {
 }
 
 #[async_trait]
-impl<B: OptimizedBlockStoreWriter> BlockStoreWriter for B {
+impl<B: OptimizedBlockStoreWriter + Sync> BlockStoreWriter for B {
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
         let mut block_data = Self::allocate(data.len());
         assert_eq!(block_data.as_ref().len(), data.len());
@@ -110,9 +112,9 @@ mod block_data {
     }
 }
 
+mod caching;
 mod cppbridge;
 mod encrypted;
 mod inmemory;
 mod integrity;
 mod ondisk;
-mod caching;

@@ -1,5 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
+use futures::stream::Stream;
+use std::pin::Pin;
 
 use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
 
@@ -24,7 +26,9 @@ impl<C: Cipher, B> EncryptedBlockStore<C, B> {
 }
 
 #[async_trait]
-impl<C: Cipher, B: BlockStoreReader> BlockStoreReader for EncryptedBlockStore<C, B> {
+impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReader
+    for EncryptedBlockStore<C, B>
+{
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let loaded = self.underlying_block_store.load(id).await?;
         match loaded {
@@ -33,8 +37,8 @@ impl<C: Cipher, B: BlockStoreReader> BlockStoreReader for EncryptedBlockStore<C,
         }
     }
 
-    fn num_blocks(&self) -> Result<u64> {
-        self.underlying_block_store.num_blocks()
+    async fn num_blocks(&self) -> Result<u64> {
+        self.underlying_block_store.num_blocks().await
     }
 
     fn estimate_num_free_bytes(&self) -> Result<u64> {
@@ -49,13 +53,15 @@ impl<C: Cipher, B: BlockStoreReader> BlockStoreReader for EncryptedBlockStore<C,
             .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
     }
 
-    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         self.underlying_block_store.all_blocks().await
     }
 }
 
 #[async_trait]
-impl<C: Cipher, B: BlockStoreDeleter> BlockStoreDeleter for EncryptedBlockStore<C, B> {
+impl<C: Cipher + Send + Sync, B: BlockStoreDeleter + Send + Sync> BlockStoreDeleter
+    for EncryptedBlockStore<C, B>
+{
     async fn remove(&self, id: &BlockId) -> Result<bool> {
         self.underlying_block_store.remove(id).await
     }
@@ -64,8 +70,8 @@ impl<C: Cipher, B: BlockStoreDeleter> BlockStoreDeleter for EncryptedBlockStore<
 create_block_data_wrapper!(BlockData);
 
 #[async_trait]
-impl<C: Cipher, B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter
-    for EncryptedBlockStore<C, B>
+impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync>
+    OptimizedBlockStoreWriter for EncryptedBlockStore<C, B>
 {
     type BlockData = BlockData;
 
@@ -91,23 +97,25 @@ impl<C: Cipher, B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter
     }
 }
 
-impl<C: Cipher, B: BlockStore + OptimizedBlockStoreWriter> BlockStore
-    for EncryptedBlockStore<C, B>
+impl<
+        C: Cipher + Send + Sync,
+        B: BlockStore + OptimizedBlockStoreWriter + Send + Sync,
+    > BlockStore for EncryptedBlockStore<C, B>
 {
 }
 
-#[async_trait]
 impl<C: Cipher, B> EncryptedBlockStore<C, B> {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
         // TODO Limit concurrency for CPU bound computations, maybe use semaphore or rayon?
-        let ciphertext = tokio::task::spawn_blocking(move || self.cipher.encrypt(plaintext)).await?;
+        let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
         Ok(_prepend_header(ciphertext))
     }
 
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
         // TODO Limit concurrency for CPU bound computations, maybe use semaphore or rayon?
         let ciphertext = _check_and_remove_header(ciphertext)?;
-        tokio::task::spawn_blocking(move || self.cipher.decrypt(ciphertext)).await.map(|d| d.into())
+        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext))
+            .map(|d| d.into())
     }
 }
 

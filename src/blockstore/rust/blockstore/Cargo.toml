@@ -31,9 +31,11 @@ thiserror = "^1.0.24"
 paste = "^1.0.5"
 lru = "^0.6.5"
 tokio = {version = "^1.5.0", features = ["fs", "io-util", "rt-multi-thread"]}
-untokio = "^0.2.1"
 tokio-stream = {version = "^0.1.5", features = ["fs"]}
 async-trait = "^0.1.50"
+futures = "^0.3.14"
+env_logger = "^0.8.3"
+lazy_static = "^1.4.0"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.92"
