@@ -14,7 +14,7 @@ New platforms:
 
 Build changes:
 * Switch to Conan package manager
-* Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers.
+* Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers. See "Using local dependencies" in the README.
 * Build with macFUSE instead of osxfuse on OSX
 * Now requires CMake 3.10 or later, and GCC 7 or later, or Clang 7 or later
 
