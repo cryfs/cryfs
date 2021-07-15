@@ -70,8 +70,8 @@ impl<C: Cipher + Send + Sync, B: BlockStoreDeleter + Send + Sync> BlockStoreDele
 create_block_data_wrapper!(BlockData);
 
 #[async_trait]
-impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync>
-    OptimizedBlockStoreWriter for EncryptedBlockStore<C, B>
+impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> OptimizedBlockStoreWriter
+    for EncryptedBlockStore<C, B>
 {
     type BlockData = BlockData;
 
@@ -97,10 +97,8 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync>
     }
 }
 
-impl<
-        C: Cipher + Send + Sync,
-        B: BlockStore + OptimizedBlockStoreWriter + Send + Sync,
-    > BlockStore for EncryptedBlockStore<C, B>
+impl<C: Cipher + Send + Sync, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync> BlockStore
+    for EncryptedBlockStore<C, B>
 {
 }
 
@@ -114,8 +112,7 @@ impl<C: Cipher, B> EncryptedBlockStore<C, B> {
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
         // TODO Limit concurrency for CPU bound computations, maybe use semaphore or rayon?
         let ciphertext = _check_and_remove_header(ciphertext)?;
-        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext))
-            .map(|d| d.into())
+        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext)).map(|d| d.into())
     }
 }
 
