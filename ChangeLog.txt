@@ -17,6 +17,8 @@ Build changes:
 * Allow an easy way to modify how the dependencies are found. This is mostly helpful for package maintainers. See "Using local dependencies" in the README.
 * Build with macFUSE instead of osxfuse on OSX
 * Now requires CMake 3.10 or later, and GCC 7 or later, or Clang 7 or later
+* Fix a build issue on Gentoo systems
+* Fix a build issue when building with boost 1.77
 
 Improvements:
 * Display the file system configuration when mounting a file system
