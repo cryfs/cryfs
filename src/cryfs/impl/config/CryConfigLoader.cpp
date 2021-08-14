@@ -37,6 +37,7 @@ either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoa
   if (config.is_left()) {
     return config.left();
   }
+  auto oldConfig = *config.right()->config();
 #ifndef CRYFS_NO_COMPATIBILITY
   //Since 0.9.7 and 0.9.8 set their own version to cryfs.version instead of the filesystem format version (which is 0.9.6), overwrite it
   if (config.right()->config()->Version() == "0.9.7" || config.right()->config()->Version() == "0.9.8") {
@@ -60,7 +61,7 @@ either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoa
   auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.right()->config()->FilesystemId()), cpputils::Data::FromString(config.right()->config()->EncryptionKey()), allowReplacedFilesystem);
   uint32_t myClientId = localState.myClientId();
   _checkMissingBlocksAreIntegrityViolations(config.right().get(), myClientId);
-  return ConfigLoadResult {std::move(config.right()), myClientId};
+  return ConfigLoadResult {std::move(oldConfig), std::move(config.right()), myClientId};
 }
 
 void CryConfigLoader::_checkVersion(const CryConfig &config, bool allowFilesystemUpgrade) {
@@ -118,8 +119,8 @@ either<CryConfigFile::LoadError, CryConfigLoader::ConfigLoadResult> CryConfigLoa
 
 CryConfigLoader::ConfigLoadResult CryConfigLoader::_createConfig(bf::path filename, bool allowReplacedFilesystem) {
   auto config = _creator.create(_cipherFromCommandLine, _blocksizeBytesFromCommandLine, _missingBlockIsIntegrityViolationFromCommandLine, allowReplacedFilesystem);
-  auto result = CryConfigFile::create(std::move(filename), std::move(config.config), _keyProvider.get());
-  return ConfigLoadResult {std::move(result), config.myClientId};
+  auto result = CryConfigFile::create(std::move(filename), config.config, _keyProvider.get());
+  return ConfigLoadResult {std::move(config.config), std::move(result), config.myClientId};
 }
 
 

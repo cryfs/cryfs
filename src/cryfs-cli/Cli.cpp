@@ -230,18 +230,29 @@ namespace cryfs_cli {
     }
 
     namespace {
-        void printConfig(const CryConfig& config) {
+        void printConfig(const CryConfig& oldConfig, const CryConfig& updatedConfig) {
+            auto printValue = [&] (const char* prefix, const char* suffix, auto member) {
+                std::cout << prefix;
+                auto oldConfigValue = member(oldConfig);
+                auto updatedConfigValue = member(updatedConfig);
+                if (oldConfigValue == updatedConfigValue) {
+                    std::cout << oldConfigValue;
+                } else {
+                    std::cout << oldConfigValue << " -> " << updatedConfigValue;
+                }
+                std::cout << suffix;
+            };
             std::cout
                 << "\n----------------------------------------------------"
                 << "\nFilesystem configuration:"
-                << "\n----------------------------------------------------"
-                << "\n- Filesystem format version: " << config.Version()
-                << "\n- Created with: CryFS " << config.CreatedWithVersion()
-                << "\n- Last opened with: CryFS " << config.LastOpenedWithVersion()
-                << "\n- Cipher: " << config.Cipher()
-                << "\n- Blocksize: " << config.BlocksizeBytes() << " bytes"
-                << "\n- Filesystem Id: " << config.FilesystemId().ToString()
-                << "\n----------------------------------------------------\n";
+                << "\n----------------------------------------------------";
+            printValue("\n- Filesystem format version: ", "", [] (const CryConfig& config) {return config.Version(); });
+            printValue("\n- Created with: CryFS ", "", [] (const CryConfig& config) { return config.CreatedWithVersion(); });
+            printValue("\n- Last opened with: CryFS ", "", [] (const CryConfig& config) { return config.LastOpenedWithVersion(); });
+            printValue("\n- Cipher: ", "", [] (const CryConfig& config) { return config.Cipher(); });
+            printValue("\n- Blocksize: ", " bytes", [] (const CryConfig& config) { return config.BlocksizeBytes(); });
+            printValue("\n- Filesystem Id: ", "", [] (const CryConfig& config) { return config.FilesystemId().ToString(); });
+            std::cout << "\n----------------------------------------------------\n";
         }
     }
 
@@ -250,7 +261,7 @@ namespace cryfs_cli {
             LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
-            printConfig(*config.configFile->config());
+            printConfig(config.oldConfig, *config.configFile->config());
             unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
             bool stoppedBecauseOfIntegrityViolation = false;
 
