@@ -11,6 +11,7 @@
 #include <boost/optional.hpp>
 #include <cpp-utils/macros.h>
 #include <atomic>
+#include <memory>
 #include "stat_compatibility.h"
 #include <fspp/fs_interface/Context.h>
 
