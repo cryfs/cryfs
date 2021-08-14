@@ -27,6 +27,5 @@ target_enable_style_warnings(${PROJECT_NAME}_bin)
 target_activate_cpp14(${PROJECT_NAME}_bin)
 
 install(TARGETS ${PROJECT_NAME}_bin
-        CONFIGURATIONS Debug Release RelWithDebInfo
         DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
