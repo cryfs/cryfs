@@ -19,6 +19,7 @@ public:
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   struct ConfigLoadResult {
+      CryConfig oldConfig; // loading a config file updates the config file, but this member keeps the original config
       cpputils::unique_ref<CryConfigFile> configFile;
       uint32_t myClientId;
   };
