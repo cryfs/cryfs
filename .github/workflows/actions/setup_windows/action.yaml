@@ -7,4 +7,4 @@ runs:
       shell: bash
       run: |
         choco install -y ninja
-        choco install -y dokany --version 1.2.1.2000 --installargs INSTALLDEVFILES=1
+        choco install -y dokany --version 1.2.2.1001 --installargs INSTALLDEVFILES=1
