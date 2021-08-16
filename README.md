@@ -116,7 +116,7 @@ Build & Install
 
  2. Build
 
-        $ mkdir cmake && cd cmake
+        $ mkdir build && cd build
         $ cmake ..
         $ make
 
@@ -132,11 +132,17 @@ You can pass the following variables to the *cmake* command (using *-Dvariablena
 Building on Windows (experimental)
 ----------------------------------
 
-Build with Visual Studio 2019 and pass in the following flags to CMake:
+1. Install conan. If you want to use "pip install conan", you may have to install Python first.
+2. Install DokanY 1.2.2. Other versions may not work.
+3. Run CMake to generate Visual Studio 2019 project files (this may not be necessary, but it makes sure everything works as expected and you can see potential errors happening during this step)
 
-    -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.1"]
+$ mkdir build && cd build
+$ cmake .. -G "Visual Studio 16 2019" -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.2.2"]
 
-If you set these variables correctly in the `CMakeSettings.json` file, you should be able to open the cryfs source folder with Visual Studio 2019.
+4. Potentially modify CMakeSettings.json file to fit your needs
+5. Open the cryfs source folder with Visual Studio 2019, or alternatively build on command line using
+
+$ cd build && cmake --build . --config RelWithDebInfo
 
 Troubleshooting
 ---------------

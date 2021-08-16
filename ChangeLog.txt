@@ -4,6 +4,7 @@ Bugfix:
 * Fix building of the range-v3 dependency. The conan remote URL for this dependency changed and we have to use the new URL. See https://github.com/cryfs/cryfs/issues/398
 * Update to CryptoPP 8.6. This fixes a rare bug where CryptoPP 8.5 encrypts data wrongly, see https://github.com/weidai11/cryptopp/issues/1069
 * cryfs-unmount correctly unmounts paths that contain spaces, see https://github.com/cryfs/cryfs/issues/372
+* Updated to DokanY 1.2.2.1001
 
 Version 0.11.0
 ---------------
