@@ -533,7 +533,7 @@ jobs:
           # TODO CMAKE_SYSTEM_VERSION is probably not needed anymore
           mkdir build
           cd build
-          cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.2.2" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
+          cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-1.3.0" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
           cmake --build . --config ${{matrix.build_type}}
       # - name: Show ccache statistics
       #   shell: bash
