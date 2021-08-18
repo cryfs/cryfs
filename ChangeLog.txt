@@ -1,4 +1,4 @@
-Version 0.11.0 (unreleased)
+Version 0.11.0
 ---------------
 Security:
 * Added the XChaCha20-Poly1305 encryption cipher. For new filesystems, this will be the default, but you're still able to create a filesystem with the previous default of AES-256-GCM
