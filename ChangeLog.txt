@@ -1,5 +1,9 @@
 Version 0.11.0
 ---------------
+Backwards Compatibility:
+* Filesystems created with CryFS 0.10.x can be mounted without requiring a migration.
+* Filesystems created with CryFS 0.11.x can be mounted by CryFS 0.10.x if you configure it to use a cipher supported by CryFS 0.10.x, e.g. AES-256-GCM. The new default, XChaCha20-Poly1305, is not supported by CryFS 0.10.x.
+
 Security:
 * Added the XChaCha20-Poly1305 encryption cipher. For new filesystems, this will be the default, but you're still able to create a filesystem with the previous default of AES-256-GCM
   by saying "no" to the "use default settings?" question when creating the file system. Also, old filesystems will not be automatically converted and will keep using AES-256-GCM.
