@@ -254,6 +254,8 @@ jobs:
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
@@ -370,6 +372,8 @@ jobs:
       - name: Save ccache cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{ github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
@@ -382,6 +386,8 @@ jobs:
       - name: Save conan cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{ github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
@@ -453,6 +459,8 @@ jobs:
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
@@ -542,6 +550,8 @@ jobs:
       # - name: Save ccache cache
       #   # note: this access key has write access to the cache. This can't run on PRs.
       #   if: ${{ github.event_name == 'push' }}
+      #   # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+      $   continue-on-error: true
       #   uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
       #   with:
       #     action: put
@@ -554,6 +564,8 @@ jobs:
       - name: Save conan cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{ github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
         uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
         with:
           action: put
