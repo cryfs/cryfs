@@ -53,7 +53,7 @@ CryFS has experimental Windows support since the 0.10 release series. To install
 
 GUI
 ===
-Theres some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
+There are some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
 - [SiriKali](https://mhogomchungu.github.io/sirikali/)
 - [Plasma Vault](https://www.kde.org/announcements/plasma-5.11.0.php) in KDE Plasma >= 5.11
 
