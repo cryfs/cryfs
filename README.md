@@ -13,9 +13,9 @@ This only works for Ubuntu 17.04 and later, and Debian Stretch and later.
 You can also use CryFS on older versions of these distributions by following the **Building from source** instructions below.
 
     sudo apt install cryfs
-    
+
 The following should work on Arch and Arch-based distros:
-    
+
     sudo pacman -S cryfs
 
 Additionally, the following would work for any Linux distro with the Nix package manager:
