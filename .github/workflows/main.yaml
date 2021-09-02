@@ -403,7 +403,7 @@ jobs:
         with:
           gtest_args: ${{matrix.gtest_args}}
           extra_env_vars: ${{matrix.extra_env_vars_for_test}}
-          
+
   windows:
     name: CI (Windows)
     strategy:

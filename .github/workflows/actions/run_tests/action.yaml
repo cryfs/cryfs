@@ -25,7 +25,7 @@ runs:
         ./test/blockstore/blockstore-test ${{inputs.gtest_args}}
         ./test/blobstore/blobstore-test ${{inputs.gtest_args}}
         ./test/cryfs/cryfs-test ${{inputs.gtest_args}}
-        
+
         # TODO Also run on macOS once fixed
         if [[ "${{runner.os}}" == "macOS" ]]; then
           echo Skipping some tests because they are not fixed for macOS yet

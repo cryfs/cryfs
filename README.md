@@ -13,9 +13,9 @@ This only works for Ubuntu 17.04 and later, and Debian Stretch and later.
 You can also use CryFS on older versions of these distributions by following the **Building from source** instructions below.
 
     sudo apt install cryfs
-    
+
 The following should work on Arch and Arch-based distros:
-    
+
     sudo pacman -S cryfs
 
 Additionally, the following would work for any Linux distro with the Nix package manager:
@@ -53,7 +53,7 @@ CryFS has experimental Windows support since the 0.10 release series. To install
 
 GUI
 ===
-Theres some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
+There are some GUI applications with CryFS support. You usually have to install the GUI **and** also CryFS itself for it to work.
 - [SiriKali](https://mhogomchungu.github.io/sirikali/)
 - [Plasma Vault](https://www.kde.org/announcements/plasma-5.11.0.php) in KDE Plasma >= 5.11
 
