@@ -18,6 +18,10 @@ The following should work on Arch and Arch-based distros:
 
     sudo pacman -S cryfs
 
+If you use homebrew-core, using the following instruction you should be able to install CrysFS:
+
+    brew install cryfs/tap/cryfs
+
 Additionally, the following would work for any Linux distro with the Nix package manager:
 
     nix-env -iA nixpkgs.cryfs
