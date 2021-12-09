@@ -318,7 +318,7 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
       - name: Build (macOS)
         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
         uses: ./.github/workflows/actions/run_build
@@ -395,7 +395,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
           artifacts: ${{ env.CONAN_USER_HOME }}
       - name: Test
         if: ${{ matrix.run_tests }}
