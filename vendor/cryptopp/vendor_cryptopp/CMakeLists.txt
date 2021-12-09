@@ -12,10 +12,10 @@
 # SET(CMAKE_C_COMPILER ${CMAKE_CXX_COMPILER})
 # # error "The CMAKE_C_COMPILER is set to a C++ compiler"
 
-if(NOT DEFINED cryptocpp_DISPLAY_CMAKE_SUPPORT_WARNING)
-  set(cryptocpp_DISPLAY_CMAKE_SUPPORT_WARNING 1)
+if(NOT DEFINED cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING)
+  set(cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING 1)
 endif()
-if(cryptocpp_DISPLAY_CMAKE_SUPPORT_WARNING)
+if(cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING)
   message( STATUS
 "*************************************************************************\n"
 "The Crypto++ library does not officially support CMake. CMake support is a\n"
@@ -28,17 +28,19 @@ endif()
 
 # Print useful information
 message( STATUS "CMake version ${CMAKE_VERSION}" )
+message( STATUS "System ${CMAKE_SYSTEM_NAME}" )
+message( STATUS "Processor ${CMAKE_SYSTEM_PROCESSOR}" )
 
 cmake_minimum_required(VERSION 2.8.6)
 cmake_policy(SET CMP0069 NEW)
 if (${CMAKE_VERSION} VERSION_LESS "3.0.0")
   project(cryptopp)
   set(cryptopp_VERSION_MAJOR 8)
-  set(cryptopp_VERSION_MINOR 5)
+  set(cryptopp_VERSION_MINOR 6)
   set(cryptopp_VERSION_PATCH 0)
 else ()
   cmake_policy(SET CMP0048 NEW)
-  project(cryptopp VERSION 8.3.0)
+  project(cryptopp VERSION 8.6.0)
   if (NOT ${CMAKE_VERSION} VERSION_LESS "3.1.0")
     cmake_policy(SET CMP0054 NEW)
   endif ()
@@ -61,10 +63,10 @@ endif ()
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 
-# We now carry around test programs. test_cxx.cxx is the default C++ one.
+# We now carry around test programs. test_cxx.cpp is the default C++ one.
 # Also see https://github.com/weidai11/cryptopp/issues/741.
 set(TEST_PROG_DIR ${SRC_DIR}/TestPrograms)
-set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cxx)
+set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cpp)
 
 #============================================================================
 # Settable options
@@ -76,14 +78,36 @@ option(CRYPTOPP_BUILD_TESTING "Build library tests" ON)
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
 option(USE_INTERMEDIATE_OBJECTS_TARGET "Use a common intermediate objects target for the static and shared library targets" ON)
 
-# These are IA-32 options. TODO: Add ARM A-32, Aarch64 and Power8 options.
+if (${CMAKE_VERSION} VERSION_GREATER "3.1")
+  option(USE_OPENMP "Enable OpenMP to parallelize some of the algorithms. Note that this isn't always faster, see https://www.cryptopp.com/wiki/OpenMP" OFF)
+endif()
+
+
+# These are IA-32 options.
 option(DISABLE_ASM "Disable ASM" OFF)
 option(DISABLE_SSSE3 "Disable SSSE3" OFF)
 option(DISABLE_SSE4 "Disable SSE4" OFF)
 option(DISABLE_AESNI "Disable AES-NI" OFF)
+option(DISABLE_CLMUL "Disable CLMUL" OFF)
 option(DISABLE_SHA "Disable SHA" OFF)
 option(DISABLE_AVX "Disable AVX" OFF)
 option(DISABLE_AVX2 "Disable AVX2" OFF)
+
+# These are ARM A-32 options
+option(DISABLE_ARM_NEON "Disable NEON" OFF)
+
+# These are Aarch64 options
+option(DISABLE_ARM_AES "Disable ASIMD" OFF)
+option(DISABLE_ARM_AES "Disable AES" OFF)
+option(DISABLE_ARM_PMULL "Disable PMULL" OFF)
+option(DISABLE_ARM_SHA "Disable SHA" OFF)
+
+# These are PowerPC options
+option(DISABLE_ALTIVEC "Disable Altivec" OFF)
+option(DISABLE_POWER7 "Disable POWER7" OFF)
+option(DISABLE_POWER8 "Disable POWER8" OFF)
+option(DISABLE_POWER9 "Disable POWER9" OFF)
+
 set(CRYPTOPP_DATA_DIR "" CACHE PATH "Crypto++ test data directory")
 
 #============================================================================
@@ -94,13 +118,15 @@ set(CRYPTOPP_COMPILE_DEFINITIONS)
 set(CRYPTOPP_COMPILE_OPTIONS)
 
 # Stop hiding the damn output...
-# set(CMAKE_VERBOSE_MAKEFILE on)
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# Stop CMake complaining...
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(MACOSX_RPATH FALSE)
+endif()
 
 # Always 1 ahead in Master. Also see http://groups.google.com/forum/#!topic/cryptopp-users/SFhqLDTQPG4
 set(LIB_VER ${cryptopp_VERSION_MAJOR}${cryptopp_VERSION_MINOR}${cryptopp_VERSION_PATCH})
-
-# Don't use RPATH's. The resulting binary could fail a security audit.
-set(CMAKE_MACOSX_RPATH 0)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
   list(APPEND CRYPTOPP_COMPILE_OPTIONS -wd68 -wd186 -wd279 -wd327 -wd161 -wd3180)
@@ -136,6 +162,21 @@ if (DISABLE_AVX2)
 endif ()
 if (DISABLE_SHA)
   list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_SHA)
+endif ()
+if (DISABLE_ARM_NEON)
+  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ARM_NEON)
+endif ()
+if (DISABLE_ARM_ASIMD)
+  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ARM_ASIMD)
+endif ()
+if (DISABLE_ARM_AES)
+  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ARM_AES)
+endif ()
+if (DISABLE_ARM_PMULL)
+  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ARM_PMULL)
+endif ()
+if (DISABLE_ARM_SHA)
+  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ARM_SHA)
 endif ()
 if (DISABLE_ALTIVEC)
   list(APPEND CRYPTOPP_COMPILE_DEFINITIONS CRYPTOPP_DISABLE_ALTIVEC)
@@ -295,12 +336,12 @@ function(DumpMachine output pattern)
 
 endfunction(DumpMachine)
 
-# Thansk to Anonimal for MinGW; see http://github.com/weidai11/cryptopp/issues/466
+# Thanks to Anonimal for MinGW; see http://github.com/weidai11/cryptopp/issues/466
 DumpMachine(CRYPTOPP_AMD64 "(x86_64|AMD64|amd64)")
 DumpMachine(CRYPTOPP_I386 "^i.86$")
 DumpMachine(CRYPTOPP_MINGW32 "^mingw32")
-DumpMachine(CRYPTOPP_MINGW64 "(w64-mingw32)|(mingw64)")
-DumpMachine(CRYPTOPP_ARMV8 "(armv8|aarch32|aarch64)")
+DumpMachine(CRYPTOPP_MINGW64 "(w64-mingw32|mingw64)")
+DumpMachine(CRYPTOPP_ARMV8 "(armv8|arm64|aarch32|aarch64)")
 DumpMachine(CRYPTOPP_ARM32 "(arm|armhf|arm7l|eabihf)")
 DumpMachine(CRYPTOPP_PPC32 "^(powerpc|ppc)")
 DumpMachine(CRYPTOPP_PPC64 "^ppc64")
@@ -549,30 +590,44 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 
   if (CRYPTOPP_AMD64 OR CRYPTOPP_I386)
 
+    # For Darwin and a GCC port compiler, we need to check for -Wa,-q first. -Wa,-q
+    # is a GCC option, and it tells GCC to use the Clang Integrated Assembler. We
+    # need LLVM's assembler because GAS is too old on Apple platforms. GAS will
+    # not assemble modern ISA, like AVX or AVX2.
+	if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+      CheckCompileLinkOption("-Wa,-q" CRYPTOPP_IA32_WAQ
+                             "${TEST_PROG_DIR}/test_x86_sse2.cpp")
+
+      if (CRYPTOPP_IA32_WAQ)
+        list(APPEND CRYPTOPP_COMPILE_OPTIONS "-Wa,-q")
+      endif ()
+	endif ()
+
+    # Now we can move on to normal feature testing.
     CheckCompileLinkOption("-msse2" CRYPTOPP_IA32_SSE2
-                           "${TEST_PROG_DIR}/test_x86_sse2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse2.cpp")
     CheckCompileLinkOption("-mssse3" CRYPTOPP_IA32_SSSE3
-                           "${TEST_PROG_DIR}/test_x86_ssse3.cxx")
+                           "${TEST_PROG_DIR}/test_x86_ssse3.cpp")
     CheckCompileLinkOption("-msse4.1" CRYPTOPP_IA32_SSE41
-                           "${TEST_PROG_DIR}/test_x86_sse41.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse41.cpp")
     CheckCompileLinkOption("-msse4.2" CRYPTOPP_IA32_SSE42
-                           "${TEST_PROG_DIR}/test_x86_sse42.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse42.cpp")
     CheckCompileLinkOption("-mssse3 -mpclmul" CRYPTOPP_IA32_CLMUL
-                           "${TEST_PROG_DIR}/test_x86_clmul.cxx")
+                           "${TEST_PROG_DIR}/test_x86_clmul.cpp")
     CheckCompileLinkOption("-msse4.1 -maes" CRYPTOPP_IA32_AES
-                           "${TEST_PROG_DIR}/test_x86_aes.cxx")
+                           "${TEST_PROG_DIR}/test_x86_aes.cpp")
     CheckCompileLinkOption("-mavx" CRYPTOPP_IA32_AVX
-                           "${TEST_PROG_DIR}/test_x86_avx.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx.cpp")
     CheckCompileLinkOption("-mavx2" CRYPTOPP_IA32_AVX2
-                           "${TEST_PROG_DIR}/test_x86_avx2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx2.cpp")
     CheckCompileLinkOption("-msse4.2 -msha" CRYPTOPP_IA32_SHA
-                           "${TEST_PROG_DIR}/test_x86_sha.cxx")
-    if (EXISTS "${TEST_PROG_DIR}/test_asm_mixed.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sha.cpp")
+    if (EXISTS "${TEST_PROG_DIR}/test_asm_mixed.cpp")
       CheckCompileLinkOption("" CRYPTOPP_MIXED_ASM
-                             "${TEST_PROG_DIR}/test_asm_mixed.cxx")
+                             "${TEST_PROG_DIR}/test_asm_mixed.cpp")
     else ()
       CheckCompileLinkOption("" CRYPTOPP_MIXED_ASM
-                             "${TEST_PROG_DIR}/test_mixed_asm.cxx")
+                             "${TEST_PROG_DIR}/test_mixed_asm.cpp")
     endif ()
 
     # https://github.com/weidai11/cryptopp/issues/756
@@ -594,6 +649,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       set_source_files_properties(${SRC_DIR}/cham_simd.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
       set_source_files_properties(${SRC_DIR}/keccak_simd.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
       set_source_files_properties(${SRC_DIR}/lea_simd.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
+      set_source_files_properties(${SRC_DIR}/lsh256_sse.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
+      set_source_files_properties(${SRC_DIR}/lsh512_sse.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
       set_source_files_properties(${SRC_DIR}/simon128_simd.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
       set_source_files_properties(${SRC_DIR}/speck128_simd.cpp PROPERTIES COMPILE_FLAGS "-mssse3")
       if (NOT CRYPTOPP_IA32_SSE41 AND NOT DISABLE_SSE4)
@@ -627,6 +684,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
           list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_AVX2")
         elseif (CRYPTOPP_IA32_AVX2 AND NOT DISABLE_AVX2)
           set_source_files_properties(${SRC_DIR}/chacha_avx.cpp PROPERTIES COMPILE_FLAGS "-mavx2")
+          set_source_files_properties(${SRC_DIR}/lsh256_avx.cpp PROPERTIES COMPILE_FLAGS "-mavx2")
+          set_source_files_properties(${SRC_DIR}/lsh512_avx.cpp PROPERTIES COMPILE_FLAGS "-mavx2")
         endif ()
         if (NOT CRYPTOPP_IA32_SHA AND NOT DISABLE_SHA)
           list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_SHANI")
@@ -641,7 +700,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 
     # This checks for <arm_acle.h>
     CheckCompileLinkOption("-march=armv8-a" CRYPTOPP_ARM_ACLE_HEADER
-                           "${TEST_PROG_DIR}/test_arm_acle_header.cxx")
+                           "${TEST_PROG_DIR}/test_arm_acle_header.cpp")
 
     # Use <arm_acle.h> if available
     if (CRYPTOPP_ARM_NEON_HEADER)
@@ -664,9 +723,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       set_source_files_properties(${SRC_DIR}/neon_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a")
       set_source_files_properties(${SRC_DIR}/simon128_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a")
       set_source_files_properties(${SRC_DIR}/speck128_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_ASIMD")
     endif ()
     if (CRYPTOPP_ARMV8A_CRC)
       set_source_files_properties(${SRC_DIR}/crc_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a+crc")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_CRC32")
     endif ()
     if (CRYPTOPP_ARMV8A_CRYPTO)
       set_source_files_properties(${SRC_DIR}/gcm_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
@@ -674,21 +737,25 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       set_source_files_properties(${SRC_DIR}/rijndael_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
       set_source_files_properties(${SRC_DIR}/sha_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
       set_source_files_properties(${SRC_DIR}/shacal2_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_AES")
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_PMULL")
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_SHA")
     endif ()
 
   elseif (CRYPTOPP_ARM32)
 
     # This checks for <arm_neon.h>
     CheckCompileLinkOption("-march=armv7-a -mfpu=neon" CRYPTOPP_ARM_NEON_HEADER
-                           "${TEST_PROG_DIR}/test_arm_neon_header.cxx")
+                           "${TEST_PROG_DIR}/test_arm_neon_header.cpp")
 
     # Use <arm_neon.h> if available
     if (CRYPTOPP_ARM_NEON_HEADER)
       CheckCompileLinkOption("-march=armv7-a -mfpu=neon -DCRYPTOPP_ARM_NEON_HEADER=1" CRYPTOPP_ARMV7A_NEON
-                             "${TEST_PROG_DIR}/test_arm_neon.cxx")
+                             "${TEST_PROG_DIR}/test_arm_neon.cpp")
     else ()
       CheckCompileLinkOption("-march=armv7-a -mfpu=neon" CRYPTOPP_ARMV7A_NEON
-                             "${TEST_PROG_DIR}/test_arm_neon.cxx")
+                             "${TEST_PROG_DIR}/test_arm_neon.cpp")
     endif ()
 
     if (CRYPTOPP_ARMV7A_NEON)
@@ -732,7 +799,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       set_source_files_properties(${SRC_DIR}/speck128_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv7-a -mfpu=neon")
       set_source_files_properties(${SRC_DIR}/sm4_simd.cpp PROPERTIES COMPILE_FLAGS "-march=armv7-a -mfpu=neon")
     else ()
-      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_ARM_NEON_AVAILABLE=0")
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_NEON")
     endif ()
 
   elseif (CRYPTOPP_PPC32 OR CRYPTOPP_PPC64)
@@ -757,13 +824,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
     endif ()
 
     CheckCompileLinkOption("${CRYPTOPP_ALTIVEC_FLAGS}" PPC_ALTIVEC_FLAG
-                           "${TEST_PROG_DIR}/test_ppc_altivec.cxx")
+                           "${TEST_PROG_DIR}/test_ppc_altivec.cpp")
 
     # Hack for XLC. Find the lowest PWR architecture.
     if (CMAKE_CXX_COMPILER MATCHES "xlC")
       if (NOT PPC_ALTIVEC_FLAG)
         CheckCompileLinkOption("${CRYPTOPP_POWER4_FLAGS}" PPC_POWER4_FLAG
-                               "${TEST_PROG_DIR}/test_ppc_altivec.cxx")
+                               "${TEST_PROG_DIR}/test_ppc_altivec.cpp")
         if (PPC_POWER4_FLAG)
           set(PPC_ALTIVEC_FLAG 1)
           set(CRYPTOPP_ALTIVEC_FLAGS "${CRYPTOPP_POWER4_FLAGS}")
@@ -771,7 +838,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       endif ()
       if (NOT PPC_ALTIVEC_FLAG)
         CheckCompileLinkOption("${CRYPTOPP_POWER5_FLAGS}" PPC_POWER5_FLAG
-                               "${TEST_PROG_DIR}/test_ppc_altivec.cxx")
+                               "${TEST_PROG_DIR}/test_ppc_altivec.cpp")
         if (PPC_POWER5_FLAG)
           set(PPC_ALTIVEC_FLAG 1)
           set(CRYPTOPP_ALTIVEC_FLAGS "${CRYPTOPP_POWER5_FLAGS}")
@@ -779,7 +846,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       endif ()
       if (NOT PPC_ALTIVEC_FLAG)
         CheckCompileLinkOption("${CRYPTOPP_POWER6_FLAGS}" PPC_POWER6_FLAG
-                               "${TEST_PROG_DIR}/test_ppc_altivec.cxx")
+                               "${TEST_PROG_DIR}/test_ppc_altivec.cpp")
         if (PPC_POWER6_FLAG)
           set(PPC_ALTIVEC_FLAG 1)
           set(CRYPTOPP_ALTIVEC_FLAGS "${CRYPTOPP_POWER6_FLAGS}")
@@ -789,23 +856,23 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 
     # Hack for XLC and GCC. Find the right combination for PWR7 and the VSX unit.
     CheckCompileLinkOption("${CRYPTOPP_POWER7_VSX_FLAGS}" PPC_POWER7_FLAG
-                           "${TEST_PROG_DIR}/test_ppc_power7.cxx")
+                           "${TEST_PROG_DIR}/test_ppc_power7.cpp")
     if (PPC_POWER7_FLAG)
       set (CRYPTOPP_POWER7_FLAGS "${CRYPTOPP_POWER7_VSX_FLAGS}")
     else ()
       CheckCompileLinkOption("${CRYPTOPP_POWER7_PWR_FLAGS}" PPC_POWER7_FLAG
-                             "${TEST_PROG_DIR}/test_ppc_power7.cxx")
+                             "${TEST_PROG_DIR}/test_ppc_power7.cpp")
       if (PPC_POWER7_FLAG)
         set (CRYPTOPP_POWER7_FLAGS "${CRYPTOPP_POWER7_PWR_FLAGS}")
       endif ()
     endif ()
 
     CheckCompileLinkOption("${CRYPTOPP_POWER8_FLAGS}" PPC_POWER8_FLAG
-                           "${TEST_PROG_DIR}/test_ppc_power8.cxx")
+                           "${TEST_PROG_DIR}/test_ppc_power8.cpp")
 
     # Disable POWER9 due to https://github.com/weidai11/cryptopp/issues/986.
     #CheckCompileLinkOption("${CRYPTOPP_POWER9_FLAGS}" PPC_POWER9_FLAG
-    #                       "${TEST_PROG_DIR}/test_ppc_power9.cxx")
+    #                       "${TEST_PROG_DIR}/test_ppc_power9.cpp")
 
     #if (PPC_POWER9_FLAG AND NOT DISABLE_POWER9)
     #  set_source_files_properties(${SRC_DIR}/ppc_power9.cpp PROPERTIES COMPILE_FLAGS ${CRYPTOPP_POWER9_FLAGS})
@@ -863,23 +930,23 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
   if (CRYPTOPP_AMD64 OR CRYPTOPP_I386)
 
     CheckCompileLinkOption("-xarch=sse2" CRYPTOPP_IA32_SSE2
-                           "${TEST_PROG_DIR}/test_x86_sse2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse2.cpp")
     CheckCompileLinkOption("-xarch=ssse3" CRYPTOPP_IA32_SSSE3
-                           "${TEST_PROG_DIR}/test_x86_ssse3.cxx")
+                           "${TEST_PROG_DIR}/test_x86_ssse3.cpp")
     CheckCompileLinkOption("-xarch=sse4_1" CRYPTOPP_IA32_SSE41
-                           "${TEST_PROG_DIR}/test_x86_sse41.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse41.cpp")
     CheckCompileLinkOption("-xarch=sse4_2" CRYPTOPP_IA32_SSE42
-                           "${TEST_PROG_DIR}/test_x86_sse42.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse42.cpp")
     CheckCompileLinkOption("-xarch=aes" CRYPTOPP_IA32_CLMUL
-                           "${TEST_PROG_DIR}/test_x86_clmul.cxx")
+                           "${TEST_PROG_DIR}/test_x86_clmul.cpp")
     CheckCompileLinkOption("-xarch=aes" CRYPTOPP_IA32_AES
-                           "${TEST_PROG_DIR}/test_x86_aes.cxx")
+                           "${TEST_PROG_DIR}/test_x86_aes.cpp")
     CheckCompileLinkOption("-xarch=avx" CRYPTOPP_IA32_AVX
-                           "${TEST_PROG_DIR}/test_x86_avx.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx.cpp")
     CheckCompileLinkOption("-xarch=avx2" CRYPTOPP_IA32_AVX2
-                           "${TEST_PROG_DIR}/test_x86_avx2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx2.cpp")
     CheckCompileLinkOption("-xarch=sha" CRYPTOPP_IA32_SHA
-                           "${TEST_PROG_DIR}/test_x86_sha.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sha.cpp")
 
     # Each -xarch=XXX options must be added to LDFLAGS if the option is used during a compile.
     set(XARCH_LDFLAGS "")
@@ -1054,6 +1121,80 @@ if (BUILD_SHARED)
   target_link_libraries(cryptopp-shared ${CMAKE_THREAD_LIBS_INIT})
 endif ()
 
+
+#============================================================================
+# Setup OpenMP
+#============================================================================
+if (${CMAKE_VERSION} VERSION_GREATER "3.1" AND USE_OPENMP)
+  find_package(OpenMP)
+
+  if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+      message(STATUS "OpenMP: Found libomp without any special flags")
+  endif()
+
+  # If OpenMP wasn't found, try if we can find it in the default Macports location
+  if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND) AND EXISTS "/opt/local/lib/libomp/libomp.dylib") # older cmake uses OPENMP_FOUND, newer cmake also sets OPENMP_CXX_FOUND, homebrew installations seem only to get the latter set.
+      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/local/include/libomp/")
+      set(OpenMP_CXX_LIB_NAMES omp)
+      set(OpenMP_omp_LIBRARY /opt/local/lib/libomp/libomp.dylib)
+
+      find_package(OpenMP)
+      if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+          message(STATUS "OpenMP: Found libomp in macports default location.")
+      else()
+          message(FATAL_ERROR "OpenMP: Didn't find libomp. Tried macports default location but also didn't find it.")
+      endif()
+  endif()
+
+  # If OpenMP wasn't found, try if we can find it in the default Homebrew location
+  if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND) AND EXISTS "/usr/local/opt/libomp/lib/libomp.dylib")
+      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
+      set(OpenMP_CXX_LIB_NAMES omp)
+      set(OpenMP_omp_LIBRARY /usr/local/opt/libomp/lib/libomp.dylib)
+
+      find_package(OpenMP)
+      if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+          message(STATUS "OpenMP: Found libomp in homebrew default location.")
+      else()
+          message(FATAL_ERROR "OpenMP: Didn't find libomp. Tried homebrew default location but also didn't find it.")
+      endif()
+  endif()
+
+  set(Additional_OpenMP_Libraries_Workaround "")
+
+  # Workaround because older cmake on apple doesn't support FindOpenMP
+  if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND))
+      if((APPLE AND ((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
+              AND ((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0") AND (CMAKE_VERSION VERSION_LESS "3.12.0")))
+          message(STATUS "OpenMP: Applying workaround for OSX OpenMP with old cmake that doesn't have FindOpenMP")
+          set(OpenMP_CXX_FLAGS "-Xclang -fopenmp")
+          set(Additional_OpenMP_Libraries_Workaround "-lomp")
+      else()
+          message(FATAL_ERROR "OpenMP: Did not find OpenMP. Build without USE_OPENMP if you want to allow this.")
+      endif()
+  endif()
+
+  if(NOT TARGET OpenMP::OpenMP_CXX)
+      # We're on cmake < 3.9, handle behavior of the old FindOpenMP implementation
+      message(STATUS "OpenMP: Applying workaround for old CMake that doesn't define FindOpenMP using targets")
+      add_library(OpenMP_TARGET INTERFACE)
+      add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
+      target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS}) # add to all targets depending on this
+      find_package(Threads REQUIRED)
+      target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
+      target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS} ${Additional_OpenMP_Libraries_Workaround})
+  endif()
+
+  if (BUILD_STATIC)
+    target_link_libraries(cryptopp-static ${OpenMP_CXX_FLAGS}) # Workaround for Ubuntu 18.04 that otherwise doesn't set -fopenmp for linking
+    target_link_libraries(cryptopp-static OpenMP::OpenMP_CXX)
+  endif()
+  if (BUILD_SHARED)
+    target_link_libraries(cryptopp-shared ${OpenMP_CXX_FLAGS}) # Workaround for Ubuntu 18.04 that otherwise doesn't set -fopenmp for linking
+    target_link_libraries(cryptopp-shared OpenMP::OpenMP_CXX)
+  endif()
+endif()
+
 #============================================================================
 # Tests
 #============================================================================
@@ -1170,7 +1311,7 @@ elseif (CRYPTOPP_PPC64)
   message(STATUS "Platform: PowerPC-64")
 elseif (CRYPTOPP_MINGW32)
   message(STATUS "Platform: MinGW-32")
-elseif (CRYPTOPP_MINGW32)
+elseif (CRYPTOPP_MINGW64)
   message(STATUS "Platform: MinGW-64")
 endif ()
 if (CRYPTOPP_ARMV7A_NEON)

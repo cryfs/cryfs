@@ -322,8 +322,8 @@ void AddHtmlHeader()
 
 	oss << "\n<BODY>";
 
-	oss << "\n<H1><A href=\"http://www.cryptopp.com\">Crypto++</A> " << CRYPTOPP_VERSION / 100;
-	oss << '.' << (CRYPTOPP_VERSION % 100) / 10 << '.' << CRYPTOPP_VERSION % 10 << " Benchmarks</H1>";
+	oss << "\n<H1><A href=\"http://www.cryptopp.com\">Crypto++ " << CRYPTOPP_VERSION / 100;
+	oss << '.' << (CRYPTOPP_VERSION % 100) / 10 << '.' << CRYPTOPP_VERSION % 10 << "</A> Benchmarks</H1>";
 
 	oss << "\n<P>Here are speed benchmarks for some commonly used cryptographic algorithms.</P>";
 
@@ -509,6 +509,8 @@ void BenchmarkUnkeyedAlgorithms(double t, double hertz)
 		BenchMarkByNameKeyLess<HashTransformation>("SM3");
 		BenchMarkByNameKeyLess<HashTransformation>("BLAKE2s");
 		BenchMarkByNameKeyLess<HashTransformation>("BLAKE2b");
+		BenchMarkByNameKeyLess<HashTransformation>("LSH-256");
+		BenchMarkByNameKeyLess<HashTransformation>("LSH-512");
 	}
 
 	std::cout << "\n</TABLE>" << std::endl;

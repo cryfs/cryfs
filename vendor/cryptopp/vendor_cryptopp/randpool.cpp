@@ -105,6 +105,28 @@ void OldRandomPool::IncorporateEntropy(const byte *input, size_t length)
 	}
 }
 
+// GenerateWord32 is overriden and provides Crypto++ 5.4 behavior.
+// Taken from RandomNumberGenerator::GenerateWord32 in cryptlib.cpp.
+word32 OldRandomPool::GenerateWord32 (word32 min, word32 max)
+{
+	const word32 range = max-min;
+	const unsigned int maxBytes = BytePrecision(range);
+	const unsigned int maxBits = BitPrecision(range);
+
+	word32 value;
+
+	do
+	{
+		value = 0;
+		for (unsigned int i=0; i<maxBytes; i++)
+			value = (value << 8) | GenerateByte();
+
+		value = Crop(value, maxBits);
+	} while (value > range);
+
+	return value+min;
+}
+
 void OldRandomPool::Stir()
 {
 	CFB_Mode<OldRandomPoolCipher>::Encryption cipher;

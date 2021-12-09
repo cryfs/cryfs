@@ -41,6 +41,8 @@
 NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
+ANONYMOUS_NAMESPACE_BEGIN
+
 inline byte* C2B(char* ptr) {
     return reinterpret_cast<byte*>(ptr);
 }
@@ -49,34 +51,147 @@ inline const byte* C2B(const char* ptr) {
     return reinterpret_cast<const byte*>(ptr);
 }
 
+inline bool operator==(const RSA::PrivateKey& lhs, const RSA::PrivateKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetPublicExponent() == rhs.GetPublicExponent() &&
+		lhs.GetPrivateExponent() == rhs.GetPrivateExponent();
+}
+
+inline bool operator!=(const RSA::PrivateKey& lhs, const RSA::PrivateKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+inline bool operator==(const RSA::PublicKey& lhs, const RSA::PublicKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetPublicExponent() == rhs.GetPublicExponent();
+}
+
+inline bool operator!=(const RSA::PublicKey& lhs, const RSA::PublicKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+inline bool operator==(const LUC::PrivateKey& lhs, const LUC::PrivateKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetPublicExponent() == rhs.GetPublicExponent() &&
+		lhs.GetPrime1() == rhs.GetPrime1() &&
+		lhs.GetPrime2() == rhs.GetPrime2() &&
+		lhs.GetMultiplicativeInverseOfPrime2ModPrime1() == rhs.GetMultiplicativeInverseOfPrime2ModPrime1();
+}
+
+inline bool operator!=(const LUC::PrivateKey& lhs, const LUC::PrivateKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+inline bool operator==(const LUC::PublicKey& lhs, const LUC::PublicKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetPublicExponent() == rhs.GetPublicExponent();
+}
+
+inline bool operator!=(const LUC::PublicKey& lhs, const LUC::PublicKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+inline bool operator==(const Rabin::PrivateKey& lhs, const Rabin::PrivateKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetQuadraticResidueModPrime1() == rhs.GetQuadraticResidueModPrime1() &&
+		lhs.GetQuadraticResidueModPrime2() == rhs.GetQuadraticResidueModPrime2() &&
+		lhs.GetPrime1() == rhs.GetPrime1() &&
+		lhs.GetPrime2() == rhs.GetPrime2() &&
+		lhs.GetMultiplicativeInverseOfPrime2ModPrime1() == rhs.GetMultiplicativeInverseOfPrime2ModPrime1();
+}
+
+inline bool operator!=(const Rabin::PrivateKey& lhs, const Rabin::PrivateKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+inline bool operator==(const Rabin::PublicKey& lhs, const Rabin::PublicKey& rhs) {
+	return lhs.GetModulus() == rhs.GetModulus() &&
+		lhs.GetQuadraticResidueModPrime1() == rhs.GetQuadraticResidueModPrime1() &&
+		lhs.GetQuadraticResidueModPrime2() == rhs.GetQuadraticResidueModPrime2();
+}
+
+inline bool operator!=(const Rabin::PublicKey& lhs, const Rabin::PublicKey& rhs) {
+	return !operator==(lhs, rhs);
+}
+
+ANONYMOUS_NAMESPACE_END
+
 bool ValidateRSA_Encrypt()
 {
 	// Must be large enough for RSA-3072 to test SHA3_256
 	byte out[256], outPlain[128];
 	bool pass = true, fail;
 
+#if defined(CRYPTOPP_EXTENDED_VALIDATION)
+	{
+		FileSource keys(DataDir("TestData/rsa1024.dat").c_str(), true, new HexDecoder);
+		RSA::PrivateKey rsaPriv; rsaPriv.Load(keys);
+		RSA::PublicKey rsaPub(rsaPriv);
+
+		const Integer& n = rsaPriv.GetModulus();
+		const Integer& e = rsaPriv.GetPublicExponent();
+		const Integer& d = rsaPriv.GetPrivateExponent();
+
+		RSA::PrivateKey rsaPriv2;
+		rsaPriv2.Initialize(n, e, d);
+
+		fail = (rsaPriv != rsaPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "RSA::PrivateKey initialization\n";
+
+		RSA::PublicKey rsaPub2;
+		rsaPub2.Initialize(n, e);
+
+		fail = (rsaPub != rsaPub2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "RSA::PublicKey initialization\n";
+	}
+	{
+		FileSource keys(DataDir("TestData/rsa1024.dat").c_str(), true, new HexDecoder);
+		RSA::PrivateKey rsaPriv; rsaPriv.Load(keys);
+
+		ByteQueue q;
+		rsaPriv.DEREncodePrivateKey(q);
+
+		RSA::PrivateKey rsaPriv2;
+		rsaPriv2.BERDecodePrivateKey(q, true, q.MaxRetrievable());
+
+		fail = (rsaPriv != rsaPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "RSA::PrivateKey encoding and decoding\n";
+	}
+#endif
+
 	{
 		FileSource keys(DataDir("TestData/rsa1024.dat").c_str(), true, new HexDecoder);
 		RSAES_PKCS1v15_Decryptor rsaPriv(keys);
 		RSAES_PKCS1v15_Encryptor rsaPub(rsaPriv);
 
-		pass = CryptoSystemValidate(rsaPriv, rsaPub) && pass;
+		fail = !CryptoSystemValidate(rsaPriv, rsaPub);
+		pass = pass && !fail;
 	}
 	{
 		RSAES<OAEP<SHA1> >::Decryptor rsaPriv(GlobalRNG(), 512);
 		RSAES<OAEP<SHA1> >::Encryptor rsaPub(rsaPriv);
 
-		pass = CryptoSystemValidate(rsaPriv, rsaPub) && pass;
+		fail = !CryptoSystemValidate(rsaPriv, rsaPub);
+		pass = pass && !fail;
 	}
 	{
-		byte *plain = (byte *)
+		const byte plain[] =
 			"\x54\x85\x9b\x34\x2c\x49\xea\x2a";
-		static const byte encrypted[] =
+		const byte encrypted[] =
 			"\x14\xbd\xdd\x28\xc9\x83\x35\x19\x23\x80\xe8\xe5\x49\xb1\x58\x2a"
 			"\x8b\x40\xb4\x48\x6d\x03\xa6\xa5\x31\x1f\x1f\xd5\xf0\xa1\x80\xe4"
 			"\x17\x53\x03\x29\xa9\x34\x90\x74\xb1\x52\x13\x54\x29\x08\x24\x52"
 			"\x62\x51";
-		static const byte oaepSeed[] =
+		const byte oaepSeed[] =
 			"\xaa\xfd\x12\xf6\x59\xca\xe6\x34\x89\xb4\x79\xe5\x07\x6d\xde\xc2"
 			"\xf0\x6c\xb5\x8f";
 		ByteQueue bq;
@@ -105,10 +220,79 @@ bool ValidateRSA_Encrypt()
 
 bool ValidateLUC_Encrypt()
 {
-	FileSource f(DataDir("TestData/luc1024.dat").c_str(), true, new HexDecoder);
+	bool pass = true, fail;
+
+#if defined(CRYPTOPP_EXTENDED_VALIDATION)
+	{
+		FileSource keys(DataDir("TestData/luc1024.dat").c_str(), true, new HexDecoder);
+		LUC::PrivateKey lucPriv; lucPriv.BERDecode(keys);
+		LUC::PublicKey lucPub(lucPriv);
+
+		const Integer& n = lucPriv.GetModulus();
+		const Integer& e = lucPriv.GetPublicExponent();
+		const Integer& p = lucPriv.GetPrime1();
+		const Integer& q = lucPriv.GetPrime2();
+		const Integer& u = lucPriv.GetMultiplicativeInverseOfPrime2ModPrime1();
+
+		LUC::PrivateKey lucPriv2;
+		lucPriv2.Initialize(n, e, p, q, u);
+
+		fail = (lucPriv != lucPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "LUC::PrivateKey initialization\n";
+
+		LUC::PublicKey lucPub2;
+		lucPub2.Initialize(n, e);
+
+		fail = (lucPub != lucPub2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "LUC::PublicKey initialization\n";
+	}
+	{
+		FileSource keys(DataDir("TestData/luc1024.dat").c_str(), true, new HexDecoder);
+		LUC::PrivateKey lucPriv; lucPriv.BERDecode(keys);
+
+		ByteQueue q;
+		lucPriv.DEREncode(q);
+
+		LUC::PrivateKey lucPriv2;
+		lucPriv2.BERDecode(q);
+
+		fail = (lucPriv != lucPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "LUC::PrivateKey encoding and decoding\n";
+	}
+	{
+		FileSource keys(DataDir("TestData/luc1024.dat").c_str(), true, new HexDecoder);
+		LUC::PrivateKey lucPriv; lucPriv.BERDecode(keys);
+		LUC::PublicKey lucPub(lucPriv);
+
+		ByteQueue q;
+		lucPub.DEREncode(q);
+
+		LUC::PublicKey lucPub2;
+		lucPub2.BERDecode(q);
+
+		fail = (lucPub != lucPub2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "LUC::PublicKey encoding and decoding\n";
+	}
+#endif
+
 	LUCES_OAEP_SHA_Decryptor priv(GlobalRNG(), 512);
 	LUCES_OAEP_SHA_Encryptor pub(priv);
-	return CryptoSystemValidate(priv, pub);
+	fail = !CryptoSystemValidate(priv, pub);
+	pass = pass && !fail;
+
+	return pass;
 }
 
 bool ValidateLUC_DL_Encrypt()
@@ -123,10 +307,81 @@ bool ValidateLUC_DL_Encrypt()
 
 bool ValidateRabin_Encrypt()
 {
+	bool pass = true, fail;
+
+#if defined(CRYPTOPP_EXTENDED_VALIDATION)
+	{
+		FileSource keys(DataDir("TestData/rabi1024.dat").c_str(), true, new HexDecoder);
+		Rabin::PrivateKey rabinPriv; rabinPriv.BERDecode(keys);
+		Rabin::PublicKey rabinPub(rabinPriv);
+
+		const Integer& n = rabinPriv.GetModulus();
+		const Integer& r = rabinPriv.GetQuadraticResidueModPrime1();
+		const Integer& s = rabinPriv.GetQuadraticResidueModPrime2();
+		const Integer& p = rabinPriv.GetPrime1();
+		const Integer& q = rabinPriv.GetPrime2();
+		const Integer& u = rabinPriv.GetMultiplicativeInverseOfPrime2ModPrime1();
+
+		Rabin::PrivateKey rabinPriv2;
+		rabinPriv2.Initialize(n, r, s, p, q, u);
+
+		fail = (rabinPriv != rabinPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "Rabin::PrivateKey initialization\n";
+
+		Rabin::PublicKey rabinPub2;
+		rabinPub2.Initialize(n, r, s);
+
+		fail = (rabinPub != rabinPub2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "Rabin::PublicKey initialization\n";
+	}
+	{
+		FileSource keys(DataDir("TestData/rabi1024.dat").c_str(), true, new HexDecoder);
+		Rabin::PrivateKey rabinPriv; rabinPriv.BERDecode(keys);
+
+		ByteQueue q;
+		rabinPriv.DEREncode(q);
+
+		Rabin::PrivateKey rabinPriv2;
+		rabinPriv2.BERDecode(q);
+
+		fail = (rabinPriv != rabinPriv2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "Rabin::PrivateKey encoding and decoding\n";
+	}
+	{
+		FileSource keys(DataDir("TestData/rabi1024.dat").c_str(), true, new HexDecoder);
+		Rabin::PrivateKey rabinPriv; rabinPriv.BERDecode(keys);
+		Rabin::PublicKey rabinPub(rabinPriv);
+
+		ByteQueue q;
+		rabinPub.DEREncode(q);
+
+		Rabin::PublicKey rabinPub2;
+		rabinPub2.BERDecode(q);
+
+		fail = (rabinPub != rabinPub2);
+		pass = pass && !fail;
+
+		std::cout << (fail ? "FAILED    " : "passed    ");
+		std::cout << "Rabin::PublicKey encoding and decoding\n";
+	}
+#endif
+
 	FileSource f(DataDir("TestData/rabi1024.dat").c_str(), true, new HexDecoder);
 	RabinES<OAEP<SHA1> >::Decryptor priv(f);
 	RabinES<OAEP<SHA1> >::Encryptor pub(priv);
-	return CryptoSystemValidate(priv, pub);
+	fail = !CryptoSystemValidate(priv, pub);
+	pass = pass && !fail;
+
+	return pass;
 }
 
 bool ValidateECP_Encrypt()

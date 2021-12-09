@@ -23,13 +23,15 @@
 # include <immintrin.h>
 #endif
 
-#if (CRYPTOPP_ARM_NEON_HEADER)
-# include <arm_neon.h>
-#endif
-
-#if (CRYPTOPP_ARM_ACLE_HEADER)
-# include <stdint.h>
-# include <arm_acle.h>
+// Android makes <arm_acle.h> available with ARMv7-a
+#if (CRYPTOPP_BOOL_ARMV8)
+# if (CRYPTOPP_ARM_NEON_HEADER)
+#  include <arm_neon.h>
+# endif
+# if (CRYPTOPP_ARM_ACLE_HEADER)
+#  include <stdint.h>
+#  include <arm_acle.h>
+# endif
 #endif
 
 #if CRYPTOPP_POWER8_SHA_AVAILABLE
@@ -44,10 +46,6 @@
 #ifndef EXCEPTION_EXECUTE_HANDLER
 # define EXCEPTION_EXECUTE_HANDLER 1
 #endif
-
-// Clang intrinsic casts
-#define M128_CAST(x) ((__m128i *)(void *)(x))
-#define CONST_M128_CAST(x) ((const __m128i *)(const void *)(x))
 
 // Squash MS LNK4221 and libtool warnings
 extern const char SHA_SIMD_FNAME[] = __FILE__;

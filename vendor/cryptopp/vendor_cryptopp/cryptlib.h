@@ -3,7 +3,7 @@
 /// \file cryptlib.h
 /// \brief Abstract base classes that provide a uniform interface to this library.
 
-/*!	\mainpage Crypto++ Library 8.5 API Reference
+/*!	\mainpage Crypto++ Library 8.6 API Reference
 <dl>
 <dt>Abstract Base Classes<dd>
 	cryptlib.h
@@ -1219,7 +1219,7 @@ public:
 	/// \brief Computes the hash of the current message
 	/// \param digest a pointer to the buffer to receive the hash
 	/// \param digestSize the size of the truncated digest, in bytes
-	/// \details TruncatedFinal() call Final() and then copies digestSize bytes to digest.
+	/// \details TruncatedFinal() calls Final() and then copies digestSize bytes to digest.
 	///  The hash is restarted the hash for the next message.
 	/// \pre <tt>COUNTOF(digest) <= DigestSize()</tt> or <tt>COUNTOF(digest) <= HASH::DIGESTSIZE</tt> ensures
 	///  the output byte buffer is a valid size.
@@ -1399,6 +1399,23 @@ public:
 	///  do not have standard names yet. For example, there is no standard algorithm name for
 	///  Shoup's ECIES.
 	virtual std::string AlgorithmName() const;
+
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///  "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///  usually indicate a specialized implementation using instructions from a higher
+	///  instruction set architecture (ISA). Future labels may include external hardware
+	///  like a hardware security module (HSM).
+	/// \details Generally speaking Wei Dai's original IA-32 ASM code falls under "SSE2".
+	///  Labels like "SSSE3" and "SSE4.1" follow after Wei's code and use intrinsics
+	///  instead of ASM.
+	/// \details Algorithms which combine different instructions or ISAs provide the
+	///  dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
+	///  "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
+	/// \note Provider is not universally implemented yet.
+	/// \since Crypto++ 8.0
+	virtual std::string AlgorithmProvider() const {return "C++";}
 
 protected:
 	const Algorithm & GetAlgorithm() const

@@ -7,6 +7,7 @@
 # Based upon OpenSSL's setenv-android.sh by TH, JW, and SM.
 # Heavily modified by JWW for Crypto++.
 # Modified by Skycoder42 Android NDK-r19 and above.
+# Modified some more by JW and UB.
 #
 # Crypto++ Library is copyrighted as a compilation and (as of version 5.6.2)
 # licensed under the Boost Software License 1.0, while the individual files
@@ -68,20 +69,53 @@ if [ -z "${ANDROID_CPU}" ]; then
     [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
+DEF_CPPFLAGS="-DNDEBUG"
+DEF_CFLAGS="-Wall -g2 -O3 -fPIC"
+DEF_CXXFLAGS="-Wall -g2 -O3 -fPIC"
+DEF_LDFLAGS=""
+
 #########################################
 #####       Clear old options       #####
 #########################################
 
 unset IS_IOS
+unset IS_MACOS
 unset IS_ANDROID
 unset IS_ARM_EMBEDDED
 
 unset ANDROID_CPPFLAGS
+unset ANDROID_CFLAGS
 unset ANDROID_CXXFLAGS
 unset ANDROID_LDFLAGS
 unset ANDROID_SYSROOT
 
-#####################################################################
+#########################################
+#####    Small Fixups, if needed    #####
+#########################################
+
+ANDROID_CPU=$(tr '[:upper:]' '[:lower:]' <<< "${ANDROID_CPU}")
+
+if [[ "$ANDROID_CPU" == "amd64" || "$ANDROID_CPU" == "x86_64" ]] ; then
+    ANDROID_CPU=x86_64
+fi
+
+if [[ "$ANDROID_CPU" == "i386" || "$ANDROID_CPU" == "i686" ]] ; then
+    ANDROID_CPU=i686
+fi
+
+if [[ "$ANDROID_CPU" == "armv7"* || "$ANDROID_CPU" == "armeabi"* ]] ; then
+    ANDROID_CPU=armeabi-v7a
+fi
+
+if [[ "$ANDROID_CPU" == "aarch64" || "$ANDROID_CPU" == "arm64"* || "$ANDROID_CPU" == "armv8"* ]] ; then
+    ANDROID_CPU=arm64-v8a
+fi
+
+echo "Configuring for $ANDROID_SDK ($ANDROID_CPU)"
+
+########################################
+#####         Environment          #####
+########################################
 
 # ANDROID_NDK_ROOT should always be set by the user (even when not running this script)
 # http://groups.google.com/group/android-ndk/browse_thread/thread/a998e139aca71d77.
@@ -156,14 +190,13 @@ fi
 
 #####################################################################
 
-THE_ARCH=$(tr '[:upper:]' '[:lower:]' <<< "${ANDROID_CPU}")
-
 # https://developer.android.com/ndk/guides/abis.html and
 # https://developer.android.com/ndk/guides/cpp-support.
 # Since NDK r16 the only STL available is libc++, so we
 # add -std=c++11 -stdlib=libc++ to CXXFLAGS. This is
 # consistent with Android.mk and 'APP_STL := c++_shared'.
-case "$THE_ARCH" in
+
+case "$ANDROID_CPU" in
   armv7*|armeabi*)
     CC="armv7a-linux-androideabi${ANDROID_API}-clang"
     CXX="armv7a-linux-androideabi${ANDROID_API}-clang++"
@@ -172,16 +205,24 @@ case "$THE_ARCH" in
     AR="arm-linux-androideabi-ar"
     RANLIB="arm-linux-androideabi-ranlib"
     STRIP="arm-linux-androideabi-strip"
+    OBJDUMP="arm-linux-androideabi-objdump"
 
     # You may need this on older NDKs
     # ANDROID_CPPFLAGS="-D__ANDROID__=${ANDROID_API}"
 
     # Android NDK r19 and r20 no longer use -mfloat-abi=softfp. Add it as required.
-    ANDROID_CXXFLAGS="-target armv7-none-linux-androideabi${ANDROID_API} -std=c++11 -stdlib=libc++"
+    ANDROID_CFLAGS="-target armv7-none-linux-androideabi${ANDROID_API}"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -march=armv7-a -mthumb"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fno-addrsig -fno-experimental-isel"
+
+    ANDROID_CXXFLAGS="-target armv7-none-linux-androideabi${ANDROID_API}"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -march=armv7-a -mthumb"
+    ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fno-addrsig -fno-experimental-isel"
     ;;
+
   armv8*|aarch64|arm64*)
     CC="aarch64-linux-android${ANDROID_API}-clang"
     CXX="aarch64-linux-android${ANDROID_API}-clang++"
@@ -190,15 +231,21 @@ case "$THE_ARCH" in
     AR="aarch64-linux-android-ar"
     RANLIB="aarch64-linux-android-ranlib"
     STRIP="aarch64-linux-android-strip"
+    OBJDUMP="aarch64-linux-android-objdump"
 
     # You may need this on older NDKs
     # ANDROID_CPPFLAGS="-D__ANDROID__=${ANDROID_API}"
+
+    ANDROID_CFLAGS="-target aarch64-none-linux-android${ANDROID_API}"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fno-addrsig -fno-experimental-isel"
 
     ANDROID_CXXFLAGS="-target aarch64-none-linux-android${ANDROID_API}"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fno-addrsig -fno-experimental-isel"
     ;;
+
   i686|x86)
     CC="i686-linux-android${ANDROID_API}-clang"
     CXX="i686-linux-android${ANDROID_API}-clang++"
@@ -207,16 +254,23 @@ case "$THE_ARCH" in
     AR="i686-linux-android-ar"
     RANLIB="i686-linux-android-ranlib"
     STRIP="i686-linux-android-strip"
+    OBJDUMP="i686-linux-android-objdump"
 
     # You may need this on older NDKs
     # ANDROID_CPPFLAGS="-D__ANDROID__=${ANDROID_API}"
 
+    ANDROID_CFLAGS="-target i686-none-linux-android${ANDROID_API}"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -mtune=intel -mssse3 -mfpmath=sse"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fno-addrsig -fno-experimental-isel"
+
     ANDROID_CXXFLAGS="-target i686-none-linux-android${ANDROID_API}"
-    ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -mtune=intel -mssse3 -mfpmath=sse"
+    ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fno-addrsig -fno-experimental-isel"
     ;;
+
   x86_64|x64)
     CC="x86_64-linux-android${ANDROID_API}-clang"
     CXX="x86_64-linux-android${ANDROID_API}-clang++"
@@ -225,13 +279,19 @@ case "$THE_ARCH" in
     AR="x86_64-linux-android-ar"
     RANLIB="x86_64-linux-android-ranlib"
     STRIP="x86_64-linux-android-strip"
+    OBJDUMP="x86_64-linux-android-objdump"
 
     # You may need this on older NDKs
     # ANDROID_CPPFLAGS="-D__ANDROID__=${ANDROID_API}"
 
+    ANDROID_CFLAGS="-target x86_64-none-linux-android${ANDROID_API}"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -march=x86-64 -msse4.2 -mpopcnt -mtune=intel"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
+    ANDROID_CFLAGS="${ANDROID_CFLAGS} -fno-addrsig -fno-experimental-isel"
+
     ANDROID_CXXFLAGS="-target x86_64-none-linux-android${ANDROID_API}"
-    ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -march=x86-64 -msse4.2 -mpopcnt -mtune=intel"
+    ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -std=c++11 -stdlib=libc++"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fstack-protector-strong -funwind-tables -fexceptions -frtti"
     ANDROID_CXXFLAGS="${ANDROID_CXXFLAGS} -fno-addrsig -fno-experimental-isel"
     ;;
@@ -241,18 +301,22 @@ case "$THE_ARCH" in
     ;;
 esac
 
+echo "Configuring for Android API ${ANDROID_API} ($ANDROID_CPU)"
+
 #####################################################################
 
-# GNUmakefile-cross and Autotools expect these to be set.
-# They are also used in the tests below.
-export IS_ANDROID=1
+# Common to all builds
 
-export CPP CC CXX LD AS AR RANLIB STRIP
-export ANDROID_CPPFLAGS ANDROID_CXXFLAGS ANDROID_LDFLAGS
-export ANDROID_API ANDROID_CPU ANDROID_SYSROOT
+ANDROID_CPPFLAGS="${DEF_CPPFLAGS} ${ANDROID_CPPFLAGS} -DANDROID"
+ANDROID_CFLAGS="${DEF_CFLAGS} ${ANDROID_CFLAGS} -Wa,--noexecstack"
+ANDROID_CXXFLAGS="${DEF_CXXFLAGS} ${ANDROID_CXXFLAGS} -Wa,--noexecstack"
+ANDROID_LDFLAGS="${DEF_LDFLAGS}"
 
-# Do NOT use ANDROID_SYSROOT_INC or ANDROID_SYSROOT_LD
-# https://github.com/android/ndk/issues/894#issuecomment-470837964
+# Aarch64 ld does not understand --warn-execstack
+ANDROID_LDFLAGS="${ANDROID_LDFLAGS} -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
+ANDROID_LDFLAGS="${ANDROID_LDFLAGS} -Wl,--warn-shared-textrel -Wl,--warn-common"
+ANDROID_LDFLAGS="${ANDROID_LDFLAGS} -Wl,--warn-unresolved-symbols"
+ANDROID_LDFLAGS="${ANDROID_LDFLAGS} -Wl,--gc-sections -Wl,--fatal-warnings"
 
 #####################################################################
 
@@ -339,18 +403,44 @@ if [ "$VERBOSE" -gt 0 ]; then
   echo "ANDROID_TOOLCHAIN: ${ANDROID_TOOLCHAIN}"
   echo "ANDROID_API: ${ANDROID_API}"
   echo "ANDROID_CPU: ${ANDROID_CPU}"
-  echo "ANDROID_SYSROOT: ${ANDROID_SYSROOT}"
   if [ -n "${ANDROID_CPPFLAGS}" ]; then
     echo "ANDROID_CPPFLAGS: ${ANDROID_CPPFLAGS}"
   fi
+  echo "ANDROID_CFLAGS: ${ANDROID_CFLAGS}"
   echo "ANDROID_CXXFLAGS: ${ANDROID_CXXFLAGS}"
   if [ -n "${ANDROID_LDFLAGS}" ]; then
     echo "ANDROID_LDFLAGS: ${ANDROID_LDFLAGS}"
   fi
+  echo "ANDROID_SYSROOT: ${ANDROID_SYSROOT}"
   if [ -e "cpu-features.h" ] && [ -e "cpu-features.c" ]; then
     echo "CPU FEATURES: cpu-features.h and cpu-features.c are present"
   fi
 fi
+
+#####################################################################
+
+# GNUmakefile-cross and Autotools expect these to be set.
+# Note: prior to Crypto++ 8.6, CPPFLAGS, CXXFLAGS and LDFLAGS were not
+# exported. At Crypto++ 8.6 CPPFLAGS, CXXFLAGS and LDFLAGS were exported.
+
+export IS_ANDROID=1
+export CPP CC CXX LD AS AR RANLIB STRIP OBJDUMP
+
+# Do NOT use ANDROID_SYSROOT_INC or ANDROID_SYSROOT_LD
+# https://github.com/android/ndk/issues/894#issuecomment-470837964
+
+CPPFLAGS="${ANDROID_CPPFLAGS} -isysroot ${ANDROID_SYSROOT}"
+CFLAGS="${ANDROID_CFLAGS}"
+CXXFLAGS="${ANDROID_CXXFLAGS}"
+LDFLAGS="${ANDROID_LDFLAGS} --sysroot ${ANDROID_SYSROOT}"
+
+# Trim whitespace as needed
+CPPFLAGS=$(echo "${CPPFLAGS}" | awk '{$1=$1;print}')
+CFLAGS=$(echo "${CFLAGS}" | awk '{$1=$1;print}')
+CXXFLAGS=$(echo "${CXXFLAGS}" | awk '{$1=$1;print}')
+LDFLAGS=$(echo "${LDFLAGS}" | awk '{$1=$1;print}')
+
+export CPPFLAGS CFLAGS CXXFLAGS LDFLAGS
 
 #####################################################################
 

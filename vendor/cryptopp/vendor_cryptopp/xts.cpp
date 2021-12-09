@@ -22,11 +22,7 @@
 // 0.3 to 0.4 cpb profit
 #if defined(__SSE2__) || defined(_M_X64)
 # include <emmintrin.h>
-// Clang intrinsic casts
-# define M128_CAST(x) ((__m128i *)(void *)(x))
-# define CONST_M128_CAST(x) ((const __m128i *)(const void *)(x))
 #endif
-
 
 #if defined(__aarch32__) || defined(__aarch64__) || defined(_M_ARM64)
 # if (CRYPTOPP_ARM_NEON_HEADER)
