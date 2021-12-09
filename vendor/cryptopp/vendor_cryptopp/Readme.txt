@@ -1,5 +1,5 @@
 Crypto++: free C++ Class Library of Cryptographic Schemes
-Version 8.5 - March 7, 2021
+Version 8.6 - TBD
 
 Crypto++ Library is a free C++ class library of cryptographic schemes.
 Currently the library contains the following algorithms:
@@ -28,9 +28,9 @@ Currently the library contains the following algorithms:
                                    Poly1305, Poly1305 (IETF), SipHash, Two-Track-MAC,
                                    VMAC
 
-                                   BLAKE2s, BLAKE2b, Keccack (F1600), SHA-1,
-                   hash functions  SHA-2 (224/256/384/512), SHA-3 (224/256/384/512),
-                                   SHAKE (128/256), SipHash, SM3, Tiger,
+                                   BLAKE2s, BLAKE2b, Keccack (F1600), LSH (256/512),
+                   hash functions  SHA-1, SHA-2 (224/256/384/512), SHA-3 (224/256),
+                                   SHA-3 (384/512), SHAKE (128/256), SipHash, SM3, Tiger,
                                    RIPEMD (128/160/256/320), WHIRLPOOL
 
                                    RSA, DSA, Deterministic DSA, ElGamal,
@@ -76,8 +76,8 @@ Other features include:
   * A high level interface for most of the above, using a filter/pipeline
     metaphor
   * benchmarks and validation testing
-  * x86, x64 (x86-64), x32 (ILP32), ARM-32, Aarch32, Aarch64 and Power8 in-core code
-    for the commonly used algorithms
+  * x86, x64 (x86-64), x32 (ILP32), ARM-32, Aarch32, Aarch64 and Power8
+    in-core code for the commonly used algorithms
       + run-time CPU feature detection and code selection
       + supports GCC-style and MSVC-style inline assembly, and MASM for x64
       + x86, x64 (x86-64), x32 provides MMX, SSE2, and SSE4 implementations
@@ -128,9 +128,8 @@ cryptdll - This builds the DLL. Please note that if you wish to use Crypto++
 dlltest - This builds a sample application that only uses the DLL.
 
 The DLL used to provide FIPS validated cryptography. The library was moved
-to the CMVP's <A HREF=
-"http://csrc.nist.gov/groups/STM/cmvp/documents/140-1/140val-historical.htm">
-Historical Validation List</A>. The library and the DLL are no longer considered
+to the CMVP's [Historical Validation List](http://csrc.nist.gov/groups/STM/cmvp/documents/140-1/140val-historical.htm).
+The library and the DLL are no longer considered
 validated. You should no longer use the DLL.
 
 To use the Crypto++ DLL in your application, #include "dll.h" before including
@@ -213,14 +212,14 @@ to internal buffer attacks as "Microarchitectural Data Sampling" (MDS).
 
 The library uses hardware instructions when possible for block ciphers, hashes
 and other operations. The hardware acceleration remediates some timing
-attacks. The library also uses cache-aware algoirthms and access patterns
+attacks. The library also uses cache-aware algorithms and access patterns
 to minimize leakage cache evictions.
 
 Elliptic curves over binary fields are believed to leak information. The task is a
 work in progress. We don't believe binary fields are used in production, so we feel it
 is a low risk at the moment.
 
-Crypto++ does not enagage Specter remediations at this time. The GCC options
+Crypto++ does not engage Specter remediations at this time. The GCC options
 for Specter are -mfunction-return=thunk and -mindirect-branch=thunk, and the
 library uses them during testing. If you want the Specter workarounds then add
 the GCC options to your CXXFLAGS when building the library.
@@ -295,11 +294,36 @@ documentation is one of the highest returns on investment.
 The items in this section comprise the most recent history. Please see History.txt
 for the record back to Crypto++ 1.0.
 
+8.6.0 - September 21, 2021
+      - minor release, recompile of programs required
+      - expanded community input and support
+        * 74 unique contributors as of this release
+      - fix ElGamal encryption
+      - fix ChaCha20 AVX2 implementation
+      - add octal and decimal literal prefix parsing to Integer
+      - add missing overload in ed25519Signer and ed25519Verifier
+      - make SHA-NI independent of AVX and AVX2
+      - fix OldRandomPool GenerateWord32
+      - use CPPFLAGS during feature testing
+      - fix compile on CentOS 5
+      - fix compile on FreeBSD
+      - fix feature testing on ARM A-32 and Aarch64
+      - enable inline ASM for CRC and PMULL on Apple M1
+      - fix Intel oneAPI compile
+      - rename test files with *.cpp extension
+      - fix GCC compile error due to missing _mm256_set_m128i
+      - add LSH-256 and LSH-512 hash functions
+      - add ECIES_P1363 for backwards compatibility
+      - fix AdditiveCipherTemplate<T> ProcessData
+      - remove CRYPTOPP_NO_CXX11 define
+      - add -fno-common for Darwin builds
+      - update documentation
+
 8.5.0 - March 7, 2021
       - minor release, no recompile of programs required
       - expanded community input and support
         * 70 unique contributors as of this release
-      - port to Apple M1
+      - port to Apple M1 hardware
 
 8.4.0 - January 2, 2021
       - minor release, recompile of programs required

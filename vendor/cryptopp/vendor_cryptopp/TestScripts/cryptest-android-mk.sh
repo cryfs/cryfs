@@ -5,7 +5,7 @@
 # This script tests the cryptopp-android-mk gear using ndk-build. The
 # source files include Application.mk and Android.mk.
 #
-# Written and placed in public domain by Jeffrey Walton.
+# Written and placed in public domain by Jeffrey Walton and Uri Blumenthal.
 #
 # Crypto++ Library is copyrighted as a compilation and (as of version 5.6.2)
 # licensed under the Boost Software License 1.0, while the individual files
@@ -62,7 +62,18 @@ rm -rf "${TMPDIR}/build.log" 2>/dev/null
 
 #############################################################################
 
-files=(Android.mk Application.mk make_neon.sh test_shared.hxx test_shared.cxx)
+# Prepare the environment
+unset CXX CPPFLAGS CXXFLAGS LDFLAGS
+unset ANDROID_CPPFLAGS ANDROID_CXXFLAGS ANDROID_LDFLAGS ANDROID_SYSROOT
+
+if [[ -e TestScripts/setenv-android.sh ]]; then
+    cp TestScripts/setenv-android.sh .
+    chmod u+x setenv-android.sh
+fi
+
+#############################################################################
+
+files=(Android.mk Application.mk test_shared.hxx test_shared.cxx)
 
 for file in "${files[@]}"; do
     echo "Downloading $file"
@@ -75,18 +86,6 @@ for file in "${files[@]}"; do
     # Throttle
     sleep 1
 done
-
-# Fix permissions and quarantine
-chmod u=rwx,go=rx make_neon.sh
-
-if [[ "${IS_DARWIN}" -ne 0 ]] && [[ $(command -v xattr 2>/dev/null) ]]; then
-    echo "Removing make_neon.sh quarantine"
-    xattr -d "com.apple.quarantine" make_neon.sh &>/dev/null
-fi
-
-# Fix missing *neon files
-echo "Adding NEON files for armeabi-v7a"
-bash make_neon.sh
 
 #############################################################################
 

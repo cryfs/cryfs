@@ -1,8 +1,7 @@
 This directory contains external projects, taken from the following locations:
 googletest: https://github.com/google/googletest/commit/eaf9a3fd77869cf95befb87455a2e2a2e85044ff
  - changed: In googletest/cmake/internal_utils.cmake, add cmake_policy(SET CMP0069 NEW) to silence a warning
-cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_5_0
- - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/CRYPTOPP_8_5_0
+cryptopp: https://github.com/weidai11/cryptopp/releases/tag/CRYPTOPP_8_6_0
+ - changed: added CMakeLists.txt and cryptopp-config.cmake from https://github.com/noloader/cryptopp-cmake/tree/675367754bf4bf2284910dcec24d068472c97990
  - changed: In CMakeLists.txt, rename BUILD_TESTING to CRYPTOPP_BUILD_TESTING so it doesn't clash with our BUILD_TESTING
  - changed: In CMakeLists.txt, add cmake_policy(SET CMP0069 NEW) to silence a warning
- - changed: In .gitignore, remove *.cxx entry so we don't miss checking in the test files, see https://github.com/noloader/cryptopp-cmake/issues/66

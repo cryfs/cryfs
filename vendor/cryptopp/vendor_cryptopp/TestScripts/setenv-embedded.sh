@@ -19,19 +19,37 @@ if [ "$0" = "${BASH_SOURCE[0]}" ]; then
     echo "setenv-embedded.sh is usually sourced, but not this time."
 fi
 
-# Unset old options
+DEF_CPPFLAGS="-DNDEBUG"
+DEF_CFLAGS="-Wall -g2 -O3 -fPIC"
+DEF_CXXFLAGS="-Wall -g2 -O3 -fPIC"
+DEF_LDFLAGS=""
 
-unset IS_CROSS_COMPILE
+#########################################
+#####       Clear old options       #####
+#########################################
 
 unset IS_IOS
+unset IS_MACOS
 unset IS_ANDROID
 unset IS_ARM_EMBEDDED
+
+unset ARM_EMBEDDED_CPPFLAGS
+unset ARM_EMBEDDED_CFLAGS
+unset ARM_EMBEDDED_HEADERS
+unset ARM_EMBEDDED_CXX_HEADERS
+unset ARM_EMBEDDED_CXXFLAGS
+unset ARM_EMBEDDED_LDFLAGS
+unset ARM_EMBEDDED_SYSROOT
+
+########################################
+#####         Environment          #####
+########################################
 
 if [ -z "${ARM_EMBEDDED_TOOLCHAIN-}" ]; then
     ARM_EMBEDDED_TOOLCHAIN="/usr/bin"
 fi
 
-if [ ! -d "$ARM_EMBEDDED_TOOLCHAIN" ]; then
+if [ ! -d "${ARM_EMBEDDED_TOOLCHAIN}" ]; then
     echo "ARM_EMBEDDED_TOOLCHAIN is not valid"
     [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
@@ -42,14 +60,14 @@ fi
 # Ubuntu
 TOOL_PREFIX="arm-linux-gnueabi"
 
-export CPP="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-cpp"
-export CC="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-gcc"
-export CXX="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-g++"
-export LD="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-ld"
-export AR="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-ar"
-export AS="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-as"
-export RANLIB="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-ranlib"
-# export RANLIB="$ARM_EMBEDDED_TOOLCHAIN/$TOOL_PREFIX-gcc-ranlib-4.7"
+CPP="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-cpp"
+CC="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-gcc"
+CXX="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-g++"
+LD="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-ld"
+AR="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-ar"
+AS="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-as"
+RANLIB="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-ranlib"
+OBJDUMP="${ARM_EMBEDDED_TOOLCHAIN}/${TOOL_PREFIX}-objdump"
 
 # Test a few of the tools
 if [ ! -e "$CPP" ]; then
@@ -87,16 +105,11 @@ if [ ! -e "$LD" ]; then
   [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
-# The Crypto++ Makefile uses these to disable host settings like
-#   IS_LINUX or IS_DARWIN, and incorporate settings for ARM_EMBEDDED
-export IS_ARM_EMBEDDED=1
-
-# GNUmakefile-cross uses these to to set CXXFLAGS for ARM_EMBEDDED
-if [ -z "$ARM_EMBEDDED_SYSROOT" ]; then
-  export ARM_EMBEDDED_SYSROOT="/usr/arm-linux-gnueabi"
+if [ -z "${ARM_EMBEDDED_SYSROOT}" ]; then
+  ARM_EMBEDDED_SYSROOT="/usr/arm-linux-gnueabi"
 fi
 
-if [ ! -d "$ARM_EMBEDDED_SYSROOT" ]; then
+if [ ! -d "${ARM_EMBEDDED_SYSROOT}" ]; then
   echo "ERROR: ARM_EMBEDDED_SYSROOT is not valid"
   [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
@@ -104,39 +117,62 @@ fi
 # Fix C++ header paths for Ubuntu
 # ARM_EMBEDDED_TOOLCHAIN_VERSION="4.7.3"
 ARM_EMBEDDED_TOOLCHAIN_VERSION="5.4.0"
-ARM_EMBEDDED_CXX_HEADERS="$ARM_EMBEDDED_SYSROOT/include/c++/$ARM_EMBEDDED_TOOLCHAIN_VERSION"
+ARM_EMBEDDED_CXX_HEADERS="${ARM_EMBEDDED_SYSROOT}/include/c++/${ARM_EMBEDDED_TOOLCHAIN_VERSION}"
 
-if [ ! -d "$ARM_EMBEDDED_CXX_HEADERS" ]; then
+if [ ! -d "${ARM_EMBEDDED_CXX_HEADERS}" ]; then
   echo "ERROR: ARM_EMBEDDED_CXX_HEADERS is not valid"
   [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
 
-if [ ! -d "$ARM_EMBEDDED_CXX_HEADERS/arm-linux-gnueabi" ]; then
+if [ ! -d "${ARM_EMBEDDED_CXX_HEADERS}/arm-linux-gnueabi" ]; then
   echo "ERROR: ARM_EMBEDDED_CXX_HEADERS is not valid"
   [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
 fi
-
-# Finally, the flags...
-# export ARM_EMBEDDED_FLAGS="-march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -Wl,--fix-cortex-a8 -I$ARM_EMBEDDED_CXX_HEADERS -I$ARM_EMBEDDED_CXX_HEADERS/arm-linux-gnueabi"
 
 # Add additional flags below, like -mcpu=cortex-m3.
-if [ -z "$ARM_EMBEDDED_FLAGS" ]; then
-  export ARM_EMBEDDED_FLAGS="-I$ARM_EMBEDDED_CXX_HEADERS -I$ARM_EMBEDDED_CXX_HEADERS/arm-linux-gnueabi"
+if [ -z "${ARM_EMBEDDED_HEADERS}" ]; then
+  ARM_EMBEDDED_HEADERS="-I\"${ARM_EMBEDDED_CXX_HEADERS}\" -I\"${ARM_EMBEDDED_CXX_HEADERS}/arm-linux-gnueabi\""
 fi
 
-# And print stuff to wow the user...
+#####################################################################
+
 VERBOSE=${VERBOSE:-1}
 if [ "$VERBOSE" -gt 0 ]; then
-  echo "CPP: $CPP"
-  echo "CXX: $CXX"
-  echo "AR: $AR"
-  echo "LD: $LD"
-  echo "RANLIB: $RANLIB"
-  echo "ARM_EMBEDDED_TOOLCHAIN: $ARM_EMBEDDED_TOOLCHAIN"
-  echo "ARM_EMBEDDED_CXX_HEADERS: $ARM_EMBEDDED_CXX_HEADERS"
-  echo "ARM_EMBEDDED_FLAGS: $ARM_EMBEDDED_FLAGS"
-  echo "ARM_EMBEDDED_SYSROOT: $ARM_EMBEDDED_SYSROOT"
+  echo "ARM_EMBEDDED_TOOLCHAIN: ${ARM_EMBEDDED_TOOLCHAIN}"
+  if [[ -n "${ARM_EMBEDDED_CPPFLAGS}" ]]; then
+    echo "ARM_EMBEDDED_CPPFLAGS: ${ARM_EMBEDDED_CPPFLAGS}"
+  fi
+  echo "ARM_EMBEDDED_CFLAGS: ${ARM_EMBEDDED_CFLAGS}"
+  echo "ARM_EMBEDDED_CXXFLAGS: ${ARM_EMBEDDED_CXXFLAGS}"
+  if [[ -n "${ARM_EMBEDDED_LDFLAGS}" ]]; then
+    echo "ARM_EMBEDDED_LDFLAGS: ${ARM_EMBEDDED_LDFLAGS}"
+  fi
+  echo "ARM_EMBEDDED_SYSROOT: ${ARM_EMBEDDED_SYSROOT}"
 fi
+
+#####################################################################
+
+# GNUmakefile-cross and Autotools expect these to be set.
+# Note: prior to Crypto++ 8.6, CPPFLAGS, CXXFLAGS and LDFLAGS were not
+# exported. At Crypto++ 8.6 CPPFLAGS, CXXFLAGS and LDFLAGS were exported.
+
+export IS_ARM_EMBEDDED=1
+export CPP CC CXX LD AS AR RANLIB STRIP OBJDUMP
+
+CPPFLAGS="${DEF_CPPFLAGS} ${ARM_EMBEDDED_CPPFLAGS} ${ARM_EMBEDDED_HEADERS} -isysroot ${ARM_EMBEDDED_SYSROOT}"
+CFLAGS="${DEF_CFLAGS} ${ARM_EMBEDDED_CFLAGS}"
+CXXFLAGS="${DEF_CXXFLAGS} ${ARM_EMBEDDED_CXXFLAGS}"
+LDFLAGS="${DEF_LDFLAGS} ${ARM_EMBEDDED_LDFLAGS} --sysroot ${ARM_EMBEDDED_SYSROOT}"
+
+# Trim whitespace as needed
+CPPFLAGS=$(echo "${CPPFLAGS}" | awk '{$1=$1;print}')
+CFLAGS=$(echo "${CFLAGS}" | awk '{$1=$1;print}')
+CXXFLAGS=$(echo "${CXXFLAGS}" | awk '{$1=$1;print}')
+LDFLAGS=$(echo "${LDFLAGS}" | awk '{$1=$1;print}')
+
+export CPPFLAGS CFLAGS CXXFLAGS LDFLAGS
+
+#####################################################################
 
 echo
 echo "*******************************************************************************"

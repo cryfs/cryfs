@@ -29,11 +29,6 @@
 # endif
 #endif
 
-#if defined(__AVX512F__)
-# define CRYPTOPP_AVX512_ROTATE 1
-# include <immintrin.h>
-#endif
-
 #if (CRYPTOPP_ARM_NEON_HEADER)
 # include "adv_simd.h"
 # include <arm_neon.h>

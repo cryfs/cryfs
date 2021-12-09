@@ -15,8 +15,9 @@ TOUT := $(strip $(TOUT))
 LINK_LIBRARY ?= libcryptopp.a
 LINK_LIBRARY_PATH ?= ./
 
-# Default CXXFLAGS if none were provided
-CXXFLAGS ?= -DNDEBUG -g2 -O3 -fPIC -pipe
+# Default FLAGS if none were provided
+CPPFLAGS ?= -DNDEBUG
+CXXFLAGS ?= -g2 -O3 -fPIC -pipe
 
 AR ?= ar
 ARFLAGS ?= cr
@@ -45,11 +46,11 @@ endif
 
 IS_LINUX := $(shell echo $(MACHINEX) | $(GREP) -i -c "Linux")
 
-# Can be used by Android and Embeeded cross-compiles. Disable by default because
+# Can be used by Android and Embedded cross-compiles. Disable by default because
 #   Android and embedded users typically don't run this configuration.
 HAS_SOLIB_VERSION ?= 0
 
-# Formely adhoc.cpp was created from adhoc.cpp.proto when needed.
+# Formerly adhoc.cpp was created from adhoc.cpp.proto when needed.
 # This is now needed because ISA tests are performed using adhoc.cpp.
 ifeq ($(wildcard adhoc.cpp),)
 $(shell cp adhoc.cpp.proto adhoc.cpp)
@@ -59,23 +60,21 @@ endif
 #####                General Variables                #####
 ###########################################################
 
-# Default prefix for make install
-ifeq ($(PREFIX),)
-PREFIX = /usr/local
-endif
-
 # http://www.gnu.org/prep/standards/html_node/Directory-Variables.html
-ifeq ($(DATADIR),)
-DATADIR := $(PREFIX)/share
+ifeq ($(PREFIX),)
+  PREFIX = /usr/local
 endif
 ifeq ($(LIBDIR),)
-LIBDIR := $(PREFIX)/lib
+  LIBDIR := $(PREFIX)/lib
 endif
-ifeq ($(BINDIR),)
-BINDIR := $(PREFIX)/bin
+ifeq ($(DATADIR),)
+  DATADIR := $(PREFIX)/share
 endif
 ifeq ($(INCLUDEDIR),)
-INCLUDEDIR := $(PREFIX)/include
+  INCLUDEDIR := $(PREFIX)/include
+endif
+ifeq ($(BINDIR),)
+  BINDIR := $(PREFIX)/bin
 endif
 
 # We honor ARFLAGS, but the "v" option used by default causes a noisy make
@@ -83,11 +82,21 @@ ifeq ($(ARFLAGS),rv)
   ARFLAGS = r
 endif
 
-# Sadly, we can't actually use GCC_PRAGMA_AWARE because of GCC bug 53431.
-# Its a shame because GCC has so much to offer by the way of analysis.
-# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
-ifneq ($(CLANG_COMPILER),0)
-  CXXFLAGS += -Wall
+###########################################################
+#####                      MacOS                      #####
+###########################################################
+
+# MacOS cross-compile configuration.
+#   See http://www.cryptopp.com/wiki/MacOS_(Command_Line).
+ifeq ($(IS_MACOS),1)
+  # setenv-macos.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
+  IS_APPLE_LIBTOOL=$(shell libtool -V 2>&1 | $(GREP) -i -c 'Apple')
+  ifeq ($(IS_APPLE_LIBTOOL),1)
+    AR = libtool
+  else
+    AR = /usr/bin/libtool
+  endif
+  ARFLAGS = -static -o
 endif
 
 ###########################################################
@@ -97,9 +106,7 @@ endif
 # iOS cross-compile configuration.
 #   See http://www.cryptopp.com/wiki/iOS_(Command_Line).
 ifeq ($(IS_IOS),1)
-  CXXFLAGS += $(IOS_CXXFLAGS) -stdlib=libc++
-  CXXFLAGS += --sysroot "$(IOS_SYSROOT)"
-
+  # setenv-ios.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
   AR = libtool
   ARFLAGS = -static -o
 endif
@@ -111,18 +118,7 @@ endif
 # Android cross-compile configuration.
 #   See http://www.cryptopp.com/wiki/Android_(Command_Line).
 ifeq ($(IS_ANDROID),1)
-  CPPFLAGS += $(ANDROID_CPPFLAGS)
-  CPPFLAGS += -DANDROID
-  CXXFLAGS += $(ANDROID_CXXFLAGS)
-  CXXFLAGS += --sysroot=$(ANDROID_SYSROOT)
-  CXXFLAGS += -Wa,--noexecstack
-
-  # Aarch64 ld does not understand --warn-execstack
-  LDFLAGS += $(ANDROID_LDFLAGS)
-  LDFLAGS += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
-  LDFLAGS += -Wl,--warn-shared-textrel -Wl,--warn-common
-  LDFLAGS += -Wl,--warn-unresolved-symbols
-  LDFLAGS += -Wl,--gc-sections -Wl,--fatal-warnings
+  # setenv-android.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
 
   # Source files copied into PWD for Android cpu-features
   # setenv-android.sh does the copying. Its a dirty compile.
@@ -137,8 +133,7 @@ endif
 #   See http://www.cryptopp.com/wiki/ARM_Embedded_(Command_Line)
 #   and http://www.cryptopp.com/wiki/ARM_Embedded_(Bare Metal).
 ifeq ($(IS_ARM_EMBEDDED),1)
-  # CPP, CXX, AR, RANLIB, LD, etc are set in 'setenv-embedded.sh'
-  CXXFLAGS += $(ARM_EMBEDDED_FLAGS) --sysroot=$(ARM_EMBEDDED_SYSROOT)
+  # setenv-android.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
 endif
 
 ###########################################################
@@ -156,13 +151,14 @@ ifeq ($(HOSTX),)
 endif
 
 # This dance is because Clang reports the host architecture instead
-# of the target architecture. Running Clang on an x86_64 machine with
-# -arch arm64 yields x86_64 instead of aarch64 or arm64.
+# of the target architecture for -dumpmachine. Running Clang on an
+# x86_64 machine with -arch arm64 yields x86_64 instead of arm64.
 
 ifeq ($(CLANG_COMPILER),1)
+  # The compiler is either GCC or Clang
   IS_X86 := $(shell echo $(CXXFLAGS) | $(GREP) -v 64 | $(GREP) -i -c -E 'i.86')
   IS_X64 := $(shell echo $(CXXFLAGS) | $(GREP) -i -c -E 'x86_64|amd64')
-  IS_ARM32 := $(shell echo $(CXXFLAGS) | $(GREP) -v 64 | $(GREP) -i -c -E 'arm|armhf|arm7l|eabihf')
+  IS_ARM32 := $(shell echo $(CXXFLAGS) | $(GREP) -v 64 | $(GREP) -i -c -E 'arm|armhf|arm7l|armeabihf')
   IS_ARMV8 := $(shell echo $(CXXFLAGS) | $(GREP) -i -c -E 'aarch32|aarch64|arm64|armv8')
 else
   IS_X86 := $(shell echo $(HOSTX) | $(GREP) -v 64 | $(GREP) -i -c -E 'i.86')
@@ -179,7 +175,8 @@ IS_X32 := 0
 IS_PPC32 := 0
 IS_PPC64 := 0
 
-$(info Here's what we found... IS_X86: $(IS_X86), IS_X64: $(IS_X64), IS_ARM32: $(IS_ARM32), IS_ARMV8: $(IS_ARMV8))
+# Uncomment for debugging
+# $(info Here's what we found... IS_X86: $(IS_X86), IS_X64: $(IS_X64), IS_ARM32: $(IS_ARM32), IS_ARMV8: $(IS_ARMV8))
 
 ###########################################################
 #####                  Test Program                   #####
@@ -193,26 +190,23 @@ else ifeq ($(findstring clean,$(MAKECMDGOALS)),clean)
   DETECT_FEATURES := 0
 else ifeq ($(findstring distclean,$(MAKECMDGOALS)),distclean)
   DETECT_FEATURES := 0
-else ifeq ($(findstring distclean,$(MAKECMDGOALS)),trim)
+else ifeq ($(findstring trim,$(MAKECMDGOALS)),trim)
   DETECT_FEATURES := 0
-else ifeq ($(IS_IOS),1)
+else ifeq ($(findstring zip,$(MAKECMDGOALS)),zip)
   DETECT_FEATURES := 0
 endif
 
 # Strip out -Wall, -Wextra and friends for feature testing. FORTIFY_SOURCE is removed
 # because it requires -O1 or higher, but we use -O0 to tame the optimizer.
-ifeq ($(DETECT_FEATURES),1)
-  TCXXFLAGS := $(filter-out -D_FORTIFY_SOURCE=% -M -MM -Wall -Wextra -Werror% -Wunused -Wconversion -Wp%, $(CXXFLAGS))
-  ifneq ($(strip $(TCXXFLAGS)),)
-    $(info Using testing flags: $(TCXXFLAGS))
-  endif
-  #TPROG = TestPrograms/test_cxx.cxx
-  #$(info Testing compile... )
-  #$(info $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 1>/dev/null))
+# Always print testing flags since some tests always happen, like 64-bit.
+TCXXFLAGS := $(filter-out -D_FORTIFY_SOURCE=% -M -MM -Wall -Wextra -Werror% -Wunused -Wconversion -Wp%, $(CPPFLAGS) $(CXXFLAGS))
+ifneq ($(strip $(TCXXFLAGS)),)
+  $(info Using testing flags: $(TCXXFLAGS))
 endif
 
-# For the previous messages
-$(info )
+# TCOMMAND is used for just about all tests. Make will lazy-evaluate
+# the variables when executed by $(shell $(TCOMMAND) ...).
+TCOMMAND = $(CXX) $(TCXXFLAGS) $(TEXTRA) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT)
 
 ###########################################################
 #####               X86/X32/X64 Options               #####
@@ -232,145 +226,166 @@ ifeq ($(DETECT_FEATURES),1)
   AVX2_FLAG = -mavx2
   SHANI_FLAG = -msha
 
-  TPROG = TestPrograms/test_x86_sse2.cxx
+  TPROG = TestPrograms/test_x86_sse2.cpp
   TOPT = $(SSE2_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
     CHACHA_FLAG = $(SSE2_FLAG)
   else
+    # Make does not have useful debugging facilities. Show the user
+    # what happened by compiling again without the pipe.
+    $(info Running make again to see what failed)
+    $(info $(shell $(TCOMMAND)))
     SSE2_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_ssse3.cxx
-  TOPT = $(SSSE3_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    ARIA_FLAG = $(SSSE3_FLAG)
-    CHAM_FLAG = $(SSSE3_FLAG)
-    KECCAK_FLAG = $(SSSE3_FLAG)
-    LEA_FLAG = $(SSSE3_FLAG)
-    SIMON128_FLAG = $(SSSE3_FLAG)
-    SPECK128_FLAG = $(SSSE3_FLAG)
-  else
-    SSSE3_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_sse41.cxx
-  TOPT = $(SSE41_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    BLAKE2B_FLAG = $(SSE41_FLAG)
-    BLAKE2S_FLAG = $(SSE41_FLAG)
-  else
-    SSE41_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_sse42.cxx
-  TOPT = $(SSE42_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    CRC_FLAG = $(SSE42_FLAG)
-  else
-    SSE42_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_clmul.cxx
-  TOPT = $(CLMUL_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    GCM_FLAG = $(SSSE3_FLAG) $(CLMUL_FLAG)
-    GF2N_FLAG = $(CLMUL_FLAG)
-  else
-    CLMUL_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_aes.cxx
-  TOPT = $(AESNI_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    AES_FLAG = $(SSE41_FLAG) $(AESNI_FLAG)
-    SM4_FLAG = $(SSSE3_FLAG) $(AESNI_FLAG)
-  else
-    AESNI_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_avx.cxx
-  TOPT = $(AVX_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    # XXX_FLAG = $(AVX_FLAG)
-  else
-    AVX_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_avx2.cxx
-  TOPT = $(AVX2_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    CHACHA_AVX2_FLAG = $(AVX2_FLAG)
-  else
-    AVX2_FLAG =
-  endif
-
-  TPROG = TestPrograms/test_x86_sha.cxx
-  TOPT = $(SHANI_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    SHA_FLAG = $(SSE42_FLAG) $(SHANI_FLAG)
-  else
-    SHANI_FLAG =
   endif
 
   ifeq ($(SSE2_FLAG),)
     CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
-  else ifeq ($(SSE3_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_SSE3
-  else ifeq ($(SSSE3_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
-  else ifeq ($(SSE41_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
-  else ifeq ($(SSE42_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
   endif
 
-  ifneq ($(SSE42_FLAG),)
-
-    # Unusual GCC/Clang on Macports. It assembles AES, but not CLMUL.
-    # test_x86_clmul.s:15: no such instruction: 'pclmulqdq $0, %xmm1,%xmm0'
-    ifeq ($(CLMUL_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_CLMUL
+  # Need SSE2 or higher for these tests
+  ifneq ($(SSE2_FLAG),)
+    TPROG = TestPrograms/test_x86_ssse3.cpp
+    TOPT = $(SSSE3_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      ARIA_FLAG = $(SSSE3_FLAG)
+      CHAM_FLAG = $(SSSE3_FLAG)
+      KECCAK_FLAG = $(SSSE3_FLAG)
+      LEA_FLAG = $(SSSE3_FLAG)
+      LSH256_FLAG = $(SSSE3_FLAG)
+      LSH512_FLAG = $(SSSE3_FLAG)
+      SIMON128_FLAG = $(SSSE3_FLAG)
+      SPECK128_FLAG = $(SSSE3_FLAG)
+    else
+      SSSE3_FLAG =
     endif
-    ifeq ($(AESNI_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_AESNI
+
+    # The first Apple MacBooks were Core2's with SSE4.1
+    ifneq ($(IS_DARWIN),0)
+      # Add SSE2 algo's here as required
+      # They get a free upgrade
     endif
 
-    ifeq ($(AVX_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_AVX
-    else ifeq ($(AVX2_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_AVX2
-    else ifeq ($(SHANI_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_SHANI
+    TPROG = TestPrograms/test_x86_sse41.cpp
+    TOPT = $(SSE41_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      BLAKE2B_FLAG = $(SSE41_FLAG)
+      BLAKE2S_FLAG = $(SSE41_FLAG)
+    else
+      SSE41_FLAG =
     endif
-  endif
 
-  # Drop to SSE2 if available
-  ifeq ($(GCM_FLAG),)
-    ifneq ($(SSE2_FLAG),)
+    TPROG = TestPrograms/test_x86_sse42.cpp
+    TOPT = $(SSE42_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      CRC_FLAG = $(SSE42_FLAG)
+    else
+      SSE42_FLAG =
+    endif
+
+    TPROG = TestPrograms/test_x86_clmul.cpp
+    TOPT = $(CLMUL_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      GCM_FLAG = $(SSSE3_FLAG) $(CLMUL_FLAG)
+      GF2N_FLAG = $(CLMUL_FLAG)
+    else
+      CLMUL_FLAG =
+    endif
+
+    TPROG = TestPrograms/test_x86_aes.cpp
+    TOPT = $(AESNI_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      AES_FLAG = $(SSE41_FLAG) $(AESNI_FLAG)
+      SM4_FLAG = $(SSSE3_FLAG) $(AESNI_FLAG)
+    else
+      AESNI_FLAG =
+    endif
+
+    TPROG = TestPrograms/test_x86_avx.cpp
+    TOPT = $(AVX_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      # XXX_FLAG = $(AVX_FLAG)
+    else
+      AVX_FLAG =
+    endif
+
+    TPROG = TestPrograms/test_x86_avx2.cpp
+    TOPT = $(AVX2_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      CHACHA_AVX2_FLAG = $(AVX2_FLAG)
+      LSH256_AVX2_FLAG = $(AVX2_FLAG)
+      LSH512_AVX2_FLAG = $(AVX2_FLAG)
+    else
+      AVX2_FLAG =
+    endif
+
+    TPROG = TestPrograms/test_x86_sha.cpp
+    TOPT = $(SHANI_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      SHA_FLAG = $(SSE42_FLAG) $(SHANI_FLAG)
+    else
+      SHANI_FLAG =
+    endif
+
+    ifeq ($(SSE3_FLAG),)
+      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE3
+    else ifeq ($(SSSE3_FLAG),)
+      CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
+    else ifeq ($(SSE41_FLAG),)
+      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
+    else ifeq ($(SSE42_FLAG),)
+      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
+    endif
+
+    ifneq ($(SSE42_FLAG),)
+      # Unusual GCC/Clang on Macports. It assembles AES, but not CLMUL.
+      # test_x86_clmul.s:15: no such instruction: 'pclmulqdq $0, %xmm1,%xmm0'
+      ifeq ($(CLMUL_FLAG),)
+        CXXFLAGS += -DCRYPTOPP_DISABLE_CLMUL
+      endif
+      ifeq ($(AESNI_FLAG),)
+        CXXFLAGS += -DCRYPTOPP_DISABLE_AESNI
+      endif
+
+      ifeq ($(AVX_FLAG),)
+        CXXFLAGS += -DCRYPTOPP_DISABLE_AVX
+      else ifeq ($(AVX2_FLAG),)
+        CXXFLAGS += -DCRYPTOPP_DISABLE_AVX2
+      endif
+      # SHANI independent of AVX per GH #1045
+      ifeq ($(SHANI_FLAG),)
+        CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_SHANI
+      endif
+    endif
+
+    # Drop to SSE2 if available
+    ifeq ($(GCM_FLAG),)
       GCM_FLAG = $(SSE2_FLAG)
     endif
+
+    # Most Clang cannot handle mixed asm with positional arguments, where the
+    # body is Intel style with no prefix and the templates are AT&T style.
+    # Also see https://bugs.llvm.org/show_bug.cgi?id=39895 .
+
+    # CRYPTOPP_DISABLE_MIXED_ASM is now being added in config_asm.h for all
+    # Clang compilers. This test will need to be re-enabled if Clang fixes it.
+    #TPROG = TestPrograms/test_asm_mixed.cpp
+    #TOPT =
+    #HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    #ifneq ($(strip $(HAVE_OPT)),0)
+    #  CXXFLAGS += -DCRYPTOPP_DISABLE_MIXED_ASM
+    #endif
+
+  # SSE2_FLAGS
   endif
-
-  # Most Clang cannot handle mixed asm with positional arguments, where the
-  # body is Intel style with no prefix and the templates are AT&T style.
-  # Also see https://bugs.llvm.org/show_bug.cgi?id=39895 .
-
-  # CRYPTOPP_DISABLE_MIXED_ASM is now being added in config_asm.h for all
-  # Clang compilers. This test will need to be re-enabled if Clang fixes it.
-  #TPROG = TestPrograms/test_asm_mixed.cxx
-  #HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  #ifneq ($(strip $(HAVE_OPT)),0)
-  #  CXXFLAGS += -DCRYPTOPP_DISABLE_MIXED_ASM
-  #endif
 
 # DETECT_FEATURES
 endif
@@ -393,16 +408,16 @@ ifeq ($(DETECT_FEATURES),1)
   endif
 
   # Clang needs an option to include <arm_neon.h>
-  TPROG = TestPrograms/test_arm_neon_header.cxx
-  TOPT = $(NEON_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  TPROG = TestPrograms/test_arm_neon_header.cpp
+  TOPT = -DCRYPTOPP_ARM_NEON_HEADER=1 $(NEON_FLAG)
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
-    THEADER += -DCRYPTOPP_ARM_NEON_HEADER=1
+    TEXTRA += -DCRYPTOPP_ARM_NEON_HEADER=1
   endif
 
-  TPROG = TestPrograms/test_arm_neon.cxx
+  TPROG = TestPrograms/test_arm_neon.cpp
   TOPT = $(NEON_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
     ARIA_FLAG = $(NEON_FLAG)
     AES_FLAG = $(NEON_FLAG)
@@ -418,7 +433,14 @@ ifeq ($(DETECT_FEATURES),1)
     SPECK128_FLAG = $(NEON_FLAG)
     SM4_FLAG = $(NEON_FLAG)
   else
+    # Make does not have useful debugging facilities. Show the user
+    # what happened by compiling again without the pipe.
+    $(info Running make again to see what failed)
+    $(info $(shell $(TCOMMAND)))
     NEON_FLAG =
+  endif
+
+  ifeq ($(NEON_FLAG),)
     CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
   endif
 
@@ -435,11 +457,11 @@ ifneq ($(IS_ARMV8),0)
 ifeq ($(DETECT_FEATURES),1)
 
   ifeq ($(IS_IOS),1)
-    ASIMD_FLAG =
-    CRC_FLAG =
-    AES_FLAG =
-    PMUL_FLAG =
-    SHA_FLAG =
+    ASIMD_FLAG = -arch arm64
+    CRC_FLAG = -arch arm64
+    AES_FLAG = -arch arm64
+    PMUL_FLAG = -arch arm64
+    SHA_FLAG = -arch arm64
   else
     ASIMD_FLAG = -march=armv8-a
     CRC_FLAG = -march=armv8-a+crc
@@ -449,23 +471,23 @@ ifeq ($(DETECT_FEATURES),1)
     SHA_FLAG = -march=armv8-a+crypto
   endif
 
-  TPROG = TestPrograms/test_arm_neon_header.cxx
-  TOPT =
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  TPROG = TestPrograms/test_arm_neon_header.cpp
+  TOPT = -DCRYPTOPP_ARM_NEON_HEADER=1
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
-    THEADER += -DCRYPTOPP_ARM_NEON_HEADER=1
+    TEXTRA += -DCRYPTOPP_ARM_NEON_HEADER=1
   endif
 
-  TPROG = TestPrograms/test_arm_acle_header.cxx
-  TOPT = $(ASIMD_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  TPROG = TestPrograms/test_arm_acle_header.cpp
+  TOPT = -DCRYPTOPP_ARM_ACLE_HEADER=1 $(ASIMD_FLAG)
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
-    THEADER += -DCRYPTOPP_ARM_ACLE_HEADER=1
+    TEXTRA += -DCRYPTOPP_ARM_ACLE_HEADER=1
   endif
 
-  TPROG = TestPrograms/test_arm_asimd.cxx
+  TPROG = TestPrograms/test_arm_asimd.cpp
   TOPT = $(ASIMD_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
   ifeq ($(strip $(HAVE_OPT)),0)
     ARIA_FLAG = $(ASIMD_FLAG)
     BLAKE2B_FLAG = $(ASIMD_FLAG)
@@ -478,72 +500,91 @@ ifeq ($(DETECT_FEATURES),1)
     SPECK128_FLAG = $(ASIMD_FLAG)
     SM4_FLAG = $(ASIMD_FLAG)
   else
+    # Make does not have useful debugging facilities. Show the user
+    # what happened by compiling again without the pipe.
+    $(info Running make again to see what failed)
+    $(info $(shell $(TCOMMAND)))
     ASIMD_FLAG =
+  endif
+
+  ifeq ($(ASIMD_FLAG),)
     CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
   endif
 
-    TPROG = TestPrograms/test_arm_crc.cxx
+  ifneq ($(ASIMD_FLAG),)
+
+    TPROG = TestPrograms/test_arm_crc.cpp
     TOPT = $(CRC_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       CRC_FLAG =
       CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_CRC32
     endif
 
-    TPROG = TestPrograms/test_arm_aes.cxx
+    TPROG = TestPrograms/test_arm_aes.cpp
     TOPT = $(AES_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       AES_FLAG =
       CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_AES
     endif
 
-    TPROG = TestPrograms/test_arm_pmull.cxx
+    TPROG = TestPrograms/test_arm_pmull.cpp
     TOPT = $(PMULL_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       GCM_FLAG =
       GF2N_FLAG =
       CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_PMULL
     endif
 
-    TPROG = TestPrograms/test_arm_sha1.cxx
+    TPROG = TestPrograms/test_arm_sha1.cpp
     TOPT = $(SHA_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       SHA_FLAG =
       CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA1
     endif
 
-    TPROG = TestPrograms/test_arm_sha256.cxx
+    TPROG = TestPrograms/test_arm_sha256.cpp
     TOPT = $(SHA_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       SHA_FLAG =
       CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA2
     endif
 
-    TPROG = TestPrograms/test_arm_sm3.cxx
-    TOPT = -march=armv8.4-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    TPROG = TestPrograms/test_arm_sm3.cpp
+    TOPT = -march=armv8.4-a+sm3
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifeq ($(strip $(HAVE_OPT)),0)
-      SM3_FLAG = -march=armv8.4-a+crypto
-      SM4_FLAG = -march=armv8.4-a+crypto
+      SM3_FLAG = -march=armv8.4-a+sm3
+      SM4_FLAG = -march=armv8.4-a+sm3
     else
       #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SM3
       #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SM4
     endif
 
-    TPROG = TestPrograms/test_arm_sha3.cxx
-    TOPT = -march=armv8.4-a+crypto
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(THEADER) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+    TPROG = TestPrograms/test_arm_sha3.cpp
+    TOPT = -march=armv8.4-a+sha3
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifeq ($(strip $(HAVE_OPT)),0)
-      SHA3_FLAG = -march=armv8.4-a+crypto
-      SHA512_FLAG = -march=armv8.4-a+crypto
+      SHA3_FLAG = -march=armv8.4-a+sha3
     else
       #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA3
-      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SM4
     endif
+
+    TPROG = TestPrograms/test_arm_sha512.cpp
+    TOPT = -march=armv8.4-a+sha512
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifeq ($(strip $(HAVE_OPT)),0)
+      SHA512_FLAG = -march=armv8.4-a+sha512
+    else
+      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA512
+    endif
+
+  # ASIMD_FLAG
+  endif
 
 # DETECT_FEATURES
 endif
@@ -740,7 +781,7 @@ clean:
 	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(CLEAN_OBJS) $(ANDROID_CPU_OBJ) rdrand-*.o
 	@-$(RM) libcryptopp.a libcryptopp.dylib cryptopp.dll libcryptopp.dll.a libcryptopp.import.a
 	@-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX) libcryptopp.so$(SOLIB_VERSION_SUFFIX)
-	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.info ct et
+	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.dat ct et
 	@-$(RM) *.la *.lo *.gcov *.gcno *.gcda *.stackdump core core-*
 	@-$(RM) /tmp/adhoc.exe
 	@-$(RM) -r /tmp/cryptopp_test/
@@ -769,6 +810,7 @@ android-clean:
 .PHONY: distclean
 distclean: clean autotools-clean cmake-clean android-clean
 	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps benchmarks.html cryptest.txt
+	-$(RM) cryptest_all.info cryptest_debug.info cryptest_noasm.info cryptest_base.info cryptest.info cryptest_release.info
 	@-$(RM) cryptest-*.txt cryptopp.tgz libcryptopp.pc *.o *.bc *.ii *~
 	@-$(RM) -r cryptlib.lib cryptest.exe *.suo *.sdf *.pdb Win32/ x64/ ipch/
 	@-$(RM) -r $(LIBOBJS:.o=.obj) $(TESTOBJS:.o=.obj)
@@ -949,6 +991,22 @@ keccak_simd.o : keccak_simd.cpp
 # SSSE3 available
 lea_simd.o : lea_simd.cpp
 	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(LEA_FLAG) -c) $<
+
+# SSSE3 available
+lsh256_sse.o : lsh256_sse.cpp
+	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(LSH256_FLAG) -c) $<
+
+# AVX2 available
+lsh256_avx.o : lsh256_avx.cpp
+	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(LSH256_AVX2_FLAG) -c) $<
+
+# SSSE3 available
+lsh512_sse.o : lsh512_sse.cpp
+	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(LSH512_FLAG) -c) $<
+
+# AVX2 available
+lsh512_avx.o : lsh512_avx.cpp
+	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(LSH512_AVX2_FLAG) -c) $<
 
 # NEON available
 neon_simd.o : neon_simd.cpp

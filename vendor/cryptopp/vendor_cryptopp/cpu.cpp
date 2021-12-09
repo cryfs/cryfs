@@ -20,6 +20,13 @@
 # include <immintrin.h>
 #endif
 
+// For IsProcessorFeaturePresent on Microsoft Arm64 platforms,
+// https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-isprocessorfeaturepresent
+#if defined(_WIN32) && defined(_M_ARM64)
+# include <Windows.h>
+# include <processthreadsapi.h>
+#endif
+
 #ifdef _AIX
 # include <sys/systemcfg.h>
 #endif
@@ -49,6 +56,13 @@ unsigned long int getauxval(unsigned long int) { return 0; }
 #if defined(__APPLE__)
 # include <sys/utsname.h>
 # include <sys/sysctl.h>
+#endif
+
+// FreeBSD headers are giving us trouble...
+// https://github.com/weidai11/cryptopp/pull/1029
+#if defined(__FreeBSD__)
+# include <sys/auxv.h>
+# include <sys/elf_common.h>
 #endif
 
 // The cpu-features header and source file are located in
@@ -213,17 +227,16 @@ public:
 		{
 			// M1 machine?
 			std::string brand;
-			size_t size = 0;
+			size_t size = 32;
 
-			if (sysctlbyname("machdep.cpu.brand_string", NULL, &size, NULL, 0) == 0 && size > 0)
+			// Supply an oversized buffer, and avoid
+			// an extra call to sysctlbyname.
+			brand.resize(size);
+			if (sysctlbyname("machdep.cpu.brand_string", &brand[0], &size, NULL, 0) == 0 && size > 0)
 			{
+				if (brand[size-1] == '\0')
+					size--;
 				brand.resize(size);
-				if (sysctlbyname("machdep.cpu.brand_string", &brand[0], &size, NULL, 0) == 0 && size > 0)
-				{
-					if (brand[size-1] == '\0')
-						size--;
-					brand.resize(size);
-				}
 			}
 
 			if (brand == "Apple M1")
@@ -569,7 +582,8 @@ void DetectX86Features()
     // x86_64 machines don't check some flags because SSE2
     // is part of the core instruction set architecture
     CRYPTOPP_UNUSED(MMX_FLAG); CRYPTOPP_UNUSED(SSE_FLAG);
-    CRYPTOPP_UNUSED(SSE3_FLAG); CRYPTOPP_UNUSED(XSAVE_FLAG);
+    CRYPTOPP_UNUSED(SSE2_FLAG); CRYPTOPP_UNUSED(SSE3_FLAG);
+    CRYPTOPP_UNUSED(XSAVE_FLAG);
 
 #if (CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
 	// 64-bit core instruction set includes SSE2. Just check
@@ -833,6 +847,9 @@ inline bool CPU_QueryARMv7()
 #elif defined(__APPLE__) && defined(__arm__)
 	// Apple hardware is ARMv7 or above.
 	return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	// Windows 10 ARM64 is only supported on Armv8a and above
+	return true;
 #endif
 	return false;
 }
@@ -858,7 +875,12 @@ inline bool CPU_QueryNEON()
 		return true;
 #elif defined(__APPLE__) && defined(__aarch64__)
 	// Core feature set for Aarch32 and Aarch64.
-	return true;
+	if (IsAppleMachineARMv8())
+		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	// Windows 10 ARM64 is only supported on Armv8a and above
+	if (IsProcessorFeaturePresent(PF_ARM_V8_INSTRUCTIONS_AVAILABLE) != 0)
+		return true;
 #endif
 	return false;
 }
@@ -882,6 +904,9 @@ inline bool CPU_QueryCRC32()
 #elif defined(__APPLE__) && defined(__aarch64__)
 	// M1 processor
 	if (IsAppleMachineARMv82())
+		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE) != 0)
 		return true;
 #endif
 	return false;
@@ -907,6 +932,9 @@ inline bool CPU_QueryPMULL()
 	// M1 processor
 	if (IsAppleMachineARMv82())
 		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) != 0)
+		return true;
 #endif
 	return false;
 }
@@ -928,7 +956,12 @@ inline bool CPU_QueryAES()
 	if ((getauxval(AT_HWCAP2) & HWCAP2_AES) != 0)
 		return true;
 #elif defined(__APPLE__) && defined(__aarch64__)
-	return IsAppleMachineARMv8();
+	// M1 processor
+	if (IsAppleMachineARMv82())
+		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) != 0)
+		return true;
 #endif
 	return false;
 }
@@ -950,7 +983,12 @@ inline bool CPU_QuerySHA1()
 	if ((getauxval(AT_HWCAP2) & HWCAP2_SHA1) != 0)
 		return true;
 #elif defined(__APPLE__) && defined(__aarch64__)
-	return IsAppleMachineARMv8();
+	// M1 processor
+	if (IsAppleMachineARMv82())
+		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) != 0)
+		return true;
 #endif
 	return false;
 }
@@ -972,7 +1010,12 @@ inline bool CPU_QuerySHA256()
 	if ((getauxval(AT_HWCAP2) & HWCAP2_SHA2) != 0)
 		return true;
 #elif defined(__APPLE__) && defined(__aarch64__)
-	return IsAppleMachineARMv8();
+	// M1 processor
+	if (IsAppleMachineARMv82())
+		return true;
+#elif defined(_WIN32) && defined(_M_ARM64)
+	if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) != 0)
+		return true;
 #endif
 	return false;
 }
@@ -1172,6 +1215,11 @@ inline bool CPU_QueryAltivec()
 	unsigned int unused, arch;
 	GetAppleMachineInfo(unused, unused, arch);
 	return arch == AppleMachineInfo::PowerMac;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE_HAS_ALTIVEC)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE_HAS_ALTIVEC) != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1185,6 +1233,11 @@ inline bool CPU_QueryPower7()
 #elif defined(_AIX)
 	if (__power_7_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE_ARCH_2_06)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE_ARCH_2_06) != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1198,6 +1251,11 @@ inline bool CPU_QueryPower8()
 #elif defined(_AIX)
 	if (__power_8_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_ARCH_2_07)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE_ARCH_2_07) != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1211,6 +1269,11 @@ inline bool CPU_QueryPower9()
 #elif defined(_AIX)
 	if (__power_9_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_ARCH_3_00)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE_ARCH2_3_00) != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1225,6 +1288,11 @@ inline bool CPU_QueryAES()
 #elif defined(_AIX)
 	if (__power_8_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_HAS_VEC_CRYPTO)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP2, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE2_HAS_VEC_CRYPTO != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1239,6 +1307,11 @@ inline bool CPU_QueryPMULL()
 #elif defined(_AIX)
 	if (__power_8_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_HAS_VEC_CRYPTO)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP2, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE2_HAS_VEC_CRYPTO != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1253,6 +1326,11 @@ inline bool CPU_QuerySHA256()
 #elif defined(_AIX)
 	if (__power_8_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_HAS_VEC_CRYPTO)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP2, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE2_HAS_VEC_CRYPTO != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1266,6 +1344,11 @@ inline bool CPU_QuerySHA512()
 #elif defined(_AIX)
 	if (__power_8_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_HAS_VEC_CRYPTO)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP2, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE2_HAS_VEC_CRYPTO != 0)
+			return true;
 #endif
 	return false;
 }
@@ -1273,13 +1356,19 @@ inline bool CPU_QuerySHA512()
 // Power9 random number generator
 inline bool CPU_QueryDARN()
 {
-	// Power9 and ISA 3.0 provide DARN.
+	// Power9 and ISA 3.0 provide DARN. It looks like
+	// Glibc offers PPC_FEATURE2_DARN.
 #if defined(__linux__) && defined(PPC_FEATURE2_ARCH_3_00)
 	if ((getauxval(AT_HWCAP2) & PPC_FEATURE2_ARCH_3_00) != 0)
 		return true;
 #elif defined(_AIX)
 	if (__power_9_andup() != 0)
 		return true;
+#elif defined(__FreeBSD__) && defined(PPC_FEATURE2_ARCH_3_00)
+	unsigned long cpufeatures;
+	if (elf_aux_info(AT_HWCAP2, &cpufeatures, sizeof(cpufeatures)) == 0)
+		if ((cpufeatures & PPC_FEATURE2_ARCH_3_00) != 0)
+			return true;
 #endif
 	return false;
 }

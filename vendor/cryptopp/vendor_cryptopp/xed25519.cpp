@@ -73,8 +73,8 @@ NAMESPACE_BEGIN(CryptoPP)
 
 x25519::x25519(const byte y[PUBLIC_KEYLENGTH], const byte x[SECRET_KEYLENGTH])
 {
-    std::memcpy(m_pk, y, SECRET_KEYLENGTH);
-    std::memcpy(m_sk, x, PUBLIC_KEYLENGTH);
+    std::memcpy(m_pk, y, PUBLIC_KEYLENGTH);
+    std::memcpy(m_sk, x, SECRET_KEYLENGTH);
 
     CRYPTOPP_ASSERT(IsClamped(m_sk) == true);
     CRYPTOPP_ASSERT(IsSmallOrder(m_pk) == false);
@@ -152,9 +152,12 @@ void x25519::BERDecodeAndCheckAlgorithmID(BufferedTransformation &bt)
     // if the OIDs do not match.
     OID oid(bt);
 
+    // 1.3.6.1.4.1.3029.1.5.1/curvey25519 from Cryptlib used by OpenPGP.
+    // https://datatracker.ietf.org/doc/html/draft-ietf-openpgp-rfc4880bis
     if (!m_oid.Empty() && m_oid != oid)
         BERDecodeError();  // Only accept user specified OID
-    else if (oid == ASN1::curve25519() || oid == ASN1::X25519())
+    else if (oid == ASN1::curve25519() || oid == ASN1::X25519() ||
+        oid == OID(1)+3+6+1+4+1+3029+1+5)
         m_oid = oid;  // Accept any of the x25519 OIDs
     else
         BERDecodeError();
@@ -660,6 +663,14 @@ ed25519Signer::ed25519Signer(const Integer &x)
         ("DerivePublicKey", true));
 }
 
+ed25519Signer::ed25519Signer(const PKCS8PrivateKey &key)
+{
+    // Load all fields from the other key
+    ByteQueue queue;
+    key.Save(queue);
+    AccessPrivateKey().Load(queue);
+}
+
 ed25519Signer::ed25519Signer(RandomNumberGenerator &rng)
 {
     AccessPrivateKey().GenerateRandom(rng);
@@ -844,6 +855,14 @@ ed25519Verifier::ed25519Verifier(const Integer &y)
 
     AccessPublicKey().AssignFrom(MakeParameters
         (Name::PublicElement(), ConstByteArrayParameter(by, PUBLIC_KEYLENGTH, false)));
+}
+
+ed25519Verifier::ed25519Verifier(const X509PublicKey &key)
+{
+    // Load all fields from the other key
+    ByteQueue queue;
+    key.Save(queue);
+    AccessPublicKey().Load(queue);
 }
 
 ed25519Verifier::ed25519Verifier(BufferedTransformation &params)
