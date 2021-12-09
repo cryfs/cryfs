@@ -3,91 +3,74 @@
 #include <stdexcept>
 #include <cerrno>
 #include <array>
-
-#if defined(__APPLE__)
-
-#include <sys/wait.h>
-constexpr const char* openmode = "r";
-
-#elif !defined(_MSC_VER)
-
-#include <sys/wait.h>
-constexpr const char* openmode = "re";
-
-#else
-
-#define popen _popen
-#define pclose _pclose
-#define WEXITSTATUS(a) a
-#define WIFEXITED(a) true
-constexpr const char* openmode = "r";
-
-#endif
+#include <boost/process.hpp>
 
 using std::string;
+using std::vector;
 
-namespace cpputils {
-    namespace {
-	class SubprocessHandle final {
-	public:
-		SubprocessHandle(const string &command)
-		: _subprocess(popen(command.c_str(), openmode)) {
-			if (!_subprocess) {
-				throw std::runtime_error("Error starting subprocess " + command + ". Errno: " + std::to_string(errno));
+namespace bp = boost::process;
+namespace bf = boost::filesystem;
+
+namespace cpputils
+{
+	namespace
+	{
+		bf::path _find_executable(const char *command)
+		{
+			bf::path executable = bp::search_path(command);
+			if (executable == "")
+			{
+				throw std::runtime_error("Tried to run command " + std::string(command) + " but didn't find it in the PATH");
 			}
+			return executable;
+		}
+	}
+
+	SubprocessResult Subprocess::call(const char *command, const vector<string> &args)
+	{
+		return call(_find_executable(command), args);
+	}
+
+	SubprocessResult Subprocess::check_call(const char *command, const vector<string> &args)
+	{
+		return check_call(_find_executable(command), args);
+	}
+
+	SubprocessResult Subprocess::call(const bf::path &executable, const vector<string> &args)
+	{
+		if (!bf::exists(executable))
+		{
+			throw std::runtime_error("Tried to run executable " + executable.string() + " but didn't find it");
 		}
 
-		~SubprocessHandle() {
-			if (_subprocess != nullptr) {
-				close();
-			}
+		bp::ipstream child_stdout;
+		bp::ipstream child_stderr;
+		bp::child child = bp::child(bp::exe = executable.string(), bp::std_out > child_stdout, bp::std_err > child_stderr, bp::args(args));
+		if (!child.valid())
+		{
+			throw std::runtime_error("Error starting subprocess " + executable.string() + ". Errno: " + std::to_string(errno));
 		}
 
-		string getOutput() {
-			string output;
-			std::array<char, 1024> buffer{};
-			while (fgets(buffer.data(), buffer.size(), _subprocess) != nullptr) {
-				output += buffer.data();
-			}
-			return output;
+		child.join();
+
+		string output_stdout = string(std::istreambuf_iterator<char>(child_stdout), {});
+		string output_stderr = string(std::istreambuf_iterator<char>(child_stderr), {});
+
+		return SubprocessResult{
+			std::move(output_stdout),
+			std::move(output_stderr),
+			child.exit_code(),
+		};
+	}
+
+	SubprocessResult Subprocess::check_call(const bf::path &executable, const vector<string> &args)
+	{
+		auto result = call(executable, args);
+		if (result.exitcode != 0)
+		{
+			throw SubprocessError("Subprocess \"" + executable.string() + "\" exited with code " + std::to_string(result.exitcode));
 		}
-
-		int close() {
-			auto returncode = pclose(_subprocess);
-			_subprocess = nullptr;
-			if (returncode == -1) {
-				throw std::runtime_error("Error calling pclose. Errno: " + std::to_string(errno));
-			}
-#pragma GCC diagnostic push // WIFEXITSTATUS / WEXITSTATUS use old style casts
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-			if (!WIFEXITED(returncode)) {
-				// WEXITSTATUS is only valid if WIFEXITED is 0.
-				throw std::runtime_error("WIFEXITED returned " + std::to_string(WIFEXITED(returncode)));
-			}
-			return WEXITSTATUS(returncode);
-#pragma GCC diagnostic pop
-		}
-
-	private:
-		FILE *_subprocess;
-	};
-
-    }
-
-    SubprocessResult Subprocess::call(const string &command) {
-		SubprocessHandle subprocess(command);
-        string output = subprocess.getOutput();
-        int exitcode = subprocess.close();
-
-        return SubprocessResult {output, exitcode};
-    }
-
-    SubprocessResult Subprocess::check_call(const string &command) {
-        auto result = call(command);
-        if(result.exitcode != 0) {
-            throw SubprocessError("Subprocess \""+command+"\" exited with code "+std::to_string(result.exitcode));
-        }
-        return result;
-    }
+		return result;
+	}
 
 }

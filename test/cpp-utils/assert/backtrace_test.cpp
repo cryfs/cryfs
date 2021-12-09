@@ -9,187 +9,221 @@ using std::string;
 using testing::HasSubstr;
 namespace bf = boost::filesystem;
 
-namespace {
-	std::string call_process_exiting_with(const std::string& kind, const std::string& signal = "") {
+namespace
+{
+	std::string call_process_exiting_with(const std::string &kind, const std::string &signal = "")
+	{
 #if defined(_MSC_VER)
-		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal.exe";
+		auto executable = bf::canonical(get_executable().parent_path()) / "cpp-utils-test_exit_signal.exe";
 #else
-		auto executable = get_executable().parent_path() / "cpp-utils-test_exit_signal";
+		auto executable = bf::canonical(get_executable().parent_path()) / "cpp-utils-test_exit_signal";
 #endif
-		if (!bf::exists(executable)) {
+		if (!bf::exists(executable))
+		{
 			throw std::runtime_error(executable.string() + " not found.");
 		}
-		const std::string command = executable.string() + " \"" + kind + "\" \"" + signal + "\"  2>&1";
-		auto result = cpputils::Subprocess::call(command);
-		return result.output;
+		auto result = cpputils::Subprocess::call(executable, {kind, signal});
+		return result.output_stderr;
 	}
 }
 
 #if !(defined(_MSC_VER) && defined(NDEBUG))
 
-TEST(BacktraceTest, ContainsTopLevelLine) {
-    string backtrace = cpputils::backtrace();
-    EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
-    EXPECT_THAT(backtrace, HasSubstr("ContainsTopLevelLine"));
+TEST(BacktraceTest, ContainsTopLevelLine)
+{
+	string backtrace = cpputils::backtrace();
+	EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
+	EXPECT_THAT(backtrace, HasSubstr("ContainsTopLevelLine"));
 }
 #endif
 
-namespace {
-	std::string call_process_exiting_with_nullptr_violation() {
+namespace
+{
+	std::string call_process_exiting_with_nullptr_violation()
+	{
 		return call_process_exiting_with("nullptr");
 	}
-	std::string call_process_exiting_with_exception(const std::string& message) {
+	std::string call_process_exiting_with_exception(const std::string &message)
+	{
 		return call_process_exiting_with("exception", message);
 	}
 }
 #if defined(_MSC_VER)
 #include <Windows.h>
-namespace {
-	std::string call_process_exiting_with_sigsegv() {
+namespace
+{
+	std::string call_process_exiting_with_sigsegv()
+	{
 		return call_process_exiting_with("signal", std::to_string(EXCEPTION_ACCESS_VIOLATION));
 	}
-	std::string call_process_exiting_with_sigill() {
+	std::string call_process_exiting_with_sigill()
+	{
 		return call_process_exiting_with("signal", std::to_string(EXCEPTION_ILLEGAL_INSTRUCTION));
 	}
-	std::string call_process_exiting_with_code(DWORD code) {
+	std::string call_process_exiting_with_code(DWORD code)
+	{
 		return call_process_exiting_with("signal", std::to_string(code));
 	}
 }
 #else
-namespace {
-	std::string call_process_exiting_with_sigsegv() {
+namespace
+{
+	std::string call_process_exiting_with_sigsegv()
+	{
 		return call_process_exiting_with("signal", std::to_string(SIGSEGV));
 	}
-	std::string call_process_exiting_with_sigabrt() {
+	std::string call_process_exiting_with_sigabrt()
+	{
 		return call_process_exiting_with("signal", std::to_string(SIGABRT));
 	}
-	std::string call_process_exiting_with_sigill() {
+	std::string call_process_exiting_with_sigill()
+	{
 		return call_process_exiting_with("signal", std::to_string(SIGILL));
 	}
 }
 #endif
 
-TEST(BacktraceTest, DoesntCrashOnCaughtException) {
+TEST(BacktraceTest, DoesntCrashOnCaughtException)
+{
 	// This is needed to make sure we don't use some kind of vectored exception handler on Windows
 	// that ignores the call stack and always jumps on when an exception happens.
 	cpputils::showBacktraceOnCrash();
-	try {
+	try
+	{
 		throw std::logic_error("exception");
-	} catch (const std::logic_error& e) {
+	}
+	catch (const std::logic_error &e)
+	{
 		// intentionally empty
 	}
 }
 
 #if !(defined(_MSC_VER) && defined(NDEBUG))
-TEST(BacktraceTest, ContainsBacktrace) {
-    string backtrace = cpputils::backtrace();
+TEST(BacktraceTest, ContainsBacktrace)
+{
+	string backtrace = cpputils::backtrace();
 #if defined(_MSC_VER)
-    EXPECT_THAT(backtrace, HasSubstr("testing::Test::Run"));
+	EXPECT_THAT(backtrace, HasSubstr("testing::Test::Run"));
 #else
-    EXPECT_THAT(backtrace, HasSubstr("BacktraceTest_ContainsBacktrace_Test::TestBody"));
+	EXPECT_THAT(backtrace, HasSubstr("BacktraceTest_ContainsBacktrace_Test::TestBody"));
 #endif
 }
 
-TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
-    auto output = call_process_exiting_with_nullptr_violation();
+TEST(BacktraceTest, ShowBacktraceOnNullptrAccess)
+{
+	auto output = call_process_exiting_with_nullptr_violation();
 #if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
+TEST(BacktraceTest, ShowBacktraceOnSigSegv)
+{
 	auto output = call_process_exiting_with_sigsegv();
 #if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
-TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
+TEST(BacktraceTest, ShowBacktraceOnUnhandledException)
+{
 	auto output = call_process_exiting_with_exception("my_exception_message");
 #if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigIll) {
+TEST(BacktraceTest, ShowBacktraceOnSigIll)
+{
 	auto output = call_process_exiting_with_sigill();
 #if defined(_MSC_VER)
-    EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
+	EXPECT_THAT(output, HasSubstr("handle_exit_signal"));
 #else
-    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
 #else
-TEST(BacktraceTest, ContainsBacktrace) {
+TEST(BacktraceTest, ContainsBacktrace)
+{
 	string backtrace = cpputils::backtrace();
 	EXPECT_THAT(backtrace, HasSubstr("#0"));
 }
-TEST(BacktraceTest, ShowBacktraceOnNullptrAccess) {
+TEST(BacktraceTest, ShowBacktraceOnNullptrAccess)
+{
 	auto output = call_process_exiting_with_nullptr_violation();
 	EXPECT_THAT(output, HasSubstr("#1"));
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigSegv) {
+TEST(BacktraceTest, ShowBacktraceOnSigSegv)
+{
 	auto output = call_process_exiting_with_sigsegv();
 	EXPECT_THAT(output, HasSubstr("#1"));
 }
 
-TEST(BacktraceTest, ShowBacktraceOnUnhandledException) {
+TEST(BacktraceTest, ShowBacktraceOnUnhandledException)
+{
 	auto output = call_process_exiting_with_exception("my_exception_message");
 	EXPECT_THAT(output, HasSubstr("#1"));
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigIll) {
+TEST(BacktraceTest, ShowBacktraceOnSigIll)
+{
 	auto output = call_process_exiting_with_sigill();
 	EXPECT_THAT(output, HasSubstr("#1"));
 }
 #endif
 
 #if !defined(_MSC_VER)
-TEST(BacktraceTest, ShowBacktraceOnSigAbrt) {
-    auto output = call_process_exiting_with_sigabrt();
-    EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
+TEST(BacktraceTest, ShowBacktraceOnSigAbrt)
+{
+	auto output = call_process_exiting_with_sigabrt();
+	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName) {
+TEST(BacktraceTest, ShowBacktraceOnSigAbrt_ShowsCorrectSignalName)
+{
 	auto output = call_process_exiting_with_sigabrt();
 	EXPECT_THAT(output, HasSubstr("SIGABRT"));
 }
 #endif
 
 #if !defined(_MSC_VER)
-constexpr const char* sigsegv_message = "SIGSEGV";
-constexpr const char* sigill_message = "SIGILL";
+constexpr const char *sigsegv_message = "SIGSEGV";
+constexpr const char *sigill_message = "SIGILL";
 #else
-constexpr const char* sigsegv_message = "EXCEPTION_ACCESS_VIOLATION";
-constexpr const char* sigill_message = "EXCEPTION_ILLEGAL_INSTRUCTION";
+constexpr const char *sigsegv_message = "EXCEPTION_ACCESS_VIOLATION";
+constexpr const char *sigill_message = "EXCEPTION_ILLEGAL_INSTRUCTION";
 #endif
 
-TEST(BacktraceTest, ShowBacktraceOnSigSegv_ShowsCorrectSignalName) {
+TEST(BacktraceTest, ShowBacktraceOnSigSegv_ShowsCorrectSignalName)
+{
 	auto output = call_process_exiting_with_sigsegv();
 	EXPECT_THAT(output, HasSubstr(sigsegv_message));
 }
 
-TEST(BacktraceTest, ShowBacktraceOnSigIll_ShowsCorrectSignalName) {
+TEST(BacktraceTest, ShowBacktraceOnSigIll_ShowsCorrectSignalName)
+{
 	auto output = call_process_exiting_with_sigill();
 	EXPECT_THAT(output, HasSubstr(sigill_message));
 }
 
 #if !defined(_MSC_VER)
-TEST(BacktraceTest, ShowBacktraceOnUnhandledException_ShowsCorrectExceptionMessage) {
+TEST(BacktraceTest, ShowBacktraceOnUnhandledException_ShowsCorrectExceptionMessage)
+{
 	auto output = call_process_exiting_with_exception("my_exception_message");
 	EXPECT_THAT(output, HasSubstr("my_exception_message"));
 }
 #endif
 
 #if defined(_MSC_VER)
-TEST(BacktraceTest, UnknownCode_ShowsCorrectSignalName) {
+TEST(BacktraceTest, UnknownCode_ShowsCorrectSignalName)
+{
 	auto output = call_process_exiting_with_code(0x1234567);
 	EXPECT_THAT(output, HasSubstr("UNKNOWN_CODE(0x1234567)"));
 }
