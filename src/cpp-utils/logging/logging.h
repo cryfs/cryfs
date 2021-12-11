@@ -34,6 +34,10 @@ namespace cpputils {
             logger().reset();
         }
 
+        inline void flush() {
+            logger()->flush();
+        }
+
         inline void setLevel(ERROR_TYPE) {
             logger().setLevel(spdlog::level::err);
         }
