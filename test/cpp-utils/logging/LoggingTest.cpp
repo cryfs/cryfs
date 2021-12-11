@@ -9,6 +9,9 @@
 using namespace cpputils::logging;
 using std::string;
 
+// Disable the next tests for MSVC debug builds since writing to stderr doesn't seem to work well there
+#if !defined(_MSC_VER) || NDEBUG
+
 TEST_F(LoggingTest, DefaultLoggerIsStderr) {
     string output = captureStderr([]{
         LOG(INFO, "My log message");
@@ -29,6 +32,8 @@ TEST_F(LoggingTest, SetLogger_NewLoggerIsUsed) {
 	//EXPECT_THAT(output, MatchesRegex(".*\\[MyTestLog2\\].*\\[info\\].*My log message.*"));
 	EXPECT_TRUE(std::regex_search(output, std::regex(".*\\[MyTestLog2\\].*\\[info\\].*My log message.*")));
 }
+
+#endif
 
 TEST_F(LoggingTest, SetNonStderrLogger_LogsToNewLogger) {
     setLogger(mockLogger.get());
