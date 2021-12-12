@@ -482,7 +482,7 @@ void Fuse::unmount(const bf::path& mountdir, bool force) {
   //TODO Find better way to unmount (i.e. don't use external fusermount). Unmounting by kill(getpid(), SIGINT) worked, but left the mount directory transport endpoint as not connected.
 #if defined(__APPLE__)
   UNUSED(force);
-  int returncode = cpputils::Subprocess::call("umount", {mountdir.string()}).exitcode;
+  int returncode = cpputils::Subprocess::call("umount", {mountdir.string()}, "").exitcode;
 #elif defined(_MSC_VER)
   UNUSED(force);
   std::wstring mountdir_ = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(mountdir.string());
@@ -490,7 +490,7 @@ void Fuse::unmount(const bf::path& mountdir, bool force) {
   int returncode = success ? 0 : -1;
 #else
   std::vector<std::string> args = force ? std::vector<std::string>({"-u", mountdir.string()}) : std::vector<std::string>({"-u", "-z", mountdir.string()});  // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
-  int returncode = cpputils::Subprocess::call("fusermount", args).exitcode;
+  int returncode = cpputils::Subprocess::call("fusermount", args, "").exitcode;
 #endif
   if (returncode != 0) {
     throw std::runtime_error("Could not unmount filesystem");
