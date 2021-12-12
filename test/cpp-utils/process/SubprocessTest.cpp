@@ -10,6 +10,8 @@ using cpputils::SubprocessError;
 using std::string;
 namespace bf = boost::filesystem;
 
+// TODO Test passing input to stdin of processes
+
 #if defined(_MSC_VER)
 constexpr const char* NEWLINE = "\r\n";
 #else
