@@ -25,10 +25,10 @@ namespace cpputils
     class Subprocess final
     {
     public:
-        static SubprocessResult call(const char *command, const std::vector<std::string> &args);
-        static SubprocessResult call(const boost::filesystem::path &executable, const std::vector<std::string> &args);
-        static SubprocessResult check_call(const char *command, const std::vector<std::string> &args);
-        static SubprocessResult check_call(const boost::filesystem::path &executable, const std::vector<std::string> &args);
+        static SubprocessResult call(const char *command, const std::vector<std::string> &args, const std::string& input);
+        static SubprocessResult call(const boost::filesystem::path &executable, const std::vector<std::string> &args, const std::string& input);
+        static SubprocessResult check_call(const char *command, const std::vector<std::string> &args, const std::string& input);
+        static SubprocessResult check_call(const boost::filesystem::path &executable, const std::vector<std::string> &args, const std::string& input);
 
     private:
         DISALLOW_COPY_AND_ASSIGN(Subprocess);
