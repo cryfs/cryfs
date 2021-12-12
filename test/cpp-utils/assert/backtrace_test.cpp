@@ -22,7 +22,7 @@ namespace
 		{
 			throw std::runtime_error(executable.string() + " not found.");
 		}
-		auto result = cpputils::Subprocess::call(executable, {kind, signal});
+		auto result = cpputils::Subprocess::call(executable, {kind, signal}, "");
 		return result.output_stderr;
 	}
 }
