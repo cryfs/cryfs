@@ -14,6 +14,12 @@ namespace bf = boost::filesystem;
 namespace ba = boost::asio;
 namespace bs = boost::system;
 
+#if defined(_MSC_VER)
+constexpr auto PIPE_CLOSED = ba::error::broken_pipe;
+#else
+constexpr auto PIPE_CLOSED = ba::error::eof;
+#endif
+
 namespace cpputils
 {
 	namespace
@@ -46,7 +52,7 @@ namespace cpputils
 					output_.reserve(output_.size() + n);
 					output_.insert(output_.end(), vOut_.begin(), vOut_.begin() + n);
 					if (ec) {
-						if (ec != ba::error::eof) {
+						if (ec != PIPE_CLOSED) {
 							throw SubprocessError(std::string() + "Error getting output from subprocess. Error code: " + std::to_string(ec.value()) + " : " + ec.message());
 						}
 					} else {
@@ -118,7 +124,7 @@ namespace cpputils
 		return check_call(_find_executable(command), args, input);
 	}
 
-	SubprocessResult Subprocess::call(const bf::path &executable, const vector<string> &args, const string& input)
+	SubprocessResult Subprocess::call(const bf::path& executable, const vector<string>& args, const string& input)
 	{
 		if (!bf::exists(executable))
 		{
@@ -138,8 +144,8 @@ namespace cpputils
 		bp::child child(
 			bp::exe = executable.string(),
 			bp::args(args),
-			bp::std_out > stdout_handler.pipe(), 
-			bp::std_err > stderr_handler.pipe(), 
+			bp::std_out > stdout_handler.pipe(),
+			bp::std_err > stderr_handler.pipe(),
 			bp::std_in < stdin_handler.pipe()
 		);
 
@@ -148,6 +154,7 @@ namespace cpputils
 		stderr_handler.async_read();
 
 		ctx.run();
+
 		child.wait();
 
 		return SubprocessResult{

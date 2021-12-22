@@ -11,6 +11,7 @@ using std::string;
 namespace bf = boost::filesystem;
 
 // TODO Test passing input to stdin of processes
+// TODO Test stderr
 
 #if defined(_MSC_VER)
 constexpr const char* NEWLINE = "\r\n";
@@ -163,8 +164,10 @@ TEST(SubprocessTest, Call_argumentwithspaces)
     EXPECT_EQ(std::string("hello") + NEWLINE + "world" + NEWLINE, Subprocess::check_call(exit_with_message_and_status(), {"0", "hello", "world"}, "").output_stdout);
 }
 
+#if !defined(_MSC_VER)
 TEST(SubprocessTest, Call_withcommandfrompath)
 {
     // Test that we can call a system command without specifying the full path
     EXPECT_EQ("hello\n", Subprocess::check_call("echo", {"hello"}, "").output_stdout);
 }
+#endif
