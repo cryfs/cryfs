@@ -1,4 +1,4 @@
-Version 0.11.1 (unreleased)
+Version 0.11.1
 ---------------
 Bugfix:
 * Fix building of the range-v3 dependency. The conan remote URL for this dependency changed and we have to use the new URL. See https://github.com/cryfs/cryfs/issues/398
