@@ -9,8 +9,7 @@ Install latest release
 Linux
 ------
 
-This only works for Ubuntu 17.04 and later, and Debian Stretch and later.
-You can also use CryFS on older versions of these distributions by following the **Building from source** instructions below.
+CryFS is available through apt, but depending on which version of Ubuntu or Debian you're using, you may get an old version.
 
     sudo apt install cryfs
 
