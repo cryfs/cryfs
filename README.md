@@ -35,7 +35,7 @@ If you use Homebrew:
     brew install --cask macfuse
     brew install cryfs/tap/cryfs
 
-If you use MacPorts (only available for OSX 10.12 to 10.14 at the moment):
+If you use MacPorts:
 
     port install cryfs
 
