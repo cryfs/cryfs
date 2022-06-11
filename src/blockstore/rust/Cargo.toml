@@ -23,6 +23,9 @@ sodiumoxide = {git = "https://github.com/sodiumoxide/sodiumoxide", rev = "9f6a18
 static_assertions = "^1.1.0"
 sysinfo = "^0.16.4"
 errno = "^0.2.7"
+binread = {version = "2.1.1", features = ["const_generics"]}
+binwrite = "0.2.1"
+common_macros = "0.1.1"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.92"

@@ -1,6 +1,9 @@
 use anyhow::{bail, Result};
+use binread::{BinRead, BinResult, ReadOptions};
+use binwrite::{BinWrite, WriterOption};
 use rand::{thread_rng, Rng};
 use std::convert::TryInto;
+use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use super::{
@@ -71,6 +74,26 @@ impl BlockId {
     }
 }
 
+impl BinRead for BlockId {
+    type Args = ();
+    fn read_options<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<BlockId> {
+        let blockid = <[u8; BLOCKID_LEN]>::read_options(reader, ro, ())?;
+        let blockid = BlockId::from_data(&blockid)
+            .expect("Can't fail because we pass in an array of exactly the right size");
+        Ok(blockid)
+    }
+}
+
+impl BinWrite for BlockId {
+    fn write_options<W: Write>(
+        &self,
+        writer: &mut W,
+        wo: &WriterOption,
+    ) -> Result<(), std::io::Error> {
+        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, wo)
+    }
+}
+
 pub struct OptionData(Option<Vec<u8>>);
 
 impl OptionData {
@@ -111,7 +134,9 @@ impl RustBlockStore2Bridge {
         // In C++, the convention was to return 0 instead of an error,
         // so let's catch errors and return 0 instead.
         // TODO Is there a better way?
-        self.0.block_size_from_physical_block_size(block_size).unwrap_or(0)
+        self.0
+            .block_size_from_physical_block_size(block_size)
+            .unwrap_or(0)
     }
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
         Ok(self.0.all_blocks()?.collect())
@@ -136,4 +161,21 @@ fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
     Box::new(RustBlockStore2Bridge(Box::new(OnDiskBlockStore::new(
         Path::new(basedir).to_path_buf(),
     ))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::binary::{BinaryReadExt, BinaryWriteExt};
+    use std::io::Cursor;
+
+    #[test]
+    fn serialize_deserialize_blockid() {
+        let blockid = BlockId::from_hex("ea92df46054175fe9ec0dec871d3affd").unwrap();
+        let mut serialized = Vec::new();
+        blockid.serialize_to_stream(&mut serialized).unwrap();
+        let deserialized =
+            BlockId::deserialize_from_complete_stream(&mut Cursor::new(serialized)).unwrap();
+        assert_eq!(blockid, deserialized);
+    }
 }

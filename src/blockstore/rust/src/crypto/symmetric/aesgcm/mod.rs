@@ -7,7 +7,7 @@ use log::warn;
 
 mod libsodium;
 
-use super::{EncryptionKey, Cipher};
+use super::{Cipher, EncryptionKey};
 
 const NONCE_SIZE: usize = 12;
 const AUTH_TAG_SIZE: usize = 16;
@@ -31,10 +31,14 @@ impl Cipher for Aes256Gcm {
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         let hardware_acceleration_available = Aes256Gcm_HardwareAccelerated::is_available();
         if hardware_acceleration_available {
-            Self(Aes256GcmImpl::HardwareAccelerated(Aes256Gcm_HardwareAccelerated::new(encryption_key)))
+            Self(Aes256GcmImpl::HardwareAccelerated(
+                Aes256Gcm_HardwareAccelerated::new(encryption_key),
+            ))
         } else {
             warn!("Your CPU doesn't offer hardware acceleration for AES. Doing cryptography will be very slow.");
-            Self(Aes256GcmImpl::SoftwareImplementation(Aes256Gcm_SoftwareImplemented::new(encryption_key)))
+            Self(Aes256GcmImpl::SoftwareImplementation(
+                Aes256Gcm_SoftwareImplemented::new(encryption_key),
+            ))
         }
     }
 
@@ -49,7 +53,7 @@ impl Cipher for Aes256Gcm {
         );
         Ok(ciphertext_size - NONCE_SIZE - AUTH_TAG_SIZE)
     }
-    
+
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
         match &self.0 {
             Aes256GcmImpl::HardwareAccelerated(i) => i.encrypt(plaintext),
@@ -59,7 +63,7 @@ impl Cipher for Aes256Gcm {
 
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
         match &self.0 {
-            Aes256GcmImpl::HardwareAccelerated(i)=> i.decrypt(ciphertext),
+            Aes256GcmImpl::HardwareAccelerated(i) => i.decrypt(ciphertext),
             Aes256GcmImpl::SoftwareImplementation(i) => i.decrypt(ciphertext),
         }
     }
