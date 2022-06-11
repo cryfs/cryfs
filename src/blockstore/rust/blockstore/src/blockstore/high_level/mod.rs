@@ -16,9 +16,6 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 mod cache;
 use cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
-#[cfg(test)]
-pub(super) mod tests;
-
 pub struct Block<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> {
     cache_entry: BlockCacheEntryGuard<B>,
 }
