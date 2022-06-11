@@ -1,3 +1,7 @@
+//! This module defines a common set of unit tests to be run on a [BlockStore] implementation.
+//! To use it, implement [Fixture] for your block store and call [instantiate_blockstore_tests!].
+
+use async_trait::async_trait;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use crate::blockstore::{low_level::BlockStore, BlockId};
@@ -9,11 +13,23 @@ use crate::utils::async_drop::SyncDrop;
 ///
 /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
 /// required by the block store.
+#[async_trait]
 pub trait Fixture {
-    type ConcreteBlockStore: BlockStore;
+    type ConcreteBlockStore: BlockStore + Send + Sync;
 
+    /// Instantiate the fixture
     fn new() -> Self;
+
+    /// Create a new block store for testing
     fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
+
+    /// Run some action defined by the fixture. This is often called
+    /// by test cases between making changes and asserting that the changes
+    /// were correctly made. Test fixtures can do things like flushing here
+    /// if they want to test that flushing doesn't break anything.
+    /// Most fixtures will likely implement this as a no-op.
+    /// TODO Go through our low level block store implementations and see if they have a use for yield_fixture
+    async fn yield_fixture(&self, store: &Self::ConcreteBlockStore);
 }
 
 pub fn blockid(seed: u64) -> BlockId {

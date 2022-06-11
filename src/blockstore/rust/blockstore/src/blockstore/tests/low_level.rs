@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+//! This module contains common test cases for the low level [BlockStore] API
+
 use anyhow::Result;
 use futures::stream::TryStreamExt;
 use std::ops::Deref;
@@ -22,6 +24,8 @@ pub mod try_create {
         let store = f.store();
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
+
         let status = store
             .try_create(&blockid(1), data(1024, 1).as_ref())
             .await
@@ -30,8 +34,10 @@ pub mod try_create {
             TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists,
             status
         );
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingEmptyBlock_thenFails(
@@ -40,6 +46,8 @@ pub mod try_create {
         let store = f.store();
 
         store.store(&blockid(1), &data(0, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
+
         let status = store
             .try_create(&blockid(1), data(1024, 1).as_ref())
             .await
@@ -48,8 +56,10 @@ pub mod try_create {
             TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists,
             status
         );
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 0)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
@@ -58,13 +68,17 @@ pub mod try_create {
         let store = f.store();
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
+
         let status = store
             .try_create(&blockid(2), data(1024, 1).as_ref())
             .await
             .unwrap();
         assert_eq!(TryCreateResult::SuccessfullyCreated, status);
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
@@ -73,13 +87,17 @@ pub mod try_create {
         let store = f.store();
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
+
         let status = store
             .try_create(&blockid(2), data(0, 1).as_ref())
             .await
             .unwrap();
         assert_eq!(TryCreateResult::SuccessfullyCreated, status);
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
@@ -92,8 +110,10 @@ pub mod try_create {
             .await
             .unwrap();
         assert_eq!(TryCreateResult::SuccessfullyCreated, status);
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
@@ -106,8 +126,10 @@ pub mod try_create {
             .await
             .unwrap();
         assert_eq!(TryCreateResult::SuccessfullyCreated, status);
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -123,12 +145,17 @@ pub mod load {
             .store(&blockid(0), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store
             .store(&blockid(1), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(Some(data(1024, 1)), loaded);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds(
@@ -140,9 +167,14 @@ pub mod load {
             .store(&blockid(0), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(1), data(0, 1).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
+
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(Some(data(0, 1)), loaded);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails(
@@ -154,12 +186,17 @@ pub mod load {
             .store(&blockid(0), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store
             .store(&blockid(1), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         let loaded = store.load(&blockid(2)).await.unwrap();
         assert_eq!(None, loaded);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails(mut f: impl Fixture) {
@@ -167,6 +204,7 @@ pub mod load {
 
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(None, loaded);
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -182,8 +220,10 @@ pub mod store {
             .store(&blockid(1), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
@@ -192,8 +232,10 @@ pub mod store {
         let store = f.store();
 
         store.store(&blockid(1), data(0, 1).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds(
@@ -205,12 +247,15 @@ pub mod store {
             .store(&blockid(1), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
         store
             .store(&blockid(2), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
@@ -222,9 +267,13 @@ pub mod store {
             .store(&blockid(1), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(2), data(0, 1).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds(
@@ -236,20 +285,27 @@ pub mod store {
             .store(&blockid(1), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store
             .store(&blockid(2), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store
             .store(&blockid(2), data(1024, 2).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         // Test the unrelated block still has the old value
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
 
         // Check it got successfully overwritten
         assert_eq!(Some(data(1024, 2)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds(
@@ -261,17 +317,24 @@ pub mod store {
             .store(&blockid(1), data(1024, 0).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store
             .store(&blockid(2), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(2), data(0, 2).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
 
         // Test the unrelated block still has the old value
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
 
         // Check it got successfully overwritten
         assert_eq!(Some(data(0, 2)), store.load(&blockid(2)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -287,12 +350,19 @@ pub mod remove {
             .store(&blockid(1), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(1)).await.unwrap().is_some());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
@@ -301,12 +371,19 @@ pub mod remove {
         let store = f.store();
 
         store.store(&blockid(1), data(0, 1).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(1)).await.unwrap().is_some());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore(
@@ -318,17 +395,25 @@ pub mod remove {
             .store(&blockid(1), data(1024, 2).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         store
             .store(&blockid(2), data(1024, 1).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(2)).await.unwrap().is_some());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
@@ -340,14 +425,22 @@ pub mod remove {
             .store(&blockid(1), data(1024, 2).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         store.store(&blockid(2), data(0, 1).as_ref()).await.unwrap();
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(2)).await.unwrap().is_some());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
@@ -359,7 +452,10 @@ pub mod remove {
             RemoveResult::NotRemovedBecauseItDoesntExist,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
@@ -371,12 +467,16 @@ pub mod remove {
             .store(&blockid(1), data(1024, 2).as_ref())
             .await
             .unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(
             RemoveResult::NotRemovedBecauseItDoesntExist,
             store.remove(&blockid(2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
+
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -388,6 +488,7 @@ pub mod num_blocks {
     ) {
         let store = f.store();
         assert_eq!(0, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
@@ -395,72 +496,116 @@ pub mod num_blocks {
     ) {
         let store = f.store();
         assert_eq!(0, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(1), &data(1024, 1)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(2, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(2), &data(0, 2)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         store.store(&blockid(1), &data(1024, 3)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
         let store = f.store();
+
         assert_eq!(0, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             TryCreateResult::SuccessfullyCreated,
             store.try_create(&blockid(0), &data(1024, 0)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             TryCreateResult::SuccessfullyCreated,
             store.try_create(&blockid(1), &data(1024, 1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(2, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             TryCreateResult::SuccessfullyCreated,
             store.try_create(&blockid(2), &data(0, 2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists,
             store.try_create(&blockid(1), &data(1024, 3)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
         let store = f.store();
+
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 1)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(2), &data(0, 2)).await.unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(3, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(0)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(2, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::NotRemovedBecauseItDoesntExist,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_eq!(0, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -482,6 +627,7 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -489,7 +635,9 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -497,7 +645,9 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(0, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenBlockStoreWithTwoBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -505,11 +655,14 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(
             vec![blockid(0), blockid(1)],
             call_all_blocks(store.deref()).await,
         );
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -517,12 +670,16 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(2), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(
             vec![blockid(0), blockid(1), blockid(2)],
             call_all_blocks(store.deref()).await,
         );
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks(
@@ -530,29 +687,38 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         store.store(&blockid(2), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(1)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(
             vec![blockid(0), blockid(2)],
             call_all_blocks(store.deref()).await,
         );
+        f.yield_fixture(&store).await;
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(2)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
+        f.yield_fixture(&store).await;
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(0)).await.unwrap()
         );
+        f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
+        f.yield_fixture(&store).await;
     }
 }
 
@@ -564,6 +730,7 @@ pub mod exists {
     ) {
         let store = f.store();
         assert_eq!(false, store.exists(&blockid(0)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse(
@@ -571,7 +738,9 @@ pub mod exists {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(false, store.exists(&blockid(1)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue(
@@ -579,7 +748,9 @@ pub mod exists {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
         assert_eq!(true, store.exists(&blockid(0)).await.unwrap());
+        f.yield_fixture(&store).await;
     }
 }
 

@@ -409,6 +409,7 @@ mod tests {
     > {
         integrity_file_dir: TempDir,
     }
+    #[async_trait]
     impl<
             const ALLOW_INTEGRITY_VIOLATIONS: bool,
             const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
@@ -440,6 +441,7 @@ mod tests {
                 .unwrap(),
             )
         }
+        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
     }
 
     instantiate_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));

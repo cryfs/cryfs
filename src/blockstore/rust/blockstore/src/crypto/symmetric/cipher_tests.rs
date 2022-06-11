@@ -91,7 +91,7 @@ mod enc_dec {
     mod aes256gcm_software {}
 
     #[instantiate_tests(<Aes256Gcm_HardwareAccelerated, Aes256Gcm_HardwareAccelerated>)]
-    #[cfg(any(target_arch = "x86", target_arch="x86_64"))]  // TODO Better aes-ni feature detection
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     mod aes256gcm_hardware {}
 
     #[instantiate_tests(<Aes256Gcm, Aes256Gcm>)]
@@ -99,10 +99,10 @@ mod enc_dec {
 
     // Test interoperability (i.e. encrypting with one and decrypting with the other works)
     #[instantiate_tests(<Aes256Gcm_HardwareAccelerated, Aes256Gcm_SoftwareImplemented>)]
-    #[cfg(any(target_arch = "x86", target_arch="x86_64"))]  // TODO Better aes-ni feature detection
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     mod aes256gcm_hardware_software {}
     #[instantiate_tests(<Aes256Gcm_SoftwareImplemented, Aes256Gcm_HardwareAccelerated>)]
-    #[cfg(any(target_arch = "x86", target_arch="x86_64"))]  // TODO Better aes-ni feature detection
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     mod aes256gcm_software_hardware {}
 }
 
@@ -150,7 +150,7 @@ mod basics {
     mod aes256gcm_software {}
 
     #[instantiate_tests(<Aes256Gcm_HardwareAccelerated>)]
-    #[cfg(any(target_arch = "x86", target_arch="x86_64"))]  // TODO Better aes-ni feature detection
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     mod aes256gcm_hardware {}
 
     #[instantiate_tests(<Aes256Gcm>)]
@@ -207,7 +207,7 @@ mod aes_256_gcm {
         );
     }
 
-    #[cfg(any(target_arch = "x86", target_arch="x86_64"))]  // TODO Better aes-ni feature detection
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     #[test]
     fn test_backward_compatibility_hardware() {
         // Test a preencrypted message to make sure we can still encrypt it

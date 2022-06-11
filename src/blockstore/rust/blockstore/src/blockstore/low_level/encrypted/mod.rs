@@ -208,6 +208,7 @@ mod tests {
     struct TestFixture<C: 'static + Cipher + Send + Sync> {
         _c: PhantomData<C>,
     }
+    #[async_trait]
     impl<C: 'static + Cipher + Send + Sync> crate::blockstore::tests::Fixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
@@ -225,6 +226,7 @@ mod tests {
                 Cipher::new(key),
             ))
         }
+        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
     }
 
     mod aes256gcm {
