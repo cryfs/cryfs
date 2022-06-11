@@ -221,7 +221,7 @@ impl<B> IntegrityBlockStore<B> {
         let mut view = block_layout::View::new(data);
         view.format_version_header_mut()
             .write(FORMAT_VERSION_HEADER);
-        view.block_id_mut().data_mut().copy_from_slice(id.data());
+        view.block_id_mut().copy_from_slice(id.data());
         view.last_update_client_id_mut().write(my_client_id);
         view.block_version_mut().write(version);
         view.into_storage()
@@ -239,7 +239,7 @@ impl<B> IntegrityBlockStore<B> {
         if format_version_header != FORMAT_VERSION_HEADER {
             bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
         }
-        let block_id = BlockId::from_array(view.block_id().data());
+        let block_id = BlockId::from_array(view.block_id());
         if block_id != *expected_block_id {
             self._integrity_violation_detected(
                 IntegrityViolationError::WrongBlockId {
