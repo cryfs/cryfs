@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
 use async_trait::async_trait;
-use binary_layout::FieldMetadata;
+use binary_layout::prelude::*;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use log::warn;
 use std::collections::hash_set::HashSet;
@@ -23,11 +23,11 @@ use known_block_versions::{BlockVersion, IntegrityViolationError, KnownBlockVers
 const FORMAT_VERSION_HEADER: u16 = 1;
 
 binary_layout::define_layout!(block_layout, LittleEndian, {
-    // TODO Use types BlockId, ClientId, ... instead of slices, probably through some LayoutAs trait
+    // TODO Use types BlockId, FormatVersionHeader as types instead of slices
     format_version_header: u16,
     block_id: [u8; BLOCKID_LEN],
-    last_update_client_id: u32,
-    block_version: u64,
+    last_update_client_id: ClientId as u32,
+    block_version: BlockVersion as u64,
     data: [u8],
 });
 
@@ -222,8 +222,8 @@ impl<B> IntegrityBlockStore<B> {
         view.format_version_header_mut()
             .write(FORMAT_VERSION_HEADER);
         view.block_id_mut().data_mut().copy_from_slice(id.data());
-        view.last_update_client_id_mut().write(my_client_id.id);
-        view.block_version_mut().write(version.version);
+        view.last_update_client_id_mut().write(my_client_id);
+        view.block_version_mut().write(version);
         view.into_storage()
     }
 
@@ -249,12 +249,8 @@ impl<B> IntegrityBlockStore<B> {
                 .into(),
             )?;
         }
-        let last_update_client_id = ClientId {
-            id: view.last_update_client_id().read(),
-        };
-        let block_version = BlockVersion {
-            version: view.block_version().read(),
-        };
+        let last_update_client_id = view.last_update_client_id().read();
+        let block_version = view.block_version().read();
         match self
             .known_block_versions
             .lock()
