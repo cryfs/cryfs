@@ -394,11 +394,19 @@ mod tests {
 
     use crate::instantiate_blockstore_tests;
 
-    struct TestFixture {
+    struct TestFixture<
+        const ALLOW_INTEGRITY_VIOLATIONS: bool,
+        const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
+    > {
         store: Option<AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>>,
         _integrity_file_dir: TempDir,
     }
-    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
+    impl<
+            const ALLOW_INTEGRITY_VIOLATIONS: bool,
+            const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
+        > crate::blockstore::low_level::tests::Fixture
+        for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
+    {
         type ConcreteBlockStore = AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>;
         fn new() -> Self {
             let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
@@ -410,8 +418,8 @@ mod tests {
                     .to_path_buf(),
                 ClientId { id: 1 },
                 IntegrityConfig {
-                    allow_integrity_violations: false,
-                    missing_block_is_integrity_violation: true,
+                    allow_integrity_violations: ALLOW_INTEGRITY_VIOLATIONS,
+                    missing_block_is_integrity_violation: MISSING_BLOCK_IS_INTEGRITY_VIOLATION,
                     on_integrity_violation: Box::new(|err| {
                         panic!("Integrity violation: {:?}", err)
                     }),
@@ -428,15 +436,35 @@ mod tests {
         }
     }
 
-    impl Drop for TestFixture {
+    impl<
+            const ALLOW_INTEGRITY_VIOLATIONS: bool,
+            const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
+        > Drop for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
+    {
         fn drop(&mut self) {
             // Using futures::executor::block_on within a tokio runtime isn't great, but good enough for unit tests.
             // See also https://stackoverflow.com/questions/71541765/rust-async-drop
-            futures::executor::block_on(self.store.take().expect("Already dropped").async_drop()).unwrap();
+            futures::executor::block_on(self.store.take().expect("Already dropped").async_drop())
+                .unwrap();
         }
     }
 
-    instantiate_blockstore_tests!(TestFixture);
+    instantiate_blockstore_tests!(TestFixture<false, false>);
 
-    // TODO Add tests with other integrity configs, e.g. combinations of bool AllowIntegrityViolations, bool MissingBlockIsIntegrityViolation
+    mod multiclient {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture<false, false>);
+    }
+    mod singleclient {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture<false, true>);
+    }
+    mod multiclient_allow_integrity_violations {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture<true, false>);
+    }
+    mod singleclient_allow_integrity_violations {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture<true, true>);
+    }
 }

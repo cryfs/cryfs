@@ -163,23 +163,27 @@ fn _prepend_header(mut data: Data) -> Data {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
-    use crate::crypto::symmetric::{Aes256Gcm, EncryptionKey};
 
+    use rand::{rngs::StdRng, RngCore, SeedableRng};
+
+    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use crate::crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305};
     use crate::instantiate_blockstore_tests;
 
-    struct TestFixture {
-        store: EncryptedBlockStore<Aes256Gcm, InMemoryBlockStore>,
+    struct TestFixture<C: Cipher + Send + Sync> {
+        store: EncryptedBlockStore<C, InMemoryBlockStore>,
     }
-    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
-        type ConcreteBlockStore = EncryptedBlockStore<Aes256Gcm, InMemoryBlockStore>;
+    impl<C: Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture for TestFixture<C> {
+        type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
-            let key = EncryptionKey::from_hex(
-                "ab5e040141bca0da388c78b4c42ffa44ee15d31a28c8a86aaab5554f0a3c43f9",
-            )
+            let key = EncryptionKey::new(|key_data| {
+                let mut rng = StdRng::seed_from_u64(0);
+                rng.fill_bytes(key_data);
+                Ok(())
+            })
             .unwrap();
             Self {
-                store: EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key)),
+                store: EncryptedBlockStore::new(InMemoryBlockStore::new(), Cipher::new(key)),
             }
         }
         fn store(&mut self) -> &mut Self::ConcreteBlockStore {
@@ -187,7 +191,23 @@ mod tests {
         }
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
-    
-    // TODO Add tests for encrypted block store using other ciphers and potentially a fake cipher
+    mod aes256gcm {
+        use super::*;
+        instantiate_blockstore_tests!(super::TestFixture<Aes256Gcm>, (flavor = "multi_thread"));
+    }
+    mod aes128gcm {
+        use super::*;
+        crate::instantiate_blockstore_tests!(
+            super::TestFixture<Aes128Gcm>,
+            (flavor = "multi_thread")
+        );
+    }
+
+    mod xchachapoly1305 {
+        use super::*;
+        crate::instantiate_blockstore_tests!(
+            super::TestFixture<XChaCha20Poly1305>,
+            (flavor = "multi_thread")
+        );
+    }
 }
