@@ -3,12 +3,14 @@
 use anyhow::Result;
 use futures::stream::StreamExt;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
+use std::ops::Deref;
 
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, RemoveResult,
     TryCreateResult,
 };
 use crate::data::Data;
+use crate::utils::async_drop::SyncDrop;
 
 // TODO Test try_create_optimized(), store_optimized()
 
@@ -21,14 +23,14 @@ pub trait Fixture {
     type ConcreteBlockStore: BlockStore;
 
     fn new() -> Self;
-    fn store(&mut self) -> &mut Self::ConcreteBlockStore;
+    fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
 }
 
-fn blockid(seed: u64) -> BlockId {
+pub fn blockid(seed: u64) -> BlockId {
     BlockId::from_slice(data(16, seed).as_ref()).unwrap()
 }
 
-fn data(size: usize, seed: u64) -> Data {
+pub fn data(size: usize, seed: u64) -> Data {
     let mut rng = StdRng::seed_from_u64(seed);
     let mut res = vec![0; size];
     rng.fill_bytes(&mut res);
@@ -493,7 +495,7 @@ pub mod all_blocks {
         mut f: impl Fixture,
     ) {
         let store = f.store();
-        assert_unordered_vec_eq(vec![], call_all_blocks(store).await);
+        assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
     }
 
     pub async fn test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -501,7 +503,7 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
-        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store).await);
+        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
     }
 
     pub async fn test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -509,7 +511,7 @@ pub mod all_blocks {
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(0, 0)).await.unwrap();
-        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store).await);
+        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
     }
 
     pub async fn test_givenBlockStoreWithTwoBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -518,7 +520,10 @@ pub mod all_blocks {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
-        assert_unordered_vec_eq(vec![blockid(0), blockid(1)], call_all_blocks(store).await);
+        assert_unordered_vec_eq(
+            vec![blockid(0), blockid(1)],
+            call_all_blocks(store.deref()).await,
+        );
     }
 
     pub async fn test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
@@ -530,7 +535,7 @@ pub mod all_blocks {
         store.store(&blockid(2), &data(1024, 0)).await.unwrap();
         assert_unordered_vec_eq(
             vec![blockid(0), blockid(1), blockid(2)],
-            call_all_blocks(store).await,
+            call_all_blocks(store.deref()).await,
         );
     }
 
@@ -546,19 +551,22 @@ pub mod all_blocks {
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(1)).await.unwrap()
         );
-        assert_unordered_vec_eq(vec![blockid(0), blockid(2)], call_all_blocks(store).await);
+        assert_unordered_vec_eq(
+            vec![blockid(0), blockid(2)],
+            call_all_blocks(store.deref()).await,
+        );
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(2)).await.unwrap()
         );
-        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store).await);
+        assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
             store.remove(&blockid(0)).await.unwrap()
         );
-        assert_unordered_vec_eq(vec![], call_all_blocks(store).await);
+        assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
     }
 }
 

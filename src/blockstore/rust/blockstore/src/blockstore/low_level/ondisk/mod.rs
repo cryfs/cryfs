@@ -340,33 +340,32 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
+    use crate::{instantiate_blockstore_tests, instantiate_locking_blockstore_tests};
     use tempdir::TempDir;
 
     struct TestFixture {
-        // Fields of a struct are dropped in declaration order, so we declare
-        // the blockstore first to make sure it's gone when we're dropping the
-        // tempdir.
-        store: SyncDrop<OnDiskBlockStore>,
-        _basedir: TempDir,
+        basedir: TempDir,
     }
     impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
-            let store = SyncDrop::new(OnDiskBlockStore::new(basedir.path().to_path_buf()));
-            Self {
-                _basedir: basedir,
-                store,
-            }
+            Self { basedir }
         }
-        fn store(&mut self) -> &mut OnDiskBlockStore {
-            &mut self.store
+        fn store(&mut self) -> SyncDrop<OnDiskBlockStore> {
+            SyncDrop::new(OnDiskBlockStore::new(self.basedir.path().to_path_buf()))
         }
     }
 
-    instantiate_blockstore_tests!(TestFixture);
+    mod low_level_blockstore_tests {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture);
+    }
+    mod high_level_blockstore_tests {
+        use super::*;
+        instantiate_locking_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    }
 
     #[tokio::test]
     async fn test_block_path() {
