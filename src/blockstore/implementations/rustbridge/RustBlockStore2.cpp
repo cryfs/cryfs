@@ -1,40 +1,10 @@
 #include "RustBlockStore2.h"
+#include "helpers.h"
 
 namespace blockstore
 {
     namespace rust
     {
-
-        namespace
-        {
-            ::rust::Box<bridge::BlockId> cast_blockid(const BlockId &blockId)
-            {
-                return bridge::new_blockid(blockId.data().as_array());
-            }
-            BlockId cast_blockid(const bridge::BlockId &blockId)
-            {
-                return BlockId::FromBinary(blockId.data().data());
-            }
-            ::rust::Slice<const uint8_t> cast_data(const cpputils::Data &data)
-            {
-                return ::rust::Slice<const uint8_t>{static_cast<const uint8_t *>(data.data()), data.size()};
-            }
-            boost::optional<cpputils::Data> cast_optional_data(const ::blockstore::rust::bridge::OptionData *optionData)
-            {
-                if (optionData->has_value())
-                {
-                    auto data = optionData->value();
-                    cpputils::Data result(data.size());
-                    std::memcpy(result.data(), data.data(), data.size());
-                    return result;
-                }
-                else
-                {
-                    return boost::none;
-                }
-            }
-        }
-
         RustBlockStore2::RustBlockStore2(::rust::Box<bridge::RustBlockStore2Bridge> blockStore)
             : _blockStore(std::move(blockStore))
         {
@@ -42,22 +12,22 @@ namespace blockstore
 
         bool RustBlockStore2::tryCreate(const BlockId &blockId, const cpputils::Data &data)
         {
-            return _blockStore->try_create(*cast_blockid(blockId), cast_data(data));
+            return _blockStore->try_create(*helpers::cast_blockid(blockId), helpers::cast_data(data));
         }
 
         bool RustBlockStore2::remove(const BlockId &blockId)
         {
-            return _blockStore->remove(*cast_blockid(blockId));
+            return _blockStore->remove(*helpers::cast_blockid(blockId));
         }
 
         boost::optional<cpputils::Data> RustBlockStore2::load(const BlockId &blockId) const
         {
-            return cast_optional_data(&*_blockStore->load(*cast_blockid(blockId)));
+            return helpers::cast_optional_data(&*_blockStore->load(*helpers::cast_blockid(blockId)));
         }
 
         void RustBlockStore2::store(const BlockId &blockId, const cpputils::Data &data)
         {
-            return _blockStore->store(*cast_blockid(blockId), cast_data(data));
+            return _blockStore->store(*helpers::cast_blockid(blockId), helpers::cast_data(data));
         }
 
         uint64_t RustBlockStore2::numBlocks() const
@@ -80,7 +50,7 @@ namespace blockstore
             auto blocks = _blockStore->all_blocks();
             for (const auto &block : blocks)
             {
-                callback(cast_blockid(block));
+                callback(helpers::cast_blockid(block));
             }
         }
 

@@ -42,6 +42,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
 
     #[inline]
     pub fn data_mut(&mut self) -> &mut Data {
+        self.dirty = true;
         &mut self.data
     }
 
@@ -75,7 +76,13 @@ pub struct LockingBlockStore<B: super::low_level::BlockStore + Send + Sync> {
 }
 
 impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
-    async fn load(&self, block_id: BlockId) -> Result<Option<AsyncDropGuard<Block<B>>>> {
+    pub fn new(base_store: B) -> Self {
+        Self {
+            base_store: Arc::new(base_store),
+        }
+    }
+
+    pub async fn load(&self, block_id: BlockId) -> Result<Option<AsyncDropGuard<Block<B>>>> {
         Ok(self.base_store.load(&block_id).await?.map(|data| {
             AsyncDropGuard::new(Block {
                 block_id,
@@ -86,7 +93,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
         }))
     }
 
-    async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
+    pub async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
         // TODO Is self.base_store.try_create_optimized() better?
         match self.base_store.try_create(block_id, data.as_ref()).await? {
             crate::blockstore::low_level::TryCreateResult::SuccessfullyCreated => Ok(TryCreateResult::SuccessfullyCreated),
@@ -94,13 +101,13 @@ impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
         }
     }
 
-    async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
+    pub async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
         // TODO Does an API make more sense where we call a callback similar to with_load, allow call sites to modify that block, and only write back once the callback returns?
         // TODO Is self.base_store.store_optimized() better?
         self.base_store.store(block_id, data).await
     }
 
-    async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
+    pub async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
         match self.base_store.remove(block_id).await? {
             crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved => {
                 Ok(RemoveResult::SuccessfullyRemoved)
@@ -111,24 +118,24 @@ impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
         }
     }
 
-    async fn num_blocks(&self) -> Result<u64> {
+    pub async fn num_blocks(&self) -> Result<u64> {
         self.base_store.num_blocks().await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    pub fn estimate_num_free_bytes(&self) -> Result<u64> {
         self.base_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    pub fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
         self.base_store
             .block_size_from_physical_block_size(block_size)
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    pub async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         self.base_store.all_blocks().await
     }
 
-    async fn create(&self, data: &Data) -> Result<()> {
+    pub async fn create(&self, data: &Data) -> Result<()> {
         loop {
             let created = self.try_create(&BlockId::new_random(), data).await?;
             match created {
