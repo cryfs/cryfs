@@ -335,7 +335,7 @@ dependencies = [
  "libc",
  "lockable",
  "log",
- "lru",
+ "lru 0.7.3",
  "owning_ref_lockable",
  "paste 1.0.6",
  "rand 0.8.5",
@@ -706,9 +706,10 @@ dependencies = [
 [[package]]
 name = "lockable"
 version = "0.0.2"
-source = "git+https://github.com/smessmer/lockable?rev=945145b07ea924f16d01e9e8eab5329aea98b73f#945145b07ea924f16d01e9e8eab5329aea98b73f"
+source = "git+https://github.com/smessmer/lockable?rev=073147ef27948aab6eae79f9f684b94792adfd20#073147ef27948aab6eae79f9f684b94792adfd20"
 dependencies = [
  "anyhow",
+ "lru 0.7.5",
  "owning_ref_lockable",
  "thiserror",
  "tokio",
@@ -727,6 +728,15 @@ dependencies = [
 name = "lru"
 version = "0.7.3"
 source = "git+https://github.com/smessmer/lru-rs.git?rev=ec021658cd7d48deb88226ad31bb6f3f33e16575#ec021658cd7d48deb88226ad31bb6f3f33e16575"
+dependencies = [
+ "hashbrown",
+]
+
+[[package]]
+name = "lru"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32613e41de4c47ab04970c348ca7ae7382cf116625755af070b008a15516a889"
 dependencies = [
  "hashbrown",
 ]

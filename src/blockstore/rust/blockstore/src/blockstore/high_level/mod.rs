@@ -29,7 +29,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     #[inline]
     pub fn data(&self) -> &Data {
         self.cache_entry
-            .as_ref()
+            .value()
             .expect("An existing block cannot have a None cache entry")
             .data()
     }
@@ -37,7 +37,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     #[inline]
     pub fn data_mut(&mut self) -> &mut Data {
         self.cache_entry
-            .as_mut()
+            .value_mut()
             .expect("An existing block cannot have a None cache entry")
             .data_mut()
     }
@@ -45,7 +45,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     pub async fn flush(&mut self) -> Result<()> {
         let block_id = *self.block_id();
         self.cache_entry
-            .as_mut()
+            .value_mut()
             .expect("An existing block cannot have a None cache entry")
             .flush(&block_id)
             .await
@@ -53,7 +53,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
 
     pub async fn resize(&mut self, new_size: usize) {
         self.cache_entry
-            .as_mut()
+            .value_mut()
             .expect("An existing block cannot have a None cache entry")
             .resize(new_size)
             .await;
@@ -90,7 +90,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
     pub async fn load(&self, block_id: BlockId) -> Result<Option<Block<B>>> {
         // TODO Cache non-existence?
         let mut cache_entry = self.cache.async_lock(block_id).await;
-        if cache_entry.is_none() {
+        if cache_entry.value().is_none() {
             let loaded = self.base_store.load(&block_id).await?;
             if let Some(loaded) = loaded {
                 self.cache.set_entry(
@@ -102,7 +102,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
                 );
             }
         }
-        if cache_entry.is_some() {
+        if cache_entry.value().is_some() {
             Ok(Some(Block { cache_entry }))
         } else {
             Ok(None)
@@ -111,7 +111,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
 
     pub async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
         let mut cache_entry = self.cache.async_lock(*block_id).await;
-        if cache_entry.is_some() {
+        if cache_entry.value().is_some() {
             // Block already exists in the cache
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
@@ -161,7 +161,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
         // Remove from cache
         // TODO This is dangerous, we could accidentally drop the cache entry lock if we put it into the let binding by value but it needs to be held while we remove from the base store. Instead make removed_from_base_store a lambda and invoke it from in here?
         let (removed_from_cache, should_remove_from_base_store) =
-            if let Some(cache_entry) = &*cache_entry_guard {
+            if let Some(cache_entry) = cache_entry_guard.value() {
                 let should_remove_from_base_store = cache_entry.block_exists_in_base_store()
                     == BlockBaseStoreState::ExistsInBaseStore;
                 self.cache

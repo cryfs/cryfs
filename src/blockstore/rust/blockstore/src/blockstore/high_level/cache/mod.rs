@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::time::Duration;
+use lockable::LruGuard;
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
@@ -15,9 +16,6 @@ use crate::utils::periodic_task::PeriodicTask;
 mod cache_impl;
 mod entry;
 mod guard;
-mod lockable_cache;
-
-use lockable_cache::Guard;
 
 use cache_impl::BlockCacheImpl;
 pub use entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
@@ -111,7 +109,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         cache: &BlockCacheImpl<B>,
         duration: Duration,
     ) -> Result<()> {
-        let to_prune: Vec<Guard<'_, _, _>> = cache.lock_entries_unlocked_for_longer_than(duration);
+        let to_prune = cache.lock_entries_unlocked_for_longer_than(duration);
         // Now we have a list of mutex guards, locking all keys that we want to prune.
         // The global mutex for the cache is unlocked, so other threads may now come in
         // and could get one of those mutexes, waiting for them to lock. To address this,
@@ -120,7 +118,6 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         // other tasks are waiting and only remove it if no other tasks are waiting.
         // TODO Test what the previous paragraph describes
         let pruning_tasks: FuturesUnordered<_> = to_prune
-            .into_iter()
             .map(|guard| Self::_prune_block(cache, guard))
             .collect();
         let errors = pruning_tasks
@@ -141,12 +138,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
 
     async fn _prune_block<'a>(
         cache: &BlockCacheImpl<B>,
-        mut guard: Guard<'a, BlockId, BlockCacheEntry<B>>,
+        mut guard: LruGuard<'a, BlockId, BlockCacheEntry<B>>,
     ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();
         let entry = guard
-            .as_mut()
+            .value_mut()
             .expect("Found a None entry in the cache. This violates our invariant.");
         entry.flush(&block_id).await?;
 
@@ -176,7 +173,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> AsyncD
             // Now we're the only task having access to this arc
             let cache = Arc::try_unwrap(self.cache)
                 .expect("This can't fail since we are the only task having access");
-            let entries = cache.into_entries_unordered().await;
+            let entries: FuturesUnordered<_> = cache.into_entries_unordered().await.map(future::ready).collect();
 
             let errors = entries.filter_map(|(key, mut value)| async move {
                 let result = value.flush(&key).await;
