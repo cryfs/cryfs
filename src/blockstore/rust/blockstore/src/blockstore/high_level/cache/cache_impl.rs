@@ -1,21 +1,19 @@
 use anyhow::Result;
-use futures::Stream;
 use std::fmt::Debug;
 use std::future::Future;
-use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
+use lockable::{LockableLruCache, LruGuard, LruOwnedGuard};
 
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
-use super::lockable_cache::{Guard, GuardImpl, LockableCache};
 use crate::blockstore::BlockId;
 use crate::data::Data;
 
 pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> {
     // Only None while it is being dropped
-    cache: Option<Arc<LockableCache<BlockId, BlockCacheEntry<B>>>>,
+    cache: Option<Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>>>,
 
     // This variable counts how many blocks in the cache are not in the base store.
     // Since this isn't protected by the same mutex as cache, it is only eventually consistent.
@@ -27,12 +25,12 @@ pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + S
 impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockCacheImpl<B> {
     pub fn new() -> Arc<Self> {
         Arc::new(BlockCacheImpl {
-            cache: Some(Arc::new(LockableCache::new())),
+            cache: Some(Arc::new(LockableLruCache::new())),
             num_blocks_in_cache_but_not_in_base_store: 0.into(),
         })
     }
 
-    fn _cache(&self) -> &Arc<LockableCache<BlockId, BlockCacheEntry<B>>> {
+    fn _cache(&self) -> &Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>> {
         &self
             .cache
             .as_ref()
@@ -48,9 +46,9 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         BlockCacheEntryGuard { guard }
     }
 
-    pub fn delete_entry_from_cache<'a>(&self, entry: &mut Guard<'a, BlockId, BlockCacheEntry<B>>) {
+    pub fn delete_entry_from_cache<'a>(&self, entry: &mut LruGuard<'a, BlockId, BlockCacheEntry<B>>) {
         let entry = entry
-            .take()
+            .remove()
             .expect("Tried to delete an entry that wasn't set");
         if entry.block_exists_in_base_store() == BlockBaseStoreState::DoesntExistInBaseStore {
             let prev = self
@@ -66,15 +64,11 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         // Since entry is now None, when the Guard is dropped and calls LockableCache::_unlock, it will remove the entry from the cache.
     }
 
-    pub fn delete_entry_from_cache_even_if_dirty<
-        C: Deref<Target = LockableCache<BlockId, BlockCacheEntry<B>>>,
-    >(
+    pub fn delete_entry_from_cache_even_if_dirty(
         &self,
-        entry: &mut GuardImpl<BlockId, BlockCacheEntry<B>, C>,
+        entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
     ) {
-        let old_entry = std::mem::replace(&mut **entry, None);
-
-        let old_entry = old_entry.expect("Tried to delete an entry that wasn't set");
+        let old_entry = entry.remove().expect("Tried to delete an entry that wasn't set");
 
         if old_entry.block_exists_in_base_store() == BlockBaseStoreState::DoesntExistInBaseStore {
             let prev = self
@@ -102,7 +96,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         base_store_state: BlockBaseStoreState,
     ) {
         assert!(
-            entry.is_none(),
+            entry.value().is_none(),
             "Can only set an entry if it wasn't set beforehand. Otherwise, use overwrite_entry"
         );
         if base_store_state == BlockBaseStoreState::DoesntExistInBaseStore {
@@ -113,12 +107,13 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
             self.num_blocks_in_cache_but_not_in_base_store
                 .fetch_add(1, Ordering::SeqCst);
         }
-        **entry = Some(BlockCacheEntry::new(
+        let old_entry = entry.insert(BlockCacheEntry::new(
             Arc::clone(base_store),
             new_value,
             dirty,
             base_store_state,
         ));
+        assert!(old_entry.is_none(), "We checked above already that the entry isn't set");
     }
 
     pub async fn set_or_overwrite_entry_even_if_dirty<F>(
@@ -132,7 +127,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     where
         F: Future<Output = Result<BlockBaseStoreState>>,
     {
-        let base_store_state = if let Some(entry) = &**entry {
+        let base_store_state = if let Some(entry) = entry.value() {
             entry.block_exists_in_base_store()
         } else {
             let base_store_state = base_store_state().await?;
@@ -147,14 +142,13 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
             base_store_state
         };
 
-        let old_entry = std::mem::replace(
-            &mut **entry,
-            Some(BlockCacheEntry::new(
+        let old_entry = entry.insert(
+            BlockCacheEntry::new(
                 Arc::clone(base_store),
                 new_value,
                 dirty,
                 base_store_state,
-            )),
+            ),
         );
         // Now the old cache entry is in the old_entry variable and we need to discard it
         // so we don't trigger a panic when it gets destructed and is dirty.
@@ -172,23 +166,24 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     pub fn lock_entries_unlocked_for_longer_than(
         &self,
         duration: Duration,
-    ) -> Vec<Guard<'_, BlockId, BlockCacheEntry<B>>> {
+    ) -> impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
         self._cache()
             .lock_entries_unlocked_for_longer_than(duration)
     }
 
     pub async fn into_entries_unordered(
         mut self,
-    ) -> impl Stream<Item = (BlockId, BlockCacheEntry<B>)> {
-        // Since self is passed in by value, we know that we're the only task with
-        // access to this instance. No other task or thread can increase the refcount of the
-        // Arc around self.cache. Other threads can still hold BlockCacheEntryGuard
-        // instances and hold instances of this Arc, but the encapsulation in BlockCacheEntryGuard
-        // doesn't allow them to increase the refcount since it is un-cloneable.
-        // We just need to wait until the last thread/task destructs their BlockCacheEntryGuard
-        // and then we can go ahead and destruct the cache.
+    ) -> impl Iterator<Item = (BlockId, BlockCacheEntry<B>)> {
+        // At this point, we have exclusive access to self, but there may still be other threads/tasks having access to
+        // a clone of the Arc containing self.cache. The only way for them to hold such a copy is through a
+        // LruOwnedGuard that locks one of the block ids. LruOwnedGuard cannot be cloned. It is reasonable to assume that
+        // these threads/tasks will at some point release their lock. Since we have exclusive access to the self object,
+        // We know that no new threads/tasks can acquire such a lock. We just have to wait until the last thread/task releases their lock.
         // This will also wait until self.prune_task is far enough in being stopped to have
         // released its clone of the Arc.
+        // However, note that there is still a chance of a deadlock here. If one of those threads is the current thread, or if one of
+        // those threads waits for the current thread on something, then we have a deadlock.
+        // TODO Is there a better way to handle this?
         let cache = self._cache();
         while Arc::strong_count(&*cache) > 1 {
             // TODO Is there a better alternative that doesn't involve busy waiting?

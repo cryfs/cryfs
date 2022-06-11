@@ -1,15 +1,14 @@
 use std::fmt::{self, Debug};
-use std::ops::{Deref, DerefMut};
+use lockable::LruOwnedGuard;
 
 use super::entry::BlockCacheEntry;
-use super::lockable_cache::OwnedGuard;
 use crate::blockstore::BlockId;
 
 pub struct BlockCacheEntryGuard<B>
 where
     B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
 {
-    pub(super) guard: OwnedGuard<BlockId, BlockCacheEntry<B>>,
+    pub(super) guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
 }
 
 impl<B> BlockCacheEntryGuard<B>
@@ -19,24 +18,17 @@ where
     pub fn key(&self) -> &BlockId {
         self.guard.key()
     }
-}
 
-impl<B> Deref for BlockCacheEntryGuard<B>
-where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
-{
-    type Target = Option<BlockCacheEntry<B>>;
-    fn deref(&self) -> &Self::Target {
-        self.guard.deref()
+    pub fn value(&self) -> Option<&BlockCacheEntry<B>> {
+        self.guard.value()
     }
-}
 
-impl<B> DerefMut for BlockCacheEntryGuard<B>
-where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.guard.deref_mut()
+    pub fn value_mut(&mut self) -> Option<&mut BlockCacheEntry<B>> {
+        self.guard.value_mut()
+    }
+
+    pub fn insert(&mut self, v: BlockCacheEntry<B>) -> Option<BlockCacheEntry<B>> {
+        self.guard.insert(v)
     }
 }
 
