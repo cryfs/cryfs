@@ -1,7 +1,10 @@
 use anyhow::{anyhow, bail, Context, Result};
-use std::fs::{DirEntry, File};
+use tokio::{fs::{DirEntry, File}, io::AsyncWriteExt};
+use tokio_stream::wrappers::ReadDirStream;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use async_trait::async_trait;
+use std::future::Future;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -27,10 +30,11 @@ impl OnDiskBlockStore {
     }
 }
 
+#[async_trait]
 impl BlockStoreReader for OnDiskBlockStore {
-    fn load(&self, id: &BlockId) -> Result<Option<Data>> {
+    async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let path = self._block_path(id);
-        match std::fs::read(&path) {
+        match tokio::fs::read(&path).await {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                 // File doesn't exist. Return None. This is not an error.
                 Ok(None)
@@ -70,9 +74,9 @@ impl BlockStoreReader for OnDiskBlockStore {
             .with_context(|| anyhow!("Physical block size of {} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))
     }
 
-    fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
         let mut result = vec![];
-        self._for_each_block_file(&mut |file| {
+        self._for_each_block_file(&mut |file| async {
             let path = file.path();
             // The following couple lines panic if the path is wrong. That's ok because
             // _for_each_block_file is supposed to only return paths that are good.
@@ -132,10 +136,11 @@ impl BlockStoreReader for OnDiskBlockStore {
     }
 }
 
+#[async_trait]
 impl BlockStoreDeleter for OnDiskBlockStore {
-    fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<bool> {
         let path = self._block_path(id);
-        match std::fs::remove_file(path) {
+        match tokio::fs::remove_file(path).await {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                 // File doesn't exist. Return false. This is not an error.
                 Ok(false)
@@ -148,6 +153,7 @@ impl BlockStoreDeleter for OnDiskBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
+#[async_trait]
 impl OptimizedBlockStoreWriter for OnDiskBlockStore {
     type BlockData = BlockData;
 
@@ -157,19 +163,27 @@ impl OptimizedBlockStoreWriter for OnDiskBlockStore {
         BlockData::new(data)
     }
 
-    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
         let path = self._block_path(id);
-        if path.exists() {
+        if path_exists(path).await? {
             Ok(false)
         } else {
-            _store(&path, data)?;
+            _store(&path, data).await?;
             Ok(true)
         }
     }
 
-    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
+    async fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         let path = self._block_path(id);
-        _store(&path, data)
+        _store(&path, data).await
+    }
+}
+
+async fn path_exists(path: &Path) -> Result<bool> {
+    match tokio::fs::metadata(path).await {
+        Ok(_) => Ok(true),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err.into()),
     }
 }
 
@@ -190,13 +204,14 @@ impl OnDiskBlockStore {
             .join(&block_id_str[PREFIX_LEN..]);
     }
 
-    fn _for_each_block_file(
+    async fn _for_each_block_file<R: Future<Output=Result<()>>> (
         &self,
-        callback: &mut impl FnMut(&DirEntry) -> Result<()>,
+        callback: &mut impl FnMut(&DirEntry) -> R,
     ) -> Result<()> {
-        for subdir in self.basedir.read_dir()? {
+        let dir_contents = ReadDirStream::new(tokio::fs::read_dir(self.basedir).await?);
+        for subdir in tokio::fs::read_dir(self.basedir).await? {
             let subdir = subdir?;
-            if subdir.metadata()?.is_dir()
+            if subdir.metadata().await?.is_dir()
                 && subdir.file_name().len() == PREFIX_LEN
                 && subdir
                     .file_name()
@@ -210,7 +225,7 @@ impl OnDiskBlockStore {
                     .chars()
                     .all(|c| _is_allowed_blockid_character(c))
             {
-                for blockfile in subdir.path().read_dir()? {
+                for blockfile in subdir.path().read_dir().await? {
                     let blockfile = blockfile?;
                     if blockfile.file_name().len() == NONPREFIX_LEN
                         && blockfile
@@ -225,7 +240,7 @@ impl OnDiskBlockStore {
                             .chars()
                             .all(|c| _is_allowed_blockid_character(c))
                     {
-                        callback(&blockfile)?;
+                        callback(&blockfile).await?;
                     }
                 }
             }
@@ -246,8 +261,8 @@ fn _check_and_remove_header(data: Data) -> Result<Data> {
 }
 
 // TODO Test
-fn _create_dir_if_doesnt_exist(dir: &Path) -> Result<()> {
-    match std::fs::create_dir(dir) {
+async fn _create_dir_if_doesnt_exist(dir: &Path) -> Result<()> {
+    match tokio::fs::create_dir(dir).await {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
             // This is ok, we only want to create the directory if it doesn't exist yet
@@ -261,11 +276,12 @@ fn _is_allowed_blockid_character(c: char) -> bool {
     (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
 }
 
-fn _store(path: &Path, data: BlockData) -> Result<()> {
+async fn _store(path: &Path, data: BlockData) -> Result<()> {
     _create_dir_if_doesnt_exist(
         path.parent()
             .expect("Block file path should have a parent directory"),
     )
+    .await
     .with_context(|| {
         format!(
             "Failed to create parent directory for block file at {}",
@@ -279,8 +295,10 @@ fn _store(path: &Path, data: BlockData) -> Result<()> {
     // TODO Use binary-layout here?
     data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
     let mut file = File::create(&path)
+        .await
         .with_context(|| format!("Failed to create block file at {}", path.display()))?;
     file.write_all(data.as_ref())
+        .await
         .with_context(|| format!("Failed to write to block file at {}", path.display()))?;
     Ok(())
 }
