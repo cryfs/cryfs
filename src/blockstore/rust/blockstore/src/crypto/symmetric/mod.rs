@@ -39,7 +39,10 @@ pub trait CipherCallback {
 
     fn callback<C: Cipher + Send + Sync + 'static>(self) -> Self::Result;
 }
-pub fn lookup_cipher<CB>(cipher_name: &str, callback: CB) -> CB::Result where CB: CipherCallback {
+pub fn lookup_cipher<CB>(cipher_name: &str, callback: CB) -> CB::Result
+where
+    CB: CipherCallback,
+{
     match cipher_name {
         "xchacha20-poly1305" => callback.callback::<XChaCha20Poly1305>(),
         "aes-256-gcm" => callback.callback::<Aes256Gcm>(),

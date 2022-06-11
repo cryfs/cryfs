@@ -1,12 +1,15 @@
-use anyhow::{anyhow, bail, ensure, Context, Error, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_trait::async_trait;
 use binary_layout::prelude::*;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::{
+    future,
+    stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
+};
 use log::warn;
 use std::collections::hash_set::HashSet;
+use std::fmt::{self, Debug};
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::Mutex;
 
 use super::block_data::IBlockData;
 use super::{
@@ -14,11 +17,14 @@ use super::{
     RemoveResult, TryCreateResult, BLOCKID_LEN,
 };
 
-mod known_block_versions;
+mod integrity_data;
 
 use crate::data::Data;
-pub use known_block_versions::ClientId;
-use known_block_versions::{BlockVersion, IntegrityViolationError, KnownBlockVersions};
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
+pub use integrity_data::ClientId;
+use integrity_data::{
+    BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, IntegrityViolationError,
+};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
@@ -36,26 +42,29 @@ const HEADER_SIZE: usize = block_layout::data::OFFSET;
 pub struct IntegrityConfig {
     pub allow_integrity_violations: bool,
     pub missing_block_is_integrity_violation: bool,
-    pub on_integrity_violation: Box<dyn Sync + Send + Fn()>,
+    pub on_integrity_violation: Box<dyn Sync + Send + Fn(&IntegrityViolationError)>,
 }
 
-pub struct IntegrityBlockStore<B> {
+/// Warning: This is thread safe in a sense that it can handle calls about **different** block ids at the same time
+/// but it cannot handle calls about **the same** block id at the same time. That would cause race conditions
+/// in `integrity_data` and possibly other places. Only use this with something on top (e.g. `LockingBlockStore`)
+/// ensuring that there are no concurrent calls about the same block id.
+pub struct IntegrityBlockStore<B: Send> {
     underlying_block_store: B,
     config: IntegrityConfig,
-    known_block_versions: Mutex<KnownBlockVersions>,
+    integrity_data: AsyncDropGuard<IntegrityData>,
 }
 
-impl<B> IntegrityBlockStore<B> {
+impl<B: Send> IntegrityBlockStore<B> {
     pub fn new(
         underlying_block_store: B,
         integrity_file_path: PathBuf,
         my_client_id: ClientId,
         config: IntegrityConfig,
-    ) -> Result<Self> {
-        let known_block_versions =
-            KnownBlockVersions::new(integrity_file_path.clone(), my_client_id)
-                .context("Tried to create KnownBlockVersions")?;
-        if known_block_versions.integrity_violation_in_previous_run() {
+    ) -> Result<AsyncDropGuard<Self>> {
+        let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
+            .context("Tried to create IntegrityData")?;
+        if integrity_data.integrity_violation_in_previous_run() {
             if config.allow_integrity_violations {
                 warn!("Integrity violation in previous run (but integrity checks are disabled)");
             } else {
@@ -65,11 +74,25 @@ impl<B> IntegrityBlockStore<B> {
                 .into());
             }
         }
-        Ok(Self {
+        Ok(AsyncDropGuard::new(Self {
             underlying_block_store,
             config,
-            known_block_versions: Mutex::new(known_block_versions),
-        })
+            integrity_data,
+        }))
+    }
+}
+
+#[async_trait]
+impl<B: Send> AsyncDrop for IntegrityBlockStore<B> {
+    type Error = anyhow::Error;
+    async fn async_drop_impl(self) -> Result<()> {
+        self.integrity_data.async_drop().await
+    }
+}
+
+impl<B: Send> Debug for IntegrityBlockStore<B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "IntegrityBlockStore")
     }
 }
 
@@ -80,26 +103,28 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
     }
 
     async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
+        let mut block_info_guard = self.integrity_data.lock_block_info(*block_id).await;
         let loaded = self.underlying_block_store.load(block_id).await.context(
             "IntegrityBlockStore failed to load the block from the underlying block store",
         )?;
         match loaded {
             None => {
-                if self.config.missing_block_is_integrity_violation
-                    && self
-                        .known_block_versions
-                        .lock()
-                        .unwrap()
-                        .should_block_exist(&block_id)
-                {
-                    self._integrity_violation_detected(
-                        IntegrityViolationError::MissingBlock { block: *block_id }.into(),
-                    )?;
+                if self.config.missing_block_is_integrity_violation {
+                    if let Some(block_info) = block_info_guard.value() {
+                        if block_info.block_is_expected_to_exist() {
+                            self._integrity_violation_detected(
+                                IntegrityViolationError::MissingBlock { block: *block_id }.into(),
+                            )?;
+                        }
+                    }
                 }
                 Ok(None)
             }
             Some(loaded) => {
-                let data = self._check_and_remove_header(loaded, block_id)?;
+                let block_info = block_info_guard.value_or_insert_with(|| {
+                    BlockInfo::new_unknown(self.integrity_data.my_client_id())
+                });
+                let data = self._check_and_remove_header(block_info, loaded, block_id)?;
                 Ok(Some(data))
             }
         }
@@ -120,30 +145,63 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
     }
 
     async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
-        let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
         if self.config.missing_block_is_integrity_violation {
-            // TODO No collect, but pass through stream asynchronously?
-            let all_underlying_blocks: Vec<BlockId> = all_underlying_blocks.try_collect().await?;
-            let mut expected_blocks: HashSet<BlockId> = self
-                .known_block_versions
-                .lock()
-                .unwrap()
-                .existing_blocks()
-                .copied()
-                .collect();
+            let all_underlying_blocks = {
+                let blocks = self.underlying_block_store.all_blocks().await?;
+                let blocks: Vec<BlockId> = blocks.try_collect().await?;
+                blocks
+            };
+            let mut expected_blocks = {
+                let blocks: HashSet<BlockId> =
+                    self.integrity_data.existing_blocks().into_iter().collect();
+                blocks
+            };
+
             for existing_block in &all_underlying_blocks {
                 expected_blocks.remove(existing_block);
             }
-            if !expected_blocks.is_empty() {
+            let missing_blocks: FuturesUnordered<_> = expected_blocks
+                .into_iter()
+                .map(|id| future::ready(id))
+                .collect();
+            let missing_blocks = missing_blocks
+                .map(|v| -> Result<BlockId> { Ok(v) })
+                .try_filter_map(|expected_block_id| async move {
+                    // We have a block that our integrity data says should exist but the underlying block store says doesn't exist.
+                    // This could be an integrity violation. However, there are race conditions. For example, the block could
+                    // have been created after we checked the underlying block store and before we checked the integrity data.
+                    // The only way to be sure is to actually lock this block id and check again.
+                    let block_info_guard =
+                        self.integrity_data.lock_block_info(expected_block_id).await;
+                    if let Some(block_info) = block_info_guard.value() {
+                        let expected_to_exist = block_info.block_is_expected_to_exist();
+                        let actually_exists = self
+                            .underlying_block_store
+                            .exists(&expected_block_id)
+                            .await?;
+                        if expected_to_exist && !actually_exists {
+                            Ok(Some(expected_block_id))
+                        } else {
+                            // It actually was a race condition, ignore this false positive
+                            Ok(None)
+                        }
+                    } else {
+                        // It actually was a race condition, ignore this false positive
+                        Ok(None)
+                    }
+                });
+            let missing_blocks: HashSet<BlockId> = missing_blocks.try_collect().await?;
+            if !missing_blocks.is_empty() {
                 self._integrity_violation_detected(
                     IntegrityViolationError::MissingBlocks {
-                        blocks: expected_blocks,
+                        blocks: missing_blocks,
                     }
                     .into(),
                 )?;
             }
             Ok(futures::stream::iter(all_underlying_blocks.into_iter().map(Ok)).boxed())
         } else {
+            let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
             Ok(all_underlying_blocks)
         }
     }
@@ -152,11 +210,13 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
 #[async_trait]
 impl<B: BlockStoreDeleter + Sync + Send> BlockStoreDeleter for IntegrityBlockStore<B> {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
-        self.known_block_versions
-            .lock()
-            .unwrap()
-            .mark_block_as_deleted(*id);
-        self.underlying_block_store.remove(id).await
+        let mut block_info_guard = self.integrity_data.lock_block_info(*id).await;
+        let remove_result = self.underlying_block_store.remove(id).await?;
+        // Only mark block as deleted after we know the operation succeeded
+        block_info_guard
+            .value_or_insert_with(|| BlockInfo::new_unknown(self.integrity_data.my_client_id()))
+            .mark_block_as_deleted();
+        Ok(remove_result)
     }
 }
 
@@ -175,26 +235,64 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send> OptimizedBlockStoreWriter
     }
 
     async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<TryCreateResult> {
-        let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store
+        let mut block_info_guard = self.integrity_data.lock_block_info(*id).await;
+        let (version_transaction, data) = self._prepend_header(
+            self.integrity_data.my_client_id(),
+            block_info_guard.value_or_insert_with(|| {
+                BlockInfo::new_unknown(self.integrity_data.my_client_id())
+            }),
+            id,
+            data.extract(),
+        );
+        let result = self
+            .underlying_block_store
             .try_create_optimized(id, B::BlockData::new(data))
-            .await
+            .await;
+        match result {
+            Ok(TryCreateResult::SuccessfullyCreated) => {
+                version_transaction.commit();
+                Ok(TryCreateResult::SuccessfullyCreated)
+            }
+            Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists) => {
+                version_transaction.cancel();
+                Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
+            }
+            Err(err) => {
+                version_transaction.cancel();
+                Err(err)
+            }
+        }
     }
 
     async fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
-        let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store
+        let mut block_info_guard = self.integrity_data.lock_block_info(*id).await;
+        let (version_transaction, data) = self._prepend_header(
+            self.integrity_data.my_client_id(),
+            block_info_guard.value_or_insert_with(|| {
+                BlockInfo::new_unknown(self.integrity_data.my_client_id())
+            }),
+            id,
+            data.extract(),
+        );
+        let result = self
+            .underlying_block_store
             .store_optimized(id, B::BlockData::new(data))
-            .await
+            .await;
+        match result {
+            Ok(()) => {
+                version_transaction.commit();
+                Ok(())
+            }
+            Err(err) => {
+                version_transaction.cancel();
+                Err(err)
+            }
+        }
     }
 }
 
-impl<B> IntegrityBlockStore<B> {
-    fn _integrity_violation_detected(&self, reason: Error) -> Result<()> {
-        assert!(
-            reason.is::<IntegrityViolationError>(),
-            "This should only be called with an IntegrityViolationError"
-        );
+impl<B: Send> IntegrityBlockStore<B> {
+    fn _integrity_violation_detected(&self, reason: IntegrityViolationError) -> Result<()> {
         if self.config.allow_integrity_violations {
             warn!(
                 "Integrity violation (but integrity checks are disabled): {:?}",
@@ -202,22 +300,21 @@ impl<B> IntegrityBlockStore<B> {
             );
             Ok(())
         } else {
-            self.known_block_versions
-                .lock()
-                .unwrap()
+            self.integrity_data
                 .set_integrity_violation_in_previous_run();
-            (*self.config.on_integrity_violation)();
-            Err(reason)
+            (*self.config.on_integrity_violation)(&reason);
+            Err(reason.into())
         }
     }
 
-    fn _prepend_header(&self, id: &BlockId, mut data: Data) -> Data {
-        let (version, my_client_id) = {
-            let ref mut known_block_versions = self.known_block_versions.lock().unwrap();
-            let version = known_block_versions.increment_version(*id);
-            let my_client_id = known_block_versions.my_client_id();
-            (version, my_client_id)
-        };
+    fn _prepend_header<'a>(
+        &self,
+        my_client_id: ClientId,
+        block_info: &'a mut BlockInfo,
+        id: &BlockId,
+        mut data: Data,
+    ) -> (BlockVersionTransaction<'a>, Data) {
+        let version_transaction = block_info.start_increment_version_transaction(my_client_id);
 
         data.grow_region_fail_if_reallocation_necessary(HEADER_SIZE, 0).expect("Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header");
         let mut view = block_layout::View::new(data);
@@ -225,11 +322,17 @@ impl<B> IntegrityBlockStore<B> {
             .write(FORMAT_VERSION_HEADER);
         view.block_id_mut().copy_from_slice(id.data());
         view.last_update_client_id_mut().write(my_client_id);
-        view.block_version_mut().write(version);
-        view.into_storage()
+        view.block_version_mut()
+            .write(version_transaction.new_version());
+        (version_transaction, view.into_storage())
     }
 
-    fn _check_and_remove_header(&self, data: Data, expected_block_id: &BlockId) -> Result<Data> {
+    fn _check_and_remove_header(
+        &self,
+        block_info: &mut BlockInfo,
+        data: Data,
+        expected_block_id: &BlockId,
+    ) -> Result<Data> {
         ensure!(
             data.len() >= block_layout::data::OFFSET,
             "Block size is {} but we need at least {} to store the block header",
@@ -253,24 +356,27 @@ impl<B> IntegrityBlockStore<B> {
         }
         let last_update_client_id = view.last_update_client_id().read();
         let block_version = view.block_version().read();
-        match self
-            .known_block_versions
-            .lock()
-            .unwrap()
-            .check_and_update_version(last_update_client_id, block_id, block_version)
-        {
-            Ok(()) => (),
-            Err(err) if err.is::<IntegrityViolationError>() => {
-                // IntegrityViolationErrors are channeled through _integrity_violation_detected
-                // so that we can silence them if integrity checking is disabled.
-                self._integrity_violation_detected(err)?;
-            }
-            Err(err) => Err(err)?,
-        }
 
         // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
         let mut data = view.into_storage();
         data.shrink_to_subregion(block_layout::data::OFFSET..);
+
+        // Only update version after we know the operation succeeded
+        let update =
+            block_info.check_and_update_version(last_update_client_id, block_id, block_version);
+        match update {
+            Ok(()) => (),
+            Err(err) if err.is::<IntegrityViolationError>() => {
+                // IntegrityViolationErrors are channeled through _integrity_violation_detected
+                // so that we can silence them if integrity checking is disabled.
+                self._integrity_violation_detected(
+                    err.downcast::<IntegrityViolationError>()
+                        .expect("We just checked the error type above but now it's different"),
+                )?;
+            }
+            Err(err) => Err(err)?,
+        }
+
         Ok(data)
     }
 }
@@ -278,4 +384,59 @@ impl<B> IntegrityBlockStore<B> {
 impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send> BlockStore
     for IntegrityBlockStore<B>
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use tempdir::TempDir;
+
+    use crate::instantiate_blockstore_tests;
+
+    struct TestFixture {
+        store: Option<AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>>,
+        _integrity_file_dir: TempDir,
+    }
+    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
+        type ConcreteBlockStore = AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>;
+        fn new() -> Self {
+            let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
+            let store = IntegrityBlockStore::new(
+                InMemoryBlockStore::new(),
+                integrity_file_dir
+                    .path()
+                    .join("integrity_file")
+                    .to_path_buf(),
+                ClientId { id: 1 },
+                IntegrityConfig {
+                    allow_integrity_violations: false,
+                    missing_block_is_integrity_violation: true,
+                    on_integrity_violation: Box::new(|err| {
+                        panic!("Integrity violation: {:?}", err)
+                    }),
+                },
+            )
+            .unwrap();
+            Self {
+                _integrity_file_dir: integrity_file_dir,
+                store: Some(store),
+            }
+        }
+        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
+            self.store.as_mut().expect("Already dropped")
+        }
+    }
+
+    impl Drop for TestFixture {
+        fn drop(&mut self) {
+            // Using futures::executor::block_on within a tokio runtime isn't great, but good enough for unit tests.
+            // See also https://stackoverflow.com/questions/71541765/rust-async-drop
+            futures::executor::block_on(self.store.take().expect("Already dropped").async_drop()).unwrap();
+        }
+    }
+
+    instantiate_blockstore_tests!(TestFixture);
+
+    // TODO Add tests with other integrity configs, e.g. combinations of bool AllowIntegrityViolations, bool MissingBlockIsIntegrityViolation
 }

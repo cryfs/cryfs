@@ -1,9 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{future, stream::{self, Stream, StreamExt, TryStreamExt}};
+use futures::{
+    future,
+    stream::{self, Stream, StreamExt, TryStreamExt},
+};
+use std::collections::HashSet;
 use std::fmt::{self, Debug};
 use std::pin::Pin;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::blockstore::BlockId;
@@ -11,7 +14,7 @@ use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod cache;
-use cache::{BlockCache, BlockCacheEntryGuard, CacheEntryState, BlockBaseStoreState};
+use cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
 pub struct Block<B: super::low_level::BlockStore + Send + Sync + 'static> {
     cache_entry: BlockCacheEntryGuard<B>,
@@ -88,12 +91,15 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
         // TODO Cache non-existence?
         let mut cache_entry = self.cache.async_lock(block_id).await;
         if cache_entry.is_none() {
-            let loaded = self
-                .base_store
-                .load(&block_id)
-                .await?;
+            let loaded = self.base_store.load(&block_id).await?;
             if let Some(loaded) = loaded {
-                self.cache.set_entry(&self.base_store, &mut cache_entry, loaded, CacheEntryState::Clean, BlockBaseStoreState::ExistsInBaseStore);
+                self.cache.set_entry(
+                    &self.base_store,
+                    &mut cache_entry,
+                    loaded,
+                    CacheEntryState::Clean,
+                    BlockBaseStoreState::ExistsInBaseStore,
+                );
             }
         }
         if cache_entry.is_some() {
@@ -112,7 +118,13 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
         if self.base_store.exists(block_id).await? {
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
-        self.cache.set_entry(&self.base_store, &mut cache_entry, data.clone(), CacheEntryState::Dirty, BlockBaseStoreState::DoesntExistInBaseStore);
+        self.cache.set_entry(
+            &self.base_store,
+            &mut cache_entry,
+            data.clone(),
+            CacheEntryState::Dirty,
+            BlockBaseStoreState::DoesntExistInBaseStore,
+        );
         Ok(TryCreateResult::SuccessfullyCreated)
     }
 
@@ -128,7 +140,15 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
         };
 
         // Add the new value to the cache.
-        self.cache.set_or_overwrite_entry_even_if_dirty(&self.base_store, &mut cache_entry, data.clone(), CacheEntryState::Dirty, exists_in_base_store).await?;
+        self.cache
+            .set_or_overwrite_entry_even_if_dirty(
+                &self.base_store,
+                &mut cache_entry,
+                data.clone(),
+                CacheEntryState::Dirty,
+                exists_in_base_store,
+            )
+            .await?;
 
         Ok(())
     }
@@ -140,22 +160,21 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
 
         // Remove from cache
         // TODO This is dangerous, we could accidentally drop the cache entry lock if we put it into the let binding by value but it needs to be held while we remove from the base store. Instead make removed_from_base_store a lambda and invoke it from in here?
-        let (removed_from_cache, should_remove_from_base_store) = if let Some(cache_entry) = &*cache_entry_guard {
-            let should_remove_from_base_store = cache_entry.block_exists_in_base_store() == BlockBaseStoreState::ExistsInBaseStore;
-            self.cache.delete_entry_from_cache_even_if_dirty(&mut cache_entry_guard);
-            (true, should_remove_from_base_store)
-        } else {
-            (false, true)
-        };
+        let (removed_from_cache, should_remove_from_base_store) =
+            if let Some(cache_entry) = &*cache_entry_guard {
+                let should_remove_from_base_store = cache_entry.block_exists_in_base_store()
+                    == BlockBaseStoreState::ExistsInBaseStore;
+                self.cache
+                    .delete_entry_from_cache_even_if_dirty(&mut cache_entry_guard);
+                (true, should_remove_from_base_store)
+            } else {
+                (false, true)
+            };
 
         let removed_from_base_store = if should_remove_from_base_store {
             match self.base_store.remove(block_id).await? {
-                crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved => {
-                    true
-                }
-                crate::blockstore::low_level::RemoveResult::NotRemovedBecauseItDoesntExist => {
-                    false
-                }
+                crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved => true,
+                crate::blockstore::low_level::RemoveResult::NotRemovedBecauseItDoesntExist => false,
             }
         } else {
             false
@@ -171,7 +190,8 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
     // Note: for any blocks that are created or removed while the returned stream is running,
     // we don't give any guarantees for whether they're counted or not.
     pub async fn num_blocks(&self) -> Result<u64> {
-        Ok(self.base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
+        Ok(self.base_store.num_blocks().await?
+            + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
     pub fn estimate_num_free_bytes(&self) -> Result<u64> {
@@ -191,9 +211,13 @@ impl<B: super::low_level::BlockStore + Send + Sync + 'static> LockingBlockStore<
         let blocks_in_base_store = self.base_store.all_blocks().await?;
 
         let blocks_in_cache_set: HashSet<_> = blocks_in_cache.iter().copied().collect();
-        let blocks_in_base_store_and_not_in_cache = blocks_in_base_store.try_filter(move |block_id| future::ready(!blocks_in_cache_set.contains(block_id)));
+        let blocks_in_base_store_and_not_in_cache = blocks_in_base_store
+            .try_filter(move |block_id| future::ready(!blocks_in_cache_set.contains(block_id)));
 
-        Ok(Box::pin(stream::iter(blocks_in_cache.into_iter().map(Ok)).chain(blocks_in_base_store_and_not_in_cache)))
+        Ok(Box::pin(
+            stream::iter(blocks_in_cache.into_iter().map(Ok))
+                .chain(blocks_in_base_store_and_not_in_cache),
+        ))
     }
 
     pub async fn create(&self, data: &Data) -> Result<()> {

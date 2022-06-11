@@ -51,7 +51,8 @@ impl Cipher for Aes256Gcm {
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Use binary-layout here?
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
+        let ciphertext_size =
+            plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let nonce = self.cipher.gen_initial_nonce();
         let auth_tag = self
             .cipher
@@ -68,15 +69,19 @@ impl Cipher for Aes256Gcm {
         ciphertext.grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD_PREFIX, Self::CIPHERTEXT_OVERHEAD_SUFFIX).context(
             "Tried to add prefix and suffix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
         ciphertext[..Self::CIPHERTEXT_OVERHEAD_PREFIX].copy_from_slice(nonce.as_ref());
-        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..].copy_from_slice(auth_tag.as_ref());
+        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..]
+            .copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
         let ciphertext_len = ciphertext.len();
-        let (nonce, rest) = ciphertext.as_mut().split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
-        let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
+        let (nonce, rest) = ciphertext
+            .as_mut()
+            .split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
+        let (cipherdata, auth_tag) =
+            rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
         let nonce = Nonce::from_slice(nonce).expect("Wrong nonce size");
         let auth_tag = Tag::from_slice(auth_tag).expect("Wrong auth tag size");
         self.cipher
@@ -92,7 +97,9 @@ impl Cipher for Aes256Gcm {
             )
             .map_err(|()| anyhow!("Decrypting data failed"))?;
         let mut plaintext = ciphertext;
-        plaintext.shrink_to_subregion(Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX));
+        plaintext.shrink_to_subregion(
+            Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX),
+        );
         assert_eq!(
             ciphertext_len
                 .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)

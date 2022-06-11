@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use futures::stream::Stream;
 use futures::TryStreamExt;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use super::high_level::{self, Block, LockingBlockStore};
@@ -13,11 +13,10 @@ use super::low_level::{
     inmemory::InMemoryBlockStore,
     integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
     ondisk::OnDiskBlockStore,
-    BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    OptimizedBlockStoreWriter,
+    BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, OptimizedBlockStoreWriter,
 };
 use crate::blockstore::{BlockId, BLOCKID_LEN};
-use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey, self, CipherCallback};
+use crate::crypto::symmetric::{self, Aes256Gcm, Cipher, CipherCallback, EncryptionKey};
 use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
 
@@ -65,8 +64,23 @@ mod ffi {
         fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge>;
 
         fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
-        fn new_locking_integrity_encrypted_ondisk_blockstore(integrity_file_path: &str, my_client_id: u32, allow_integrity_violations: bool, missing_block_is_integrity_violation: bool, cipher_name: &str, encryption_key_hex: &str, basedir: &str) -> Result<Box<RustBlockStoreBridge>>;
-        fn new_locking_integrity_encrypted_inmemory_blockstore(integrity_file_path: &str, my_client_id: u32, allow_integrity_violations: bool, missing_block_is_integrity_violation: bool, cipher_name: &str, encryption_key_hex: &str) -> Result<Box<RustBlockStoreBridge>>;
+        fn new_locking_integrity_encrypted_ondisk_blockstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+            basedir: &str,
+        ) -> Result<Box<RustBlockStoreBridge>>;
+        fn new_locking_integrity_encrypted_inmemory_blockstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+        ) -> Result<Box<RustBlockStoreBridge>>;
     }
 
     #[namespace = "blockstore::rust::bridge"]
@@ -213,11 +227,9 @@ impl OptionRustBlockBridge {
     }
 
     fn extract_value(&mut self) -> Result<Box<RustBlockBridge>> {
-        log_errors(|| {
-            match self.0.take() {
-                None => bail!("OptionRustBlockBridge doesn't have a value"),
-                Some(data) => Ok(Box::new(data)),
-            }
+        log_errors(|| match self.0.take() {
+            None => bail!("OptionRustBlockBridge doesn't have a value"),
+            Some(data) => Ok(Box::new(data)),
         })
     }
 }
@@ -262,20 +274,18 @@ impl RustBlockStoreBridge {
     }
 
     fn try_create(&self, block_id: &BlockId, data: &[u8]) -> Result<Box<OptionRustBlockBridge>> {
-        log_errors(|| {
-            TOKIO_RUNTIME.block_on(self._try_create(block_id, data))
-        })
+        log_errors(|| TOKIO_RUNTIME.block_on(self._try_create(block_id, data)))
     }
 
     fn load(&self, block_id: &BlockId) -> Result<Box<OptionRustBlockBridge>> {
-        log_errors(|| {
-            match TOKIO_RUNTIME.block_on(self._underlying().load(*block_id))? {
+        log_errors(
+            || match TOKIO_RUNTIME.block_on(self._underlying().load(*block_id))? {
                 Some(block) => Ok(Box::new(OptionRustBlockBridge(Some(RustBlockBridge::new(
                     block,
                 ))))),
                 None => Ok(Box::new(OptionRustBlockBridge(None))),
-            }
-        })
+            },
+        )
     }
 
     async fn _overwrite(&self, block_id: &BlockId, data: &[u8]) -> Result<Box<RustBlockBridge>> {
@@ -292,30 +302,24 @@ impl RustBlockStoreBridge {
     }
 
     fn overwrite(&self, block_id: &BlockId, data: &[u8]) -> Result<Box<RustBlockBridge>> {
-        log_errors(||
-            TOKIO_RUNTIME.block_on(self._overwrite(block_id, data))
-        )
+        log_errors(|| TOKIO_RUNTIME.block_on(self._overwrite(block_id, data)))
     }
 
     fn remove(&self, block_id: &BlockId) -> Result<bool> {
-        log_errors(|| {
-            match TOKIO_RUNTIME.block_on(self._underlying().remove(block_id))? {
+        log_errors(
+            || match TOKIO_RUNTIME.block_on(self._underlying().remove(block_id))? {
                 high_level::RemoveResult::SuccessfullyRemoved => Ok(true),
                 high_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
-            }
-        })
+            },
+        )
     }
 
     fn num_blocks(&self) -> Result<u64> {
-        log_errors(|| {
-            TOKIO_RUNTIME.block_on(self._underlying().num_blocks())
-        })
+        log_errors(|| TOKIO_RUNTIME.block_on(self._underlying().num_blocks()))
     }
 
     fn estimate_num_free_bytes(&self) -> Result<u64> {
-        log_errors(|| {
-            self._underlying().estimate_num_free_bytes()
-        })
+        log_errors(|| self._underlying().estimate_num_free_bytes())
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
@@ -407,11 +411,9 @@ impl RustBlockStore2Bridge {
         })
     }
     fn remove(&self, id: &BlockId) -> Result<bool> {
-        log_errors(|| {
-            match TOKIO_RUNTIME.block_on(self.0.remove(id))? {
-                low_level::RemoveResult::SuccessfullyRemoved => Ok(true),
-                low_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
-            }
+        log_errors(|| match TOKIO_RUNTIME.block_on(self.0.remove(id))? {
+            low_level::RemoveResult::SuccessfullyRemoved => Ok(true),
+            low_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
         })
     }
     fn load(&self, id: &BlockId) -> Result<Box<OptionData>> {
@@ -427,14 +429,10 @@ impl RustBlockStore2Bridge {
         })
     }
     fn num_blocks(&self) -> Result<u64> {
-        log_errors(|| {
-            Ok(TOKIO_RUNTIME.block_on(self.0.num_blocks()).unwrap())
-        })
+        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.num_blocks()).unwrap()))
     }
     fn estimate_num_free_bytes(&self) -> Result<u64> {
-        log_errors(|| {
-            self.0.estimate_num_free_bytes()
-        })
+        log_errors(|| self.0.estimate_num_free_bytes())
     }
     fn block_size_from_physical_block_size(&self, block_size: u64) -> u64 {
         // In C++, the convention was to return 0 instead of an error,
@@ -488,7 +486,7 @@ fn new_integrity_inmemory_blockstore(
                 IntegrityConfig {
                     allow_integrity_violations: false,
                     missing_block_is_integrity_violation: true,
-                    on_integrity_violation: Box::new(|| {}),
+                    on_integrity_violation: Box::new(|_| {}),
                 },
             )?,
         ))))
@@ -518,59 +516,101 @@ struct _BlockStoreCreator<'a, B> {
     base_store: B,
 }
 
-impl <'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> CipherCallback for _BlockStoreCreator<'a, B> {
+impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> CipherCallback
+    for _BlockStoreCreator<'a, B>
+{
     type Result = Result<Box<RustBlockStoreBridge>>;
 
     fn callback<C: Cipher + Send + Sync + 'static>(self) -> Result<Box<RustBlockStoreBridge>> {
-        Ok(Box::new(RustBlockStoreBridge(Some(LockingBlockStore::new(
-            DynBlockStore(
-                Box::new(
-                    IntegrityBlockStore::new(
-                        EncryptedBlockStore::new(
-                            self.base_store,
-                            C::new(EncryptionKey::<C::KeySize>::from_hex(self.encryption_key_hex)?),
-                        ),
-                        self.integrity_file_path,
-                        self.my_client_id,
-                        self.integrity_config,
-                    )?,
-                )
-            )
-        )))))
+        Ok(Box::new(RustBlockStoreBridge(Some(
+            LockingBlockStore::new(DynBlockStore(Box::new(IntegrityBlockStore::new(
+                EncryptedBlockStore::new(
+                    self.base_store,
+                    C::new(EncryptionKey::<C::KeySize>::from_hex(
+                        self.encryption_key_hex,
+                    )?),
+                ),
+                self.integrity_file_path,
+                self.my_client_id,
+                self.integrity_config,
+            )?))),
+        ))))
     }
 }
 
-fn _new_locking_integrity_encrypted_blockstore(integrity_file_path: &str, my_client_id: u32, allow_integrity_violations: bool, missing_block_is_integrity_violation: bool, cipher_name: &str, encryption_key_hex: &str, base_store: impl BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static) -> Result<Box<RustBlockStoreBridge>> {
-    symmetric::lookup_cipher(cipher_name, _BlockStoreCreator {
-        integrity_file_path: Path::new(integrity_file_path).to_path_buf(),
-        my_client_id: ClientId{id: my_client_id},
-        integrity_config: IntegrityConfig {
+fn _new_locking_integrity_encrypted_blockstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    base_store: impl BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static,
+) -> Result<Box<RustBlockStoreBridge>> {
+    symmetric::lookup_cipher(
+        cipher_name,
+        _BlockStoreCreator {
+            integrity_file_path: Path::new(integrity_file_path).to_path_buf(),
+            my_client_id: ClientId { id: my_client_id },
+            integrity_config: IntegrityConfig {
+                allow_integrity_violations,
+                missing_block_is_integrity_violation,
+                on_integrity_violation: Box::new(|_| {
+                    // TODO
+                    todo!()
+                }),
+            },
+            encryption_key_hex,
+            base_store,
+        },
+    )
+}
+
+fn new_locking_integrity_encrypted_ondisk_blockstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    basedir: &str,
+) -> Result<Box<RustBlockStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        _new_locking_integrity_encrypted_blockstore(
+            integrity_file_path,
+            my_client_id,
             allow_integrity_violations,
             missing_block_is_integrity_violation,
-            on_integrity_violation: Box::new(|| {
-                // TODO
-                todo!()
-            }),
-        },
-        encryption_key_hex,
-        base_store,
+            cipher_name,
+            encryption_key_hex,
+            OnDiskBlockStore::new(Path::new(basedir).to_path_buf()),
+        )
     })
 }
 
-fn new_locking_integrity_encrypted_ondisk_blockstore(integrity_file_path: &str, my_client_id: u32, allow_integrity_violations: bool, missing_block_is_integrity_violation: bool, cipher_name: &str, encryption_key_hex: &str, basedir: &str) -> Result<Box<RustBlockStoreBridge>> {
+fn new_locking_integrity_encrypted_inmemory_blockstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+) -> Result<Box<RustBlockStoreBridge>> {
     LOGGER_INIT.ensure_initialized();
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        _new_locking_integrity_encrypted_blockstore(integrity_file_path, my_client_id, allow_integrity_violations, missing_block_is_integrity_violation, cipher_name, encryption_key_hex, OnDiskBlockStore::new(Path::new(basedir).to_path_buf()))
-    })
-}
-
-fn new_locking_integrity_encrypted_inmemory_blockstore(integrity_file_path: &str, my_client_id: u32, allow_integrity_violations: bool, missing_block_is_integrity_violation: bool, cipher_name: &str, encryption_key_hex: &str) -> Result<Box<RustBlockStoreBridge>> {
-    LOGGER_INIT.ensure_initialized();
-    let _init_tokio = TOKIO_RUNTIME.enter();
-
-    log_errors(|| {
-        _new_locking_integrity_encrypted_blockstore(integrity_file_path, my_client_id, allow_integrity_violations, missing_block_is_integrity_violation, cipher_name, encryption_key_hex, InMemoryBlockStore::new())
+        _new_locking_integrity_encrypted_blockstore(
+            integrity_file_path,
+            my_client_id,
+            allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            cipher_name,
+            encryption_key_hex,
+            InMemoryBlockStore::new(),
+        )
     })
 }

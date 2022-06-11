@@ -135,3 +135,27 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
 }
 
 impl BlockStore for InMemoryBlockStore {}
+
+#[cfg(test)]
+mod tests {
+    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+
+    use crate::instantiate_blockstore_tests;
+
+    struct TestFixture {
+        store: InMemoryBlockStore,
+    }
+    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
+        type ConcreteBlockStore = InMemoryBlockStore;
+        fn new() -> Self {
+            Self {
+                store: InMemoryBlockStore::new(),
+            }
+        }
+        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
+            &mut self.store
+        }
+    }
+
+    instantiate_blockstore_tests!(TestFixture);
+}

@@ -15,6 +15,12 @@ pub trait BinaryReadExt: Sized {
     /// is fully used. This function will return an error if the stream has more data
     /// after the object.
     fn deserialize_from_complete_stream(source: &mut (impl Read + Seek)) -> Result<Self>;
+
+    /// Deserialize the object from the given file and ensure that the file
+    /// is fully used. This function will return an error if the file has more data
+    /// after the object.
+    /// If the file doesn't exist, `None` is returned.
+    fn deserialize_from_file(file_path: &Path) -> Result<Option<Self>>;
 }
 
 impl<T: BinRead<Args = ()> + Sized> BinaryReadExt for T {
@@ -37,6 +43,16 @@ impl<T: BinRead<Args = ()> + Sized> BinaryReadExt for T {
         ensure_stream_is_complete(source)?;
         Ok(result)
     }
+
+    fn deserialize_from_file(file_path: &Path) -> Result<Option<Self>> {
+        match File::open(file_path) {
+            Ok(file) => Ok(Some(Self::deserialize_from_complete_stream(
+                &mut BufReader::new(file),
+            )?)),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+            Err(err) => Err(err.into()),
+        }
+    }
 }
 
 fn ensure_stream_is_complete(stream: &mut (impl Read + Seek)) -> Result<()> {
@@ -53,26 +69,6 @@ fn ensure_stream_is_complete(stream: &mut (impl Read + Seek)) -> Result<()> {
         remaining_bytes
     );
     Ok(())
-}
-
-/// Extension trait to deserialize an object from a stream.
-/// This adds some additional functions to [BinaryReadExt]
-/// for the case where the object implements [Default].
-pub trait BinaryReadDefaultExt: Sized {
-    /// Deserialize the object from the given file and ensure that the file
-    /// is fully used. This function will return an error if the file has more data
-    /// after the object.
-    fn deserialize_from_file_or_default(file_path: &Path) -> Result<Self>;
-}
-
-impl<T: BinRead<Args = ()> + Default + Sized> BinaryReadDefaultExt for T {
-    fn deserialize_from_file_or_default(file_path: &Path) -> Result<Self> {
-        match File::open(file_path) {
-            Ok(file) => Self::deserialize_from_complete_stream(&mut BufReader::new(file)),
-            Err(err) if err.kind() == ErrorKind::NotFound => Ok(Self::default()),
-            Err(err) => Err(err.into()),
-        }
-    }
 }
 
 /// Extension trait to serialize an object into a stream or a file.
@@ -373,7 +369,7 @@ mod tests {
         }
     }
 
-    mod deserialize_from_file_or_default {
+    mod deserialize_from_file {
         use super::*;
         use tempdir::TempDir;
 
@@ -381,8 +377,7 @@ mod tests {
         fn nonexisting_file() {
             let tempdir = TempDir::new("").unwrap();
             let file_path = tempdir.path().join("file");
-            let loaded = MyStruct::deserialize_from_file_or_default(&file_path).unwrap();
-            assert_eq!(MyStruct::default(), loaded);
+            assert_eq!(None, MyStruct::deserialize_from_file(&file_path).unwrap());
         }
 
         #[test]
@@ -394,8 +389,8 @@ mod tests {
                 field2: 10,
             };
             object.serialize_to_file(&file_path).unwrap();
-            let loaded = MyStruct::deserialize_from_file_or_default(&file_path).unwrap();
-            assert_eq!(object, loaded);
+            let loaded = MyStruct::deserialize_from_file(&file_path).unwrap();
+            assert_eq!(Some(object), loaded);
         }
     }
 

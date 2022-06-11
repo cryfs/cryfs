@@ -60,9 +60,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.55"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "159bb86af3a200e19a068f4224eae4c8bb2d0fa054c7e5d1cacd5cef95e684cd"
+checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
 
 [[package]]
 name = "array-init"
@@ -333,9 +333,10 @@ dependencies = [
  "itertools",
  "lazy_static",
  "libc",
+ "lockable",
  "log",
  "lru",
- "owning_ref",
+ "owning_ref_lockable",
  "paste 1.0.6",
  "rand 0.8.5",
  "region",
@@ -703,6 +704,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "lockable"
+version = "0.0.2"
+source = "git+https://github.com/smessmer/lockable?rev=945145b07ea924f16d01e9e8eab5329aea98b73f#945145b07ea924f16d01e9e8eab5329aea98b73f"
+dependencies = [
+ "anyhow",
+ "owning_ref_lockable",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -775,9 +787,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "owning_ref"
-version = "0.4.1"
-source = "git+https://github.com/smessmer/owning-ref-rs?rev=4f1d11353fbebbd3f05d5d7b879c0906c4e0759e#4f1d11353fbebbd3f05d5d7b879c0906c4e0759e"
+name = "owning_ref_lockable"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6e541805afb3c88b99843162a5cd14aff5db3c50cb7ea6d9a1bad3d3ffacd7b"
 dependencies = [
  "stable_deref_trait",
 ]

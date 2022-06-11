@@ -10,8 +10,8 @@ use tokio::time::{Duration, Instant};
 
 use super::error::TryLockError;
 use super::guard::{Guard, GuardImpl, OwnedGuard};
+use crate::utils::locked_mutex_guard::LockedMutexGuard;
 use crate::utils::lru_into_iter::LruCacheIntoIter;
-use crate::utils::mutex::LockedMutexGuard;
 
 // TODO Fix code samples in documentation
 
@@ -59,7 +59,7 @@ impl<V> Debug for CacheEntry<V> {
 /// # })().unwrap();
 /// ```
 ///
-/// You can use an arbitrary type to index locks by, as long as that type implements [PartialEq] + [Eq] + [Hash] + [Clone] + [Debug].
+/// You can use an arbitrary type to index cache entries by, as long as that type implements [PartialEq] + [Eq] + [Hash] + [Clone] + [Debug].
 ///
 /// ```
 /// use lockpool::{LockPool, SyncLockPool};
@@ -88,10 +88,13 @@ where
     // - Any entries not currently locked will never be None. None is only entered
     //   into the cache to denote values that are currrently locked but don't actually
     //   have data in the cache. This invariant is mostly meant to clean up space.
-    // - The timestamps in CacheEntry will follow the same order as the LRU order of the cache
+    // - The timestamps in CacheEntry will follow the same order as the LRU order of the cache,
+    //   with an exception for currently locked entries that may be temporarily out of order
+    //   while the entry is locked.
     // - We never hand the inner Arc around a cache entry out of the encapsulation of this class,
     //   except through non-cloneable Guard objects encapsulating those Arcs.
     //   This allows us to reason about which threads can or cannot increase the refcounts.
+    // TODO Use the lockable crate instead
     cache_entries: std::sync::Mutex<LruCache<K, Arc<tokio::sync::Mutex<CacheEntry<V>>>>>,
 }
 
@@ -126,7 +129,7 @@ where
     /// Upon returning, the thread is the only thread with the lock held. A RAII guard is returned to allow scoped unlock
     /// of the lock. When the guard goes out of scope, the lock will be unlocked.
     ///
-    /// This function can be used from non-async contexts but will panic if used from async contexts.
+    /// This function can only be used from non-async contexts and will panic if used from async contexts.
     ///
     /// The exact behavior on locking a lock in the thread which already holds the lock is left unspecified.
     /// However, this function will not return on the second call (it might panic or deadlock, for example).
@@ -289,7 +292,7 @@ where
         let entry = cache_entries
             // TODO Remove clone()
             .get_or_insert(key.clone(), || {
-                Arc::new(tokio::sync::Mutex::new(CacheEntry {        
+                Arc::new(tokio::sync::Mutex::new(CacheEntry {
                     last_unlocked: Instant::now(),
                     value: None,
                 }))
@@ -452,7 +455,11 @@ where
     // TODO Test
     pub fn keys(&self) -> Vec<K> {
         let cache_entries = self._cache_entries();
-        cache_entries.iter().map(|(key, _value)| key).cloned().collect()
+        cache_entries
+            .iter()
+            .map(|(key, _value)| key)
+            .cloned()
+            .collect()
     }
 }
 

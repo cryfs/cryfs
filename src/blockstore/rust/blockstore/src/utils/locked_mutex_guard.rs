@@ -1,4 +1,4 @@
-use owning_ref::OwningHandle;
+use owning_ref_lockable::OwningHandle;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard, TryLockError};

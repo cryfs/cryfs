@@ -87,9 +87,17 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> Optimi
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> Self::BlockData {
-        let mut data =
-            B::allocate(FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX + size).extract();
-        data.shrink_to_subregion((FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX)..(data.len() - C::CIPHERTEXT_OVERHEAD_SUFFIX));
+        let mut data = B::allocate(
+            FORMAT_VERSION_HEADER.len()
+                + C::CIPHERTEXT_OVERHEAD_PREFIX
+                + C::CIPHERTEXT_OVERHEAD_SUFFIX
+                + size,
+        )
+        .extract();
+        data.shrink_to_subregion(
+            (FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX)
+                ..(data.len() - C::CIPHERTEXT_OVERHEAD_SUFFIX),
+        );
         BlockData::new(data)
     }
 
@@ -150,4 +158,36 @@ fn _prepend_header(mut data: Data) -> Data {
         );
     data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
     data
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use crate::crypto::symmetric::{Aes256Gcm, EncryptionKey};
+
+    use crate::instantiate_blockstore_tests;
+
+    struct TestFixture {
+        store: EncryptedBlockStore<Aes256Gcm, InMemoryBlockStore>,
+    }
+    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
+        type ConcreteBlockStore = EncryptedBlockStore<Aes256Gcm, InMemoryBlockStore>;
+        fn new() -> Self {
+            let key = EncryptionKey::from_hex(
+                "ab5e040141bca0da388c78b4c42ffa44ee15d31a28c8a86aaab5554f0a3c43f9",
+            )
+            .unwrap();
+            Self {
+                store: EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key)),
+            }
+        }
+        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
+            &mut self.store
+        }
+    }
+
+    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    
+    // TODO Add tests for encrypted block store using other ciphers and potentially a fake cipher
 }

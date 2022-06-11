@@ -12,7 +12,7 @@ use std::ops::{Bound, Deref, DerefMut, Range, RangeBounds};
 /// of the remaining data on to something else without having to copy it. The downside is that the
 /// header data isn't freed up - as long as any subregion of the original data exists somewhere,
 /// the whole data has to be kept in memory.
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub struct Data {
     storage: Vec<u8>,
     // region stores the subregion in the vector that we care for.
@@ -185,6 +185,20 @@ impl Deref for Data {
 impl DerefMut for Data {
     fn deref_mut(&mut self) -> &mut [u8] {
         self.as_mut()
+    }
+}
+
+// TODO Test
+impl PartialEq for Data {
+    fn eq(&self, other: &Data) -> bool {
+        self.as_ref() == other.as_ref()
+    }
+}
+
+#[cfg(test)]
+impl std::fmt::Debug for Data {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "Data({})", hex::encode_upper(self.as_ref()))
     }
 }
 
