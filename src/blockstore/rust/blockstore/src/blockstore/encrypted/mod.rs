@@ -92,7 +92,6 @@ impl<C: Cipher, B: BlockStore + OptimizedBlockStoreWriter> BlockStore
 
 impl<C: Cipher, B> EncryptedBlockStore<C, B> {
     fn _encrypt(&self, plaintext: Data) -> Result<Data> {
-        // TODO Avoid _prepend_header, instead directly encrypt into a pre-allocated cipherdata Vec<u8>
         let ciphertext = self.cipher.encrypt(plaintext)?;
         Ok(_prepend_header(ciphertext))
     }
