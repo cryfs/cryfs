@@ -31,6 +31,8 @@ set(SOURCES
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
   implementations/rustbridge/RustBlockStore2.cpp
+  implementations/rustbridge/RustBlockStore.cpp
+  implementations/rustbridge/RustBlock.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

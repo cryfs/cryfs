@@ -44,6 +44,7 @@ set(SOURCES
     implementations/rustbridge/RustBridgeIntegrityInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeCachingInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeOnDiskBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeLockingInMemoryBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
