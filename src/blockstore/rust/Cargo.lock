@@ -322,6 +322,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "libc",
+ "lockpool",
  "log",
  "paste 1.0.6",
  "rand 0.8.5",
@@ -680,6 +681,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "lockpool"
+version = "2.0.2"
+source = "git+https://github.com/smessmer/lockpool?rev=d706424c9a72d9c5ad69f3b8634413bbf764e633#d706424c9a72d9c5ad69f3b8634413bbf764e633"
+dependencies = [
+ "async-trait",
+ "owning_ref",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -742,6 +754,14 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "owning_ref"
+version = "0.4.1"
+source = "git+https://github.com/smessmer/owning-ref-rs.git?rev=33b9630201751021958405ac956d5f2ea23f4909#33b9630201751021958405ac956d5f2ea23f4909"
+dependencies = [
+ "stable_deref_trait",
+]
 
 [[package]]
 name = "paste"
@@ -1046,6 +1066,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "static_assertions"
