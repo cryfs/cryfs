@@ -5,7 +5,7 @@ use std::path::Path;
 
 use super::{
     encrypted::EncryptedBlockStore, inmemory::InMemoryBlockStore, ondisk::OnDiskBlockStore,
-    BlockStore2,
+    BlockStore,
 };
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
 
@@ -86,7 +86,7 @@ impl OptionData {
     }
 }
 
-struct RustBlockStore2Bridge(Box<dyn BlockStore2>);
+struct RustBlockStore2Bridge(Box<dyn BlockStore>);
 
 impl RustBlockStore2Bridge {
     fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
