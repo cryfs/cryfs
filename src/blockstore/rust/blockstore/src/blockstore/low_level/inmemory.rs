@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
 
-use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
+use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter, RemoveResult, TryCreateResult};
 
 use super::block_data::IBlockData;
 use crate::data::Data;
@@ -73,13 +73,16 @@ impl BlockStoreReader for InMemoryBlockStore {
 
 #[async_trait]
 impl BlockStoreDeleter for InMemoryBlockStore {
-    async fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         let mut blocks = self
             .blocks
             .write()
             .map_err(|_| anyhow!("Failed to acquire lock"))?;
         let remove_result = blocks.remove(id);
-        Ok(remove_result.is_some())
+        match remove_result {
+            Some(_) => Ok(RemoveResult::SuccessfullyRemoved),
+            None => Ok(RemoveResult::NotRemovedBecauseItDoesntExist)
+        }
     }
 }
 
@@ -93,20 +96,20 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         BlockData::new(Data::from(vec![0; size]))
     }
 
-    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<TryCreateResult> {
         let mut blocks = self
             .blocks
             .write()
             .map_err(|_| anyhow!("Failed to acquire lock"))?;
         if blocks.contains_key(id) {
-            Ok(false)
+            Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
         } else {
             let insert_result = blocks.insert(id.clone(), data.extract());
             assert!(
                 insert_result.is_none(),
                 "We just checked above that this key doesn't exist, why does it exist now?"
             );
-            Ok(true)
+            Ok(TryCreateResult::SuccessfullyCreated)
         }
     }
 

@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
-    BLOCKID_LEN,
+    BLOCKID_LEN, RemoveResult, TryCreateResult,
 };
 
 mod known_block_versions;
@@ -146,7 +146,7 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
 
 #[async_trait]
 impl<B: BlockStoreDeleter + Sync + Send> BlockStoreDeleter for IntegrityBlockStore<B> {
-    async fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.known_block_versions
             .lock()
             .unwrap()
@@ -164,13 +164,12 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send> OptimizedBlockStoreWriter
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
-        let data = B::allocate(HEADER_SIZE + size)
-            .extract()
-            .into_subregion(HEADER_SIZE..);
+        let mut data = B::allocate(HEADER_SIZE + size).extract();
+        data.shrink_to_subregion(HEADER_SIZE..);
         BlockData::new(data)
     }
 
-    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<TryCreateResult> {
         let data = self._prepend_header(id, data.extract());
         self.underlying_block_store
             .try_create_optimized(id, B::BlockData::new(data))
@@ -207,7 +206,7 @@ impl<B> IntegrityBlockStore<B> {
         }
     }
 
-    fn _prepend_header(&self, id: &BlockId, data: Data) -> Data {
+    fn _prepend_header(&self, id: &BlockId, mut data: Data) -> Data {
         let (version, my_client_id) = {
             let ref mut known_block_versions = self.known_block_versions.lock().unwrap();
             let version = known_block_versions.increment_version(*id);
@@ -215,9 +214,7 @@ impl<B> IntegrityBlockStore<B> {
             (version, my_client_id)
         };
 
-        let data = data.grow_region(HEADER_SIZE, 0).expect(
-            "Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header",
-        );
+        data.grow_region_fail_if_reallocation_necessary(HEADER_SIZE, 0).expect("Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header");
         let mut view = block_layout::View::new(data);
         view.format_version_header_mut()
             .write(FORMAT_VERSION_HEADER);
@@ -267,9 +264,9 @@ impl<B> IntegrityBlockStore<B> {
         }
 
         // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
-        Ok(view
-            .into_storage()
-            .into_subregion(block_layout::data::OFFSET..))
+        let mut data = view.into_storage();
+        data.shrink_to_subregion(block_layout::data::OFFSET..);
+        Ok(data)
     }
 }
 

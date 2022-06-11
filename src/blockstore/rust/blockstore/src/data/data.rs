@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::ops::{Bound, Deref, DerefMut, Range, RangeBounds};
 
 /// An instance of data owns a block of data. It implements `AsRef<[u8]>` and `AsMut<[u8]>` to allow
-/// borrowing that data, and it has a [Data::into_subregion] function that cuts away bytes at either
+/// borrowing that data, and it has a [Data::shrink_to_subregion] function that cuts away bytes at either
 /// end of the block and returns a [Data] instance that (semantically) owns a subrange of the original
 /// [Data] instance. This works without copying. Implementation wise, the new instance still owns and
 /// holds all of the data, just the accessors got limited to a smaller subrange.
@@ -16,7 +16,7 @@ use std::ops::{Bound, Deref, DerefMut, Range, RangeBounds};
 pub struct Data {
     storage: Vec<u8>,
     // region stores the subregion in the vector that we care for.
-    // TODO We're probably safer with an invariant that 0 <= range.start <= range.end <= storage.len(). Otherwise we'd have to think about the other case everywhere.
+    // Invariant: 0 <= range.start <= range.end <= storage.len()
     region: Range<usize>,
 }
 
@@ -34,7 +34,7 @@ impl Data {
     /// Note, however, that this is implemented by keeping all of the original data in memory and just
     /// changing the behavior of the accessors. The memory will only be freed once the subregion instance
     /// gets dropped.
-    pub fn into_subregion(self, range: impl RangeBounds<usize> + Debug) -> Self {
+    pub fn shrink_to_subregion(&mut self, range: impl RangeBounds<usize> + Debug) {
         let start_bound_diff = match range.start_bound() {
             Bound::Unbounded => 0,
             Bound::Included(&x) => x,
@@ -60,30 +60,67 @@ impl Data {
                 .checked_sub(x)
                 .unwrap_or_else(panic_end_out_of_bounds),
         };
-        Self {
-            storage: self.storage,
-            region: Range {
-                start: self.region.start + start_bound_diff,
-                end: self.region.end - end_bound_diff,
-            },
-        }
+        self.region = Range {
+            start: self.region.start + start_bound_diff,
+            end: self.region.end - end_bound_diff,
+        };
+        self._assert_range_invariant();
     }
 
     /// Grow the subregion by adding more bytes to the beginning or end of the current region.
-    /// This is the inverse of [Data::into_subregion].
+    /// This is the inverse of [Data::shrink_to_subregion].
     ///
     /// This function does not copy and will only succeed if there is enough space in the storage.
     // TODO Test
-    pub fn grow_region(self, add_prefix_bytes: usize, add_suffix_bytes: usize) -> Result<Data> {
-        ensure!(add_prefix_bytes <= self.region.start, "Tried to grow a Data object beyond its bounds. It only has {} prefix bytes available but {} were requested.", self.region.start, add_prefix_bytes);
-        ensure!(add_suffix_bytes + self.region.end <= self.storage.len(), "Tried to grow a Data object beyond its bounds. It only has {} suffix bytes available but {} were requested.", self.storage.len().saturating_sub(self.region.end), add_suffix_bytes);
-        Ok(Self {
-            storage: self.storage,
-            region: Range {
-                start: self.region.start - add_prefix_bytes,
-                end: self.region.end + add_suffix_bytes,
-            },
-        })
+    pub fn _grow_region(&mut self, add_prefix_bytes: usize, add_suffix_bytes: usize) {
+        self.reserve(add_prefix_bytes, add_suffix_bytes);
+
+        self.grow_region_fail_if_reallocation_necessary(add_prefix_bytes, add_suffix_bytes)
+            .expect("We just reserved enough prefix/suffix bytes but it still failed");
+    }
+
+    // TODO Test
+    pub fn grow_region_fail_if_reallocation_necessary(
+        &mut self,
+        add_prefix_bytes: usize,
+        add_suffix_bytes: usize,
+    ) -> Result<()> {
+        ensure!(
+            self.region.start >= add_prefix_bytes,
+            "Tried to add {} prefix bytes but only {} are available",
+            add_prefix_bytes,
+            self.region.start
+        );
+        ensure!(
+            self.region.end + add_suffix_bytes <= self.storage.len(),
+            "Tried to add {} suffix bytes but only {} are available",
+            add_suffix_bytes,
+            self.storage.len() - self.region.end
+        );
+        self.region = Range {
+            start: self.region.start - add_prefix_bytes,
+            end: self.region.end + add_suffix_bytes,
+        };
+        self._assert_range_invariant();
+        Ok(())
+    }
+
+    pub fn reserve(&mut self, prefix_bytes: usize, suffix_bytes: usize) {
+        if self.region.start < prefix_bytes || self.region.end + suffix_bytes > self.storage.len() {
+            // We don't have enough prefix or suffix bytes. Need to reallocate.
+            let mut new_storage = Vec::new();
+            // TODO There may be a faster way without Vec::resize where we only have to zero out the prefix bytes and suffix bytes instead of the whole vector
+            new_storage.resize(prefix_bytes + self.region.len() + suffix_bytes, 0u8);
+            new_storage[prefix_bytes..(prefix_bytes + self.region.len())]
+                .copy_from_slice(self.as_ref());
+
+            self.storage = new_storage;
+            self.region = Range {
+                start: prefix_bytes,
+                end: prefix_bytes + self.region.len(),
+            };
+            self._assert_range_invariant();
+        }
     }
 
     pub fn available_prefix_bytes(&self) -> usize {
@@ -92,6 +129,24 @@ impl Data {
 
     pub fn available_suffix_bytes(&self) -> usize {
         self.storage.len() - self.region.end
+    }
+
+    // TODO Test
+    pub fn resize(&mut self, new_size: usize) {
+        if new_size < self.region.len() {
+            self.shrink_to_subregion(0..new_size);
+        } else {
+            self._grow_region(0, new_size - self.region.len());
+        }
+    }
+
+    fn _assert_range_invariant(&self) {
+        assert!(
+            self.region.start <= self.region.end && self.region.end <= self.storage.len(),
+            "Region invariant violated: Region {:?} with storage size {}",
+            self.region,
+            self.storage.len()
+        );
     }
 }
 
@@ -173,157 +228,156 @@ mod tests {
 
     #[test]
     fn given_fullsubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0));
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..);
+        assert_eq!(data.as_ref(), &data_region(1024, 0));
     }
 
     #[test]
     fn given_fullsubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(..);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0));
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..);
+        assert_eq!(data.as_mut(), &data_region(1024, 0));
     }
 
     #[test]
     fn given_fullsubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..);
-        assert_eq!(0, subdata.available_prefix_bytes());
-        assert_eq!(0, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..);
+        assert_eq!(0, data.available_prefix_bytes());
+        assert_eq!(0, data.available_suffix_bytes());
     }
 
     #[test]
     fn given_openendsubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0)[5..]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..);
+        assert_eq!(data.as_ref(), &data_region(1024, 0)[5..]);
     }
 
     #[test]
     fn given_openendsubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(5..);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0)[5..]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..);
+        assert_eq!(data.as_mut(), &data_region(1024, 0)[5..]);
     }
 
     #[test]
     fn given_openendsubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..);
-        assert_eq!(5, subdata.available_prefix_bytes());
-        assert_eq!(0, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..);
+        assert_eq!(5, data.available_prefix_bytes());
+        assert_eq!(0, data.available_suffix_bytes());
     }
 
     #[test]
     fn given_openbeginningexclusivesubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..1000);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0)[..1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..1000);
+        assert_eq!(data.as_ref(), &data_region(1024, 0)[..1000]);
     }
 
     #[test]
     fn given_openbeginningexclusivesubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(..1000);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0)[..1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..1000);
+        assert_eq!(data.as_mut(), &data_region(1024, 0)[..1000]);
     }
 
     #[test]
     fn given_openbeginningexclusivesubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..1000);
-        assert_eq!(0, subdata.available_prefix_bytes());
-        assert_eq!(24, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..1000);
+        assert_eq!(0, data.available_prefix_bytes());
+        assert_eq!(24, data.available_suffix_bytes());
     }
 
     #[test]
     fn given_openbeginninginclusivesubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..=1000);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0)[..=1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..=1000);
+        assert_eq!(data.as_ref(), &data_region(1024, 0)[..=1000]);
     }
 
     #[test]
     fn given_openbeginninginclusivesubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(..=1000);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0)[..=1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..=1000);
+        assert_eq!(data.as_mut(), &data_region(1024, 0)[..=1000]);
     }
 
     #[test]
     fn given_openbeginninginclusivesubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(..=1000);
-        assert_eq!(0, subdata.available_prefix_bytes());
-        assert_eq!(23, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..=1000);
+        assert_eq!(0, data.available_prefix_bytes());
+        assert_eq!(23, data.available_suffix_bytes());
     }
 
     #[test]
     fn given_exclusivesubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..1000);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0)[5..1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..1000);
+        assert_eq!(data.as_ref(), &data_region(1024, 0)[5..1000]);
     }
 
     #[test]
     fn given_exclusivesubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(5..1000);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0)[5..1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..1000);
+        assert_eq!(data.as_mut(), &data_region(1024, 0)[5..1000]);
     }
 
     #[test]
     fn given_exclusivesubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..1000);
-        assert_eq!(5, subdata.available_prefix_bytes());
-        assert_eq!(24, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..1000);
+        assert_eq!(5, data.available_prefix_bytes());
+        assert_eq!(24, data.available_suffix_bytes());
     }
 
     #[test]
     fn given_inclusivesubregiondata_when_callingasref() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..=1000);
-        assert_eq!(subdata.as_ref(), &data_region(1024, 0)[5..=1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..=1000);
+        assert_eq!(data.as_ref(), &data_region(1024, 0)[5..=1000]);
     }
 
     #[test]
     fn given_inclusivesubregiondata_when_callingasmut() {
-        let data: Data = data_region(1024, 0).into();
-        let mut subdata = data.into_subregion(5..=1000);
-        assert_eq!(subdata.as_mut(), &data_region(1024, 0)[5..=1000]);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..=1000);
+        assert_eq!(data.as_mut(), &data_region(1024, 0)[5..=1000]);
     }
 
     #[test]
     fn given_inclusivesubregiondata_when_gettingavailablebytes() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data.into_subregion(5..=1000);
-        assert_eq!(5, subdata.available_prefix_bytes());
-        assert_eq!(23, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5..=1000);
+        assert_eq!(5, data.available_prefix_bytes());
+        assert_eq!(23, data.available_suffix_bytes());
     }
 
     #[test]
     fn nested_subregions_still_do_the_right_thing() {
-        let data: Data = data_region(1024, 0).into();
-        let subdata = data
-            .into_subregion(..)
-            .into_subregion(5..)
-            .into_subregion(..1000)
-            .into_subregion(..=950)
-            .into_subregion(10..900)
-            .into_subregion(3..=800)
-            // and all types of ranges again, just in case they don't work if a certain other range happens beforehand
-            .into_subregion(..)
-            .into_subregion(5..)
-            .into_subregion(..700)
-            .into_subregion(..=650)
-            .into_subregion(10..600)
-            .into_subregion(3..=500);
-        assert_eq!(36, subdata.available_prefix_bytes());
-        assert_eq!(490, subdata.available_suffix_bytes());
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..);
+        data.shrink_to_subregion(5..);
+        data.shrink_to_subregion(..1000);
+        data.shrink_to_subregion(..=950);
+        data.shrink_to_subregion(10..900);
+        data.shrink_to_subregion(3..=800);
+        // and all types of ranges again, just in case they don't work if a certain other range happens beforehand
+        data.shrink_to_subregion(..);
+        data.shrink_to_subregion(5..);
+        data.shrink_to_subregion(..700);
+        data.shrink_to_subregion(..=650);
+        data.shrink_to_subregion(10..600);
+        data.shrink_to_subregion(3..=500);
+        assert_eq!(36, data.available_prefix_bytes());
+        assert_eq!(490, data.available_suffix_bytes());
         assert_eq!(
-            subdata.as_ref(),
+            data.as_ref(),
             &data_region(1024, 0)[..][5..][..1000][..=950][10..900][3..=800][..][5..][..700]
                 [..=650][10..600][3..=500]
         );
@@ -334,8 +388,8 @@ mod tests {
         expected = "Range end out of bounds. Tried to access subregion ..=1024 for a Data instance of length 1024"
     )]
     fn given_fullrangedata_when_tryingtogrowendbeyondlength_with_inclusiverange_then_panics() {
-        let data: Data = data_region(1024, 0).into();
-        data.into_subregion(..=1024);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..=1024);
     }
 
     #[test]
@@ -343,9 +397,9 @@ mod tests {
         expected = "Range end out of bounds. Tried to access subregion ..=100 for a Data instance of length 100"
     )]
     fn given_subrangedata_when_tryingtogrowendbeyondlength_with_inclusiverange_then_panics() {
-        let data: Data = data_region(1024, 0).into();
-        let data = data.into_subregion(0..100);
-        data.into_subregion(..=100);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(0..100);
+        data.shrink_to_subregion(..=100);
     }
 
     #[test]
@@ -353,8 +407,8 @@ mod tests {
         expected = "Range end out of bounds. Tried to access subregion ..1025 for a Data instance of length 1024"
     )]
     fn given_fullrangedata_when_tryingtogrowendbeyondlength_with_exclusiverange_then_panics() {
-        let data: Data = data_region(1024, 0).into();
-        data.into_subregion(..1025);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(..1025);
     }
 
     #[test]
@@ -362,15 +416,24 @@ mod tests {
         expected = "Range end out of bounds. Tried to access subregion ..101 for a Data instance of length 100"
     )]
     fn given_subrangedata_when_tryingtogrowendbeyondlength_with_exclusiverange_then_panics() {
-        let data: Data = data_region(1024, 0).into();
-        let data = data.into_subregion(0..100);
-        data.into_subregion(..101);
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(0..100);
+        data.shrink_to_subregion(..101);
     }
 
     #[test]
-    fn given_fullrangedata_when_tryingtogrowstartbeyondend_then_returnszerolengthrange() {
-        let data: Data = data_region(1024, 0).into();
-        let data = data.into_subregion(5000..400);
+    #[should_panic(expected = "Region invariant violated: Region 500..400 with storage size 1024")]
+    fn given_fullrangedata_when_tryingtouseinvertedrange_then_panics() {
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(500..400);
+        assert_eq!(0, data.len());
+    }
+
+    #[test]
+    #[should_panic(expected = "Region invariant violated: Region 5000..400 with storage size 1024")]
+    fn given_fullrangedata_when_tryingtogrowstartbeyondend_then_panics() {
+        let mut data: Data = data_region(1024, 0).into();
+        data.shrink_to_subregion(5000..400);
         assert_eq!(0, data.len());
     }
 }

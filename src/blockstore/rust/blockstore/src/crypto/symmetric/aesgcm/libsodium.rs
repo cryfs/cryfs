@@ -65,7 +65,8 @@ impl Cipher for Aes256Gcm {
                 &nonce,
                 &convert_key(&self.encryption_key),
             );
-        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
+        let mut ciphertext = plaintext;
+        ciphertext.grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD, 0).context(
             "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
         ciphertext[0..NONCE_SIZE].copy_from_slice(nonce.as_ref());
         ciphertext[NONCE_SIZE..(NONCE_SIZE + AUTH_TAG_SIZE)].copy_from_slice(auth_tag.as_ref());
@@ -91,7 +92,8 @@ impl Cipher for Aes256Gcm {
                 &convert_key(&self.encryption_key),
             )
             .map_err(|()| anyhow!("Decrypting data failed"))?;
-        let plaintext = ciphertext.into_subregion((NONCE_SIZE + AUTH_TAG_SIZE)..);
+        let mut plaintext = ciphertext;
+        plaintext.shrink_to_subregion((NONCE_SIZE + AUTH_TAG_SIZE)..);
         assert_eq!(
             ciphertext_len
                 .checked_sub(Self::CIPHERTEXT_OVERHEAD)

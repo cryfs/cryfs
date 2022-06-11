@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::stream::Stream;
 use std::pin::Pin;
 
-use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
+use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter, RemoveResult, TryCreateResult};
 
 use super::block_data::IBlockData;
 use crate::crypto::symmetric::Cipher;
@@ -62,7 +62,7 @@ impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReade
 impl<C: Cipher + Send + Sync, B: BlockStoreDeleter + Send + Sync> BlockStoreDeleter
     for EncryptedBlockStore<C, B>
 {
-    async fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.underlying_block_store.remove(id).await
     }
 }
@@ -76,13 +76,13 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> Optimi
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> Self::BlockData {
-        let data = B::allocate(FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD + size)
-            .extract()
-            .into_subregion((FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD)..);
+        let mut data =
+            B::allocate(FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD + size).extract();
+        data.shrink_to_subregion((FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD)..);
         BlockData::new(data)
     }
 
-    async fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<TryCreateResult> {
         let ciphertext = self._encrypt(data.extract()).await?;
         self.underlying_block_store
             .try_create_optimized(id, B::BlockData::new(ciphertext))
@@ -116,7 +116,7 @@ impl<C: Cipher, B> EncryptedBlockStore<C, B> {
     }
 }
 
-fn _check_and_remove_header(data: Data) -> Result<Data> {
+fn _check_and_remove_header(mut data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         bail!(
             "Couldn't parse encrypted block. Expected FORMAT_VERSION_HEADER of {:?} but found {:?}",
@@ -124,14 +124,16 @@ fn _check_and_remove_header(data: Data) -> Result<Data> {
             &data[..FORMAT_VERSION_HEADER.len()]
         );
     }
-    Ok(data.into_subregion(FORMAT_VERSION_HEADER.len()..))
+    data.shrink_to_subregion(FORMAT_VERSION_HEADER.len()..);
+    Ok(data)
 }
 
-fn _prepend_header(data: Data) -> Data {
+fn _prepend_header(mut data: Data) -> Data {
     // TODO Use binary-layout here?
-    let mut data = data.grow_region(FORMAT_VERSION_HEADER.len(), 0).expect(
-        "Tried to grow the data to contain the header in EncryptedBlockStore::_prepend_header",
-    );
+    data.grow_region_fail_if_reallocation_necessary(FORMAT_VERSION_HEADER.len(), 0)
+        .expect(
+            "Tried to grow the data to contain the header in EncryptedBlockStore::_prepend_header",
+        );
     data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
     data
 }

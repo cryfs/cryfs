@@ -2,12 +2,10 @@ use anyhow::{ensure, Result};
 use async_trait::async_trait;
 use clru::CLruCache;
 use futures::future::join_all;
+use log::warn;
 use std::fmt::Debug;
-use std::future::Future;
-use std::sync::Mutex;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
-use log::warn;
 
 // TODO This isn't complete yet. Look at Cache.h and add features (e.g. making space before each push, periodic evicting, ...)
 
@@ -110,16 +108,18 @@ where
             Ok(runtime) => {
                 // Handle::block_on can't drive io or timers. Only Runtime::block_on can drive them, see https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Handle.html#method.block_on
                 // This might deadlock if there isn't another thread doing Runtime::block_on().
-                runtime
-                    .block_on(self.evict_all())
-                    .unwrap();
+                runtime.block_on(self.evict_all()).unwrap();
             }
             Err(err) => {
-                warn!("Called Cache::drop from outside of a tokio runtime. Starting our own runtime.");
-                let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime
-                    .block_on(self.evict_all())
-                    .unwrap();
+                if err.is_missing_context() {
+                    warn!(
+                        "Called Cache::drop from outside of a tokio runtime. Starting our own runtime."
+                    );
+                    let runtime = tokio::runtime::Runtime::new().unwrap();
+                    runtime.block_on(self.evict_all()).unwrap();
+                } else {
+                    panic!("Error querying the runtime: {}", err);
+                }
             }
         };
     }

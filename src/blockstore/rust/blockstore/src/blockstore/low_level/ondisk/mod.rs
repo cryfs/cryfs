@@ -1,19 +1,16 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
-use std::future::Future;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use tokio::{
-    fs::{DirEntry, File},
-    io::AsyncWriteExt,
+    fs::DirEntry,
 };
 use tokio_stream::wrappers::ReadDirStream;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
-    OptimizedBlockStoreWriter, BLOCKID_LEN,
+    OptimizedBlockStoreWriter, BLOCKID_LEN, RemoveResult, TryCreateResult,
 };
 use crate::data::Data;
 
@@ -88,14 +85,14 @@ impl BlockStoreReader for OnDiskBlockStore {
 
 #[async_trait]
 impl BlockStoreDeleter for OnDiskBlockStore {
-    async fn remove(&self, id: &BlockId) -> Result<bool> {
+    async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         let path = self._block_path(id);
         match tokio::fs::remove_file(path).await {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                 // File doesn't exist. Return false. This is not an error.
-                Ok(false)
+                Ok(RemoveResult::NotRemovedBecauseItDoesntExist)
             }
-            Ok(()) => Ok(true),
+            Ok(()) => Ok(RemoveResult::SuccessfullyRemoved),
             Err(err) => Err(err.into()),
         }
     }
@@ -108,18 +105,18 @@ impl OptimizedBlockStoreWriter for OnDiskBlockStore {
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
-        let data = Data::from(vec![0; FORMAT_VERSION_HEADER.len() + size])
-            .into_subregion(FORMAT_VERSION_HEADER.len()..);
+        let mut data = Data::from(vec![0; FORMAT_VERSION_HEADER.len() + size]);
+        data.shrink_to_subregion(FORMAT_VERSION_HEADER.len()..);
         BlockData::new(data)
     }
 
-    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+    async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<TryCreateResult> {
         let path = self._block_path(id);
         if path_exists(&path).await? {
-            Ok(false)
+            Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
         } else {
             _store(&path, data).await?;
-            Ok(true)
+            Ok(TryCreateResult::SuccessfullyCreated)
         }
     }
 
@@ -261,7 +258,7 @@ fn _blockid_from_filepath(path: &Path) -> BlockId {
         .unwrap()
 }
 
-fn _check_and_remove_header(data: Data) -> Result<Data> {
+fn _check_and_remove_header(mut data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
             bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS?");
@@ -269,7 +266,8 @@ fn _check_and_remove_header(data: Data) -> Result<Data> {
             bail!("This is not a valid block: {}", hex::encode(data));
         }
     }
-    Ok(data.into_subregion(FORMAT_VERSION_HEADER.len()..))
+    data.shrink_to_subregion(FORMAT_VERSION_HEADER.len()..);
+    Ok(data)
 }
 
 // TODO Test
@@ -300,9 +298,8 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
             path.display()
         )
     })?;
-    let mut data = data
-        .extract()
-        .grow_region(FORMAT_VERSION_HEADER.len(), 0)
+    let mut data = data.extract();
+    data.grow_region_fail_if_reallocation_necessary(FORMAT_VERSION_HEADER.len(), 0)
         .expect("Tried to grow data region to store in OnDiskBlockStore::_store");
     // TODO Use binary-layout here?
     data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
@@ -321,7 +318,7 @@ mod tests {
     struct TestFixture {
         basedir: TempDir,
     }
-    impl crate::blockstore::tests::Fixture for TestFixture {
+    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             Self {
