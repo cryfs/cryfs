@@ -9,14 +9,14 @@ use std::fmt::{self, Debug};
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::blockstore::BlockId;
+use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod cache;
 use cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
-pub struct Block<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct Block<B: BlockStore + Send + Sync + Debug + 'static> {
     cache_entry: BlockCacheEntryGuard<B>,
 }
 
