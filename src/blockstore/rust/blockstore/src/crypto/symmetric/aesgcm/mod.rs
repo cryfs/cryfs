@@ -29,7 +29,8 @@ pub struct Aes256Gcm(Aes256GcmImpl);
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD: usize = NONCE_SIZE + AUTH_TAG_SIZE;
+    const CIPHERTEXT_OVERHEAD_PREFIX: usize = NONCE_SIZE;
+    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = AUTH_TAG_SIZE;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         let hardware_acceleration_available = Aes256Gcm_HardwareAccelerated::is_available();

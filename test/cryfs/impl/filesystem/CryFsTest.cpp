@@ -46,10 +46,6 @@ public:
     return CryConfigLoader(make_shared<NoninteractiveConsole>(mockConsole()), Random::PseudoRandom(), std::move(keyProvider), localStateDir, none, none, none).loadOrCreate(config.path(), false, false).right().configFile;
   }
 
-  unique_ref<OnDiskBlockStore2> blockStore() {
-    return make_unique_ref<OnDiskBlockStore2>(rootdir.path());
-  }
-
   cpputils::TempDir tempLocalStateDir;
   LocalStateDir localStateDir;
   TempDir rootdir;
@@ -64,10 +60,10 @@ auto failOnIntegrityViolation() {
 
 TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    CryDevice dev(loadOrCreateConfig(), rootdir.path(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     dev.setContext(fspp::Context {fspp::relatime()});
   }
-  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+  CryDevice dev(loadOrCreateConfig(), rootdir.path(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
   dev.setContext(fspp::Context {fspp::relatime()});
   auto rootDir = dev.LoadDir(bf::path("/"));
   rootDir.value()->children();
@@ -75,12 +71,12 @@ TEST_F(CryFsTest, CreatedRootdirIsLoadableAfterClosing) {
 
 TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    CryDevice dev(loadOrCreateConfig(), rootdir.path(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     dev.setContext(fspp::Context {fspp::relatime()});
   }
   Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
-    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    CryDevice dev(loadOrCreateConfig(), rootdir.path(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     dev.setContext(fspp::Context {fspp::relatime()});
   }
   Data configAfterLoading = Data::LoadFromFile(config.path()).value();

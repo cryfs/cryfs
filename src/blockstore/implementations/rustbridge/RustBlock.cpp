@@ -9,7 +9,7 @@ namespace blockstore
       : Block(helpers::cast_blockid(*block->block_id())), _block(std::move(block)) {}
 
       RustBlock::~RustBlock() {
-          _block->async_drop();
+        //   _block->async_drop();
       }
 
       const void *RustBlock::data() const {

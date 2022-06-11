@@ -40,6 +40,14 @@ struct CachingBlockStoreImpl<B: OptimizedBlockStoreWriter + Send + Sync> {
 }
 
 impl<B: BlockStoreReader + OptimizedBlockStoreWriter + Send + Sync> CachingBlockStoreImpl<B> {
+    async fn exists_in_cache_or_base_store(&mut self, block_id: &BlockId) -> Result<bool> {
+        if self.cache.contains(block_id) {
+            Ok(true)
+        } else {
+            self.store_impl_impl.underlying_block_store.exists(block_id).await
+        }
+    }
+
     async fn load_from_cache_or_base_store(
         &mut self,
         block_id: &BlockId,
@@ -136,6 +144,11 @@ impl<B: OptimizedBlockStoreWriter + Send + Sync> CachingBlockStore<B> {
 impl<B: BlockStoreReader + OptimizedBlockStoreWriter + Send + Sync> BlockStoreReader
     for CachingBlockStore<B>
 {
+    async fn exists(&self, id: &BlockId) -> Result<bool> {
+        let mut store_impl = self.store_impl.lock().await;
+        store_impl.exists_in_cache_or_base_store(id).await
+    }
+
     async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
         debug!("Loading {:?}", block_id);
         // TODO Move this (and other) code to CachingBlockStoreImpl?

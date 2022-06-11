@@ -26,7 +26,8 @@ pub struct AeadCipher<C: NewAead + AeadInPlace> {
 impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
     type KeySize = C::KeySize;
 
-    const CIPHERTEXT_OVERHEAD: usize = C::NonceSize::USIZE + C::TagSize::USIZE;
+    const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
+    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::TagSize::USIZE;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         Self {
@@ -39,20 +40,21 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         // TODO Move C::new call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
-        // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
+        // TODO For compatibility with the C++ cryfs version, we append nonce in the beginning and tag in the end.
+        //      But it is somewhat weird to grow the plaintext input into both directions. We should just grow it in one direction.
         // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
+        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let nonce = random_nonce::<C>();
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
         let mut ciphertext = plaintext;
         ciphertext
-            .grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD, 0)
-            .expect("Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt");
-        ciphertext[0..C::NonceSize::USIZE].copy_from_slice(nonce.as_ref());
-        ciphertext[C::NonceSize::USIZE..(C::NonceSize::USIZE + C::TagSize::USIZE)]
+            .grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD_PREFIX, Self::CIPHERTEXT_OVERHEAD_SUFFIX)
+            .expect("Tried to add prefix and suffix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt");
+        ciphertext[..Self::CIPHERTEXT_OVERHEAD_PREFIX].copy_from_slice(nonce.as_ref());
+        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..]
             .copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
@@ -64,18 +66,18 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         //      secret protection we get from our EncryptionKey class then.
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
         let ciphertext_len = ciphertext.len();
-        let (nonce, rest) = ciphertext.as_mut().split_at_mut(C::NonceSize::USIZE);
+        let (nonce, rest) = ciphertext.as_mut().split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
         let nonce: &[u8] = nonce;
-        let (auth_tag, cipherdata) = rest.split_at_mut(C::TagSize::USIZE);
+        let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
         let auth_tag: &[u8] = auth_tag;
         cipher
             .decrypt_in_place_detached(nonce.into(), &[], cipherdata.as_mut(), auth_tag.into())
             .context("Decrypting data failed")?;
         let mut plaintext = ciphertext;
-        plaintext.shrink_to_subregion((C::NonceSize::USIZE + C::TagSize::USIZE)..);
+        plaintext.shrink_to_subregion(Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX));
         assert_eq!(
             ciphertext_len
-                .checked_sub(Self::CIPHERTEXT_OVERHEAD)
+                .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)
                 .unwrap(),
             plaintext.len()
         );

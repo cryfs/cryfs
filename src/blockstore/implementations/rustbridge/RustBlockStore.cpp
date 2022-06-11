@@ -32,6 +32,10 @@ namespace blockstore
         RustBlockStore::RustBlockStore(::rust::Box<bridge::RustBlockStoreBridge> blockStore)
         : _blockStore(std::move(blockStore)) {}
 
+        RustBlockStore::~RustBlockStore() {
+            _blockStore->async_drop();
+        }
+
         BlockId RustBlockStore::createBlockId() {
             return helpers::cast_blockid(*_blockStore->create_block_id());
         }

@@ -18,6 +18,7 @@ pub trait Cache<Key, Value> {
     fn num_filled_entries(&self) -> usize;
     fn push(&mut self, key: Key, value: Value) -> Result<()>;
     fn pop(&mut self, key: &Key) -> Option<Value>;
+    fn contains(&mut self, key: &Key) -> bool;
 }
 
 #[async_trait]
@@ -66,6 +67,10 @@ where
 
     fn pop(&mut self, key: &Key) -> Option<Value> {
         self.cache.pop(key)
+    }
+
+    fn contains(&mut self, key: &Key) -> bool {
+        self.cache.contains(key)
     }
 }
 

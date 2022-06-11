@@ -75,9 +75,13 @@ impl<B> IntegrityBlockStore<B> {
 
 #[async_trait]
 impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore<B> {
+    async fn exists(&self, block_id: &BlockId) -> Result<bool> {
+        self.underlying_block_store.exists(block_id).await
+    }
+
     async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
         let loaded = self.underlying_block_store.load(block_id).await.context(
-            "IntegrityBlockStore tried to load the block from the underlying block store",
+            "IntegrityBlockStore failed to load the block from the underlying block store",
         )?;
         match loaded {
             None => {
@@ -109,8 +113,9 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
+    // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        block_size.checked_sub(HEADER_SIZE as u64)
+        self.underlying_block_store.block_size_from_physical_block_size(block_size)?.checked_sub(HEADER_SIZE as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
     }
 

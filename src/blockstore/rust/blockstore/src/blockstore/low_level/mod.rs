@@ -8,6 +8,8 @@ use crate::data::Data;
 
 #[async_trait]
 pub trait BlockStoreReader {
+    // TODO Add test cases for exists(), they're not among the C++ test cases since we added it later
+    async fn exists(&self, id: &BlockId) -> Result<bool>;
     async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
     async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<u64>;

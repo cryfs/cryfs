@@ -16,6 +16,7 @@ namespace blockstore
     {
     public:
         RustBlockStore(::rust::Box<bridge::RustBlockStoreBridge> blockStore);
+        ~RustBlockStore();
 
         BlockId createBlockId() override;
         boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;

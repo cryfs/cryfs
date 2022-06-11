@@ -1,4 +1,5 @@
 #include <blockstore/implementations/caching/CachingBlockStore2.h>
+#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
@@ -13,6 +14,7 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
 #include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
+#include <blockstore/implementations/rustbridge/RustBlockStore.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
 #include "cryfs/impl/config/CryCipher.h"
@@ -35,6 +37,7 @@ using blobstore::BlobStore;
 using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blockstore::caching::CachingBlockStore2;
+using blockstore::ondisk::OnDiskBlockStore2;
 using blockstore::integrity::IntegrityBlockStore2;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -54,15 +57,25 @@ namespace bf = boost::filesystem;
 
 namespace cryfs {
 
-CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
-: _fsBlobStore(CreateFsBlobStore(std::move(blockStore), configFile.get(), localStateDir, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation))),
+CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, const boost::filesystem::path& basedir, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
+: _fsBlobStore(CreateFsBlobStore(
+    CreateBlobStore(basedir, localStateDir, configFile.get(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)),
+    configFile.get()
+  )),
   _rootBlobId(GetOrCreateRootBlobId(configFile.get())), _configFile(std::move(configFile)),
   _onFsAction() {
 }
 
-unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<BlockStore2> blockStore, CryConfigFile *configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
-  auto blobStore = CreateBlobStore(std::move(blockStore), localStateDir, configFile, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
+CryDevice::CryDevice(std::shared_ptr<CryConfigFile> configFile, const LocalStateDir& localStateDir, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation)
+: _fsBlobStore(CreateFsBlobStore(
+    CreateFakeBlobStore(localStateDir, configFile.get(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)),
+    configFile.get()
+  )),
+  _rootBlobId(GetOrCreateRootBlobId(configFile.get())), _configFile(std::move(configFile)),
+  _onFsAction() {
+}
 
+unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::CreateFsBlobStore(unique_ref<blobstore::BlobStore> blobStore, CryConfigFile *configFile) {
 #ifndef CRYFS_NO_COMPATIBILITY
   auto fsBlobStore = MigrateOrCreateFsBlobStore(std::move(blobStore), configFile);
 #else
@@ -93,48 +106,55 @@ unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(uniqu
 }
 #endif
 
-unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
-  auto integrityEncryptedBlockStore = CreateIntegrityEncryptedBlockStore(std::move(blockStore), localStateDir, configFile, myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::move(onIntegrityViolation));
-  // Create integrityEncryptedBlockStore not in the same line as BlobStoreOnBlocks, because it can modify BlocksizeBytes
-  // in the configFile and therefore has to be run before the second parameter to the BlobStoreOnBlocks parameter is evaluated.
-  return make_unique_ref<BlobStoreOnBlocks>(
-     make_unique_ref<LowToHighLevelBlockStore>(
-         make_unique_ref<CachingBlockStore2>(
-             std::move(integrityEncryptedBlockStore)
-         )
-     ),
-     configFile->config()->BlocksizeBytes());
-}
-
-unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
-  auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
+unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(const boost::filesystem::path& basedir, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
   auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
-
-#ifndef CRYFS_NO_COMPATIBILITY
-  if (!configFile->config()->HasVersionNumbers()) {
-    IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath, myClientId);
-    configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + IntegrityBlockStore2::HEADER_LENGTH - blockstore::BlockId::BINARY_LENGTH); // Minus BlockId size because EncryptedBlockStore doesn't store the BlockId anymore (that was moved to IntegrityBlockStore)
-    // Don't migrate again if it was successful
-    configFile->config()->SetHasVersionNumbers(true);
-    configFile->save();
-  }
-#endif
-
-  try {
-    return make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, myClientId,
-                                                 allowIntegrityViolations, missingBlockIsIntegrityViolation,
-                                                 std::move(onIntegrityViolation));
-  } catch (const blockstore::integrity::IntegrityViolationOnPreviousRun& e) {
-    throw CryfsException(string() +
-                        "There was an integrity violation detected. Preventing any further access to the file system. " +
-                        "This can either happen if an attacker changed your files or rolled back the file system to a previous state, " +
-                        "but it can also happen if you rolled back the file system yourself, for example restored a backup. " +
-                        "If you want to reset the integrity data (i.e. accept changes made by a potential attacker), " +
-                        "please delete the following file before re-mounting it: " +
-                        e.stateFile().string(), ErrorCode::IntegrityViolationOnPreviousRun);
-  }
+  return make_unique_ref<BlobStoreOnBlocks>(
+    make_unique_ref<blockstore::rust::RustBlockStore>(
+      blockstore::rust::bridge::new_locking_integrity_encrypted_ondisk_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, configFile->config()->Cipher(), configFile->config()->EncryptionKey(), basedir.c_str())
+    ),
+    configFile->config()->BlocksizeBytes());
 }
+
+unique_ref<blobstore::BlobStore> CryDevice::CreateFakeBlobStore(const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
+  auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
+  auto integrityFilePath = statePath / "integritydata";
+  return make_unique_ref<BlobStoreOnBlocks>(
+    make_unique_ref<blockstore::rust::RustBlockStore>(
+      blockstore::rust::bridge::new_locking_integrity_encrypted_inmemory_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, configFile->config()->Cipher(), configFile->config()->EncryptionKey())
+    ),
+    configFile->config()->BlocksizeBytes());
+}
+
+// unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
+//   auto encryptedBlockStore = CreateEncryptedBlockStore(*configFile->config(), std::move(blockStore));
+//   auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
+//   auto integrityFilePath = statePath / "integritydata";
+//
+// #ifndef CRYFS_NO_COMPATIBILITY
+//   if (!configFile->config()->HasVersionNumbers()) {
+//     IntegrityBlockStore2::migrateFromBlockstoreWithoutVersionNumbers(encryptedBlockStore.get(), integrityFilePath, myClientId);
+//     configFile->config()->SetBlocksizeBytes(configFile->config()->BlocksizeBytes() + IntegrityBlockStore2::HEADER_LENGTH - blockstore::BlockId::BINARY_LENGTH); // Minus BlockId size because EncryptedBlockStore doesn't store the BlockId anymore (that was moved to IntegrityBlockStore)
+//     // Don't migrate again if it was successful
+//     configFile->config()->SetHasVersionNumbers(true);
+//     configFile->save();
+//   }
+// #endif
+//
+//   try {
+//     return make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, myClientId,
+//                                                  allowIntegrityViolations, missingBlockIsIntegrityViolation,
+//                                                  std::move(onIntegrityViolation));
+//   } catch (const blockstore::integrity::IntegrityViolationOnPreviousRun& e) {
+//     throw CryfsException(string() +
+//                         "There was an integrity violation detected. Preventing any further access to the file system. " +
+//                         "This can either happen if an attacker changed your files or rolled back the file system to a previous state, " +
+//                         "but it can also happen if you rolled back the file system yourself, for example restored a backup. " +
+//                         "If you want to reset the integrity data (i.e. accept changes made by a potential attacker), " +
+//                         "please delete the following file before re-mounting it: " +
+//                         e.stateFile().string(), ErrorCode::IntegrityViolationOnPreviousRun);
+//   }
+// }
 
 BlockId CryDevice::CreateRootBlobAndReturnId() {
   auto rootBlob =  _fsBlobStore->createDirBlob(blockstore::BlockId::Null());

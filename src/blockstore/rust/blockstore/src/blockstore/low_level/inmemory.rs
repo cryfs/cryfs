@@ -28,6 +28,14 @@ impl InMemoryBlockStore {
 
 #[async_trait]
 impl BlockStoreReader for InMemoryBlockStore {
+    async fn exists(&self, id: &BlockId) -> Result<bool> {
+        let blocks = self
+            .blocks
+            .read()
+            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+        Ok(blocks.contains_key(id))
+    }
+
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let blocks = self
             .blocks

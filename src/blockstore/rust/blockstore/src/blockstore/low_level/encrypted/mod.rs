@@ -12,6 +12,8 @@ use super::block_data::IBlockData;
 use crate::crypto::symmetric::Cipher;
 use crate::data::Data;
 
+// TODO Here and in other files: Add more .context() to errors
+
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
 
 pub struct EncryptedBlockStore<C: Cipher, B> {
@@ -32,8 +34,14 @@ impl<C: Cipher, B> EncryptedBlockStore<C, B> {
 impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReader
     for EncryptedBlockStore<C, B>
 {
+    async fn exists(&self, id: &BlockId) -> Result<bool> {
+        self.underlying_block_store.exists(id).await
+    }
+
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
-        let loaded = self.underlying_block_store.load(id).await?;
+        let loaded = self.underlying_block_store.load(id).await.context(
+            "EncryptedBlockStore failed to load the block from the underlying block store",
+        )?;
         match loaded {
             None => Ok(None),
             Some(data) => Ok(Some(self._decrypt(data).await?)),
@@ -49,10 +57,10 @@ impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReade
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        let ciphertext_size = block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+        let ciphertext_size = self.underlying_block_store.block_size_from_physical_block_size(block_size)?.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))?;
         ciphertext_size
-            .checked_sub(C::CIPHERTEXT_OVERHEAD as u64)
+            .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
     }
 
@@ -80,8 +88,8 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> Optimi
 
     fn allocate(size: usize) -> Self::BlockData {
         let mut data =
-            B::allocate(FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD + size).extract();
-        data.shrink_to_subregion((FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD)..);
+            B::allocate(FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX + size).extract();
+        data.shrink_to_subregion((FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX)..(data.len() - C::CIPHERTEXT_OVERHEAD_SUFFIX));
         BlockData::new(data)
     }
 
@@ -111,13 +119,12 @@ impl<C: Cipher + Send + Sync, B: BlockStore + OptimizedBlockStoreWriter + Send +
 
 impl<C: Cipher, B> EncryptedBlockStore<C, B> {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
-        // TODO Limit concurrency for CPU bound computations, maybe use semaphore or rayon?
+        // TODO Is it better to move encryption/decryption to a dedicated threadpool instead of block_in_place?
         let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
         Ok(_prepend_header(ciphertext))
     }
 
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
-        // TODO Limit concurrency for CPU bound computations, maybe use semaphore or rayon?
         let ciphertext = _check_and_remove_header(ciphertext)?;
         tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext)).map(|d| d.into())
     }
