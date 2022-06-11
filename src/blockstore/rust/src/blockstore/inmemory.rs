@@ -35,8 +35,8 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(sys.get_available_memory())
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> u64 {
-        block_size
+    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+        Ok(block_size)
     }
 
     fn all_blocks(&self) -> Result<Box<dyn Iterator<Item=BlockId>>> {

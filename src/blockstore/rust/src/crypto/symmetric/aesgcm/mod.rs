@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use generic_array::typenum::U32;
 use log::warn;
 
@@ -42,12 +42,12 @@ impl Cipher for Aes256Gcm {
         plaintext_size + NONCE_SIZE + AUTH_TAG_SIZE
     }
 
-    fn plaintext_size(ciphertext_size: usize) -> usize {
-        assert!(
+    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
+        ensure!(
             ciphertext_size >= NONCE_SIZE + AUTH_TAG_SIZE,
             "Invalid ciphertext size"
         );
-        ciphertext_size - NONCE_SIZE - AUTH_TAG_SIZE
+        Ok(ciphertext_size - NONCE_SIZE - AUTH_TAG_SIZE)
     }
     
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {

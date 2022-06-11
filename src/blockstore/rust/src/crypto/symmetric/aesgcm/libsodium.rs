@@ -50,15 +50,19 @@ impl Cipher for Aes256Gcm {
         super::Aes256Gcm::ciphertext_size(plaintext_size)
     }
 
-    fn plaintext_size(ciphertext_size: usize) -> usize {
+    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
         super::Aes256Gcm::plaintext_size(ciphertext_size)
     }
 
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+        // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         let ciphertext_size = Self::ciphertext_size(plaintext.len());
         let nonce = self.cipher.gen_initial_nonce();
         let cipherdata =
             self.cipher
+                // TODO Move convert_key call to constructor so we don't have to do it every time?
+                //      Note that we have to somehow migrate the
+                //      secret protection we get from our EncryptionKey class then.
                 .seal(plaintext, None, &nonce, &convert_key(&self.encryption_key));
         let mut ciphertext = Vec::with_capacity(ciphertext_size);
         ciphertext.extend_from_slice(nonce.as_ref());
@@ -73,9 +77,12 @@ impl Cipher for Aes256Gcm {
         let nonce = Nonce::from_slice(nonce).expect("Wrong nonce size");
         let plaintext = self
             .cipher
+            // TODO Move convert_key call to constructor so we don't have to do it every time?
+            //      Note that we have to somehow migrate the
+            //      secret protection we get from our EncryptionKey class then.
             .open(cipherdata, None, &nonce, &convert_key(&self.encryption_key))
             .map_err(|()| anyhow!("Decrypting data failed"))?;
-        assert_eq!(Self::plaintext_size(ciphertext.len()), plaintext.len());
+        assert_eq!(Self::plaintext_size(ciphertext.len()).unwrap(), plaintext.len());
         Ok(plaintext)
     }
 }

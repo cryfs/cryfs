@@ -62,12 +62,9 @@ impl BlockStoreReader for OnDiskBlockStore {
         sysinfo::get_available_disk_space(&self.basedir)
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> u64 {
-        if block_size <= FORMAT_VERSION_HEADER.len() as u64 {
-            0
-        } else {
-            block_size - (FORMAT_VERSION_HEADER.len() as u64)
-        }
+    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+        block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+            .with_context(|| anyhow!("Physical block size of {} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))
     }
 
     fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
