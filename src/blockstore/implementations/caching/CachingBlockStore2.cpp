@@ -103,7 +103,7 @@ optional<Data> CachingBlockStore2::load(const BlockId &blockId) const {
   if (loaded == boost::none) {
     // TODO Cache non-existence?
     return boost::none;
-n  }
+  }
   optional<Data> result = (*loaded)->read().copy();
   _cache.push(blockId, std::move(*loaded));
   return result;

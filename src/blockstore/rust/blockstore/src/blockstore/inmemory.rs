@@ -45,7 +45,7 @@ impl BlockStoreReader for InMemoryBlockStore {
     fn estimate_num_free_bytes(&self) -> Result<u64> {
         let mut sys = System::new();
         sys.refresh_memory();
-        Ok(sys.get_available_memory())
+        Ok(sys.available_memory())
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {

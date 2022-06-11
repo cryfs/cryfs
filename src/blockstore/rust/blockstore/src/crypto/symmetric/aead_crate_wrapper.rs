@@ -3,7 +3,7 @@
 use aead::generic_array::typenum::Unsigned;
 use aead::{
     generic_array::{ArrayLength, GenericArray},
-    AeadInPlace, NewAead, Nonce,
+    AeadInPlace, NewAead, Nonce, AeadCore,
 };
 use anyhow::{Context, Result};
 use rand::{thread_rng, RngCore};
@@ -46,7 +46,7 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
         let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
-        let nonce = random_nonce();
+        let nonce = random_nonce::<C>();
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
@@ -83,8 +83,8 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
     }
 }
 
-fn random_nonce<Size: ArrayLength<u8>>() -> Nonce<Size> {
-    let mut nonce = Nonce::<Size>::default();
+fn random_nonce<A: AeadCore>() -> Nonce<A> {
+    let mut nonce = Nonce::<A>::default();
     let mut rng = thread_rng();
     rng.fill_bytes(&mut nonce);
     nonce
