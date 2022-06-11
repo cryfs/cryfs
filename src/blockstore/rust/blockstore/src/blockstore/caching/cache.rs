@@ -4,8 +4,10 @@ use clru::CLruCache;
 use futures::future::join_all;
 use std::fmt::Debug;
 use std::future::Future;
+use std::sync::Mutex;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
+use log::warn;
 
 // TODO This isn't complete yet. Look at Cache.h and add features (e.g. making space before each push, periodic evicting, ...)
 
@@ -20,10 +22,15 @@ pub trait Cache<Key, Value> {
     fn pop(&mut self, key: &Key) -> Option<Value>;
 }
 
-pub struct LRUCache<Key, Value, OnEvictFn, F>
+#[async_trait]
+pub trait EvictionCallback<Key, Value> {
+    // TODO Can we avoid the Box around the future?
+    async fn on_evict(&self, k: Key, v: Value) -> Result<()>;
+}
+
+pub struct LRUCache<Key, Value, OnEvictFn>
 where
-    F: Future<Output = Result<()>>,
-    OnEvictFn: Fn(Key, Value) -> F,
+    OnEvictFn: EvictionCallback<Key, Value>,
     Key: Debug + Hash + Eq,
 {
     cache: CLruCache<Key, Value>,
@@ -31,10 +38,9 @@ where
 }
 
 #[async_trait]
-impl<Key, Value, OnEvictFn, F> Cache<Key, Value> for LRUCache<Key, Value, OnEvictFn, F>
+impl<Key, Value, OnEvictFn> Cache<Key, Value> for LRUCache<Key, Value, OnEvictFn>
 where
-    F: Future<Output = Result<()>>,
-    OnEvictFn: Fn(Key, Value) -> F,
+    OnEvictFn: EvictionCallback<Key, Value>,
     Key: Debug + Hash + Eq,
 {
     type OnEvictFn = OnEvictFn;
@@ -65,10 +71,9 @@ where
     }
 }
 
-impl<Key, Value, OnEvictFn, F> LRUCache<Key, Value, OnEvictFn, F>
+impl<Key, Value, OnEvictFn> LRUCache<Key, Value, OnEvictFn>
 where
-    F: Future<Output = Result<()>>,
-    OnEvictFn: Fn(Key, Value) -> F,
+    OnEvictFn: EvictionCallback<Key, Value>,
     Key: Debug + Hash + Eq,
 {
     async fn evict_all(&mut self) -> Result<()> {
@@ -78,7 +83,7 @@ where
         let results: Vec<Result<()>> = join_all(
             cache
                 .into_iter()
-                .map(|(key, value)| (self.on_evict_fn)(key, value)),
+                .map(|(key, value)| self.on_evict_fn.on_evict(key, value)),
         )
         .await;
         let results: Result<Vec<()>> = results.into_iter().collect();
@@ -95,17 +100,27 @@ where
     }
 }
 
-impl<Key, Value, OnEvictFn, F> Drop for LRUCache<Key, Value, OnEvictFn, F>
+impl<Key, Value, OnEvictFn> Drop for LRUCache<Key, Value, OnEvictFn>
 where
     Key: Debug + Hash + Eq,
-    F: Future<Output = Result<()>>,
-    OnEvictFn: Fn(Key, Value) -> F,
+    OnEvictFn: EvictionCallback<Key, Value>,
 {
     fn drop(&mut self) {
-        // TODO Handle::block_on can't drive io or timers. Only Runtime::block_on can drive them, see https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Handle.html#method.block_on
-        // This might deadlock if there isn't another thread doing Runtime::block_on().
-        tokio::runtime::Handle::current()
-            .block_on(self.evict_all())
-            .unwrap();
+        match tokio::runtime::Handle::try_current() {
+            Ok(runtime) => {
+                // Handle::block_on can't drive io or timers. Only Runtime::block_on can drive them, see https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Handle.html#method.block_on
+                // This might deadlock if there isn't another thread doing Runtime::block_on().
+                runtime
+                    .block_on(self.evict_all())
+                    .unwrap();
+            }
+            Err(err) => {
+                warn!("Called Cache::drop from outside of a tokio runtime. Starting our own runtime.");
+                let runtime = tokio::runtime::Runtime::new().unwrap();
+                runtime
+                    .block_on(self.evict_all())
+                    .unwrap();
+            }
+        };
     }
 }

@@ -12,6 +12,7 @@ use super::{
     inmemory::InMemoryBlockStore,
     integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
     ondisk::OnDiskBlockStore,
+    caching::CachingBlockStore,
     BlockStore,
 };
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
@@ -48,6 +49,7 @@ mod ffi {
 
         fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
         fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
+        fn new_caching_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
         fn new_integrity_inmemory_blockstore(
             integrity_file_path: &str,
         ) -> Result<Box<RustBlockStore2Bridge>>;
@@ -124,8 +126,22 @@ impl OptionData {
     }
 }
 
+struct LoggerInit {
+}
+impl LoggerInit {
+    pub fn new() -> Self {
+        env_logger::init();
+        Self {}
+    }
+
+    pub fn ensure_initialized(&self) {
+        // noop. But calling this means the lazy static has to be created.
+    }
+}
+
 lazy_static::lazy_static! {
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    static ref LOGGER_INIT: LoggerInit = LoggerInit::new();
 }
 
 struct RustBlockStore2Bridge(Box<dyn BlockStore>);
@@ -167,10 +183,12 @@ impl RustBlockStore2Bridge {
 }
 
 fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
+    LOGGER_INIT.ensure_initialized();
     Box::new(RustBlockStore2Bridge(Box::new(InMemoryBlockStore::new())))
 }
 
 fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
+    LOGGER_INIT.ensure_initialized();
     let key =
         EncryptionKey::from_hex("9726ca3703940a918802953d8db5996c5fb25008a20c92cb95aa4b8fe92702d9")
             .unwrap();
@@ -180,9 +198,17 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     ))))
 }
 
+fn new_caching_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
+    LOGGER_INIT.ensure_initialized();
+    Box::new(RustBlockStore2Bridge(Box::new(CachingBlockStore::new(
+        InMemoryBlockStore::new()
+    ))))
+}
+
 fn new_integrity_inmemory_blockstore(
     integrity_file_path: &str,
 ) -> Result<Box<RustBlockStore2Bridge>> {
+    LOGGER_INIT.ensure_initialized();
     Ok(Box::new(RustBlockStore2Bridge(Box::new(
         IntegrityBlockStore::new(
             InMemoryBlockStore::new(),
@@ -198,6 +224,7 @@ fn new_integrity_inmemory_blockstore(
 }
 
 fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
+    LOGGER_INIT.ensure_initialized();
     Box::new(RustBlockStore2Bridge(Box::new(OnDiskBlockStore::new(
         Path::new(basedir).to_path_buf(),
     ))))
