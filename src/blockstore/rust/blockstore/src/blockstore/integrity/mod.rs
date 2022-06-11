@@ -3,16 +3,19 @@ use binary_layout::FieldMetadata;
 use log::warn;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::collections::hash_set::HashSet;
 
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
     BLOCKID_LEN,
 };
+use super::block_data::IBlockData;
 
 mod known_block_versions;
 
 use crate::data::Data;
-use known_block_versions::{BlockVersion, ClientId, IntegrityViolationError, KnownBlockVersions};
+use known_block_versions::{BlockVersion, IntegrityViolationError, KnownBlockVersions};
+pub use known_block_versions::ClientId;
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
@@ -28,9 +31,9 @@ binary_layout::define_layout!(block_layout, LittleEndian, {
 const HEADER_SIZE: usize = block_layout::data::OFFSET;
 
 pub struct IntegrityConfig {
-    allow_integrity_violations: bool,
-    missing_block_is_integrity_violation: bool,
-    on_integrity_violation: Box<dyn Fn()>,
+    pub allow_integrity_violations: bool,
+    pub missing_block_is_integrity_violation: bool,
+    pub on_integrity_violation: Box<dyn Fn()>,
 }
 
 pub struct IntegrityBlockStore<B> {
@@ -99,13 +102,27 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
     }
 
     fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
-        todo!()
+        let all_underlying_blocks = self.underlying_block_store.all_blocks()?;
+        if self.config.missing_block_is_integrity_violation {
+            let all_underlying_blocks: Vec<BlockId> = all_underlying_blocks.collect();
+            let mut expected_blocks: HashSet<BlockId> = self.known_block_versions.lock().unwrap().existing_blocks().copied().collect();
+            for existing_block in &all_underlying_blocks {
+                expected_blocks.remove(existing_block);
+            }
+            if !expected_blocks.is_empty() {
+                self._integrity_violation_detected(IntegrityViolationError::MissingBlocks{blocks: expected_blocks}.into())?;
+            }
+            Ok(Box::new(all_underlying_blocks.into_iter()))
+        } else {
+            Ok(all_underlying_blocks)
+        }
     }
 }
 
 impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
     fn remove(&self, id: &BlockId) -> Result<bool> {
-        todo!()
+        self.known_block_versions.lock().unwrap().mark_block_as_deleted(*id);
+        self.underlying_block_store.remove(id)
     }
 }
 
@@ -115,15 +132,20 @@ impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockS
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
-        todo!()
+        let data = B::allocate(HEADER_SIZE + size)
+            .extract()
+            .into_subregion(HEADER_SIZE..);
+        BlockData::new(data)
     }
 
     fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
-        todo!()
+        let data = self._prepend_header(id, data.extract());
+        self.underlying_block_store.try_create_optimized(id, B::BlockData::new(data))
     }
 
     fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
-        todo!()
+        let data = self._prepend_header(id, data.extract());
+        self.underlying_block_store.store_optimized(id, B::BlockData::new(data))
     }
 }
 
@@ -147,6 +169,25 @@ impl<B> IntegrityBlockStore<B> {
             (*self.config.on_integrity_violation)();
             Err(reason)
         }
+    }
+
+    fn _prepend_header(&self, id: &BlockId, data: Data) -> Data {
+        let (version, my_client_id) = {
+            let ref mut known_block_versions = self.known_block_versions.lock().unwrap();
+            let version = known_block_versions.increment_version(*id);
+            let my_client_id = known_block_versions.my_client_id();
+            (version, my_client_id)
+        };
+
+        let data = data.grow_region(HEADER_SIZE, 0).expect(
+            "Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header",
+        );
+        let mut view = block_layout::View::new(data);
+        view.format_version_header_mut().write(FORMAT_VERSION_HEADER);
+        view.block_id_mut().data_mut().copy_from_slice(id.data());
+        view.last_update_client_id_mut().write(my_client_id.id);
+        view.block_version_mut().write(version.version);
+        view.into_storage()
     }
 
     fn _check_and_remove_header(&self, data: Data, expected_block_id: &BlockId) -> Result<Data> {

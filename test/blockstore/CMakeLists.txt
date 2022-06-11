@@ -41,6 +41,7 @@ set(SOURCES
     implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeEncryptedInMemoryBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeIntegrityInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeOnDiskBlockStoreTest.cpp
 )
 
