@@ -23,8 +23,8 @@ fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
 fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
-    let mut result = Data::from(vec![0; C::CIPHERTEXT_OVERHEAD + plaintext.len()])
-        .into_subregion(C::CIPHERTEXT_OVERHEAD..);
+    let mut result = Data::from(vec![0; C::CIPHERTEXT_OVERHEAD + plaintext.len()]);
+    result.shrink_to_subregion(C::CIPHERTEXT_OVERHEAD..);
     result.as_mut().copy_from_slice(plaintext);
     result
 }

@@ -1,31 +1,26 @@
 use anyhow::{bail, Result};
-use binread::{BinRead, BinResult, ReadOptions};
-use binwrite::{BinWrite, WriterOption};
 use futures::TryStreamExt;
-use rand::{thread_rng, Rng};
-use std::convert::TryInto;
-use std::io::{Read, Seek, Write};
 use std::path::Path;
 
-use super::{
+use super::low_level::{
+    caching::CachingBlockStore,
     encrypted::EncryptedBlockStore,
     inmemory::InMemoryBlockStore,
     integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
     ondisk::OnDiskBlockStore,
-    caching::CachingBlockStore,
-    BlockStore,
+    BlockStore, TryCreateResult, RemoveResult,
 };
+use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
 use crate::data::Data;
-
-pub const BLOCKID_LEN: usize = 16;
 
 #[cxx::bridge]
 mod ffi {
     #[namespace = "blockstore::rust::bridge"]
-    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-    struct BlockId {
-        id: [u8; 16],
+    extern "Rust" {
+        type BlockId;
+        fn data(&self) -> &[u8; 16]; // TODO Instead of '16' we should use BLOCKID_LEN here
+        fn new_blockid(id: &[u8; 16]) -> Box<BlockId>;
     }
 
     #[namespace = "blockstore::rust::bridge"]
@@ -57,58 +52,8 @@ mod ffi {
     }
 }
 
-pub use ffi::BlockId;
-
-impl BlockId {
-    pub fn new_random() -> Self {
-        let mut result = Self {
-            id: [0; BLOCKID_LEN],
-        };
-        let mut rng = thread_rng();
-        rng.fill(&mut result.id);
-        result
-    }
-    pub fn from_slice(id_data: &[u8]) -> Result<Self> {
-        Ok(Self::from_array(id_data.try_into()?))
-    }
-    pub fn from_array(id: &[u8; BLOCKID_LEN]) -> Self {
-        Self { id: *id }
-    }
-    pub fn data(&self) -> &[u8; BLOCKID_LEN] {
-        &self.id
-    }
-    pub fn from_hex(hex_data: &str) -> Result<Self> {
-        Self::from_slice(&hex::decode(hex_data)?)
-    }
-    pub fn to_hex(&self) -> String {
-        hex::encode_upper(self.data())
-    }
-}
-
-impl std::fmt::Debug for BlockId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BlockId({})", self.to_hex())
-    }
-}
-
-impl BinRead for BlockId {
-    type Args = ();
-    fn read_options<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<BlockId> {
-        let blockid = <[u8; BLOCKID_LEN]>::read_options(reader, ro, ())?;
-        let blockid = BlockId::from_slice(&blockid)
-            .expect("Can't fail because we pass in an array of exactly the right size");
-        Ok(blockid)
-    }
-}
-
-impl BinWrite for BlockId {
-    fn write_options<W: Write>(
-        &self,
-        writer: &mut W,
-        wo: &WriterOption,
-    ) -> Result<(), std::io::Error> {
-        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, wo)
-    }
+fn new_blockid(data: &[u8; BLOCKID_LEN]) -> Box<BlockId> {
+    Box::new(BlockId::from_array(data))
 }
 
 pub struct OptionData(Option<Data>);
@@ -126,8 +71,7 @@ impl OptionData {
     }
 }
 
-struct LoggerInit {
-}
+struct LoggerInit {}
 impl LoggerInit {
     pub fn new() -> Self {
         env_logger::init();
@@ -149,10 +93,16 @@ struct RustBlockStore2Bridge(Box<dyn BlockStore>);
 impl RustBlockStore2Bridge {
     fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
         // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
-        TOKIO_RUNTIME.block_on(self.0.try_create(id, data))
+        match TOKIO_RUNTIME.block_on(self.0.try_create(id, data))? {
+            TryCreateResult::SuccessfullyCreated => Ok(true),
+            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => Ok(false),
+        }
     }
     fn remove(&self, id: &BlockId) -> Result<bool> {
-        TOKIO_RUNTIME.block_on(self.0.remove(id))
+        match TOKIO_RUNTIME.block_on(self.0.remove(id))? {
+            RemoveResult::SuccessfullyRemoved => Ok(true),
+            RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
+        }
     }
     fn load(&self, id: &BlockId) -> Result<Box<OptionData>> {
         let loaded = TOKIO_RUNTIME.block_on(self.0.load(id))?;
@@ -201,7 +151,7 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
 fn new_caching_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     LOGGER_INIT.ensure_initialized();
     Box::new(RustBlockStore2Bridge(Box::new(CachingBlockStore::new(
-        InMemoryBlockStore::new()
+        InMemoryBlockStore::new(),
     ))))
 }
 
@@ -228,21 +178,4 @@ fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
     Box::new(RustBlockStore2Bridge(Box::new(OnDiskBlockStore::new(
         Path::new(basedir).to_path_buf(),
     ))))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::utils::binary::{BinaryReadExt, BinaryWriteExt};
-    use std::io::Cursor;
-
-    #[test]
-    fn serialize_deserialize_blockid() {
-        let blockid = BlockId::from_hex("ea92df46054175fe9ec0dec871d3affd").unwrap();
-        let mut serialized = Vec::new();
-        blockid.serialize_to_stream(&mut serialized).unwrap();
-        let deserialized =
-            BlockId::deserialize_from_complete_stream(&mut Cursor::new(serialized)).unwrap();
-        assert_eq!(blockid, deserialized);
-    }
 }

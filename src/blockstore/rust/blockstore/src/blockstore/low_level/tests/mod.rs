@@ -23,8 +23,8 @@ macro_rules! _instantiate_blockstore_test {
     ($fixture: ty, $name: ident) => {
         #[tokio::test]
         async fn $name() {
-            let fixture = <$fixture as $crate::blockstore::tests::Fixture>::new();
-            $crate::blockstore::tests::$name(fixture).await
+            let fixture = <$fixture as $crate::blockstore::low_level::tests::Fixture>::new();
+            $crate::blockstore::low_level::tests::$name(fixture).await
         }
     };
 }

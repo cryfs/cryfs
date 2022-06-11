@@ -1,10 +1,7 @@
 //! Ciphers from the `aead` crate (and other crates following its traits, for example `aes_gcm`)
 
 use aead::generic_array::typenum::Unsigned;
-use aead::{
-    generic_array::{ArrayLength, GenericArray},
-    AeadInPlace, NewAead, Nonce, AeadCore,
-};
+use aead::{generic_array::GenericArray, AeadCore, AeadInPlace, NewAead, Nonce};
 use anyhow::{Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
@@ -50,8 +47,10 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
-        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
-                "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        let mut ciphertext = plaintext;
+        ciphertext
+            .grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD, 0)
+            .expect("Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt");
         ciphertext[0..C::NonceSize::USIZE].copy_from_slice(nonce.as_ref());
         ciphertext[C::NonceSize::USIZE..(C::NonceSize::USIZE + C::TagSize::USIZE)]
             .copy_from_slice(auth_tag.as_ref());
@@ -72,7 +71,8 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         cipher
             .decrypt_in_place_detached(nonce.into(), &[], cipherdata.as_mut(), auth_tag.into())
             .context("Decrypting data failed")?;
-        let plaintext = ciphertext.into_subregion((C::NonceSize::USIZE + C::TagSize::USIZE)..);
+        let mut plaintext = ciphertext;
+        plaintext.shrink_to_subregion((C::NonceSize::USIZE + C::TagSize::USIZE)..);
         assert_eq!(
             ciphertext_len
                 .checked_sub(Self::CIPHERTEXT_OVERHEAD)
