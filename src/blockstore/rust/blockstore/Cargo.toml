@@ -1,50 +1,50 @@
 [package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2018"
+edition = "2021"
 name = "cryfs-blockstore"
 version = "0.1.0"
 
 [dependencies]
 aes-gcm = {version = "^0.9.4", features = ["std"]}
-anyhow = "^1.0.43"
-cxx = {version = "^1.0.54", features = ["c++14"]}
-binary-layout = "^2.0.1"
-generic-array = "^0.14.4"
+anyhow = "^1.0.55"
+cxx = {version = "^1.0.65", features = ["c++14"]}
+binary-layout = {git = "https://github.com/smessmer/binary-layout", rev = "f49fa855ab8619cd4d68a2852692d1e17f914ca6" }
+generic-array = "^0.14.5"
 hex = "^0.4.3"
 log = "^0.4.14"
-rand = "^0.8.4"
+rand = "^0.8.5"
 aead = "^0.4.3"
 chacha20poly1305 = "^0.9.0"
-cipher = "^0.3.0"
-itertools = "^0.10.1"
+cipher = "^0.4.2"
+itertools = "^0.10.3"
 region = "^3.0.0"
 ring = "^0.16.20"
 sodiumoxide = "^0.2.7"
 static_assertions = "^1.1.0"
-sysinfo = "^0.20.2"
-errno = "^0.2.7"
+sysinfo = "^0.23.2"
+errno = "^0.2.8"
 binread = {version = "^2.2.0", features = ["const_generics"]}
 binwrite = "^0.2.1"
 common_macros = "^0.1.1"
-thiserror = "^1.0.28"
-paste = "^1.0.5"
+thiserror = "^1.0.30"
+paste = "^1.0.6"
 clru = "^0.5.0"
-tokio = {version = "^1.11.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
-tokio-stream = {version = "^0.1.7", features = ["fs"]}
+tokio = {version = "^1.17.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
+tokio-stream = {version = "^0.1.8", features = ["fs"]}
 # TODO Is async-trait still needed?
-async-trait = "^0.1.51"
-futures = "^0.3.17"
+async-trait = "^0.1.52"
+futures = "^0.3.21"
 env_logger = "^0.9.0"
 lazy_static = "^1.4.0"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
-libc = "^0.2.101"
+libc = "^0.2.119"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["fileapi"] }
+winapi = { version = "^0.3.9", features = ["fileapi"] }
 
 [build-dependencies]
-cxx-build = "^1.0.54"
+cxx-build = "^1.0.65"
 
 [dev-dependencies]
 generic-tests = "^0.1.2"
