@@ -42,6 +42,7 @@ set(SOURCES
     implementations/rustbridge/RustBridgeInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeEncryptedInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeIntegrityInMemoryBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeCachingInMemoryBlockStoreTest.cpp
     implementations/rustbridge/RustBridgeOnDiskBlockStoreTest.cpp
 )
 

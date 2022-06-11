@@ -78,13 +78,15 @@ pub trait BlockStore: BlockStoreReader + BlockStoreWriter + BlockStoreDeleter {}
 mod block_data {
     use super::Data;
 
-    pub trait IBlockData: AsRef<[u8]> + AsMut<[u8]> {
+    pub trait IBlockData: AsRef<[u8]> + AsMut<[u8]> + Clone {
+        // TODO Rename to new_unchecked ?
         fn new(data: Data) -> Self;
         fn extract(self) -> Data;
     }
 
     macro_rules! create_block_data_wrapper {
         ($name: ident) => {
+            #[derive(Clone)]
             pub struct $name(Data);
 
             impl AsRef<[u8]> for BlockData {
