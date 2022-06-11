@@ -2,8 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::Stream;
 use std::any::Any;
-use std::pin::Pin;
 use std::fmt::Debug;
+use std::pin::Pin;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
@@ -72,7 +72,12 @@ impl<B: OptimizedBlockStoreWriter + Sync> BlockStoreWriter for B {
 }
 
 pub trait BlockStore:
-    BlockStoreReader + BlockStoreWriter + BlockStoreDeleter + AsyncDrop<Error = anyhow::Error> + Debug + Any
+    BlockStoreReader
+    + BlockStoreWriter
+    + BlockStoreDeleter
+    + AsyncDrop<Error = anyhow::Error>
+    + Debug
+    + Any
 {
 }
 

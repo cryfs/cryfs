@@ -51,16 +51,25 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     }
 
     pub async fn async_lock(&self, block_id: BlockId) -> BlockCacheEntryGuard<B> {
-        self.cache.as_ref().expect("Object is already destructed").async_lock(block_id).await
+        self.cache
+            .as_ref()
+            .expect("Object is already destructed")
+            .async_lock(block_id)
+            .await
     }
 
     pub fn keys(&self) -> Vec<BlockId> {
-        self.cache.as_ref().expect("Object is already destructed").keys()
+        self.cache
+            .as_ref()
+            .expect("Object is already destructed")
+            .keys()
     }
 
     pub fn delete_entry_from_cache_even_if_dirty(&self, entry: &mut BlockCacheEntryGuard<B>) {
         self.cache
-            .as_ref().expect("Object is already destructed").delete_entry_from_cache_even_if_dirty(&mut entry.guard);
+            .as_ref()
+            .expect("Object is already destructed")
+            .delete_entry_from_cache_even_if_dirty(&mut entry.guard);
     }
 
     pub fn set_entry(
@@ -72,7 +81,8 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         base_store_state: BlockBaseStoreState,
     ) {
         self.cache
-            .as_ref().expect("Object is already destructed")
+            .as_ref()
+            .expect("Object is already destructed")
             .set_entry(base_store, entry, new_value, dirty, base_store_state);
     }
 
@@ -101,7 +111,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     }
 
     pub fn num_blocks_in_cache_but_not_in_base_store(&self) -> u64 {
-        self.cache.as_ref().expect("Object is already destructed").num_blocks_in_cache_but_not_in_base_store()
+        self.cache
+            .as_ref()
+            .expect("Object is already destructed")
+            .num_blocks_in_cache_but_not_in_base_store()
     }
 
     async fn _prune_old_blocks(cache: &BlockCacheImpl<B>) -> Result<()> {
@@ -165,7 +178,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
-        let mut prune_task = self.prune_task.take().expect("Object was already destructed");
+        let mut prune_task = self
+            .prune_task
+            .take()
+            .expect("Object was already destructed");
         let stop_prune_task = async move { prune_task.async_drop().await };
         let drop_entries = async move {
             // The self.cache arc is shared between the prune task and self.
@@ -224,7 +240,9 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     }
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> Debug for BlockCache<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> Debug
+    for BlockCache<B>
+{
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCache").finish()
     }

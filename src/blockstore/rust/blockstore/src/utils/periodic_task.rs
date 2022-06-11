@@ -164,7 +164,8 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_empty_task() {
-        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async { Ok(()) });
+        let mut task =
+            PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async { Ok(()) });
         task.async_drop().await.unwrap();
     }
 

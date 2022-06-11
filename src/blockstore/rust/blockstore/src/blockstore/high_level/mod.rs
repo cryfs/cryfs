@@ -197,8 +197,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     // we don't give any guarantees for whether they're counted or not.
     pub async fn num_blocks(&self) -> Result<u64> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
-        Ok(base_store.num_blocks().await?
-            + self.cache.num_blocks_in_cache_but_not_in_base_store())
+        Ok(base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
     pub fn estimate_num_free_bytes(&self) -> Result<u64> {
@@ -208,8 +207,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
 
     pub fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
-        base_store
-            .block_size_from_physical_block_size(block_size)
+        base_store.block_size_from_physical_block_size(block_size)
     }
 
     // Note: for any blocks that are created or removed while the returned stream is running,
@@ -287,4 +285,26 @@ pub enum TryCreateResult {
 pub enum RemoveResult {
     SuccessfullyRemoved,
     NotRemovedBecauseItDoesntExist,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::blockstore::low_level::BlockStore;
+
+    /// By writing a [LockingBlockStoreFixture] implementation and using the [instantiate_locking_blockstore_tests] macro,
+    /// our suite of block store tests is instantiated for a given block store.
+    ///
+    /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
+    /// required by the block store.
+    pub trait LockingBlockStoreFixture {
+        type ConcreteBlockStore: BlockStore + Send + Sync + Debug + 'static;
+
+        fn new() -> Self;
+        fn store(&mut self) -> &mut LockingBlockStore<Self::ConcreteBlockStore>;
+    }
+
+    fn two_created_blocks_have_different_ids<F: LockingBlockStoreFixture>(mut f: F) {
+        let store = f.store();
+    }
 }

@@ -6,7 +6,7 @@ use crate::blockstore::BlockId;
 
 pub struct BlockCacheEntryGuard<B>
 where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug+ 'static,
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 {
     pub(super) guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
 }

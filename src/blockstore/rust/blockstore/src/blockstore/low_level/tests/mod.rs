@@ -38,10 +38,8 @@ fn data(size: usize, seed: u64) -> Data {
 pub mod try_create {
     use super::*;
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -58,10 +56,8 @@ pub mod try_create {
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -75,10 +71,8 @@ pub mod try_create {
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -92,10 +86,8 @@ pub mod try_create {
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
     }
 
-    pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -108,10 +100,8 @@ pub mod try_create {
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -128,10 +118,8 @@ pub mod try_create {
 pub mod load {
     use super::*;
 
-    pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -147,10 +135,8 @@ pub mod load {
         assert_eq!(Some(data(1024, 1)), loaded);
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -163,8 +149,8 @@ pub mod load {
         assert_eq!(Some(data(0, 1)), loaded);
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails<F: Fixture>(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -180,9 +166,7 @@ pub mod load {
         assert_eq!(None, loaded);
     }
 
-    pub async fn test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails<F: Fixture>(
-        mut f: F,
-    ) {
+    pub async fn test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails(mut f: impl Fixture) {
         let store = f.store();
 
         let loaded = store.load(&blockid(1)).await.unwrap();
@@ -193,10 +177,8 @@ pub mod load {
 pub mod store {
     use super::*;
 
-    pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -208,10 +190,8 @@ pub mod store {
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -220,10 +200,8 @@ pub mod store {
         assert_eq!(Some(data(0, 1)), store.load(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -239,10 +217,8 @@ pub mod store {
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -255,10 +231,8 @@ pub mod store {
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -282,10 +256,8 @@ pub mod store {
         assert_eq!(Some(data(1024, 2)), store.load(&blockid(2)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -310,10 +282,8 @@ pub mod store {
 pub mod remove {
     use super::*;
 
-    pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -329,10 +299,8 @@ pub mod remove {
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
     }
 
-    pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -345,10 +313,8 @@ pub mod remove {
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -369,10 +335,8 @@ pub mod remove {
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -390,8 +354,8 @@ pub mod remove {
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
     }
 
-    pub async fn test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails<F: Fixture>(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -402,8 +366,8 @@ pub mod remove {
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails<F: Fixture>(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
 
@@ -423,19 +387,15 @@ pub mod remove {
 pub mod num_blocks {
     use super::*;
 
-    pub async fn test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         assert_eq!(0, store.num_blocks().await.unwrap());
     }
 
-    pub async fn test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         assert_eq!(0, store.num_blocks().await.unwrap());
@@ -449,10 +409,8 @@ pub mod num_blocks {
         assert_eq!(3, store.num_blocks().await.unwrap());
     }
 
-    pub async fn test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         assert_eq!(0, store.num_blocks().await.unwrap());
@@ -478,10 +436,8 @@ pub mod num_blocks {
         assert_eq!(3, store.num_blocks().await.unwrap());
     }
 
-    pub async fn test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
@@ -533,39 +489,31 @@ pub mod all_blocks {
             .unwrap()
     }
 
-    pub async fn test_givenEmptyBlockStore_whenCallingAllBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenCallingAllBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         assert_unordered_vec_eq(vec![], call_all_blocks(store).await);
     }
 
-    pub async fn test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store).await);
     }
 
-    pub async fn test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(0, 0)).await.unwrap();
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store).await);
     }
 
-    pub async fn test_givenBlockStoreWithTwoBlocks_whenCallingAllBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenBlockStoreWithTwoBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
@@ -573,10 +521,8 @@ pub mod all_blocks {
         assert_unordered_vec_eq(vec![blockid(0), blockid(1)], call_all_blocks(store).await);
     }
 
-    pub async fn test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
@@ -588,10 +534,8 @@ pub mod all_blocks {
         );
     }
 
-    pub async fn test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
@@ -621,29 +565,23 @@ pub mod all_blocks {
 pub mod exists {
     use super::*;
 
-    pub async fn test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         assert_eq!(false, store.exists(&blockid(0)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         assert_eq!(false, store.exists(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue<
-        F: Fixture,
-    >(
-        mut f: F,
+    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue(
+        mut f: impl Fixture,
     ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
