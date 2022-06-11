@@ -150,6 +150,3 @@ pub mod encrypted;
 pub mod inmemory;
 pub mod integrity;
 pub mod ondisk;
-
-#[cfg(test)]
-pub(super) mod tests;

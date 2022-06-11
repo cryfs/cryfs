@@ -340,14 +340,14 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
-    use crate::{instantiate_blockstore_tests, instantiate_locking_blockstore_tests};
     use tempdir::TempDir;
 
     struct TestFixture {
         basedir: TempDir,
     }
-    impl crate::blockstore::low_level::tests::Fixture for TestFixture {
+    impl crate::blockstore::tests::Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
@@ -358,14 +358,7 @@ mod tests {
         }
     }
 
-    mod low_level_blockstore_tests {
-        use super::*;
-        instantiate_blockstore_tests!(TestFixture);
-    }
-    mod high_level_blockstore_tests {
-        use super::*;
-        instantiate_locking_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
-    }
+    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
     async fn test_block_path() {

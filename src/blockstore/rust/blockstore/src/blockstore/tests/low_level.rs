@@ -2,40 +2,15 @@
 
 use anyhow::Result;
 use futures::stream::StreamExt;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
 use std::ops::Deref;
 
-use super::{
-    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, RemoveResult,
-    TryCreateResult,
+use super::{blockid, data, Fixture};
+use crate::blockstore::low_level::{
+    BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, RemoveResult, TryCreateResult,
 };
-use crate::data::Data;
-use crate::utils::async_drop::SyncDrop;
+use crate::blockstore::BlockId;
 
 // TODO Test try_create_optimized(), store_optimized()
-
-/// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests] macro,
-/// our suite of block store tests is instantiated for a given block store.
-///
-/// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
-/// required by the block store.
-pub trait Fixture {
-    type ConcreteBlockStore: BlockStore;
-
-    fn new() -> Self;
-    fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
-}
-
-pub fn blockid(seed: u64) -> BlockId {
-    BlockId::from_slice(data(16, seed).as_ref()).unwrap()
-}
-
-pub fn data(size: usize, seed: u64) -> Data {
-    let mut rng = StdRng::seed_from_u64(seed);
-    let mut res = vec![0; size];
-    rng.fill_bytes(&mut res);
-    res.into()
-}
 
 pub mod try_create {
     use super::*;
@@ -598,12 +573,12 @@ pub mod exists {
 }
 
 #[macro_export]
-macro_rules! _instantiate_blockstore_tests {
+macro_rules! _instantiate_lowlevel_blockstore_tests {
     (@module $module_name: ident, $target: ty, $tokio_test_args: tt $(, $test_cases: ident)* $(,)?) => {
         mod $module_name {
             use super::*;
 
-            $crate::_instantiate_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
+            $crate::_instantiate_lowlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
         }
     };
     (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt) => {
@@ -612,35 +587,35 @@ macro_rules! _instantiate_blockstore_tests {
         #[tokio::test$tokio_test_args]
         #[allow(non_snake_case)]
         async fn $head_test_case() {
-            let fixture = <$target as $crate::blockstore::low_level::tests::Fixture>::new();
-            $crate::blockstore::low_level::tests::$module_name::$head_test_case(fixture).await
+            let fixture = <$target as $crate::blockstore::tests::Fixture>::new();
+            $crate::blockstore::tests::low_level::$module_name::$head_test_case(fixture).await
         }
-        $crate::_instantiate_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
     };
 }
 
 /// This macro instantiates all blockstore tests for a given blockstore.
 /// See [Fixture] for how to invoke it.
 #[macro_export]
-macro_rules! instantiate_blockstore_tests {
+macro_rules! instantiate_lowlevel_blockstore_tests {
     ($target: ty) => {
-        $crate::instantiate_blockstore_tests!($target, ());
+        $crate::instantiate_lowlevel_blockstore_tests!($target, ());
     };
     ($target: ty, $tokio_test_args: tt) => {
-        $crate::_instantiate_blockstore_tests!(@module try_create, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module try_create, $target, $tokio_test_args,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds,
         );
-        $crate::_instantiate_blockstore_tests!(@module load, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module load, $target, $tokio_test_args,
             test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenLoadExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails,
             test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails,
         );
-        $crate::_instantiate_blockstore_tests!(@module store, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module store, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds,
@@ -648,7 +623,7 @@ macro_rules! instantiate_blockstore_tests {
             test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds,
         );
-        $crate::_instantiate_blockstore_tests!(@module remove, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module remove, $target, $tokio_test_args,
             test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore,
             test_givenOtherwiseEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore,
             test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore,
@@ -656,13 +631,13 @@ macro_rules! instantiate_blockstore_tests {
             test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
             test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
         );
-        $crate::_instantiate_blockstore_tests!(@module num_blocks, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module num_blocks, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
         );
-        $crate::_instantiate_blockstore_tests!(@module all_blocks, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module all_blocks, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult,
@@ -670,7 +645,7 @@ macro_rules! instantiate_blockstore_tests {
             test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks,
         );
-        $crate::_instantiate_blockstore_tests!(@module exists, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_tests!(@module exists, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue,
