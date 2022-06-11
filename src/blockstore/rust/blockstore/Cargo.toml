@@ -5,49 +5,49 @@ name = "cryfs-blockstore"
 version = "0.1.0"
 
 [dependencies]
-aes-gcm = {version = "^0.8.0", features = ["std"]}
-anyhow = "^1.0.37"
-cxx = {version = "^1.0.27", features = ["c++14"]}
+aes-gcm = {version = "^0.9.4", features = ["std"]}
+anyhow = "^1.0.43"
+cxx = {version = "^1.0.54", features = ["c++14"]}
 binary-layout = "^2.0.1"
 generic-array = "^0.14.4"
-hex = "^0.4.2"
-log = "^0.4.13"
-rand = "^0.8.1"
-# TODO current release sodiumoxide 0.2.6 doesn't have aes yet, use current master
-aead = "^0.3.2"
-chacha20poly1305 = "^0.7.1"
-cipher = "^0.2.5"
-itertools = "^0.10.0"
-region = "^2.2.0"
-ring = "^0.16.19"
-sodiumoxide = {git = "https://github.com/sodiumoxide/sodiumoxide", rev = "9f6a18d40a4db253edfebac9f2ce5c22d09b1f47"}
+hex = "^0.4.3"
+log = "^0.4.14"
+rand = "^0.8.4"
+aead = "^0.4.3"
+chacha20poly1305 = "^0.9.0"
+cipher = "^0.3.0"
+itertools = "^0.10.1"
+region = "^3.0.0"
+ring = "^0.16.20"
+sodiumoxide = "^0.2.7"
 static_assertions = "^1.1.0"
-sysinfo = "^0.16.4"
+sysinfo = "^0.20.2"
 errno = "^0.2.7"
-binread = {version = "^2.1.1", features = ["const_generics"]}
+binread = {version = "^2.2.0", features = ["const_generics"]}
 binwrite = "^0.2.1"
 common_macros = "^0.1.1"
-thiserror = "^1.0.24"
+thiserror = "^1.0.28"
 paste = "^1.0.5"
-clru = "^0.4.0"
-tokio = {version = "^1.5.0", features = ["fs", "io-util", "rt-multi-thread"]}
-tokio-stream = {version = "^0.1.5", features = ["fs"]}
-async-trait = "^0.1.50"
-futures = "^0.3.14"
-env_logger = "^0.8.3"
+clru = "^0.5.0"
+tokio = {version = "^1.11.0", features = ["fs", "io-util", "rt-multi-thread"]}
+tokio-stream = {version = "^0.1.7", features = ["fs"]}
+# TODO Is async-trait still needed?
+async-trait = "^0.1.51"
+futures = "^0.3.17"
+env_logger = "^0.9.0"
 lazy_static = "^1.4.0"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
-libc = "^0.2.92"
+libc = "^0.2.101"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["fileapi"] }
 
 [build-dependencies]
-cxx-build = "^1.0.27"
+cxx-build = "^1.0.54"
 
 [dev-dependencies]
-generic-tests = "^0.1.1"
+generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
 
 [lib]
