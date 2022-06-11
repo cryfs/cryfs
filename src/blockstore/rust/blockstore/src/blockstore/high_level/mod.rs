@@ -16,6 +16,9 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 mod cache;
 use cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
+#[cfg(test)]
+pub(super) mod tests;
+
 pub struct Block<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> {
     cache_entry: BlockCacheEntryGuard<B>,
 }
@@ -229,16 +232,17 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         ))
     }
 
-    pub async fn create(&self, data: &Data) -> Result<()> {
+    pub async fn create(&self, data: &Data) -> Result<BlockId> {
         loop {
-            let created = self.try_create(&BlockId::new_random(), data).await?;
+            let block_id = BlockId::new_random();
+            let created = self.try_create(&block_id, data).await?;
             match created {
                 TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => {
                     /* just continue */
                     ()
                 }
                 TryCreateResult::SuccessfullyCreated => {
-                    return Ok(());
+                    return Ok(block_id);
                 }
             }
         }
@@ -285,26 +289,4 @@ pub enum TryCreateResult {
 pub enum RemoveResult {
     SuccessfullyRemoved,
     NotRemovedBecauseItDoesntExist,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::blockstore::low_level::BlockStore;
-
-    /// By writing a [LockingBlockStoreFixture] implementation and using the [instantiate_locking_blockstore_tests] macro,
-    /// our suite of block store tests is instantiated for a given block store.
-    ///
-    /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
-    /// required by the block store.
-    pub trait LockingBlockStoreFixture {
-        type ConcreteBlockStore: BlockStore + Send + Sync + Debug + 'static;
-
-        fn new() -> Self;
-        fn store(&mut self) -> &mut LockingBlockStore<Self::ConcreteBlockStore>;
-    }
-
-    fn two_created_blocks_have_different_ids<F: LockingBlockStoreFixture>(mut f: F) {
-        let store = f.store();
-    }
 }

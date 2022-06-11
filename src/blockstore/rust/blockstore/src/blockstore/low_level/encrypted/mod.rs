@@ -198,55 +198,85 @@ mod tests {
     use super::*;
 
     use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use std::marker::PhantomData;
 
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
     use crate::crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305};
-    use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
+    use crate::{instantiate_blockstore_tests, instantiate_locking_blockstore_tests};
 
     struct TestFixture<C: 'static + Cipher + Send + Sync> {
-        store: SyncDrop<EncryptedBlockStore<C, InMemoryBlockStore>>,
+        _c: PhantomData<C>,
     }
     impl<C: 'static + Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture
         for TestFixture<C>
     {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
+            Self { _c: PhantomData }
+        }
+        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
             let key = EncryptionKey::new(|key_data| {
                 let mut rng = StdRng::seed_from_u64(0);
                 rng.fill_bytes(key_data);
                 Ok(())
             })
             .unwrap();
-            Self {
-                store: SyncDrop::new(EncryptedBlockStore::new(
-                    InMemoryBlockStore::new(),
-                    Cipher::new(key),
-                )),
-            }
-        }
-        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
-            &mut self.store
+            SyncDrop::new(EncryptedBlockStore::new(
+                InMemoryBlockStore::new(),
+                Cipher::new(key),
+            ))
         }
     }
 
-    mod aes256gcm {
+    mod low_level_blockstore_tests {
         use super::*;
-        instantiate_blockstore_tests!(super::TestFixture<Aes256Gcm>, (flavor = "multi_thread"));
-    }
-    mod aes128gcm {
-        use super::*;
-        crate::instantiate_blockstore_tests!(
-            super::TestFixture<Aes128Gcm>,
-            (flavor = "multi_thread")
-        );
+
+        mod aes256gcm {
+            use super::*;
+            instantiate_blockstore_tests!(super::TestFixture<Aes256Gcm>, (flavor = "multi_thread"));
+        }
+        mod aes128gcm {
+            use super::*;
+            crate::instantiate_blockstore_tests!(
+                super::TestFixture<Aes128Gcm>,
+                (flavor = "multi_thread")
+            );
+        }
+
+        mod xchachapoly1305 {
+            use super::*;
+            crate::instantiate_blockstore_tests!(
+                super::TestFixture<XChaCha20Poly1305>,
+                (flavor = "multi_thread")
+            );
+        }
     }
 
-    mod xchachapoly1305 {
+    mod high_level_blockstore_tests {
         use super::*;
-        crate::instantiate_blockstore_tests!(
-            super::TestFixture<XChaCha20Poly1305>,
-            (flavor = "multi_thread")
-        );
+
+        mod aes256gcm {
+            use super::*;
+            instantiate_locking_blockstore_tests!(
+                super::TestFixture<Aes256Gcm>,
+                (flavor = "multi_thread")
+            );
+        }
+        mod aes128gcm {
+            use super::*;
+            crate::instantiate_locking_blockstore_tests!(
+                super::TestFixture<Aes128Gcm>,
+                (flavor = "multi_thread")
+            );
+        }
+
+        mod xchachapoly1305 {
+            use super::*;
+            crate::instantiate_locking_blockstore_tests!(
+                super::TestFixture<XChaCha20Poly1305>,
+                (flavor = "multi_thread")
+            );
+        }
     }
 }

@@ -154,23 +154,27 @@ impl BlockStore for InMemoryBlockStore {}
 #[cfg(test)]
 mod tests {
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
-    use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
+    use crate::{instantiate_blockstore_tests, instantiate_locking_blockstore_tests};
 
-    struct TestFixture {
-        store: SyncDrop<InMemoryBlockStore>,
-    }
+    struct TestFixture {}
     impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = InMemoryBlockStore;
         fn new() -> Self {
-            Self {
-                store: SyncDrop::new(InMemoryBlockStore::new()),
-            }
+            Self {}
         }
-        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
-            &mut self.store
+        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+            SyncDrop::new(InMemoryBlockStore::new())
         }
     }
 
-    instantiate_blockstore_tests!(TestFixture);
+    mod low_level_blockstore_tests {
+        use super::*;
+        instantiate_blockstore_tests!(TestFixture);
+    }
+
+    mod high_level_blockstore_tests {
+        use super::*;
+        instantiate_locking_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    }
 }

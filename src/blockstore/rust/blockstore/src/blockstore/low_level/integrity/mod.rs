@@ -401,14 +401,13 @@ mod tests {
     use crate::utils::async_drop::SyncDrop;
     use tempdir::TempDir;
 
-    use crate::instantiate_blockstore_tests;
+    use crate::{instantiate_blockstore_tests, instantiate_locking_blockstore_tests};
 
     struct TestFixture<
         const ALLOW_INTEGRITY_VIOLATIONS: bool,
         const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
     > {
-        store: SyncDrop<IntegrityBlockStore<InMemoryBlockStore>>,
-        _integrity_file_dir: TempDir,
+        integrity_file_dir: TempDir,
     }
     impl<
             const ALLOW_INTEGRITY_VIOLATIONS: bool,
@@ -419,10 +418,13 @@ mod tests {
         type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
             let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
-            let store = SyncDrop::new(
+            Self { integrity_file_dir }
+        }
+        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+            SyncDrop::new(
                 IntegrityBlockStore::new(
                     InMemoryBlockStore::new(),
-                    integrity_file_dir
+                    self.integrity_file_dir
                         .path()
                         .join("integrity_file")
                         .to_path_buf(),
@@ -436,33 +438,53 @@ mod tests {
                     },
                 )
                 .unwrap(),
-            );
-            Self {
-                _integrity_file_dir: integrity_file_dir,
-                store,
-            }
-        }
-        fn store(&mut self) -> &mut Self::ConcreteBlockStore {
-            &mut self.store
+            )
         }
     }
 
-    instantiate_blockstore_tests!(TestFixture<false, false>);
-
-    mod multiclient {
+    mod low_level_blockstore_tests {
         use super::*;
+
         instantiate_blockstore_tests!(TestFixture<false, false>);
+
+        mod multiclient {
+            use super::*;
+            instantiate_blockstore_tests!(TestFixture<false, false>);
+        }
+        mod singleclient {
+            use super::*;
+            instantiate_blockstore_tests!(TestFixture<false, true>);
+        }
+        mod multiclient_allow_integrity_violations {
+            use super::*;
+            instantiate_blockstore_tests!(TestFixture<true, false>);
+        }
+        mod singleclient_allow_integrity_violations {
+            use super::*;
+            instantiate_blockstore_tests!(TestFixture<true, true>);
+        }
     }
-    mod singleclient {
+
+    mod high_level_blockstore_tests {
         use super::*;
-        instantiate_blockstore_tests!(TestFixture<false, true>);
-    }
-    mod multiclient_allow_integrity_violations {
-        use super::*;
-        instantiate_blockstore_tests!(TestFixture<true, false>);
-    }
-    mod singleclient_allow_integrity_violations {
-        use super::*;
-        instantiate_blockstore_tests!(TestFixture<true, true>);
+
+        instantiate_locking_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));
+
+        mod multiclient {
+            use super::*;
+            instantiate_locking_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));
+        }
+        mod singleclient {
+            use super::*;
+            instantiate_locking_blockstore_tests!(TestFixture<false, true>, (flavor = "multi_thread"));
+        }
+        mod multiclient_allow_integrity_violations {
+            use super::*;
+            instantiate_locking_blockstore_tests!(TestFixture<true, false>, (flavor = "multi_thread"));
+        }
+        mod singleclient_allow_integrity_violations {
+            use super::*;
+            instantiate_locking_blockstore_tests!(TestFixture<true, true>, (flavor = "multi_thread"));
+        }
     }
 }

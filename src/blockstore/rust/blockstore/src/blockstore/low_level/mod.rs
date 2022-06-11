@@ -152,4 +152,4 @@ pub mod integrity;
 pub mod ondisk;
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
