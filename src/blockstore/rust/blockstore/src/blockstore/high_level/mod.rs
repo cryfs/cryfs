@@ -6,14 +6,13 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use lockpool::{AsyncLockPool, LockPool, TokioLockPool, TryLockError};
+use lockpool::{AsyncLockPool, LockPool, TokioLockPool, TryLockError, Guard};
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub struct Block<B: super::low_level::BlockStore + Send + Sync> {
-    block_id: BlockId,
     data: Data,
     dirty: bool,
     base_store: Arc<B>,
@@ -23,7 +22,7 @@ pub struct Block<B: super::low_level::BlockStore + Send + Sync> {
 impl<B: super::low_level::BlockStore + Send + Sync> fmt::Debug for Block<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Block")
-            .field("block_id", &self.block_id)
+            .field("block_id", self.block_id())
             .field("dirty", &self.dirty)
             .finish()
     }
@@ -32,7 +31,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> fmt::Debug for Block<B> {
 impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     #[inline]
     pub fn block_id(&self) -> &BlockId {
-        &self.block_id
+        &self.lock_guard.key()
     }
 
     #[inline]
@@ -49,7 +48,7 @@ impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     pub async fn flush(&mut self) -> Result<()> {
         if self.dirty {
             // TODO self.base_store.optimized_store() ?
-            self.base_store.store(&self.block_id, &self.data).await?;
+            self.base_store.store(self.block_id(), &self.data).await?;
             self.dirty = false;
         }
         Ok(())
@@ -88,7 +87,6 @@ impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
         let lock_guard = self.lock_pool.lock_owned_async(block_id).await;
         Ok(self.base_store.load(&block_id).await?.map(|data| {
             AsyncDropGuard::new(Block {
-                block_id,
                 data,
                 dirty: false,
                 base_store: Arc::clone(&self.base_store),

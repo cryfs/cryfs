@@ -36,7 +36,7 @@ async-trait = "^0.1.52"
 futures = "^0.3.21"
 env_logger = "^0.9.0"
 lazy_static = "^1.4.0"
-lockpool = {git = "https://github.com/smessmer/lockpool", rev = "d706424c9a72d9c5ad69f3b8634413bbf764e633", features = ["tokio"] }
+lockpool = {git = "https://github.com/smessmer/lockpool", rev = "ef34790df16209c8ec1155a27ba9f47dd2132ec4", features = ["tokio"] }
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.119"
