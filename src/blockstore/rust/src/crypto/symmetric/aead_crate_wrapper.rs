@@ -5,7 +5,7 @@ use aead::{
     generic_array::{ArrayLength, GenericArray},
     Aead, NewAead, Nonce,
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
@@ -39,15 +39,21 @@ impl<C: NewAead + Aead> Cipher for AeadCipher<C> {
         plaintext_size + C::NonceSize::USIZE + C::TagSize::USIZE
     }
 
-    fn plaintext_size(ciphertext_size: usize) -> usize {
-        assert!(
+    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
+        ensure!(
             ciphertext_size >= C::NonceSize::USIZE + C::TagSize::USIZE,
-            "Invalid ciphertext size"
+            "Ciphertext size of {} bytes is too small to hold the ciphertext, even for a plaintext of 0 bytes. Ciphertext size must be at least {} bytes.",
+            ciphertext_size,
+            C::NonceSize::USIZE + C::TagSize::USIZE,
         );
-        ciphertext_size - C::NonceSize::USIZE - C::TagSize::USIZE
+        Ok(ciphertext_size - C::NonceSize::USIZE - C::TagSize::USIZE)
     }
 
     fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+        // TODO Move C::new call to constructor so we don't have to do it every time?
+        //      Is it actually expensive? Note that we have to somehow migrate the
+        //      secret protection we get from our EncryptionKey class then.
+        // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
         let ciphertext_size = Self::ciphertext_size(plaintext.len());
         let nonce = random_nonce();
@@ -62,13 +68,16 @@ impl<C: NewAead + Aead> Cipher for AeadCipher<C> {
     }
 
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
+        // TODO Move C::new call to constructor so we don't have to do it every time?
+        //      Is it actually expensive? Note that we have to somehow migrate the
+        //      secret protection we get from our EncryptionKey class then.
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
         let nonce = &ciphertext[..C::NonceSize::USIZE];
         let cipherdata = &ciphertext[C::NonceSize::USIZE..];
         let plaintext = cipher
             .decrypt(nonce.into(), cipherdata)
             .context("Decrypting data failed")?;
-        assert_eq!(Self::plaintext_size(ciphertext.len()), plaintext.len());
+        assert_eq!(Self::plaintext_size(ciphertext.len()).unwrap(), plaintext.len());
         Ok(plaintext)
     }
 }

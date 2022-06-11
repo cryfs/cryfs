@@ -94,7 +94,7 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = vec![];
         let ciphertext = cipher.encrypt(&plaintext).unwrap();
-        assert_eq!(plaintext.len(), C::plaintext_size(ciphertext.len()));
+        assert_eq!(plaintext.len(), C::plaintext_size(ciphertext.len()).unwrap());
         assert_eq!(
             ciphertext.len(),
             C::ciphertext_size(plaintext.len())
@@ -106,7 +106,7 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap();
         let ciphertext = cipher.encrypt(&plaintext).unwrap();
-        assert_eq!(plaintext.len(), C::plaintext_size(ciphertext.len()));
+        assert_eq!(plaintext.len(), C::plaintext_size(ciphertext.len()).unwrap());
         assert_eq!(
             ciphertext.len(),
             C::ciphertext_size(plaintext.len())
