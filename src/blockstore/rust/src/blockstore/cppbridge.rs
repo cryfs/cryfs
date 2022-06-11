@@ -17,7 +17,7 @@ pub const BLOCKID_LEN: usize = 16;
 #[cxx::bridge]
 mod ffi {
     #[namespace = "blockstore::rust::bridge"]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
     struct BlockId {
         id: [u8; 16],
     }
@@ -58,19 +58,26 @@ impl BlockId {
         rng.fill(&mut result.id);
         result
     }
-    pub fn from_data(id_data: &[u8]) -> Result<Self> {
-        Ok(Self {
-            id: id_data.try_into()?,
-        })
+    pub fn from_slice(id_data: &[u8]) -> Result<Self> {
+        Ok(Self::from_array(id_data.try_into()?))
+    }
+    pub fn from_array(id: &[u8; BLOCKID_LEN]) -> Self {
+        Self { id: *id }
     }
     pub fn data(&self) -> &[u8; BLOCKID_LEN] {
         &self.id
     }
     pub fn from_hex(hex_data: &str) -> Result<Self> {
-        Self::from_data(&hex::decode(hex_data)?)
+        Self::from_slice(&hex::decode(hex_data)?)
     }
     pub fn to_hex(&self) -> String {
         hex::encode_upper(self.data())
+    }
+}
+
+impl std::fmt::Debug for BlockId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlockId({})", self.to_hex())
     }
 }
 
@@ -78,7 +85,7 @@ impl BinRead for BlockId {
     type Args = ();
     fn read_options<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<BlockId> {
         let blockid = <[u8; BLOCKID_LEN]>::read_options(reader, ro, ())?;
-        let blockid = BlockId::from_data(&blockid)
+        let blockid = BlockId::from_slice(&blockid)
             .expect("Can't fail because we pass in an array of exactly the right size");
         Ok(blockid)
     }

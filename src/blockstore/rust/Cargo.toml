@@ -26,6 +26,7 @@ errno = "^0.2.7"
 binread = {version = "2.1.1", features = ["const_generics"]}
 binwrite = "0.2.1"
 common_macros = "0.1.1"
+thiserror = "1.0.24"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.92"

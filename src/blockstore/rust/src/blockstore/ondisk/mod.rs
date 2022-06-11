@@ -274,7 +274,7 @@ mod tests {
         assert_eq!(
             Path::new("/base/path/2AC/9C78D80937AD50852C50BD3F1F982"),
             block_store._block_path(
-                &BlockId::from_data(&hex::decode("2AC9C78D80937AD50852C50BD3F1F982").unwrap())
+                &BlockId::from_slice(&hex::decode("2AC9C78D80937AD50852C50BD3F1F982").unwrap())
                     .unwrap()
             )
         );
