@@ -8,7 +8,6 @@ use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, 
 use std::sync::Once;
 
 use super::super::{Cipher, EncryptionKey};
-use super::{AUTH_TAG_SIZE, NONCE_SIZE};
 
 use crate::data::Data;
 
@@ -37,7 +36,8 @@ impl Aes256Gcm {
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD;
+    const CIPHERTEXT_OVERHEAD_PREFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_PREFIX;
+    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_SUFFIX;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         init_libsodium();
@@ -50,9 +50,8 @@ impl Cipher for Aes256Gcm {
     }
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
-        // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         // TODO Use binary-layout here?
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
+        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let nonce = self.cipher.gen_initial_nonce();
         let auth_tag = self
             .cipher
@@ -66,18 +65,18 @@ impl Cipher for Aes256Gcm {
                 &convert_key(&self.encryption_key),
             );
         let mut ciphertext = plaintext;
-        ciphertext.grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD, 0).context(
-            "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
-        ciphertext[0..NONCE_SIZE].copy_from_slice(nonce.as_ref());
-        ciphertext[NONCE_SIZE..(NONCE_SIZE + AUTH_TAG_SIZE)].copy_from_slice(auth_tag.as_ref());
+        ciphertext.grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD_PREFIX, Self::CIPHERTEXT_OVERHEAD_SUFFIX).context(
+            "Tried to add prefix and suffix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        ciphertext[..Self::CIPHERTEXT_OVERHEAD_PREFIX].copy_from_slice(nonce.as_ref());
+        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..].copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
         let ciphertext_len = ciphertext.len();
-        let (nonce, rest) = ciphertext.as_mut().split_at_mut(NONCE_SIZE);
-        let (auth_tag, cipherdata) = rest.split_at_mut(AUTH_TAG_SIZE);
+        let (nonce, rest) = ciphertext.as_mut().split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
+        let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
         let nonce = Nonce::from_slice(nonce).expect("Wrong nonce size");
         let auth_tag = Tag::from_slice(auth_tag).expect("Wrong auth tag size");
         self.cipher
@@ -93,10 +92,10 @@ impl Cipher for Aes256Gcm {
             )
             .map_err(|()| anyhow!("Decrypting data failed"))?;
         let mut plaintext = ciphertext;
-        plaintext.shrink_to_subregion((NONCE_SIZE + AUTH_TAG_SIZE)..);
+        plaintext.shrink_to_subregion(Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX));
         assert_eq!(
             ciphertext_len
-                .checked_sub(Self::CIPHERTEXT_OVERHEAD)
+                .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)
                 .unwrap(),
             plaintext.len()
         );

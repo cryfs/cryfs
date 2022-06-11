@@ -59,7 +59,7 @@ optional<unique_ref<DataNode>> DataNodeStore::load(const BlockId &blockId) {
   if (block == none) {
     return none;
   } else {
-    ASSERT((*block)->size() == _layout.blocksizeBytes(), "Loading block of wrong size");
+    ASSERT((*block)->size() == _layout.blocksizeBytes(), std::string() + "Loading block of wrong size: " + std::to_string((*block)->size()) + " vs " + std::to_string(_layout.blocksizeBytes()));
     return load(std::move(*block));
   }
 }

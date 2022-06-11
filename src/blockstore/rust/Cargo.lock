@@ -39,6 +39,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43bb833f0bf979d8475d38fbf09ed3b8a55e1885fe93ad3f93239fc6a4f17b98"
+dependencies = [
+ "getrandom",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -322,8 +333,9 @@ dependencies = [
  "itertools",
  "lazy_static",
  "libc",
- "lockpool",
  "log",
+ "lru",
+ "owning_ref",
  "paste 1.0.6",
  "rand 0.8.5",
  "region",
@@ -335,6 +347,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "winapi",
 ]
 
@@ -600,6 +613,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+dependencies = [
+ "ahash",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -681,23 +703,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "lockpool"
-version = "2.0.2"
-source = "git+https://github.com/smessmer/lockpool?rev=ef34790df16209c8ec1155a27ba9f47dd2132ec4#ef34790df16209c8ec1155a27ba9f47dd2132ec4"
-dependencies = [
- "async-trait",
- "owning_ref",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lru"
+version = "0.7.3"
+source = "git+https://github.com/smessmer/lru-rs.git?rev=ec021658cd7d48deb88226ad31bb6f3f33e16575#ec021658cd7d48deb88226ad31bb6f3f33e16575"
+dependencies = [
+ "hashbrown",
 ]
 
 [[package]]
@@ -758,7 +777,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "owning_ref"
 version = "0.4.1"
-source = "git+https://github.com/smessmer/owning-ref-rs.git?rev=33b9630201751021958405ac956d5f2ea23f4909#33b9630201751021958405ac956d5f2ea23f4909"
+source = "git+https://github.com/smessmer/owning-ref-rs?rev=4f1d11353fbebbd3f05d5d7b879c0906c4e0759e#4f1d11353fbebbd3f05d5d7b879c0906c4e0759e"
 dependencies = [
  "stable_deref_trait",
 ]
@@ -1181,6 +1200,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
 dependencies = [
  "futures-core",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64910e1b9c1901aaf5375561e35b9c057d95ff41a44ede043a03e09279eabaf1"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "log",
  "pin-project-lite",
  "tokio",
 ]

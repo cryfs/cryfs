@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
+use std::io::ErrorKind;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -32,6 +33,20 @@ impl OnDiskBlockStore {
 
 #[async_trait]
 impl BlockStoreReader for OnDiskBlockStore {
+    async fn exists(&self, id: &BlockId) -> Result<bool> {
+        let path = self._block_path(id);
+        match tokio::fs::metadata(path).await {
+            Ok(_) => Ok(true),
+            Err(err) => {
+                if err.kind() == ErrorKind::NotFound {
+                    Ok(false)
+                } else {
+                    Err(err.into())
+                }
+            }
+        }
+    }
+
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let path = self._block_path(id);
         match tokio::fs::read(&path).await {

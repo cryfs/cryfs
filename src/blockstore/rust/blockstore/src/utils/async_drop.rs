@@ -107,7 +107,6 @@ mod tests {
     use std::fmt::{self, Debug};
     use std::future::Future;
     use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
-    use std::sync::{Arc, Mutex};
 
     struct MyStructWithDrop<F, FA, FS>
     where
@@ -191,7 +190,7 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "Forgot to call async_drop on MyStructWithoutDrop")]
     async fn given_type_without_drop_when_forgetting_to_call_async_drop_then_panics() {
-        let obj = AsyncDropGuard::new(MyStructWithoutDrop {
+        let _obj = AsyncDropGuard::new(MyStructWithoutDrop {
             on_async_drop: || async { Ok(()) },
         });
     }
@@ -199,7 +198,7 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "Forgot to call async_drop on MyStructWithDrop")]
     async fn given_type_with_drop_when_forgetting_to_call_async_drop_then_panics() {
-        let obj = AsyncDropGuard::new(MyStructWithDrop {
+        let _obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: || async { Ok(()) },
             on_sync_drop: || (),
         });
@@ -207,7 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_type_without_drop_when_calling_async_drop_then_calls_async_drop_impl() {
-        let mut called = AtomicI32::new(0);
+        let called = AtomicI32::new(0);
         let obj = AsyncDropGuard::new(MyStructWithoutDrop {
             on_async_drop: || async {
                 let prev_value = called.swap(1, Ordering::SeqCst);
@@ -222,7 +221,7 @@ mod tests {
     #[tokio::test]
     async fn given_type_with_drop_when_calling_async_drop_then_calls_async_drop_impl_and_then_calls_drop(
     ) {
-        let mut called = AtomicI32::new(0);
+        let called = AtomicI32::new(0);
         let obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: || async {
                 let prev_value = called.swap(1, Ordering::SeqCst);
@@ -248,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_type_with_drop_when_async_drop_fails_then_returns_error_and_still_calls_drop() {
-        let mut called = AtomicBool::new(false);
+        let called = AtomicBool::new(false);
         let obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: || async { Err("My error") },
             on_sync_drop: || {

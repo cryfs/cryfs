@@ -21,8 +21,7 @@ inline auto failOnIntegrityViolation() {
 class CryTestBase : public TestWithFakeHomeDirectory {
 public:
     CryTestBase(): _tempLocalStateDir(), _localStateDir(_tempLocalStateDir.path()), _configFile(false), _device(nullptr) {
-        auto fakeBlockStore = cpputils::make_unique_ref<blockstore::inmemory::InMemoryBlockStore2>();
-        _device = std::make_unique<cryfs::CryDevice>(configFile(), std::move(fakeBlockStore), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+        _device = std::make_unique<cryfs::CryDevice>(configFile(), _localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
         _device->setContext(fspp::Context { fspp::relatime() });
     }
 

@@ -23,8 +23,8 @@ fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
 fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
-    let mut result = Data::from(vec![0; C::CIPHERTEXT_OVERHEAD + plaintext.len()]);
-    result.shrink_to_subregion(C::CIPHERTEXT_OVERHEAD..);
+    let mut result = Data::from(vec![0; C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX + plaintext.len()]);
+    result.shrink_to_subregion(C::CIPHERTEXT_OVERHEAD_PREFIX..(C::CIPHERTEXT_OVERHEAD_PREFIX + plaintext.len()));
     result.as_mut().copy_from_slice(plaintext);
     result
 }
@@ -105,8 +105,8 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = allocate_space_for_ciphertext::<C>(&[]);
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
-        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD);
-        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD);
+        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX);
+        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX);
     }
 
     #[test]
@@ -114,8 +114,8 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
-        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD);
-        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD);
+        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX);
+        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX);
     }
 
     #[instantiate_tests(<XChaCha20Poly1305>)]
@@ -141,7 +141,7 @@ mod xchacha20poly1305 {
     fn test_backward_compatibility() {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = XChaCha20Poly1305::new(key(1));
-        let ciphertext = hex::decode("4879c427886b292b57b44cfbc5169ec3b6e87d6f47cd4987c34ad2ef6283c9176e6d4f0f812c96155793a67c2997557d031fbb").unwrap();
+        let ciphertext = hex::decode("f75cbc1dfb19c7686a90deb76123d628b6ff74a38cdb3a899c9c1d4dc4558bfee4d9e9af7b289436999fe779b47b1a6b95b30f").unwrap();
         assert_eq!(
             b"Hello World",
             &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
@@ -157,7 +157,7 @@ mod aes_128_gcm {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = Aes128Gcm::new(key(1));
         let ciphertext = hex::decode(
-            "d85772885df1cb9150519483b6e0d4af2230203eeadde9e60e23bb5ee4922bf78295f35a0e0cfc",
+            "3d15d00e18d0bb55a5b7d37614e3621bef03f3758390b98be8d7b0e7a51b4fc07b5af9dc3e19bf",
         )
         .unwrap();
         assert_eq!(
@@ -175,7 +175,7 @@ mod aes_256_gcm {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = Aes256Gcm_SoftwareImplemented::new(key(1));
         let ciphertext = hex::decode(
-            "4f429e7932b58335e205fb2092c89fe3d026d3878453920d73885b053b0d4dd702c21aaf549aa3",
+            "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )
         .unwrap();
         assert_eq!(
@@ -189,7 +189,7 @@ mod aes_256_gcm {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = Aes256Gcm_HardwareAccelerated::new(key(1));
         let ciphertext = hex::decode(
-            "4f429e7932b58335e205fb2092c89fe3d026d3878453920d73885b053b0d4dd702c21aaf549aa3",
+            "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )
         .unwrap();
         assert_eq!(
