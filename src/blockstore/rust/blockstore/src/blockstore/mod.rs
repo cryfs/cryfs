@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::marker::PhantomData;
 
 use crate::data::Data;
 
