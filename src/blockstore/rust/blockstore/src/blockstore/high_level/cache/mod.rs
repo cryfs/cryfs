@@ -1,33 +1,27 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{
-    future,
-    stream::FuturesUnordered,
-    StreamExt,
-};
-use std::fmt::Debug;
-use std::sync::Arc;
-use tokio::{
-    time::Duration,
-};
 use futures::join;
+use futures::{future, stream::FuturesUnordered, StreamExt};
+use std::fmt::Debug;
 use std::future::Future;
+use std::sync::Arc;
+use tokio::time::Duration;
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use crate::utils::periodic_task::PeriodicTask;
 
-mod lockable_cache;
 mod cache_impl;
 mod entry;
 mod guard;
+mod lockable_cache;
 
 use lockable_cache::Guard;
 
-pub use entry::{BlockCacheEntry, CacheEntryState, BlockBaseStoreState};
-pub use guard::BlockCacheEntryGuard;
 use cache_impl::BlockCacheImpl;
+pub use entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
+pub use guard::BlockCacheEntryGuard;
 
 // How often to run the task to prune old blocks
 const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
@@ -65,24 +59,49 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     }
 
     pub fn delete_entry_from_cache_even_if_dirty(&self, entry: &mut BlockCacheEntryGuard<B>) {
-        self.cache.delete_entry_from_cache_even_if_dirty(&mut entry.guard);
+        self.cache
+            .delete_entry_from_cache_even_if_dirty(&mut entry.guard);
     }
 
-    pub fn set_entry(&self, base_store: &Arc<B>, entry: &mut BlockCacheEntryGuard<B>, new_value: Data, dirty: CacheEntryState, base_store_state: BlockBaseStoreState) {
-        self.cache.set_entry(base_store, entry, new_value, dirty, base_store_state);
+    pub fn set_entry(
+        &self,
+        base_store: &Arc<B>,
+        entry: &mut BlockCacheEntryGuard<B>,
+        new_value: Data,
+        dirty: CacheEntryState,
+        base_store_state: BlockBaseStoreState,
+    ) {
+        self.cache
+            .set_entry(base_store, entry, new_value, dirty, base_store_state);
     }
 
-    pub async fn set_or_overwrite_entry_even_if_dirty<F>(&self, base_store: &Arc<B>, entry: &mut BlockCacheEntryGuard<B>, new_value: Data, dirty: CacheEntryState, base_store_state: impl FnOnce() -> F) -> Result<()> where F: Future<Output = Result<BlockBaseStoreState>> {
-        self.cache.set_or_overwrite_entry_even_if_dirty(base_store, entry, new_value, dirty, base_store_state).await
+    pub async fn set_or_overwrite_entry_even_if_dirty<F>(
+        &self,
+        base_store: &Arc<B>,
+        entry: &mut BlockCacheEntryGuard<B>,
+        new_value: Data,
+        dirty: CacheEntryState,
+        base_store_state: impl FnOnce() -> F,
+    ) -> Result<()>
+    where
+        F: Future<Output = Result<BlockBaseStoreState>>,
+    {
+        self.cache
+            .set_or_overwrite_entry_even_if_dirty(
+                base_store,
+                entry,
+                new_value,
+                dirty,
+                base_store_state,
+            )
+            .await
     }
 
     pub fn num_blocks_in_cache_but_not_in_base_store(&self) -> u64 {
         self.cache.num_blocks_in_cache_but_not_in_base_store()
     }
 
-    async fn _prune_old_blocks(
-        cache: &BlockCacheImpl<B>,
-    ) -> Result<()> {
+    async fn _prune_old_blocks(cache: &BlockCacheImpl<B>) -> Result<()> {
         Self::_prune_blocks_not_accessed_for_longer_than(cache, PRUNE_BLOCKS_OLDER_THAN).await
     }
 
@@ -120,16 +139,19 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         }
     }
 
-    async fn _prune_block<'a>(cache: &BlockCacheImpl<B>, mut guard: Guard<'a, BlockId, BlockCacheEntry<B>>) -> Result<()> {
+    async fn _prune_block<'a>(
+        cache: &BlockCacheImpl<B>,
+        mut guard: Guard<'a, BlockId, BlockCacheEntry<B>>,
+    ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();
-        let entry = guard.as_mut().expect("Found a None entry in the cache. This violates our invariant.");
-        entry
-            .flush(&block_id)
-            .await?;
+        let entry = guard
+            .as_mut()
+            .expect("Found a None entry in the cache. This violates our invariant.");
+        entry.flush(&block_id).await?;
 
         cache.delete_entry_from_cache(&mut guard);
-        
+
         Ok(())
     }
 }
@@ -141,9 +163,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> AsyncD
     type Error = anyhow::Error;
 
     async fn async_drop_impl(mut self) -> Result<()> {
-        let stop_prune_task = async move {
-            self.prune_task.async_drop().await
-        };
+        let stop_prune_task = async move { self.prune_task.async_drop().await };
         let drop_entries = async move {
             // The self.cache arc is shared between the prune task and self.
             // Since self is passed in by value, prune task is the only one

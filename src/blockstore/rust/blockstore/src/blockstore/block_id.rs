@@ -6,7 +6,7 @@ use std::io::{Read, Seek, Write};
 
 pub const BLOCKID_LEN: usize = 16;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BlockId {
     id: [u8; BLOCKID_LEN],
 }

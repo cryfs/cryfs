@@ -39,8 +39,9 @@ lazy_static = "^1.4.0"
 # https://github.com/jeromefroe/lru-rs/pull/128
 lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
 # owning_ref_rs uses v0.4.1 with https://github.com/Kimundi/owning-ref-rs/pull/80 and parts of https://github.com/Kimundi/owning-ref-rs/pull/56
-owning_ref = {git = "https://github.com/smessmer/owning-ref-rs", rev = "4f1d11353fbebbd3f05d5d7b879c0906c4e0759e"}
-tokio-util = "0.7.0"
+owning_ref_lockable = "^0.4.2"
+tokio-util = "^0.7.0"
+lockable = {git = "https://github.com/smessmer/lockable", rev = "945145b07ea924f16d01e9e8eab5329aea98b73f"}
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.119"

@@ -44,7 +44,8 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         //      But it is somewhat weird to grow the plaintext input into both directions. We should just grow it in one direction.
         // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
+        let ciphertext_size =
+            plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let nonce = random_nonce::<C>();
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
@@ -66,15 +67,20 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         //      secret protection we get from our EncryptionKey class then.
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
         let ciphertext_len = ciphertext.len();
-        let (nonce, rest) = ciphertext.as_mut().split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
+        let (nonce, rest) = ciphertext
+            .as_mut()
+            .split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
         let nonce: &[u8] = nonce;
-        let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
+        let (cipherdata, auth_tag) =
+            rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
         let auth_tag: &[u8] = auth_tag;
         cipher
             .decrypt_in_place_detached(nonce.into(), &[], cipherdata.as_mut(), auth_tag.into())
             .context("Decrypting data failed")?;
         let mut plaintext = ciphertext;
-        plaintext.shrink_to_subregion(Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX));
+        plaintext.shrink_to_subregion(
+            Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX),
+        );
         assert_eq!(
             ciphertext_len
                 .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)

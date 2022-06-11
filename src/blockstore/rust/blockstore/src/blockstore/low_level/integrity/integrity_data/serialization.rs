@@ -1,60 +1,28 @@
 use binread::BinRead;
 use binwrite::BinWrite;
 use core::num::NonZeroU8;
+use lockable::LockableHashMap;
 use std::collections::hash_map::HashMap;
-use std::hash::Hash;
+use std::sync::Arc;
 
 use crate::blockstore::BlockId;
 use crate::utils::binary::{
     read_bool, read_hashmap, read_null_string, write_bool, write_hashmap, write_null_string,
 };
+use crate::utils::containers::HashMapExt;
 
-#[derive(PartialEq, Eq, Debug, Hash, BinRead, BinWrite, Clone, Copy)]
-pub struct ClientId {
-    // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
-    pub id: u32,
-}
-
-impl binary_layout::LayoutAs<u32> for ClientId {
-    fn read(id: u32) -> ClientId {
-        ClientId { id }
-    }
-
-    fn write(id: ClientId) -> u32 {
-        id.id
-    }
-}
-
-#[derive(PartialEq, Eq, Debug, Hash, PartialOrd, BinRead, BinWrite, Clone, Copy)]
-pub struct BlockVersion {
-    // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
-    pub version: u64,
-}
-
-impl BlockVersion {
-    pub fn increment(&mut self) {
-        self.version += 1;
-    }
-}
-
-impl binary_layout::LayoutAs<u64> for BlockVersion {
-    fn read(version: u64) -> BlockVersion {
-        BlockVersion { version }
-    }
-
-    fn write(version: BlockVersion) -> u64 {
-        version.version
-    }
-}
+use super::known_block_versions::{BlockInfo, BlockVersion, ClientId, KnownBlockVersions};
 
 const FORMAT_VERSION_HEADER: &[u8] = b"cryfs.integritydata.knownblockversions;1";
 
-/// FileData is an in memory representation of our integrity data
+// TODO Is KnownBlockVersionsSerialized compatible with the C++ version?
+
+/// KnownBlockVersionsSerialized is an in memory representation of our integrity data
 /// (see [KnownBlockVersions]).
-/// It can be serialized to an actual file an deserialized from
+/// It can be serialized to an actual file and deserialized from
 /// an actual file.
 #[derive(BinRead, BinWrite, Debug, PartialEq)]
-pub struct FileData {
+pub struct KnownBlockVersionsSerialized {
     #[binread(
         assert(header.iter().map(|c| c.get()).collect::<Vec<_>>() == FORMAT_VERSION_HEADER,
         "Wrong format version header: '{}'. Expected '{}'",
@@ -77,17 +45,88 @@ pub struct FileData {
     pub last_update_client_id: HashMap<BlockId, ClientId>,
 }
 
-impl Default for FileData {
-    fn default() -> FileData {
-        let header = FORMAT_VERSION_HEADER
-            .iter()
-            .map(|&c| NonZeroU8::new(c).unwrap())
-            .collect();
-        FileData {
-            header,
-            integrity_violation_in_previous_run: false,
-            known_block_versions: HashMap::new(),
-            last_update_client_id: HashMap::new(),
+// TODO Test
+impl From<KnownBlockVersionsSerialized> for KnownBlockVersions {
+    fn from(data: KnownBlockVersionsSerialized) -> KnownBlockVersions {
+        // TODO A better algorithm may be to create a HashMap first and then use .into_iter().collect() to get it into a LockableHashMap
+        let block_infos = LockableHashMap::new();
+        // TODO block_infos.reserve(data.last_update_client_id.len());
+        for (block_id, client_id) in data.last_update_client_id {
+            let mut block_info = block_infos.try_lock(block_id).expect(
+                "We're just creating this object, nobody else has access. Locking can't fail",
+            );
+            block_info
+                .try_insert(BlockInfo::new_unknown(client_id))
+                .expect("Input hashmap last_update_client_id had duplicate keys");
+        }
+        for ((client_id, block_id), block_version) in data.known_block_versions {
+            let mut block_info = block_infos.try_lock(block_id).expect(
+                "We're just creating this object, nobody else has access. Locking can't fail",
+            );
+            let block_info = block_info.value_or_insert_with(|| BlockInfo::new_unknown(client_id));
+            HashMapExt::try_insert(
+                &mut block_info.known_block_versions,
+                client_id,
+                block_version,
+            )
+            .expect("Input hashmap had duplicate keys");
+        }
+        let result = KnownBlockVersions {
+            integrity_violation_in_previous_run: data.integrity_violation_in_previous_run.into(),
+            block_infos: Arc::new(block_infos),
+        };
+        result
+    }
+}
+
+impl KnownBlockVersionsSerialized {
+    pub async fn async_from(data: KnownBlockVersions) -> Self {
+        let mut known_block_versions = HashMap::new();
+        let mut last_update_client_id = HashMap::new();
+        let num_blocks = data.block_infos.num_entries_or_locked();
+        known_block_versions.reserve(num_blocks);
+        last_update_client_id.reserve(num_blocks);
+
+        let integrity_violation_in_previous_run = data.integrity_violation_in_previous_run();
+
+        // At this point, we have exclusive access to KnownBlockVersions, but there may still be other threads/tasks having access to
+        // a clone of the Arc containing KnownBlockVersions.block_infos. The only way for them to hold such a copy is through a
+        // HashMapOwnedGuard that locks one of the block ids. HashMapOwnedGuard cannot be cloned. It is reasonable to assume that
+        // these threads/tasks will at some point release their lock. Since we have exclusive access to the KnownBlockVersions object,
+        // we know that no new threads/tasks can acquire such a lock. We just have to wait until the last thread/task releases their lock.
+        // However, note that there is still a chance of a deadlock here. If one of those threads is the current thread, or if one of
+        // those threads waits for the current thread on something, then we have a deadlock.
+        // TODO Is there a better way to handle this?
+        while Arc::strong_count(&data.block_infos) > 1 {
+            // TODO Is there a better alternative that doesn't involve busy waiting?
+            tokio::task::yield_now().await;
+        }
+        let block_infos = Arc::try_unwrap(data.block_infos).expect("We just waited until we're the only one with a clone of the Arc. It can't have gone back up.");
+
+        for (block_id, block_info) in block_infos.into_entries_unordered() {
+            for (client_id, block_version) in block_info.known_block_versions {
+                HashMapExt::try_insert(
+                    &mut known_block_versions,
+                    (client_id, block_id),
+                    block_version,
+                )
+                .expect("Input hashmap had duplicate keys");
+            }
+            HashMapExt::try_insert(
+                &mut last_update_client_id,
+                block_id,
+                block_info.last_update_client_id,
+            )
+            .expect("Input hashmap had duplicate keys");
+        }
+        Self {
+            header: FORMAT_VERSION_HEADER
+                .iter()
+                .map(|&c| NonZeroU8::new(c).unwrap())
+                .collect(),
+            integrity_violation_in_previous_run,
+            known_block_versions,
+            last_update_client_id,
         }
     }
 }
@@ -101,15 +140,21 @@ fn format_potential_utf8(data: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::known_block_versions::KnownBlockVersions;
     use super::*;
     use crate::utils::binary::testutils::{binary, deserialize, test_serialize_deserialize};
     use common_macros::hash_map;
 
+    async fn known_block_versions_serialized_default() -> KnownBlockVersionsSerialized {
+        KnownBlockVersionsSerialized::async_from(KnownBlockVersions::default()).await
+    }
+
     #[test]
     fn given_wrong_header_utf8() {
-        let error =
-            deserialize::<FileData>(&binary(&[b"cryfs.integritydata.knownblockversions;20\0"]))
-                .unwrap_err();
+        let error = deserialize::<KnownBlockVersionsSerialized>(&binary(&[
+            b"cryfs.integritydata.knownblockversions;20\0",
+        ]))
+        .unwrap_err();
         if let binread::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
             const EXPECTED_POS: u64 = 0;
             assert_eq!(
@@ -128,7 +173,8 @@ mod tests {
 
     #[test]
     fn given_wrong_header_nonutf8() {
-        let error = deserialize::<FileData>(&binary(&[b"cryfs\x80\0"])).unwrap_err();
+        let error =
+            deserialize::<KnownBlockVersionsSerialized>(&binary(&[b"cryfs\x80\0"])).unwrap_err();
         if let binread::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
             const EXPECTED_POS: u64 = 0;
             assert_eq!(
@@ -145,12 +191,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn given_integrityviolationinpreviousrun_true() {
+    #[tokio::test]
+    async fn given_integrityviolationinpreviousrun_true() {
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 integrity_violation_in_previous_run: true,
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[&binary(&[
                 FORMAT_VERSION_HEADER,
@@ -162,12 +208,12 @@ mod tests {
         );
     }
 
-    #[test]
-    fn given_integrityviolationinpreviousrun_false() {
+    #[tokio::test]
+    async fn given_integrityviolationinpreviousrun_false() {
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 integrity_violation_in_previous_run: false,
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[&binary(&[
                 FORMAT_VERSION_HEADER,
@@ -181,7 +227,7 @@ mod tests {
 
     #[test]
     fn given_integrityviolationinpreviousrun_invalid() {
-        let error = deserialize::<FileData>(&binary(&[
+        let error = deserialize::<KnownBlockVersionsSerialized>(&binary(&[
             FORMAT_VERSION_HEADER,
             b"\0",
             b"\x02",
@@ -205,12 +251,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn given_knownblockversions_empty() {
+    #[tokio::test]
+    async fn given_knownblockversions_empty() {
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 known_block_versions: HashMap::new(),
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[&binary(&[
                 FORMAT_VERSION_HEADER,
@@ -222,8 +268,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn given_knownblockversions_nonempty() {
+    #[tokio::test]
+    async fn given_knownblockversions_nonempty() {
         let first_entry = binary(&[
             &0x3ab74641u32.to_le_bytes(),
             &hex::decode("bd9cb3b508182dd71eda77c3ff99325c").unwrap(),
@@ -235,12 +281,12 @@ mod tests {
             &10_000_000u64.to_le_bytes(),
         ]);
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 known_block_versions: hash_map![
                     (ClientId{id:0x3ab74641}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
                     (ClientId{id:0x21233651}, BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap()) => BlockVersion{version:10_000_000},
                 ],
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[
                 &binary(&[
@@ -265,12 +311,12 @@ mod tests {
         );
     }
 
-    #[test]
-    fn given_lastupdateclientid_empty() {
+    #[tokio::test]
+    async fn given_lastupdateclientid_empty() {
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 last_update_client_id: HashMap::new(),
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[&binary(&[
                 FORMAT_VERSION_HEADER,
@@ -282,8 +328,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn given_lastupdateclientid_nonempty() {
+    #[tokio::test]
+    async fn given_lastupdateclientid_nonempty() {
         let first_entry = binary(&[
             &hex::decode("45fc5ad983c6c85a7a2859181d2199cb").unwrap(),
             &0x21233651u32.to_le_bytes(),
@@ -293,12 +339,12 @@ mod tests {
             &0x3ab74641u32.to_le_bytes(),
         ]);
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 last_update_client_id: hash_map![
                     BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => ClientId { id: 0x3ab74641 },
                     BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap() => ClientId { id: 0x21233651 },
                 ],
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[
                 &binary(&[
@@ -323,17 +369,17 @@ mod tests {
         );
     }
 
-    #[test]
-    fn given_knownblockversions_and_lastupdateclientid_nonempty() {
+    #[tokio::test]
+    async fn given_knownblockversions_and_lastupdateclientid_nonempty() {
         test_serialize_deserialize(
-            FileData {
+            KnownBlockVersionsSerialized {
                 known_block_versions: hash_map![
                     (ClientId{id:0x3ab74641}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
                 ],
                 last_update_client_id: hash_map![
                     BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => ClientId { id: 0x3ab74641 },
                 ],
-                ..FileData::default()
+                ..known_block_versions_serialized_default().await
             },
             &[&binary(&[
                 FORMAT_VERSION_HEADER,
@@ -354,7 +400,7 @@ mod tests {
 
     #[test]
     fn given_toomuchdata() {
-        let error = deserialize::<FileData>(&binary(&[
+        let error = deserialize::<KnownBlockVersionsSerialized>(&binary(&[
             FORMAT_VERSION_HEADER,
             b"\0",
             b"\x00",

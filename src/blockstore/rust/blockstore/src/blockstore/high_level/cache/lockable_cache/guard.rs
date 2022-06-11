@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use super::pool::{CacheEntry, LockableCache};
-use crate::utils::mutex::LockedMutexGuard;
+use crate::utils::locked_mutex_guard::LockedMutexGuard;
 
 /// A RAII implementation of a scoped lock for locks from a [LockPool]. When this instance is dropped (falls out of scope), the lock will be unlocked.
 #[must_use = "if unused the Mutex will immediately unlock"]

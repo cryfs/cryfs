@@ -2,7 +2,6 @@
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
 #include <gtest/gtest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 
@@ -39,24 +38,3 @@ INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_multiclient, BlockStoreTest, IntegrityB
 INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_singleclient, BlockStoreTest, IntegrityBlockStoreTestFixture_singleclient);
 INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_multiclient_allowIntegrityViolations, BlockStoreTest, IntegrityBlockStoreTestFixture_multiclient_allowIntegrityViolations);
 INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_singleclient_allowIntegrityViolations, BlockStoreTest, IntegrityBlockStoreTestFixture_singleclient_allowIntegrityViolations);
-
-template<bool AllowIntegrityViolations, bool MissingBlockIsIntegrityViolation>
-class IntegrityBlockStore2TestFixture: public BlockStore2TestFixture {
-public:
-  IntegrityBlockStore2TestFixture() :stateFile(false) {}
-
-  TempFile stateFile;
-  unique_ref<BlockStore2> createBlockStore() override {
-    return make_unique_ref<IntegrityBlockStore2>(make_unique_ref<InMemoryBlockStore2>(), stateFile.path(), 0x12345678, AllowIntegrityViolations, MissingBlockIsIntegrityViolation, [] {});
-  }
-};
-
-using IntegrityBlockStore2TestFixture_multiclient = IntegrityBlockStore2TestFixture<false, false>;
-using IntegrityBlockStore2TestFixture_singleclient = IntegrityBlockStore2TestFixture<false, true>;
-using IntegrityBlockStore2TestFixture_multiclient_allowIntegrityViolations = IntegrityBlockStore2TestFixture<true, false>;
-using IntegrityBlockStore2TestFixture_singleclient_allowIntegrityViolations = IntegrityBlockStore2TestFixture<true, true>;
-
-INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_multiclient, BlockStore2Test, IntegrityBlockStore2TestFixture_multiclient);
-INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_singleclient, BlockStore2Test, IntegrityBlockStore2TestFixture_singleclient);
-INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_multiclient_allowIntegrityViolations, BlockStore2Test, IntegrityBlockStore2TestFixture_multiclient_allowIntegrityViolations);
-INSTANTIATE_TYPED_TEST_SUITE_P(Integrity_singleclient_allowIntegrityViolations, BlockStore2Test, IntegrityBlockStore2TestFixture_singleclient_allowIntegrityViolations);

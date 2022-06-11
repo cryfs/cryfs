@@ -1,7 +1,6 @@
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
 #include <gtest/gtest.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
@@ -24,12 +23,3 @@ public:
 };
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InMemory, BlockStoreTest, InMemoryBlockStoreTestFixture);
-
-class InMemoryBlockStore2TestFixture: public BlockStore2TestFixture {
-public:
-  unique_ref<BlockStore2> createBlockStore() override {
-    return make_unique_ref<InMemoryBlockStore2>();
-  }
-};
-
-INSTANTIATE_TYPED_TEST_SUITE_P(InMemory, BlockStore2Test, InMemoryBlockStore2TestFixture);

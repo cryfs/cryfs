@@ -1,6 +1,5 @@
 #include "blockstore/implementations/rustbridge/RustBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
 #include <gtest/gtest.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
@@ -29,18 +28,3 @@ public:
 };
 
 INSTANTIATE_TYPED_TEST_SUITE_P(Rust_IntegrityInMemory, BlockStoreTest, RustBridgeIntegrityInMemoryBlockStoreTestFixture);
-
-class RustBridgeIntegrityInMemoryBlockStore2TestFixture : public BlockStore2TestFixture
-{
-public:
-    RustBridgeIntegrityInMemoryBlockStore2TestFixture() :stateFile(false) {}
-
-    TempFile stateFile;
-    unique_ref<BlockStore2> createBlockStore() override
-    {
-        return make_unique_ref<RustBlockStore2>(
-            blockstore::rust::bridge::new_integrity_inmemory_blockstore(stateFile.path().c_str()));
-    }
-};
-
-INSTANTIATE_TYPED_TEST_SUITE_P(Rust_IntegrityInMemory, BlockStore2Test, RustBridgeIntegrityInMemoryBlockStore2TestFixture);

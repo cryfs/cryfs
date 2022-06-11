@@ -23,8 +23,15 @@ fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
 fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
-    let mut result = Data::from(vec![0; C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX + plaintext.len()]);
-    result.shrink_to_subregion(C::CIPHERTEXT_OVERHEAD_PREFIX..(C::CIPHERTEXT_OVERHEAD_PREFIX + plaintext.len()));
+    let mut result = Data::from(vec![
+        0;
+        C::CIPHERTEXT_OVERHEAD_PREFIX
+            + C::CIPHERTEXT_OVERHEAD_SUFFIX
+            + plaintext.len()
+    ]);
+    result.shrink_to_subregion(
+        C::CIPHERTEXT_OVERHEAD_PREFIX..(C::CIPHERTEXT_OVERHEAD_PREFIX + plaintext.len()),
+    );
     result.as_mut().copy_from_slice(plaintext);
     result
 }
@@ -105,8 +112,14 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = allocate_space_for_ciphertext::<C>(&[]);
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
-        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX);
-        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX);
+        assert_eq!(
+            plaintext.len(),
+            ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX
+        );
+        assert_eq!(
+            ciphertext.len(),
+            plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX
+        );
     }
 
     #[test]
@@ -114,8 +127,14 @@ mod basics {
         let cipher = C::new(key(1));
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
-        assert_eq!(plaintext.len(), ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX);
-        assert_eq!(ciphertext.len(), plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX);
+        assert_eq!(
+            plaintext.len(),
+            ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX
+        );
+        assert_eq!(
+            ciphertext.len(),
+            plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX
+        );
     }
 
     #[instantiate_tests(<XChaCha20Poly1305>)]

@@ -27,12 +27,17 @@ pub struct BlockCacheEntry<B: crate::blockstore::low_level::BlockStore + Send + 
 
 impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockCacheEntry<B> {
     #[inline]
-    pub fn new(base_store: Arc<B>, data: Data, dirty: CacheEntryState, block_exists_in_base_store: BlockBaseStoreState) -> Self {
+    pub fn new(
+        base_store: Arc<B>,
+        data: Data,
+        dirty: CacheEntryState,
+        block_exists_in_base_store: BlockBaseStoreState,
+    ) -> Self {
         Self {
             base_store,
             dirty,
             data,
-            block_exists_in_base_store
+            block_exists_in_base_store,
         }
     }
 
@@ -71,7 +76,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     pub(super) fn discard(mut self) {
         self.dirty = CacheEntryState::Clean;
         // now that dirty is false, the value can be safely dropped
-    } 
+    }
 }
 
 impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> fmt::Debug
@@ -85,10 +90,14 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> fmt::D
 }
 
 impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> Drop
-    for BlockCacheEntry<B> {
+    for BlockCacheEntry<B>
+{
     fn drop(&mut self) {
         // User code never gets access to BlockCacheEntry by value, so they can't do this mistake.
         // If a dirty block is really dropped, it is our mistake.
-        assert!(self.dirty == CacheEntryState::Clean, "Tried to drop a dirty block. Please call flush() first");
+        assert!(
+            self.dirty == CacheEntryState::Clean,
+            "Tried to drop a dirty block. Please call flush() first"
+        );
     }
 }

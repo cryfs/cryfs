@@ -44,7 +44,10 @@ impl<B: BlockStoreReader + OptimizedBlockStoreWriter + Send + Sync> CachingBlock
         if self.cache.contains(block_id) {
             Ok(true)
         } else {
-            self.store_impl_impl.underlying_block_store.exists(block_id).await
+            self.store_impl_impl
+                .underlying_block_store
+                .exists(block_id)
+                .await
         }
     }
 

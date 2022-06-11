@@ -1,7 +1,6 @@
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
 #include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
 #include <gtest/gtest.h>
 
 #include <cpp-utils/tempfile/TempDir.h>
@@ -30,16 +29,3 @@ private:
 };
 
 INSTANTIATE_TYPED_TEST_SUITE_P(OnDisk, BlockStoreTest, OnDiskBlockStoreTestFixture);
-
-class OnDiskBlockStore2TestFixture: public BlockStore2TestFixture {
-public:
-  OnDiskBlockStore2TestFixture(): tempdir() {}
-
-  unique_ref<BlockStore2> createBlockStore() override {
-    return make_unique_ref<OnDiskBlockStore2>(tempdir.path());
-  }
-private:
-  TempDir tempdir;
-};
-
-INSTANTIATE_TYPED_TEST_SUITE_P(OnDisk, BlockStore2Test, OnDiskBlockStore2TestFixture);

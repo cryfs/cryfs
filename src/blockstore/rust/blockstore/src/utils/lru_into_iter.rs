@@ -1,6 +1,6 @@
 use lru::LruCache;
 use std::hash::Hash;
-use std::iter::{Iterator, FusedIterator};
+use std::iter::{FusedIterator, Iterator};
 
 // TODO Replace with https://github.com/jeromefroe/lru-rs/pull/129
 
@@ -48,12 +48,12 @@ where
 }
 
 impl<K, V> ExactSizeIterator for LruCacheIterator<K, V> where K: Hash + Eq {}
-impl<K, V> FusedIterator for LruCacheIterator<K, V> where K: Hash + Eq  {}
+impl<K, V> FusedIterator for LruCacheIterator<K, V> where K: Hash + Eq {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_into_iter() {
         let mut cache = LruCache::new(3);

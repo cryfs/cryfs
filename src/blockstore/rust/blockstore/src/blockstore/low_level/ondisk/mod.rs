@@ -1,11 +1,11 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
-use std::io::ErrorKind;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -329,17 +329,24 @@ mod tests {
     use tempdir::TempDir;
 
     struct TestFixture {
-        basedir: TempDir,
+        // Fields of a struct are dropped in declaration order, so we declare
+        // the blockstore first to make sure it's gone when we're dropping the
+        // tempdir.
+        store: OnDiskBlockStore,
+        _basedir: TempDir,
     }
     impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
+            let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
+            let store = OnDiskBlockStore::new(basedir.path().to_path_buf());
             Self {
-                basedir: TempDir::new("OnDiskBlockStoreTest").unwrap(),
+                _basedir: basedir,
+                store,
             }
         }
-        fn setup(&self) -> OnDiskBlockStore {
-            OnDiskBlockStore::new(self.basedir.path().to_path_buf())
+        fn store(&mut self) -> &mut OnDiskBlockStore {
+            &mut self.store
         }
     }
 
