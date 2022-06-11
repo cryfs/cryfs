@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
+use futures::stream::{Stream, StreamExt};
 use std::collections::hash_map::HashMap;
+use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
-use async_trait::async_trait;
 
 use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter};
 
@@ -32,7 +34,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(load_result.map(|d| d.into()))
     }
 
-    fn num_blocks(&self) -> Result<u64> {
+    async fn num_blocks(&self) -> Result<u64> {
         let blocks = self
             .blocks
             .read()
@@ -50,14 +52,22 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(block_size)
     }
 
-    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         let blocks = self
             .blocks
             .read()
             .map_err(|_| anyhow!("Failed to acquire lock"))?;
-        Ok(Box::new(
-            blocks.keys().cloned().collect::<Vec<BlockId>>().into_iter(),
-        ))
+        Ok(
+            // TODO Do we still need to collect here after having switched to a stream?
+            futures::stream::iter(
+                blocks
+                    .keys()
+                    .cloned()
+                    .map(Ok)
+                    .collect::<Vec<Result<BlockId>>>(),
+            )
+            .boxed(),
+        )
     }
 }
 

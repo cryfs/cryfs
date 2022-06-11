@@ -1,22 +1,24 @@
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binary_layout::FieldMetadata;
-use log::warn;
-use std::path::PathBuf;
-use std::sync::Mutex;
-use std::collections::hash_set::HashSet;
 use async_trait::async_trait;
+use binary_layout::FieldMetadata;
+use futures::stream::{Stream, StreamExt, TryStreamExt};
+use log::warn;
+use std::collections::hash_set::HashSet;
+use std::path::PathBuf;
+use std::pin::Pin;
+use std::sync::Mutex;
 
+use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
     BLOCKID_LEN,
 };
-use super::block_data::IBlockData;
 
 mod known_block_versions;
 
 use crate::data::Data;
-use known_block_versions::{BlockVersion, IntegrityViolationError, KnownBlockVersions};
 pub use known_block_versions::ClientId;
+use known_block_versions::{BlockVersion, IntegrityViolationError, KnownBlockVersions};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
@@ -34,7 +36,7 @@ const HEADER_SIZE: usize = block_layout::data::OFFSET;
 pub struct IntegrityConfig {
     pub allow_integrity_violations: bool,
     pub missing_block_is_integrity_violation: bool,
-    pub on_integrity_violation: Box<dyn Fn()>,
+    pub on_integrity_violation: Box<dyn Sync + Send + Fn()>,
 }
 
 pub struct IntegrityBlockStore<B> {
@@ -55,13 +57,12 @@ impl<B> IntegrityBlockStore<B> {
                 .context("Tried to create KnownBlockVersions")?;
         if known_block_versions.integrity_violation_in_previous_run() {
             if config.allow_integrity_violations {
-                warn!(
-                    "Integrity violation in previous run (but integrity checks are disabled)"
-                );
+                warn!("Integrity violation in previous run (but integrity checks are disabled)");
             } else {
                 return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
                     integrity_file_path: integrity_file_path.clone(),
-                }.into());
+                }
+                .into());
             }
         }
         Ok(Self {
@@ -73,7 +74,7 @@ impl<B> IntegrityBlockStore<B> {
 }
 
 #[async_trait]
-impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
+impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore<B> {
     async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
         let loaded = self.underlying_block_store.load(block_id).await.context(
             "IntegrityBlockStore tried to load the block from the underlying block store",
@@ -100,8 +101,8 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
         }
     }
 
-    fn num_blocks(&self) -> Result<u64> {
-        self.underlying_block_store.num_blocks()
+    async fn num_blocks(&self) -> Result<u64> {
+        self.underlying_block_store.num_blocks().await
     }
 
     fn estimate_num_free_bytes(&self) -> Result<u64> {
@@ -113,18 +114,30 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
     }
 
-    async fn all_blocks(&self) -> Result<Box<dyn Iterator<Item = BlockId>>> {
+    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
         if self.config.missing_block_is_integrity_violation {
-            let all_underlying_blocks: Vec<BlockId> = all_underlying_blocks.collect();
-            let mut expected_blocks: HashSet<BlockId> = self.known_block_versions.lock().unwrap().existing_blocks().copied().collect();
+            // TODO No collect, but pass through stream asynchronously?
+            let all_underlying_blocks: Vec<BlockId> = all_underlying_blocks.try_collect().await?;
+            let mut expected_blocks: HashSet<BlockId> = self
+                .known_block_versions
+                .lock()
+                .unwrap()
+                .existing_blocks()
+                .copied()
+                .collect();
             for existing_block in &all_underlying_blocks {
                 expected_blocks.remove(existing_block);
             }
             if !expected_blocks.is_empty() {
-                self._integrity_violation_detected(IntegrityViolationError::MissingBlocks{blocks: expected_blocks}.into())?;
+                self._integrity_violation_detected(
+                    IntegrityViolationError::MissingBlocks {
+                        blocks: expected_blocks,
+                    }
+                    .into(),
+                )?;
             }
-            Ok(Box::new(all_underlying_blocks.into_iter()))
+            Ok(futures::stream::iter(all_underlying_blocks.into_iter().map(Ok)).boxed())
         } else {
             Ok(all_underlying_blocks)
         }
@@ -132,9 +145,12 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
 }
 
 #[async_trait]
-impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
+impl<B: BlockStoreDeleter + Sync + Send> BlockStoreDeleter for IntegrityBlockStore<B> {
     async fn remove(&self, id: &BlockId) -> Result<bool> {
-        self.known_block_versions.lock().unwrap().mark_block_as_deleted(*id);
+        self.known_block_versions
+            .lock()
+            .unwrap()
+            .mark_block_as_deleted(*id);
         self.underlying_block_store.remove(id).await
     }
 }
@@ -142,7 +158,9 @@ impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
 create_block_data_wrapper!(BlockData);
 
 #[async_trait]
-impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockStore<B> {
+impl<B: OptimizedBlockStoreWriter + Sync + Send> OptimizedBlockStoreWriter
+    for IntegrityBlockStore<B>
+{
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
@@ -154,12 +172,16 @@ impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockS
 
     async fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
         let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store.try_create_optimized(id, B::BlockData::new(data)).await
+        self.underlying_block_store
+            .try_create_optimized(id, B::BlockData::new(data))
+            .await
     }
 
     async fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         let data = self._prepend_header(id, data.extract());
-        self.underlying_block_store.store_optimized(id, B::BlockData::new(data)).await
+        self.underlying_block_store
+            .store_optimized(id, B::BlockData::new(data))
+            .await
     }
 }
 
@@ -197,7 +219,8 @@ impl<B> IntegrityBlockStore<B> {
             "Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header",
         );
         let mut view = block_layout::View::new(data);
-        view.format_version_header_mut().write(FORMAT_VERSION_HEADER);
+        view.format_version_header_mut()
+            .write(FORMAT_VERSION_HEADER);
         view.block_id_mut().data_mut().copy_from_slice(id.data());
         view.last_update_client_id_mut().write(my_client_id.id);
         view.block_version_mut().write(version.version);
@@ -254,4 +277,7 @@ impl<B> IntegrityBlockStore<B> {
     }
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter> BlockStore for IntegrityBlockStore<B> {}
+impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send> BlockStore
+    for IntegrityBlockStore<B>
+{
+}
