@@ -2,11 +2,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
 use futures::{future, stream::FuturesUnordered, StreamExt};
+use lockable::LruGuard;
 use std::fmt::Debug;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::time::Duration;
-use lockable::LruGuard;
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
@@ -26,56 +26,59 @@ const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
 // The cutoff age of blocks. Each time the task runs, blocks older than this will be pruned.
 const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
 
-pub struct BlockCache<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> {
-    cache: Arc<BlockCacheImpl<B>>,
-    prune_task: AsyncDropGuard<PeriodicTask>,
+pub struct BlockCache<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> {
+    // Always Some except during destruction
+    cache: Option<Arc<BlockCacheImpl<B>>>,
+    // Always Some except during destruction
+    prune_task: Option<AsyncDropGuard<PeriodicTask>>,
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockCache<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache<B> {
     pub fn new() -> AsyncDropGuard<Self> {
         let cache = BlockCacheImpl::new();
         let cache_clone = Arc::clone(&cache);
         AsyncDropGuard::new(Self {
-            cache,
-            prune_task: PeriodicTask::spawn(
+            cache: Some(cache),
+            prune_task: Some(PeriodicTask::spawn(
                 "BlockCache::prune",
                 PRUNE_BLOCKS_INTERVAL,
                 move || {
                     let cache_clone = Arc::clone(&cache_clone);
                     async move { Self::_prune_old_blocks(&cache_clone).await }
                 },
-            ),
+            )),
         })
     }
 
     pub async fn async_lock(&self, block_id: BlockId) -> BlockCacheEntryGuard<B> {
-        self.cache.async_lock(block_id).await
+        self.cache.as_ref().expect("Object is already destructed").async_lock(block_id).await
     }
 
     pub fn keys(&self) -> Vec<BlockId> {
-        self.cache.keys()
+        self.cache.as_ref().expect("Object is already destructed").keys()
     }
 
     pub fn delete_entry_from_cache_even_if_dirty(&self, entry: &mut BlockCacheEntryGuard<B>) {
         self.cache
-            .delete_entry_from_cache_even_if_dirty(&mut entry.guard);
+            .as_ref().expect("Object is already destructed").delete_entry_from_cache_even_if_dirty(&mut entry.guard);
     }
 
     pub fn set_entry(
         &self,
-        base_store: &Arc<B>,
+        base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
         base_store_state: BlockBaseStoreState,
     ) {
         self.cache
+            .as_ref().expect("Object is already destructed")
             .set_entry(base_store, entry, new_value, dirty, base_store_state);
     }
 
     pub async fn set_or_overwrite_entry_even_if_dirty<F>(
         &self,
-        base_store: &Arc<B>,
+        base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
@@ -85,6 +88,8 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         F: Future<Output = Result<BlockBaseStoreState>>,
     {
         self.cache
+            .as_ref()
+            .expect("Object is already destructed")
             .set_or_overwrite_entry_even_if_dirty(
                 base_store,
                 entry,
@@ -96,7 +101,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     }
 
     pub fn num_blocks_in_cache_but_not_in_base_store(&self) -> u64 {
-        self.cache.num_blocks_in_cache_but_not_in_base_store()
+        self.cache.as_ref().expect("Object is already destructed").num_blocks_in_cache_but_not_in_base_store()
     }
 
     async fn _prune_old_blocks(cache: &BlockCacheImpl<B>) -> Result<()> {
@@ -154,26 +159,32 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
 }
 
 #[async_trait]
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> AsyncDrop
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
     for BlockCache<B>
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(mut self) -> Result<()> {
-        let stop_prune_task = async move { self.prune_task.async_drop().await };
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        let mut prune_task = self.prune_task.take().expect("Object was already destructed");
+        let stop_prune_task = async move { prune_task.async_drop().await };
         let drop_entries = async move {
             // The self.cache arc is shared between the prune task and self.
             // Since self is passed in by value, prune task is the only one
             // that also has an instance. We're dropping prune_task concurrently
             // with this task. So let's wait until it has dropped it
-            while Arc::strong_count(&self.cache) > 1 {
+            let cache = self.cache.take().expect("Object is already destructed");
+            while Arc::strong_count(&cache) > 1 {
                 // TODO Is there a better alternative that doesn't involve busy waiting?
                 tokio::task::yield_now().await;
             }
             // Now we're the only task having access to this arc
-            let cache = Arc::try_unwrap(self.cache)
+            let cache = Arc::try_unwrap(cache)
                 .expect("This can't fail since we are the only task having access");
-            let entries: FuturesUnordered<_> = cache.into_entries_unordered().await.map(future::ready).collect();
+            let entries: FuturesUnordered<_> = cache
+                .into_entries_unordered()
+                .await
+                .map(future::ready)
+                .collect();
 
             let errors = entries.filter_map(|(key, mut value)| async move {
                 let result = value.flush(&key).await;
@@ -213,7 +224,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> AsyncD
     }
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> Debug for BlockCache<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> Debug for BlockCache<B> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCache").finish()
     }

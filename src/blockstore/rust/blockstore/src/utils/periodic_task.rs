@@ -75,7 +75,7 @@ impl PeriodicTask {
 impl AsyncDrop for PeriodicTask {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(mut self) -> Result<()> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         self.terminate().await?;
         Ok(())
     }
@@ -164,7 +164,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_empty_task() {
-        let task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async { Ok(()) });
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async { Ok(()) });
         task.async_drop().await.unwrap();
     }
 
@@ -172,7 +172,7 @@ mod tests {
     async fn runs_several_times() {
         let was_run = Arc::new(AtomicU32::new(0));
         let was_run_clone = Arc::clone(&was_run);
-        let task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), move || {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), move || {
             let was_run_clone = Arc::clone(&was_run_clone);
             async move {
                 // Add an additional sleep to give control back to the event loop
@@ -221,7 +221,7 @@ mod tests {
     async fn drop_stops_execution() {
         let was_run = Arc::new(AtomicU32::new(0));
         let was_run_clone = Arc::clone(&was_run);
-        let task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), move || {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), move || {
             let was_run_clone = Arc::clone(&was_run_clone);
             async move {
                 // Add an additional sleep to give control back to the event loop
@@ -247,7 +247,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_panic_task() {
         // TODO Why isn't this panic reported back?
-        let task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
             panic!("my error")
         });
         task.async_drop().await.unwrap();
@@ -256,7 +256,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_error_task() {
         // TODO Why isn't this error reported back?
-        let task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
             bail!("my error")
         });
         task.async_drop().await.unwrap();

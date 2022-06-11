@@ -621,18 +621,30 @@ pub mod all_blocks {
 pub mod exists {
     use super::*;
 
-    pub async fn test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<F: Fixture> (mut f: F) {
+    pub async fn test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<
+        F: Fixture,
+    >(
+        mut f: F,
+    ) {
         let store = f.store();
         assert_eq!(false, store.exists(&blockid(0)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<F: Fixture>(mut f: F) {
+    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse<
+        F: Fixture,
+    >(
+        mut f: F,
+    ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         assert_eq!(false, store.exists(&blockid(1)).await.unwrap());
     }
 
-    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue<F: Fixture>(mut f: F) {
+    pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue<
+        F: Fixture,
+    >(
+        mut f: F,
+    ) {
         let store = f.store();
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         assert_eq!(true, store.exists(&blockid(0)).await.unwrap());

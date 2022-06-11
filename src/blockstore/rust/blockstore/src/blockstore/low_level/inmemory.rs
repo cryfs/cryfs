@@ -2,27 +2,28 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use std::collections::hash_map::HashMap;
+use std::fmt::{self, Debug};
 use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
 
+use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
     RemoveResult, TryCreateResult,
 };
-
-use super::block_data::IBlockData;
 use crate::data::Data;
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub struct InMemoryBlockStore {
     blocks: RwLock<HashMap<BlockId, Data>>,
 }
 
 impl InMemoryBlockStore {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             blocks: RwLock::new(HashMap::new()),
-        }
+        })
     }
 }
 
@@ -134,22 +135,36 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
     }
 }
 
+impl Debug for InMemoryBlockStore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "InMemoryBlockStore")
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemoryBlockStore {
+    type Error = anyhow::Error;
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl BlockStore for InMemoryBlockStore {}
 
 #[cfg(test)]
 mod tests {
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
-
     use crate::instantiate_blockstore_tests;
+    use crate::utils::async_drop::SyncDrop;
 
     struct TestFixture {
-        store: InMemoryBlockStore,
+        store: SyncDrop<InMemoryBlockStore>,
     }
     impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = InMemoryBlockStore;
         fn new() -> Self {
             Self {
-                store: InMemoryBlockStore::new(),
+                store: SyncDrop::new(InMemoryBlockStore::new()),
             }
         }
         fn store(&mut self) -> &mut Self::ConcreteBlockStore {

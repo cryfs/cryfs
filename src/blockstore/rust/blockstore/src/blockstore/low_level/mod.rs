@@ -1,10 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::Stream;
+use std::any::Any;
 use std::pin::Pin;
+use std::fmt::Debug;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
+use crate::utils::async_drop::AsyncDrop;
 
 #[async_trait]
 pub trait BlockStoreReader {
@@ -68,7 +71,10 @@ impl<B: OptimizedBlockStoreWriter + Sync> BlockStoreWriter for B {
     }
 }
 
-pub trait BlockStore: BlockStoreReader + BlockStoreWriter + BlockStoreDeleter {}
+pub trait BlockStore:
+    BlockStoreReader + BlockStoreWriter + BlockStoreDeleter + AsyncDrop<Error = anyhow::Error> + Debug + Any
+{
+}
 
 /// BlockData instances wrap a [Data] instance and guarantee the upholding of an
 /// important invariant for [OptimizedBlockStoreWriter], namely that the data stored
