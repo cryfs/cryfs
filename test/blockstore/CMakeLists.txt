@@ -39,6 +39,9 @@ set(SOURCES
     implementations/integrity/IntegrityBlockStoreTest_Generic.cpp
     implementations/integrity/IntegrityBlockStoreTest_Specific.cpp
     implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeInMemoryBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeEncryptedInMemoryBlockStoreTest.cpp
+    implementations/rustbridge/RustBridgeOnDiskBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
