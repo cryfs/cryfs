@@ -1,7 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
-use futures::{future, stream::FuturesUnordered, StreamExt};
+use futures::{
+    future,
+    stream::{FuturesUnordered, Stream, StreamExt},
+};
 use lockable::LruGuard;
 use std::fmt::Debug;
 use std::future::Future;
@@ -128,6 +131,28 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         duration: Duration,
     ) -> Result<()> {
         let to_prune = cache.lock_entries_unlocked_for_longer_than(duration);
+        Self::_prune_blocks(cache, to_prune).await
+    }
+
+    /// TODO Docs
+    /// TODO Test
+    #[cfg(test)]
+    pub async fn prune_all_blocks<'a>(&'a self) -> Result<()> {
+        let cache = self.cache.as_ref().expect("Object is already destructed");
+        let to_prune = cache
+            .lock_all_entries()
+            .await
+            // TODO Is this possible by directly processing the stream and not collecting into a Vec?
+            .collect::<Vec<_>>()
+            .await
+            .into_iter();
+        Self::_prune_blocks(cache, to_prune).await
+    }
+
+    async fn _prune_blocks(
+        cache: &BlockCacheImpl<B>,
+        to_prune: impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>>,
+    ) -> Result<()> {
         // Now we have a list of mutex guards, locking all keys that we want to prune.
         // The global mutex for the cache is unlocked, so other threads may now come in
         // and could get one of those mutexes, waiting for them to lock. To address this,
@@ -154,9 +179,9 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         }
     }
 
-    async fn _prune_block<'a>(
+    async fn _prune_block(
         cache: &BlockCacheImpl<B>,
-        mut guard: LruGuard<'a, BlockId, BlockCacheEntry<B>>,
+        mut guard: LruGuard<'_, BlockId, BlockCacheEntry<B>>,
     ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();

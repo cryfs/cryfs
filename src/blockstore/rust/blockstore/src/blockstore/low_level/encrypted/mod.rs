@@ -226,7 +226,7 @@ mod tests {
                 Cipher::new(key),
             ))
         }
-        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
+        async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
     mod aes256gcm {

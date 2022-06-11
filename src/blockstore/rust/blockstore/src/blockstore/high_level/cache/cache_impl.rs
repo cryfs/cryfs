@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::stream::Stream;
 use lockable::{LockableLruCache, LruGuard, LruOwnedGuard};
 use std::fmt::Debug;
 use std::future::Future;
@@ -180,6 +181,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     ) -> impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
         self._cache()
             .lock_entries_unlocked_for_longer_than(duration)
+    }
+
+    pub async fn lock_all_entries(
+        &self,
+    ) -> impl Stream<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
+        self._cache().lock_all_entries().await
     }
 
     pub async fn into_entries_unordered(

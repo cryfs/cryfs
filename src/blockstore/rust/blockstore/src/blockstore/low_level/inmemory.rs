@@ -167,7 +167,7 @@ mod tests {
         fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
             SyncDrop::new(InMemoryBlockStore::new())
         }
-        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
+        async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
     instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));

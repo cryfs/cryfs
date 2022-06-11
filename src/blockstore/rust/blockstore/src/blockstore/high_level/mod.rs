@@ -244,6 +244,14 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
             }
         }
     }
+
+    /// clear_cache is only used in test cases. Without test cases calling it, they would only
+    /// ever test cached blocks and never have to store/reload them to the base store.
+    /// This is implemented in a very slow way and shouldn't be used in non-test code.
+    #[cfg(test)]
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.cache.prune_all_blocks().await
+    }
 }
 
 #[async_trait]
