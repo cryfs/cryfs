@@ -3,7 +3,11 @@ use std::fs::{DirEntry, File};
 use std::io::{IoSlice, Write};
 use std::path::{Path, PathBuf};
 
-use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter, BLOCKID_LEN};
+use super::{
+    block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
+    OptimizedBlockStoreWriter, BLOCKID_LEN,
+};
+use crate::data::Data;
 
 mod sysinfo;
 
@@ -24,7 +28,7 @@ impl OnDiskBlockStore {
 }
 
 impl BlockStoreReader for OnDiskBlockStore {
-    fn load(&self, id: &BlockId) -> Result<Option<Vec<u8>>> {
+    fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let path = self._block_path(id);
         match std::fs::read(&path) {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
@@ -35,14 +39,13 @@ impl BlockStoreReader for OnDiskBlockStore {
                 Err(err).with_context(|| format!("Failed to open block file at {}", path.display()))
             }
             Ok(file_content) => {
-                let block_content = _check_and_remove_header(&file_content)
-                    .with_context(|| {
+                let block_content =
+                    _check_and_remove_header(file_content.into()).with_context(|| {
                         format!(
                             "Failed to parse file contents of block at {}",
                             path.display()
                         )
-                    })?
-                    .to_vec();
+                    })?;
                 // TODO Avoid last .to_vec() by introducing a Data class that can hold the whole file contents but refer to subranges of the data?
                 Ok(Some(block_content))
             }
@@ -129,17 +132,7 @@ impl BlockStoreReader for OnDiskBlockStore {
     }
 }
 
-impl BlockStoreWriter for OnDiskBlockStore {
-    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
-        let path = self._block_path(id);
-        if path.exists() {
-            Ok(false)
-        } else {
-            _store(&path, data)?;
-            Ok(true)
-        }
-    }
-
+impl BlockStoreDeleter for OnDiskBlockStore {
     fn remove(&self, id: &BlockId) -> Result<bool> {
         let path = self._block_path(id);
         match std::fs::remove_file(path) {
@@ -151,8 +144,30 @@ impl BlockStoreWriter for OnDiskBlockStore {
             Err(err) => Err(err.into()),
         }
     }
+}
 
-    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
+create_block_data_wrapper!(BlockData);
+
+impl OptimizedBlockStoreWriter for OnDiskBlockStore {
+    type BlockData = BlockData;
+
+    fn allocate(size: usize) -> BlockData {
+        let data = Data::from(vec![0; FORMAT_VERSION_HEADER.len() + size])
+            .into_subregion(FORMAT_VERSION_HEADER.len()..);
+        BlockData::new(data)
+    }
+
+    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+        let path = self._block_path(id);
+        if path.exists() {
+            Ok(false)
+        } else {
+            _store(&path, data)?;
+            Ok(true)
+        }
+    }
+
+    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         let path = self._block_path(id);
         _store(&path, data)
     }
@@ -219,7 +234,7 @@ impl OnDiskBlockStore {
     }
 }
 
-fn _check_and_remove_header(data: &[u8]) -> Result<&[u8]> {
+fn _check_and_remove_header(data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
             bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS?");
@@ -227,7 +242,7 @@ fn _check_and_remove_header(data: &[u8]) -> Result<&[u8]> {
             bail!("This is not a valid block.");
         }
     }
-    Ok(&data[FORMAT_VERSION_HEADER.len()..])
+    Ok(data.into_subregion(FORMAT_VERSION_HEADER.len()..))
 }
 
 // TODO Test
@@ -246,7 +261,7 @@ fn _is_allowed_blockid_character(c: char) -> bool {
     (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
 }
 
-fn _store(path: &Path, data: &[u8]) -> Result<()> {
+fn _store(path: &Path, data: BlockData) -> Result<()> {
     _create_dir_if_doesnt_exist(
         path.parent()
             .expect("Block file path should have a parent directory"),
@@ -257,9 +272,15 @@ fn _store(path: &Path, data: &[u8]) -> Result<()> {
             path.display()
         )
     })?;
+    let mut data = data
+        .extract()
+        .grow_region(FORMAT_VERSION_HEADER.len(), 0)
+        .expect("Tried to grow data region to store in OnDiskBlockStore::_store");
+    // TODO Use binary-layout here?
+    data.as_mut()[..FORMAT_VERSION_HEADER.len()].copy_from_slice(FORMAT_VERSION_HEADER);
     let mut file = File::create(&path)
         .with_context(|| format!("Failed to create block file at {}", path.display()))?;
-    file.write_vectored(&[IoSlice::new(FORMAT_VERSION_HEADER), IoSlice::new(data)])
+    file.write_all(data.as_ref())
         .with_context(|| format!("Failed to write to block file at {}", path.display()))?;
     Ok(())
 }

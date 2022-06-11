@@ -1,13 +1,17 @@
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use binary_layout::{define_layout, FieldMetadata};
+use binary_layout::FieldMetadata;
 use log::warn;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter, BLOCKID_LEN};
+use super::{
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+    BLOCKID_LEN,
+};
 
 mod known_block_versions;
 
+use crate::data::Data;
 use known_block_versions::{BlockVersion, ClientId, IntegrityViolationError, KnownBlockVersions};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
@@ -55,7 +59,7 @@ impl<B> IntegrityBlockStore<B> {
 }
 
 impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
-    fn load(&self, block_id: &BlockId) -> Result<Option<Vec<u8>>> {
+    fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
         let loaded = self.underlying_block_store.load(block_id).context(
             "IntegrityBlockStore tried to load the block from the underlying block store",
         )?;
@@ -74,7 +78,10 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
                 }
                 Ok(None)
             }
-            Some(loaded) => todo!(),
+            Some(loaded) => {
+                let data = self._check_and_remove_header(loaded, block_id)?;
+                Ok(Some(data))
+            }
         }
     }
 
@@ -96,16 +103,26 @@ impl<B: BlockStoreReader> BlockStoreReader for IntegrityBlockStore<B> {
     }
 }
 
-impl<B: BlockStoreWriter> BlockStoreWriter for IntegrityBlockStore<B> {
-    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
-        todo!()
-    }
-
+impl<B: BlockStoreDeleter> BlockStoreDeleter for IntegrityBlockStore<B> {
     fn remove(&self, id: &BlockId) -> Result<bool> {
         todo!()
     }
+}
 
-    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
+create_block_data_wrapper!(BlockData);
+
+impl<B: OptimizedBlockStoreWriter> OptimizedBlockStoreWriter for IntegrityBlockStore<B> {
+    type BlockData = BlockData;
+
+    fn allocate(size: usize) -> BlockData {
+        todo!()
+    }
+
+    fn try_create_optimized(&self, id: &BlockId, data: BlockData) -> Result<bool> {
+        todo!()
+    }
+
+    fn store_optimized(&self, id: &BlockId, data: BlockData) -> Result<()> {
         todo!()
     }
 }
@@ -132,18 +149,14 @@ impl<B> IntegrityBlockStore<B> {
         }
     }
 
-    fn _check_and_remove_header<'a>(
-        &self,
-        data: &'a [u8],
-        expected_block_id: &BlockId,
-    ) -> Result<&'a [u8]> {
-        let view = block_layout::View::new(data);
+    fn _check_and_remove_header(&self, data: Data, expected_block_id: &BlockId) -> Result<Data> {
         ensure!(
             data.len() >= block_layout::data::OFFSET,
             "Block size is {} but we need at least {} to store the block header",
             data.len(),
             block_layout::data::OFFSET
         );
+        let view = block_layout::View::new(data);
         let format_version_header = view.format_version_header().read();
         if format_version_header != FORMAT_VERSION_HEADER {
             bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
@@ -179,8 +192,11 @@ impl<B> IntegrityBlockStore<B> {
             Err(err) => Err(err)?,
         }
 
-        Ok(view.into_data().extract())
+        // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
+        Ok(view
+            .into_storage()
+            .into_subregion(block_layout::data::OFFSET..))
     }
 }
 
-impl<B: BlockStore> BlockStore for IntegrityBlockStore<B> {}
+impl<B: BlockStore + OptimizedBlockStoreWriter> BlockStore for IntegrityBlockStore<B> {}

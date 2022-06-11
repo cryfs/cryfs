@@ -8,6 +8,7 @@ use log::warn;
 mod libsodium;
 
 use super::{Cipher, EncryptionKey};
+use crate::data::Data;
 
 const NONCE_SIZE: usize = 12;
 const AUTH_TAG_SIZE: usize = 16;
@@ -28,6 +29,8 @@ pub struct Aes256Gcm(Aes256GcmImpl);
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
+    const CIPHERTEXT_OVERHEAD: usize = NONCE_SIZE + AUTH_TAG_SIZE;
+
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         let hardware_acceleration_available = Aes256Gcm_HardwareAccelerated::is_available();
         if hardware_acceleration_available {
@@ -42,26 +45,14 @@ impl Cipher for Aes256Gcm {
         }
     }
 
-    fn ciphertext_size(plaintext_size: usize) -> usize {
-        plaintext_size + NONCE_SIZE + AUTH_TAG_SIZE
-    }
-
-    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
-        ensure!(
-            ciphertext_size >= NONCE_SIZE + AUTH_TAG_SIZE,
-            "Invalid ciphertext size"
-        );
-        Ok(ciphertext_size - NONCE_SIZE - AUTH_TAG_SIZE)
-    }
-
-    fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+    fn encrypt(&self, plaintext: Data) -> Result<Data> {
         match &self.0 {
             Aes256GcmImpl::HardwareAccelerated(i) => i.encrypt(plaintext),
             Aes256GcmImpl::SoftwareImplementation(i) => i.encrypt(plaintext),
         }
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
+    fn decrypt(&self, ciphertext: Data) -> Result<Data> {
         match &self.0 {
             Aes256GcmImpl::HardwareAccelerated(i) => i.decrypt(ciphertext),
             Aes256GcmImpl::SoftwareImplementation(i) => i.decrypt(ciphertext),

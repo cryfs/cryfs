@@ -11,6 +11,7 @@ use super::{
     BlockStore,
 };
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
+use crate::data::Data;
 
 pub const BLOCKID_LEN: usize = 16;
 
@@ -101,7 +102,7 @@ impl BinWrite for BlockId {
     }
 }
 
-pub struct OptionData(Option<Vec<u8>>);
+pub struct OptionData(Option<Data>);
 
 impl OptionData {
     fn has_value(&self) -> bool {
@@ -120,6 +121,7 @@ struct RustBlockStore2Bridge(Box<dyn BlockStore>);
 
 impl RustBlockStore2Bridge {
     fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
+        // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
         self.0.try_create(id, data)
     }
     fn remove(&self, id: &BlockId) -> Result<bool> {
@@ -129,6 +131,7 @@ impl RustBlockStore2Bridge {
         Ok(Box::new(OptionData(self.0.load(id)?)))
     }
     fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
+        // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
         self.0.store(id, data)
     }
     fn num_blocks(&self) -> Result<u64> {

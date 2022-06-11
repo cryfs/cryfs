@@ -2,14 +2,15 @@
 //! on CPUs that are new enough to have that support. If the CPU doesn't support it, then `Aes256Gcm::new()`
 //! will return an error.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use generic_array::typenum::U32;
-use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce};
+use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
 use std::sync::Once;
 
 use super::super::{Cipher, EncryptionKey};
+use super::{AUTH_TAG_SIZE, NONCE_SIZE};
 
-use super::NONCE_SIZE;
+use crate::data::Data;
 
 static INIT_LIBSODIUM: Once = Once::new();
 
@@ -36,6 +37,8 @@ impl Aes256Gcm {
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
+    const CIPHERTEXT_OVERHEAD: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD;
+
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         init_libsodium();
 
@@ -46,44 +49,53 @@ impl Cipher for Aes256Gcm {
         }
     }
 
-    fn ciphertext_size(plaintext_size: usize) -> usize {
-        super::Aes256Gcm::ciphertext_size(plaintext_size)
-    }
-
-    fn plaintext_size(ciphertext_size: usize) -> Result<usize> {
-        super::Aes256Gcm::plaintext_size(ciphertext_size)
-    }
-
-    fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+    fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
-        let ciphertext_size = Self::ciphertext_size(plaintext.len());
+        // TODO Use binary-layout here?
+        let ciphertext_size = plaintext.len() + Self::CIPHERTEXT_OVERHEAD;
         let nonce = self.cipher.gen_initial_nonce();
-        let cipherdata = self
+        let auth_tag = self
             .cipher
             // TODO Move convert_key call to constructor so we don't have to do it every time?
             //      Note that we have to somehow migrate the
             //      secret protection we get from our EncryptionKey class then.
-            .seal(plaintext, None, &nonce, &convert_key(&self.encryption_key));
-        let mut ciphertext = Vec::with_capacity(ciphertext_size);
-        ciphertext.extend_from_slice(nonce.as_ref());
-        ciphertext.extend(cipherdata); // TODO Is there a way to encrypt it without copying here? Or does it even matter?
+            .seal_detached(
+                plaintext.as_mut(),
+                None,
+                &nonce,
+                &convert_key(&self.encryption_key),
+            );
+        let mut ciphertext = plaintext.grow_region(Self::CIPHERTEXT_OVERHEAD, 0).context(
+            "Tried to add prefix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
+        ciphertext[0..NONCE_SIZE].copy_from_slice(nonce.as_ref());
+        ciphertext[NONCE_SIZE..(NONCE_SIZE + AUTH_TAG_SIZE)].copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
-        let nonce = &ciphertext[..NONCE_SIZE];
-        let cipherdata = &ciphertext[NONCE_SIZE..];
+    fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
+        let ciphertext_len = ciphertext.len();
+        let (nonce, rest) = ciphertext.as_mut().split_at_mut(NONCE_SIZE);
+        let (auth_tag, cipherdata) = rest.split_at_mut(AUTH_TAG_SIZE);
         let nonce = Nonce::from_slice(nonce).expect("Wrong nonce size");
-        let plaintext = self
-            .cipher
+        let auth_tag = Tag::from_slice(auth_tag).expect("Wrong auth tag size");
+        self.cipher
             // TODO Move convert_key call to constructor so we don't have to do it every time?
             //      Note that we have to somehow migrate the
             //      secret protection we get from our EncryptionKey class then.
-            .open(cipherdata, None, &nonce, &convert_key(&self.encryption_key))
+            .open_detached(
+                cipherdata.as_mut(),
+                None,
+                &auth_tag,
+                &nonce,
+                &convert_key(&self.encryption_key),
+            )
             .map_err(|()| anyhow!("Decrypting data failed"))?;
+        let plaintext = ciphertext.into_subregion((NONCE_SIZE + AUTH_TAG_SIZE)..);
         assert_eq!(
-            Self::plaintext_size(ciphertext.len()).unwrap(),
+            ciphertext_len
+                .checked_sub(Self::CIPHERTEXT_OVERHEAD)
+                .unwrap(),
             plaintext.len()
         );
         Ok(plaintext)
