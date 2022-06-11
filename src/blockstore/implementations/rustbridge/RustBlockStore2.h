@@ -16,6 +16,7 @@ namespace blockstore
     {
     public:
       RustBlockStore2(::rust::Box<bridge::RustBlockStore2Bridge> blockStore);
+      ~RustBlockStore2();
 
       bool tryCreate(const BlockId &blockId, const cpputils::Data &data) override;
       bool remove(const BlockId &blockId) override;

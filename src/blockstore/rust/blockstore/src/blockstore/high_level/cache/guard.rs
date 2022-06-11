@@ -1,19 +1,19 @@
-use std::fmt::{self, Debug};
 use lockable::LruOwnedGuard;
+use std::fmt::{self, Debug};
 
 use super::entry::BlockCacheEntry;
 use crate::blockstore::BlockId;
 
 pub struct BlockCacheEntryGuard<B>
 where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug+ 'static,
 {
     pub(super) guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
 }
 
 impl<B> BlockCacheEntryGuard<B>
 where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 {
     pub fn key(&self) -> &BlockId {
         self.guard.key()
@@ -34,7 +34,7 @@ where
 
 impl<B> Debug for BlockCacheEntryGuard<B>
 where
-    B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static,
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockCacheEntryGuard({:?})", self.guard)

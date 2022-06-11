@@ -1,38 +1,43 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use futures::stream::Stream;
+use std::fmt::{self, Debug};
 use std::pin::Pin;
 
+use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
     RemoveResult, TryCreateResult,
 };
-
-use super::block_data::IBlockData;
 use crate::crypto::symmetric::Cipher;
 use crate::data::Data;
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Here and in other files: Add more .context() to errors
 
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
 
-pub struct EncryptedBlockStore<C: Cipher, B> {
-    underlying_block_store: B,
+pub struct EncryptedBlockStore<C: 'static + Cipher, B: Debug + AsyncDrop<Error = anyhow::Error>> {
+    underlying_block_store: AsyncDropGuard<B>,
     cipher: C,
 }
 
-impl<C: Cipher, B> EncryptedBlockStore<C, B> {
-    pub fn new(underlying_block_store: B, cipher: C) -> Self {
-        Self {
+impl<C: 'static + Cipher + Send + Sync, B: Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>>
+    EncryptedBlockStore<C, B>
+{
+    pub fn new(underlying_block_store: AsyncDropGuard<B>, cipher: C) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             underlying_block_store,
             cipher,
-        }
+        })
     }
 }
 
 #[async_trait]
-impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReader
-    for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: BlockStoreReader + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
+    > BlockStoreReader for EncryptedBlockStore<C, B>
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         self.underlying_block_store.exists(id).await
@@ -70,8 +75,10 @@ impl<C: Cipher + Send + Sync, B: BlockStoreReader + Send + Sync> BlockStoreReade
 }
 
 #[async_trait]
-impl<C: Cipher + Send + Sync, B: BlockStoreDeleter + Send + Sync> BlockStoreDeleter
-    for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: BlockStoreDeleter + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
+    > BlockStoreDeleter for EncryptedBlockStore<C, B>
 {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.underlying_block_store.remove(id).await
@@ -81,8 +88,10 @@ impl<C: Cipher + Send + Sync, B: BlockStoreDeleter + Send + Sync> BlockStoreDele
 create_block_data_wrapper!(BlockData);
 
 #[async_trait]
-impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> OptimizedBlockStoreWriter
-    for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: OptimizedBlockStoreWriter + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
+    > OptimizedBlockStoreWriter for EncryptedBlockStore<C, B>
 {
     type BlockData = BlockData;
 
@@ -120,12 +129,30 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> Optimi
     }
 }
 
-impl<C: Cipher + Send + Sync, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync> BlockStore
+impl<C: 'static + Cipher + Send + Sync, B: Send + Debug + AsyncDrop<Error = anyhow::Error>> Debug
     for EncryptedBlockStore<C, B>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "EncryptedBlockStore")
+    }
+}
+
+#[async_trait]
+impl<C: 'static + Cipher + Send + Sync, B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
+    for EncryptedBlockStore<C, B>
+{
+    type Error = anyhow::Error;
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        self.underlying_block_store.async_drop().await
+    }
+}
+
+impl<C: 'static + Cipher + Send + Sync, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug>
+    BlockStore for EncryptedBlockStore<C, B>
 {
 }
 
-impl<C: Cipher, B> EncryptedBlockStore<C, B> {
+impl<C: 'static + Cipher, B: Debug + AsyncDrop<Error = anyhow::Error>> EncryptedBlockStore<C, B> {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
         // TODO Is it better to move encryption/decryption to a dedicated threadpool instead of block_in_place?
         let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
@@ -169,11 +196,12 @@ mod tests {
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
     use crate::crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305};
     use crate::instantiate_blockstore_tests;
+    use crate::utils::async_drop::SyncDrop;
 
-    struct TestFixture<C: Cipher + Send + Sync> {
-        store: EncryptedBlockStore<C, InMemoryBlockStore>,
+    struct TestFixture<C: 'static + Cipher + Send + Sync> {
+        store: SyncDrop<EncryptedBlockStore<C, InMemoryBlockStore>>,
     }
-    impl<C: Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture for TestFixture<C> {
+    impl<C: 'static + Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
             let key = EncryptionKey::new(|key_data| {
@@ -183,7 +211,10 @@ mod tests {
             })
             .unwrap();
             Self {
-                store: EncryptedBlockStore::new(InMemoryBlockStore::new(), Cipher::new(key)),
+                store: SyncDrop::new(EncryptedBlockStore::new(
+                    InMemoryBlockStore::new(),
+                    Cipher::new(key),
+                )),
             }
         }
         fn store(&mut self) -> &mut Self::ConcreteBlockStore {

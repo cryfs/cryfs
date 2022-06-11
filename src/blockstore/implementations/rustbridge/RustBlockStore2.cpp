@@ -10,6 +10,10 @@ namespace blockstore
         {
         }
 
+        RustBlockStore2::~RustBlockStore2() {
+            _blockStore->async_drop();
+        }
+
         bool RustBlockStore2::tryCreate(const BlockId &blockId, const cpputils::Data &data)
         {
             return _blockStore->try_create(*helpers::cast_blockid(blockId), helpers::cast_data(data));

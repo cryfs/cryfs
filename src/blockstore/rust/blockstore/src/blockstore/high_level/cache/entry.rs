@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
+use crate::utils::async_drop::AsyncDropGuard;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CacheEntryState {
@@ -17,18 +18,18 @@ pub enum BlockBaseStoreState {
     DoesntExistInBaseStore,
 }
 
-pub struct BlockCacheEntry<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> {
+pub struct BlockCacheEntry<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> {
     // TODO Do we really need to store the base_store in each cache entry?
-    base_store: Arc<B>,
+    base_store: Arc<AsyncDropGuard<B>>,
     dirty: CacheEntryState,
     data: Data,
     block_exists_in_base_store: BlockBaseStoreState,
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockCacheEntry<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheEntry<B> {
     #[inline]
     pub fn new(
-        base_store: Arc<B>,
+        base_store: Arc<AsyncDropGuard<B>>,
         data: Data,
         dirty: CacheEntryState,
         block_exists_in_base_store: BlockBaseStoreState,
@@ -79,7 +80,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     }
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> fmt::Debug
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug
     for BlockCacheEntry<B>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -89,7 +90,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> fmt::D
     }
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> Drop
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> Drop
     for BlockCacheEntry<B>
 {
     fn drop(&mut self) {

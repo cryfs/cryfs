@@ -1,17 +1,18 @@
 use anyhow::Result;
+use lockable::{LockableLruCache, LruGuard, LruOwnedGuard};
 use std::fmt::Debug;
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
-use lockable::{LockableLruCache, LruGuard, LruOwnedGuard};
 
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
 use crate::blockstore::BlockId;
 use crate::data::Data;
+use crate::utils::async_drop::AsyncDropGuard;
 
-pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> {
+pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> {
     // Only None while it is being dropped
     cache: Option<Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>>>,
 
@@ -22,7 +23,7 @@ pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + S
     num_blocks_in_cache_but_not_in_base_store: AtomicU64,
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockCacheImpl<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheImpl<B> {
     pub fn new() -> Arc<Self> {
         Arc::new(BlockCacheImpl {
             cache: Some(Arc::new(LockableLruCache::new())),
@@ -46,7 +47,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         BlockCacheEntryGuard { guard }
     }
 
-    pub fn delete_entry_from_cache<'a>(&self, entry: &mut LruGuard<'a, BlockId, BlockCacheEntry<B>>) {
+    pub fn delete_entry_from_cache<'a>(
+        &self,
+        entry: &mut LruGuard<'a, BlockId, BlockCacheEntry<B>>,
+    ) {
         let entry = entry
             .remove()
             .expect("Tried to delete an entry that wasn't set");
@@ -68,7 +72,9 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
         &self,
         entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
     ) {
-        let old_entry = entry.remove().expect("Tried to delete an entry that wasn't set");
+        let old_entry = entry
+            .remove()
+            .expect("Tried to delete an entry that wasn't set");
 
         if old_entry.block_exists_in_base_store() == BlockBaseStoreState::DoesntExistInBaseStore {
             let prev = self
@@ -89,7 +95,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
 
     pub fn set_entry(
         &self,
-        base_store: &Arc<B>,
+        base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
@@ -113,12 +119,15 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
             dirty,
             base_store_state,
         ));
-        assert!(old_entry.is_none(), "We checked above already that the entry isn't set");
+        assert!(
+            old_entry.is_none(),
+            "We checked above already that the entry isn't set"
+        );
     }
 
     pub async fn set_or_overwrite_entry_even_if_dirty<F>(
         &self,
-        base_store: &Arc<B>,
+        base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
@@ -142,14 +151,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
             base_store_state
         };
 
-        let old_entry = entry.insert(
-            BlockCacheEntry::new(
-                Arc::clone(base_store),
-                new_value,
-                dirty,
-                base_store_state,
-            ),
-        );
+        let old_entry = entry.insert(BlockCacheEntry::new(
+            Arc::clone(base_store),
+            new_value,
+            dirty,
+            base_store_state,
+        ));
         // Now the old cache entry is in the old_entry variable and we need to discard it
         // so we don't trigger a panic when it gets destructed and is dirty.
         if let Some(old_entry) = old_entry {
@@ -200,7 +207,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> BlockC
     }
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + 'static> Debug
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> Debug
     for BlockCacheImpl<B>
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
+use std::fmt::{self, Debug};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -12,6 +13,7 @@ use super::{
     OptimizedBlockStoreWriter, RemoveResult, TryCreateResult, BLOCKID_LEN,
 };
 use crate::data::Data;
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod sysinfo;
 
@@ -26,8 +28,8 @@ pub struct OnDiskBlockStore {
 }
 
 impl OnDiskBlockStore {
-    pub fn new(basedir: PathBuf) -> Self {
-        Self { basedir }
+    pub fn new(basedir: PathBuf) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { basedir })
     }
 }
 
@@ -144,6 +146,20 @@ async fn path_exists(path: &Path) -> Result<bool> {
         Ok(_) => Ok(true),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(err) => Err(err.into()),
+    }
+}
+
+impl Debug for OnDiskBlockStore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "OnDiskBlockStore")
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for OnDiskBlockStore {
+    type Error = anyhow::Error;
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -324,22 +340,22 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::instantiate_blockstore_tests;
+    use crate::utils::async_drop::SyncDrop;
     use tempdir::TempDir;
 
     struct TestFixture {
         // Fields of a struct are dropped in declaration order, so we declare
         // the blockstore first to make sure it's gone when we're dropping the
         // tempdir.
-        store: OnDiskBlockStore,
+        store: SyncDrop<OnDiskBlockStore>,
         _basedir: TempDir,
     }
     impl crate::blockstore::low_level::tests::Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
-            let store = OnDiskBlockStore::new(basedir.path().to_path_buf());
+            let store = SyncDrop::new(OnDiskBlockStore::new(basedir.path().to_path_buf()));
             Self {
                 _basedir: basedir,
                 store,
@@ -352,9 +368,9 @@ mod tests {
 
     instantiate_blockstore_tests!(TestFixture);
 
-    #[test]
-    fn test_block_path() {
-        let block_store = OnDiskBlockStore::new(Path::new("/base/path").to_path_buf());
+    #[tokio::test]
+    async fn test_block_path() {
+        let mut block_store = OnDiskBlockStore::new(Path::new("/base/path").to_path_buf());
         assert_eq!(
             Path::new("/base/path/2AC/9C78D80937AD50852C50BD3F1F982"),
             block_store._block_path(
@@ -362,6 +378,7 @@ mod tests {
                     .unwrap()
             )
         );
+        block_store.async_drop().await.unwrap();
     }
 
     #[test]

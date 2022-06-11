@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_trait::async_trait;
 use binary_layout::prelude::*;
 use futures::{
-    future,
+    future::{self},
     stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
 };
 use log::warn;
@@ -49,15 +49,15 @@ pub struct IntegrityConfig {
 /// but it cannot handle calls about **the same** block id at the same time. That would cause race conditions
 /// in `integrity_data` and possibly other places. Only use this with something on top (e.g. `LockingBlockStore`)
 /// ensuring that there are no concurrent calls about the same block id.
-pub struct IntegrityBlockStore<B: Send> {
-    underlying_block_store: B,
+pub struct IntegrityBlockStore<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> {
+    underlying_block_store: AsyncDropGuard<B>,
     config: IntegrityConfig,
     integrity_data: AsyncDropGuard<IntegrityData>,
 }
 
-impl<B: Send> IntegrityBlockStore<B> {
+impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
     pub fn new(
-        underlying_block_store: B,
+        underlying_block_store: AsyncDropGuard<B>,
         integrity_file_path: PathBuf,
         my_client_id: ClientId,
         config: IntegrityConfig,
@@ -82,22 +82,16 @@ impl<B: Send> IntegrityBlockStore<B> {
     }
 }
 
-#[async_trait]
-impl<B: Send> AsyncDrop for IntegrityBlockStore<B> {
-    type Error = anyhow::Error;
-    async fn async_drop_impl(self) -> Result<()> {
-        self.integrity_data.async_drop().await
-    }
-}
-
-impl<B: Send> Debug for IntegrityBlockStore<B> {
+impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> Debug for IntegrityBlockStore<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "IntegrityBlockStore")
     }
 }
 
 #[async_trait]
-impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore<B> {
+impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> BlockStoreReader
+    for IntegrityBlockStore<B>
+{
     async fn exists(&self, block_id: &BlockId) -> Result<bool> {
         self.underlying_block_store.exists(block_id).await
     }
@@ -208,7 +202,9 @@ impl<B: BlockStoreReader + Sync + Send> BlockStoreReader for IntegrityBlockStore
 }
 
 #[async_trait]
-impl<B: BlockStoreDeleter + Sync + Send> BlockStoreDeleter for IntegrityBlockStore<B> {
+impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
+    BlockStoreDeleter for IntegrityBlockStore<B>
+{
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         let mut block_info_guard = self.integrity_data.lock_block_info(*id).await;
         let remove_result = self.underlying_block_store.remove(id).await?;
@@ -223,8 +219,8 @@ impl<B: BlockStoreDeleter + Sync + Send> BlockStoreDeleter for IntegrityBlockSto
 create_block_data_wrapper!(BlockData);
 
 #[async_trait]
-impl<B: OptimizedBlockStoreWriter + Sync + Send> OptimizedBlockStoreWriter
-    for IntegrityBlockStore<B>
+impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
+    OptimizedBlockStoreWriter for IntegrityBlockStore<B>
 {
     type BlockData = BlockData;
 
@@ -291,7 +287,7 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send> OptimizedBlockStoreWriter
     }
 }
 
-impl<B: Send> IntegrityBlockStore<B> {
+impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
     fn _integrity_violation_detected(&self, reason: IntegrityViolationError) -> Result<()> {
         if self.config.allow_integrity_violations {
             warn!(
@@ -381,7 +377,19 @@ impl<B: Send> IntegrityBlockStore<B> {
     }
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send> BlockStore
+#[async_trait]
+impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
+    for IntegrityBlockStore<B>
+{
+    type Error = anyhow::Error;
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        self.underlying_block_store.async_drop().await?;
+        self.integrity_data.async_drop().await?;
+        Ok(())
+    }
+}
+
+impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
     for IntegrityBlockStore<B>
 {
 }
@@ -390,6 +398,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send> BlockStore
 mod tests {
     use super::*;
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use crate::utils::async_drop::SyncDrop;
     use tempdir::TempDir;
 
     use crate::instantiate_blockstore_tests;
@@ -398,7 +407,7 @@ mod tests {
         const ALLOW_INTEGRITY_VIOLATIONS: bool,
         const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
     > {
-        store: Option<AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>>,
+        store: SyncDrop<IntegrityBlockStore<InMemoryBlockStore>>,
         _integrity_file_dir: TempDir,
     }
     impl<
@@ -407,45 +416,34 @@ mod tests {
         > crate::blockstore::low_level::tests::Fixture
         for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
     {
-        type ConcreteBlockStore = AsyncDropGuard<IntegrityBlockStore<InMemoryBlockStore>>;
+        type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
             let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
-            let store = IntegrityBlockStore::new(
-                InMemoryBlockStore::new(),
-                integrity_file_dir
-                    .path()
-                    .join("integrity_file")
-                    .to_path_buf(),
-                ClientId { id: 1 },
-                IntegrityConfig {
-                    allow_integrity_violations: ALLOW_INTEGRITY_VIOLATIONS,
-                    missing_block_is_integrity_violation: MISSING_BLOCK_IS_INTEGRITY_VIOLATION,
-                    on_integrity_violation: Box::new(|err| {
-                        panic!("Integrity violation: {:?}", err)
-                    }),
-                },
-            )
-            .unwrap();
+            let store = SyncDrop::new(
+                IntegrityBlockStore::new(
+                    InMemoryBlockStore::new(),
+                    integrity_file_dir
+                        .path()
+                        .join("integrity_file")
+                        .to_path_buf(),
+                    ClientId { id: 1 },
+                    IntegrityConfig {
+                        allow_integrity_violations: ALLOW_INTEGRITY_VIOLATIONS,
+                        missing_block_is_integrity_violation: MISSING_BLOCK_IS_INTEGRITY_VIOLATION,
+                        on_integrity_violation: Box::new(|err| {
+                            panic!("Integrity violation: {:?}", err)
+                        }),
+                    },
+                )
+                .unwrap(),
+            );
             Self {
                 _integrity_file_dir: integrity_file_dir,
-                store: Some(store),
+                store,
             }
         }
         fn store(&mut self) -> &mut Self::ConcreteBlockStore {
-            self.store.as_mut().expect("Already dropped")
-        }
-    }
-
-    impl<
-            const ALLOW_INTEGRITY_VIOLATIONS: bool,
-            const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
-        > Drop for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
-    {
-        fn drop(&mut self) {
-            // Using futures::executor::block_on within a tokio runtime isn't great, but good enough for unit tests.
-            // See also https://stackoverflow.com/questions/71541765/rust-async-drop
-            futures::executor::block_on(self.store.take().expect("Already dropped").async_drop())
-                .unwrap();
+            &mut self.store
         }
     }
 

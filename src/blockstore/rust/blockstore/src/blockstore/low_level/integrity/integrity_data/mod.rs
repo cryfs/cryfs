@@ -254,7 +254,7 @@ impl IntegrityData {
 #[async_trait]
 impl AsyncDrop for IntegrityData {
     type Error = anyhow::Error;
-    async fn async_drop_impl(mut self) -> Result<()> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         self.known_block_versions
             .take()
             .expect("Was already destructed")
