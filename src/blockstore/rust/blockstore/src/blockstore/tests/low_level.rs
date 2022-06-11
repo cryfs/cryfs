@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use anyhow::Result;
-use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use std::ops::Deref;
 
 use super::{blockid, data, Fixture};
@@ -9,6 +9,7 @@ use crate::blockstore::low_level::{
     BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, RemoveResult, TryCreateResult,
 };
 use crate::blockstore::BlockId;
+use crate::utils::testutils::assert_unordered_vec_eq;
 
 // TODO Test try_create_optimized(), store_optimized()
 
@@ -31,6 +32,24 @@ pub mod try_create {
         );
 
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
+    }
+
+    pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingEmptyBlock_thenFails(
+        mut f: impl Fixture,
+    ) {
+        let store = f.store();
+
+        store.store(&blockid(1), &data(0, 0)).await.unwrap();
+        let status = store
+            .try_create(&blockid(1), data(1024, 1).as_ref())
+            .await
+            .unwrap();
+        assert_eq!(
+            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists,
+            status
+        );
+
+        assert_eq!(Some(data(0, 0)), store.load(&blockid(1)).await.unwrap());
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
@@ -448,21 +467,13 @@ pub mod num_blocks {
 pub mod all_blocks {
     use super::*;
 
-    fn assert_unordered_vec_eq(mut lhs: Vec<BlockId>, mut rhs: Vec<BlockId>) {
-        lhs.sort();
-        rhs.sort();
-        assert_eq!(lhs, rhs);
-    }
-
     async fn call_all_blocks(store: &impl BlockStoreReader) -> Vec<BlockId> {
         store
             .all_blocks()
             .await
             .unwrap()
-            .collect::<Vec<Result<BlockId>>>()
+            .try_collect()
             .await
-            .into_iter()
-            .collect::<Result<Vec<BlockId>>>()
             .unwrap()
     }
 
@@ -604,6 +615,7 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
     ($target: ty, $tokio_test_args: tt) => {
         $crate::_instantiate_lowlevel_blockstore_tests!(@module try_create, $target, $tokio_test_args,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
+            test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingEmptyBlock_thenFails,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
