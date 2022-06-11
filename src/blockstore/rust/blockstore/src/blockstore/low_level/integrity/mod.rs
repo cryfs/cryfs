@@ -441,7 +441,7 @@ mod tests {
                 .unwrap(),
             )
         }
-        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
+        async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
     instantiate_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));

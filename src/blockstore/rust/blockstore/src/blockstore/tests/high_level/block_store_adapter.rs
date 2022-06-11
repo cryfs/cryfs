@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::Stream;
+use futures::{future::BoxFuture, FutureExt, Stream};
 use std::fmt::{self, Debug};
 use std::pin::Pin;
 
@@ -21,6 +21,10 @@ pub struct BlockStoreAdapter<B: BlockStore + Send + Sync + Debug + 'static>(
 impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreAdapter<B> {
     pub fn new(store: AsyncDropGuard<LockingBlockStore<B>>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self(store))
+    }
+
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.0.clear_cache_slow().await
     }
 }
 
@@ -106,11 +110,13 @@ impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStore for BlockStoreAda
 /// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
 /// a [Fixture] that creates a [LockingBlockStore] based on that [BlockStore].
 /// This allows using our block store test suite on [LockingBlockStore].
-pub struct TestFixtureAdapter<F: Fixture + Sync> {
+pub struct TestFixtureAdapter<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
 }
 #[async_trait]
-impl<F: Fixture + Sync> crate::blockstore::tests::Fixture for TestFixtureAdapter<F> {
+impl<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> crate::blockstore::tests::Fixture
+    for TestFixtureAdapter<F, FLUSH_CACHE_ON_YIELD>
+{
     type ConcreteBlockStore = BlockStoreAdapter<F::ConcreteBlockStore>;
     fn new() -> Self {
         Self { f: F::new() }
@@ -120,6 +126,8 @@ impl<F: Fixture + Sync> crate::blockstore::tests::Fixture for TestFixtureAdapter
         SyncDrop::new(BlockStoreAdapter::new(LockingBlockStore::new(inner)))
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
-        // TODO
+        if FLUSH_CACHE_ON_YIELD {
+            store.clear_cache_slow().await.unwrap();
+        }
     }
 }

@@ -2,7 +2,6 @@
 
 //! This module contains common test cases for the low level [BlockStore] API
 
-use anyhow::Result;
 use futures::stream::TryStreamExt;
 use std::ops::Deref;
 
@@ -12,8 +11,6 @@ use crate::blockstore::low_level::{
 };
 use crate::blockstore::BlockId;
 use crate::utils::testutils::assert_unordered_vec_eq;
-
-// TODO Test try_create_optimized(), store_optimized()
 
 pub mod try_create {
     use super::*;
@@ -833,5 +830,9 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
             test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue,
         );
+
+        // TODO Test estimate_num_free_bytes
+        // TODO Test block_size_from_physical_block_size
+        // TODO Test OptimizedBlockStoreWriter
     };
 }

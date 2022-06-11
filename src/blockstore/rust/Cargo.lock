@@ -706,9 +706,10 @@ dependencies = [
 [[package]]
 name = "lockable"
 version = "0.0.2"
-source = "git+https://github.com/smessmer/lockable?rev=073147ef27948aab6eae79f9f684b94792adfd20#073147ef27948aab6eae79f9f684b94792adfd20"
+source = "git+https://github.com/smessmer/lockable?rev=a81deeb967a64b0579518810149123dccc589a9b#a81deeb967a64b0579518810149123dccc589a9b"
 dependencies = [
  "anyhow",
+ "futures",
  "lru 0.7.5",
  "owning_ref_lockable",
  "thiserror",

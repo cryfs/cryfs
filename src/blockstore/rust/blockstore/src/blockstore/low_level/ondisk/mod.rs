@@ -357,7 +357,7 @@ mod tests {
         fn store(&mut self) -> SyncDrop<OnDiskBlockStore> {
             SyncDrop::new(OnDiskBlockStore::new(self.basedir.path().to_path_buf()))
         }
-        async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {}
+        async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
     instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));

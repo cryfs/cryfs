@@ -51,6 +51,7 @@ pub trait OptimizedBlockStoreWriter {
         id: &BlockId,
         data: Self::BlockData,
     ) -> Result<TryCreateResult>;
+
     async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
 }
 

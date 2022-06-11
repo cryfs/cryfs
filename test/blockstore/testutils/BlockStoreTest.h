@@ -81,58 +81,6 @@ public:
 
 TYPED_TEST_SUITE_P(BlockStoreTest);
 
-
-/*
-TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
-  auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
-  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
-  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(1024));
-  EXPECT_NE(boost::none, block);
-  EXPECT_EQ(boost::none, block2);
-}
-
-TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndDifferentSize) {
-  auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
-  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
-  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(4096));
-  EXPECT_NE(boost::none, block);
-  EXPECT_EQ(boost::none, block2);
-}
-
-TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize) {
-  auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto block = blockStore->tryCreate(blockId, cpputils::Data(0));
-  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
-  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(1024));
-  EXPECT_NE(boost::none, block);
-  EXPECT_EQ(boost::none, block2);
-}
-
-TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndSecondNullSize) {
-  auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto block = blockStore->tryCreate(blockId, cpputils::Data(1024));
-  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
-  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(0));
-  EXPECT_NE(boost::none, block);
-  EXPECT_EQ(boost::none, block2);
-}
-
-TYPED_TEST_P(BlockStoreTest, TryCreateTwoBlocksWithSameBlockIdAndBothNullSize) {
-  auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  auto block = blockStore->tryCreate(blockId, cpputils::Data(0));
-  (*block)->flush(); //TODO Ideally, flush shouldn't be necessary here.
-  auto block2 = blockStore->tryCreate(blockId, cpputils::Data(0));
-  EXPECT_NE(boost::none, block);
-  EXPECT_EQ(boost::none, block2);
-}*/
-
 #include "BlockStoreTest_Size.h"
 #include "BlockStoreTest_Data.h"
 

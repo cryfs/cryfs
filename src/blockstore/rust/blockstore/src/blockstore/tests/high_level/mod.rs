@@ -5,19 +5,13 @@
 //! for [LockingBlockStore], and then uses [super::low_level] to run the common low level
 //! tests on [LockingBlockStore] as well. On top of that, we add some tests that are specific to [LockingBlockStore].
 
-use futures::{StreamExt, TryStreamExt};
 use std::fmt::Debug;
 
-use crate::blockstore::high_level::{Block, LockingBlockStore, RemoveResult, TryCreateResult};
+use crate::blockstore::high_level::{Block, LockingBlockStore, RemoveResult};
 use crate::blockstore::low_level::BlockStore;
-use crate::blockstore::BlockId;
-use crate::data::Data;
 use crate::utils::async_drop::SyncDrop;
 
 use crate::blockstore::tests::{blockid, data, Fixture};
-use crate::utils::testutils::assert_unordered_vec_eq;
-
-// TODO Go through tests and make sure we have versions that flush. Otherwise, we're just testing the cache.
 
 mod block_store_adapter;
 pub use block_store_adapter::TestFixtureAdapter;
@@ -41,27 +35,6 @@ where
         let inner = Fixture::store(self).into_inner_dont_drop();
         SyncDrop::new(LockingBlockStore::new(inner))
     }
-}
-
-async fn create_block<B: BlockStore + Send + Sync + Debug + 'static>(
-    store: &LockingBlockStore<B>,
-    block_id: &BlockId,
-    data: &Data,
-) {
-    assert_eq!(
-        TryCreateResult::SuccessfullyCreated,
-        store.try_create(block_id, &data).await.unwrap()
-    );
-}
-
-async fn remove_block<B: BlockStore + Send + Sync + Debug + 'static>(
-    store: &LockingBlockStore<B>,
-    block_id: &BlockId,
-) {
-    assert_eq!(
-        RemoveResult::SuccessfullyRemoved,
-        store.remove(block_id).await.unwrap()
-    );
 }
 
 async fn assert_block_is_usable<B: BlockStore + Send + Sync + Debug>(
@@ -226,9 +199,13 @@ macro_rules! instantiate_highlevel_blockstore_tests {
     };
     ($target: ty, $tokio_test_args: tt) => {
         // Run all low level tests on this block store (using an adapter to map the APIs)
-        mod low_level_adapter {
+        mod low_level_adapter_without_flushing {
             use super::*;
-            $crate::instantiate_lowlevel_blockstore_tests!($crate::blockstore::tests::high_level::TestFixtureAdapter<$target>, $tokio_test_args);
+            $crate::instantiate_lowlevel_blockstore_tests!($crate::blockstore::tests::high_level::TestFixtureAdapter<$target, false>, $tokio_test_args);
+        }
+        mod low_level_adapter_with_flushing {
+            use super::*;
+            $crate::instantiate_lowlevel_blockstore_tests!($crate::blockstore::tests::high_level::TestFixtureAdapter<$target, true>, $tokio_test_args);
         }
         // And run some additional tests for APIs only we have
         $crate::_instantiate_highlevel_blockstore_tests!(@module create, $target, $tokio_test_args,
@@ -253,5 +230,9 @@ macro_rules! instantiate_highlevel_blockstore_tests {
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds,
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable,
         );
+
+        // TODO Test Block::block_id()
+        // TODO Test Block::data() and data_mut()
+        // TODO Test Block::flush()
     };
 }
