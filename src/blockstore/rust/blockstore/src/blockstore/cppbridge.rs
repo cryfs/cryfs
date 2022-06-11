@@ -8,7 +8,7 @@ use super::low_level::{
     inmemory::InMemoryBlockStore,
     integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
     ondisk::OnDiskBlockStore,
-    BlockStore, TryCreateResult, RemoveResult,
+    BlockStore, RemoveResult, TryCreateResult,
 };
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};

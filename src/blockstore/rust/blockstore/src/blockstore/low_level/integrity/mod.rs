@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
-    BLOCKID_LEN, RemoveResult, TryCreateResult,
+    RemoveResult, TryCreateResult, BLOCKID_LEN,
 };
 
 mod known_block_versions;

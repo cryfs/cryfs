@@ -6,7 +6,10 @@ use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
 
-use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter, RemoveResult, TryCreateResult};
+use super::{
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+    RemoveResult, TryCreateResult,
+};
 
 use super::block_data::IBlockData;
 use crate::data::Data;
@@ -81,7 +84,7 @@ impl BlockStoreDeleter for InMemoryBlockStore {
         let remove_result = blocks.remove(id);
         match remove_result {
             Some(_) => Ok(RemoveResult::SuccessfullyRemoved),
-            None => Ok(RemoveResult::NotRemovedBecauseItDoesntExist)
+            None => Ok(RemoveResult::NotRemovedBecauseItDoesntExist),
         }
     }
 }
