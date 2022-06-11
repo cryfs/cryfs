@@ -12,13 +12,13 @@ use crate::utils::binary::{
 #[derive(PartialEq, Eq, Debug, Hash, BinRead, BinWrite, Clone, Copy)]
 pub struct ClientId {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
-    pub(super) id: u32,
+    pub id: u32,
 }
 
 #[derive(PartialEq, Eq, Debug, Hash, PartialOrd, BinRead, BinWrite, Clone, Copy)]
 pub struct BlockVersion {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
-    pub(super) version: u64,
+    pub version: u64,
 }
 
 impl BlockVersion {
