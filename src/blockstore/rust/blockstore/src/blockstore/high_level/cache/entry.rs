@@ -18,7 +18,9 @@ pub enum BlockBaseStoreState {
     DoesntExistInBaseStore,
 }
 
-pub struct BlockCacheEntry<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct BlockCacheEntry<
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
+> {
     // TODO Do we really need to store the base_store in each cache entry?
     base_store: Arc<AsyncDropGuard<B>>,
     dirty: CacheEntryState,
@@ -26,7 +28,9 @@ pub struct BlockCacheEntry<B: crate::blockstore::low_level::BlockStore + Send + 
     block_exists_in_base_store: BlockBaseStoreState,
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheEntry<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static>
+    BlockCacheEntry<B>
+{
     #[inline]
     pub fn new(
         base_store: Arc<AsyncDropGuard<B>>,

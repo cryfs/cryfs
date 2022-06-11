@@ -22,8 +22,10 @@ pub struct EncryptedBlockStore<C: 'static + Cipher, B: Debug + AsyncDrop<Error =
     cipher: C,
 }
 
-impl<C: 'static + Cipher + Send + Sync, B: Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>>
-    EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>,
+    > EncryptedBlockStore<C, B>
 {
     pub fn new(underlying_block_store: AsyncDropGuard<B>, cipher: C) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -138,8 +140,10 @@ impl<C: 'static + Cipher + Send + Sync, B: Send + Debug + AsyncDrop<Error = anyh
 }
 
 #[async_trait]
-impl<C: 'static + Cipher + Send + Sync, B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
-    for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>,
+    > AsyncDrop for EncryptedBlockStore<C, B>
 {
     type Error = anyhow::Error;
     async fn async_drop_impl(&mut self) -> Result<()> {
@@ -147,8 +151,10 @@ impl<C: 'static + Cipher + Send + Sync, B: Sync + Send + Debug + AsyncDrop<Error
     }
 }
 
-impl<C: 'static + Cipher + Send + Sync, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug>
-    BlockStore for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
+    > BlockStore for EncryptedBlockStore<C, B>
 {
 }
 
@@ -201,7 +207,9 @@ mod tests {
     struct TestFixture<C: 'static + Cipher + Send + Sync> {
         store: SyncDrop<EncryptedBlockStore<C, InMemoryBlockStore>>,
     }
-    impl<C: 'static + Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture for TestFixture<C> {
+    impl<C: 'static + Cipher + Send + Sync> crate::blockstore::low_level::tests::Fixture
+        for TestFixture<C>
+    {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
             let key = EncryptionKey::new(|key_data| {

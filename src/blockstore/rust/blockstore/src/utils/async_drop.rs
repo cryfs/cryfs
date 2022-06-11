@@ -53,7 +53,7 @@ impl<T: Debug> AsyncDropGuard<T> {
     // Warning: The resulting AsyncDropGuard will call async_drop on U instead of T.
     // There will be no call to async_drop for T anymore.
     // Callers of this function need to make sure that this is correct behavior for T, U.
-    pub fn map_unsafe<U: Debug>(mut self, fun: impl FnOnce(T)-> U) -> AsyncDropGuard<U> {
+    pub fn map_unsafe<U: Debug>(mut self, fun: impl FnOnce(T) -> U) -> AsyncDropGuard<U> {
         AsyncDropGuard(self.0.take().map(fun))
     }
 }

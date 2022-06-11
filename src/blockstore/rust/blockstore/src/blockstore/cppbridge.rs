@@ -1,8 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use futures::{
-    stream::{Stream, TryStreamExt},
-};
+use futures::stream::{Stream, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -22,7 +20,6 @@ use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Assertion on shutdown that no running tasks are left
-
 
 #[cxx::bridge]
 mod ffi {
@@ -250,12 +247,10 @@ impl RustBlockStoreBridge {
         block_id: &BlockId,
         data: &[u8],
     ) -> Result<Box<OptionRustBlockBridge>> {
-        match self.0
-            .try_create(block_id, &data.to_vec().into())
-            .await?
-        {
+        match self.0.try_create(block_id, &data.to_vec().into()).await? {
             high_level::TryCreateResult::SuccessfullyCreated => {
-                let loaded = self.0
+                let loaded = self
+                    .0
                     .load(*block_id)
                     .await?
                     .expect("We just created this but it doesn't exist?");
@@ -274,22 +269,19 @@ impl RustBlockStoreBridge {
     }
 
     fn load(&self, block_id: &BlockId) -> Result<Box<OptionRustBlockBridge>> {
-        log_errors(
-            || match TOKIO_RUNTIME.block_on(self.0.load(*block_id))? {
-                Some(block) => Ok(Box::new(OptionRustBlockBridge(Some(RustBlockBridge::new(
-                    block,
-                ))))),
-                None => Ok(Box::new(OptionRustBlockBridge(None))),
-            },
-        )
+        log_errors(|| match TOKIO_RUNTIME.block_on(self.0.load(*block_id))? {
+            Some(block) => Ok(Box::new(OptionRustBlockBridge(Some(RustBlockBridge::new(
+                block,
+            ))))),
+            None => Ok(Box::new(OptionRustBlockBridge(None))),
+        })
     }
 
     async fn _overwrite(&self, block_id: &BlockId, data: &[u8]) -> Result<Box<RustBlockBridge>> {
         // TODO Overwriting and then loading could be slow. Should we instead change the rust API so that it also returns the block from the overwrite() call?
-        self.0
-            .overwrite(block_id, &data.to_vec().into())
-            .await?;
-        let loaded = self.0
+        self.0.overwrite(block_id, &data.to_vec().into()).await?;
+        let loaded = self
+            .0
             .load(*block_id)
             .await?
             .expect("We just created this but it doesn't exist?");
@@ -301,12 +293,10 @@ impl RustBlockStoreBridge {
     }
 
     fn remove(&self, block_id: &BlockId) -> Result<bool> {
-        log_errors(
-            || match TOKIO_RUNTIME.block_on(self.0.remove(block_id))? {
-                high_level::RemoveResult::SuccessfullyRemoved => Ok(true),
-                high_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
-            },
-        )
+        log_errors(|| match TOKIO_RUNTIME.block_on(self.0.remove(block_id))? {
+            high_level::RemoveResult::SuccessfullyRemoved => Ok(true),
+            high_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
+        })
     }
 
     fn num_blocks(&self) -> Result<u64> {
@@ -318,33 +308,27 @@ impl RustBlockStoreBridge {
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        log_errors(|| {
-            self.0
-                .block_size_from_physical_block_size(block_size)
-        })
+        log_errors(|| self.0.block_size_from_physical_block_size(block_size))
     }
 
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
         log_errors(|| {
-            TOKIO_RUNTIME.block_on(async {
-                TryStreamExt::try_collect(self.0.all_blocks().await?).await
-            })
+            TOKIO_RUNTIME
+                .block_on(async { TryStreamExt::try_collect(self.0.all_blocks().await?).await })
         })
     }
 
     fn async_drop(&mut self) -> Result<()> {
-        log_errors(|| {
-            TOKIO_RUNTIME.block_on(
-                self.0.async_drop()
-            )
-        })
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.async_drop()))
     }
 }
 
 struct DynBlockStore(Box<dyn BlockStore + Send + Sync>);
 
 impl DynBlockStore {
-    pub fn from<B: 'static + BlockStore + Send + Sync>(v: AsyncDropGuard<Box<B>>) -> AsyncDropGuard<Self> {
+    pub fn from<B: 'static + BlockStore + Send + Sync>(
+        v: AsyncDropGuard<Box<B>>,
+    ) -> AsyncDropGuard<Self> {
         v.map_unsafe(|a| Self(a as Box<dyn BlockStore + Send + Sync>))
     }
 }
@@ -462,18 +446,15 @@ impl RustBlockStore2Bridge {
         })
     }
     fn async_drop(&mut self) -> Result<()> {
-        log_errors(|| {
-            TOKIO_RUNTIME.block_on(
-                self.0
-                    .async_drop(),
-            )
-        })
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.async_drop()))
     }
 }
 
 fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     LOGGER_INIT.ensure_initialized();
-    Box::new(RustBlockStore2Bridge(DynBlockStore::from(InMemoryBlockStore::new().into_box())))
+    Box::new(RustBlockStore2Bridge(DynBlockStore::from(
+        InMemoryBlockStore::new().into_box(),
+    )))
 }
 
 fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
@@ -481,10 +462,9 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     let key =
         EncryptionKey::from_hex("9726ca3703940a918802953d8db5996c5fb25008a20c92cb95aa4b8fe92702d9")
             .unwrap();
-    Box::new(RustBlockStore2Bridge(DynBlockStore::from(EncryptedBlockStore::new(
-        InMemoryBlockStore::new(),
-        Aes256Gcm::new(key),
-    ).into_box())))
+    Box::new(RustBlockStore2Bridge(DynBlockStore::from(
+        EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key)).into_box(),
+    )))
 }
 
 fn new_integrity_inmemory_blockstore(
@@ -502,16 +482,17 @@ fn new_integrity_inmemory_blockstore(
                     missing_block_is_integrity_violation: true,
                     on_integrity_violation: Box::new(|_| {}),
                 },
-            )?.into_box(),
+            )?
+            .into_box(),
         ))))
     })
 }
 
 fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
     LOGGER_INIT.ensure_initialized();
-    Box::new(RustBlockStore2Bridge(DynBlockStore::from(OnDiskBlockStore::new(
-        Path::new(basedir).to_path_buf(),
-    ).into_box())))
+    Box::new(RustBlockStore2Bridge(DynBlockStore::from(
+        OnDiskBlockStore::new(Path::new(basedir).to_path_buf()).into_box(),
+    )))
 }
 
 fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
@@ -536,19 +517,22 @@ impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> Ciph
     type Result = Result<Box<RustBlockStoreBridge>>;
 
     fn callback<C: Cipher + Send + Sync + 'static>(self) -> Result<Box<RustBlockStoreBridge>> {
-        Ok(Box::new(RustBlockStoreBridge(
-            LockingBlockStore::new(DynBlockStore::from(IntegrityBlockStore::new(
-                EncryptedBlockStore::new(
-                    self.base_store,
-                    C::new(EncryptionKey::<C::KeySize>::from_hex(
-                        self.encryption_key_hex,
-                    )?),
-                ),
-                self.integrity_file_path,
-                self.my_client_id,
-                self.integrity_config,
-            )?.into_box()))),
-        ))
+        Ok(Box::new(RustBlockStoreBridge(LockingBlockStore::new(
+            DynBlockStore::from(
+                IntegrityBlockStore::new(
+                    EncryptedBlockStore::new(
+                        self.base_store,
+                        C::new(EncryptionKey::<C::KeySize>::from_hex(
+                            self.encryption_key_hex,
+                        )?),
+                    ),
+                    self.integrity_file_path,
+                    self.my_client_id,
+                    self.integrity_config,
+                )?
+                .into_box(),
+            ),
+        ))))
     }
 }
 

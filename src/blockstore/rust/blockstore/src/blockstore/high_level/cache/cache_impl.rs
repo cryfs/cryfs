@@ -12,7 +12,9 @@ use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
 
-pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct BlockCacheImpl<
+    B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
+> {
     // Only None while it is being dropped
     cache: Option<Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>>>,
 
@@ -23,7 +25,9 @@ pub struct BlockCacheImpl<B: crate::blockstore::low_level::BlockStore + Send + S
     num_blocks_in_cache_but_not_in_base_store: AtomicU64,
 }
 
-impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheImpl<B> {
+impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static>
+    BlockCacheImpl<B>
+{
     pub fn new() -> Arc<Self> {
         Arc::new(BlockCacheImpl {
             cache: Some(Arc::new(LockableLruCache::new())),
