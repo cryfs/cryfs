@@ -15,6 +15,16 @@ pub struct ClientId {
     pub id: u32,
 }
 
+impl binary_layout::LayoutAs<u32> for ClientId {
+    fn read(id: u32) -> ClientId {
+        ClientId { id }
+    }
+
+    fn write(id: ClientId) -> u32 {
+        id.id
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Hash, PartialOrd, BinRead, BinWrite, Clone, Copy)]
 pub struct BlockVersion {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
@@ -24,6 +34,16 @@ pub struct BlockVersion {
 impl BlockVersion {
     pub fn increment(&mut self) {
         self.version += 1;
+    }
+}
+
+impl binary_layout::LayoutAs<u64> for BlockVersion {
+    fn read(version: u64) -> BlockVersion {
+        BlockVersion { version }
+    }
+
+    fn write(version: BlockVersion) -> u64 {
+        version.version
     }
 }
 

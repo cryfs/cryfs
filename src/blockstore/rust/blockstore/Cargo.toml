@@ -8,7 +8,7 @@ version = "0.1.0"
 aes-gcm = {version = "^0.8.0", features = ["std"]}
 anyhow = "^1.0.37"
 cxx = {version = "^1.0.27", features = ["c++14"]}
-binary-layout = "^1.0.0"
+binary-layout = "^2.0.1"
 generic-array = "^0.14.4"
 hex = "^0.4.2"
 log = "^0.4.13"
