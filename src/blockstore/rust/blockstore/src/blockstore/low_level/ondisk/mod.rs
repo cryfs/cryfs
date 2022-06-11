@@ -3,14 +3,12 @@ use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use tokio::{
-    fs::DirEntry,
-};
+use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
-    OptimizedBlockStoreWriter, BLOCKID_LEN, RemoveResult, TryCreateResult,
+    OptimizedBlockStoreWriter, RemoveResult, TryCreateResult, BLOCKID_LEN,
 };
 use crate::data::Data;
 

@@ -1,23 +1,35 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use futures::stream::Stream;
 use log;
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Add locking so that we don't open the same block multiple times or remove a block while it is open
 
-pub struct Block<B: super::low_level::BlockStore> {
+pub struct Block<B: super::low_level::BlockStore + Send + Sync> {
     block_id: BlockId,
     data: Data,
     dirty: bool,
-    base_store: Rc<B>,
+    base_store: Arc<B>,
 }
 
-impl<B: super::low_level::BlockStore> Block<B> {
+impl<B: super::low_level::BlockStore + Send + Sync> fmt::Debug for Block<B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Block")
+            .field("block_id", &self.block_id)
+            .field("dirty", &self.dirty)
+            .finish()
+    }
+}
+
+impl<B: super::low_level::BlockStore + Send + Sync> Block<B> {
     #[inline]
     pub fn block_id(&self) -> &BlockId {
         &self.block_id
@@ -48,51 +60,30 @@ impl<B: super::low_level::BlockStore> Block<B> {
     }
 }
 
-impl<B: super::low_level::BlockStore> Drop for Block<B> {
-    fn drop(&mut self) {
-        assert!(!self.dirty, "Dropped dirty block {:?}. This means we didn't write the changes back. This is a bug. Not good!", self.block_id)
+#[async_trait]
+impl<B: super::low_level::BlockStore + Send + Sync> AsyncDrop for Block<B> {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(mut self) -> Result<()> {
+        self.flush().await
     }
 }
 
 // TODO Should we require B: OptimizedBlockStoreWriter and use its methods?
-pub struct LockingBlockStore<B: super::low_level::BlockStore> {
-    base_store: Rc<B>,
+pub struct LockingBlockStore<B: super::low_level::BlockStore + Send + Sync> {
+    base_store: Arc<B>,
 }
 
-impl<B: super::low_level::BlockStore> LockingBlockStore<B> {
-    async fn with_load<T, F>(
-        &self,
-        block_id: BlockId,
-        func: impl FnOnce(Option<&mut Block<B>>) -> F,
-    ) -> Result<T>
-    where
-        F: Future<Output = Result<T>>,
-    {
-        let loaded = self.base_store.load(&block_id).await?;
-        if let Some(loaded) = loaded {
-            let mut block = Block {
+impl<B: super::low_level::BlockStore + Send + Sync> LockingBlockStore<B> {
+    async fn load(&self, block_id: BlockId) -> Result<Option<AsyncDropGuard<Block<B>>>> {
+        Ok(self.base_store.load(&block_id).await?.map(|data| {
+            AsyncDropGuard::new(Block {
                 block_id,
-                data: loaded,
+                data,
                 dirty: false,
-                base_store: Rc::clone(&self.base_store),
-            };
-            let result = func(Some(&mut block)).await;
-            match block.flush().await {
-                Ok(()) => result,
-                Err(flush_err) => {
-                    // Report the flush error but log any potentially swallowed error from func
-                    if let Err(func_err) = result {
-                        log::error!(
-                            "Swallowed error because another error happened: {}",
-                            func_err
-                        );
-                    }
-                    Err(flush_err)
-                }
-            }
-        } else {
-            func(None).await
-        }
+                base_store: Arc::clone(&self.base_store),
+            })
+        }))
     }
 
     async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
@@ -111,8 +102,12 @@ impl<B: super::low_level::BlockStore> LockingBlockStore<B> {
 
     async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
         match self.base_store.remove(block_id).await? {
-            crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved => Ok(RemoveResult::SuccessfullyRemoved),
-            crate::blockstore::low_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(RemoveResult::NotRemovedBecauseItDoesntExist),
+            crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved => {
+                Ok(RemoveResult::SuccessfullyRemoved)
+            }
+            crate::blockstore::low_level::RemoveResult::NotRemovedBecauseItDoesntExist => {
+                Ok(RemoveResult::NotRemovedBecauseItDoesntExist)
+            }
         }
     }
 
@@ -125,7 +120,8 @@ impl<B: super::low_level::BlockStore> LockingBlockStore<B> {
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        self.base_store.block_size_from_physical_block_size(block_size)
+        self.base_store
+            .block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {

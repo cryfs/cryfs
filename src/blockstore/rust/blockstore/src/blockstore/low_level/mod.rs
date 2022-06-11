@@ -41,7 +41,11 @@ pub trait OptimizedBlockStoreWriter {
     /// and that can then be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     fn allocate(size: usize) -> Self::BlockData;
 
-    async fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<TryCreateResult>;
+    async fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: Self::BlockData,
+    ) -> Result<TryCreateResult>;
     async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
 }
 
@@ -126,7 +130,6 @@ pub enum RemoveResult {
     SuccessfullyRemoved,
     NotRemovedBecauseItDoesntExist,
 }
-
 
 pub mod caching;
 pub mod encrypted;

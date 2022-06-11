@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use futures::stream::Stream;
 use std::pin::Pin;
 
-use super::{BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter, RemoveResult, TryCreateResult};
+use super::{
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+    RemoveResult, TryCreateResult,
+};
 
 use super::block_data::IBlockData;
 use crate::crypto::symmetric::Cipher;
@@ -82,7 +85,11 @@ impl<C: Cipher + Send + Sync, B: OptimizedBlockStoreWriter + Send + Sync> Optimi
         BlockData::new(data)
     }
 
-    async fn try_create_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<TryCreateResult> {
+    async fn try_create_optimized(
+        &self,
+        id: &BlockId,
+        data: Self::BlockData,
+    ) -> Result<TryCreateResult> {
         let ciphertext = self._encrypt(data.extract()).await?;
         self.underlying_block_store
             .try_create_optimized(id, B::BlockData::new(ciphertext))

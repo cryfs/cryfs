@@ -16,7 +16,7 @@ use tokio::sync::Mutex as AsyncMutex;
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
-    OptimizedBlockStoreWriter, TryCreateResult, RemoveResult,
+    OptimizedBlockStoreWriter, RemoveResult, TryCreateResult,
 };
 
 use crate::data::Data;
