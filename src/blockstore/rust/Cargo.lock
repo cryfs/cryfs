@@ -683,7 +683,7 @@ dependencies = [
 [[package]]
 name = "lockpool"
 version = "2.0.2"
-source = "git+https://github.com/smessmer/lockpool?rev=d706424c9a72d9c5ad69f3b8634413bbf764e633#d706424c9a72d9c5ad69f3b8634413bbf764e633"
+source = "git+https://github.com/smessmer/lockpool?rev=ef34790df16209c8ec1155a27ba9f47dd2132ec4#ef34790df16209c8ec1155a27ba9f47dd2132ec4"
 dependencies = [
  "async-trait",
  "owning_ref",
