@@ -29,7 +29,7 @@ binwrite = "^0.2.1"
 common_macros = "^0.1.1"
 thiserror = "^1.0.24"
 paste = "^1.0.5"
-lru = "^0.6.5"
+clru = "^0.4.0"
 tokio = {version = "^1.5.0", features = ["fs", "io-util", "rt-multi-thread"]}
 tokio-stream = {version = "^0.1.5", features = ["fs"]}
 async-trait = "^0.1.50"

@@ -1,41 +1,111 @@
-use anyhow::Result;
-use lru::LruCache;
+use anyhow::{ensure, Result};
+use async_trait::async_trait;
+use clru::CLruCache;
+use futures::future::join_all;
+use std::fmt::Debug;
+use std::future::Future;
 use std::hash::Hash;
+use std::num::NonZeroUsize;
 
-pub struct Cache<Key, Value, OnEvictFn>
+// TODO This isn't complete yet. Look at Cache.h and add features (e.g. making space before each push, periodic evicting, ...)
+
+#[async_trait]
+pub trait Cache<Key, Value> {
+    type OnEvictFn;
+
+    fn new(capacity: NonZeroUsize, on_evict_fn: Self::OnEvictFn) -> Self;
+
+    fn num_filled_entries(&self) -> usize;
+    fn push(&mut self, key: Key, value: Value) -> Result<()>;
+    fn pop(&mut self, key: &Key) -> Option<Value>;
+}
+
+pub struct LRUCache<Key, Value, OnEvictFn, F>
 where
-    OnEvictFn: Fn(Key, Value),
-    Key: Hash + Eq,
+    F: Future<Output = Result<()>>,
+    OnEvictFn: Fn(Key, Value) -> F,
+    Key: Debug + Hash + Eq,
 {
-    cache: LruCache<Key, Value>,
+    cache: CLruCache<Key, Value>,
     on_evict_fn: OnEvictFn,
 }
 
-impl<Key, Value, OnEvictFn> Cache<Key, Value, OnEvictFn>
+#[async_trait]
+impl<Key, Value, OnEvictFn, F> Cache<Key, Value> for LRUCache<Key, Value, OnEvictFn, F>
 where
-    OnEvictFn: Fn(Key, Value),
-    Key: Hash + Eq,
+    F: Future<Output = Result<()>>,
+    OnEvictFn: Fn(Key, Value) -> F,
+    Key: Debug + Hash + Eq,
 {
-    pub fn new(capacity: usize, on_evict_fn: OnEvictFn) -> Self {
+    type OnEvictFn = OnEvictFn;
+
+    fn new(capacity: NonZeroUsize, on_evict_fn: OnEvictFn) -> Self {
         Self {
-            cache: LruCache::new(capacity),
+            cache: CLruCache::new(capacity),
             on_evict_fn,
         }
     }
 
-    pub fn len(&self) -> usize {
+    fn num_filled_entries(&self) -> usize {
         self.cache.len()
     }
 
-    pub fn push(key: Key, value: Value) -> Result<()> {
-        todo!()
+    fn push(&mut self, key: Key, value: Value) -> Result<()> {
+        ensure!(!self.cache.contains(&key), "Tried to insert key {:?} into cache but it already exists. This can only be a race condition between different actions trying to modify the same block.", key);
+        let insert_result = self.cache.put(key, value);
+        assert!(
+            insert_result.is_none(),
+            "This can't happen because we just checked above that it doesn't exist"
+        );
+        Ok(())
     }
 
-    pub fn pop(key: &Key) -> Option<Value> {
-        todo!()
+    fn pop(&mut self, key: &Key) -> Option<Value> {
+        self.cache.pop(key)
+    }
+}
+
+impl<Key, Value, OnEvictFn, F> LRUCache<Key, Value, OnEvictFn, F>
+where
+    F: Future<Output = Result<()>>,
+    OnEvictFn: Fn(Key, Value) -> F,
+    Key: Debug + Hash + Eq,
+{
+    async fn evict_all(&mut self) -> Result<()> {
+        let cache = self._take_cache();
+        // Use join_all and not try_join_all, because we don't want to cancel
+        // other futures if one fails.
+        let results: Vec<Result<()>> = join_all(
+            cache
+                .into_iter()
+                .map(|(key, value)| (self.on_evict_fn)(key, value)),
+        )
+        .await;
+        let results: Result<Vec<()>> = results.into_iter().collect();
+        results?;
+        Ok(())
     }
 
-    pub fn flush() {
-        todo!()
+    fn _take_cache(&mut self) -> CLruCache<Key, Value> {
+        let mut cache = CLruCache::new(NonZeroUsize::new(self.cache.capacity()).expect(
+            "This can't happen because the previous cache was initialized with NonZeroUsize",
+        ));
+        std::mem::swap(&mut self.cache, &mut cache);
+        cache
+    }
+}
+
+impl<Key, Value, OnEvictFn, F> Drop for LRUCache<Key, Value, OnEvictFn, F>
+where
+    Key: Debug + Hash + Eq,
+    F: Future<Output = Result<()>>,
+    OnEvictFn: Fn(Key, Value) -> F,
+{
+    fn drop(&mut self) {
+        // TODO Handle::block_on can't drive io or timers. Only Runtime::block_on can drive them, see https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Handle.html#method.block_on
+        // This might deadlock if there isn't another thread doing Runtime::block_on().
+        tokio::runtime::Handle::current()
+            .block_on(self.evict_all())
+            .unwrap();
     }
 }
