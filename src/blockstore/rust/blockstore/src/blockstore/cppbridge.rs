@@ -1,14 +1,17 @@
 use anyhow::{bail, Result};
 use binread::{BinRead, BinResult, ReadOptions};
 use binwrite::{BinWrite, WriterOption};
+use futures::TryStreamExt;
 use rand::{thread_rng, Rng};
 use std::convert::TryInto;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use super::{
-    encrypted::EncryptedBlockStore, inmemory::InMemoryBlockStore, ondisk::OnDiskBlockStore,
-    integrity::{IntegrityBlockStore, IntegrityConfig, ClientId},
+    encrypted::EncryptedBlockStore,
+    inmemory::InMemoryBlockStore,
+    integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
+    ondisk::OnDiskBlockStore,
     BlockStore,
 };
 use crate::crypto::symmetric::{Aes256Gcm, Cipher, EncryptionKey};
@@ -45,7 +48,9 @@ mod ffi {
 
         fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
         fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge>;
-        fn new_integrity_inmemory_blockstore(integrity_file_path: &str) -> Result<Box<RustBlockStore2Bridge>>;
+        fn new_integrity_inmemory_blockstore(
+            integrity_file_path: &str,
+        ) -> Result<Box<RustBlockStore2Bridge>>;
         fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge>;
     }
 }
@@ -119,25 +124,30 @@ impl OptionData {
     }
 }
 
+lazy_static::lazy_static! {
+    static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+}
+
 struct RustBlockStore2Bridge(Box<dyn BlockStore>);
 
 impl RustBlockStore2Bridge {
     fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
         // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
-        self.0.try_create(id, data)
+        TOKIO_RUNTIME.block_on(self.0.try_create(id, data))
     }
     fn remove(&self, id: &BlockId) -> Result<bool> {
-        self.0.remove(id)
+        TOKIO_RUNTIME.block_on(self.0.remove(id))
     }
     fn load(&self, id: &BlockId) -> Result<Box<OptionData>> {
-        Ok(Box::new(OptionData(self.0.load(id)?)))
+        let loaded = TOKIO_RUNTIME.block_on(self.0.load(id))?;
+        Ok(Box::new(OptionData(loaded)))
     }
     fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
         // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
-        self.0.store(id, data)
+        TOKIO_RUNTIME.block_on(self.0.store(id, data))
     }
     fn num_blocks(&self) -> Result<u64> {
-        self.0.num_blocks()
+        Ok(TOKIO_RUNTIME.block_on(self.0.num_blocks()).unwrap())
     }
     fn estimate_num_free_bytes(&self) -> Result<u64> {
         self.0.estimate_num_free_bytes()
@@ -151,7 +161,8 @@ impl RustBlockStore2Bridge {
             .unwrap_or(0)
     }
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
-        Ok(self.0.all_blocks()?.collect())
+        TOKIO_RUNTIME
+            .block_on(async { TryStreamExt::try_collect(self.0.all_blocks().await?).await })
     }
 }
 
@@ -169,17 +180,21 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     ))))
 }
 
-fn new_integrity_inmemory_blockstore(integrity_file_path: &str) -> Result<Box<RustBlockStore2Bridge>> {
-    Ok(Box::new(RustBlockStore2Bridge(Box::new(IntegrityBlockStore::new(
-        InMemoryBlockStore::new(),
-        Path::new(integrity_file_path).to_path_buf(),
-        ClientId{id: 1},
-        IntegrityConfig {
-            allow_integrity_violations: false,
-            missing_block_is_integrity_violation: true,
-            on_integrity_violation: Box::new(|| {}),
-        },
-    )?))))
+fn new_integrity_inmemory_blockstore(
+    integrity_file_path: &str,
+) -> Result<Box<RustBlockStore2Bridge>> {
+    Ok(Box::new(RustBlockStore2Bridge(Box::new(
+        IntegrityBlockStore::new(
+            InMemoryBlockStore::new(),
+            Path::new(integrity_file_path).to_path_buf(),
+            ClientId { id: 1 },
+            IntegrityConfig {
+                allow_integrity_violations: false,
+                missing_block_is_integrity_violation: true,
+                on_integrity_violation: Box::new(|| {}),
+            },
+        )?,
+    ))))
 }
 
 fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
