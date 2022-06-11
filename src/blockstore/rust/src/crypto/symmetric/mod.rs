@@ -1,8 +1,8 @@
 use anyhow::Result;
 use generic_array::ArrayLength;
 
-pub trait Cipher : Sized {
-    type KeySize : ArrayLength<u8>;
+pub trait Cipher: Sized {
+    type KeySize: ArrayLength<u8>;
 
     fn new(key: EncryptionKey<Self::KeySize>) -> Self;
 
@@ -17,8 +17,8 @@ pub trait Cipher : Sized {
 
 mod aead_crate_wrapper;
 mod aesgcm;
-mod key;
 mod cipher_crate_wrapper;
+mod key;
 
 #[cfg(test)]
 mod cipher_tests;

@@ -58,12 +58,12 @@ impl Cipher for Aes256Gcm {
         // TODO Is this data layout compatible with the C++ version of EncryptedBlockStore2?
         let ciphertext_size = Self::ciphertext_size(plaintext.len());
         let nonce = self.cipher.gen_initial_nonce();
-        let cipherdata =
-            self.cipher
-                // TODO Move convert_key call to constructor so we don't have to do it every time?
-                //      Note that we have to somehow migrate the
-                //      secret protection we get from our EncryptionKey class then.
-                .seal(plaintext, None, &nonce, &convert_key(&self.encryption_key));
+        let cipherdata = self
+            .cipher
+            // TODO Move convert_key call to constructor so we don't have to do it every time?
+            //      Note that we have to somehow migrate the
+            //      secret protection we get from our EncryptionKey class then.
+            .seal(plaintext, None, &nonce, &convert_key(&self.encryption_key));
         let mut ciphertext = Vec::with_capacity(ciphertext_size);
         ciphertext.extend_from_slice(nonce.as_ref());
         ciphertext.extend(cipherdata); // TODO Is there a way to encrypt it without copying here? Or does it even matter?
@@ -82,7 +82,10 @@ impl Cipher for Aes256Gcm {
             //      secret protection we get from our EncryptionKey class then.
             .open(cipherdata, None, &nonce, &convert_key(&self.encryption_key))
             .map_err(|()| anyhow!("Decrypting data failed"))?;
-        assert_eq!(Self::plaintext_size(ciphertext.len()).unwrap(), plaintext.len());
+        assert_eq!(
+            Self::plaintext_size(ciphertext.len()).unwrap(),
+            plaintext.len()
+        );
         Ok(plaintext)
     }
 }

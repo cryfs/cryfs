@@ -1,4 +1,4 @@
-use anyhow::{bail, anyhow, Result, Context};
+use anyhow::{anyhow, bail, Context, Result};
 
 use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter};
 
@@ -25,9 +25,7 @@ impl<C: Cipher, B: BlockStoreReader> BlockStoreReader for EncryptedBlockStore<C,
         let loaded = self.underlying_block_store.load(id)?;
         match loaded {
             None => Ok(None),
-            Some(data) => {
-                Ok(Some(self._decrypt(&data)?))
-            }
+            Some(data) => Ok(Some(self._decrypt(&data)?)),
         }
     }
 
@@ -85,7 +83,11 @@ impl<C: Cipher, B> EncryptedBlockStore<C, B> {
 
 fn _check_and_remove_header(data: &[u8]) -> Result<&[u8]> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
-        bail!("Couldn't parse encrypted block. Expected FORMAT_VERSION_HEADER of {:?} but found {:?}", FORMAT_VERSION_HEADER, &data[..FORMAT_VERSION_HEADER.len()]);
+        bail!(
+            "Couldn't parse encrypted block. Expected FORMAT_VERSION_HEADER of {:?} but found {:?}",
+            FORMAT_VERSION_HEADER,
+            &data[..FORMAT_VERSION_HEADER.len()]
+        );
     }
     Ok(&data[FORMAT_VERSION_HEADER.len()..])
 }
