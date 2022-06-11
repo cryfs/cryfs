@@ -120,3 +120,6 @@ mod encrypted;
 mod inmemory;
 mod integrity;
 mod ondisk;
+
+#[cfg(test)]
+mod tests;

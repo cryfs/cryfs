@@ -29,7 +29,7 @@ common_macros = "^0.1.1"
 thiserror = "^1.0.28"
 paste = "^1.0.5"
 clru = "^0.5.0"
-tokio = {version = "^1.11.0", features = ["fs", "io-util", "rt-multi-thread"]}
+tokio = {version = "^1.11.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
 tokio-stream = {version = "^0.1.7", features = ["fs"]}
 # TODO Is async-trait still needed?
 async-trait = "^0.1.51"

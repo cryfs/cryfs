@@ -315,6 +315,26 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 mod tests {
     use super::*;
 
+    use crate::instantiate_blockstore_tests;
+    use tempdir::TempDir;
+
+    struct TestFixture {
+        basedir: TempDir,
+    }
+    impl crate::blockstore::tests::Fixture for TestFixture {
+        type ConcreteBlockStore = OnDiskBlockStore;
+        fn new() -> Self {
+            Self {
+                basedir: TempDir::new("OnDiskBlockStoreTest").unwrap(),
+            }
+        }
+        fn setup(&self) -> OnDiskBlockStore {
+            OnDiskBlockStore::new(self.basedir.path().to_path_buf())
+        }
+    }
+
+    instantiate_blockstore_tests!(TestFixture);
+
     #[test]
     fn test_block_path() {
         let block_store = OnDiskBlockStore::new(Path::new("/base/path").to_path_buf());
