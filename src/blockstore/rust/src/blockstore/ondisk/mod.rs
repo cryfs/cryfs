@@ -3,7 +3,7 @@ use std::fs::{DirEntry, File};
 use std::io::{IoSlice, Write};
 use std::path::{Path, PathBuf};
 
-use super::{BlockId, BlockStore2, BLOCKID_LEN};
+use super::{BlockId, BlockStore, BlockStoreReader, BlockStoreWriter, BLOCKID_LEN};
 
 mod sysinfo;
 
@@ -23,29 +23,7 @@ impl OnDiskBlockStore {
     }
 }
 
-impl BlockStore2 for OnDiskBlockStore {
-    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
-        let path = self._block_path(id);
-        if path.exists() {
-            Ok(false)
-        } else {
-            _store(&path, data)?;
-            Ok(true)
-        }
-    }
-
-    fn remove(&self, id: &BlockId) -> Result<bool> {
-        let path = self._block_path(id);
-        match std::fs::remove_file(path) {
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                // File doesn't exist. Return false. This is not an error.
-                Ok(false)
-            }
-            Ok(()) => Ok(true),
-            Err(err) => Err(err.into()),
-        }
-    }
-
+impl BlockStoreReader for OnDiskBlockStore {
     fn load(&self, id: &BlockId) -> Result<Option<Vec<u8>>> {
         let path = self._block_path(id);
         match std::fs::read(&path) {
@@ -69,11 +47,6 @@ impl BlockStore2 for OnDiskBlockStore {
                 Ok(Some(block_content))
             }
         }
-    }
-
-    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
-        let path = self._block_path(id);
-        _store(&path, data)
     }
 
     fn num_blocks(&self) -> Result<u64> {
@@ -158,6 +131,37 @@ impl BlockStore2 for OnDiskBlockStore {
         Ok(Box::new(result.into_iter()))
     }
 }
+
+impl BlockStoreWriter for OnDiskBlockStore {
+    fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<bool> {
+        let path = self._block_path(id);
+        if path.exists() {
+            Ok(false)
+        } else {
+            _store(&path, data)?;
+            Ok(true)
+        }
+    }
+
+    fn remove(&self, id: &BlockId) -> Result<bool> {
+        let path = self._block_path(id);
+        match std::fs::remove_file(path) {
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                // File doesn't exist. Return false. This is not an error.
+                Ok(false)
+            }
+            Ok(()) => Ok(true),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
+        let path = self._block_path(id);
+        _store(&path, data)
+    }
+}
+
+impl BlockStore for OnDiskBlockStore {}
 
 impl OnDiskBlockStore {
     fn _block_path(&self, block_id: &BlockId) -> PathBuf {
