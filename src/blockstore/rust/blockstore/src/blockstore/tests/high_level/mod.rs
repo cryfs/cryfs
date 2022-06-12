@@ -7,12 +7,15 @@
 
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::sync::Arc;
+use std::time::Duration;
 
 use crate::blockstore::high_level::{Block, LockingBlockStore, RemoveResult};
 use crate::blockstore::low_level::BlockStore;
 use crate::utils::async_drop::SyncDrop;
+use crate::utils::testutils::assert_data_range_eq;
 
-use crate::blockstore::tests::{blockid, data, Fixture};
+use crate::blockstore::tests::{data, Fixture};
 
 mod block_store_adapter;
 pub use block_store_adapter::TestFixtureAdapter;
@@ -50,11 +53,7 @@ where
     }
     async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>) {
         if FLUSH_CACHE_ON_YIELD {
-            // We can't call clear_cache_slow() here because that would clear the whole cache
-            // and wait for all blocks to be released. But the test cases here (as opposed
-            // to the low level one through block_store_adapter) usually keep a Block object
-            // around while calling yield_fixture.
-            store.clear_unlocked_cache_entries().await.unwrap();
+            store.clear_cache_slow().await.unwrap();
         }
     }
 }
@@ -89,6 +88,7 @@ pub mod create {
     }
 
     // TODO Test block exists and has correct data after creation
+    // TODO Make sure all tests have an afterLoading variant
 }
 
 pub mod remove {
@@ -99,10 +99,8 @@ pub mod remove {
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.data_mut().copy_from_slice(&data(1024, 1));
-        f.yield_fixture(&store).await;
 
         std::mem::drop(block);
         f.yield_fixture(&store).await;
@@ -126,12 +124,11 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(1024).await;
-        f.yield_fixture(&store).await;
-
         assert_eq!(1024, block.data().len());
+
+        std::mem::drop(block);
         f.yield_fixture(&store).await;
     }
 
@@ -143,12 +140,10 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(1024).await;
-        f.yield_fixture(&store).await;
-
         assert_block_is_usable(&store, block).await;
+
         f.yield_fixture(&store).await;
     }
 
@@ -160,12 +155,11 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(1024).await;
-        f.yield_fixture(&store).await;
-
         assert_eq!(1024, block.data().len());
+
+        std::mem::drop(block);
         f.yield_fixture(&store).await;
     }
 
@@ -177,12 +171,10 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(1024).await;
-        f.yield_fixture(&store).await;
-
         assert_block_is_usable(&store, block).await;
+
         f.yield_fixture(&store).await;
     }
 
@@ -194,12 +186,11 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(100).await;
-        f.yield_fixture(&store).await;
-
         assert_eq!(100, block.data().len());
+
+        std::mem::drop(block);
         f.yield_fixture(&store).await;
     }
 
@@ -211,12 +202,10 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(100).await;
-        f.yield_fixture(&store).await;
-
         assert_block_is_usable(&store, block).await;
+
         f.yield_fixture(&store).await;
     }
 
@@ -228,12 +217,11 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(0).await;
-        f.yield_fixture(&store).await;
-
         assert_eq!(0, block.data().len());
+
+        std::mem::drop(block);
         f.yield_fixture(&store).await;
     }
 
@@ -245,14 +233,165 @@ pub mod resize {
         f.yield_fixture(&store).await;
 
         let mut block = store.load(blockid).await.unwrap().unwrap();
-        f.yield_fixture(&store).await;
 
         block.resize(0).await;
-        f.yield_fixture(&store).await;
-
         assert_block_is_usable(&store, block).await;
         f.yield_fixture(&store).await;
     }
+
+    // TODO Make sure all tests have an afterLoading variant
+}
+
+pub mod data {
+    use super::*;
+
+    struct DataRange {
+        blocksize: usize,
+        offset: usize,
+        count: usize,
+    }
+
+    impl DataRange {
+        const fn new(blocksize: usize, offset: usize, count: usize) -> Self {
+            Self {
+                blocksize,
+                offset,
+                count,
+            }
+        }
+    }
+
+    const DATA_RANGES: &[DataRange] = &[
+        DataRange::new(1024, 0, 1024), // full size leaf, access beginning to end
+        DataRange::new(1024, 100, 1024 - 200), // full size leaf, access middle to middle
+        DataRange::new(1024, 0, 1024 - 100), // full size leaf, access beginning to middle
+        DataRange::new(1024, 100, 1024 - 100), // full size leaf, access middle to end
+        DataRange::new(1024 - 100, 0, 1024 - 100), // non-full size leaf, access beginning to end
+        DataRange::new(1024 - 100, 100, 1024 - 300), // non-full size leaf, access middle to middle
+        DataRange::new(1024 - 100, 0, 1024 - 200), // non-full size leaf, access beginning to middle
+        DataRange::new(1024 - 100, 100, 1024 - 200), // non-full size leaf, access middle to end
+    ];
+
+    pub async fn test_writeAndReadImmediately(mut f: impl LockingBlockStoreFixture) {
+        for data_range in DATA_RANGES {
+            let store = f.store();
+
+            let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
+            f.yield_fixture(&store).await;
+            let mut block = store.load(blockid).await.unwrap().unwrap();
+
+            block.data_mut()[data_range.offset..(data_range.offset + data_range.count)]
+                .copy_from_slice(
+                    &data(data_range.blocksize, 5)
+                        [data_range.offset..(data_range.offset + data_range.count)],
+                );
+
+            assert_data_range_eq(
+                &data(data_range.blocksize, 0),
+                block.data(),
+                ..data_range.offset,
+            );
+            assert_data_range_eq(
+                &data(data_range.blocksize, 5),
+                block.data(),
+                data_range.offset..(data_range.offset + data_range.count),
+            );
+            assert_data_range_eq(
+                &data(data_range.blocksize, 0),
+                block.data(),
+                (data_range.offset + data_range.count)..,
+            );
+
+            std::mem::drop(block);
+            f.yield_fixture(&store).await;
+        }
+    }
+
+    pub async fn test_writeAndReadAfterLoading(mut f: impl LockingBlockStoreFixture) {
+        for data_range in DATA_RANGES {
+            let store = f.store();
+
+            let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
+            f.yield_fixture(&store).await;
+            let mut block = store.load(blockid).await.unwrap().unwrap();
+
+            block.data_mut()[data_range.offset..(data_range.offset + data_range.count)]
+                .copy_from_slice(
+                    &data(data_range.blocksize, 5)
+                        [data_range.offset..(data_range.offset + data_range.count)],
+                );
+
+            std::mem::drop(block);
+            f.yield_fixture(&store).await;
+
+            let block = store.load(blockid).await.unwrap().unwrap();
+
+            assert_data_range_eq(
+                &data(data_range.blocksize, 0),
+                block.data(),
+                ..data_range.offset,
+            );
+            assert_data_range_eq(
+                &data(data_range.blocksize, 5),
+                block.data(),
+                data_range.offset..(data_range.offset + data_range.count),
+            );
+            assert_data_range_eq(
+                &data(data_range.blocksize, 0),
+                block.data(),
+                (data_range.offset + data_range.count)..,
+            );
+
+            std::mem::drop(block);
+            f.yield_fixture(&store).await;
+        }
+    }
+}
+
+pub mod overwrite {
+    use super::*;
+
+    pub async fn test_whenOverwritingWhileLoaded_thenBlocks(mut f: impl LockingBlockStoreFixture) {
+        let store = Arc::new(f.store());
+
+        let blockid = store.create(&data(1024, 0)).await.unwrap();
+        let block = store.load(blockid).await.unwrap().unwrap();
+
+        let _store = Arc::clone(&store);
+        let overwrite_task = tokio::task::spawn(async move {
+            _store.overwrite(&blockid, &data(1024, 1)).await.unwrap();
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!overwrite_task.is_finished());
+
+        std::mem::drop(block);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(overwrite_task.is_finished());
+    }
+
+    pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(
+        mut f: impl LockingBlockStoreFixture,
+    ) {
+        let store = Arc::new(f.store());
+
+        let blockid = store.create(&data(1024, 0)).await.unwrap();
+        let block = store.load(blockid).await.unwrap().unwrap();
+
+        let _store = Arc::clone(&store);
+        let overwrite_task = tokio::task::spawn(async move {
+            _store.overwrite(&blockid, &data(512, 1)).await.unwrap();
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        std::mem::drop(block);
+        overwrite_task.await.unwrap();
+
+        let block = store.load(blockid).await.unwrap().unwrap();
+        assert_eq!(&data(512, 1), block.data());
+    }
+
+    // TODO Test other locking behaviors, i.e. loading while loaded, removing while loaded, ...
 }
 
 // TODO Other functions to test?
@@ -328,6 +467,14 @@ macro_rules! instantiate_highlevel_blockstore_tests {
             test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenBlockIsStillUsable,
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds,
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable,
+        );
+        $crate::_instantiate_highlevel_blockstore_tests!(@module data, $target, $tokio_test_args,
+            test_writeAndReadImmediately,
+            test_writeAndReadAfterLoading,
+        );
+        $crate::_instantiate_highlevel_blockstore_tests!(@module overwrite, $target, $tokio_test_args,
+            test_whenOverwritingWhileLoaded_thenBlocks,
+            test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites,
         );
 
         // TODO Test Block::block_id()
