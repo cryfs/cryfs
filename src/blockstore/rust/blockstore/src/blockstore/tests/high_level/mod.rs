@@ -88,6 +88,7 @@ pub mod create {
     }
 
     // TODO Test block exists and has correct data after creation
+    // TODO Test creating empty blocks, both on empty and non-empty block store (see low level tests)
     // TODO Make sure all tests have an afterLoading variant
 }
 
@@ -478,7 +479,8 @@ macro_rules! instantiate_highlevel_blockstore_tests {
         );
 
         // TODO Test Block::block_id()
-        // TODO Test Block::data() and data_mut()
+        // TODO Test Block::data() and data_mut() return the same data after loading
         // TODO Test Block::flush()
+        // TODO For  Block::flush(), test other operations with flushing inbetween
     };
 }
