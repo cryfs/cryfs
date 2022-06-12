@@ -137,7 +137,15 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     /// TODO Docs
     /// TODO Test
     #[cfg(test)]
-    pub async fn prune_all_blocks<'a>(&'a self) -> Result<()> {
+    pub async fn prune_unlocked_blocks(&self) -> Result<()> {
+        let cache = self.cache.as_ref().expect("Object is already destructed");
+        Self::_prune_blocks_not_accessed_for_longer_than(cache, Duration::ZERO).await
+    }
+
+    /// TODO Docs
+    /// TODO Test
+    #[cfg(test)]
+    pub async fn prune_all_blocks(&self) -> Result<()> {
         let cache = self.cache.as_ref().expect("Object is already destructed");
         let to_prune = cache
             .lock_all_entries()

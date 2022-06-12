@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{future::BoxFuture, FutureExt, Stream};
+use futures::{future::BoxFuture, Stream};
 use std::fmt::{self, Debug};
 use std::pin::Pin;
 
