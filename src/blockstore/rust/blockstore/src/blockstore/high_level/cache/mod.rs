@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::join;
 use futures::{
     future,
-    stream::{FuturesUnordered, Stream, StreamExt},
+    stream::{FuturesUnordered, StreamExt},
 };
 use lockable::LruGuard;
 use std::fmt::Debug;
@@ -132,14 +132,6 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     ) -> Result<()> {
         let to_prune = cache.lock_entries_unlocked_for_at_least(duration);
         Self::_prune_blocks(cache, to_prune).await
-    }
-
-    /// TODO Docs
-    /// TODO Test
-    #[cfg(test)]
-    pub async fn prune_unlocked_blocks(&self) -> Result<()> {
-        let cache = self.cache.as_ref().expect("Object is already destructed");
-        Self::_prune_blocks_not_accessed_for_at_least(cache, Duration::ZERO).await
     }
 
     /// TODO Docs

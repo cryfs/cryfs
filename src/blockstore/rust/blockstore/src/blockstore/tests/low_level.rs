@@ -333,6 +333,8 @@ pub mod store {
         assert_eq!(Some(data(0, 2)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
     }
+
+    // TODO Test that overwriting an existing block with larger/smaller blocksize works
 }
 
 pub mod remove {
