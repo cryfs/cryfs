@@ -17,8 +17,10 @@ pub type Aes256Gcm_HardwareAccelerated = libsodium::Aes256Gcm;
 pub type Aes256Gcm_SoftwareImplemented = super::aead_crate_wrapper::AeadCipher<aes_gcm::Aes256Gcm>;
 
 /// An implementation of the AES-256-GCM cipher. This does runtime CPU feature detection.
-/// If the CPU supports a hardware accelerated implementation, that one will be used, oherwise we fall back
-/// to a slow software implementation.
+/// If the CPU supports a hardware accelerated implementation, the libsodium hardware accelerated
+/// algorithm will be used. Otherwise we fall back to the aes-gcm crate, which also claims to do
+/// runtime feature detection and use hardware acceleration if available, but our benchmarks show
+/// that aes-gcm is 2x as slow as libsodium.
 enum Aes256GcmImpl {
     HardwareAccelerated(Aes256Gcm_HardwareAccelerated),
     SoftwareImplementation(Aes256Gcm_SoftwareImplemented),
