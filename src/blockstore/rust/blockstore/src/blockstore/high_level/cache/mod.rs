@@ -121,16 +121,16 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     }
 
     async fn _prune_old_blocks(cache: &BlockCacheImpl<B>) -> Result<()> {
-        Self::_prune_blocks_not_accessed_for_longer_than(cache, PRUNE_BLOCKS_OLDER_THAN).await
+        Self::_prune_blocks_not_accessed_for_at_least(cache, PRUNE_BLOCKS_OLDER_THAN).await
     }
 
     /// TODO Docs
     /// TODO Test
-    async fn _prune_blocks_not_accessed_for_longer_than(
+    async fn _prune_blocks_not_accessed_for_at_least(
         cache: &BlockCacheImpl<B>,
         duration: Duration,
     ) -> Result<()> {
-        let to_prune = cache.lock_entries_unlocked_for_longer_than(duration);
+        let to_prune = cache.lock_entries_unlocked_for_at_least(duration);
         Self::_prune_blocks(cache, to_prune).await
     }
 
@@ -139,7 +139,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     #[cfg(test)]
     pub async fn prune_unlocked_blocks(&self) -> Result<()> {
         let cache = self.cache.as_ref().expect("Object is already destructed");
-        Self::_prune_blocks_not_accessed_for_longer_than(cache, Duration::ZERO).await
+        Self::_prune_blocks_not_accessed_for_at_least(cache, Duration::ZERO).await
     }
 
     /// TODO Docs
