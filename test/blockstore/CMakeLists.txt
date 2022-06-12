@@ -5,21 +5,13 @@ set(SOURCES
     interface/BlockStoreTest.cpp
     interface/BlockStore2Test.cpp
     interface/BlockTest.cpp
-    implementations/testfake/TestFakeBlockStoreTest.cpp
-    implementations/mock/MockBlockStoreTest.cpp
-    implementations/inmemory/InMemoryBlockStoreTest.cpp
-    implementations/parallelaccess/ParallelAccessBlockStoreTest_Generic.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
-    implementations/compressing/CompressingBlockStoreTest.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
-    implementations/encrypted/EncryptedBlockStoreTest_Generic.cpp
     implementations/encrypted/EncryptedBlockStoreTest_Specific.cpp
-    implementations/ondisk/OnDiskBlockStoreTest_Generic.cpp
     implementations/ondisk/OnDiskBlockStoreTest_Specific.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockCreateTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockFlushTest.cpp
     implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
-    implementations/caching/CachingBlockStore2Test_Generic.cpp
     implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
@@ -36,15 +28,7 @@ set(SOURCES
     implementations/caching/cache/PeriodicTaskTest.cpp
     implementations/caching/cache/QueueMapTest_Peek.cpp
     implementations/integrity/KnownBlockVersionsTest.cpp
-    implementations/integrity/IntegrityBlockStoreTest_Generic.cpp
     implementations/integrity/IntegrityBlockStoreTest_Specific.cpp
-    implementations/low2highlevel/LowToHighLevelBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeInMemoryBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeEncryptedInMemoryBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeIntegrityInMemoryBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeCachingInMemoryBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeOnDiskBlockStoreTest.cpp
-    implementations/rustbridge/RustBridgeLockingInMemoryBlockStoreTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
