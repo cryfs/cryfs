@@ -179,8 +179,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         &self,
         duration: Duration,
     ) -> impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
-        self._cache()
-            .lock_entries_unlocked_for_at_least(duration)
+        self._cache().lock_entries_unlocked_for_at_least(duration)
     }
 
     pub async fn lock_all_entries(

@@ -5,8 +5,8 @@
 //! for [LockingBlockStore], and then uses [super::low_level] to run the common low level
 //! tests on [LockingBlockStore] as well. On top of that, we add some tests that are specific to [LockingBlockStore].
 
-use std::fmt::Debug;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
 use crate::blockstore::high_level::{Block, LockingBlockStore, RemoveResult};
 use crate::blockstore::low_level::BlockStore;
@@ -34,7 +34,8 @@ pub struct LockingBlockStoreFixtureImpl<F: Fixture, const FLUSH_CACHE_ON_YIELD: 
 }
 
 #[async_trait]
-impl<F, const FLUSH_CACHE_ON_YIELD: bool> LockingBlockStoreFixture for LockingBlockStoreFixtureImpl<F, FLUSH_CACHE_ON_YIELD>
+impl<F, const FLUSH_CACHE_ON_YIELD: bool> LockingBlockStoreFixture
+    for LockingBlockStoreFixtureImpl<F, FLUSH_CACHE_ON_YIELD>
 where
     F: Fixture + Sync,
     F::ConcreteBlockStore: Send + Sync + Debug + 'static,
