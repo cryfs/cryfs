@@ -30,10 +30,10 @@ mod cipher_tests;
 pub use key::EncryptionKey;
 
 // export ciphers
-pub use aesgcm::{Aes128Gcm, Aes256Gcm};
+pub use aesgcm::{Aes128Gcm, Aes256Gcm, Aes256Gcm_HardwareAccelerated, Aes256Gcm_SoftwareImplemented};
 pub type XChaCha20Poly1305 = aead_crate_wrapper::AeadCipher<chacha20poly1305::XChaCha20Poly1305>;
 
-// offer a way to lookup ciphers statically
+// offer a way to lookup ciphers at runtime while statically binding its type
 pub trait CipherCallback {
     type Result;
 
