@@ -9,6 +9,8 @@ use std::hash::Hash;
 use std::io::{BufReader, BufWriter, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
+// TODO Re-enable doc tests
+
 /// Extension trait to deserialize an object from a stream
 pub trait BinaryReadExt: Sized {
     /// Deserialize the object from the given stream and ensure that the stream
@@ -100,7 +102,10 @@ impl<T: BinWrite> BinaryWriteExt for T {
 /// Deserialize a bool field with [binread].
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binread::BinRead;
+/// use cryfs_blockstore::utils::binary::read_bool;
+///
 /// #[derive(BinRead)]
 /// struct MyStruct {
 ///   #[binread(parse_with = read_bool)]
@@ -127,7 +132,10 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> Bin
 /// Serialize a bool field with [binwrite].
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binwrite::BinWrite;
+/// use cryfs_blockstore::utils::binary::write_bool;
+///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
 ///   #[binwrite(with(write_bool))]
@@ -147,7 +155,11 @@ pub fn write_bool(
 /// Deserialize a hashmap with [binread].
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binread::BinRead;
+/// use std::collections::HashMap;
+/// use cryfs_blockstore::utils::binary::read_hashmap;
+///
 /// #[derive(BinRead)]
 /// struct MyStruct {
 ///   #[binread(parse_with = read_hashmap)]
@@ -172,7 +184,11 @@ pub fn read_hashmap<K: BinRead<Args = ()> + Eq + Hash, V: BinRead<Args = ()>, R:
 /// Serialize a hashmap with [binwrite].
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binwrite::BinWrite;
+/// use std::collections::HashMap;
+/// use cryfs_blockstore::utils::binary::write_hashmap;
+///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
 ///   #[binwrite(with(write_hashmap))]
@@ -200,7 +216,10 @@ pub fn write_hashmap<K: BinWrite + Eq + Hash, V: BinWrite>(
 /// of NULL. This function is more strict and always expects a NULL in the end.
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binread::BinRead;
+/// use cryfs_blockstore::utils::binary::read_null_string;
+///
 /// #[derive(BinRead)]
 /// struct MyStruct {
 ///   #[binread(parse_with = read_null_string)]
@@ -240,7 +259,10 @@ pub fn read_null_string<R: Read + Seek>(
 /// You can use this helper to serialize it.
 ///
 /// # Examples
-/// ```
+/// ```ignore
+/// use binwrite::BinWrite;
+/// use cryfs_blockstore::utils::binary::write_null_string;
+///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
 ///   #[binwrite(with(write_null_string))]
