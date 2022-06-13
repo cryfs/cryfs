@@ -193,18 +193,21 @@ mod tests {
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
-        mock_store.expect_async_drop_impl().returning(move || {
-            let _underlying_store = Arc::clone(&_underlying_store);
-            Box::pin(async move {
-                _underlying_store
-                    .lock()
-                    .await
-                    .take()
-                    .expect("Already destructed")
-                    .async_drop()
-                    .await
-            })
-        });
+        mock_store
+            .expect_async_drop_impl()
+            .times(1)
+            .returning(move || {
+                let _underlying_store = Arc::clone(&_underlying_store);
+                Box::pin(async move {
+                    _underlying_store
+                        .lock()
+                        .await
+                        .take()
+                        .expect("Already destructed")
+                        .async_drop()
+                        .await
+                })
+            });
 
         mock_store
     }
