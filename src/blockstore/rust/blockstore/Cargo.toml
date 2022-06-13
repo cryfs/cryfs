@@ -55,6 +55,7 @@ cxx-build = "^1.0.65"
 generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
 criterion = "^0.3.5"
+mockall = "^0.11.1"
 
 [lib]
 # rlib for benchmarks, staticlib for C++ integration

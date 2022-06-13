@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use generic_array::ArrayLength;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -34,68 +34,100 @@ fn make_ciphertext(cipher: &impl Cipher, size: usize) -> Data {
 fn bench_encrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("encrypt");
 
-    for size in [1, 1024, 1024*1024/*, 100*1024*1024*/] {
-        group.bench_with_input(BenchmarkId::new("aes256gcm-auto", size), &size, |b, &size| {
-            let cipher = Aes256Gcm::new(make_key());
-            let plaintext = make_plaintext(&cipher, size);
-            b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
-        });
-        if Aes256Gcm_HardwareAccelerated::is_available() {
-            group.bench_with_input(BenchmarkId::new("aes256gcm-hardware", size), &size, |b, &size| {
-                let cipher = Aes256Gcm_HardwareAccelerated::new(make_key());
+    for size in [1, 1024, 1024 * 1024 /*, 100*1024*1024*/] {
+        group.bench_with_input(
+            BenchmarkId::new("aes256gcm-auto", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes256Gcm::new(make_key());
                 let plaintext = make_plaintext(&cipher, size);
                 b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
-            });
+            },
+        );
+        if Aes256Gcm_HardwareAccelerated::is_available() {
+            group.bench_with_input(
+                BenchmarkId::new("aes256gcm-hardware", size),
+                &size,
+                |b, &size| {
+                    let cipher = Aes256Gcm_HardwareAccelerated::new(make_key());
+                    let plaintext = make_plaintext(&cipher, size);
+                    b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+                },
+            );
         }
-        group.bench_with_input(BenchmarkId::new("aes256gcm-software", size), &size, |b, &size| {
-            let cipher = Aes256Gcm_SoftwareImplemented::new(make_key());
-            let plaintext = make_plaintext(&cipher, size);
-            b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("aes256gcm-software", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes256Gcm_SoftwareImplemented::new(make_key());
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
         group.bench_with_input(BenchmarkId::new("aes128gcm", size), &size, |b, &size| {
             let cipher = Aes128Gcm::new(make_key());
             let plaintext = make_plaintext(&cipher, size);
             b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
         });
-        group.bench_with_input(BenchmarkId::new("xchacha20-poly1305", size), &size, |b, &size| {
-            let cipher = XChaCha20Poly1305::new(make_key());
-            let plaintext = make_plaintext(&cipher, size);
-            b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20-poly1305", size),
+            &size,
+            |b, &size| {
+                let cipher = XChaCha20Poly1305::new(make_key());
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
     }
 }
 
 fn bench_decrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("decrypt");
 
-    for size in [1, 1024, 1024*1024/*, 100*1024*1024*/] {
-        group.bench_with_input(BenchmarkId::new("aes256gcm-auto", size), &size, |b, &size| {
-            let cipher = Aes256Gcm::new(make_key());
-            let ciphertext = make_ciphertext(&cipher, size);
-            b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
-        });
-        if Aes256Gcm_HardwareAccelerated::is_available() {
-            group.bench_with_input(BenchmarkId::new("aes256gcm-hardware", size), &size, |b, &size| {
-                let cipher = Aes256Gcm_HardwareAccelerated::new(make_key());
+    for size in [1, 1024, 1024 * 1024 /*, 100*1024*1024*/] {
+        group.bench_with_input(
+            BenchmarkId::new("aes256gcm-auto", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes256Gcm::new(make_key());
                 let ciphertext = make_ciphertext(&cipher, size);
                 b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
-            });
+            },
+        );
+        if Aes256Gcm_HardwareAccelerated::is_available() {
+            group.bench_with_input(
+                BenchmarkId::new("aes256gcm-hardware", size),
+                &size,
+                |b, &size| {
+                    let cipher = Aes256Gcm_HardwareAccelerated::new(make_key());
+                    let ciphertext = make_ciphertext(&cipher, size);
+                    b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+                },
+            );
         }
-        group.bench_with_input(BenchmarkId::new("aes256gcm-software", size), &size, |b, &size| {
-            let cipher = Aes256Gcm_SoftwareImplemented::new(make_key());
-            let ciphertext = make_ciphertext(&cipher, size);
-            b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("aes256gcm-software", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes256Gcm_SoftwareImplemented::new(make_key());
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
         group.bench_with_input(BenchmarkId::new("aes128gcm", size), &size, |b, &size| {
             let cipher = Aes128Gcm::new(make_key());
             let ciphertext = make_ciphertext(&cipher, size);
             b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
         });
-        group.bench_with_input(BenchmarkId::new("xchacha20-poly1305", size), &size, |b, &size| {
-            let cipher = XChaCha20Poly1305::new(make_key());
-            let ciphertext = make_ciphertext(&cipher, size);
-            b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20-poly1305", size),
+            &size,
+            |b, &size| {
+                let cipher = XChaCha20Poly1305::new(make_key());
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
     }
 }
 
