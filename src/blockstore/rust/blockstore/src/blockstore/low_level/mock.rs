@@ -2,9 +2,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::{future::BoxFuture, stream::Stream};
 use mockall::mock;
-use std::pin::Pin;
 use std::fmt::{self, Debug};
-use std::sync::{Arc};
+use std::pin::Pin;
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::blockstore::{
@@ -15,7 +15,7 @@ use crate::blockstore::{
     BlockId,
 };
 use crate::data::Data;
-use crate::utils::async_drop::{AsyncDropGuard, AsyncDrop};
+use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mock! {
     pub BlockStore {
@@ -65,47 +65,99 @@ mod tests {
         mock_store.expect_exists().returning(move |id| {
             let _underlying_store = Arc::clone(&_underlying_store);
             let id = *id;
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").exists(&id).await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .exists(&id)
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_num_blocks().returning(move || {
             let _underlying_store = Arc::clone(&_underlying_store);
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").num_blocks().await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .num_blocks()
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
-        mock_store.expect_estimate_num_free_bytes().returning(move || {
-            let _underlying_store = Arc::clone(&_underlying_store);
-            let r = _underlying_store.blocking_lock().as_ref().expect("Already destructed").estimate_num_free_bytes();
-            r
-        });
+        mock_store
+            .expect_estimate_num_free_bytes()
+            .returning(move || {
+                let _underlying_store = Arc::clone(&_underlying_store);
+                let r = _underlying_store
+                    .blocking_lock()
+                    .as_ref()
+                    .expect("Already destructed")
+                    .estimate_num_free_bytes();
+                r
+            });
 
         let _underlying_store = Arc::clone(&underlying_store);
-        mock_store.expect_block_size_from_physical_block_size().returning(move |block_size| {
-            let _underlying_store = Arc::clone(&_underlying_store);
-            let r = _underlying_store.blocking_lock().as_ref().expect("Already destructed").block_size_from_physical_block_size(block_size);
-            r
-        });
+        mock_store
+            .expect_block_size_from_physical_block_size()
+            .returning(move |block_size| {
+                let _underlying_store = Arc::clone(&_underlying_store);
+                let r = _underlying_store
+                    .blocking_lock()
+                    .as_ref()
+                    .expect("Already destructed")
+                    .block_size_from_physical_block_size(block_size);
+                r
+            });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_all_blocks().returning(move || {
             let _underlying_store = Arc::clone(&_underlying_store);
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").all_blocks().await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .all_blocks()
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_load().returning(move |id| {
             let _underlying_store = Arc::clone(&_underlying_store);
             let id = *id;
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").load(&id).await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .load(&id)
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_remove().returning(move |id| {
             let _underlying_store = Arc::clone(&_underlying_store);
             let id = *id;
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").remove(&id).await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .remove(&id)
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
@@ -113,7 +165,15 @@ mod tests {
             let _underlying_store = Arc::clone(&_underlying_store);
             let id = *id;
             let data = data.to_vec();
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").try_create(&id, &data).await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .try_create(&id, &data)
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
@@ -121,14 +181,28 @@ mod tests {
             let _underlying_store = Arc::clone(&_underlying_store);
             let id = *id;
             let data = data.to_vec();
-            Box::pin(async move { _underlying_store.lock().await.as_ref().expect("Already destructed").store(&id, &data).await })
+            Box::pin(async move {
+                _underlying_store
+                    .lock()
+                    .await
+                    .as_ref()
+                    .expect("Already destructed")
+                    .store(&id, &data)
+                    .await
+            })
         });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_async_drop_impl().returning(move || {
             let _underlying_store = Arc::clone(&_underlying_store);
             Box::pin(async move {
-                _underlying_store.lock().await.take().expect("Already destructed").async_drop().await
+                _underlying_store
+                    .lock()
+                    .await
+                    .take()
+                    .expect("Already destructed")
+                    .async_drop()
+                    .await
             })
         });
 
