@@ -2,9 +2,6 @@ project (blockstore-test)
 
 set(SOURCES
     utils/BlockStoreUtilsTest.cpp
-    interface/BlockStoreTest.cpp
-    interface/BlockStore2Test.cpp
-    interface/BlockTest.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
     implementations/encrypted/EncryptedBlockStoreTest_Specific.cpp

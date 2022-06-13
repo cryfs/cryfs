@@ -100,9 +100,14 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     fn drop(&mut self) {
         // User code never gets access to BlockCacheEntry by value, so they can't do this mistake.
         // If a dirty block is really dropped, it is our mistake.
-        assert!(
-            self.dirty == CacheEntryState::Clean,
-            "Tried to drop a dirty block. Please call flush() first"
-        );
+        if self.dirty != CacheEntryState::Clean {
+            if std::thread::panicking() {
+                // We're already panicking, double panic wouldn't show a good error message anyways. Let's just log instead.
+                // A common scenario for this to happen is a failing test case.
+                log::error!("Tried to drop a dirty block. Please call flush() first");
+            } else {
+                panic!("Tried to drop a dirty block. Please call flush() first");
+            }
+        }
     }
 }
