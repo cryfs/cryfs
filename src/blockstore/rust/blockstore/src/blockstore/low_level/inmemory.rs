@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result, Context};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use std::collections::hash_map::HashMap;
@@ -33,7 +33,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         let blocks = self
             .blocks
             .read()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         Ok(blocks.contains_key(id))
     }
 
@@ -41,7 +41,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         let blocks = self
             .blocks
             .read()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         let load_result = blocks.get(id).cloned();
         Ok(load_result.map(|d| d.into()))
     }
@@ -50,7 +50,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         let blocks = self
             .blocks
             .read()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         Ok(blocks.len() as u64)
     }
 
@@ -68,7 +68,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         let blocks = self
             .blocks
             .read()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         Ok(
             // TODO Do we still need to collect here after having switched to a stream?
             futures::stream::iter(
@@ -89,7 +89,7 @@ impl BlockStoreDeleter for InMemoryBlockStore {
         let mut blocks = self
             .blocks
             .write()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         let remove_result = blocks.remove(id);
         match remove_result {
             Some(_) => Ok(RemoveResult::SuccessfullyRemoved),
@@ -112,7 +112,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         let mut blocks = self
             .blocks
             .write()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         if blocks.contains_key(id) {
             Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
         } else {
@@ -129,7 +129,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         let mut blocks = self
             .blocks
             .write()
-            .map_err(|_| anyhow!("Failed to acquire lock"))?;
+            .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         blocks.insert(id.clone(), data.extract());
         Ok(())
     }
