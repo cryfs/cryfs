@@ -5,10 +5,6 @@ set(SOURCES
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
     implementations/encrypted/EncryptedBlockStoreTest_Specific.cpp
-    implementations/ondisk/OnDiskBlockStoreTest_Specific.cpp
-    implementations/ondisk/OnDiskBlockTest/OnDiskBlockCreateTest.cpp
-    implementations/ondisk/OnDiskBlockTest/OnDiskBlockFlushTest.cpp
-    implementations/ondisk/OnDiskBlockTest/OnDiskBlockLoadTest.cpp
     implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
