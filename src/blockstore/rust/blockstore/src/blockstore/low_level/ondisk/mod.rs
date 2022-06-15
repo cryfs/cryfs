@@ -13,7 +13,10 @@ use super::{
     OptimizedBlockStoreWriter, RemoveResult, TryCreateResult, BLOCKID_LEN,
 };
 use crate::data::Data;
-use crate::utils::{path::path_join, async_drop::{AsyncDrop, AsyncDropGuard}};
+use crate::utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::path_join,
+};
 
 mod sysinfo;
 
@@ -174,7 +177,11 @@ impl OnDiskBlockStore {
                 .all(|c| _is_allowed_blockid_character(c)),
             "Created invalid block_id_str"
         );
-        path_join(&[self.basedir.as_path(), Path::new(&block_id_str[..PREFIX_LEN]), Path::new(&block_id_str[PREFIX_LEN..])])
+        path_join(&[
+            self.basedir.as_path(),
+            Path::new(&block_id_str[..PREFIX_LEN]),
+            Path::new(&block_id_str[PREFIX_LEN..]),
+        ])
     }
 
     async fn _all_block_files(&self) -> Result<impl Stream<Item = Result<DirEntry>>> {

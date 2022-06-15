@@ -2,7 +2,11 @@ use std::path::{Path, PathBuf};
 
 /// Efficient way to join paths with fewer allocations than PathBuf.join().join().join()...
 pub fn path_join(components: &[&Path]) -> PathBuf {
-    let total_size_required: usize = components.iter().map(|c| 1 + c.as_os_str().len()).sum::<usize>().saturating_sub(1);
+    let total_size_required: usize = components
+        .iter()
+        .map(|c| 1 + c.as_os_str().len())
+        .sum::<usize>()
+        .saturating_sub(1);
     let mut result = PathBuf::with_capacity(total_size_required);
     for c in components {
         result.push(c);
@@ -53,7 +57,10 @@ mod tests {
         for first in paths() {
             for second in paths() {
                 for third in paths() {
-                    assert_eq!(first.join(second).join(third), path_join(&[first, second, third]));
+                    assert_eq!(
+                        first.join(second).join(third),
+                        path_join(&[first, second, third])
+                    );
                 }
             }
         }
@@ -65,7 +72,10 @@ mod tests {
             for second in paths() {
                 for third in paths() {
                     for fourth in paths() {
-                        assert_eq!(first.join(second).join(third).join(fourth), path_join(&[first, second, third, fourth]));
+                        assert_eq!(
+                            first.join(second).join(third).join(fourth),
+                            path_join(&[first, second, third, fourth])
+                        );
                     }
                 }
             }
