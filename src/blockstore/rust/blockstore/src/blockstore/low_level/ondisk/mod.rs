@@ -32,6 +32,8 @@ pub struct OnDiskBlockStore {
 
 impl OnDiskBlockStore {
     pub fn new(basedir: PathBuf) -> AsyncDropGuard<Self> {
+        // TODO When we're creating a new file system, we should make sure that all the subfolders exist.
+        //      Because we don't remove the folders when blocks get removed, otherwise a used file system looks different from a new one.
         AsyncDropGuard::new(Self { basedir })
     }
 }
@@ -170,18 +172,7 @@ impl BlockStore for OnDiskBlockStore {}
 
 impl OnDiskBlockStore {
     fn _block_path(&self, block_id: &BlockId) -> PathBuf {
-        let block_id_str = block_id.to_hex();
-        assert!(
-            block_id_str
-                .chars()
-                .all(|c| _is_allowed_blockid_character(c)),
-            "Created invalid block_id_str"
-        );
-        path_join(&[
-            self.basedir.as_path(),
-            Path::new(&block_id_str[..PREFIX_LEN]),
-            Path::new(&block_id_str[PREFIX_LEN..]),
-        ])
+        _block_path(self.basedir.as_path(), block_id)
     }
 
     async fn _all_block_files(&self) -> Result<impl Stream<Item = Result<DirEntry>>> {
@@ -294,9 +285,9 @@ fn _blockid_from_filepath(path: &Path) -> BlockId {
 fn _check_and_remove_header(mut data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
-            bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS?");
+            bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS? Block: {}", base64::encode(data));
         } else {
-            bail!("This is not a valid block: {}", hex::encode(data));
+            bail!("This is not a valid block: {}", base64::encode(data));
         }
     }
     data.shrink_to_subregion(FORMAT_VERSION_HEADER.len()..);
@@ -341,9 +332,26 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
         .with_context(|| format!("Failed to write to block file at {}", path.display()))
 }
 
+fn _block_path(basedir: &Path, block_id: &BlockId) -> PathBuf {
+    let block_id_str = block_id.to_hex();
+    assert!(
+        block_id_str
+            .chars()
+            .all(|c| _is_allowed_blockid_character(c)),
+        "Created invalid block_id_str"
+    );
+    path_join(&[
+        basedir,
+        Path::new(&block_id_str[..PREFIX_LEN]),
+        Path::new(&block_id_str[PREFIX_LEN..]),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::blockstore::low_level::BlockStoreWriter;
+    use crate::blockstore::tests::{blockid, data, Fixture};
     use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
     use tempdir::TempDir;
@@ -352,7 +360,7 @@ mod tests {
         basedir: TempDir,
     }
     #[async_trait]
-    impl crate::blockstore::tests::Fixture for TestFixture {
+    impl Fixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
@@ -368,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_path() {
-        let mut block_store = OnDiskBlockStore::new(Path::new("/base/path").to_path_buf());
+        let mut block_store = OnDiskBlockStore::new(PathBuf::from("/base/path"));
         assert_eq!(
             Path::new("/base/path/2AC/9C78D80937AD50852C50BD3F1F982"),
             block_store._block_path(
@@ -382,5 +390,97 @@ mod tests {
     #[test]
     fn test_prefix() {
         assert!(FORMAT_VERSION_HEADER.starts_with(FORMAT_VERSION_HEADER_PREFIX));
+    }
+
+    #[test]
+    fn test_block_size_from_physical_block_size() {
+        let mut fixture = TestFixture::new();
+        let store = fixture.store();
+        let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64;
+
+        assert_eq!(
+            0u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead)
+                .unwrap()
+        );
+        assert_eq!(
+            20u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .unwrap()
+        );
+        assert!(store.block_size_from_physical_block_size(0).is_err());
+    }
+
+    fn _get_block_file_size(basedir: &Path, block_id: &BlockId) -> u64 {
+        _block_path(basedir, block_id).metadata().unwrap().len()
+    }
+
+    fn _block_file_exists(basedir: &Path, block_id: &BlockId) -> bool {
+        let path = _block_path(basedir, block_id);
+        assert!(
+            !path.exists() || path.is_file(),
+            "If it exists, then it must be a file"
+        );
+        path.is_file()
+    }
+
+    #[tokio::test]
+    async fn test_ondisk_block_size() {
+        let mut fixture = TestFixture::new();
+        let store = fixture.store();
+
+        store.store(&blockid(0), &[]).await.unwrap();
+        assert_eq!(
+            0,
+            store
+                .block_size_from_physical_block_size(_get_block_file_size(
+                    fixture.basedir.path(),
+                    &blockid(0)
+                ))
+                .unwrap()
+        );
+
+        store.store(&blockid(1), &data(500, 0)).await.unwrap();
+        assert_eq!(
+            500,
+            store
+                .block_size_from_physical_block_size(_get_block_file_size(
+                    fixture.basedir.path(),
+                    &blockid(1)
+                ))
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_whenStoringBlock_thenBlockFileExists() {
+        let mut fixture = TestFixture::new();
+        let store = fixture.store();
+
+        assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
+        store.store(&blockid(0), &[]).await.unwrap();
+        assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));
+
+        assert!(!_block_file_exists(fixture.basedir.path(), &blockid(1)));
+        store.store(&blockid(1), &data(500, 0)).await.unwrap();
+        assert!(_block_file_exists(fixture.basedir.path(), &blockid(1)));
+    }
+
+    #[tokio::test]
+    async fn test_whenRemovingBlock_thenBlockFileDoesntExist() {
+        let mut fixture = TestFixture::new();
+        let store = fixture.store();
+
+        store.store(&blockid(0), &[]).await.unwrap();
+        assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));
+        store.remove(&blockid(0)).await.unwrap();
+        assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
+
+        store.store(&blockid(1), &data(500, 0)).await.unwrap();
+        assert!(_block_file_exists(fixture.basedir.path(), &blockid(1)));
+        store.remove(&blockid(1)).await.unwrap();
+        assert!(!_block_file_exists(fixture.basedir.path(), &blockid(1)));
     }
 }

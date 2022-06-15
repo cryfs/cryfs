@@ -398,6 +398,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
 mod tests {
     use super::*;
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use crate::blockstore::tests::Fixture;
     use crate::utils::async_drop::SyncDrop;
     use tempdir::TempDir;
 
@@ -413,7 +414,7 @@ mod tests {
     impl<
             const ALLOW_INTEGRITY_VIOLATIONS: bool,
             const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
-        > crate::blockstore::tests::Fixture
+        > Fixture
         for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
     {
         type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
@@ -461,5 +462,26 @@ mod tests {
     mod singleclient_allow_integrity_violations {
         use super::*;
         instantiate_blockstore_tests!(TestFixture<true, true>, (flavor = "multi_thread"));
+    }
+
+    #[test]
+    fn test_block_size_from_physical_block_size() {
+        let mut fixture = TestFixture::<false, false>::new();
+        let store = fixture.store();
+        let expected_overhead: u64 = HEADER_SIZE as u64;
+
+        assert_eq!(
+            0u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead)
+                .unwrap()
+        );
+        assert_eq!(
+            20u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .unwrap()
+        );
+        assert!(store.block_size_from_physical_block_size(0).is_err());
     }
 }

@@ -154,12 +154,13 @@ impl BlockStore for InMemoryBlockStore {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::blockstore::tests::Fixture;
     use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
 
     struct TestFixture {}
     #[async_trait]
-    impl crate::blockstore::tests::Fixture for TestFixture {
+    impl Fixture for TestFixture {
         type ConcreteBlockStore = InMemoryBlockStore;
         fn new() -> Self {
             Self {}
@@ -171,4 +172,24 @@ mod tests {
     }
 
     instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+
+    #[test]
+    fn test_block_size_from_physical_block_size() {
+        let mut fixture = TestFixture::new();
+        let store = fixture.store();
+        let expected_overhead: u64 = 0u64;
+
+        assert_eq!(
+            0u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead)
+                .unwrap()
+        );
+        assert_eq!(
+            20u64,
+            store
+                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .unwrap()
+        );
+    }
 }
