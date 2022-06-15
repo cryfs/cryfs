@@ -353,7 +353,12 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
         data.shrink_to_subregion(block_layout::data::OFFSET..);
 
         // Only update version after we know the operation succeeded
-        self._check_version_header(last_update_client_id, block_version, expected_block_id, block_info)?;
+        self._check_version_header(
+            last_update_client_id,
+            block_version,
+            expected_block_id,
+            block_info,
+        )?;
 
         Ok(data)
     }
@@ -366,7 +371,11 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
         Ok(())
     }
 
-    fn _check_id_header(&self, view: &block_layout::View<Data>, expected_block_id: &BlockId) -> Result<()> {
+    fn _check_id_header(
+        &self,
+        view: &block_layout::View<Data>,
+        expected_block_id: &BlockId,
+    ) -> Result<()> {
         let block_id = BlockId::from_array(view.block_id());
         if block_id != *expected_block_id {
             self._integrity_violation_detected(
@@ -380,7 +389,13 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
         Ok(())
     }
 
-    fn _check_version_header(&self, last_update_client_id: ClientId, block_version: BlockVersion, block_id: BlockId, block_info: &mut BlockInfo) -> Result<()> {
+    fn _check_version_header(
+        &self,
+        last_update_client_id: ClientId,
+        block_version: BlockVersion,
+        block_id: BlockId,
+        block_info: &mut BlockInfo,
+    ) -> Result<()> {
         let update =
             block_info.check_and_update_version(last_update_client_id, block_id, block_version);
         match update {
