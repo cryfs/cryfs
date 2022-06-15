@@ -4,7 +4,6 @@ set(SOURCES
     utils/BlockStoreUtilsTest.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
-    implementations/encrypted/EncryptedBlockStoreTest_Specific.cpp
     implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp

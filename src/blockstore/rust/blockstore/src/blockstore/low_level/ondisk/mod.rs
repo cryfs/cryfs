@@ -349,6 +349,8 @@ fn _block_path(basedir: &Path, block_id: &BlockId) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #![allow(non_snake_case)]
+
     use super::*;
     use crate::blockstore::low_level::BlockStoreWriter;
     use crate::blockstore::tests::{blockid, data, Fixture};
@@ -475,12 +477,18 @@ mod tests {
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));
-        store.remove(&blockid(0)).await.unwrap();
+        assert_eq!(
+            RemoveResult::SuccessfullyRemoved,
+            store.remove(&blockid(0)).await.unwrap()
+        );
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
 
         store.store(&blockid(1), &data(500, 0)).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(1)));
-        store.remove(&blockid(1)).await.unwrap();
+        assert_eq!(
+            RemoveResult::SuccessfullyRemoved,
+            store.remove(&blockid(1)).await.unwrap()
+        );
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(1)));
     }
 }

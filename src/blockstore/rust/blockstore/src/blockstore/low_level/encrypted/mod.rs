@@ -1,7 +1,10 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use futures::stream::Stream;
+use std::borrow::Borrow;
 use std::fmt::{self, Debug};
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::pin::Pin;
 
 use super::block_data::IBlockData;
@@ -17,20 +20,28 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
 
-pub struct EncryptedBlockStore<C: 'static + Cipher, B: Debug + AsyncDrop<Error = anyhow::Error>> {
+pub struct EncryptedBlockStore<
+    C: 'static + Cipher,
+    _B: Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> {
     underlying_block_store: AsyncDropGuard<B>,
     cipher: C,
+    _phantom: PhantomData<_B>,
 }
 
 impl<
+        // TODO Are all those bounds on C, _B, B still needed ?
         C: 'static + Cipher + Send + Sync,
-        B: Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    > EncryptedBlockStore<C, B>
+        _B: Debug + Send + Sync,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > EncryptedBlockStore<C, _B, B>
 {
     pub fn new(underlying_block_store: AsyncDropGuard<B>, cipher: C) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_block_store,
             cipher,
+            _phantom: PhantomData,
         })
     }
 }
@@ -38,17 +49,28 @@ impl<
 #[async_trait]
 impl<
         C: 'static + Cipher + Send + Sync,
-        B: BlockStoreReader + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
-    > BlockStoreReader for EncryptedBlockStore<C, B>
+        _B: BlockStoreReader + Send + Sync + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > BlockStoreReader for EncryptedBlockStore<C, _B, B>
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
-        self.underlying_block_store.exists(id).await
+        self.underlying_block_store
+            .deref()
+            .borrow()
+            .exists(id)
+            .await
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
-        let loaded = self.underlying_block_store.load(id).await.context(
-            "EncryptedBlockStore failed to load the block from the underlying block store",
-        )?;
+        let loaded = self
+            .underlying_block_store
+            .deref()
+            .borrow()
+            .load(id)
+            .await
+            .context(
+                "EncryptedBlockStore failed to load the block from the underlying block store",
+            )?;
         match loaded {
             None => Ok(None),
             Some(data) => Ok(Some(self._decrypt(data).await?)),
@@ -56,15 +78,22 @@ impl<
     }
 
     async fn num_blocks(&self) -> Result<u64> {
-        self.underlying_block_store.num_blocks().await
+        self.underlying_block_store
+            .deref()
+            .borrow()
+            .num_blocks()
+            .await
     }
 
     fn estimate_num_free_bytes(&self) -> Result<u64> {
-        self.underlying_block_store.estimate_num_free_bytes()
+        self.underlying_block_store
+            .deref()
+            .borrow()
+            .estimate_num_free_bytes()
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        let ciphertext_size = self.underlying_block_store.block_size_from_physical_block_size(block_size)?.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+        let ciphertext_size = self.underlying_block_store.deref().borrow().block_size_from_physical_block_size(block_size)?.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))?;
         ciphertext_size
             .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
@@ -72,18 +101,27 @@ impl<
     }
 
     async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
-        self.underlying_block_store.all_blocks().await
+        self.underlying_block_store
+            .deref()
+            .borrow()
+            .all_blocks()
+            .await
     }
 }
 
 #[async_trait]
 impl<
         C: 'static + Cipher + Send + Sync,
-        B: BlockStoreDeleter + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
-    > BlockStoreDeleter for EncryptedBlockStore<C, B>
+        _B: BlockStoreDeleter + Send + Sync + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > BlockStoreDeleter for EncryptedBlockStore<C, _B, B>
 {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
-        self.underlying_block_store.remove(id).await
+        self.underlying_block_store
+            .deref()
+            .borrow()
+            .remove(id)
+            .await
     }
 }
 
@@ -92,13 +130,14 @@ create_block_data_wrapper!(BlockData);
 #[async_trait]
 impl<
         C: 'static + Cipher + Send + Sync,
-        B: OptimizedBlockStoreWriter + Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>,
-    > OptimizedBlockStoreWriter for EncryptedBlockStore<C, B>
+        _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > OptimizedBlockStoreWriter for EncryptedBlockStore<C, _B, B>
 {
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> Self::BlockData {
-        let mut data = B::allocate(
+        let mut data = _B::allocate(
             FORMAT_VERSION_HEADER.len()
                 + C::CIPHERTEXT_OVERHEAD_PREFIX
                 + C::CIPHERTEXT_OVERHEAD_SUFFIX
@@ -119,20 +158,27 @@ impl<
     ) -> Result<TryCreateResult> {
         let ciphertext = self._encrypt(data.extract()).await?;
         self.underlying_block_store
-            .try_create_optimized(id, B::BlockData::new(ciphertext))
+            .deref()
+            .borrow()
+            .try_create_optimized(id, _B::BlockData::new(ciphertext))
             .await
     }
 
     async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()> {
         let ciphertext = self._encrypt(data.extract()).await?;
         self.underlying_block_store
-            .store_optimized(id, B::BlockData::new(ciphertext))
+            .deref()
+            .borrow()
+            .store_optimized(id, _B::BlockData::new(ciphertext))
             .await
     }
 }
 
-impl<C: 'static + Cipher + Send + Sync, B: Send + Debug + AsyncDrop<Error = anyhow::Error>> Debug
-    for EncryptedBlockStore<C, B>
+impl<
+        C: 'static + Cipher + Send + Sync,
+        _B: Send + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > Debug for EncryptedBlockStore<C, _B, B>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "EncryptedBlockStore")
@@ -142,8 +188,9 @@ impl<C: 'static + Cipher + Send + Sync, B: Send + Debug + AsyncDrop<Error = anyh
 #[async_trait]
 impl<
         C: 'static + Cipher + Send + Sync,
-        B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>,
-    > AsyncDrop for EncryptedBlockStore<C, B>
+        _B: Sync + Send + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > AsyncDrop for EncryptedBlockStore<C, _B, B>
 {
     type Error = anyhow::Error;
     async fn async_drop_impl(&mut self) -> Result<()> {
@@ -153,12 +200,18 @@ impl<
 
 impl<
         C: 'static + Cipher + Send + Sync,
-        B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
-    > BlockStore for EncryptedBlockStore<C, B>
+        _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > BlockStore for EncryptedBlockStore<C, _B, B>
 {
 }
 
-impl<C: 'static + Cipher, B: Debug + AsyncDrop<Error = anyhow::Error>> EncryptedBlockStore<C, B> {
+impl<
+        C: 'static + Cipher,
+        _B: Debug,
+        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+    > EncryptedBlockStore<C, _B, B>
+{
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
         // TODO Is it better to move encryption/decryption to a dedicated threadpool instead of block_in_place?
         let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
@@ -197,34 +250,41 @@ fn _prepend_header(mut data: Data) -> Data {
 mod tests {
     use super::*;
 
+    use generic_array::ArrayLength;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::marker::PhantomData;
 
-    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
-    use crate::blockstore::tests::Fixture;
+    use crate::blockstore::low_level::{
+        inmemory::InMemoryBlockStore, BlockStoreReader, BlockStoreWriter,
+    };
+    use crate::blockstore::tests::{blockid, data, Fixture};
     use crate::crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305};
     use crate::instantiate_blockstore_tests;
+    use crate::utils::async_drop::AsyncDropArc;
     use crate::utils::async_drop::SyncDrop;
+
+    fn key<KeySize: ArrayLength<u8>>(seed: u64) -> EncryptionKey<KeySize> {
+        EncryptionKey::new(|key_data| {
+            let mut rng = StdRng::seed_from_u64(seed);
+            rng.fill_bytes(key_data);
+            Ok(())
+        })
+        .unwrap()
+    }
 
     struct TestFixture<C: 'static + Cipher + Send + Sync> {
         _c: PhantomData<C>,
     }
     #[async_trait]
     impl<C: 'static + Cipher + Send + Sync> Fixture for TestFixture<C> {
-        type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
+        type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore, InMemoryBlockStore>;
         fn new() -> Self {
             Self { _c: PhantomData }
         }
         fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-            let key = EncryptionKey::new(|key_data| {
-                let mut rng = StdRng::seed_from_u64(0);
-                rng.fill_bytes(key_data);
-                Ok(())
-            })
-            .unwrap();
             SyncDrop::new(EncryptedBlockStore::new(
                 InMemoryBlockStore::new(),
-                Cipher::new(key),
+                Cipher::new(key(0)),
             ))
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
@@ -277,5 +337,80 @@ mod tests {
         _test_block_size_from_physical_block_size::<Aes256Gcm>();
         _test_block_size_from_physical_block_size::<Aes128Gcm>();
         _test_block_size_from_physical_block_size::<XChaCha20Poly1305>();
+    }
+
+    async fn _store(
+        bs: &AsyncDropGuard<AsyncDropArc<InMemoryBlockStore>>,
+        key: EncryptionKey<<Aes256Gcm as Cipher>::KeySize>,
+        block_id: &BlockId,
+        data: &Data,
+    ) {
+        let mut store = EncryptedBlockStore::<
+            Aes256Gcm,
+            InMemoryBlockStore,
+            AsyncDropArc<InMemoryBlockStore>,
+        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key));
+
+        store.store(block_id, data).await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    async fn _load(
+        bs: &AsyncDropGuard<AsyncDropArc<InMemoryBlockStore>>,
+        key: EncryptionKey<<Aes256Gcm as Cipher>::KeySize>,
+        block_id: &BlockId,
+    ) -> Result<Option<Data>> {
+        let mut store = EncryptedBlockStore::<
+            Aes256Gcm,
+            InMemoryBlockStore,
+            AsyncDropArc<InMemoryBlockStore>,
+        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key));
+        let result = store.load(block_id).await;
+
+        store.async_drop().await.unwrap();
+        result
+    }
+
+    async fn _manipulate(
+        bs: &AsyncDropGuard<AsyncDropArc<InMemoryBlockStore>>,
+        block_id: &BlockId,
+    ) {
+        let mut data = bs.load(block_id).await.unwrap().unwrap();
+        data[0] += 1;
+        bs.store(block_id, &data).await.unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_loading_with_same_key_works() {
+        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+
+        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
+        assert_eq!(
+            Some(data(1024, 0)),
+            _load(&inner, key(0), &blockid(0)).await.unwrap()
+        );
+
+        inner.async_drop().await.unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_loading_with_different_key_doesnt_work() {
+        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+
+        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
+        _load(&inner, key(1), &blockid(0)).await.unwrap_err();
+
+        inner.async_drop().await.unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_loading_manipulated_block_doesnt_work() {
+        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+
+        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
+        _manipulate(&inner, &blockid(0)).await;
+        _load(&inner, key(0), &blockid(0)).await.unwrap_err();
+
+        inner.async_drop().await.unwrap();
     }
 }
