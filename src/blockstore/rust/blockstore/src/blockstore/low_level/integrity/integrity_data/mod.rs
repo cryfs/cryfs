@@ -16,7 +16,7 @@ pub use known_block_versions::{
     CLIENT_ID_FOR_DELETED_BLOCK,
 };
 
-// TODO Rething serialization. It's weird to have a KnownBlockVersions object wrapped in an IntegrityData object just because parts are serialized to different files. Merge them.
+// TODO Rethink serialization. It's weird to have a KnownBlockVersions object wrapped in an IntegrityData object just because parts are serialized to different files. Merge them.
 
 /// IntegrityData is the basis of the CryFS integrity promise.
 /// It remembers persistent state, locally on the CryFS client device:
@@ -233,7 +233,6 @@ impl IntegrityData {
     /// seen them before and we haven't deleted it. Note that, similar to
     /// [IntegrityData::should_block_exist], this can return blocks that
     /// have been correctly deleted by other authorized clients.
-    /// // TODO Is impl Stream good enough here instead of the Pin<Box<_>>?
     pub fn existing_blocks(&self) -> Vec<BlockId> {
         self._known_block_versions().existing_blocks()
     }
