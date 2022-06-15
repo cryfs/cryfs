@@ -518,6 +518,24 @@ pub mod num_blocks {
         f.yield_fixture(&store).await;
     }
 
+    pub async fn test_afterStoringBlocks_withSameId_whenCallingNumBlocks_thenReturnsCorrectResult(
+        mut f: impl Fixture,
+    ) {
+        let store = f.store();
+        assert_eq!(0, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
+        store.store(&blockid(0), &data(1024, 0)).await.unwrap();
+        f.yield_fixture(&store).await;
+        assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+
+        store.store(&blockid(0), &data(1024, 1)).await.unwrap();
+        f.yield_fixture(&store).await;
+        assert_eq!(1, store.num_blocks().await.unwrap());
+        f.yield_fixture(&store).await;
+    }
+
     pub async fn test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
@@ -816,6 +834,7 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
         $crate::_instantiate_lowlevel_blockstore_tests!(@module num_blocks, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
+            test_afterStoringBlocks_withSameId_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
         );

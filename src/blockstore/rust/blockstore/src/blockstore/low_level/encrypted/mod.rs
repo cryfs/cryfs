@@ -201,6 +201,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use crate::blockstore::tests::Fixture;
     use crate::crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305};
     use crate::instantiate_blockstore_tests;
     use crate::utils::async_drop::SyncDrop;
@@ -209,7 +210,7 @@ mod tests {
         _c: PhantomData<C>,
     }
     #[async_trait]
-    impl<C: 'static + Cipher + Send + Sync> crate::blockstore::tests::Fixture for TestFixture<C> {
+    impl<C: 'static + Cipher + Send + Sync> Fixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore>;
         fn new() -> Self {
             Self { _c: PhantomData }
@@ -247,5 +248,34 @@ mod tests {
             super::TestFixture<XChaCha20Poly1305>,
             (flavor = "multi_thread")
         );
+    }
+
+    #[test]
+    fn test_block_size_from_physical_block_size() {
+        fn _test_block_size_from_physical_block_size<C: 'static + Cipher + Send + Sync>() {
+            let mut fixture = TestFixture::<C>::new();
+            let store = fixture.store();
+            let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64
+                + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
+                + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64;
+
+            assert_eq!(
+                0u64,
+                store
+                    .block_size_from_physical_block_size(expected_overhead)
+                    .unwrap()
+            );
+            assert_eq!(
+                20u64,
+                store
+                    .block_size_from_physical_block_size(expected_overhead + 20u64)
+                    .unwrap()
+            );
+            assert!(store.block_size_from_physical_block_size(0).is_err());
+        }
+
+        _test_block_size_from_physical_block_size::<Aes256Gcm>();
+        _test_block_size_from_physical_block_size::<Aes128Gcm>();
+        _test_block_size_from_physical_block_size::<XChaCha20Poly1305>();
     }
 }

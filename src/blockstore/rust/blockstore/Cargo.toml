@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 aes-gcm = {version = "^0.9.4", features = ["std"]}
+base64 = "^0.13.0"
 anyhow = "^1.0.55"
 cxx = {version = "^1.0.65", features = ["c++14"]}
 binary-layout = {git = "https://github.com/smessmer/binary-layout", rev = "f49fa855ab8619cd4d68a2852692d1e17f914ca6" }
