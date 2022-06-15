@@ -45,10 +45,6 @@ pub struct IntegrityConfig {
     pub on_integrity_violation: Box<dyn Sync + Send + Fn(&IntegrityViolationError)>,
 }
 
-/// Warning: This is thread safe in a sense that it can handle calls about **different** block ids at the same time
-/// but it cannot handle calls about **the same** block id at the same time. That would cause race conditions
-/// in `integrity_data` and possibly other places. Only use this with something on top (e.g. `LockingBlockStore`)
-/// ensuring that there are no concurrent calls about the same block id.
 pub struct IntegrityBlockStore<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> {
     underlying_block_store: AsyncDropGuard<B>,
     config: IntegrityConfig,
@@ -118,7 +114,7 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                 let block_info = block_info_guard.value_or_insert_with(|| {
                     BlockInfo::new_unknown(self.integrity_data.my_client_id())
                 });
-                let data = self._check_and_remove_header(block_info, loaded, block_id)?;
+                let data = self._check_and_remove_header(block_info, loaded, *block_id)?;
                 Ok(Some(data))
             }
         }
@@ -140,11 +136,20 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
 
     async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         if self.config.missing_block_is_integrity_violation {
+            // TODO Is there a way to do this with stream processing, i.e. without collecting?
+            //      That's what the C++ implementation did. It would mean that errors about missing blocks
+            //      would be delayed though. And we'd likely have to handle race conditions like
+            //      blocks being deleted while this function runs.
             let all_underlying_blocks = {
                 let blocks = self.underlying_block_store.all_blocks().await?;
                 let blocks: Vec<BlockId> = blocks.try_collect().await?;
                 blocks
             };
+            // We get expected_blocks **after** we got all_underlying blocks so that any blocks potentially deleted
+            // in the meantime are already gone from expected_blocks.
+            // TODO Is this actually race-condition-proof? What if there is currently a remove ongoing, it has already
+            //      deleted the block before the calculation of all_underlying_blocks, but hasn't updated integrity_data yet
+            //      when we're running this?
             let mut expected_blocks = {
                 let blocks: HashSet<BlockId> =
                     self.integrity_data.existing_blocks().into_iter().collect();
@@ -327,7 +332,7 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
         &self,
         block_info: &mut BlockInfo,
         data: Data,
-        expected_block_id: &BlockId,
+        expected_block_id: BlockId,
     ) -> Result<Data> {
         ensure!(
             data.len() >= block_layout::data::OFFSET,
@@ -336,10 +341,32 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
             block_layout::data::OFFSET
         );
         let view = block_layout::View::new(data);
+
+        Self::_check_format_version_header(&view)?;
+        self._check_id_header(&view, &expected_block_id)?;
+
+        let last_update_client_id = view.last_update_client_id().read();
+        let block_version = view.block_version().read();
+
+        // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
+        let mut data = view.into_storage();
+        data.shrink_to_subregion(block_layout::data::OFFSET..);
+
+        // Only update version after we know the operation succeeded
+        self._check_version_header(last_update_client_id, block_version, expected_block_id, block_info)?;
+
+        Ok(data)
+    }
+
+    fn _check_format_version_header(view: &block_layout::View<Data>) -> Result<()> {
         let format_version_header = view.format_version_header().read();
         if format_version_header != FORMAT_VERSION_HEADER {
             bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
         }
+        Ok(())
+    }
+
+    fn _check_id_header(&self, view: &block_layout::View<Data>, expected_block_id: &BlockId) -> Result<()> {
         let block_id = BlockId::from_array(view.block_id());
         if block_id != *expected_block_id {
             self._integrity_violation_detected(
@@ -350,30 +377,24 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
                 .into(),
             )?;
         }
-        let last_update_client_id = view.last_update_client_id().read();
-        let block_version = view.block_version().read();
+        Ok(())
+    }
 
-        // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
-        let mut data = view.into_storage();
-        data.shrink_to_subregion(block_layout::data::OFFSET..);
-
-        // Only update version after we know the operation succeeded
+    fn _check_version_header(&self, last_update_client_id: ClientId, block_version: BlockVersion, block_id: BlockId, block_info: &mut BlockInfo) -> Result<()> {
         let update =
             block_info.check_and_update_version(last_update_client_id, block_id, block_version);
         match update {
-            Ok(()) => (),
+            Ok(()) => Ok(()),
             Err(err) if err.is::<IntegrityViolationError>() => {
                 // IntegrityViolationErrors are channeled through _integrity_violation_detected
                 // so that we can silence them if integrity checking is disabled.
                 self._integrity_violation_detected(
                     err.downcast::<IntegrityViolationError>()
                         .expect("We just checked the error type above but now it's different"),
-                )?;
+                )
             }
-            Err(err) => Err(err)?,
+            Err(err) => Err(err),
         }
-
-        Ok(data)
     }
 }
 
