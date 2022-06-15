@@ -301,7 +301,7 @@ mod tests {
     #![allow(non_snake_case)]
 
     use super::*;
-    use crate::blockstore::low_level::{mock::MockBlockStore};
+    use crate::blockstore::low_level::mock::MockBlockStore;
     use crate::blockstore::tests::data;
     use anyhow::anyhow;
     use mockall::predicate::{always, function};
