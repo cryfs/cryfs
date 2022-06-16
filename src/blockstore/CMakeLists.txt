@@ -23,9 +23,6 @@ set(SOURCES
   implementations/caching/cache/QueueMap.cpp
   implementations/low2highlevel/LowToHighLevelBlock.cpp
   implementations/low2highlevel/LowToHighLevelBlockStore.cpp
-  implementations/integrity/IntegrityBlockStore2.cpp
-  implementations/integrity/KnownBlockVersions.cpp
-  implementations/integrity/ClientIdAndBlockId.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
   implementations/rustbridge/RustBlockStore2.cpp
