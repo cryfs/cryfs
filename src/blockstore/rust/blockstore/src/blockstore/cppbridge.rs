@@ -1,9 +1,10 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, anyhow, Result};
 use async_trait::async_trait;
 use futures::stream::{Stream, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::num::NonZeroU32;
 
 use super::high_level::{self, Block, LockingBlockStore};
 use super::low_level::{
@@ -476,7 +477,7 @@ fn new_integrity_inmemory_blockstore(
             IntegrityBlockStore::new(
                 InMemoryBlockStore::new(),
                 Path::new(integrity_file_path).to_path_buf(),
-                ClientId { id: 1 },
+                ClientId { id: NonZeroU32::new(1).unwrap() },
                 IntegrityConfig {
                     allow_integrity_violations: false,
                     missing_block_is_integrity_violation: true,
@@ -549,7 +550,7 @@ fn _new_locking_integrity_encrypted_blockstore(
         cipher_name,
         _BlockStoreCreator {
             integrity_file_path: Path::new(integrity_file_path).to_path_buf(),
-            my_client_id: ClientId { id: my_client_id },
+            my_client_id: ClientId { id: NonZeroU32::new(my_client_id).ok_or_else(||anyhow!("Tried to create a block store with a client id of 0."))? },
             integrity_config: IntegrityConfig {
                 allow_integrity_violations,
                 missing_block_is_integrity_violation,

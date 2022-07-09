@@ -2,7 +2,7 @@ use std::collections::hash_set::HashSet;
 use std::path::PathBuf;
 use thiserror::Error;
 
-use super::{BlockVersion, ClientId};
+use super::{BlockVersion, MaybeClientId, ClientId};
 use crate::blockstore::BlockId;
 
 #[derive(Error, Debug)]
@@ -12,7 +12,7 @@ pub enum IntegrityViolationError {
     )]
     RollBack {
         block: BlockId,
-        from_client: ClientId,
+        from_client: MaybeClientId,
         to_client: ClientId,
         from_version: BlockVersion,
         to_version: BlockVersion,
