@@ -1,7 +1,7 @@
 use anyhow::{ensure, Context, Error, Result};
 use binread::{BinRead, BinResult, ReadOptions};
 use binwrite::{BinWrite, WriterOption};
-use core::num::NonZeroU8;
+use std::num::{NonZeroU32, NonZeroU8};
 use itertools::Itertools;
 use std::collections::hash_map::HashMap;
 use std::fs::File;
@@ -280,6 +280,28 @@ pub fn write_null_string(
     // and add null byte
     u8::write_options(&0, writer, options)
 }
+
+/// TODO Docs
+/// TODO Tests
+pub fn read_nonzerou32<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<NonZeroU32> {
+    let pos = reader.seek(SeekFrom::Current(0))?;
+    let value = u32::read_options(reader, ro, ())?;
+    NonZeroU32::new(value).ok_or_else(||binread::Error::AssertFail {
+        pos,
+        message: String::from("Tried to read '0' as a NonZeroU32 value. Must not be zero."),
+    })
+}
+
+/// TODO Docs
+/// TODO Tests
+pub fn write_nonzerou32(
+    v: &NonZeroU32,
+    writer: &mut impl Write,
+    options: &WriterOption,
+) -> Result<(), std::io::Error> {
+    u32::write_options(&v.get(), writer, options)
+}
+
 
 #[cfg(test)]
 pub mod testutils {

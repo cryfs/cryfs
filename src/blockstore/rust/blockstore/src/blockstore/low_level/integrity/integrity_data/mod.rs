@@ -1,4 +1,4 @@
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use lockable::HashMapOwnedGuard;
 use std::path::PathBuf;
@@ -12,25 +12,14 @@ mod serialization;
 
 pub use integrity_violation_error::IntegrityViolationError;
 pub use known_block_versions::{
-    BlockInfo, BlockVersion, BlockVersionTransaction, ClientId, KnownBlockVersions,
-    CLIENT_ID_FOR_DELETED_BLOCK,
+    BlockInfo, BlockVersion, BlockVersionTransaction, MaybeClientId, ClientId, KnownBlockVersions,
 };
 
 // TODO Rethink serialization. It's weird to have a KnownBlockVersions object wrapped in an IntegrityData object just because parts are serialized to different files. Merge them.
 
 /// IntegrityData is the basis of the CryFS integrity promise.
-/// It remembers persistent state, locally on the CryFS client device:
-///  - `known_block_versions: HashMap<(ClientId, BlockId), BlockVersion>`
-///    The newest version number of the block that we've already seen and was created by the given client.
-///  - `last_update_client_id: HashMap<BlockId, ClientId>`
-///    The client_id we consider to have created the current version of the block.
-///
-/// The invariant we uphold is that within a `(client_id, block_id)` pair, version numbers are always increasing.
-///
-/// # Important Functions
-/// [IntegrityData::check_and_update_version] is called whenever a block is read and ensures that it hasn't been rolled back.
-/// [IntegrityData::increment_version] is called whenever we modify a block ourselves and updates the internal state correspondingly.
-/// [IntegrityData::mark_block_as_deleted] is called whenever we delete a block to make sure it doesn't get reintroduced.
+/// For each block, it remembers a [BlockInfo] structure that ensures that
+/// adversaries can't roll back, delete or re-introduce a block.
 #[derive(Debug)]
 pub struct IntegrityData {
     state_file_path: PathBuf,
@@ -44,10 +33,6 @@ pub struct IntegrityData {
 
 impl IntegrityData {
     pub fn new(state_file_path: PathBuf, my_client_id: ClientId) -> Result<AsyncDropGuard<Self>> {
-        ensure!(
-            my_client_id != CLIENT_ID_FOR_DELETED_BLOCK,
-            "Tried to instantiate a IntegrityData instace with an invalid client id"
-        );
         let known_block_versions = Some(
             KnownBlockVersions::load_or_default(&state_file_path)
                 .context("Tried to deserialize the state file")?,
@@ -71,21 +56,6 @@ impl IntegrityData {
         self._known_block_versions().lock_block_info(block_id).await
     }
 
-    // TODO Do we need this?
-    // pub fn block_version(&self, client_id: ClientId, block_id: BlockId) -> Option<BlockVersion> {
-    // self.file_data
-    //     .block_data
-    //     .get(&block_id)
-    //     .map(|block_data| {
-    //         block_data
-    //         .lock()
-    //         .unwrap()
-    //         .known_block_versions
-    //         .get(&client_id)
-    //         .copied()
-    //     }).flatten()
-    // }
-
     /// Checks if any previous runs recognized any integrity violations and marked it in the local state.
     /// Integrity violations are marked in the local state to make sure the user notices. We currently
     /// don't have any better way to report it to the user than just to permanently prevent access to
@@ -103,131 +73,6 @@ impl IntegrityData {
         self._known_block_versions()
             .set_integrity_violation_in_previous_run();
     }
-
-    /// This function is intended to be called whenever we read a block.
-    /// It checks the read block version against our internal state to make sure that blocks aren't rolled back,
-    /// and then updates our internal state to make sure that the change this read operation observed can't be rolled back in the future.
-    ///
-    /// There's three possibilities
-    /// 1. We see exactly the same `(client_id, version_number)` as stored in our local state `(last_update_client_id, known_block_versions)`.
-    ///    This means nothing changed since we've read the block last, there was no rollback.
-    /// 2. We see the same `client_id`, but a different `block_version`. In this case, we enforce the `block_version` to increase.
-    ///    If it was decreasing, then that's a rollback to a version we might have previously seen.
-    /// 3. We see a different `client_id`. In this case, we enforce the `block_version` to be at least one larger than the one from `known_block_versions`.
-    ///    If it was decreasing, then that's a rollback to a version we might have previously seen, and if it is the same as `known_block_versions`,
-    ///    then it's a rollback to a version we have previously seen.
-    // pub fn check_and_update_version(
-    //     &mut self,
-    //     client_id: ClientId,
-    //     block_id: BlockId,
-    //     version: BlockVersion,
-    // ) -> Result<()> {
-    // ensure!(
-    //     client_id != CLIENT_ID_FOR_DELETED_BLOCK,
-    //     "Called IntegrityData::check_and_update_version with an invalid client id"
-    // );
-    // ensure!(version.version > 0, "Version has to be >0");
-    // let known_block_versions_entry = self
-    //     .file_data
-    //     .known_block_versions
-    //     .entry((client_id, block_id));
-    // let last_update_client_id_entry = self.file_data.last_update_client_id.entry(block_id);
-    // match (known_block_versions_entry, last_update_client_id_entry) {
-    //     (
-    //         Entry::Vacant(known_block_versions_entry),
-    //         Entry::Vacant(last_update_client_id_entry),
-    //     ) => {
-    //         known_block_versions_entry.insert(Arc::new(Mutex::new(version)));
-    //         last_update_client_id_entry.insert(Arc::new(Mutex::new(client_id)));
-    //     }
-    //     (Entry::Vacant(_), Entry::Occupied(_)) => {
-    //         bail!("last_update_client_ids had the block with id {} but known_block_versions didn't have it. This shouldn't happen. Likely our local state is corrupted.", block_id.to_hex());
-    //     }
-    //     (Entry::Occupied(_), Entry::Vacant(_)) => {
-    //         bail!("known_block_versions had the block with id {} but last_update_client_ids didn't have it. This shouldn't happen. Likely our local state is corrupted.", block_id.to_hex());
-    //     }
-    //     (
-    //         Entry::Occupied(mut known_block_versions_entry),
-    //         Entry::Occupied(mut last_update_client_id_entry),
-    //     ) => {
-    //         ensure!(
-    //             //In all of the cases 1, 2, 3: the version number must not decrease
-    //             (*known_block_versions_entry.get().lock().unwrap() <= version) &&
-    //             // In case 3 (i.e. we see a change in client id), the version number must increase
-    //             (*last_update_client_id_entry.get() == client_id || *known_block_versions_entry.get() < version),
-    //             IntegrityViolationError::RollBack {
-    //                 block: block_id,
-    //                 from_client: *last_update_client_id_entry.get(),
-    //                 to_client: client_id,
-    //                 from_version: *known_block_versions_entry.get(),
-    //                 to_version: version,
-    //             }
-    //         );
-    //         known_block_versions_entry.insert(version);
-    //         last_update_client_id_entry.insert(client_id);
-    //     }
-    // }
-
-    // Ok(())
-    // }
-
-    /// This function is intended to be called whenever we modify a block ourselves.
-    /// It updates our internal state so the modification can't be rolled back in the future.
-    // pub fn increment_version(&mut self, block_id: BlockId) -> BlockVersion {
-    // self.file_data
-    //     .last_update_client_id
-    //     .insert(block_id, self.my_client_id);
-    // match self
-    //     .file_data
-    //     .known_block_versions
-    //     .entry((self.my_client_id, block_id))
-    // {
-    //     Entry::Vacant(entry) => {
-    //         let new_version = BlockVersion { version: 1 };
-    //         entry.insert(new_version);
-    //         println!("{:?} new: {:?}", block_id, new_version);
-    //         new_version
-    //     }
-    //     Entry::Occupied(mut entry) => {
-    //         entry.get_mut().increment();
-    //         println!("{:?} increment: {:?}", block_id, *entry.get());
-    //         *entry.get()
-    //     }
-    // }
-    // }
-
-    /// This function is intended to be called whenever we delete a block. It will set
-    /// the `last_update_client_id` for this block to an invalid `client_id`.
-    /// Following the explanation in [IntegrityData::check_and_update_version], this means
-    /// that all previously seen versions of this block won't be accepted anymore, not even the
-    /// most recent one. The only way to reintroduce this block is if some client creates a
-    /// version of it with a new, higher version number.
-    // pub fn mark_block_as_deleted(&mut self, block_id: BlockId) {
-    // self.file_data
-    //     .last_update_client_id
-    //     .insert(block_id, CLIENT_ID_FOR_DELETED_BLOCK);
-    // }
-
-    /// This function returns true iff we expect the block with the given id to exist,
-    /// i.e. we have seen it before and we haven't deleted it. Note that we don't know
-    /// if a different client might have deleted it, so this could return true for
-    /// blocks that were correctly deleted by other authorized clients.
-    // pub fn should_block_exist(&self, block_id: &BlockId) -> bool {
-    // match self.file_data.last_update_client_id.get(block_id) {
-    //     None => {
-    //         // We've never seen (i.e. loaded) this block. So we can't say it has to exist.
-    //         false
-    //     }
-    //     Some(&CLIENT_ID_FOR_DELETED_BLOCK) => {
-    //         // We've deleted this block. We can't say it has to exist.
-    //         false
-    //     }
-    //     Some(_) => {
-    //         // We've seen this block before and we haven't deleted it
-    //         true
-    //     }
-    // }
-    // }
 
     /// This function returns all blocks that we expect to exist, i.e. we have
     /// seen them before and we haven't deleted it. Note that, similar to
@@ -259,5 +104,164 @@ impl AsyncDrop for IntegrityData {
             .expect("Was already destructed")
             .save(&self.state_file_path)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempdir::TempDir;
+    use std::num::NonZeroU32;
+
+    use crate::blockstore::tests::blockid;
+    use crate::utils::async_drop::SyncDrop;
+
+    struct Fixture {
+        state_file_dir: TempDir,
+    }
+
+    impl Fixture {
+        pub fn new() -> Self {
+            Self {
+                state_file_dir: TempDir::new("OnDiskBlockStoreTest").unwrap(),
+            }
+        }
+
+        pub fn make_obj(&self, my_client_id: ClientId) -> SyncDrop<IntegrityData> {
+            SyncDrop::new(
+                IntegrityData::new(
+                    self.state_file_dir
+                        .path()
+                        .join("integrity_file")
+                        .to_path_buf(),
+                    my_client_id,
+                )
+                .unwrap(),
+            )
+        }
+    }
+
+    async fn set_version(
+        obj: &mut SyncDrop<IntegrityData>,
+        block_id: BlockId,
+        client_id: ClientId,
+        version: BlockVersion,
+    ) -> Result<()> {
+        obj.lock_block_info(block_id)
+            .await
+            .value_or_insert_with(|| BlockInfo::new_unknown(MaybeClientId::ClientId(client_id)))
+            .check_and_update_version(client_id, block_id, version)
+    }
+
+    async fn get_last_update_client_id(
+        obj: &SyncDrop<IntegrityData>,
+        block_id: BlockId,
+    ) -> MaybeClientId {
+        obj.lock_block_info(block_id)
+            .await
+            .value()
+            .expect("Entry not found")
+            .last_update_client_id()
+    }
+
+    async fn get_version(obj: &SyncDrop<IntegrityData>, block_id: BlockId) -> Option<BlockVersion> {
+        obj.lock_block_info(block_id)
+            .await
+            .value()
+            .expect("Entry not found")
+            .current_version()
+    }
+
+    async fn get_version_for_client(
+        obj: &SyncDrop<IntegrityData>,
+        block_id: BlockId,
+        client_id: ClientId,
+    ) -> Option<BlockVersion> {
+        obj.lock_block_info(block_id)
+            .await
+            .value()
+            .expect("Entry not found")
+            .current_version_for_client(&client_id)
+    }
+
+    fn clientid(id: u32) -> ClientId {
+        ClientId { id: NonZeroU32::new(id).unwrap() }
+    }
+
+    fn version(version: u64) -> BlockVersion {
+        BlockVersion { version }
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get() {
+        let fixture = Fixture::new();
+        let mut obj = fixture.make_obj(clientid(1));
+
+        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        assert_eq!(
+            MaybeClientId::ClientId(clientid(1)),
+            get_last_update_client_id(&obj, blockid(0)).await
+        );
+        assert_eq!(Some(version(5)), get_version(&obj, blockid(0)).await);
+    }
+
+    #[tokio::test]
+    async fn test_version_is_per_client() {
+        let fixture = Fixture::new();
+        let mut obj = fixture.make_obj(clientid(1));
+
+        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(2), version(3)).await.unwrap();
+        assert_eq!(
+            Some(version(5)),
+            get_version_for_client(&obj, blockid(0), clientid(1)).await
+        );
+        assert_eq!(
+            Some(version(3)),
+            get_version_for_client(&obj, blockid(0), clientid(2)).await
+        );
+    }
+
+    #[tokio::test]
+    async fn test_version_is_per_block() {
+        let fixture = Fixture::new();
+        let mut obj = fixture.make_obj(clientid(1));
+
+        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        set_version(&mut obj, blockid(1), clientid(1), version(3)).await.unwrap();
+        assert_eq!(
+            Some(version(5)),
+            get_version_for_client(&obj, blockid(0), clientid(1)).await
+        );
+        assert_eq!(
+            Some(version(3)),
+            get_version_for_client(&obj, blockid(1), clientid(1)).await
+        );
+    }
+
+    #[tokio::test]
+    async fn test_allows_increasing() {
+        let fixture = Fixture::new();
+        let mut obj = fixture.make_obj(clientid(1));
+
+        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(6)).await.unwrap();
+        assert_eq!(
+            Some(version(6)),
+            get_version(&obj, blockid(0)).await
+        );
+    }
+
+    #[tokio::test]
+    async fn test_doesnt_allow_decreasing() {
+        let fixture = Fixture::new();
+        let mut obj = fixture.make_obj(clientid(1));
+
+        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(4)).await.unwrap_err();
+        assert_eq!(
+            Some(version(5)),
+            get_version(&obj, blockid(0)).await
+        );
     }
 }

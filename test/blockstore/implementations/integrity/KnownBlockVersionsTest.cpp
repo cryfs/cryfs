@@ -32,54 +32,6 @@ public:
     }
 };
 
-TEST_F(KnownBlockVersionsTest, setandget) {
-    setVersion(&testobj, clientId, blockId, 5);
-    EXPECT_EQ(5u, testobj.getBlockVersion(clientId, blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, setandget_isPerClientId) {
-    setVersion(&testobj, clientId, blockId, 5);
-    setVersion(&testobj, clientId2, blockId, 3);
-    EXPECT_EQ(5u, testobj.getBlockVersion(clientId, blockId));
-    EXPECT_EQ(3u, testobj.getBlockVersion(clientId2, blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, setandget_isPerBlock) {
-    setVersion(&testobj, clientId, blockId, 5);
-    setVersion(&testobj, clientId, blockId2, 3);
-    EXPECT_EQ(5u, testobj.getBlockVersion(clientId, blockId));
-    EXPECT_EQ(3u, testobj.getBlockVersion(clientId, blockId2));
-}
-
-TEST_F(KnownBlockVersionsTest, setandget_allowsIncreasing) {
-    setVersion(&testobj, clientId, blockId, 5);
-    setVersion(&testobj, clientId, blockId, 6);
-    EXPECT_EQ(6u, testobj.getBlockVersion(clientId, blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, setandget_doesntAllowDecreasing) {
-    setVersion(&testobj, clientId, blockId, 5);
-    EXPECT_ANY_THROW(
-      setVersion(&testobj, clientId, blockId, 4);
-    );
-}
-
-TEST_F(KnownBlockVersionsTest, myClientId_isConsistent) {
-    EXPECT_EQ(testobj.myClientId(), testobj.myClientId());
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_newentry) {
-    auto version = testobj.incrementVersion(blockId);
-    EXPECT_EQ(1u, version);
-    EXPECT_EQ(1u, testobj.getBlockVersion(testobj.myClientId(), blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, incrementVersion_oldentry) {
-    setVersion(&testobj, testobj.myClientId(), blockId, 5);
-    auto version = testobj.incrementVersion(blockId);
-    EXPECT_EQ(6u, version);
-    EXPECT_EQ(6u, testobj.getBlockVersion(testobj.myClientId(), blockId));
-}
 
 TEST_F(KnownBlockVersionsTest, checkAndUpdateVersion_newentry) {
     EXPECT_TRUE(testobj.checkAndUpdateVersion(clientId, blockId, 5));

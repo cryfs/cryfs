@@ -11,7 +11,7 @@ use crate::utils::binary::{
 };
 use crate::utils::containers::HashMapExt;
 
-use super::known_block_versions::{BlockInfo, BlockVersion, ClientId, KnownBlockVersions};
+use super::known_block_versions::{BlockInfo, MaybeClientId, BlockVersion, ClientId, KnownBlockVersions};
 
 const FORMAT_VERSION_HEADER: &[u8] = b"cryfs.integritydata.knownblockversions;1";
 
@@ -42,7 +42,7 @@ pub struct KnownBlockVersionsSerialized {
 
     #[binread(parse_with = read_hashmap)]
     #[binwrite(with(write_hashmap))]
-    pub last_update_client_id: HashMap<BlockId, ClientId>,
+    pub last_update_client_id: HashMap<BlockId, MaybeClientId>,
 }
 
 // TODO Test
@@ -63,7 +63,7 @@ impl From<KnownBlockVersionsSerialized> for KnownBlockVersions {
             let mut block_info = block_infos.try_lock(block_id).expect(
                 "We're just creating this object, nobody else has access. Locking can't fail",
             );
-            let block_info = block_info.value_or_insert_with(|| BlockInfo::new_unknown(client_id));
+            let block_info = block_info.value_or_insert_with(|| BlockInfo::new_unknown(MaybeClientId::ClientId(client_id)));
             HashMapExt::try_insert(
                 &mut block_info.known_block_versions,
                 client_id,
@@ -144,6 +144,7 @@ mod tests {
     use super::*;
     use crate::utils::binary::testutils::{binary, deserialize, test_serialize_deserialize};
     use common_macros::hash_map;
+    use std::num::NonZeroU32;
 
     async fn known_block_versions_serialized_default() -> KnownBlockVersionsSerialized {
         KnownBlockVersionsSerialized::async_from(KnownBlockVersions::default()).await
@@ -283,8 +284,8 @@ mod tests {
         test_serialize_deserialize(
             KnownBlockVersionsSerialized {
                 known_block_versions: hash_map![
-                    (ClientId{id:0x3ab74641}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
-                    (ClientId{id:0x21233651}, BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap()) => BlockVersion{version:10_000_000},
+                    (ClientId{id:NonZeroU32::new(0x3ab74641).unwrap()}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
+                    (ClientId{id:NonZeroU32::new(0x21233651).unwrap()}, BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap()) => BlockVersion{version:10_000_000},
                 ],
                 ..known_block_versions_serialized_default().await
             },
@@ -341,8 +342,8 @@ mod tests {
         test_serialize_deserialize(
             KnownBlockVersionsSerialized {
                 last_update_client_id: hash_map![
-                    BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => ClientId { id: 0x3ab74641 },
-                    BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap() => ClientId { id: 0x21233651 },
+                    BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => MaybeClientId::ClientId(ClientId { id: NonZeroU32::new(0x3ab74641).unwrap() }),
+                    BlockId::from_hex("45fc5ad983c6c85a7a2859181d2199cb").unwrap() => MaybeClientId::ClientId(ClientId { id: NonZeroU32::new(0x21233651).unwrap() }),
                 ],
                 ..known_block_versions_serialized_default().await
             },
@@ -374,10 +375,10 @@ mod tests {
         test_serialize_deserialize(
             KnownBlockVersionsSerialized {
                 known_block_versions: hash_map![
-                    (ClientId{id:0x3ab74641}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
+                    (ClientId{id:NonZeroU32::new(0x3ab74641).unwrap()}, BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap()) => BlockVersion{version:50},
                 ],
                 last_update_client_id: hash_map![
-                    BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => ClientId { id: 0x3ab74641 },
+                    BlockId::from_hex("bd9cb3b508182dd71eda77c3ff99325c").unwrap() => MaybeClientId::ClientId(ClientId { id: NonZeroU32::new(0x3ab74641).unwrap() }),
                 ],
                 ..known_block_versions_serialized_default().await
             },
