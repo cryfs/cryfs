@@ -36,55 +36,6 @@ public:
     }
 };
 
-TEST_F(KnownBlockVersionsTest, saveAndLoad_empty)
-{
-    TempFile stateFile(false);
-    {
-        KnownBlockVersions _1(stateFile.path(), myClientId);
-    }
-
-    EXPECT_TRUE(KnownBlockVersions(stateFile.path(), myClientId).checkAndUpdateVersion(clientId, blockId, 1));
-}
-
-TEST_F(KnownBlockVersionsTest, saveAndLoad_oneentry)
-{
-    TempFile stateFile(false);
-    EXPECT_TRUE(KnownBlockVersions(stateFile.path(), myClientId).checkAndUpdateVersion(clientId, blockId, 100));
-
-    KnownBlockVersions obj(stateFile.path(), myClientId);
-    EXPECT_EQ(100u, obj.getBlockVersion(clientId, blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, saveAndLoad_threeentries)
-{
-    TempFile stateFile(false);
-    {
-        KnownBlockVersions obj(stateFile.path(), myClientId);
-        EXPECT_TRUE(obj.checkAndUpdateVersion(obj.myClientId(), blockId, 100));
-        EXPECT_TRUE(obj.checkAndUpdateVersion(obj.myClientId(), blockId2, 50));
-        EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, blockId, 150));
-    }
-
-    KnownBlockVersions obj(stateFile.path(), myClientId);
-    EXPECT_EQ(100u, obj.getBlockVersion(obj.myClientId(), blockId));
-    EXPECT_EQ(50u, obj.getBlockVersion(obj.myClientId(), blockId2));
-    EXPECT_EQ(150u, obj.getBlockVersion(clientId, blockId));
-}
-
-TEST_F(KnownBlockVersionsTest, saveAndLoad_lastUpdateClientIdIsStored)
-{
-    {
-        KnownBlockVersions obj(stateFile.path(), myClientId);
-        EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, blockId, 100));
-        EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, blockId, 10));
-    }
-
-    KnownBlockVersions obj(stateFile.path(), myClientId);
-    EXPECT_FALSE(obj.checkAndUpdateVersion(clientId, blockId, 100));
-    EXPECT_TRUE(obj.checkAndUpdateVersion(clientId2, blockId, 10));
-    EXPECT_TRUE(obj.checkAndUpdateVersion(clientId, blockId, 101));
-}
-
 TEST_F(KnownBlockVersionsTest, markAsDeleted_doesntAllowReIntroducing_sameClientId)
 {
     setVersion(&testobj, clientId, blockId, 5);
