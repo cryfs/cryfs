@@ -287,7 +287,16 @@ impl<'a> BlockVersionTransaction<'a> {
 
 impl<'a> Drop for BlockVersionTransaction<'a> {
     fn drop(&mut self) {
-        assert!(self.0.is_none(), "Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
+        if self.0.is_some() {
+            // The BlockVersionTransaction left scope without the user calling commit() or cancel() on it
+            if std::thread::panicking() {
+                // We're already panicking, double panic wouldn't show a good error message anyways. Let's just log instead.
+                // A common scenario for this to happen is a failing test case.
+                log::error!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
+            } else {
+                panic!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
+            }
+        }
     }
 }
 
@@ -579,7 +588,70 @@ mod tests {
             );
         }
 
-        // TODO Test incrementing version of deleted blocks
+        #[test]
+        fn test_givenDeletedObject_whenIncrementingVersionForNewClient_thenSucceeds() {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            let transaction = obj.start_increment_version_transaction(clientid(6));
+            assert_eq!(version(1), transaction.new_version());
+            transaction.commit();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(6)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(1)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                    clientid(6) => version(1),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenIncrementingVersionForExistingClient_thenSucceeds() {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            let transaction = obj.start_increment_version_transaction(clientid(2));
+            assert_eq!(version(3), transaction.new_version());
+            transaction.commit();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(2)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(3)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(3),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+        }
     }
 
     mod deletion {
@@ -1079,7 +1151,7 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenIncrementingVersionForNewClient_withVersionIsOne_thenSucceeds(
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds(
         ) {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
@@ -1112,7 +1184,7 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenIncrementingVersionForNewClient_withVersionIsHigherThanOne_thenSucceeds(
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsHigherThanOne_thenSucceeds(
         ) {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
@@ -1144,7 +1216,321 @@ mod tests {
             );
         }
 
-        // TODO Test check_and_update on deleted blocks
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsDecreasing_thenFails(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(3), blockid(1), version(3))
+                .unwrap_err();
+
+            assert_eq!(MaybeClientId::BlockWasDeleted, obj.last_update_client_id());
+            assert_eq!(None, obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsEqual_thenFails(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(3), blockid(1), version(4))
+                .unwrap_err();
+
+            assert_eq!(MaybeClientId::BlockWasDeleted, obj.last_update_client_id());
+            assert_eq!(None, obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByOne_thenSucceeds(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(3), blockid(1), version(5))
+                .unwrap();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(3)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(5)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(5),
+                    clientid(4) => version(7),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(3), blockid(1), version(10))
+                .unwrap();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(3)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(10)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(10),
+                    clientid(4) => version(7),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(6), blockid(1), version(1))
+                .unwrap();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(6)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(1)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                    clientid(6) => version(1),
+                },
+            );
+        }
+
+        #[test]
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsMoreThanOne_thenSucceeds(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                },
+            );
+
+            obj.check_and_update_version(clientid(6), blockid(1), version(10))
+                .unwrap();
+
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(6)),
+                obj.last_update_client_id()
+            );
+            assert_eq!(Some(version(10)), obj.current_version());
+            assert_versions_are(
+                &obj,
+                hash_map! {
+                    clientid(1) => version(8),
+                    clientid(2) => version(2),
+                    clientid(3) => version(4),
+                    clientid(4) => version(7),
+                    clientid(6) => version(10),
+                },
+            );
+        }
+    }
+
+    mod current_version {
+        use super::*;
+
+        #[test]
+        fn test_givenEmptyObject_whenQueryingCurrentVersion_thenReturnsNone() {
+            let obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            assert_eq!(None, obj.current_version());
+        }
+
+        #[test]
+        fn test_givenEmptyObject_afterIncrementingVersionAndCommitting_whenQueryingCurrentVersion_thenReturnsSome(
+        ) {
+            let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            obj.start_increment_version_transaction(clientid(5))
+                .commit();
+            assert_eq!(Some(version(1)), obj.current_version());
+        }
+
+        #[test]
+        fn test_givenEmptyObject_afterIncrementingVersionAndCancelling_whenQueryingCurrentVersion_thenReturnsNone(
+        ) {
+            let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            obj.start_increment_version_transaction(clientid(5))
+                .cancel();
+            assert_eq!(None, obj.current_version());
+        }
+
+        #[test]
+        fn test_givenEmptyObject_afterCheckingAndUpdatingVersion_whenQueryingCurrentVersion_thenReturnsSome(
+        ) {
+            let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            obj.check_and_update_version(clientid(5), blockid(1), version(5))
+                .unwrap();
+            assert_eq!(Some(version(5)), obj.current_version());
+        }
+
+        #[test]
+        fn test_givenEmptyObject_afterDeletingBlock_whenQueryingCurrentVersion_thenReturnsNone() {
+            let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            obj.check_and_update_version(clientid(5), blockid(1), version(5))
+                .unwrap();
+            assert_eq!(Some(version(5)), obj.current_version());
+            obj.mark_block_as_deleted();
+            assert_eq!(None, obj.current_version());
+        }
+    }
+
+    mod existing_blocks {
+        use super::*;
+
+        #[test]
+        fn test_givenEmptyObject_whenQueryingExistingBlocks_thenReturnsEmptyList() {
+            let obj = KnownBlockVersions::default();
+            assert_unordered_vec_eq(vec![], obj.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_givenEmptyObject_whenAddingSomeBlocks_thenReturnsAll() {
+            let obj = KnownBlockVersions::default();
+            obj.lock_block_info(blockid(1))
+                .await
+                .try_insert(BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1))))
+                .unwrap();
+            obj.lock_block_info(blockid(2))
+                .await
+                .try_insert(BlockInfo::new_unknown(MaybeClientId::BlockWasDeleted))
+                .unwrap();
+            obj.lock_block_info(blockid(3))
+                .await
+                .try_insert(BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1))))
+                .unwrap();
+            assert_unordered_vec_eq(
+                vec![blockid(1), blockid(2), blockid(3)],
+                obj.existing_blocks(),
+            );
+        }
+    }
+
+    mod block_is_expected_to_exist {
+        use super::*;
+
+        #[test]
+        fn test_givenEmptyObject_whenQueryingBlockIsExpectedToExist_thenReturnsNo() {
+            let obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
+            assert_eq!(false, obj.block_is_expected_to_exist());
+        }
+
+        #[test]
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forExistingBlock_thenReturnsYes(
+        ) {
+            let obj = BlockInfo::new(
+                MaybeClientId::ClientId(clientid(1)),
+                hash_map! {
+                    clientid(1) => version(5),
+                    clientid(3) => version(1),
+                },
+            );
+            assert_eq!(true, obj.block_is_expected_to_exist());
+        }
+
+        #[test]
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forDeletedBlock_thenReturnsNo(
+        ) {
+            let obj = BlockInfo::new(
+                MaybeClientId::BlockWasDeleted,
+                hash_map! {
+                    clientid(1) => version(5),
+                    clientid(3) => version(1),
+                },
+            );
+            assert_eq!(false, obj.block_is_expected_to_exist());
+        }
+
+        #[test]
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_afterDeletingBlock_thenReturnsNo(
+        ) {
+            let mut obj = BlockInfo::new(
+                MaybeClientId::ClientId(clientid(1)),
+                hash_map! {
+                    clientid(1) => version(5),
+                    clientid(3) => version(1),
+                },
+            );
+            obj.mark_block_as_deleted();
+            assert_eq!(false, obj.block_is_expected_to_exist());
+        }
     }
 
     mod save_and_load {

@@ -19,7 +19,6 @@ set(SOURCES
     implementations/caching/cache/CacheTest_RaceCondition.cpp
     implementations/caching/cache/PeriodicTaskTest.cpp
     implementations/caching/cache/QueueMapTest_Peek.cpp
-    implementations/integrity/KnownBlockVersionsTest.cpp
     implementations/integrity/IntegrityBlockStoreTest_Specific.cpp
 )
 
