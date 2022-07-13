@@ -23,7 +23,8 @@ use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 pub use integrity_data::ClientId;
 use integrity_data::{
-    BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, IntegrityViolationError, MaybeClientId,
+    BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, IntegrityViolationError,
+    MaybeClientId,
 };
 
 const FORMAT_VERSION_HEADER: u16 = 1;
@@ -112,7 +113,9 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
             }
             Some(loaded) => {
                 let block_info = block_info_guard.value_or_insert_with(|| {
-                    BlockInfo::new_unknown(MaybeClientId::ClientId(self.integrity_data.my_client_id()))
+                    BlockInfo::new_unknown(MaybeClientId::ClientId(
+                        self.integrity_data.my_client_id(),
+                    ))
                 });
                 let data = self._check_and_remove_header(block_info, loaded, *block_id)?;
                 Ok(Some(data))
@@ -215,7 +218,9 @@ impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Erro
         let remove_result = self.underlying_block_store.remove(id).await?;
         // Only mark block as deleted after we know the operation succeeded
         block_info_guard
-            .value_or_insert_with(|| BlockInfo::new_unknown(MaybeClientId::ClientId(self.integrity_data.my_client_id())))
+            .value_or_insert_with(|| {
+                BlockInfo::new_unknown(MaybeClientId::ClientId(self.integrity_data.my_client_id()))
+            })
             .mark_block_as_deleted();
         Ok(remove_result)
     }
@@ -436,8 +441,8 @@ mod tests {
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
     use crate::blockstore::tests::Fixture;
     use crate::utils::async_drop::SyncDrop;
-    use tempdir::TempDir;
     use std::num::NonZeroU32;
+    use tempdir::TempDir;
 
     use crate::instantiate_blockstore_tests;
 
@@ -467,7 +472,9 @@ mod tests {
                         .path()
                         .join("integrity_file")
                         .to_path_buf(),
-                    ClientId { id: NonZeroU32::new(1).unwrap() },
+                    ClientId {
+                        id: NonZeroU32::new(1).unwrap(),
+                    },
                     IntegrityConfig {
                         allow_integrity_violations: ALLOW_INTEGRITY_VIOLATIONS,
                         missing_block_is_integrity_violation: MISSING_BLOCK_IS_INTEGRITY_VIOLATION,

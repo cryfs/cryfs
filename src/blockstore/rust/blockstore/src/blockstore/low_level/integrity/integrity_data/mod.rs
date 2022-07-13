@@ -12,7 +12,7 @@ mod serialization;
 
 pub use integrity_violation_error::IntegrityViolationError;
 pub use known_block_versions::{
-    BlockInfo, BlockVersion, BlockVersionTransaction, MaybeClientId, ClientId, KnownBlockVersions,
+    BlockInfo, BlockVersion, BlockVersionTransaction, ClientId, KnownBlockVersions, MaybeClientId,
 };
 
 // TODO Rethink serialization. It's weird to have a KnownBlockVersions object wrapped in an IntegrityData object just because parts are serialized to different files. Merge them.
@@ -110,8 +110,8 @@ impl AsyncDrop for IntegrityData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
     use std::num::NonZeroU32;
+    use tempdir::TempDir;
 
     use crate::blockstore::tests::blockid;
     use crate::utils::async_drop::SyncDrop;
@@ -185,7 +185,9 @@ mod tests {
     }
 
     fn clientid(id: u32) -> ClientId {
-        ClientId { id: NonZeroU32::new(id).unwrap() }
+        ClientId {
+            id: NonZeroU32::new(id).unwrap(),
+        }
     }
 
     fn version(version: u64) -> BlockVersion {
@@ -197,7 +199,9 @@ mod tests {
         let fixture = Fixture::new();
         let mut obj = fixture.make_obj(clientid(1));
 
-        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(5))
+            .await
+            .unwrap();
         assert_eq!(
             MaybeClientId::ClientId(clientid(1)),
             get_last_update_client_id(&obj, blockid(0)).await
@@ -210,8 +214,12 @@ mod tests {
         let fixture = Fixture::new();
         let mut obj = fixture.make_obj(clientid(1));
 
-        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
-        set_version(&mut obj, blockid(0), clientid(2), version(3)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(5))
+            .await
+            .unwrap();
+        set_version(&mut obj, blockid(0), clientid(2), version(3))
+            .await
+            .unwrap();
         assert_eq!(
             Some(version(5)),
             get_version_for_client(&obj, blockid(0), clientid(1)).await
@@ -227,8 +235,12 @@ mod tests {
         let fixture = Fixture::new();
         let mut obj = fixture.make_obj(clientid(1));
 
-        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
-        set_version(&mut obj, blockid(1), clientid(1), version(3)).await.unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(5))
+            .await
+            .unwrap();
+        set_version(&mut obj, blockid(1), clientid(1), version(3))
+            .await
+            .unwrap();
         assert_eq!(
             Some(version(5)),
             get_version_for_client(&obj, blockid(0), clientid(1)).await
@@ -244,12 +256,13 @@ mod tests {
         let fixture = Fixture::new();
         let mut obj = fixture.make_obj(clientid(1));
 
-        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
-        set_version(&mut obj, blockid(0), clientid(1), version(6)).await.unwrap();
-        assert_eq!(
-            Some(version(6)),
-            get_version(&obj, blockid(0)).await
-        );
+        set_version(&mut obj, blockid(0), clientid(1), version(5))
+            .await
+            .unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(6))
+            .await
+            .unwrap();
+        assert_eq!(Some(version(6)), get_version(&obj, blockid(0)).await);
     }
 
     #[tokio::test]
@@ -257,11 +270,12 @@ mod tests {
         let fixture = Fixture::new();
         let mut obj = fixture.make_obj(clientid(1));
 
-        set_version(&mut obj, blockid(0), clientid(1), version(5)).await.unwrap();
-        set_version(&mut obj, blockid(0), clientid(1), version(4)).await.unwrap_err();
-        assert_eq!(
-            Some(version(5)),
-            get_version(&obj, blockid(0)).await
-        );
+        set_version(&mut obj, blockid(0), clientid(1), version(5))
+            .await
+            .unwrap();
+        set_version(&mut obj, blockid(0), clientid(1), version(4))
+            .await
+            .unwrap_err();
+        assert_eq!(Some(version(5)), get_version(&obj, blockid(0)).await);
     }
 }

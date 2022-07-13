@@ -11,7 +11,9 @@ use crate::utils::binary::{
 };
 use crate::utils::containers::HashMapExt;
 
-use super::known_block_versions::{BlockInfo, MaybeClientId, BlockVersion, ClientId, KnownBlockVersions};
+use super::known_block_versions::{
+    BlockInfo, BlockVersion, ClientId, KnownBlockVersions, MaybeClientId,
+};
 
 const FORMAT_VERSION_HEADER: &[u8] = b"cryfs.integritydata.knownblockversions;1";
 
@@ -63,7 +65,9 @@ impl From<KnownBlockVersionsSerialized> for KnownBlockVersions {
             let mut block_info = block_infos.try_lock(block_id).expect(
                 "We're just creating this object, nobody else has access. Locking can't fail",
             );
-            let block_info = block_info.value_or_insert_with(|| BlockInfo::new_unknown(MaybeClientId::ClientId(client_id)));
+            let block_info = block_info.value_or_insert_with(|| {
+                BlockInfo::new_unknown(MaybeClientId::ClientId(client_id))
+            });
             HashMapExt::try_insert(
                 &mut block_info.known_block_versions,
                 client_id,
