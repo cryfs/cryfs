@@ -308,7 +308,6 @@ impl Default for KnownBlockVersions {
 }
 
 impl KnownBlockVersions {
-    // TODO Test
     pub fn load_or_default(file_path: &Path) -> Result<Self> {
         if let Some(serialized) = KnownBlockVersionsSerialized::deserialize_from_file(file_path)? {
             Ok(serialized.into())
@@ -317,14 +316,12 @@ impl KnownBlockVersions {
         }
     }
 
-    // TODO Test
     pub async fn save(self, file_path: &Path) -> Result<()> {
         KnownBlockVersionsSerialized::async_from(self)
             .await
             .serialize_to_file(file_path)
     }
 
-    // TODO Test
     pub async fn lock_block_info(
         &self,
         block_id: BlockId,
@@ -352,6 +349,7 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
     use crate::blockstore::tests::blockid;
+    use crate::utils::testutils::assert_unordered_vec_eq;
 
     use common_macros::hash_map;
 
@@ -1147,5 +1145,120 @@ mod tests {
         }
 
         // TODO Test check_and_update on deleted blocks
+    }
+
+    mod save_and_load {
+        use super::*;
+
+        #[test]
+        fn test_givenNoFile_whenLoading_thenReturnsDefault() {
+            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let nonexisting_path = tempdir.path().join("not-existing");
+            let loaded = KnownBlockVersions::load_or_default(&nonexisting_path).unwrap();
+            assert_eq!(
+                false,
+                loaded
+                    .integrity_violation_in_previous_run
+                    .load(Ordering::SeqCst)
+            );
+            assert_eq!(Vec::<BlockId>::new(), loaded.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_givenEmptyObject_withNoPreviousViolation_whenSavingAndLoading_thenSucceeds() {
+            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let filepath = tempdir.path().join("file");
+            let obj = KnownBlockVersions::default();
+
+            obj.save(&filepath).await.unwrap();
+            let loaded = KnownBlockVersions::load_or_default(&filepath).unwrap();
+            assert_eq!(
+                false,
+                loaded
+                    .integrity_violation_in_previous_run
+                    .load(Ordering::SeqCst)
+            );
+            assert_eq!(Vec::<BlockId>::new(), loaded.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_givenEmptyObject_withPreviousViolation_whenSavingAndLoading_thenSucceeds() {
+            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let filepath = tempdir.path().join("file");
+            let obj = KnownBlockVersions::default();
+            obj.set_integrity_violation_in_previous_run();
+
+            obj.save(&filepath).await.unwrap();
+            let loaded = KnownBlockVersions::load_or_default(&filepath).unwrap();
+            assert_eq!(
+                true,
+                loaded
+                    .integrity_violation_in_previous_run
+                    .load(Ordering::SeqCst)
+            );
+            assert_eq!(Vec::<BlockId>::new(), loaded.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_givenNonEmptyObject_whenSavingAndLoading_thenSucceeds() {
+            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let filepath = tempdir.path().join("file");
+            let obj = KnownBlockVersions::default();
+            obj.lock_block_info(blockid(1))
+                .await
+                .try_insert(BlockInfo::new(
+                    MaybeClientId::ClientId(clientid(2)),
+                    hash_map! {
+                        clientid(1) => version(5),
+                        clientid(2) => version(3),
+                        clientid(5) => version(6),
+                    },
+                ))
+                .unwrap();
+            obj.lock_block_info(blockid(2))
+                .await
+                .try_insert(BlockInfo::new(
+                    MaybeClientId::BlockWasDeleted,
+                    hash_map! {
+                        clientid(1) => version(3),
+                        clientid(2) => version(8),
+                        clientid(5) => version(2),
+                    },
+                ))
+                .unwrap();
+
+            obj.save(&filepath).await.unwrap();
+            let loaded = KnownBlockVersions::load_or_default(&filepath).unwrap();
+
+            assert_unordered_vec_eq(vec![blockid(1), blockid(2)], loaded.existing_blocks());
+            let block_info = loaded.lock_block_info(blockid(1)).await;
+            assert_eq!(
+                MaybeClientId::ClientId(clientid(2)),
+                block_info.value().unwrap().last_update_client_id,
+            );
+            assert_versions_are(
+                &block_info.value().unwrap(),
+                hash_map! {
+                    clientid(1) => version(5),
+                    clientid(2) => version(3),
+                    clientid(5) => version(6),
+                },
+            );
+            let block_info = loaded.lock_block_info(blockid(2)).await;
+            assert_eq!(
+                MaybeClientId::BlockWasDeleted,
+                block_info.value().unwrap().last_update_client_id,
+            );
+            assert_versions_are(
+                &block_info.value().unwrap(),
+                hash_map! {
+                    clientid(1) => version(3),
+                    clientid(2) => version(8),
+                    clientid(5) => version(2),
+                },
+            );
+        }
+
+        // TODO BC test that uses a base64 serialized file and checks that it is is still parseable
     }
 }
