@@ -2,7 +2,7 @@ use std::collections::hash_set::HashSet;
 use std::path::PathBuf;
 use thiserror::Error;
 
-use super::{BlockVersion, MaybeClientId, ClientId};
+use super::{BlockVersion, ClientId, MaybeClientId};
 use crate::blockstore::BlockId;
 
 #[derive(Error, Debug)]
