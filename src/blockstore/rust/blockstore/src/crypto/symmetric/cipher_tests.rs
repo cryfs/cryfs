@@ -72,6 +72,17 @@ mod enc_dec {
     }
 
     #[test]
+    fn given_toosmallciphertext_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
+        let enc_cipher = Enc::new(key(1));
+        let dec_cipher = Dec::new(key(1));
+        let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
+        let ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
+        let ciphertext = &ciphertext[..(ciphertext.len() - 1)];
+        let decrypted_plaintext = dec_cipher.decrypt(ciphertext.to_vec().into());
+        assert!(decrypted_plaintext.is_err());
+    }
+
+    #[test]
     fn given_differentkey_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
         let enc_cipher = Enc::new(key(1));
         let dec_cipher = Dec::new(key(2));
@@ -138,6 +149,31 @@ mod basics {
             ciphertext.len(),
             plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX
         );
+    }
+
+    #[test]
+    fn given_zerosizeciphertext_then_doesntdecrypt<C: Cipher>() {
+        let cipher = C::new(key(1));
+        let ciphertext = vec![];
+        let decrypted_plaintext = cipher.decrypt(ciphertext.into());
+        assert!(decrypted_plaintext.is_err());
+    }
+
+    #[test]
+    fn given_toosmallciphertext_then_doesntdecrypt<C: Cipher>() {
+        let cipher = C::new(key(1));
+        let ciphertext = vec![0xab, 0xcd];
+        let decrypted_plaintext = cipher.decrypt(ciphertext.into());
+        assert!(decrypted_plaintext.is_err());
+    }
+
+    #[test]
+    fn test_encryption_is_indeterministic<C: Cipher>() {
+        let cipher = C::new(key(1));
+        let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
+        let ciphertext1 = cipher.encrypt(plaintext.clone().into()).unwrap();
+        let ciphertext2 = cipher.encrypt(plaintext.clone().into()).unwrap();
+        assert_ne!(ciphertext1, ciphertext2);
     }
 
     #[instantiate_tests(<XChaCha20Poly1305>)]

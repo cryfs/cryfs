@@ -1,7 +1,6 @@
 project (cpp-utils-test)
 
 set(SOURCES
-    crypto/symmetric/CipherTest.cpp
     crypto/kdf/SCryptTest.cpp
     crypto/kdf/SCryptParametersTest.cpp
     crypto/hash/HashTest.cpp

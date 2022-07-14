@@ -2,7 +2,7 @@
 //! on CPUs that are new enough to have that support. If the CPU doesn't support it, then `Aes256Gcm::new()`
 //! will return an error.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use generic_array::typenum::U32;
 use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
 use std::sync::Once;
@@ -76,6 +76,7 @@ impl Cipher for Aes256Gcm {
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
+        ensure!(ciphertext.len() > Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
         let ciphertext_len = ciphertext.len();
         let (nonce, rest) = ciphertext
             .as_mut()
