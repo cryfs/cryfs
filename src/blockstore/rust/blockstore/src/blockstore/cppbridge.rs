@@ -12,6 +12,7 @@ use super::low_level::{
     encrypted::EncryptedBlockStore,
     inmemory::InMemoryBlockStore,
     integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
+    readonly::ReadOnlyBlockStore,
     ondisk::OnDiskBlockStore,
     BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, OptimizedBlockStoreWriter,
 };
@@ -67,6 +68,15 @@ mod ffi {
 
         fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
         fn new_locking_integrity_encrypted_ondisk_blockstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+            basedir: &str,
+        ) -> Result<Box<RustBlockStoreBridge>>;
+        fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
             integrity_file_path: &str,
             my_client_id: u32,
             allow_integrity_violations: bool,
@@ -592,6 +602,31 @@ fn new_locking_integrity_encrypted_ondisk_blockstore(
             cipher_name,
             encryption_key_hex,
             OnDiskBlockStore::new(Path::new(basedir).to_path_buf()),
+        )
+    })
+}
+
+fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    basedir: &str,
+) -> Result<Box<RustBlockStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        _new_locking_integrity_encrypted_blockstore(
+            integrity_file_path,
+            my_client_id,
+            allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            cipher_name,
+            encryption_key_hex,
+            ReadOnlyBlockStore::new(OnDiskBlockStore::new(Path::new(basedir).to_path_buf())),
         )
     })
 }

@@ -2,10 +2,8 @@
 #include <boost/filesystem.hpp>
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
-#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <blockstore/implementations/readonly/ReadOnlyBlockStore2.h>
-#include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
-#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
+#include <blockstore/implementations/rustbridge/RustBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
@@ -31,10 +29,7 @@ using boost::filesystem::path;
 using namespace cryfs;
 using namespace cpputils;
 using namespace blockstore;
-using namespace blockstore::ondisk;
 using namespace blockstore::readonly;
-using namespace blockstore::integrity;
-using namespace blockstore::lowtohighlevel;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
@@ -56,16 +51,15 @@ void printNode(unique_ref<DataNode> node) {
 }
 
 unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
-    auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>(basedir);
-    auto readOnlyBlockStore = make_unique_ref<ReadOnlyBlockStore2>(std::move(onDiskBlockStore));
-    auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(readOnlyBlockStore), config.configFile->config()->EncryptionKey());
-    auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
-    auto integrityFilePath = statePath / "integritydata";
-    auto onIntegrityViolation = [] () {
-        std::cerr << "Warning: Integrity violation encountered" << std::endl;
-    };
-    auto integrityBlockStore = make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, config.myClientId, false, true, onIntegrityViolation);
-    return make_unique_ref<LowToHighLevelBlockStore>(std::move(integrityBlockStore));
+  auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
+  auto integrityFilePath = statePath / "integritydata";
+  return make_unique_ref<blockstore::rust::RustBlockStore>(
+    // TODO 
+    //   auto onIntegrityViolation = [] () {
+    //     std::cerr << "Warning: Integrity violation encountered" << std::endl;
+    //   };
+    blockstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_blockstore(integrityFilePath.c_str(), config.myClientId, false, true, config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str())
+  );
 }
 
 struct AccumulateBlockIds final {

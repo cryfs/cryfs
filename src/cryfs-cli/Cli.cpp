@@ -1,6 +1,5 @@
 #include "Cli.h"
 
-#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -36,7 +35,6 @@ using namespace cryfs;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
 
-using blockstore::ondisk::OnDiskBlockStore2;
 using program_options::ProgramOptions;
 
 using cpputils::make_unique_ref;

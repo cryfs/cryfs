@@ -54,3 +54,23 @@ where
         _ => panic!("Unknown cipher: {}", cipher_name),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct DummyCallback;
+    impl CipherCallback for DummyCallback {
+        type Result = ();
+        fn callback<C: Cipher + Send + Sync + 'static>(self) -> Self::Result {
+            ()
+        }
+    }
+
+    #[test]
+    fn finds_all_available_ciphers() {
+        for cipher_name in ["xchacha20-poly1305", "aes-256-gcm", "aes-128-gcm"] {
+            lookup_cipher(cipher_name, DummyCallback);
+        }
+    }
+}

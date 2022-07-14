@@ -63,7 +63,8 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "variant": "cpp",
-        "any": "cpp"
+        "any": "cpp",
+        "numeric": "cpp"
     },
     "rust-analyzer.linkedProjects": [
         "src/blockstore/rust/Cargo.toml"

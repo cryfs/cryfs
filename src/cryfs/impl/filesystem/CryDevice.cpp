@@ -1,5 +1,3 @@
-#include <blockstore/implementations/caching/CachingBlockStore2.h>
-#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
@@ -11,9 +9,6 @@
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
-#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
-#include <blockstore/implementations/encrypted/EncryptedBlockStore2.h>
-#include <blockstore/implementations/integrity/IntegrityBlockStore2.h>
 #include <blockstore/implementations/rustbridge/RustBlockStore.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
@@ -34,11 +29,7 @@ using fspp::fuse::FuseErrnoException;
 using blockstore::BlockStore2;
 using blockstore::BlockId;
 using blobstore::BlobStore;
-using blockstore::lowtohighlevel::LowToHighLevelBlockStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
-using blockstore::caching::CachingBlockStore2;
-using blockstore::ondisk::OnDiskBlockStore2;
-using blockstore::integrity::IntegrityBlockStore2;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -353,10 +344,10 @@ BlockId CryDevice::GetOrCreateRootBlobId(CryConfigFile *configFile) {
   return BlockId::FromString(root_blockId);
 }
 
-cpputils::unique_ref<blockstore::BlockStore2> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore2> baseBlockStore) {
-  //TODO Test that CryFS is using the specified cipher
-  return CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(baseBlockStore), config.EncryptionKey());
-}
+// cpputils::unique_ref<blockstore::BlockStore2> CryDevice::CreateEncryptedBlockStore(const CryConfig &config, unique_ref<BlockStore2> baseBlockStore) {
+//   //TODO Test that CryFS is using the specified cipher
+//   return CryCiphers::find(config.Cipher()).createEncryptedBlockstore(std::move(baseBlockStore), config.EncryptionKey());
+// }
 
 void CryDevice::onFsAction(std::function<void()> callback) {
   _onFsAction.push_back(callback);
