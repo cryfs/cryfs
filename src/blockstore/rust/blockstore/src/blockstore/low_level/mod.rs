@@ -145,8 +145,6 @@ pub enum RemoveResult {
     NotRemovedBecauseItDoesntExist,
 }
 
-mod async_drop_guard;
-pub mod caching;
 pub mod encrypted;
 pub mod inmemory;
 pub mod integrity;
