@@ -41,6 +41,7 @@ binary_layout::define_layout!(block_layout, LittleEndian, {
 const HEADER_SIZE: usize = block_layout::data::OFFSET;
 
 pub struct IntegrityConfig {
+    // TODO enums instead of bool
     pub allow_integrity_violations: bool,
     pub missing_block_is_integrity_violation: bool,
     pub on_integrity_violation: Box<dyn Sync + Send + Fn(&IntegrityViolationError)>,
@@ -436,7 +437,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
 }
 
 #[cfg(test)]
-mod tests {
+mod generic_tests {
     use super::*;
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
     use crate::blockstore::tests::Fixture;
@@ -527,5 +528,634 @@ mod tests {
                 .unwrap()
         );
         assert!(store.block_size_from_physical_block_size(0).is_err());
+    }
+}
+
+#[cfg(test)]
+mod specialized_tests {
+    #![allow(non_snake_case)]
+
+    use super::integrity_data::testutils::{clientid, version};
+    use super::*;
+    use crate::blockstore::low_level::{
+        inmemory::InMemoryBlockStore, shared::SharedBlockStore, BlockStoreWriter,
+    };
+    use crate::blockstore::tests::{blockid, data};
+    use crate::utils::async_drop::SyncDrop;
+    use common_macros::hash_set;
+    use futures::future::BoxFuture;
+    use std::num::NonZeroU32;
+    use std::sync::{Arc, Mutex};
+    use tempdir::TempDir;
+
+    struct Fixture {
+        underlying: SyncDrop<SharedBlockStore<InMemoryBlockStore>>,
+        integrity_file_dir: TempDir,
+        integrity_violation_triggered: Arc<Mutex<Option<IntegrityViolationError>>>,
+    }
+
+    impl Fixture {
+        fn new() -> Self {
+            Self {
+                underlying: SyncDrop::new(SharedBlockStore::new(InMemoryBlockStore::new())),
+                integrity_file_dir: TempDir::new("test").unwrap(),
+                integrity_violation_triggered: Arc::new(Mutex::new(None)),
+            }
+        }
+
+        fn store(
+            &self,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+        ) -> SyncDrop<IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>> {
+            let integrity_violation_triggered = Arc::clone(&self.integrity_violation_triggered);
+            SyncDrop::new(
+                IntegrityBlockStore::new(
+                    SharedBlockStore::clone(self.underlying.inner()),
+                    self.integrity_file_dir
+                        .path()
+                        .join("integrity_file")
+                        .to_path_buf(),
+                    clientid(1),
+                    IntegrityConfig {
+                        allow_integrity_violations,
+                        missing_block_is_integrity_violation,
+                        on_integrity_violation: Box::new(move |err| {
+                            *integrity_violation_triggered.lock().unwrap() = Some(err.clone());
+                        }),
+                    },
+                )
+                .unwrap(),
+            )
+        }
+
+        async fn modify_block(
+            &self,
+            store: &IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+            id: &BlockId,
+        ) {
+            let mut data = store.load(id).await.unwrap().unwrap();
+            data[0] += 1;
+            store.store(id, &data).await.unwrap();
+        }
+
+        async fn modify_block_id_header(&self, id: &BlockId, modified_block_id: &BlockId) {
+            let mut data = self.underlying.load(id).await.unwrap().unwrap();
+            let mut view = block_layout::View::new(&mut data);
+            view.block_id_mut()
+                .copy_from_slice(modified_block_id.data());
+            self.underlying.store(id, &data).await.unwrap();
+        }
+
+        async fn load_base_block(&self, id: &BlockId) -> Data {
+            self.underlying.load(id).await.unwrap().unwrap()
+        }
+
+        async fn rollback_base_block(&self, id: &BlockId, data: &[u8]) {
+            self.underlying.store(id, data).await.unwrap()
+        }
+
+        async fn decrease_version_number(&self, id: &BlockId) {
+            let mut data = self.underlying.load(id).await.unwrap().unwrap();
+            let mut view = block_layout::View::new(&mut data);
+            let old_version = view.block_version().read();
+            assert!(
+                old_version > BlockVersion { version: 1 },
+                "Can't decrease the lowest allowed version number"
+            );
+            view.block_version_mut().write(BlockVersion {
+                version: old_version.version - 1,
+            });
+            self.underlying.store(id, &data).await.unwrap();
+        }
+
+        async fn increase_version_number(&self, id: &BlockId) {
+            let mut data = self.underlying.load(id).await.unwrap().unwrap();
+            let mut view = block_layout::View::new(&mut data);
+            let old_version = view.block_version().read();
+            view.block_version_mut().write(BlockVersion {
+                version: old_version.version + 1,
+            });
+            self.underlying.store(id, &data).await.unwrap();
+        }
+
+        async fn change_client_id(&self, id: &BlockId) {
+            let mut data = self.underlying.load(id).await.unwrap().unwrap();
+            let mut view = block_layout::View::new(&mut data);
+            let old_client_id = view.last_update_client_id().read().id.get();
+            view.last_update_client_id_mut().write(ClientId {
+                id: NonZeroU32::new(old_client_id + 1).unwrap(),
+            });
+            self.underlying.store(id, &data).await.unwrap();
+        }
+
+        async fn delete_base_block(&self, id: &BlockId) {
+            assert_eq!(
+                RemoveResult::SuccessfullyRemoved,
+                self.underlying.remove(id).await.unwrap()
+            );
+        }
+
+        async fn insert_base_block(&self, id: &BlockId, data: &Data) {
+            assert_eq!(
+                TryCreateResult::SuccessfullyCreated,
+                self.underlying.try_create(id, data).await.unwrap()
+            );
+        }
+
+        fn assert_integrity_violation_triggered(&self, expected: &IntegrityViolationError) {
+            assert_eq!(
+                Some(expected),
+                self.integrity_violation_triggered.lock().unwrap().as_ref(),
+            );
+        }
+
+        fn assert_integrity_violation_didnt_trigger(&self) {
+            assert_eq!(None, *self.integrity_violation_triggered.lock().unwrap());
+        }
+    }
+
+    async fn create_block_return_key(
+        store: &IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+        data: &[u8],
+    ) -> BlockId {
+        let mut id_seed = 0;
+        loop {
+            id_seed += 1;
+            let blockid = blockid(id_seed);
+            if TryCreateResult::SuccessfullyCreated
+                == store.try_create(&blockid, data).await.unwrap()
+            {
+                return blockid;
+            }
+        }
+    }
+
+    async fn remove_block(
+        store: &IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+        blockid: &BlockId,
+    ) {
+        assert_eq!(
+            RemoveResult::SuccessfullyRemoved,
+            store.remove(&blockid).await.unwrap()
+        );
+    }
+
+    async fn list_all_blocks(
+        store: &IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+    ) -> Result<HashSet<BlockId>> {
+        store.all_blocks().await?.try_collect().await
+    }
+
+    enum ExpectedIntegrityViolation {
+        Always(IntegrityViolationError),
+        OnlyIfMissingBlocksAreAnIntegrityViolation(IntegrityViolationError),
+        NoIntegrityViolation,
+    }
+
+    /// Runs `setup`() and afterwards tests that running `action` will:
+    /// - Trigger `expected_integrity_violation` if the block store is set up with allow_integrity_violations=false
+    /// - Doesn't trigger an error if the block store is set up with allow_integrity_violations=true
+    /// - Depending on the `expected_integrity_violation` being `Always` or `OnlyIfMissingBlocksAreAnIntegrityViolation`, tests that
+    ///   missing_block_is_integrity_violation=true/false correctly triggers or doesn't trigger the violation.
+    async fn run_test<Context, SetupFn, ActionFn>(
+        setup: SetupFn,
+        action: ActionFn,
+        expected_integrity_violation: impl Fn(&Context) -> ExpectedIntegrityViolation,
+    ) where
+        for<'a> SetupFn: Fn(
+            &'a Fixture,
+            &'a IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+        ) -> BoxFuture<'a, Context>,
+        for<'a> ActionFn: Fn(
+            &'a Context,
+            &'a Fixture,
+            &'a IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
+        ) -> BoxFuture<'a, Result<()>>,
+    {
+        let assert_error = |fixture: &Fixture, result: Result<()>, expected_error| {
+            assert_eq!(
+                expected_error,
+                result
+                    .unwrap_err()
+                    .downcast::<IntegrityViolationError>()
+                    .unwrap()
+            );
+            fixture.assert_integrity_violation_triggered(&expected_error);
+        };
+        let assert_no_error = |fixture: &Fixture, result: Result<()>| {
+            result.unwrap();
+            fixture.assert_integrity_violation_didnt_trigger();
+        };
+        // Test the integrity violation triggers when violations aren't allowed
+        {
+            let fixture = Fixture::new();
+            let store = fixture.store(false, true);
+            let context = setup(&fixture, &store).await;
+            fixture.assert_integrity_violation_didnt_trigger();
+            let result = action(&context, &fixture, &store).await;
+            match expected_integrity_violation(&context) {
+                ExpectedIntegrityViolation::Always(expected_error) => {
+                    assert_error(&fixture, result, expected_error)
+                }
+                ExpectedIntegrityViolation::OnlyIfMissingBlocksAreAnIntegrityViolation(
+                    expected_error,
+                ) => assert_error(&fixture, result, expected_error),
+                ExpectedIntegrityViolation::NoIntegrityViolation => {
+                    assert_no_error(&fixture, result)
+                }
+            }
+        }
+        {
+            let fixture = Fixture::new();
+            let store = fixture.store(false, false);
+            let context = setup(&fixture, &store).await;
+            fixture.assert_integrity_violation_didnt_trigger();
+            let result = action(&context, &fixture, &store).await;
+            match expected_integrity_violation(&context) {
+                ExpectedIntegrityViolation::Always(expected_error) => {
+                    assert_error(&fixture, result, expected_error)
+                }
+                ExpectedIntegrityViolation::OnlyIfMissingBlocksAreAnIntegrityViolation(
+                    _expected_error,
+                ) => assert_no_error(&fixture, result),
+                ExpectedIntegrityViolation::NoIntegrityViolation => {
+                    assert_no_error(&fixture, result)
+                }
+            }
+        }
+
+        // Test the integrity violation doesn't trigger when violations are allowed
+        {
+            let fixture = Fixture::new();
+            let store = fixture.store(true, true);
+            let context = setup(&fixture, &store).await;
+            fixture.assert_integrity_violation_didnt_trigger();
+            let result = action(&context, &fixture, &store).await;
+            assert_no_error(&fixture, result);
+        }
+        {
+            let fixture = Fixture::new();
+            let store = fixture.store(true, false);
+            let context = setup(&fixture, &store).await;
+            let result = action(&context, &fixture, &store).await;
+            assert_no_error(&fixture, result);
+        }
+    }
+
+    #[tokio::test]
+    async fn rolling_back_block() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    let old_base_block = fixture.load_base_block(&blockid).await;
+                    fixture.modify_block(&store, &blockid).await;
+                    fixture.rollback_base_block(&blockid, &old_base_block).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert!(loaded.is_some());
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::Always(IntegrityViolationError::RollBack {
+                    block,
+                    from_client: MaybeClientId::ClientId(clientid(1)),
+                    to_client: clientid(1),
+                    from_client_last_seen_version: Some(version(2)),
+                    to_client_last_seen_version: version(2),
+                    actual_version: version(1),
+                })
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn decreasing_version_number_for_same_client() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    fixture.modify_block(&store, &blockid).await;
+                    fixture.decrease_version_number(&blockid).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert!(loaded.is_some());
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::Always(IntegrityViolationError::RollBack {
+                    block,
+                    from_client: MaybeClientId::ClientId(clientid(1)),
+                    to_client: clientid(1),
+                    from_client_last_seen_version: Some(version(2)),
+                    to_client_last_seen_version: version(2),
+                    actual_version: version(1),
+                })
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn decreasing_version_number_but_switching_to_different_client_for_which_the_version_is_increasing(
+    ) {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    fixture.modify_block(&store, &blockid).await;
+                    let old_block_our_client = fixture.load_base_block(&blockid).await;
+                    // Simulate a valid change by a different client by changing the client id
+                    fixture.change_client_id(&blockid).await;
+                    fixture.decrease_version_number(&blockid).await;
+                    store.load(&blockid).await.unwrap().unwrap();
+                    let old_block_other_client = fixture.load_base_block(&blockid).await;
+                    // Switch back to our client
+                    fixture
+                        .rollback_base_block(&blockid, &old_block_our_client)
+                        .await;
+                    fixture.increase_version_number(&blockid).await;
+                    fixture.increase_version_number(&blockid).await;
+                    fixture.increase_version_number(&blockid).await;
+                    store.load(&blockid).await.unwrap().unwrap();
+                    // Switch back to previous client which is on a lower version number
+                    fixture
+                        .rollback_base_block(&blockid, &old_block_other_client)
+                        .await;
+                    fixture.increase_version_number(&blockid).await;
+
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert!(loaded.is_some());
+                    Ok(())
+                })
+            },
+            |&_block| ExpectedIntegrityViolation::NoIntegrityViolation,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn decreasing_version_number_but_switching_to_new_client() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    fixture.modify_block(&store, &blockid).await;
+                    // Simulate a valid change by a different client by changing the client id
+                    fixture.change_client_id(&blockid).await;
+                    fixture.decrease_version_number(&blockid).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert!(loaded.is_some());
+                    Ok(())
+                })
+            },
+            |&_block| ExpectedIntegrityViolation::NoIntegrityViolation,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn rolling_back_to_previous_client_without_increasing_version() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    // Increase the version number
+                    fixture.increase_version_number(&blockid).await;
+                    fixture.increase_version_number(&blockid).await;
+                    fixture.increase_version_number(&blockid).await;
+                    store.load(&blockid).await.unwrap().unwrap();
+
+                    let old_base_block = fixture.load_base_block(&blockid).await;
+
+                    // Fake a modification by a different client with lower version numbers
+                    fixture.decrease_version_number(&blockid).await;
+                    fixture.decrease_version_number(&blockid).await;
+                    fixture.change_client_id(&blockid).await;
+                    store.load(&blockid).await.unwrap().unwrap();
+
+                    // Rollback to old client without increasing its version number
+                    fixture.rollback_base_block(&blockid, &old_base_block).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert_eq!(Some(data(1024, 1)), loaded);
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::Always(IntegrityViolationError::RollBack {
+                    block,
+                    from_client: MaybeClientId::ClientId(clientid(2)),
+                    to_client: clientid(1),
+                    from_client_last_seen_version: Some(version(2)),
+                    to_client_last_seen_version: version(4),
+                    actual_version: version(4),
+                })
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn reintroducing_deleted_block_with_same_version_number() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    let old_base_block = fixture.load_base_block(&blockid).await;
+                    remove_block(&store, &blockid).await;
+                    fixture.insert_base_block(&blockid, &old_base_block).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert_eq!(Some(data(1024, 1)), loaded);
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::Always(IntegrityViolationError::RollBack {
+                    block,
+                    from_client: MaybeClientId::BlockWasDeleted,
+                    to_client: clientid(1),
+                    from_client_last_seen_version: None,
+                    to_client_last_seen_version: version(1),
+                    actual_version: version(1),
+                })
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn reintroducing_deleted_block_with_increased_version_number() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    let old_base_block = fixture.load_base_block(&blockid).await;
+                    remove_block(&store, &blockid).await;
+                    fixture.insert_base_block(&blockid, &old_base_block).await;
+                    fixture.increase_version_number(&blockid).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert_eq!(Some(data(1024, 1)), loaded);
+                    Ok(())
+                })
+            },
+            |&_block| ExpectedIntegrityViolation::NoIntegrityViolation,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn loading_missing_block() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    fixture.delete_base_block(&blockid).await;
+                    blockid
+                })
+            },
+            |blockid, _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert_eq!(None, loaded);
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::OnlyIfMissingBlocksAreAnIntegrityViolation(
+                    IntegrityViolationError::MissingBlock { block },
+                )
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn listing_blocks_with_one_missing_block() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    fixture.delete_base_block(&blockid).await;
+                    blockid
+                })
+            },
+            |_blockid, _fixture, store| {
+                Box::pin(async move {
+                    let all_blocks = list_all_blocks(&store).await?;
+                    assert_eq!(hash_set! {}, all_blocks);
+                    Ok(())
+                })
+            },
+            |&block| {
+                ExpectedIntegrityViolation::OnlyIfMissingBlocksAreAnIntegrityViolation(
+                    IntegrityViolationError::MissingBlocks {
+                        blocks: hash_set! {block},
+                    },
+                )
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn listing_blocks_with_multiple_missing_blocks() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid1 = create_block_return_key(&store, &data(1024, 1)).await;
+                    let blockid2 = create_block_return_key(&store, &data(1024, 2)).await;
+                    let blockid3 = create_block_return_key(&store, &data(1024, 3)).await;
+                    let blockid4 = create_block_return_key(&store, &data(1024, 4)).await;
+                    fixture.delete_base_block(&blockid2).await;
+                    fixture.delete_base_block(&blockid3).await;
+                    fixture.delete_base_block(&blockid4).await;
+                    (blockid1, blockid2, blockid3, blockid4)
+                })
+            },
+            |(blockid1, _blockid2, _blockid3, _blockid4), _fixture, store| {
+                Box::pin(async move {
+                    let all_blocks = list_all_blocks(&store).await?;
+                    assert_eq!(hash_set! {*blockid1}, all_blocks);
+                    Ok(())
+                })
+            },
+            |&(_blockid1, blockid2, blockid3, blockid4)| {
+                ExpectedIntegrityViolation::OnlyIfMissingBlocksAreAnIntegrityViolation(
+                    IntegrityViolationError::MissingBlocks {
+                        blocks: hash_set! {blockid2, blockid3, blockid4},
+                    },
+                )
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn load_block_with_wrong_block_id() {
+        run_test(
+            |fixture, store| {
+                Box::pin(async move {
+                    let blockid = create_block_return_key(&store, &data(1024, 1)).await;
+                    let mut modified_block_id = blockid.data().clone();
+                    modified_block_id[0] += 1;
+                    let modified_block_id = BlockId::from_slice(&modified_block_id).unwrap();
+                    fixture
+                        .modify_block_id_header(&blockid, &modified_block_id)
+                        .await;
+                    (blockid, modified_block_id)
+                })
+            },
+            |&(blockid, _modified_block_id), _fixture, store| {
+                Box::pin(async move {
+                    let loaded = store.load(&blockid).await?;
+                    assert_eq!(Some(data(1024, 1)), loaded);
+                    Ok(())
+                })
+            },
+            |&(blockid, modified_blockid)| {
+                ExpectedIntegrityViolation::Always(IntegrityViolationError::WrongBlockId {
+                    id_from_filename: blockid,
+                    id_from_header: modified_blockid,
+                })
+            },
+        )
+        .await;
     }
 }

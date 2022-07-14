@@ -19,6 +19,10 @@ impl<T: Debug + AsyncDrop> SyncDrop<T> {
     pub fn into_inner_dont_drop(mut self) -> AsyncDropGuard<T> {
         self.0.take().expect("Already dropped")
     }
+
+    pub fn inner(&self) -> &AsyncDropGuard<T> {
+        self.0.as_ref().expect("Already dropped")
+    }
 }
 
 impl<T: Debug + AsyncDrop> Drop for SyncDrop<T> {

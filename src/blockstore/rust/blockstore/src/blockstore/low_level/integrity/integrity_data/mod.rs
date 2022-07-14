@@ -108,11 +108,27 @@ impl AsyncDrop for IntegrityData {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod testutils {
     use super::*;
     use std::num::NonZeroU32;
+
+    pub fn clientid(id: u32) -> ClientId {
+        ClientId {
+            id: NonZeroU32::new(id).unwrap(),
+        }
+    }
+
+    pub fn version(version: u64) -> BlockVersion {
+        BlockVersion { version }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
     use tempdir::TempDir;
 
+    use super::testutils::{clientid, version};
     use crate::blockstore::tests::blockid;
     use crate::utils::async_drop::SyncDrop;
 
@@ -182,16 +198,6 @@ mod tests {
             .value()
             .expect("Entry not found")
             .current_version_for_client(&client_id)
-    }
-
-    fn clientid(id: u32) -> ClientId {
-        ClientId {
-            id: NonZeroU32::new(id).unwrap(),
-        }
-    }
-
-    fn version(version: u64) -> BlockVersion {
-        BlockVersion { version }
     }
 
     #[tokio::test]
