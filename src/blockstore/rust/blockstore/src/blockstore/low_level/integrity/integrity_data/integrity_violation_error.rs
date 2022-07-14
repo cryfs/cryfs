@@ -5,17 +5,18 @@ use thiserror::Error;
 use super::{BlockVersion, ClientId, MaybeClientId};
 use crate::blockstore::BlockId;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum IntegrityViolationError {
     #[error(
-        "Integrity Violation: Tried to roll back block {block:?} from client {from_client:?} version {from_version:?} to client {to_client:?} version {to_version:?}."
+        "Integrity Violation: Tried to roll back block {block:?} from client {from_client:?} (last seen version {from_client_last_seen_version:?}) to client {to_client:?} (last seen version {to_client_last_seen_version:?}) with version {actual_version:?}."
     )]
     RollBack {
         block: BlockId,
         from_client: MaybeClientId,
         to_client: ClientId,
-        from_version: BlockVersion,
-        to_version: BlockVersion,
+        from_client_last_seen_version: Option<BlockVersion>,
+        to_client_last_seen_version: BlockVersion,
+        actual_version: BlockVersion,
     },
 
     #[error("Integrity Violation: Block {id_from_header:?} is stored as block {id_from_filename:?}. Did an attacker try to rename some blocks?")]

@@ -1,4 +1,4 @@
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Result};
 use binread::{BinRead, BinResult, ReadOptions};
 use binwrite::{BinWrite, WriterOption};
 use lockable::{HashMapOwnedGuard, LockableHashMap};
@@ -195,19 +195,24 @@ impl BlockInfo {
                 self.last_update_client_id = MaybeClientId::ClientId(client_id);
             }
             Entry::Occupied(mut known_block_versions_entry) => {
-                ensure!(
-                    //In all of the cases 1, 2, 3: the version number must not decrease
-                    (*known_block_versions_entry.get() <= version) &&
+                if
+                //In all of the cases 1, 2, 3: the version number must not decrease
+                (*known_block_versions_entry.get() > version) ||
                     // In case 3 (i.e. we see a change in client id), the version number must increase
-                    (self.last_update_client_id == MaybeClientId::ClientId(client_id) || *known_block_versions_entry.get() < version),
-                    IntegrityViolationError::RollBack {
+                    (self.last_update_client_id != MaybeClientId::ClientId(client_id) && *known_block_versions_entry.get() >= version)
+                {
+                    let to_client_last_seen_version = *known_block_versions_entry.get();
+                    let from_client = self.last_update_client_id();
+                    let from_client_last_seen_version = self.current_version();
+                    bail!(IntegrityViolationError::RollBack {
                         block: block_id,
-                        from_client: self.last_update_client_id,
+                        from_client,
+                        from_client_last_seen_version,
                         to_client: client_id,
-                        from_version: *known_block_versions_entry.get(),
-                        to_version: version,
-                    }
-                );
+                        to_client_last_seen_version,
+                        actual_version: version,
+                    });
+                }
                 known_block_versions_entry.insert(version);
                 self.last_update_client_id = MaybeClientId::ClientId(client_id);
             }
@@ -231,12 +236,10 @@ impl BlockInfo {
         }
     }
 
-    #[cfg(test)]
     pub fn last_update_client_id(&self) -> MaybeClientId {
         self.last_update_client_id
     }
 
-    #[cfg(test)]
     pub fn current_version(&self) -> Option<BlockVersion> {
         match self.last_update_client_id {
             MaybeClientId::ClientId(client_id) => self.current_version_for_client(&client_id),
@@ -244,7 +247,6 @@ impl BlockInfo {
         }
     }
 
-    #[cfg(test)]
     pub fn current_version_for_client(&self, client_id: &ClientId) -> Option<BlockVersion> {
         self.known_block_versions.get(client_id).copied()
     }
