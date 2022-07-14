@@ -149,6 +149,7 @@ pub mod encrypted;
 pub mod inmemory;
 pub mod integrity;
 pub mod ondisk;
+pub mod readonly;
 
 #[cfg(test)]
 pub mod mock;

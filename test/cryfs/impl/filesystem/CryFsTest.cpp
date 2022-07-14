@@ -2,7 +2,6 @@
 #include <cpp-utils/tempfile/TempDir.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/pointer/cast.h>
-#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/filesystem/CryDir.h>
 #include <cryfs/impl/filesystem/CryFile.h>
@@ -27,7 +26,6 @@ using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::Data;
 using cpputils::NoninteractiveConsole;
-using blockstore::ondisk::OnDiskBlockStore2;
 using boost::none;
 using cryfs::CryPresetPasswordBasedKeyProvider;
 
