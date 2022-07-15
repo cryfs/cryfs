@@ -7,32 +7,32 @@ version = "0.1.0"
 [dependencies]
 aes-gcm = {version = "^0.9.4", features = ["std"]}
 base64 = "^0.13.0"
-anyhow = "^1.0.55"
-cxx = {version = "^1.0.65", features = ["c++14"]}
+anyhow = "^1.0.58"
+cxx = {version = "^1.0.71", features = ["c++14"]}
 binary-layout = {git = "https://github.com/smessmer/binary-layout", rev = "f49fa855ab8619cd4d68a2852692d1e17f914ca6" }
 generic-array = "^0.14.5"
 hex = "^0.4.3"
-log = "^0.4.14"
+log = "^0.4.17"
 rand = "^0.8.5"
 aead = "^0.4.3"
-chacha20poly1305 = "^0.9.0"
-cipher = "^0.4.2"
+chacha20poly1305 = "^0.9.1"
+cipher = "^0.4.3"
 itertools = "^0.10.3"
 region = "^3.0.0"
 ring = "^0.16.20"
 sodiumoxide = "^0.2.7"
 static_assertions = "^1.1.0"
-sysinfo = "^0.23.2"
+sysinfo = "^0.24.6"
 errno = "^0.2.8"
 binread = {version = "^2.2.0", features = ["const_generics"]}
 binwrite = "^0.2.1"
 common_macros = "^0.1.1"
-thiserror = "^1.0.30"
-paste = "^1.0.6"
+thiserror = "^1.0.31"
+paste = "^1.0.7"
 clru = "^0.5.0"
-tokio = {version = "^1.19.2", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
-tokio-stream = {version = "^0.1.8", features = ["fs"]}
-async-trait = "^0.1.52"
+tokio = {version = "^1.20.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
+tokio-stream = {version = "^0.1.9", features = ["fs"]}
+async-trait = "^0.1.56"
 futures = "^0.3.21"
 env_logger = "^0.9.0"
 lazy_static = "^1.4.0"
@@ -40,22 +40,22 @@ lazy_static = "^1.4.0"
 lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
 # owning_ref_rs uses v0.4.1 with https://github.com/Kimundi/owning-ref-rs/pull/80 and parts of https://github.com/Kimundi/owning-ref-rs/pull/56
 owning_ref_lockable = "^0.4.2"
-tokio-util = "^0.7.0"
-lockable = {git = "https://github.com/smessmer/lockable", rev = "9a05aaf9a8cab12e4b57618f6508cfba46674489", features = ["lru"]}
+tokio-util = "^0.7.3"
+lockable = {git = "https://github.com/smessmer/lockable", rev = "de484eb1715eba2e658f7d1ec82d129efd30f474", features = ["lru"]}
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
-libc = "^0.2.119"
+libc = "^0.2.126"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "^0.3.9", features = ["fileapi"] }
 
 [build-dependencies]
-cxx-build = "^1.0.65"
+cxx-build = "^1.0.71"
 
 [dev-dependencies]
 generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
-criterion = "^0.3.5"
+criterion = "^0.3.6"
 mockall = "^0.11.1"
 
 [lib]
