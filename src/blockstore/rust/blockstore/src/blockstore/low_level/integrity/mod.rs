@@ -40,10 +40,21 @@ binary_layout::define_layout!(block_layout, LittleEndian, {
 
 const HEADER_SIZE: usize = block_layout::data::OFFSET;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AllowIntegrityViolations {
+    AllowViolations,
+    DontAllowViolations,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MissingBlockIsIntegrityViolation {
+    IsAViolation,
+    IsNotAViolation,
+}
+
 pub struct IntegrityConfig {
-    // TODO enums instead of bool
-    pub allow_integrity_violations: bool,
-    pub missing_block_is_integrity_violation: bool,
+    pub allow_integrity_violations: AllowIntegrityViolations,
+    pub missing_block_is_integrity_violation: MissingBlockIsIntegrityViolation,
     pub on_integrity_violation: Box<dyn Sync + Send + Fn(&IntegrityViolationError)>,
 }
 
@@ -63,13 +74,14 @@ impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockSt
         let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
             .context("Tried to create IntegrityData")?;
         if integrity_data.integrity_violation_in_previous_run() {
-            if config.allow_integrity_violations {
-                warn!("Integrity violation in previous run (but integrity checks are disabled)");
-            } else {
-                return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
-                    integrity_file_path: integrity_file_path.clone(),
+            match config.allow_integrity_violations {
+                AllowIntegrityViolations::AllowViolations => warn!("Integrity violation in previous run (but integrity checks are disabled)"),
+                AllowIntegrityViolations::DontAllowViolations => {
+                    return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
+                        integrity_file_path: integrity_file_path.clone(),
+                    }
+                    .into());
                 }
-                .into());
             }
         }
         Ok(AsyncDropGuard::new(Self {
@@ -101,13 +113,18 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         )?;
         match loaded {
             None => {
-                if self.config.missing_block_is_integrity_violation {
-                    if let Some(block_info) = block_info_guard.value() {
-                        if block_info.block_is_expected_to_exist() {
-                            self._integrity_violation_detected(
-                                IntegrityViolationError::MissingBlock { block: *block_id }.into(),
-                            )?;
+                match self.config.missing_block_is_integrity_violation {
+                    MissingBlockIsIntegrityViolation::IsAViolation => {
+                        if let Some(block_info) = block_info_guard.value() {
+                            if block_info.block_is_expected_to_exist() {
+                                self._integrity_violation_detected(
+                                    IntegrityViolationError::MissingBlock { block: *block_id }.into(),
+                                )?;
+                            }
                         }
+                    }
+                    MissingBlockIsIntegrityViolation::IsNotAViolation => {
+                        // do nothing
                     }
                 }
                 Ok(None)
@@ -139,73 +156,76 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 
     async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
-        if self.config.missing_block_is_integrity_violation {
-            // TODO Is there a way to do this with stream processing, i.e. without collecting?
-            //      That's what the C++ implementation did. It would mean that errors about missing blocks
-            //      would be delayed though. And we'd likely have to handle race conditions like
-            //      blocks being deleted while this function runs.
-            let all_underlying_blocks = {
-                let blocks = self.underlying_block_store.all_blocks().await?;
-                let blocks: Vec<BlockId> = blocks.try_collect().await?;
-                blocks
-            };
-            // We get expected_blocks **after** we got all_underlying blocks so that any blocks potentially deleted
-            // in the meantime are already gone from expected_blocks.
-            // TODO Is this actually race-condition-proof? What if there is currently a remove ongoing, it has already
-            //      deleted the block before the calculation of all_underlying_blocks, but hasn't updated integrity_data yet
-            //      when we're running this?
-            let mut expected_blocks = {
-                let blocks: HashSet<BlockId> =
-                    self.integrity_data.existing_blocks().into_iter().collect();
-                blocks
-            };
+        match self.config.missing_block_is_integrity_violation {
+            MissingBlockIsIntegrityViolation::IsAViolation => {
+                // TODO Is there a way to do this with stream processing, i.e. without collecting?
+                //      That's what the C++ implementation did. It would mean that errors about missing blocks
+                //      would be delayed though. And we'd likely have to handle race conditions like
+                //      blocks being deleted while this function runs.
+                let all_underlying_blocks = {
+                    let blocks = self.underlying_block_store.all_blocks().await?;
+                    let blocks: Vec<BlockId> = blocks.try_collect().await?;
+                    blocks
+                };
+                // We get expected_blocks **after** we got all_underlying blocks so that any blocks potentially deleted
+                // in the meantime are already gone from expected_blocks.
+                // TODO Is this actually race-condition-proof? What if there is currently a remove ongoing, it has already
+                //      deleted the block before the calculation of all_underlying_blocks, but hasn't updated integrity_data yet
+                //      when we're running this?
+                let mut expected_blocks = {
+                    let blocks: HashSet<BlockId> =
+                        self.integrity_data.existing_blocks().into_iter().collect();
+                    blocks
+                };
 
-            for existing_block in &all_underlying_blocks {
-                expected_blocks.remove(existing_block);
-            }
-            let missing_blocks: FuturesUnordered<_> = expected_blocks
-                .into_iter()
-                .map(|id| future::ready(id))
-                .collect();
-            let missing_blocks = missing_blocks
-                .map(|v| -> Result<BlockId> { Ok(v) })
-                .try_filter_map(|expected_block_id| async move {
-                    // We have a block that our integrity data says should exist but the underlying block store says doesn't exist.
-                    // This could be an integrity violation. However, there are race conditions. For example, the block could
-                    // have been created after we checked the underlying block store and before we checked the integrity data.
-                    // The only way to be sure is to actually lock this block id and check again.
-                    let block_info_guard =
-                        self.integrity_data.lock_block_info(expected_block_id).await;
-                    if let Some(block_info) = block_info_guard.value() {
-                        let expected_to_exist = block_info.block_is_expected_to_exist();
-                        let actually_exists = self
-                            .underlying_block_store
-                            .exists(&expected_block_id)
-                            .await?;
-                        if expected_to_exist && !actually_exists {
-                            Ok(Some(expected_block_id))
+                for existing_block in &all_underlying_blocks {
+                    expected_blocks.remove(existing_block);
+                }
+                let missing_blocks: FuturesUnordered<_> = expected_blocks
+                    .into_iter()
+                    .map(|id| future::ready(id))
+                    .collect();
+                let missing_blocks = missing_blocks
+                    .map(|v| -> Result<BlockId> { Ok(v) })
+                    .try_filter_map(|expected_block_id| async move {
+                        // We have a block that our integrity data says should exist but the underlying block store says doesn't exist.
+                        // This could be an integrity violation. However, there are race conditions. For example, the block could
+                        // have been created after we checked the underlying block store and before we checked the integrity data.
+                        // The only way to be sure is to actually lock this block id and check again.
+                        let block_info_guard =
+                            self.integrity_data.lock_block_info(expected_block_id).await;
+                        if let Some(block_info) = block_info_guard.value() {
+                            let expected_to_exist = block_info.block_is_expected_to_exist();
+                            let actually_exists = self
+                                .underlying_block_store
+                                .exists(&expected_block_id)
+                                .await?;
+                            if expected_to_exist && !actually_exists {
+                                Ok(Some(expected_block_id))
+                            } else {
+                                // It actually was a race condition, ignore this false positive
+                                Ok(None)
+                            }
                         } else {
                             // It actually was a race condition, ignore this false positive
                             Ok(None)
                         }
-                    } else {
-                        // It actually was a race condition, ignore this false positive
-                        Ok(None)
-                    }
-                });
-            let missing_blocks: HashSet<BlockId> = missing_blocks.try_collect().await?;
-            if !missing_blocks.is_empty() {
-                self._integrity_violation_detected(
-                    IntegrityViolationError::MissingBlocks {
-                        blocks: missing_blocks,
-                    }
-                    .into(),
-                )?;
+                    });
+                let missing_blocks: HashSet<BlockId> = missing_blocks.try_collect().await?;
+                if !missing_blocks.is_empty() {
+                    self._integrity_violation_detected(
+                        IntegrityViolationError::MissingBlocks {
+                            blocks: missing_blocks,
+                        }
+                        .into(),
+                    )?;
+                }
+                Ok(futures::stream::iter(all_underlying_blocks.into_iter().map(Ok)).boxed())
             }
-            Ok(futures::stream::iter(all_underlying_blocks.into_iter().map(Ok)).boxed())
-        } else {
-            let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
-            Ok(all_underlying_blocks)
+            MissingBlockIsIntegrityViolation::IsNotAViolation => {
+                let all_underlying_blocks = self.underlying_block_store.all_blocks().await?;
+                Ok(all_underlying_blocks)
+            }
         }
     }
 }
@@ -300,17 +320,20 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
 
 impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
     fn _integrity_violation_detected(&self, reason: IntegrityViolationError) -> Result<()> {
-        if self.config.allow_integrity_violations {
-            warn!(
-                "Integrity violation (but integrity checks are disabled): {:?}",
-                reason,
-            );
-            Ok(())
-        } else {
-            self.integrity_data
-                .set_integrity_violation_in_previous_run();
-            (*self.config.on_integrity_violation)(&reason);
-            Err(reason.into())
+        match self.config.allow_integrity_violations {
+            AllowIntegrityViolations::AllowViolations => {
+                warn!(
+                    "Integrity violation (but integrity checks are disabled): {:?}",
+                    reason,
+                );
+                Ok(())
+            }
+            AllowIntegrityViolations::DontAllowViolations => {
+                self.integrity_data
+                    .set_integrity_violation_in_previous_run();
+                (*self.config.on_integrity_violation)(&reason);
+                Err(reason.into())
+            }
         }
     }
 
@@ -477,8 +500,8 @@ mod generic_tests {
                         id: NonZeroU32::new(1).unwrap(),
                     },
                     IntegrityConfig {
-                        allow_integrity_violations: ALLOW_INTEGRITY_VIOLATIONS,
-                        missing_block_is_integrity_violation: MISSING_BLOCK_IS_INTEGRITY_VIOLATION,
+                        allow_integrity_violations: if ALLOW_INTEGRITY_VIOLATIONS {AllowIntegrityViolations::AllowViolations} else {AllowIntegrityViolations::DontAllowViolations},
+                        missing_block_is_integrity_violation: if MISSING_BLOCK_IS_INTEGRITY_VIOLATION { MissingBlockIsIntegrityViolation::IsAViolation} else {MissingBlockIsIntegrityViolation::IsNotAViolation},
                         on_integrity_violation: Box::new(|err| {
                             panic!("Integrity violation: {:?}", err)
                         }),
@@ -565,8 +588,8 @@ mod specialized_tests {
 
         fn store(
             &self,
-            allow_integrity_violations: bool,
-            missing_block_is_integrity_violation: bool,
+            allow_integrity_violations: AllowIntegrityViolations,
+            missing_block_is_integrity_violation: MissingBlockIsIntegrityViolation,
         ) -> SyncDrop<IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>> {
             let integrity_violation_triggered = Arc::clone(&self.integrity_violation_triggered);
             SyncDrop::new(
@@ -750,7 +773,7 @@ mod specialized_tests {
         // Test the integrity violation triggers when violations aren't allowed
         {
             let fixture = Fixture::new();
-            let store = fixture.store(false, true);
+            let store = fixture.store(AllowIntegrityViolations::DontAllowViolations, MissingBlockIsIntegrityViolation::IsAViolation);
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -768,7 +791,7 @@ mod specialized_tests {
         }
         {
             let fixture = Fixture::new();
-            let store = fixture.store(false, false);
+            let store = fixture.store(AllowIntegrityViolations::DontAllowViolations, MissingBlockIsIntegrityViolation::IsNotAViolation);
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -788,7 +811,7 @@ mod specialized_tests {
         // Test the integrity violation doesn't trigger when violations are allowed
         {
             let fixture = Fixture::new();
-            let store = fixture.store(true, true);
+            let store = fixture.store(AllowIntegrityViolations::AllowViolations, MissingBlockIsIntegrityViolation::IsAViolation);
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -796,7 +819,7 @@ mod specialized_tests {
         }
         {
             let fixture = Fixture::new();
-            let store = fixture.store(true, false);
+            let store = fixture.store(AllowIntegrityViolations::AllowViolations, MissingBlockIsIntegrityViolation::IsNotAViolation);
             let context = setup(&fixture, &store).await;
             let result = action(&context, &fixture, &store).await;
             assert_no_error(&fixture, result);
