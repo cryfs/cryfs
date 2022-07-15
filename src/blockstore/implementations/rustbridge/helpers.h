@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MESSMER_BLOCKSTORE_IMPLEMENTATIONS_RUSTBRIDGE_HELPERS_H_
+#define MESSMER_BLOCKSTORE_IMPLEMENTATIONS_RUSTBRIDGE_HELPERS_H_
+
 #include "cxxbridge/cryfs-cppbridge/src/blockstore.rs.h"
 
 namespace blockstore
@@ -35,3 +39,5 @@ namespace blockstore
         }
     }
 }
+
+#endif
