@@ -319,12 +319,16 @@ impl Default for KnownBlockVersions {
 }
 
 impl KnownBlockVersions {
-    pub fn load_or_default(file_path: &Path) -> Result<Self> {
+    pub fn load(file_path: &Path) -> Result<Option<Self>> {
         if let Some(serialized) = KnownBlockVersionsSerialized::deserialize_from_file(file_path)? {
-            Ok(serialized.into())
+            Ok(Some(serialized.into()))
         } else {
-            Ok(KnownBlockVersions::default())
+            Ok(None)
         }
+    }
+
+    pub fn load_or_default(file_path: &Path) -> Result<Self> {
+        Ok(Self::load(file_path)?.unwrap_or_else(KnownBlockVersions::default))
     }
 
     pub async fn save(self, file_path: &Path) -> Result<()> {
@@ -362,6 +366,7 @@ mod tests {
     use crate::blockstore::tests::blockid;
     use crate::utils::testutils::assert_unordered_vec_eq;
 
+    use tempdir::TempDir;
     use common_macros::hash_map;
 
     fn clientid(id: u32) -> ClientId {
@@ -1647,6 +1652,63 @@ mod tests {
             );
         }
 
-        // TODO BC test that uses a base64 serialized file and checks that it is is still parseable
+        fn write_file(path: &Path, content: &[u8]) {
+            let mut file = std::fs::File::create(path).unwrap();
+            file.write_all(content).unwrap();
+        }
+
+        #[tokio::test]
+        async fn test_backwards_compatibility_empty_file() {
+            let tempdir = TempDir::new("test").unwrap();
+            let path = tempdir.path().join("file");
+            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
+            let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
+            assert!(!obj.integrity_violation_in_previous_run());
+            assert_eq!(Vec::<BlockId>::new(), obj.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_backwards_compatibility_empty_file_with_previous_violation() {
+            let tempdir = TempDir::new("test").unwrap();
+            let path = tempdir.path().join("file");
+            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQABAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
+            let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
+            assert!(obj.integrity_violation_in_previous_run());
+            assert_eq!(Vec::<BlockId>::new(), obj.existing_blocks());
+        }
+
+        #[tokio::test]
+        async fn test_backwards_compatibility_nonempty_file() {
+            let tempdir = TempDir::new("test").unwrap();
+            let path = tempdir.path().join("file");
+            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAwAAAAAAAACJZ0Ujkyo4nuFLxwkKx3KXIUkbtAIAAAAAAAAAeFY0EhSRu0kyo4nuFLxwkKx3KXIFAAAAAAAAAIlnRSMUkbtJMqOJ7hS8cJCsdylyCgAAAAAAAAACAAAAAAAAAJMqOJ7hS8cJCsdylyFJG7QAAAAAFJG7STKjie4UvHCQrHcpcnhWNBI=").unwrap());
+            let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
+            assert!(!obj.integrity_violation_in_previous_run());
+
+            let blockid1 = BlockId::from_hex("1491BB4932A389EE14BC7090AC772972").unwrap();
+            let blockid2 = BlockId::from_hex("932A389EE14BC7090AC7729721491BB4").unwrap();
+            let clientid1 = clientid(0x23456789);
+            let clientid2 = clientid(0x12345678);
+            assert_unordered_vec_eq(vec![blockid1, blockid2], obj.existing_blocks());
+            {
+                let info = obj.lock_block_info(blockid1).await;
+                let info = info.value().unwrap();
+                assert!(!info.block_is_deleted());
+                assert_eq!(MaybeClientId::ClientId(clientid2), info.last_update_client_id());
+                assert_versions_are(info, hash_map! {
+                    clientid1 => version(10),
+                    clientid2 => version(5),
+                });
+            }
+            {
+                let info = obj.lock_block_info(blockid2).await;
+                let info = info.value().unwrap();
+                assert!(info.block_is_deleted());
+                assert_eq!(MaybeClientId::BlockWasDeleted, info.last_update_client_id());
+                assert_versions_are(info, hash_map! {
+                    clientid1 => version(2),
+                });
+            }
+        }
     }
 }
