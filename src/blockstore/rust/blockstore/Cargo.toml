@@ -8,7 +8,6 @@ version = "0.1.0"
 aes-gcm = {version = "^0.9.4", features = ["std"]}
 base64 = "^0.13.0"
 anyhow = "^1.0.58"
-cxx = {version = "^1.0.71", features = ["c++14"]}
 binary-layout = {git = "https://github.com/smessmer/binary-layout", rev = "f49fa855ab8619cd4d68a2852692d1e17f914ca6" }
 generic-array = "^0.14.5"
 hex = "^0.4.3"
@@ -49,18 +48,11 @@ libc = "^0.2.126"
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "^0.3.9", features = ["fileapi"] }
 
-[build-dependencies]
-cxx-build = "^1.0.71"
-
 [dev-dependencies]
 generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
 criterion = "^0.3.6"
 mockall = "^0.11.1"
-
-[lib]
-# rlib for benchmarks, staticlib for C++ integration
-crate-type = ["rlib", "staticlib"]
 
 [[bench]]
 name = "crypto"

@@ -38,8 +38,8 @@ target_activate_cpp14(${PROJECT_NAME})
 include (rust)
 target_add_rust_companion(
     blockstore
-    RUST_LIB_NAME "libcryfs_blockstore.a"
-    RUST_CRATE_NAME "cryfs-blockstore"
-    RUST_BRIDGES "src/blockstore/cppbridge.rs"
+    RUST_LIB_NAME "libcryfs_cppbridge.a"
+    RUST_CRATE_NAME "cryfs-cppbridge"
+    RUST_BRIDGES "src/blockstore.rs"
     RUST_DIR "rust"
 )

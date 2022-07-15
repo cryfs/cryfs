@@ -404,8 +404,6 @@ dependencies = [
  "clru",
  "common_macros",
  "criterion",
- "cxx",
- "cxx-build",
  "env_logger",
  "errno",
  "futures",
@@ -433,6 +431,22 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "winapi",
+]
+
+[[package]]
+name = "cryfs-cppbridge"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cryfs-blockstore",
+ "cxx",
+ "cxx-build",
+ "env_logger",
+ "futures",
+ "lazy_static",
+ "log",
+ "tokio",
 ]
 
 [[package]]
@@ -846,9 +860,9 @@ dependencies = [
 
 [[package]]
 name = "link-cplusplus"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f1becd27d473556dc610b8afa1636ef90747b574a84553bc11e82371d5ef2d1"
+checksum = "f8cae2cd7ba2f3f63938b9c724475dfb7b9861b545a90324476324ed21dbc8c8"
 dependencies = [
  "cc",
 ]
@@ -1347,9 +1361,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "scratch"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e114536316b51a5aa7a0e59fc49661fd263c5507dd08bd28de052e57626ce69"
+checksum = "96311ef4a16462c757bb6a39152c40f58f31cd2602a40fceb937e2bc34e6cbab"
 
 [[package]]
 name = "semver"
