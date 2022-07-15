@@ -32,6 +32,8 @@ using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
 
+using blockstore::rust::CxxCallback;
+
 using namespace cryfs_stats;
 
 void printNode(unique_ref<DataNode> node) {
@@ -51,12 +53,11 @@ void printNode(unique_ref<DataNode> node) {
 unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
   auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
+  auto onIntegrityViolation = [] () {
+    std::cerr << "Warning: Integrity violation encountered" << std::endl;
+  };
   return make_unique_ref<blockstore::rust::RustBlockStore>(
-    // TODO 
-    //   auto onIntegrityViolation = [] () {
-    //     std::cerr << "Warning: Integrity violation encountered" << std::endl;
-    //   };
-    blockstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_blockstore(integrityFilePath.c_str(), config.myClientId, false, true, config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str())
+    blockstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_blockstore(integrityFilePath.c_str(), config.myClientId, false, true, std::make_unique<CxxCallback>(onIntegrityViolation), config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str())
   );
 }
 

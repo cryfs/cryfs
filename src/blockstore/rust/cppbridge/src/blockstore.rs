@@ -33,6 +33,13 @@ use cryfs_blockstore::{
 
 #[cxx::bridge]
 mod ffi {
+    #[namespace = "blockstore::rust"]
+    unsafe extern "C++" {
+        include!("blockstore/implementations/rustbridge/CxxCallback.h");
+        type CxxCallback;
+        fn call(&self);
+    }
+
     #[namespace = "blockstore::rust::bridge"]
     extern "Rust" {
         type BlockId;
@@ -80,6 +87,7 @@ mod ffi {
             my_client_id: u32,
             allow_integrity_violations: bool,
             missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
             cipher_name: &str,
             encryption_key_hex: &str,
             basedir: &str,
@@ -89,6 +97,7 @@ mod ffi {
             my_client_id: u32,
             allow_integrity_violations: bool,
             missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
             cipher_name: &str,
             encryption_key_hex: &str,
             basedir: &str,
@@ -98,6 +107,7 @@ mod ffi {
             my_client_id: u32,
             allow_integrity_violations: bool,
             missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
             cipher_name: &str,
             encryption_key_hex: &str,
         ) -> Result<Box<RustBlockStoreBridge>>;
@@ -130,6 +140,8 @@ mod ffi {
         fn write(&mut self, source: &[u8], offset: usize) -> Result<()>;
     }
 }
+
+unsafe impl Send for ffi::CxxCallback {}
 
 fn log_errors<R>(f: impl FnOnce() -> Result<R>) -> Result<R> {
     match f() {
@@ -590,10 +602,12 @@ fn _new_locking_integrity_encrypted_blockstore(
     my_client_id: u32,
     allow_integrity_violations: bool,
     missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
     cipher_name: &str,
     encryption_key_hex: &str,
     base_store: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static>,
 ) -> Result<Box<RustBlockStoreBridge>> {
+    let on_integrity_violation = std::sync::Arc::new(std::sync::Mutex::new(on_integrity_violation));
     symmetric::lookup_cipher(
         cipher_name,
         _BlockStoreCreator {
@@ -614,9 +628,8 @@ fn _new_locking_integrity_encrypted_blockstore(
                 } else {
                     MissingBlockIsIntegrityViolation::IsNotAViolation
                 },
-                on_integrity_violation: Box::new(|_| {
-                    // TODO
-                    todo!()
+                on_integrity_violation: Box::new(move |_| {
+                    on_integrity_violation.lock().unwrap().call()
                 }),
             },
             encryption_key_hex,
@@ -630,6 +643,7 @@ fn new_locking_integrity_encrypted_ondisk_blockstore(
     my_client_id: u32,
     allow_integrity_violations: bool,
     missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
     cipher_name: &str,
     encryption_key_hex: &str,
     basedir: &str,
@@ -643,6 +657,7 @@ fn new_locking_integrity_encrypted_ondisk_blockstore(
             my_client_id,
             allow_integrity_violations,
             missing_block_is_integrity_violation,
+            on_integrity_violation,
             cipher_name,
             encryption_key_hex,
             OnDiskBlockStore::new(Path::new(basedir).to_path_buf()),
@@ -655,6 +670,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
     my_client_id: u32,
     allow_integrity_violations: bool,
     missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
     cipher_name: &str,
     encryption_key_hex: &str,
     basedir: &str,
@@ -668,6 +684,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
             my_client_id,
             allow_integrity_violations,
             missing_block_is_integrity_violation,
+            on_integrity_violation,
             cipher_name,
             encryption_key_hex,
             ReadOnlyBlockStore::new(OnDiskBlockStore::new(Path::new(basedir).to_path_buf())),
@@ -680,6 +697,7 @@ fn new_locking_integrity_encrypted_inmemory_blockstore(
     my_client_id: u32,
     allow_integrity_violations: bool,
     missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
     cipher_name: &str,
     encryption_key_hex: &str,
 ) -> Result<Box<RustBlockStoreBridge>> {
@@ -692,6 +710,7 @@ fn new_locking_integrity_encrypted_inmemory_blockstore(
             my_client_id,
             allow_integrity_violations,
             missing_block_is_integrity_violation,
+            on_integrity_violation,
             cipher_name,
             encryption_key_hex,
             InMemoryBlockStore::new(),

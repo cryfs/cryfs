@@ -10,6 +10,7 @@
 #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
 #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
 #include <blockstore/implementations/rustbridge/RustBlockStore.h>
+#include <blockstore/implementations/rustbridge/CxxCallback.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
 #include "cryfs/impl/config/CryCipher.h"
@@ -28,6 +29,7 @@ using fspp::fuse::FuseErrnoException;
 
 using blockstore::BlockStore2;
 using blockstore::BlockId;
+using blockstore::rust::CxxCallback;
 using blobstore::BlobStore;
 using blobstore::onblocks::BlobStoreOnBlocks;
 using cpputils::unique_ref;
@@ -102,7 +104,7 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(const boost::filesys
   auto integrityFilePath = statePath / "integritydata";
   return make_unique_ref<BlobStoreOnBlocks>(
     make_unique_ref<blockstore::rust::RustBlockStore>(
-      blockstore::rust::bridge::new_locking_integrity_encrypted_ondisk_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, configFile->config()->Cipher(), configFile->config()->EncryptionKey(), basedir.c_str())
+      blockstore::rust::bridge::new_locking_integrity_encrypted_ondisk_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey(), basedir.c_str())
     ),
     configFile->config()->BlocksizeBytes());
 }
@@ -112,7 +114,7 @@ unique_ref<blobstore::BlobStore> CryDevice::CreateFakeBlobStore(const LocalState
   auto integrityFilePath = statePath / "integritydata";
   return make_unique_ref<BlobStoreOnBlocks>(
     make_unique_ref<blockstore::rust::RustBlockStore>(
-      blockstore::rust::bridge::new_locking_integrity_encrypted_inmemory_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, configFile->config()->Cipher(), configFile->config()->EncryptionKey())
+      blockstore::rust::bridge::new_locking_integrity_encrypted_inmemory_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey())
     ),
     configFile->config()->BlocksizeBytes());
 }
