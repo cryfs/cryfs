@@ -4,7 +4,5 @@ pub mod low_level;
 
 pub use block_id::{BlockId, BLOCKID_LEN};
 
-mod cppbridge;
-
 #[cfg(test)]
 mod tests;

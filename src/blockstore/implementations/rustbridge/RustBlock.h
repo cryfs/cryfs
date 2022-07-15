@@ -5,7 +5,7 @@
 #include "../../interface/Block.h"
 #include <cpp-utils/macros.h>
 #include <unordered_map>
-#include "cxxbridge/cryfs-blockstore/src/blockstore/cppbridge.rs.h"
+#include "cxxbridge/cryfs-cppbridge/src/blockstore.rs.h"
 
 namespace blockstore
 {
