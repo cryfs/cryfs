@@ -1,6 +1,5 @@
 #include "parallelaccessdatatreestore/DataTreeRef.h"
 #include "parallelaccessdatatreestore/ParallelAccessDataTreeStore.h"
-#include <blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h>
 #include "datanodestore/DataLeafNode.h"
 #include "datanodestore/DataNodeStore.h"
 #include "datatreestore/DataTreeStore.h"
@@ -14,7 +13,6 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
 using blockstore::BlockStore;
-using blockstore::parallelaccess::ParallelAccessBlockStore;
 using blockstore::BlockId;
 using cpputils::dynamic_pointer_move;
 using boost::optional;
@@ -28,7 +26,7 @@ using datatreestore::DataTreeStore;
 using parallelaccessdatatreestore::ParallelAccessDataTreeStore;
 
 BlobStoreOnBlocks::BlobStoreOnBlocks(unique_ref<BlockStore> blockStore, uint64_t physicalBlocksizeBytes)
-        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(make_unique_ref<ParallelAccessBlockStore>(std::move(blockStore)), physicalBlocksizeBytes)))) {
+        : _dataTreeStore(make_unique_ref<ParallelAccessDataTreeStore>(make_unique_ref<DataTreeStore>(make_unique_ref<DataNodeStore>(std::move(blockStore), physicalBlocksizeBytes)))) {
 }
 
 BlobStoreOnBlocks::~BlobStoreOnBlocks() {

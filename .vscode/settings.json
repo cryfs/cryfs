@@ -1,9 +1,9 @@
 {
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.associations": {
+        "any": "cpp",
         "array": "cpp",
         "atomic": "cpp",
-        "strstream": "cpp",
         "bit": "cpp",
         "*.tcc": "cpp",
         "bitset": "cpp",
@@ -62,9 +62,7 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "utility": "cpp",
-        "variant": "cpp",
-        "any": "cpp",
-        "numeric": "cpp"
+        "variant": "cpp"
     },
     "rust-analyzer.linkedProjects": [
         "src/blockstore/rust/Cargo.toml"

@@ -2,7 +2,6 @@
 #include <boost/filesystem.hpp>
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
-#include <blockstore/implementations/readonly/ReadOnlyBlockStore2.h>
 #include <blockstore/implementations/rustbridge/RustBlockStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
 #include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
@@ -29,7 +28,6 @@ using boost::filesystem::path;
 using namespace cryfs;
 using namespace cpputils;
 using namespace blockstore;
-using namespace blockstore::readonly;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
