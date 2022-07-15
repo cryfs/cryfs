@@ -10,7 +10,7 @@ use super::XChaCha20Poly1305;
 use super::{Cipher, EncryptionKey};
 use crate::data::Data;
 
-fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
+pub fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
     let mut rng = StdRng::seed_from_u64(seed);
     let mut res = vec![0; L::USIZE];
     rng.fill_bytes(&mut res);
@@ -22,7 +22,7 @@ fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
 }
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
-fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
+pub fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
     let mut result = Data::from(vec![
         0;
         C::CIPHERTEXT_OVERHEAD_PREFIX
