@@ -11,7 +11,7 @@ use super::low_level::{
     self,
     encrypted::EncryptedBlockStore,
     inmemory::InMemoryBlockStore,
-    integrity::{ClientId, IntegrityBlockStore, IntegrityConfig},
+    integrity::{ClientId, IntegrityBlockStore, IntegrityConfig, AllowIntegrityViolations, MissingBlockIsIntegrityViolation},
     readonly::ReadOnlyBlockStore,
     ondisk::OnDiskBlockStore,
     BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, OptimizedBlockStoreWriter,
@@ -491,8 +491,8 @@ fn new_integrity_inmemory_blockstore(
                     id: NonZeroU32::new(1).unwrap(),
                 },
                 IntegrityConfig {
-                    allow_integrity_violations: false,
-                    missing_block_is_integrity_violation: true,
+                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                    missing_block_is_integrity_violation: MissingBlockIsIntegrityViolation::IsAViolation,
                     on_integrity_violation: Box::new(|_| {}),
                 },
             )?
@@ -568,8 +568,8 @@ fn _new_locking_integrity_encrypted_blockstore(
                 })?,
             },
             integrity_config: IntegrityConfig {
-                allow_integrity_violations,
-                missing_block_is_integrity_violation,
+                allow_integrity_violations: if allow_integrity_violations {AllowIntegrityViolations::AllowViolations} else {AllowIntegrityViolations::DontAllowViolations},
+                missing_block_is_integrity_violation: if missing_block_is_integrity_violation {MissingBlockIsIntegrityViolation::IsAViolation} else {MissingBlockIsIntegrityViolation::IsNotAViolation},
                 on_integrity_violation: Box::new(|_| {
                     // TODO
                     todo!()
