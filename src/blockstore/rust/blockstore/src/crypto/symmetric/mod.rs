@@ -58,6 +58,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::marker::PhantomData;
+    use super::cipher_tests::{allocate_space_for_ciphertext, key};
 
     struct DummyCallback;
     impl CipherCallback for DummyCallback {
@@ -72,5 +74,41 @@ mod tests {
         for cipher_name in ["xchacha20-poly1305", "aes-256-gcm", "aes-128-gcm"] {
             lookup_cipher(cipher_name, DummyCallback);
         }
+    }
+
+    struct CipherEqualityAssertion<ExpectedCipher: Cipher> {
+        _p: PhantomData<ExpectedCipher>,
+    }
+    impl <ExpectedCipher: Cipher> CipherEqualityAssertion<ExpectedCipher> {
+        pub fn new() -> Self {
+            Self {
+                _p: PhantomData,
+            }
+        }
+    }
+    impl <ExpectedCipher: Cipher> CipherCallback for CipherEqualityAssertion<ExpectedCipher> {
+        type Result = ();
+        fn callback<ActualCipher: Cipher + Send + Sync + 'static>(self) {
+            let plaintext: Data = allocate_space_for_ciphertext::<ExpectedCipher>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
+            let expected_cipher = ExpectedCipher::new(key(1));
+            let actual_cipher = ActualCipher::new(key(1));
+            let encrypted_with_expected = expected_cipher.encrypt(plaintext.clone()).unwrap();
+            let encrypted_with_actual = actual_cipher.encrypt(plaintext.clone()).unwrap();
+            assert_eq!(plaintext.clone(), actual_cipher.decrypt(encrypted_with_expected).unwrap());
+            assert_eq!(plaintext.clone(), expected_cipher.decrypt(encrypted_with_actual).unwrap());
+        }
+    }
+
+    #[test]
+    #[should_panic(expected="Unknown cipher: unknown-cipher")]
+    fn lookup_unknown_cipher() {
+        lookup_cipher("unknown-cipher", DummyCallback);
+    }
+
+    #[test]
+    fn lookup_finds_correct_cipher() {
+        lookup_cipher("aes-128-gcm", CipherEqualityAssertion::<Aes128Gcm>::new());
+        lookup_cipher("aes-256-gcm", CipherEqualityAssertion::<Aes256Gcm>::new());
+        lookup_cipher("xchacha20-poly1305", CipherEqualityAssertion::<XChaCha20Poly1305>::new());
     }
 }
