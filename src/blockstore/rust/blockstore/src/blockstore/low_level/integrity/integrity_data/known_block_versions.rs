@@ -366,8 +366,8 @@ mod tests {
     use crate::blockstore::tests::blockid;
     use crate::utils::testutils::assert_unordered_vec_eq;
 
-    use tempdir::TempDir;
     use common_macros::hash_map;
+    use tempdir::TempDir;
 
     fn clientid(id: u32) -> ClientId {
         ClientId {
@@ -1694,20 +1694,29 @@ mod tests {
                 let info = obj.lock_block_info(blockid1).await;
                 let info = info.value().unwrap();
                 assert!(!info.block_is_deleted());
-                assert_eq!(MaybeClientId::ClientId(clientid2), info.last_update_client_id());
-                assert_versions_are(info, hash_map! {
-                    clientid1 => version(10),
-                    clientid2 => version(5),
-                });
+                assert_eq!(
+                    MaybeClientId::ClientId(clientid2),
+                    info.last_update_client_id()
+                );
+                assert_versions_are(
+                    info,
+                    hash_map! {
+                        clientid1 => version(10),
+                        clientid2 => version(5),
+                    },
+                );
             }
             {
                 let info = obj.lock_block_info(blockid2).await;
                 let info = info.value().unwrap();
                 assert!(info.block_is_deleted());
                 assert_eq!(MaybeClientId::BlockWasDeleted, info.last_update_client_id());
-                assert_versions_are(info, hash_map! {
-                    clientid1 => version(2),
-                });
+                assert_versions_are(
+                    info,
+                    hash_map! {
+                        clientid1 => version(2),
+                    },
+                );
             }
         }
     }

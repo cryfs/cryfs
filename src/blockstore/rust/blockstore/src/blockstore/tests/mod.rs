@@ -21,7 +21,7 @@ pub trait Fixture {
     fn new() -> Self;
 
     /// Create a new block store for testing
-    fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
+    async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
 
     /// Run some action defined by the fixture. This is often called
     /// by test cases between making changes and asserting that the changes

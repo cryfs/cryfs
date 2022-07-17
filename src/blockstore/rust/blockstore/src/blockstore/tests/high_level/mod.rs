@@ -28,7 +28,7 @@ pub trait LockingBlockStoreFixture {
     type UnderlyingBlockStore: BlockStore + Send + Sync + Debug + 'static;
 
     fn new() -> Self;
-    fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>>;
+    async fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>>;
     async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>);
 }
 
@@ -40,15 +40,15 @@ pub struct LockingBlockStoreFixtureImpl<F: Fixture, const FLUSH_CACHE_ON_YIELD: 
 impl<F, const FLUSH_CACHE_ON_YIELD: bool> LockingBlockStoreFixture
     for LockingBlockStoreFixtureImpl<F, FLUSH_CACHE_ON_YIELD>
 where
-    F: Fixture + Sync,
+    F: Fixture + Send + Sync,
     F::ConcreteBlockStore: Send + Sync + Debug + 'static,
 {
     type UnderlyingBlockStore = F::ConcreteBlockStore;
     fn new() -> Self {
         Self { f: F::new() }
     }
-    fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>> {
-        let inner = self.f.store().into_inner_dont_drop();
+    async fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>> {
+        let inner = self.f.store().await.into_inner_dont_drop();
         SyncDrop::new(LockingBlockStore::new(inner))
     }
     async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>) {
@@ -78,7 +78,7 @@ pub mod create {
     use super::*;
 
     pub async fn test_twoCreatedBlocksHaveDifferentIds(mut f: impl LockingBlockStoreFixture) {
-        let store = f.store();
+        let store = f.store().await;
         let first = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -96,7 +96,7 @@ pub mod remove {
     use super::*;
 
     pub async fn test_canRemoveAModifiedBlock(mut f: impl LockingBlockStoreFixture) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         let mut block = store.load(blockid).await.unwrap().unwrap();
@@ -120,7 +120,7 @@ pub mod resize {
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -136,7 +136,7 @@ pub mod resize {
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -151,7 +151,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -167,7 +167,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -182,7 +182,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -198,7 +198,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -213,7 +213,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -229,7 +229,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store();
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -275,7 +275,7 @@ pub mod data {
 
     pub async fn test_writeAndReadImmediately(mut f: impl LockingBlockStoreFixture) {
         for data_range in DATA_RANGES {
-            let store = f.store();
+            let store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -310,7 +310,7 @@ pub mod data {
 
     pub async fn test_writeAndReadAfterLoading(mut f: impl LockingBlockStoreFixture) {
         for data_range in DATA_RANGES {
-            let store = f.store();
+            let store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -353,7 +353,7 @@ pub mod overwrite {
     use super::*;
 
     pub async fn test_whenOverwritingWhileLoaded_thenBlocks(mut f: impl LockingBlockStoreFixture) {
-        let store = Arc::new(f.store());
+        let store = Arc::new(f.store().await);
 
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         let block = store.load(blockid).await.unwrap().unwrap();
@@ -374,7 +374,7 @@ pub mod overwrite {
     pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = Arc::new(f.store());
+        let store = Arc::new(f.store().await);
 
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         let block = store.load(blockid).await.unwrap().unwrap();

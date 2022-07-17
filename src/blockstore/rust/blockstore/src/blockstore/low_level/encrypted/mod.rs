@@ -281,7 +281,7 @@ mod tests {
         fn new() -> Self {
             Self { _c: PhantomData }
         }
-        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
             SyncDrop::new(EncryptedBlockStore::new(
                 InMemoryBlockStore::new(),
                 Cipher::new(key(0)),
@@ -310,11 +310,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_block_size_from_physical_block_size() {
-        fn _test_block_size_from_physical_block_size<C: 'static + Cipher + Send + Sync>() {
+    #[tokio::test]
+    async fn test_block_size_from_physical_block_size() {
+        async fn _test_block_size_from_physical_block_size<C: 'static + Cipher + Send + Sync>() {
             let mut fixture = TestFixture::<C>::new();
-            let store = fixture.store();
+            let store = fixture.store().await;
             let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64
                 + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
                 + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64;
@@ -334,9 +334,9 @@ mod tests {
             assert!(store.block_size_from_physical_block_size(0).is_err());
         }
 
-        _test_block_size_from_physical_block_size::<Aes256Gcm>();
-        _test_block_size_from_physical_block_size::<Aes128Gcm>();
-        _test_block_size_from_physical_block_size::<XChaCha20Poly1305>();
+        _test_block_size_from_physical_block_size::<Aes256Gcm>().await;
+        _test_block_size_from_physical_block_size::<Aes128Gcm>().await;
+        _test_block_size_from_physical_block_size::<XChaCha20Poly1305>().await;
     }
 
     async fn _store(

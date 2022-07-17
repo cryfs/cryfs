@@ -368,7 +368,7 @@ mod tests {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
             Self { basedir }
         }
-        fn store(&mut self) -> SyncDrop<OnDiskBlockStore> {
+        async fn store(&mut self) -> SyncDrop<OnDiskBlockStore> {
             SyncDrop::new(OnDiskBlockStore::new(self.basedir.path().to_path_buf()))
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
@@ -394,10 +394,10 @@ mod tests {
         assert!(FORMAT_VERSION_HEADER.starts_with(FORMAT_VERSION_HEADER_PREFIX));
     }
 
-    #[test]
-    fn test_block_size_from_physical_block_size() {
+    #[tokio::test]
+    async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store();
+        let store = fixture.store().await;
         let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64;
 
         assert_eq!(
@@ -431,7 +431,7 @@ mod tests {
     #[tokio::test]
     async fn test_ondisk_block_size() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store();
+        let store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert_eq!(
@@ -459,7 +459,7 @@ mod tests {
     #[tokio::test]
     async fn test_whenStoringBlock_thenBlockFileExists() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store();
+        let store = fixture.store().await;
 
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
         store.store(&blockid(0), &[]).await.unwrap();
@@ -473,7 +473,7 @@ mod tests {
     #[tokio::test]
     async fn test_whenRemovingBlock_thenBlockFileDoesntExist() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store();
+        let store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));

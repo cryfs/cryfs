@@ -530,22 +530,25 @@ fn new_integrity_inmemory_blockstore(
 ) -> Result<Box<RustBlockStore2Bridge>> {
     LOGGER_INIT.ensure_initialized();
     log_errors(|| {
-        Ok(Box::new(RustBlockStore2Bridge(DynBlockStore::from(
-            IntegrityBlockStore::new(
-                InMemoryBlockStore::new(),
-                Path::new(integrity_file_path).to_path_buf(),
-                ClientId {
-                    id: NonZeroU32::new(1).unwrap(),
-                },
-                IntegrityConfig {
-                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
-                    missing_block_is_integrity_violation:
-                        MissingBlockIsIntegrityViolation::IsAViolation,
-                    on_integrity_violation: Box::new(|_| {}),
-                },
-            )?
-            .into_box(),
-        ))))
+        TOKIO_RUNTIME.block_on(async {
+            Ok(Box::new(RustBlockStore2Bridge(DynBlockStore::from(
+                IntegrityBlockStore::new(
+                    InMemoryBlockStore::new(),
+                    Path::new(integrity_file_path).to_path_buf(),
+                    ClientId {
+                        id: NonZeroU32::new(1).unwrap(),
+                    },
+                    IntegrityConfig {
+                        allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                        missing_block_is_integrity_violation:
+                            MissingBlockIsIntegrityViolation::IsAViolation,
+                        on_integrity_violation: Box::new(|_| {}),
+                    },
+                )
+                .await?
+                .into_box(),
+            ))))
+        })
     })
 }
 
@@ -572,12 +575,15 @@ struct _BlockStoreCreator<'a, B: Debug> {
     base_store: AsyncDropGuard<B>,
 }
 
+#[async_trait]
 impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> CipherCallback
     for _BlockStoreCreator<'a, B>
 {
     type Result = Result<Box<RustBlockStoreBridge>>;
 
-    fn callback<C: Cipher + Send + Sync + 'static>(self) -> Result<Box<RustBlockStoreBridge>> {
+    async fn callback<C: Cipher + Send + Sync + 'static>(
+        self,
+    ) -> Result<Box<RustBlockStoreBridge>> {
         Ok(Box::new(RustBlockStoreBridge(LockingBlockStore::new(
             DynBlockStore::from(
                 IntegrityBlockStore::new(
@@ -590,14 +596,15 @@ impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> Ciph
                     self.integrity_file_path,
                     self.my_client_id,
                     self.integrity_config,
-                )?
+                )
+                .await?
                 .into_box(),
             ),
         ))))
     }
 }
 
-fn _new_locking_integrity_encrypted_blockstore(
+async fn _new_locking_integrity_encrypted_blockstore(
     integrity_file_path: &str,
     my_client_id: u32,
     allow_integrity_violations: bool,
@@ -636,6 +643,7 @@ fn _new_locking_integrity_encrypted_blockstore(
             base_store,
         },
     )
+    .await
 }
 
 fn new_locking_integrity_encrypted_ondisk_blockstore(
@@ -652,7 +660,7 @@ fn new_locking_integrity_encrypted_ondisk_blockstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        _new_locking_integrity_encrypted_blockstore(
+        TOKIO_RUNTIME.block_on(_new_locking_integrity_encrypted_blockstore(
             integrity_file_path,
             my_client_id,
             allow_integrity_violations,
@@ -661,7 +669,7 @@ fn new_locking_integrity_encrypted_ondisk_blockstore(
             cipher_name,
             encryption_key_hex,
             OnDiskBlockStore::new(Path::new(basedir).to_path_buf()),
-        )
+        ))
     })
 }
 
@@ -679,7 +687,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        _new_locking_integrity_encrypted_blockstore(
+        TOKIO_RUNTIME.block_on(_new_locking_integrity_encrypted_blockstore(
             integrity_file_path,
             my_client_id,
             allow_integrity_violations,
@@ -688,7 +696,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
             cipher_name,
             encryption_key_hex,
             ReadOnlyBlockStore::new(OnDiskBlockStore::new(Path::new(basedir).to_path_buf())),
-        )
+        ))
     })
 }
 
@@ -705,7 +713,7 @@ fn new_locking_integrity_encrypted_inmemory_blockstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        _new_locking_integrity_encrypted_blockstore(
+        TOKIO_RUNTIME.block_on(_new_locking_integrity_encrypted_blockstore(
             integrity_file_path,
             my_client_id,
             allow_integrity_violations,
@@ -714,6 +722,6 @@ fn new_locking_integrity_encrypted_inmemory_blockstore(
             cipher_name,
             encryption_key_hex,
             InMemoryBlockStore::new(),
-        )
+        ))
     })
 }
