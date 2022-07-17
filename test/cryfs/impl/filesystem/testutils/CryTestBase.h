@@ -3,7 +3,6 @@
 
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
-#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include "../../testutils/TestWithFakeHomeDirectory.h"

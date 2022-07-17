@@ -3,7 +3,6 @@ project (blockstore-test)
 set(SOURCES
     utils/BlockStoreUtilsTest.cpp
     implementations/compressing/compressors/testutils/CompressorTest.cpp
-    implementations/caching/CachingBlockStore2Test_Specific.cpp
     implementations/caching/cache/QueueMapTest_Values.cpp
     implementations/caching/cache/testutils/MinimalKeyType.cpp
     implementations/caching/cache/testutils/CopyableMovableValueType.cpp

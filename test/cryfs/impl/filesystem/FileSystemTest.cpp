@@ -1,4 +1,3 @@
-#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <fspp/fstest/FsTest.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
@@ -16,7 +15,6 @@ using cpputils::NoninteractiveConsole;
 using fspp::Device;
 using boost::none;
 using std::make_shared;
-using blockstore::inmemory::InMemoryBlockStore2;
 using cryfs::CryPresetPasswordBasedKeyProvider;
 
 using namespace cryfs;
