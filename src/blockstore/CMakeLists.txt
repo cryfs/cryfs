@@ -7,7 +7,6 @@ set(SOURCES
   utils/FileDoesntExistException.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
-  implementations/inmemory/InMemoryBlockStore2.cpp
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp

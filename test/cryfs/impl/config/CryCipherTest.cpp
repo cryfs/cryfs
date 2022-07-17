@@ -3,12 +3,10 @@
 #include <cryfs/impl/config/CryCipher.h>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
-#include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/random/Random.h>
 
 using namespace cryfs;
-using namespace blockstore::inmemory;
 using namespace blockstore;
 
 using std::initializer_list;
