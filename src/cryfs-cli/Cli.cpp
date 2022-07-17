@@ -264,15 +264,15 @@ namespace cryfs_cli {
 
             auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
               if (fuse.get() != nullptr) {
-                LOG(ERR, "Integrity violation detected 1. Unmounting.");
+                LOG(ERR, "Integrity violation detected after mounting. Unmounting.");
                 stoppedBecauseOfIntegrityViolation = true;
-                // fuse->stop();
+                fuse->stop();
               } else {
                 // Usually on an integrity violation, the file system is unmounted.
                 // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
                 // setting up _device before running initFilesystem.
                 // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
-                LOG(ERR, "Integrity violation detected 2. Unmounting.");
+                LOG(ERR, "Integrity violation detected before mounting. Not mounting.");
               }
             };
             const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
