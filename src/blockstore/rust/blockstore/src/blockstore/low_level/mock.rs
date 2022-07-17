@@ -219,7 +219,7 @@ mod tests {
         fn new() -> Self {
             Self {}
         }
-        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
             SyncDrop::new(make_working_mock_block_store())
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}

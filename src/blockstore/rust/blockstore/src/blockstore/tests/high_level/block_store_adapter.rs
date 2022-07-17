@@ -114,15 +114,16 @@ pub struct TestFixtureAdapter<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: boo
     f: F,
 }
 #[async_trait]
-impl<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> crate::blockstore::tests::Fixture
+impl<F: Fixture + Send + Sync, const FLUSH_CACHE_ON_YIELD: bool> crate::blockstore::tests::Fixture
     for TestFixtureAdapter<F, FLUSH_CACHE_ON_YIELD>
 {
     type ConcreteBlockStore = BlockStoreAdapter<F::ConcreteBlockStore>;
     fn new() -> Self {
         Self { f: F::new() }
     }
-    fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-        let inner: AsyncDropGuard<F::ConcreteBlockStore> = self.f.store().into_inner_dont_drop();
+    async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+        let inner: AsyncDropGuard<F::ConcreteBlockStore> =
+            self.f.store().await.into_inner_dont_drop();
         SyncDrop::new(BlockStoreAdapter::new(LockingBlockStore::new(inner)))
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {

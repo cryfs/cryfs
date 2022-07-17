@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use binary_layout::prelude::*;
 use futures::{
     future::{self},
+    join,
     stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
 };
 use log::warn;
@@ -65,18 +66,24 @@ pub struct IntegrityBlockStore<B: Send + Debug + AsyncDrop<Error = anyhow::Error
 }
 
 impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
-    pub fn new(
-        underlying_block_store: AsyncDropGuard<B>,
+    pub async fn new(
+        mut underlying_block_store: AsyncDropGuard<B>,
         integrity_file_path: PathBuf,
         my_client_id: ClientId,
         config: IntegrityConfig,
     ) -> Result<AsyncDropGuard<Self>> {
-        let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
+        let mut integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
             .context("Tried to create IntegrityData")?;
         if integrity_data.integrity_violation_in_previous_run() {
             match config.allow_integrity_violations {
-                AllowIntegrityViolations::AllowViolations => warn!("Integrity violation in previous run (but integrity checks are disabled)"),
+                AllowIntegrityViolations::AllowViolations => {
+                    warn!("Integrity violation in previous run (but integrity checks are disabled)")
+                }
                 AllowIntegrityViolations::DontAllowViolations => {
+                    join!(
+                        async { integrity_data.async_drop().await.unwrap() },
+                        async { underlying_block_store.async_drop().await.unwrap() },
+                    );
                     return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
                         integrity_file_path: integrity_file_path.clone(),
                     }
@@ -118,7 +125,8 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                         if let Some(block_info) = block_info_guard.value() {
                             if block_info.block_is_expected_to_exist() {
                                 self._integrity_violation_detected(
-                                    IntegrityViolationError::MissingBlock { block: *block_id }.into(),
+                                    IntegrityViolationError::MissingBlock { block: *block_id }
+                                        .into(),
                                 )?;
                             }
                         }
@@ -488,7 +496,7 @@ mod generic_tests {
             let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
             Self { integrity_file_dir }
         }
-        fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
+        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
             SyncDrop::new(
                 IntegrityBlockStore::new(
                     InMemoryBlockStore::new(),
@@ -500,13 +508,23 @@ mod generic_tests {
                         id: NonZeroU32::new(1).unwrap(),
                     },
                     IntegrityConfig {
-                        allow_integrity_violations: if ALLOW_INTEGRITY_VIOLATIONS {AllowIntegrityViolations::AllowViolations} else {AllowIntegrityViolations::DontAllowViolations},
-                        missing_block_is_integrity_violation: if MISSING_BLOCK_IS_INTEGRITY_VIOLATION { MissingBlockIsIntegrityViolation::IsAViolation} else {MissingBlockIsIntegrityViolation::IsNotAViolation},
+                        allow_integrity_violations: if ALLOW_INTEGRITY_VIOLATIONS {
+                            AllowIntegrityViolations::AllowViolations
+                        } else {
+                            AllowIntegrityViolations::DontAllowViolations
+                        },
+                        missing_block_is_integrity_violation:
+                            if MISSING_BLOCK_IS_INTEGRITY_VIOLATION {
+                                MissingBlockIsIntegrityViolation::IsAViolation
+                            } else {
+                                MissingBlockIsIntegrityViolation::IsNotAViolation
+                            },
                         on_integrity_violation: Box::new(|err| {
                             panic!("Integrity violation: {:?}", err)
                         }),
                     },
                 )
+                .await
                 .unwrap(),
             )
         }
@@ -532,10 +550,10 @@ mod generic_tests {
         instantiate_blockstore_tests!(TestFixture<true, true>, (flavor = "multi_thread"));
     }
 
-    #[test]
-    fn test_block_size_from_physical_block_size() {
+    #[tokio::test]
+    async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::<false, false>::new();
-        let store = fixture.store();
+        let store = fixture.store().await;
         let expected_overhead: u64 = HEADER_SIZE as u64;
 
         assert_eq!(
@@ -586,7 +604,7 @@ mod specialized_tests {
             }
         }
 
-        fn store(
+        async fn store(
             &self,
             allow_integrity_violations: AllowIntegrityViolations,
             missing_block_is_integrity_violation: MissingBlockIsIntegrityViolation,
@@ -608,6 +626,7 @@ mod specialized_tests {
                         }),
                     },
                 )
+                .await
                 .unwrap(),
             )
         }
@@ -773,7 +792,12 @@ mod specialized_tests {
         // Test the integrity violation triggers when violations aren't allowed
         {
             let fixture = Fixture::new();
-            let store = fixture.store(AllowIntegrityViolations::DontAllowViolations, MissingBlockIsIntegrityViolation::IsAViolation);
+            let store = fixture
+                .store(
+                    AllowIntegrityViolations::DontAllowViolations,
+                    MissingBlockIsIntegrityViolation::IsAViolation,
+                )
+                .await;
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -791,7 +815,12 @@ mod specialized_tests {
         }
         {
             let fixture = Fixture::new();
-            let store = fixture.store(AllowIntegrityViolations::DontAllowViolations, MissingBlockIsIntegrityViolation::IsNotAViolation);
+            let store = fixture
+                .store(
+                    AllowIntegrityViolations::DontAllowViolations,
+                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                )
+                .await;
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -811,7 +840,12 @@ mod specialized_tests {
         // Test the integrity violation doesn't trigger when violations are allowed
         {
             let fixture = Fixture::new();
-            let store = fixture.store(AllowIntegrityViolations::AllowViolations, MissingBlockIsIntegrityViolation::IsAViolation);
+            let store = fixture
+                .store(
+                    AllowIntegrityViolations::AllowViolations,
+                    MissingBlockIsIntegrityViolation::IsAViolation,
+                )
+                .await;
             let context = setup(&fixture, &store).await;
             fixture.assert_integrity_violation_didnt_trigger();
             let result = action(&context, &fixture, &store).await;
@@ -819,7 +853,12 @@ mod specialized_tests {
         }
         {
             let fixture = Fixture::new();
-            let store = fixture.store(AllowIntegrityViolations::AllowViolations, MissingBlockIsIntegrityViolation::IsNotAViolation);
+            let store = fixture
+                .store(
+                    AllowIntegrityViolations::AllowViolations,
+                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                )
+                .await;
             let context = setup(&fixture, &store).await;
             let result = action(&context, &fixture, &store).await;
             assert_no_error(&fixture, result);
