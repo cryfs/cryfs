@@ -16,7 +16,7 @@ use crate::utils::binary::{read_nonzerou32, write_nonzerou32, BinaryReadExt, Bin
 use super::integrity_violation_error::IntegrityViolationError;
 use super::serialization::KnownBlockVersionsSerialized;
 
-#[derive(PartialEq, Eq, Debug, Hash, BinRead, BinWrite, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, BinRead, BinWrite, Clone, Copy)]
 pub struct ClientId {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
     #[binread(parse_with = read_nonzerou32)]
@@ -24,7 +24,13 @@ pub struct ClientId {
     pub id: NonZeroU32, // NonZeroU32 so we can efficiently store MaybeClientId
 }
 
-#[derive(Debug, PartialEq, Hash, Clone, Copy)]
+impl std::fmt::Debug for ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ClientId({})", self.id)
+    }
+}
+
+#[derive(PartialEq, Hash, Clone, Copy)]
 pub enum MaybeClientId {
     ClientId(ClientId),
     BlockWasDeleted,
@@ -40,6 +46,15 @@ impl binary_layout::LayoutAs<u32> for ClientId {
 
     fn write(id: ClientId) -> u32 {
         id.id.get()
+    }
+}
+
+impl std::fmt::Debug for MaybeClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MaybeClientId::ClientId(id) => write!(f, "{:?}", id),
+            MaybeClientId::BlockWasDeleted => write!(f, "BlockWasDeleted"),
+        }
     }
 }
 
@@ -74,7 +89,7 @@ impl BinWrite for MaybeClientId {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Hash, PartialOrd, BinRead, BinWrite, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, PartialOrd, BinRead, BinWrite, Clone, Copy)]
 pub struct BlockVersion {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
     pub version: u64,
@@ -93,6 +108,12 @@ impl binary_layout::LayoutAs<u64> for BlockVersion {
 
     fn write(version: BlockVersion) -> u64 {
         version.version
+    }
+}
+
+impl std::fmt::Debug for BlockVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlockVersion({})", self.version)
     }
 }
 
