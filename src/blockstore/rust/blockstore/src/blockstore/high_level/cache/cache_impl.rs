@@ -3,10 +3,10 @@ use futures::stream::Stream;
 use lockable::{AsyncLimit, LockableLruCache, LruOwnedGuard};
 use std::fmt::Debug;
 use std::future::Future;
+use std::num::NonZeroUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
-use std::num::NonZeroUsize;
 
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
@@ -15,7 +15,7 @@ use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
 
 // TODO Replace unsafe{NonZeroUSize::new_unchecked(_)} with NonZeroUsize::new(_).unwrap() once unwrap is const
-const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe {NonZeroUsize::new_unchecked(1024)};
+const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1024) };
 
 pub struct BlockCacheImpl<
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,

@@ -6,8 +6,8 @@ use std::pin::Pin;
 
 use super::block_data::IBlockData;
 use super::{
-    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
-    RemoveResult, TryCreateResult, BlockStoreWriter,
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
+    OptimizedBlockStoreWriter, RemoveResult, TryCreateResult,
 };
 
 use crate::data::Data;

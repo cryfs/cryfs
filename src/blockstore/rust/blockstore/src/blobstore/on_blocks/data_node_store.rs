@@ -99,8 +99,14 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         }
     }
 
-    // _optimized means that the data object passed in needs to have enough prefix bytes available to add a node header
-    pub async fn create_new_leaf_node_optimized(&self, data: Data) -> Result<DataLeafNode<B>> {
+    fn _allocate_data_for_leaf_node(&self) -> Data {
+        let mut data = Data::from(vec![0; usize::try_from(self.max_bytes_per_leaf()).unwrap()]);
+        data.shrink_to_subregion(node::data::OFFSET..);
+        data
+    }
+
+    pub async fn create_new_leaf_node(&self) -> Result<DataLeafNode<B>> {
+        let data = self._allocate_data_for_leaf_node();
         let block_data = self._serialize_leaf_node(data);
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(&block_data).await?;
@@ -114,7 +120,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         }
     }
 
-    pub async fn create_new_inner_node_optimized(
+    pub async fn create_new_inner_node(
         &self,
         depth: u8,
         children: &[BlockId],
@@ -219,3 +225,5 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
         dest[(BLOCKID_LEN * index)..(BLOCKID_LEN * (index + 1))].copy_from_slice(child.data());
     }
 }
+
+// TODO Tests
