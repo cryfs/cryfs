@@ -4,7 +4,6 @@
 #include <cpp-utils/crypto/kdf/Scrypt.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempDir.h>
-#include <blockstore/implementations/caching/CachingBlockStore2.h>
 #include <cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h>
 
 using std::vector;
@@ -158,7 +157,8 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
     ASSERT(readingFileIsSuccessful(mountdir / "myfile"), ""); // just to make sure reading usually works
 
     // wait for cache timeout (i.e. flush file system to disk)
-    constexpr auto cache_timeout = blockstore::caching::CachingBlockStore2::MAX_LIFETIME_SEC + cryfs::cachingfsblobstore::CachingFsBlobStore::MAX_LIFETIME_SEC;
+    const size_t CACHING_BLOCKSTORE_MAX_LIFETIME_SEC = 1; // TODO Use actual constant from the cache lifetime
+    constexpr auto cache_timeout = CACHING_BLOCKSTORE_MAX_LIFETIME_SEC + cryfs::cachingfsblobstore::CachingFsBlobStore::MAX_LIFETIME_SEC;
     boost::this_thread::sleep_for(boost::chrono::seconds(static_cast<int>(std::ceil(cache_timeout * 3))));
 
     // roll back base directory
