@@ -7,10 +7,6 @@ set(SOURCES
   utils/FileDoesntExistException.cpp
   implementations/testfake/FakeBlockStore.cpp
   implementations/testfake/FakeBlock.cpp
-  implementations/compressing/CompressingBlockStore.cpp
-  implementations/compressing/CompressedBlock.cpp
-  implementations/compressing/compressors/RunLengthEncoding.cpp
-  implementations/compressing/compressors/Gzip.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp

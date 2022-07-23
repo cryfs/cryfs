@@ -11,6 +11,7 @@ use cryfs_blockstore::{
         high_level::{self, Block, LockingBlockStore},
         low_level::{
             self,
+            compressing::CompressingBlockStore,
             encrypted::EncryptedBlockStore,
             inmemory::InMemoryBlockStore,
             integrity::{
@@ -82,6 +83,7 @@ mod ffi {
         fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge>;
 
         fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
+        fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
         fn new_locking_integrity_encrypted_ondisk_blockstore(
             integrity_file_path: &str,
             my_client_id: u32,
@@ -512,6 +514,14 @@ fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     LOGGER_INIT.ensure_initialized();
     Box::new(RustBlockStore2Bridge(DynBlockStore::from(
         InMemoryBlockStore::new().into_box(),
+    )))
+}
+
+fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+    Box::new(RustBlockStoreBridge(LockingBlockStore::new(
+        DynBlockStore::from(CompressingBlockStore::new(InMemoryBlockStore::new()).into_box()),
     )))
 }
 

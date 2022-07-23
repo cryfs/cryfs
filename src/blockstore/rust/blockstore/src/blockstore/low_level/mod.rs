@@ -145,6 +145,7 @@ pub enum RemoveResult {
     NotRemovedBecauseItDoesntExist,
 }
 
+pub mod compressing;
 pub mod encrypted;
 pub mod inmemory;
 pub mod integrity;
