@@ -102,7 +102,6 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     // _optimized means that the data object passed in needs to have enough prefix bytes available to add a node header
     pub async fn create_new_leaf_node_optimized(&self, data: Data) -> Result<DataLeafNode<B>> {
         let block_data = self._serialize_leaf_node(data);
-        // view.data is already set correctly because we grew this view from the data input
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(&block_data).await?;
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
@@ -149,6 +148,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         view._unused_mut().write(0);
         view.depth_mut().write(0);
         view.size_mut().write(size);
+        // view.data is already set correctly because we grew this view from the data input
         data
     }
 
