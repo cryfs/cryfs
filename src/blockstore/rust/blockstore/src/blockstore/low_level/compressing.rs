@@ -7,7 +7,7 @@ use std::pin::Pin;
 use super::block_data::IBlockData;
 use super::{
     BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
-    RemoveResult, TryCreateResult,
+    RemoveResult, TryCreateResult, BlockStoreWriter,
 };
 
 use crate::data::Data;
@@ -92,18 +92,18 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
         id: &BlockId,
         data: B::BlockData,
     ) -> Result<TryCreateResult> {
-        // TODO "Optimized" implementation without copying
         let compressed = _compress(data.extract())?;
         self.underlying_block_store
-            .try_create_optimized(id, B::BlockData::new(compressed))
+            // We cannot use try_create_optimized because we may not have enough prefix bytes available
+            .try_create(id, &compressed)
             .await
     }
 
     async fn store_optimized(&self, id: &BlockId, data: B::BlockData) -> Result<()> {
-        // TODO "Optimized" implementation without copying
         let compressed = _compress(data.extract())?;
         self.underlying_block_store
-            .store_optimized(id, B::BlockData::new(compressed))
+            // We cannot use store_optimized because we may not have enough prefix bytes available
+            .store(id, &compressed)
             .await
     }
 }
