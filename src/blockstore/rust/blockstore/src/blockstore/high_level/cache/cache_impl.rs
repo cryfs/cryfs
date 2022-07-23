@@ -1,17 +1,21 @@
 use anyhow::Result;
 use futures::stream::Stream;
-use lockable::{LockableLruCache, LruGuard, LruOwnedGuard};
+use lockable::{AsyncLimit, LockableLruCache, LruOwnedGuard};
 use std::fmt::Debug;
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
+use std::num::NonZeroUsize;
 
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
 use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
+
+// TODO Replace unsafe{NonZeroUSize::new_unchecked(_)} with NonZeroUsize::new(_).unwrap() once unwrap is const
+const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe {NonZeroUsize::new_unchecked(1024)};
 
 pub struct BlockCacheImpl<
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
@@ -47,15 +51,32 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         self._cache().keys()
     }
 
-    pub async fn async_lock(&self, block_id: BlockId) -> BlockCacheEntryGuard<B> {
-        let guard = self._cache().async_lock_owned(block_id).await;
-        BlockCacheEntryGuard { guard }
+    pub async fn async_lock<F, OnEvictFn>(
+        &self,
+        block_id: BlockId,
+        on_evict: OnEvictFn,
+    ) -> Result<BlockCacheEntryGuard<B>>
+    where
+        F: Future<Output = Result<()>>,
+        OnEvictFn: Fn(Vec<LruOwnedGuard<BlockId, BlockCacheEntry<B>>>) -> F,
+    {
+        let guard = self
+            ._cache()
+            .async_lock_owned(
+                block_id,
+                AsyncLimit::Bounded {
+                    max_entries: MAX_CACHE_ENTRIES,
+                    on_evict: move |evicted| {
+                        // TODO Should we wrap this into a BlockCacheEntryGuard for better abstraction separation?
+                        on_evict(evicted)
+                    },
+                },
+            )
+            .await?;
+        Ok(BlockCacheEntryGuard { guard })
     }
 
-    pub fn delete_entry_from_cache<'a>(
-        &self,
-        entry: &mut LruGuard<'a, BlockId, BlockCacheEntry<B>>,
-    ) {
+    pub fn delete_entry_from_cache(&self, entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>) {
         let entry = entry
             .remove()
             .expect("Tried to delete an entry that wasn't set");
@@ -178,14 +199,15 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     pub fn lock_entries_unlocked_for_at_least(
         &self,
         duration: Duration,
-    ) -> impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
-        self._cache().lock_entries_unlocked_for_at_least(duration)
+    ) -> impl Iterator<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>> {
+        self._cache()
+            .lock_entries_unlocked_for_at_least_owned(duration)
     }
 
     pub async fn lock_all_entries(
         &self,
-    ) -> impl Stream<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>> {
-        self._cache().lock_all_entries().await
+    ) -> impl Stream<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>> {
+        self._cache().lock_all_entries_owned().await
     }
 
     pub async fn into_entries_unordered(
