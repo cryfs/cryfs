@@ -10,10 +10,6 @@ set(SOURCES
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp
-  implementations/compressing/CompressingBlockStore.cpp
-  implementations/compressing/CompressedBlock.cpp
-  implementations/compressing/compressors/RunLengthEncoding.cpp
-  implementations/compressing/compressors/Gzip.cpp
   implementations/caching/cache/PeriodicTask.cpp
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp

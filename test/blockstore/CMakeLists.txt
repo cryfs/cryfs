@@ -3,7 +3,6 @@ project (blockstore-test)
 set(SOURCES
     utils/BlockStoreUtilsTest.cpp
     implementations/parallelaccess/ParallelAccessBlockStoreTest_Specific.cpp
-    implementations/compressing/compressors/testutils/CompressorTest.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
