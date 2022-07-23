@@ -90,7 +90,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
 
     pub async fn load(&self, block_id: BlockId) -> Result<Option<Block<B>>> {
         // TODO Cache non-existence?
-        let mut cache_entry = self.cache.async_lock(block_id).await;
+        let mut cache_entry = self.cache.async_lock(block_id).await?;
         if cache_entry.value().is_none() {
             let base_store = self.base_store.as_ref().expect("Already destructed");
             let loaded = base_store.load(&block_id).await?;
@@ -112,7 +112,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     }
 
     pub async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
-        let mut cache_entry = self.cache.async_lock(*block_id).await;
+        let mut cache_entry = self.cache.async_lock(*block_id).await?;
         if cache_entry.value().is_some() {
             // Block already exists in the cache
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
@@ -132,7 +132,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     }
 
     pub async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
-        let mut cache_entry = self.cache.async_lock(*block_id).await;
+        let mut cache_entry = self.cache.async_lock(*block_id).await?;
 
         let base_store = self.base_store.as_ref().expect("Already destructed");
 
@@ -161,7 +161,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     pub async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
         // TODO Don't write-through but cache remove operations?
 
-        let mut cache_entry_guard = self.cache.async_lock(*block_id).await;
+        let mut cache_entry_guard = self.cache.async_lock(*block_id).await?;
 
         // Remove from cache
         // TODO This is dangerous, we could accidentally drop the cache entry lock if we put it into the let binding by value but it needs to be held while we remove from the base store. Instead make removed_from_base_store a lambda and invoke it from in here?

@@ -5,7 +5,7 @@ use futures::{
     future,
     stream::{FuturesUnordered, StreamExt},
 };
-use lockable::LruGuard;
+use lockable::LruOwnedGuard;
 use std::fmt::Debug;
 use std::future::Future;
 use std::sync::Arc;
@@ -47,17 +47,20 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
                 PRUNE_BLOCKS_INTERVAL,
                 move || {
                     let cache_clone = Arc::clone(&cache_clone);
-                    async move { Self::_prune_old_blocks(&cache_clone).await }
+                    async move { Self::_prune_old_blocks(cache_clone).await }
                 },
             )),
         })
     }
 
-    pub async fn async_lock(&self, block_id: BlockId) -> BlockCacheEntryGuard<B> {
+    pub async fn async_lock(&self, block_id: BlockId) -> Result<BlockCacheEntryGuard<B>> {
+        let cache = Arc::clone(self.cache.as_ref().expect("Object is already destructed"));
         self.cache
             .as_ref()
             .expect("Object is already destructed")
-            .async_lock(block_id)
+            .async_lock(block_id, move |evicted| {
+                Self::_prune_blocks(Arc::clone(&cache), evicted.into_iter())
+            })
             .await
     }
 
@@ -120,14 +123,14 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             .num_blocks_in_cache_but_not_in_base_store()
     }
 
-    async fn _prune_old_blocks(cache: &BlockCacheImpl<B>) -> Result<()> {
+    async fn _prune_old_blocks(cache: Arc<BlockCacheImpl<B>>) -> Result<()> {
         Self::_prune_blocks_not_accessed_for_at_least(cache, PRUNE_BLOCKS_OLDER_THAN).await
     }
 
     /// TODO Docs
     /// TODO Test
     async fn _prune_blocks_not_accessed_for_at_least(
-        cache: &BlockCacheImpl<B>,
+        cache: Arc<BlockCacheImpl<B>>,
         duration: Duration,
     ) -> Result<()> {
         let to_prune = cache.lock_entries_unlocked_for_at_least(duration);
@@ -146,12 +149,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             .collect::<Vec<_>>()
             .await
             .into_iter();
-        Self::_prune_blocks(cache, to_prune).await
+        Self::_prune_blocks(Arc::clone(cache), to_prune).await
     }
 
     async fn _prune_blocks(
-        cache: &BlockCacheImpl<B>,
-        to_prune: impl Iterator<Item = LruGuard<'_, BlockId, BlockCacheEntry<B>>>,
+        cache: Arc<BlockCacheImpl<B>>,
+        to_prune: impl Iterator<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>>,
     ) -> Result<()> {
         // Now we have a list of mutex guards, locking all keys that we want to prune.
         // The global mutex for the cache is unlocked, so other threads may now come in
@@ -161,7 +164,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         // other tasks are waiting and only remove it if no other tasks are waiting.
         // TODO Test what the previous paragraph describes
         let pruning_tasks: FuturesUnordered<_> = to_prune
-            .map(|guard| Self::_prune_block(cache, guard))
+            .map(|guard| Self::_prune_block(&cache, guard))
             .collect();
         let errors = pruning_tasks
             .filter(|result| future::ready(result.is_err()))
@@ -181,7 +184,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
 
     async fn _prune_block(
         cache: &BlockCacheImpl<B>,
-        mut guard: LruGuard<'_, BlockId, BlockCacheEntry<B>>,
+        mut guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
     ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();
