@@ -6,6 +6,7 @@ use anyhow::{anyhow, ensure, Context, Result};
 use generic_array::typenum::U32;
 use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
 use std::sync::Once;
+use typenum::Unsigned;
 
 use super::super::{Cipher, EncryptionKey};
 
@@ -36,8 +37,8 @@ impl Aes256Gcm {
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD_PREFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_PREFIX;
-    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_SUFFIX;
+    type CiphertextOverheadPrefix = <super::Aes256Gcm as Cipher>::CiphertextOverheadPrefix;
+    type CiphertextOverheadSuffix = <super::Aes256Gcm as Cipher>::CiphertextOverheadSuffix;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         init_libsodium();
@@ -51,8 +52,9 @@ impl Cipher for Aes256Gcm {
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Use binary-layout here?
-        let ciphertext_size =
-            plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
+        let ciphertext_size = plaintext.len()
+            + Self::CiphertextOverheadPrefix::USIZE
+            + Self::CiphertextOverheadSuffix::USIZE;
         let nonce = self.cipher.gen_initial_nonce();
         let auth_tag = self
             .cipher
@@ -66,23 +68,23 @@ impl Cipher for Aes256Gcm {
                 &convert_key(&self.encryption_key),
             );
         let mut ciphertext = plaintext;
-        ciphertext.grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD_PREFIX, Self::CIPHERTEXT_OVERHEAD_SUFFIX).context(
+        ciphertext.grow_region_fail_if_reallocation_necessary(Self::CiphertextOverheadPrefix::USIZE, Self::CiphertextOverheadSuffix::USIZE).context(
             "Tried to add prefix and suffix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt").unwrap();
-        ciphertext[..Self::CIPHERTEXT_OVERHEAD_PREFIX].copy_from_slice(nonce.as_ref());
-        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..]
+        ciphertext[..Self::CiphertextOverheadPrefix::USIZE].copy_from_slice(nonce.as_ref());
+        ciphertext[(ciphertext_size - Self::CiphertextOverheadSuffix::USIZE)..]
             .copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
-        ensure!(ciphertext.len() >= Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
+        ensure!(ciphertext.len() >= Self::CiphertextOverheadPrefix::USIZE + Self::CiphertextOverheadSuffix::USIZE, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
         let ciphertext_len = ciphertext.len();
         let (nonce, rest) = ciphertext
             .as_mut()
-            .split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
+            .split_at_mut(Self::CiphertextOverheadPrefix::USIZE);
         let (cipherdata, auth_tag) =
-            rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
+            rest.split_at_mut(rest.len() - Self::CiphertextOverheadSuffix::USIZE);
         let nonce = Nonce::from_slice(nonce).expect("Wrong nonce size");
         let auth_tag = Tag::from_slice(auth_tag).expect("Wrong auth tag size");
         self.cipher
@@ -99,11 +101,14 @@ impl Cipher for Aes256Gcm {
             .map_err(|()| anyhow!("Decrypting data failed"))?;
         let mut plaintext = ciphertext;
         plaintext.shrink_to_subregion(
-            Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX),
+            Self::CiphertextOverheadPrefix::USIZE
+                ..(plaintext.len() - Self::CiphertextOverheadSuffix::USIZE),
         );
         assert_eq!(
             ciphertext_len
-                .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)
+                .checked_sub(
+                    Self::CiphertextOverheadPrefix::USIZE + Self::CiphertextOverheadSuffix::USIZE
+                )
                 .unwrap(),
             plaintext.len()
         );

@@ -10,8 +10,8 @@ mod libsodium;
 use super::{Cipher, EncryptionKey};
 use crate::data::Data;
 
-const NONCE_SIZE: usize = 12;
-const AUTH_TAG_SIZE: usize = 16;
+type NonceSize = typenum::U12;
+type AuthTagSize = typenum::U16;
 
 pub type Aes256Gcm_HardwareAccelerated = libsodium::Aes256Gcm;
 pub type Aes256Gcm_SoftwareImplemented = super::aead_crate_wrapper::AeadCipher<aes_gcm::Aes256Gcm>;
@@ -31,8 +31,8 @@ pub struct Aes256Gcm(Aes256GcmImpl);
 impl Cipher for Aes256Gcm {
     type KeySize = U32;
 
-    const CIPHERTEXT_OVERHEAD_PREFIX: usize = NONCE_SIZE;
-    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = AUTH_TAG_SIZE;
+    type CiphertextOverheadPrefix = NonceSize;
+    type CiphertextOverheadSuffix = AuthTagSize;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         let hardware_acceleration_available = Aes256Gcm_HardwareAccelerated::is_available();

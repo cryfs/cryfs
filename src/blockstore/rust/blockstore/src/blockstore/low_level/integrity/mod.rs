@@ -9,8 +9,10 @@ use futures::{
 use log::warn;
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
+use std::ops::Add;
 use std::path::PathBuf;
 use std::pin::Pin;
+use typenum::Unsigned;
 
 use super::block_data::IBlockData;
 use super::{
@@ -27,6 +29,7 @@ use integrity_data::{
     BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, IntegrityViolationError,
     MaybeClientId,
 };
+use typenum::{U0, U30};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
@@ -40,6 +43,8 @@ binary_layout::define_layout!(block_layout, LittleEndian, {
 });
 
 const HEADER_SIZE: usize = block_layout::data::OFFSET;
+type HeaderSize = U30;
+static_assertions::const_assert_eq!(HEADER_SIZE, HeaderSize::USIZE);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllowIntegrityViolations {
@@ -260,7 +265,12 @@ create_block_data_wrapper!(BlockData);
 #[async_trait]
 impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
     OptimizedBlockStoreWriter for IntegrityBlockStore<B>
+where
+    B::OverheadPrefix: Add<HeaderSize>,
+    <B::OverheadPrefix as Add<HeaderSize>>::Output: Unsigned,
 {
+    type OverheadPrefix = <B::OverheadPrefix as Add<HeaderSize>>::Output;
+    type OverheadSuffix = B::OverheadSuffix;
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
@@ -464,6 +474,9 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
 
 impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
     for IntegrityBlockStore<B>
+where
+    B::OverheadPrefix: Add<HeaderSize>,
+    <B::OverheadPrefix as Add<HeaderSize>>::Output: Unsigned,
 {
 }
 

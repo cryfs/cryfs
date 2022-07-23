@@ -434,6 +434,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "typenum",
  "winapi",
 ]
 
@@ -451,6 +452,7 @@ dependencies = [
  "lazy_static",
  "log",
  "tokio",
+ "typenum",
 ]
 
 [[package]]

@@ -2,6 +2,7 @@
 
 use generic_array::ArrayLength;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
+use typenum::Unsigned;
 
 use super::aesgcm::{
     Aes128Gcm, Aes256Gcm, Aes256Gcm_HardwareAccelerated, Aes256Gcm_SoftwareImplemented,
@@ -25,12 +26,12 @@ pub fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
 pub fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
     let mut result = Data::from(vec![
         0;
-        C::CIPHERTEXT_OVERHEAD_PREFIX
-            + C::CIPHERTEXT_OVERHEAD_SUFFIX
+        C::CiphertextOverheadPrefix::USIZE
+            + C::CiphertextOverheadSuffix::USIZE
             + plaintext.len()
     ]);
     result.shrink_to_subregion(
-        C::CIPHERTEXT_OVERHEAD_PREFIX..(C::CIPHERTEXT_OVERHEAD_PREFIX + plaintext.len()),
+        C::CiphertextOverheadPrefix::USIZE..(C::CiphertextOverheadPrefix::USIZE + plaintext.len()),
     );
     result.as_mut().copy_from_slice(plaintext);
     result
@@ -128,11 +129,15 @@ mod basics {
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
         assert_eq!(
             plaintext.len(),
-            ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX
+            ciphertext.len()
+                - C::CiphertextOverheadPrefix::USIZE
+                - C::CiphertextOverheadSuffix::USIZE
         );
         assert_eq!(
             ciphertext.len(),
-            plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX
+            plaintext.len()
+                + C::CiphertextOverheadPrefix::USIZE
+                + C::CiphertextOverheadSuffix::USIZE
         );
     }
 
@@ -143,11 +148,15 @@ mod basics {
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
         assert_eq!(
             plaintext.len(),
-            ciphertext.len() - C::CIPHERTEXT_OVERHEAD_PREFIX - C::CIPHERTEXT_OVERHEAD_SUFFIX
+            ciphertext.len()
+                - C::CiphertextOverheadPrefix::USIZE
+                - C::CiphertextOverheadSuffix::USIZE
         );
         assert_eq!(
             ciphertext.len(),
-            plaintext.len() + C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX
+            plaintext.len()
+                + C::CiphertextOverheadPrefix::USIZE
+                + C::CiphertextOverheadSuffix::USIZE
         );
     }
 

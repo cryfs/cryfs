@@ -69,6 +69,8 @@ impl<B: BlockStoreDeleter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Erro
 impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>>
     OptimizedBlockStoreWriter for ReadOnlyBlockStore<B>
 {
+    type OverheadPrefix = B::OverheadPrefix;
+    type OverheadSuffix = B::OverheadSuffix;
     type BlockData = B::BlockData;
 
     fn allocate(size: usize) -> Self::BlockData {

@@ -26,8 +26,8 @@ pub struct AeadCipher<C: NewAead + AeadInPlace> {
 impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
     type KeySize = C::KeySize;
 
-    const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
-    const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::TagSize::USIZE;
+    type CiphertextOverheadPrefix = C::NonceSize;
+    type CiphertextOverheadSuffix = C::TagSize;
 
     fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
         Self {
@@ -44,25 +44,26 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         //      But it is somewhat weird to grow the plaintext input into both directions. We should just grow it in one direction.
         // TODO Use binary-layout crate here?
         let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
-        let ciphertext_size =
-            plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
+        let ciphertext_size = plaintext.len()
+            + Self::CiphertextOverheadPrefix::USIZE
+            + Self::CiphertextOverheadSuffix::USIZE;
         let nonce = random_nonce::<C>();
         let auth_tag = cipher
             .encrypt_in_place_detached(&nonce, &[], plaintext.as_mut())
             .context("Encrypting data failed")?;
         let mut ciphertext = plaintext;
         ciphertext
-            .grow_region_fail_if_reallocation_necessary(Self::CIPHERTEXT_OVERHEAD_PREFIX, Self::CIPHERTEXT_OVERHEAD_SUFFIX)
+            .grow_region_fail_if_reallocation_necessary(Self::CiphertextOverheadPrefix::USIZE, Self::CiphertextOverheadSuffix::USIZE)
             .expect("Tried to add prefix and suffix bytes so we can store ciphertext overhead in libsodium::Aes256Gcm::encrypt");
-        ciphertext[..Self::CIPHERTEXT_OVERHEAD_PREFIX].copy_from_slice(nonce.as_ref());
-        ciphertext[(ciphertext_size - Self::CIPHERTEXT_OVERHEAD_SUFFIX)..]
+        ciphertext[..Self::CiphertextOverheadPrefix::USIZE].copy_from_slice(nonce.as_ref());
+        ciphertext[(ciphertext_size - Self::CiphertextOverheadSuffix::USIZE)..]
             .copy_from_slice(auth_tag.as_ref());
         assert_eq!(ciphertext_size, ciphertext.len());
         Ok(ciphertext)
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
-        ensure!(ciphertext.len() >= Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
+        ensure!(ciphertext.len() >= Self::CiphertextOverheadPrefix::USIZE + Self::CiphertextOverheadSuffix::USIZE, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
         // TODO Move C::new call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
@@ -70,21 +71,24 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
         let ciphertext_len = ciphertext.len();
         let (nonce, rest) = ciphertext
             .as_mut()
-            .split_at_mut(Self::CIPHERTEXT_OVERHEAD_PREFIX);
+            .split_at_mut(Self::CiphertextOverheadPrefix::USIZE);
         let nonce: &[u8] = nonce;
         let (cipherdata, auth_tag) =
-            rest.split_at_mut(rest.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX);
+            rest.split_at_mut(rest.len() - Self::CiphertextOverheadSuffix::USIZE);
         let auth_tag: &[u8] = auth_tag;
         cipher
             .decrypt_in_place_detached(nonce.into(), &[], cipherdata.as_mut(), auth_tag.into())
             .context("Decrypting data failed")?;
         let mut plaintext = ciphertext;
         plaintext.shrink_to_subregion(
-            Self::CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - Self::CIPHERTEXT_OVERHEAD_SUFFIX),
+            Self::CiphertextOverheadPrefix::USIZE
+                ..(plaintext.len() - Self::CiphertextOverheadSuffix::USIZE),
         );
         assert_eq!(
             ciphertext_len
-                .checked_sub(Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX)
+                .checked_sub(
+                    Self::CiphertextOverheadPrefix::USIZE + Self::CiphertextOverheadSuffix::USIZE
+                )
                 .unwrap(),
             plaintext.len()
         );

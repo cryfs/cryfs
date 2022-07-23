@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
+use typenum::{Unsigned, U0, U14};
 
 use super::{
     block_data::IBlockData, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -22,6 +23,9 @@ mod sysinfo;
 
 const FORMAT_VERSION_HEADER_PREFIX: &[u8] = b"cryfs;block;";
 const FORMAT_VERSION_HEADER: &[u8] = b"cryfs;block;0\0";
+
+type FormatVersionHeaderLen = U14;
+static_assertions::const_assert_eq!(FORMAT_VERSION_HEADER.len(), FormatVersionHeaderLen::USIZE);
 
 const PREFIX_LEN: usize = 3;
 const NONPREFIX_LEN: usize = 2 * BLOCKID_LEN - PREFIX_LEN;
@@ -122,6 +126,8 @@ create_block_data_wrapper!(BlockData);
 
 #[async_trait]
 impl OptimizedBlockStoreWriter for OnDiskBlockStore {
+    type OverheadPrefix = FormatVersionHeaderLen;
+    type OverheadSuffix = U0;
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {

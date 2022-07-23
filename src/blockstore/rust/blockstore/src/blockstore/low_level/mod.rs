@@ -4,6 +4,7 @@ use futures::stream::Stream;
 use std::any::Any;
 use std::fmt::Debug;
 use std::pin::Pin;
+use typenum::Unsigned;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
@@ -34,6 +35,9 @@ pub trait BlockStoreWriter {
 
 #[async_trait]
 pub trait OptimizedBlockStoreWriter {
+    type OverheadPrefix: Unsigned;
+    type OverheadSuffix: Unsigned;
+
     /// In-memory representation of the data of a block. This can be allocated using [OptimizedBlockStoreWriter::allocate]
     /// and then can be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     ///

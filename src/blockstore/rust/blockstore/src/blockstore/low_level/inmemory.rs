@@ -6,6 +6,7 @@ use std::fmt::{self, Debug};
 use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
+use typenum::U0;
 
 use super::block_data::IBlockData;
 use super::{
@@ -102,6 +103,8 @@ create_block_data_wrapper!(BlockData);
 
 #[async_trait]
 impl OptimizedBlockStoreWriter for InMemoryBlockStore {
+    type OverheadPrefix = U0;
+    type OverheadSuffix = U0;
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {

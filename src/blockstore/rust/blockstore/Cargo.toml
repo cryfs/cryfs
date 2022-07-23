@@ -42,6 +42,7 @@ lockable = {git = "https://github.com/smessmer/lockable", rev = "c43a9a864bd746f
 lzzzz = "^1.0.3"
 owning_ref_lockable = "^0.4.2"
 tokio-util = "^0.7.3"
+typenum = "^1.15.0"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.126"

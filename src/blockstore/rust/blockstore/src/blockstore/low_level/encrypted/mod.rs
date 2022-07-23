@@ -4,8 +4,10 @@ use futures::stream::Stream;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
+use std::ops::Add;
 use std::ops::Deref;
 use std::pin::Pin;
+use typenum::{Unsigned, U2};
 
 use super::block_data::IBlockData;
 use super::{
@@ -19,6 +21,8 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 // TODO Here and in other files: Add more .context() to errors
 
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
+type FormatVersionHeaderLen = U2;
+static_assertions::const_assert_eq!(FORMAT_VERSION_HEADER.len(), FormatVersionHeaderLen::USIZE);
 
 pub struct EncryptedBlockStore<
     C: 'static + Cipher,
@@ -96,7 +100,9 @@ impl<
         let ciphertext_size = self.underlying_block_store.deref().borrow().block_size_from_physical_block_size(block_size)?.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))?;
         ciphertext_size
-            .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
+            .checked_sub(
+                (C::CiphertextOverheadPrefix::USIZE + C::CiphertextOverheadSuffix::USIZE) as u64,
+            )
             .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
     }
 
@@ -133,20 +139,35 @@ impl<
         _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > OptimizedBlockStoreWriter for EncryptedBlockStore<C, _B, B>
+where
+    FormatVersionHeaderLen: Add<C::CiphertextOverheadPrefix>,
+    <FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output: Unsigned,
+    _B::OverheadPrefix: Add<<FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output>,
+    <_B::OverheadPrefix as Add<
+        <FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output,
+    >>::Output: Unsigned,
+    _B::OverheadSuffix: Add<C::CiphertextOverheadSuffix>,
+    <_B::OverheadSuffix as Add<C::CiphertextOverheadSuffix>>::Output: Unsigned,
 {
+    type OverheadPrefix = <<_B as OptimizedBlockStoreWriter>::OverheadPrefix as Add<
+        <FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output,
+    >>::Output;
+    type OverheadSuffix = <<_B as OptimizedBlockStoreWriter>::OverheadSuffix as Add<
+        C::CiphertextOverheadSuffix,
+    >>::Output;
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> Self::BlockData {
         let mut data = _B::allocate(
             FORMAT_VERSION_HEADER.len()
-                + C::CIPHERTEXT_OVERHEAD_PREFIX
-                + C::CIPHERTEXT_OVERHEAD_SUFFIX
+                + C::CiphertextOverheadPrefix::USIZE
+                + C::CiphertextOverheadSuffix::USIZE
                 + size,
         )
         .extract();
         data.shrink_to_subregion(
-            (FORMAT_VERSION_HEADER.len() + C::CIPHERTEXT_OVERHEAD_PREFIX)
-                ..(data.len() - C::CIPHERTEXT_OVERHEAD_SUFFIX),
+            (FORMAT_VERSION_HEADER.len() + C::CiphertextOverheadPrefix::USIZE)
+                ..(data.len() - C::CiphertextOverheadSuffix::USIZE),
         );
         BlockData::new(data)
     }
@@ -203,6 +224,15 @@ impl<
         _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > BlockStore for EncryptedBlockStore<C, _B, B>
+where
+    FormatVersionHeaderLen: Add<C::CiphertextOverheadPrefix>,
+    <FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output: Unsigned,
+    _B::OverheadPrefix: Add<<FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output>,
+    <_B::OverheadPrefix as Add<
+        <FormatVersionHeaderLen as Add<C::CiphertextOverheadPrefix>>::Output,
+    >>::Output: Unsigned,
+    _B::OverheadSuffix: Add<C::CiphertextOverheadSuffix>,
+    <_B::OverheadSuffix as Add<C::CiphertextOverheadSuffix>>::Output: Unsigned,
 {
 }
 
@@ -316,8 +346,8 @@ mod tests {
             let mut fixture = TestFixture::<C>::new();
             let store = fixture.store().await;
             let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64
-                + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
-                + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64;
+                + C::CiphertextOverheadPrefix::USIZE as u64
+                + C::CiphertextOverheadSuffix::USIZE as u64;
 
             assert_eq!(
                 0u64,
