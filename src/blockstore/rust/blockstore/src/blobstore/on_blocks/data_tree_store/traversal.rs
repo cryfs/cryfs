@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Error, Result};
 use async_recursion::async_recursion;
 use futures::stream::{FuturesUnordered, Stream, StreamExt};
+use std::borrow::Cow;
 use std::future::{self, Future};
 
 use crate::blobstore::on_blocks::data_node_store::{
@@ -43,7 +44,7 @@ where
     'a: 'r,
     'b: 'r,
 {
-    let futures = inner.children()?.map(move |child_id| async move {
+    let futures = inner.children().map(move |child_id| async move {
         let loaded: Result<DataNode<B>> = Ok(store.load(child_id).await?.ok_or_else(|| {
             anyhow!(
                 "Tried to load child node {:?} but couldn't find it",
