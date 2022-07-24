@@ -1,10 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
-use futures::{
-    future,
-    stream::{FuturesUnordered, StreamExt},
-};
+use futures::StreamExt;
 use lockable::LruOwnedGuard;
 use std::fmt::Debug;
 use std::future::Future;
@@ -15,6 +12,7 @@ use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use crate::utils::periodic_task::PeriodicTask;
+use crate::utils::stream::for_each_unordered;
 
 mod cache_impl;
 mod entry;
@@ -163,23 +161,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         // to return it to the cache using LockableCache::_unlock(), which will then check if
         // other tasks are waiting and only remove it if no other tasks are waiting.
         // TODO Test what the previous paragraph describes
-        let pruning_tasks: FuturesUnordered<_> = to_prune
-            .map(|guard| Self::_prune_block(&cache, guard))
-            .collect();
-        let errors = pruning_tasks
-            .filter(|result| future::ready(result.is_err()))
-            .map(|result| result.unwrap_err());
-        let errors: Vec<anyhow::Error> = errors.collect().await;
-        for error in &errors {
-            // Log all errors since we can only return one even if multiple ones happen
-            // TODO Better to introduce a special MultiError class? I also think there's another place somewhere where we log errors instead of returning multiple, fix that too.
-            log::error!("Error in prune_items_unlocked_for_longer_than: {:?}", error);
-        }
-        if let Some(first_error) = errors.into_iter().next() {
-            Err(first_error)
-        } else {
-            Ok(())
-        }
+        for_each_unordered(to_prune, |guard| Self::_prune_block(&cache, guard)).await
     }
 
     async fn _prune_block(
@@ -224,40 +206,14 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             // Now we're the only task having access to this arc
             let cache = Arc::try_unwrap(cache)
                 .expect("This can't fail since we are the only task having access");
-            let entries: FuturesUnordered<_> = cache
-                .into_entries_unordered()
-                .await
-                .map(future::ready)
-                .collect();
-
-            let errors = entries.filter_map(|(key, mut value)| async move {
-                let result = value.flush(&key).await;
-                match result {
-                    Ok(()) => None,
-                    Err(err) => Some(err),
-                }
-            });
-            let mut errors = Box::pin(errors);
-            let mut first_error = None;
-
-            // This while loop drives the whole stream (successes and errors) but only enters the loop body for errors.
-            while let Some(error) = errors.next().await {
-                if first_error.is_none() {
-                    first_error = Some(error);
-                } else {
-                    // TODO Return a list of all errors instead of logging swallowed ones
-                    log::error!("Error in BlockCache::async_drop_impl: {:?}", error);
-                }
-            }
+            for_each_unordered(
+                cache.into_entries_unordered().await,
+                |(key, mut value)| async move { value.flush(&key).await },
+            )
+            .await
 
             // TODO We want this assertion but can't do it here since we already moved out of it and can't it in BlockCacheImpl destructor since that runs while there are still guards alive.
             // assert_eq!(0, self.num_blocks_in_cache_but_not_in_base_store(), "We somehow miscounted num_blocks_in_cache_but_not_in_base_store");
-
-            if let Some(error) = first_error {
-                Err(error)
-            } else {
-                Ok(())
-            }
         };
         let (stop_prune_task, drop_entries) = join!(stop_prune_task, drop_entries);
         // TODO Report multiple errors if both stop_prune_task and drop_entries fail

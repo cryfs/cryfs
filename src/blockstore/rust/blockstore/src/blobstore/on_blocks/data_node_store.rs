@@ -33,6 +33,26 @@ pub struct DataInnerNode<B: BlockStore + Send + Sync> {
     block: Block<B>,
 }
 
+impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
+    pub fn children<'a>(
+        &'a self,
+    ) -> Result<impl Iterator<Item = BlockId> + ExactSizeIterator + 'a> {
+        let view = node::View::new(self.block.data().as_ref());
+        let num_children = usize::try_from(view.size().read()).unwrap();
+        let children_data = view.into_data().into_slice();
+        let children_ids = children_data.chunks_exact(BLOCKID_LEN);
+        ensure!(
+            num_children <= children_ids.len(),
+            "Tried to load an inner node with {} children but support at most {} per inner node",
+            num_children,
+            children_ids.len(),
+        );
+        Ok(children_ids
+            .take(num_children)
+            .map(|id_bytes| BlockId::from_slice(id_bytes).unwrap()))
+    }
+}
+
 pub struct DataLeafNode<B: BlockStore + Send + Sync> {
     block: Block<B>,
 }

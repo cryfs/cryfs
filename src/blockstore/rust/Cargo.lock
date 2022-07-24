@@ -71,6 +71,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6945cc5422176fc5e602e590c2878d2c2acd9a4fe20a4baa7c28022521698ec6"
 
 [[package]]
+name = "async-recursion"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -106,8 +117,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "binary-layout"
-version = "3.0.0"
-source = "git+https://github.com/smessmer/binary-layout?rev=f49fa855ab8619cd4d68a2852692d1e17f914ca6#f49fa855ab8619cd4d68a2852692d1e17f914ca6"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd85283366ef878d3005389f8d748e904045ea31d535511e9f31edd8f97030d5"
 dependencies = [
  "doc-comment",
  "paste 1.0.7",
@@ -397,6 +409,7 @@ dependencies = [
  "aead",
  "aes-gcm",
  "anyhow",
+ "async-recursion",
  "async-trait",
  "base64",
  "binary-layout",

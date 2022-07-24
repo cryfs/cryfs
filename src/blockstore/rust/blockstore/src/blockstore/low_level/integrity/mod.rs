@@ -9,6 +9,7 @@ use futures::{
 use log::warn;
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
+use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
@@ -191,35 +192,37 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                 }
                 let missing_blocks: FuturesUnordered<_> = expected_blocks
                     .into_iter()
-                    .map(|id| future::ready(id))
-                    .collect();
-                let missing_blocks = missing_blocks
-                    .map(|v| -> Result<BlockId> { Ok(v) })
-                    .try_filter_map(|expected_block_id| async move {
+                    .map(|expected_block_id| async move {
                         // We have a block that our integrity data says should exist but the underlying block store says doesn't exist.
                         // This could be an integrity violation. However, there are race conditions. For example, the block could
                         // have been created after we checked the underlying block store and before we checked the integrity data.
                         // The only way to be sure is to actually lock this block id and check again.
                         let block_info_guard =
                             self.integrity_data.lock_block_info(expected_block_id).await;
-                        if let Some(block_info) = block_info_guard.value() {
-                            let expected_to_exist = block_info.block_is_expected_to_exist();
-                            let actually_exists = self
-                                .underlying_block_store
-                                .exists(&expected_block_id)
-                                .await?;
-                            if expected_to_exist && !actually_exists {
-                                Ok(Some(expected_block_id))
+                        let result: Result<Option<BlockId>> =
+                            if let Some(block_info) = block_info_guard.value() {
+                                let expected_to_exist = block_info.block_is_expected_to_exist();
+                                let actually_exists = self
+                                    .underlying_block_store
+                                    .exists(&expected_block_id)
+                                    .await?;
+                                if expected_to_exist && !actually_exists {
+                                    Ok(Some(expected_block_id))
+                                } else {
+                                    // It actually was a race condition, ignore this false positive
+                                    Ok(None)
+                                }
                             } else {
                                 // It actually was a race condition, ignore this false positive
                                 Ok(None)
-                            }
-                        } else {
-                            // It actually was a race condition, ignore this false positive
-                            Ok(None)
-                        }
-                    });
-                let missing_blocks: HashSet<BlockId> = missing_blocks.try_collect().await?;
+                            };
+                        result
+                    })
+                    .collect();
+                let missing_blocks: HashSet<BlockId> = missing_blocks
+                    .try_filter_map(|expected_block_id| future::ready(Ok(expected_block_id)))
+                    .try_collect()
+                    .await?;
                 if !missing_blocks.is_empty() {
                     self._integrity_violation_detected(
                         IntegrityViolationError::MissingBlocks {
