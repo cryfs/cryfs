@@ -24,33 +24,33 @@ where
             on_leaf(leaf).await?;
         }
         DataNode::Inner(inner) => {
-            let stream = _load_children(store, inner)?
-                .map(|child| async move {
-                    all_leaves(store, &mut child?, on_leaf).await?;
-                    Ok(())
-                })
-                .buffer_unordered(usize::MAX);
-            run_to_completion(stream).await?;
+            for_each_unordered(_load_children(store, inner)?, |child| async move {
+                let mut child = child.await?;
+                all_leaves(store, &mut child, on_leaf).await?;
+                Ok(())
+            })
+            .await?;
         }
     }
     Ok(())
 }
 
-fn _load_children<'a, 'b, B: BlockStore + Send + Sync>(
+fn _load_children<'a, 'b, 'r, B: BlockStore + Send + Sync>(
     store: &'a DataNodeStore<B>,
     inner: &'b DataInnerNode<B>,
-) -> Result<FuturesUnordered<impl 'a + Future<Output = Result<DataNode<B>>>>> {
-    let futures: FuturesUnordered<_> = inner
-        .children()?
-        .map(move |child_id| async move {
-            let loaded: Result<DataNode<B>> = Ok(store.load(child_id).await?.ok_or_else(|| {
-                anyhow!(
-                    "Tried to load child node {:?} but couldn't find it",
-                    child_id,
-                )
-            })?);
-            loaded
-        })
-        .collect();
+) -> Result<impl 'r + Iterator<Item = impl 'a + Future<Output = Result<DataNode<B>>>>>
+where
+    'a: 'r,
+    'b: 'r,
+{
+    let futures = inner.children()?.map(move |child_id| async move {
+        let loaded: Result<DataNode<B>> = Ok(store.load(child_id).await?.ok_or_else(|| {
+            anyhow!(
+                "Tried to load child node {:?} but couldn't find it",
+                child_id,
+            )
+        })?);
+        loaded
+    });
     Ok(futures)
 }
