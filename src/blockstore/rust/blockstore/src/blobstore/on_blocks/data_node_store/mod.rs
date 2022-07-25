@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
 
@@ -12,22 +12,15 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod layout;
 use layout::node;
+pub use layout::NodeLayout;
 
-mod data_inner_node;
-pub use data_inner_node::DataInnerNode;
-
-mod data_leaf_node;
-pub use data_leaf_node::DataLeafNode;
-
-pub enum DataNode<B: BlockStore + Send + Sync> {
-    Inner(DataInnerNode<B>),
-    Leaf(DataLeafNode<B>),
-}
+mod data_node;
+pub use data_node::{DataInnerNode, DataLeafNode, DataNode};
 
 #[derive(Debug)]
 pub struct DataNodeStore<B: BlockStore + Send + Sync> {
     block_store: AsyncDropGuard<LockingBlockStore<B>>,
-    block_size_bytes: u32,
+    layout: NodeLayout,
 }
 
 impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
@@ -45,59 +38,34 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         );
         Ok(AsyncDropGuard::new(Self {
             block_store,
-            block_size_bytes,
+            layout: NodeLayout { block_size_bytes },
         }))
     }
 
-    pub fn max_bytes_per_leaf(&self) -> u32 {
-        self.block_size_bytes - u32::try_from(node::data::OFFSET).unwrap()
-    }
-
-    pub fn max_children_per_inner_node(&self) -> u32 {
-        let datasize = self.max_bytes_per_leaf();
-        datasize / u32::try_from(BLOCKID_LEN).unwrap()
+    pub fn layout(&self) -> &NodeLayout {
+        &self.layout
     }
 
     pub async fn load(&self, block_id: BlockId) -> Result<Option<DataNode<B>>> {
         match self.block_store.load(block_id).await? {
             None => Ok(None),
-            Some(block) => {
-                ensure!(
-                    usize::try_from(self.block_size_bytes).unwrap() == block.data().len(),
-                    "Expected to load block of size {} but loaded block {:?} had size {}",
-                    self.block_size_bytes,
-                    block_id,
-                    block.data().len(),
-                );
-                let node_view = node::View::new(block.data());
-                let format_version_header = node_view.format_version_header().read();
-                ensure!(layout::FORMAT_VERSION_HEADER == format_version_header, "Loaded a node {:?} with format_version_header == {}. This is not a supported format.", block_id, format_version_header);
-                let unused_must_be_zero = node_view.unused_must_be_zero().read();
-                ensure!(
-                    0 == unused_must_be_zero,
-                    "Loaded a node {:?} where the unused part isn't ZERO but {}",
-                    block_id,
-                    unused_must_be_zero
-                );
-                let depth = node_view.depth().read();
-                if depth == 0 {
-                    Ok(Some(DataNode::Leaf(DataLeafNode::new(block, self)?)))
-                } else {
-                    Ok(Some(DataNode::Inner(DataInnerNode::new(block, self)?)))
-                }
-            }
+            Some(block) => DataNode::parse(block, &self.layout).map(Some),
         }
     }
 
     fn _allocate_data_for_leaf_node(&self) -> Data {
-        let mut data = Data::from(vec![0; usize::try_from(self.max_bytes_per_leaf()).unwrap()]);
+        let mut data = Data::from(vec![
+            0;
+            usize::try_from(self.layout.max_bytes_per_leaf())
+                .unwrap()
+        ]);
         data.shrink_to_subregion(node::data::OFFSET..);
         data
     }
 
     pub async fn create_new_leaf_node(&self) -> Result<DataLeafNode<B>> {
         let data = self._allocate_data_for_leaf_node();
-        let block_data = data_leaf_node::serialize_leaf_node(data, self);
+        let block_data = data_node::serialize_leaf_node_optimized(data, &self.layout);
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(&block_data).await?;
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
@@ -115,7 +83,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         depth: u8,
         children: &[BlockId],
     ) -> Result<DataInnerNode<B>> {
-        let block_data = data_inner_node::serialize_inner_node(depth, children, self);
+        let block_data = data_node::serialize_inner_node(depth, children, &self.layout);
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(&block_data).await?;
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
@@ -128,11 +96,20 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         }
     }
 
-    async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
-        self.block_store.remove(block_id).await
+    pub async fn create_new_node_as_copy_from(&self, source: &DataNode<B>) -> Result<DataNode<B>> {
+        let source_data = source.raw_blockdata();
+        assert_eq!(usize::try_from(self.layout.block_size_bytes).unwrap(), source_data.len(), "Source node has wrong layout and has {} bytes. We expected {} bytes. Is it from the same DataNodeStore?", source_data.len(), self.layout.block_size_bytes);
+        // TODO Use create_optimized instead of create?
+        let blockid = self.block_store.create(source_data).await?;
+        // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
+        self.load(blockid)
+            .await?
+            .ok_or_else(|| anyhow!("We just created {:?} but now couldn't find it", blockid))
     }
 
-    // cpputils::unique_ref<DataNode> createNewNodeAsCopyFrom(const DataNode &source);
+    pub async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
+        self.block_store.remove(block_id).await
+    }
 
     // cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 

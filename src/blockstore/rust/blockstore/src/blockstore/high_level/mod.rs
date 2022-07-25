@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use futures::{
     future,
@@ -57,6 +57,20 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug> Block<B> {
             .expect("An existing block cannot have a None cache entry")
             .resize(new_size)
             .await;
+    }
+
+    pub async fn remove(self, block_store: &LockingBlockStore<B>) -> Result<()> {
+        // TODO Keep cache entry locked until removal is finished
+        let block_id = *self.block_id();
+        match block_store.remove(&block_id).await? {
+            RemoveResult::SuccessfullyRemoved => Ok(()),
+            RemoveResult::NotRemovedBecauseItDoesntExist => {
+                bail!(
+                    "Tried to remove a loaded block {:?} but didn't find it",
+                    block_id,
+                );
+            }
+        }
     }
 }
 

@@ -72,7 +72,7 @@ impl Data {
     ///
     /// This function does not copy and will only succeed if there is enough space in the storage.
     // TODO Test
-    pub fn _grow_region(&mut self, add_prefix_bytes: usize, add_suffix_bytes: usize) {
+    pub fn grow_region(&mut self, add_prefix_bytes: usize, add_suffix_bytes: usize) {
         self.reserve(add_prefix_bytes, add_suffix_bytes);
 
         self.grow_region_fail_if_reallocation_necessary(add_prefix_bytes, add_suffix_bytes)
@@ -108,9 +108,8 @@ impl Data {
     pub fn reserve(&mut self, prefix_bytes: usize, suffix_bytes: usize) {
         if self.region.start < prefix_bytes || self.region.end + suffix_bytes > self.storage.len() {
             // We don't have enough prefix or suffix bytes. Need to reallocate.
-            let mut new_storage = Vec::new();
             // TODO There may be a faster way without Vec::resize where we only have to zero out the prefix bytes and suffix bytes instead of the whole vector
-            new_storage.resize(prefix_bytes + self.region.len() + suffix_bytes, 0u8);
+            let mut new_storage = vec![0; prefix_bytes + self.region.len() + suffix_bytes];
             new_storage[prefix_bytes..(prefix_bytes + self.region.len())]
                 .copy_from_slice(self.as_ref());
 
@@ -136,7 +135,7 @@ impl Data {
         if new_size < self.region.len() {
             self.shrink_to_subregion(0..new_size);
         } else {
-            self._grow_region(0, new_size - self.region.len());
+            self.grow_region(0, new_size - self.region.len());
         }
     }
 

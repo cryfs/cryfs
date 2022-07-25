@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
-use futures::StreamExt;
 use lockable::LruOwnedGuard;
 use std::fmt::Debug;
 use std::future::Future;
@@ -139,6 +138,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     /// TODO Test
     #[cfg(test)]
     pub async fn prune_all_blocks(&self) -> Result<()> {
+        use futures::StreamExt;
         let cache = self.cache.as_ref().expect("Object is already destructed");
         let to_prune = cache
             .lock_all_entries()

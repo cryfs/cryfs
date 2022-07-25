@@ -1,9 +1,8 @@
 use anyhow::{anyhow, bail, Result};
-use async_recursion::async_recursion;
-use std::num::{NonZeroU32, NonZeroU64};
+use std::num::NonZeroU64;
 
 use super::traversal;
-use crate::blobstore::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore};
+use crate::blobstore::on_blocks::data_node_store::{DataNode, DataNodeStore, NodeLayout};
 use crate::blockstore::{low_level::BlockStore, BlockId};
 
 #[derive(Clone, Copy)]
@@ -64,18 +63,18 @@ impl SizeCache {
     ) -> Result<u64> {
         let calculate_num_bytes = |num_leaves: NonZeroU64, rightmost_leaf_num_bytes: u32| {
             Ok((num_leaves.get() - 1)
-                .checked_mul(u64::from(node_store.max_bytes_per_leaf()))
+                .checked_mul(u64::from(node_store.layout().max_bytes_per_leaf()))
                 .ok_or_else(|| {
                     anyhow!(
                         "Overflow in (num_leaves-1)*max_bytes_per_leaf: ({}-1)*{}",
                         num_leaves,
-                        node_store.max_bytes_per_leaf(),
+                        node_store.layout().max_bytes_per_leaf(),
                     )
                 })?
                 .checked_add(u64::from(rightmost_leaf_num_bytes))
                 .ok_or_else(|| {
                     anyhow!(
-                        "Overflow in (num_leaves-1)*max_bytes_per_leaf+rightmost_leaf_num_bytes: ({}-1)*{}+{}", num_leaves, node_store.max_bytes_per_leaf(), rightmost_leaf_num_bytes
+                        "Overflow in (num_leaves-1)*max_bytes_per_leaf+rightmost_leaf_num_bytes: ({}-1)*{}+{}", num_leaves, node_store.layout().max_bytes_per_leaf(), rightmost_leaf_num_bytes
                     )
                 })?)
         };
@@ -126,6 +125,22 @@ impl SizeCache {
                 _,
             ) => calculate_num_bytes(num_leaves, rightmost_leaf_num_bytes),
         }
+    }
+
+    pub fn update(
+        &mut self,
+        layout: &NodeLayout,
+        num_leaves: NonZeroU64,
+        total_num_bytes: u64,
+    ) -> Result<()> {
+        let max_bytes_per_leaf = u64::from(layout.max_bytes_per_leaf());
+        let num_bytes_in_left_leaves = (num_leaves.get() - 1) * max_bytes_per_leaf;
+        let rightmost_leaf_num_bytes = u32::try_from(total_num_bytes.checked_sub(num_bytes_in_left_leaves).ok_or_else(||anyhow!("Tried to update cache to total_num_bytes={} but with max_bytes_per_leaf={} and num_leaves={}, we should have at least {}", total_num_bytes, max_bytes_per_leaf, num_leaves, num_bytes_in_left_leaves))?).unwrap();
+        *self = Self::NumBytesIsKnown {
+            num_leaves,
+            rightmost_leaf_num_bytes,
+        };
+        Ok(())
     }
 
     async fn _calculate_leaf_size<B: BlockStore + Send + Sync>(

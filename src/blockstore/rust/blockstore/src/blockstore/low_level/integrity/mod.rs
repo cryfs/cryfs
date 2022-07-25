@@ -9,7 +9,6 @@ use futures::{
 use log::warn;
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
-use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
