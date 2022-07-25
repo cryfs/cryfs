@@ -1,6 +1,8 @@
 use anyhow::{anyhow, bail, Result};
 use async_recursion::async_recursion;
+use std::num::{NonZeroU32, NonZeroU64};
 
+use super::traversal;
 use crate::blobstore::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore};
 use crate::blockstore::{low_level::BlockStore, BlockId};
 
@@ -8,13 +10,13 @@ use crate::blockstore::{low_level::BlockStore, BlockId};
 pub enum SizeCache {
     SizeUnknown,
     RootIsInnerNodeAndNumLeavesIsKnown {
-        num_leaves: u64,
+        num_leaves: NonZeroU64,
         // It's important to remember whether root is an inner node because if it was a leaf, then it would be the rightmost_leaf_id, and trying
         // to load it to calculate the size would cause a deadlock.
         rightmost_leaf_id: BlockId,
     },
     NumBytesIsKnown {
-        num_leaves: u64,
+        num_leaves: NonZeroU64,
         rightmost_leaf_num_bytes: u32,
     },
 }
@@ -28,12 +30,14 @@ impl SizeCache {
         &mut self,
         node_store: &DataNodeStore<B>,
         root_node: &DataNode<B>,
-    ) -> Result<u64> {
+    ) -> Result<NonZeroU64> {
         match (*self, root_node) {
             (Self::SizeUnknown, DataNode::Inner(root_node)) => {
-                let (num_leaves, rightmost_leaf_id) =
-                    Self::_calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
-                        .await?;
+                let traversal::NumLeavesAndRightmostLeafId {
+                    num_leaves,
+                    rightmost_leaf_id,
+                } = traversal::calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
+                    .await?;
                 *self = SizeCache::RootIsInnerNodeAndNumLeavesIsKnown {
                     num_leaves,
                     rightmost_leaf_id,
@@ -41,7 +45,7 @@ impl SizeCache {
                 Ok(num_leaves)
             }
             (Self::SizeUnknown, DataNode::Leaf(root_node)) => {
-                let num_leaves = 1;
+                let num_leaves = NonZeroU64::new(1).unwrap();
                 *self = SizeCache::NumBytesIsKnown {
                     num_leaves,
                     rightmost_leaf_num_bytes: root_node.num_bytes(),
@@ -58,15 +62,14 @@ impl SizeCache {
         node_store: &DataNodeStore<B>,
         root_node: &DataNode<B>,
     ) -> Result<u64> {
-        let calculate_num_bytes = |num_leaves: u64, rightmost_leaf_num_bytes: u32| {
-            assert!(num_leaves >= 1);
-            Ok((num_leaves - 1)
+        let calculate_num_bytes = |num_leaves: NonZeroU64, rightmost_leaf_num_bytes: u32| {
+            Ok((num_leaves.get() - 1)
                 .checked_mul(u64::from(node_store.max_bytes_per_leaf()))
                 .ok_or_else(|| {
                     anyhow!(
                         "Overflow in (num_leaves-1)*max_bytes_per_leaf: ({}-1)*{}",
                         num_leaves,
-                        node_store.max_bytes_per_leaf()
+                        node_store.max_bytes_per_leaf(),
                     )
                 })?
                 .checked_add(u64::from(rightmost_leaf_num_bytes))
@@ -78,9 +81,11 @@ impl SizeCache {
         };
         match (*self, root_node) {
             (Self::SizeUnknown, DataNode::Inner(root_node)) => {
-                let (num_leaves, rightmost_leaf_id) =
-                    Self::_calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
-                        .await?;
+                let traversal::NumLeavesAndRightmostLeafId {
+                    num_leaves,
+                    rightmost_leaf_id,
+                } = traversal::calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
+                    .await?;
                 let rightmost_leaf_num_bytes =
                     Self::_calculate_leaf_size(node_store, rightmost_leaf_id).await?;
                 *self = Self::NumBytesIsKnown {
@@ -90,7 +95,7 @@ impl SizeCache {
                 calculate_num_bytes(num_leaves, rightmost_leaf_num_bytes)
             }
             (Self::SizeUnknown, DataNode::Leaf(root_node)) => {
-                let num_leaves = 1;
+                let num_leaves = NonZeroU64::new(1).unwrap();
                 let rightmost_leaf_num_bytes = root_node.num_bytes();
                 *self = Self::NumBytesIsKnown {
                     num_leaves,
@@ -120,75 +125,6 @@ impl SizeCache {
                 },
                 _,
             ) => calculate_num_bytes(num_leaves, rightmost_leaf_num_bytes),
-        }
-    }
-
-    #[async_recursion]
-    async fn _calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + Sync>(
-        node_store: &DataNodeStore<B>,
-        root_node: &DataInnerNode<B>,
-    ) -> Result<(u64, BlockId)> {
-        let depth = root_node.depth();
-        let children = root_node.children();
-        if depth == 1 {
-            Ok((
-                u64::try_from(children.len()).unwrap(),
-                children
-                    .last()
-                    .expect("Inner node must have at least one child"),
-            ))
-        } else {
-            let num_leaves_per_full_child = u64::from(node_store.max_children_per_inner_node())
-                .checked_pow(u32::from(depth - 1))
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Overflow in max_children_per_inner_node^(depth-1): {}^({}-1)",
-                        node_store.max_children_per_inner_node(),
-                        depth,
-                    )
-                })?;
-            let num_leaves_in_left_children = u64::try_from(children.len() - 1)
-                .unwrap()
-                .checked_mul(num_leaves_per_full_child)
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Overflow in (num_children-1)*num_leaves_per_full_child: ({}-1)*{}",
-                        children.len(),
-                        num_leaves_per_full_child,
-                    )
-                })?;
-            let last_child_id = children
-                .last()
-                .expect("Inner node must have at least one child, that's a class invariant of DataInnerNode");
-            let last_child = node_store.load(last_child_id).await?.ok_or_else(|| {
-                anyhow!(
-                    "Tried to load {:?} as a child node but couldn't find it",
-                    last_child_id
-                )
-            })?;
-            let (num_leaves_in_right_child, rightmost_leaf_id) = match last_child {
-                DataNode::Leaf(_last_child) => {
-                    bail!(
-                        "Loaded {:?} as a leaf node but the inner node above it has depth {}",
-                        last_child_id,
-                        depth,
-                    );
-                }
-                DataNode::Inner(last_child) => {
-                    Self::_calculate_num_leaves_and_rightmost_leaf_id(node_store, &last_child)
-                        .await?
-                }
-            };
-            let num_leaves = num_leaves_in_left_children
-                .checked_add(num_leaves_in_right_child)
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Overflow in num_leaves_in_left_children+num_leaves_in_right_child: {}+{}",
-                        num_leaves_in_left_children,
-                        num_leaves_in_right_child,
-                    )
-                })?;
-            Ok((num_leaves, rightmost_leaf_id))
         }
     }
 

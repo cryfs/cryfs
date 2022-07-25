@@ -10,7 +10,7 @@ aes-gcm = {version = "^0.9.4", features = ["std"]}
 anyhow = "^1.0.58"
 async-trait = "^0.1.56"
 base64 = "^0.13.0"
-binary-layout = "^3.1.0"
+binary-layout = "^3.1.1"
 binread = {version = "^2.2.0", features = ["const_generics"]}
 binwrite = "^0.2.1"
 chacha20poly1305 = "^0.9.1"

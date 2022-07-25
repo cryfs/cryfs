@@ -117,9 +117,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "binary-layout"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd85283366ef878d3005389f8d748e904045ea31d535511e9f31edd8f97030d5"
+checksum = "e89c9f31c2604ed12a5d415dd8d128849cbf242aa3e20bd2076fb9208dafd4b0"
 dependencies = [
  "doc-comment",
  "paste 1.0.7",

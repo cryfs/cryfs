@@ -1,5 +1,6 @@
 use anyhow::{ensure, Result};
 use binary_layout::Field;
+use std::num::NonZeroU32;
 
 use super::layout::{node, FORMAT_VERSION_HEADER};
 use super::DataNodeStore;
@@ -21,11 +22,7 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
         let max_bytes_per_leaf = store.max_bytes_per_leaf();
         let size = view.size().read();
         ensure!(
-            size > 0,
-            "Loaded a leaf that claims to store 0 bytes but the minimum is 1.",
-        );
-        ensure!(
-            size < max_bytes_per_leaf,
+            size <= max_bytes_per_leaf,
             "Loaded a leaf that claims to store {} bytes but the maximum is {}.",
             size,
             max_bytes_per_leaf,
@@ -45,7 +42,7 @@ pub fn serialize_leaf_node<B: BlockStore + Send + Sync>(
 ) -> Data {
     let size: u32 = u32::try_from(data.len()).unwrap();
     assert!(
-        size < node_store.max_bytes_per_leaf(),
+        size <= node_store.max_bytes_per_leaf(),
         "Tried to create leaf with {} bytes but each leaf can only hold {}",
         size,
         node_store.max_bytes_per_leaf()

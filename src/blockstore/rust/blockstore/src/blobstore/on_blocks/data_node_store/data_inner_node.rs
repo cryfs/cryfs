@@ -1,4 +1,5 @@
 use anyhow::{ensure, Result};
+use std::num::{NonZeroU32, NonZeroU8};
 
 use super::layout::{node, FORMAT_VERSION_HEADER};
 use super::DataNodeStore;
@@ -41,14 +42,16 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         Ok(Self { block })
     }
 
-    pub fn depth(&self) -> u8 {
+    pub fn depth(&self) -> NonZeroU8 {
         let view = super::node::View::new(self.block.data());
-        view.depth().read()
+        NonZeroU8::new(view.depth().read())
+            .expect("DataInnerNode class invariant violated: Has depth of zero")
     }
 
-    pub fn num_children(&self) -> u32 {
+    pub fn num_children(&self) -> NonZeroU32 {
         let view = super::node::View::new(self.block.data().as_ref());
-        view.size().read()
+        NonZeroU32::new(view.size().read())
+            .expect("DataInnerNode class invariant violated: Has only zero children")
     }
 
     pub fn children<'a>(&'a self) -> impl Iterator<Item = BlockId> + ExactSizeIterator + 'a {
