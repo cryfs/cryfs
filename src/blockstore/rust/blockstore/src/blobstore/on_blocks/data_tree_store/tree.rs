@@ -54,6 +54,13 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             .await
     }
 
+    pub fn root_node_id(&self) -> &BlockId {
+        self.root_node
+            .as_ref()
+            .expect("root_node is None")
+            .block_id()
+    }
+
     // TODO Can we make read_bytes and try_read_bytes take &self instead of &mut self?
     pub async fn read_bytes(&mut self, offset: u64, target: &mut [u8]) -> Result<()> {
         let num_bytes = self.num_bytes().await?;
