@@ -14,13 +14,15 @@ use crate::data::Data;
 use crate::utils::num::NonZeroU64Ext;
 use crate::utils::stream::for_each_unordered;
 
-// TODO Try to simplify the traversal logic and make it easier to understand.
-// TODO Remove parts of the logic and hope that a test case fails, or add test cases.
-// TODO Maybe also split this into separate files?
-// TODO Make traversals more concurrent, we can probably look at different child nodes concurrently.
-// TODO Look at direct operations vs .checked_XXX() and see which ones make sense
-// TODO Look at data types u32 vs u64 vs usize
-// TODO Look at assert vs ensure - when something can be caused by the data on disk instead of a programming bug, it must be ensure!
+// TODO All following TODOs apply for here and for tree.rs
+//  - Try to simplify the traversal logic and make it easier to understand.
+//  - Remove parts of the logic and hope that a test case fails, or add test cases.
+//  - Maybe also split this into separate files?
+//  - Make traversals more concurrent, we can probably look at different child nodes concurrently.
+//  - Look at direct operations vs .checked_XXX() and see which ones make sense
+//  - Look at data types u32 vs u64 vs usize
+//  - Look at assert vs ensure - when something can be caused by the data on disk instead of a programming bug, it must be ensure!
+//  - Look at assertions and make sure they all show a good error message
 
 #[async_recursion]
 pub async fn all_leaves<B, F>(
@@ -201,6 +203,17 @@ impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
                 }
             }
         }
+    }
+
+    pub async fn overwrite_data(&mut self, source: &[u8]) -> Result<()> {
+        match self {
+            Self::Borrowed{leaf} => leaf.data_mut().copy_from_slice(source),
+            Self::Owned{leaf} => leaf.data_mut().copy_from_slice(source),
+            Self::NotLoadedYet {store, leaf_block_id} => {
+                store.overwrite_leaf_node(leaf_block_id, source).await?;
+            }
+        }
+        Ok(())
     }
 }
 

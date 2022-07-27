@@ -113,7 +113,7 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 actual_target.copy_from_slice(actual_source);
                 Ok(())
             }
-            fn on_create_leaf(&self, _begin_byte: u64, _count: u32) -> Data {
+            fn on_create_leaf(&self, _begin_byte: u64, _num_bytes: u32) -> Data {
                 panic!("Reading shouldn't create new leaves");
             }
         }
@@ -126,6 +126,52 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             },
         )
         .await
+    }
+
+    pub async fn write_bytes(&mut self, source: &[u8], offset: u64) -> Result<()> {
+        struct Callbacks<'a> {
+            layout: NodeLayout,
+            offset: u64,
+            source: &'a [u8],
+        }
+        #[async_trait]
+        impl<'a, B: BlockStore + Send + Sync> TraversalByByteIndicesCallbacks<B> for Callbacks<'a> {
+            async fn on_existing_leaf(
+                &self,
+                index_of_first_leaf_byte: u64,
+                mut leaf: LeafHandle<'_, B>,
+                leaf_data_offset: u32,
+                leaf_data_size: u32,
+            ) -> Result<()> {
+                assert!(index_of_first_leaf_byte + u64::from(leaf_data_offset) >= self.offset && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset) <= u64::try_from(self.source.len()).unwrap() && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset) + u64::from(leaf_data_size) <= u64::try_from(self.source.len()).unwrap(), "Reading from source out of bounds");
+                let source_begin = index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset);
+                let source_end = source_begin + u64::from(leaf_data_size);
+                let actual_source = &self.source[usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
+                if leaf_data_offset == 0 && leaf_data_size == self.layout.max_bytes_per_leaf() {
+                    leaf.overwrite_data(actual_source).await?;
+                } else {
+                    let actual_target = &mut leaf.node().await?.data_mut()[usize::try_from(leaf_data_offset).unwrap()..usize::try_from(leaf_data_offset + leaf_data_size).unwrap()];
+                    actual_target.copy_from_slice(actual_source);
+                }
+                Ok(())
+            }
+            fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data {
+                assert!(begin_byte >= self.offset && begin_byte - self.offset <= u64::try_from(self.source.len()).unwrap() && begin_byte - self.offset + u64::from(num_bytes) <= u64::try_from(self.source.len()).unwrap(), "Reading from source out of bounds");
+                // TODO Should we just return a borrowed slice from on_create_leaf instead of allocating a data object? Here and in other on_create_leaf instances?
+                let mut data = Data::from(vec![0; usize::try_from(num_bytes).unwrap()]); // TODO Possible without zeroing out?
+                let source_begin = begin_byte - self.offset;
+                let source_end = source_begin + u64::from(num_bytes);
+                let actual_source = &self.source[usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
+                data.as_mut().copy_from_slice(actual_source);
+                data
+            }
+        }
+
+        self._traverse_leaves_by_byte_indices::<Callbacks, true>(offset, u64::try_from(source.len()).unwrap(), &Callbacks {
+            layout: *self.node_store.layout(),
+            offset,
+            source,
+        }).await
     }
 
     async fn _traverse_leaves_by_leaf_indices<
@@ -277,7 +323,7 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 }
                 data
             }
-            fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) {
+            fn on_backtrack_from_subtree(&self, _node: &mut DataInnerNode<B>) {
                 // do nothing
             }
         }
@@ -325,9 +371,9 @@ trait TraversalByByteIndicesCallbacks<B: BlockStore + Send + Sync> {
         &self,
         index_of_first_leaf_byte: u64,
         leaf: LeafHandle<'_, B>,
-        begin: u32,
-        count: u32,
+        leaf_data_offset: u32,
+        leaf_data_size: u32,
     ) -> Result<()>;
-    // TODO count u32 or u64?
-    fn on_create_leaf(&self, begin_byte: u64, count: u32) -> Data;
+    // TODO num_bytes u32 or u64?
+    fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
 }

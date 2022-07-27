@@ -107,13 +107,20 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
             .ok_or_else(|| anyhow!("We just created {:?} but now couldn't find it", blockid))
     }
 
+    pub async fn overwrite_leaf_node(&self, block_id: &BlockId, data: &[u8]) -> Result<()> {
+        let mut data_obj = self._allocate_data_for_leaf_node();
+        // TODO Make an overwrite_leaf_node_optimized version that requires that enough prefix bytes are already available in the data input and that doesn't require us to copy_from_slice here?
+        data_obj.as_mut().copy_from_slice(data);
+        let block_data = data_node::serialize_leaf_node_optimized(data_obj, &self.layout);
+        // TODO Use store_optimized instead of store?
+        self.block_store.overwrite(block_id, &block_data).await
+    }
+
     pub async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
         self.block_store.remove(block_id).await
     }
 
     // cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
-
-    // cpputils::unique_ref<DataLeafNode> overwriteLeaf(const blockstore::BlockId &blockId, cpputils::Data data);
 
     // void remove(cpputils::unique_ref<DataNode> node);
     // void removeSubtree(uint8_t depth, const blockstore::BlockId &blockId);
