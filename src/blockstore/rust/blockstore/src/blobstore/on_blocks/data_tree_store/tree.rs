@@ -1,19 +1,21 @@
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
+use async_recursion::async_recursion;
 use async_trait::async_trait;
 use divrem::DivCeil;
 use std::marker::PhantomData;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
 use crate::blobstore::on_blocks::data_node_store::{
-    DataInnerNode, DataNode, DataNodeStore, NodeLayout,
+    DataInnerNode, DataNode, DataNodeStore, NodeLayout, RemoveResult,
 };
-use crate::blockstore::low_level::BlockStore;
+use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDropArc, AsyncDropGuard};
+use crate::utils::stream::for_each_unordered;
 
 pub struct DataTree<B: BlockStore + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
@@ -25,6 +27,9 @@ pub struct DataTree<B: BlockStore + Send + Sync> {
     // root_node is always some except in the middle of computations
     root_node: Option<DataNode<B>>,
     node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
+
+    // TODO Think through all operations and whether they can change data that is cached in num_bytes_cache. Update cache if necessary.
+    //      num_bytes_cache caches a bit differently than the C++ cache did.
     num_bytes_cache: SizeCache,
 }
 
@@ -143,60 +148,182 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 leaf_data_offset: u32,
                 leaf_data_size: u32,
             ) -> Result<()> {
-                assert!(index_of_first_leaf_byte + u64::from(leaf_data_offset) >= self.offset && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset) <= u64::try_from(self.source.len()).unwrap() && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset) + u64::from(leaf_data_size) <= u64::try_from(self.source.len()).unwrap(), "Reading from source out of bounds");
-                let source_begin = index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset);
+                assert!(
+                    index_of_first_leaf_byte + u64::from(leaf_data_offset) >= self.offset
+                        && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset)
+                            <= u64::try_from(self.source.len()).unwrap()
+                        && index_of_first_leaf_byte - self.offset
+                            + u64::from(leaf_data_offset)
+                            + u64::from(leaf_data_size)
+                            <= u64::try_from(self.source.len()).unwrap(),
+                    "Reading from source out of bounds"
+                );
+                let source_begin =
+                    index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset);
                 let source_end = source_begin + u64::from(leaf_data_size);
-                let actual_source = &self.source[usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
+                let actual_source = &self.source
+                    [usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
                 if leaf_data_offset == 0 && leaf_data_size == self.layout.max_bytes_per_leaf() {
                     leaf.overwrite_data(actual_source).await?;
                 } else {
-                    let actual_target = &mut leaf.node().await?.data_mut()[usize::try_from(leaf_data_offset).unwrap()..usize::try_from(leaf_data_offset + leaf_data_size).unwrap()];
+                    let actual_target =
+                        &mut leaf.node().await?.data_mut()[usize::try_from(leaf_data_offset)
+                            .unwrap()
+                            ..usize::try_from(leaf_data_offset + leaf_data_size).unwrap()];
                     actual_target.copy_from_slice(actual_source);
                 }
                 Ok(())
             }
             fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data {
-                assert!(begin_byte >= self.offset && begin_byte - self.offset <= u64::try_from(self.source.len()).unwrap() && begin_byte - self.offset + u64::from(num_bytes) <= u64::try_from(self.source.len()).unwrap(), "Reading from source out of bounds");
+                assert!(
+                    begin_byte >= self.offset
+                        && begin_byte - self.offset <= u64::try_from(self.source.len()).unwrap()
+                        && begin_byte - self.offset + u64::from(num_bytes)
+                            <= u64::try_from(self.source.len()).unwrap(),
+                    "Reading from source out of bounds"
+                );
                 // TODO Should we just return a borrowed slice from on_create_leaf instead of allocating a data object? Here and in other on_create_leaf instances?
                 let mut data = Data::from(vec![0; usize::try_from(num_bytes).unwrap()]); // TODO Possible without zeroing out?
                 let source_begin = begin_byte - self.offset;
                 let source_end = source_begin + u64::from(num_bytes);
-                let actual_source = &self.source[usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
+                let actual_source = &self.source
+                    [usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
                 data.as_mut().copy_from_slice(actual_source);
                 data
             }
         }
 
-        self._traverse_leaves_by_byte_indices::<Callbacks, true>(offset, u64::try_from(source.len()).unwrap(), &Callbacks {
-            layout: *self.node_store.layout(),
+        self._traverse_leaves_by_byte_indices::<Callbacks, true>(
             offset,
-            source,
-        }).await
+            u64::try_from(source.len()).unwrap(),
+            &Callbacks {
+                layout: *self.node_store.layout(),
+                offset,
+                source,
+            },
+        )
+        .await
     }
 
-    async fn _traverse_leaves_by_leaf_indices<
+    pub async fn resize_num_bytes(&mut self, new_num_bytes: u64) -> Result<()> {
+        struct Callbacks<'a, B: BlockStore + Send + Sync> {
+            node_store: &'a DataNodeStore<B>,
+            new_num_leaves: NonZeroU64,
+            new_last_leaf_size: u32,
+        }
+        #[async_trait]
+        impl<'a, B: BlockStore + Send + Sync> traversal::TraversalCallbacks<B> for Callbacks<'a, B> {
+            async fn on_existing_leaf(
+                &self,
+                _leaf_index: u64,
+                _is_right_border_leaf: bool,
+                mut leaf: LeafHandle<'_, B>,
+            ) -> Result<()> {
+                // This is only called if the new last leaf was already existing
+                let leaf = leaf.node().await?;
+                if leaf.num_bytes() != self.new_last_leaf_size {
+                    leaf.resize(self.new_last_leaf_size);
+                }
+                Ok(())
+            }
+            fn on_create_leaf(&self, _index: u64) -> Data {
+                // This is only called, if the new last leaf was not existing yet
+                Data::from(vec![0; usize::try_from(self.new_last_leaf_size).unwrap()])
+            }
+            async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()> {
+                // This is only called for the right border nodes of the new tree.
+                // When growing size, the following is a no-op. When shrinking, we're deleting the children that aren't needed anymore.
+
+                let max_leaves_per_child = self
+                    .node_store
+                    .layout()
+                    .num_leaves_per_full_subtree(node.depth().get() - 1)?;
+                let needed_nodes_on_child_level = self
+                    .new_num_leaves
+                    .get()
+                    .div_ceil(max_leaves_per_child.get());
+                let needed_nodes_on_same_level = needed_nodes_on_child_level.div_ceil(u64::from(
+                    self.node_store.layout().max_children_per_inner_node(),
+                ));
+                let child_level_nodes_covered_by_siblings = (needed_nodes_on_same_level - 1)
+                    * u64::from(self.node_store.layout().max_children_per_inner_node());
+                let needed_children_for_right_border_node = u32::try_from(
+                    needed_nodes_on_child_level - child_level_nodes_covered_by_siblings,
+                )
+                .unwrap();
+                let children = node.children();
+                assert!(
+                    needed_children_for_right_border_node <= u32::try_from(children.len()).unwrap(),
+                    "Node has too few children"
+                );
+                // All children to the right of the new right-border-node are removed including their subtree.
+                let children_to_delete: Vec<BlockId> = children
+                    .skip(usize::try_from(needed_children_for_right_border_node).unwrap())
+                    .collect();
+                let depth = node.depth();
+
+                // Ordering: First remove the child block ids from the node, then remove the actual blocks.
+                // This has a higher chance of keeping the file system in a consistent state if there's a power loss in the middle.
+                node.shrink_num_children(
+                    NonZeroU32::new(needed_children_for_right_border_node).unwrap(),
+                )?;
+                for_each_unordered(children_to_delete.into_iter(), move |block_id| async move {
+                    DataTree::_remove_subtree(&self.node_store, depth.get() - 1, block_id).await
+                })
+                .await?;
+
+                Ok(())
+            }
+        }
+
+        let max_bytes_per_leaf = u64::from(self.node_store.layout().max_bytes_per_leaf());
+        let new_num_leaves =
+            NonZeroU64::new(new_num_bytes.div_ceil(max_bytes_per_leaf).max(1)).unwrap();
+        let new_last_leaf_size =
+            u32::try_from(new_num_bytes - (new_num_leaves.get() - 1) * max_bytes_per_leaf).unwrap();
+
+        let root_node = self.root_node.take().expect("root_node is None");
+        let new_root = self
+            ._traverse_leaves_by_leaf_indices_return_new_root::<Callbacks<'_, B>, true>(
+                root_node,
+                new_num_leaves.get() - 1,
+                new_num_leaves.get(),
+                &Callbacks {
+                    node_store: &self.node_store,
+                    new_last_leaf_size,
+                    new_num_leaves,
+                },
+            )
+            .await?;
+        self.root_node = Some(new_root);
+
+        self.num_bytes_cache
+            .update(self.node_store.layout(), new_num_leaves, new_num_bytes)?;
+        Ok(())
+    }
+
+    async fn _traverse_leaves_by_leaf_indices_return_new_root<
         C: traversal::TraversalCallbacks<B> + Sync,
         const ALLOW_WRITES: bool,
     >(
-        &mut self,
+        &self,
+        root_node: DataNode<B>,
         begin_index: u64,
         end_index: u64,
         callbacks: &C,
-    ) -> Result<()> {
+    ) -> Result<DataNode<B>> {
         if end_index <= begin_index {
-            return Ok(());
+            return Ok(root_node);
         }
 
-        let new_root = traversal::traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
+        traversal::traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
             &self.node_store,
-            self.root_node.take().expect("root_node is None"),
+            root_node,
             begin_index,
             end_index,
             callbacks,
         )
-        .await?;
-        self.root_node = Some(new_root);
-        Ok(())
+        .await
     }
 
     async fn _traverse_leaves_by_byte_indices<
@@ -323,8 +450,9 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 }
                 data
             }
-            fn on_backtrack_from_subtree(&self, _node: &mut DataInnerNode<B>) {
+            async fn on_backtrack_from_subtree(&self, _node: &mut DataInnerNode<B>) -> Result<()> {
                 // do nothing
+                Ok(())
             }
         }
 
@@ -339,12 +467,15 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             _b: PhantomData,
         };
 
-        self._traverse_leaves_by_leaf_indices::<WrappedCallbacks<'_, B, C, ALLOW_WRITES>, ALLOW_WRITES>(
+        let root_node = self.root_node.take().expect("self.root_node is None");
+        let new_root = self._traverse_leaves_by_leaf_indices_return_new_root::<WrappedCallbacks<'_, B, C, ALLOW_WRITES>, ALLOW_WRITES>(
+            root_node,
             first_leaf,
             end_leaf,
             &wrapped_callbacks,
         )
         .await?;
+        self.root_node = Some(new_root);
         let blob_is_growing_from_this_traversal = wrapped_callbacks
             .blob_is_growing_from_this_traversal
             .load(Ordering::Relaxed);
@@ -360,6 +491,51 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 .update(self.node_store.layout(), end_leaf, end_byte)?;
         }
 
+        Ok(())
+    }
+
+    #[async_recursion]
+    pub async fn _remove_subtree(
+        node_store: &DataNodeStore<B>,
+        depth: u8,
+        block_id: BlockId,
+    ) -> Result<()> {
+        if depth == 0 {
+            let remove_result = node_store.remove_by_id(&block_id).await?;
+            ensure!(
+                RemoveResult::SuccessfullyRemoved == remove_result,
+                "Tried to remove {:?} but didn't find it",
+                block_id
+            );
+        } else {
+            match node_store.load(block_id).await? {
+                None => bail!(
+                    "Tried to load inner node {:?} for removal but didn't find it",
+                    block_id
+                ),
+                Some(DataNode::Leaf(_)) => bail!(
+                    "Tried to load inner node {:?} for removal but it was a leaf",
+                    block_id
+                ),
+                Some(DataNode::Inner(node)) => {
+                    ensure!(
+                        node.depth().get() == depth,
+                        "Tried to load inner node {:?} at depth {} for removal but it had depth {}",
+                        block_id,
+                        depth,
+                        node.depth()
+                    );
+                    // Ordering: First remove the node itself, then remove the children.
+                    // This has a higher chance of keeping the file system in a consistent state if there's a power loss in the middle.
+                    let children: Vec<_> = node.children().collect();
+                    DataNode::Inner(node).remove(node_store).await?;
+                    for_each_unordered(children.into_iter(), |child_block_id| {
+                        Self::_remove_subtree(node_store, depth - 1, child_block_id)
+                    })
+                    .await?;
+                }
+            }
+        }
         Ok(())
     }
 }

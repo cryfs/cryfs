@@ -3,6 +3,7 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
+use futures::future::{self, BoxFuture};
 use std::future::Future;
 use std::num::NonZeroU64;
 
@@ -207,9 +208,12 @@ impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
 
     pub async fn overwrite_data(&mut self, source: &[u8]) -> Result<()> {
         match self {
-            Self::Borrowed{leaf} => leaf.data_mut().copy_from_slice(source),
-            Self::Owned{leaf} => leaf.data_mut().copy_from_slice(source),
-            Self::NotLoadedYet {store, leaf_block_id} => {
+            Self::Borrowed { leaf } => leaf.data_mut().copy_from_slice(source),
+            Self::Owned { leaf } => leaf.data_mut().copy_from_slice(source),
+            Self::NotLoadedYet {
+                store,
+                leaf_block_id,
+            } => {
                 store.overwrite_leaf_node(leaf_block_id, source).await?;
             }
         }
@@ -226,7 +230,7 @@ pub trait TraversalCallbacks<B: BlockStore + Send + Sync> {
         leaf: LeafHandle<'_, B>,
     ) -> Result<()>;
     fn on_create_leaf(&self, index: u64) -> Data;
-    fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>);
+    async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()>;
 }
 
 pub async fn traverse_and_return_new_root<
@@ -471,7 +475,7 @@ async fn _traverse_existing_subtree_of_inner_node<
             fn on_create_leaf(&self, _index: u64) -> Data {
                 panic!("We don't actually traverse any leaves");
             }
-            fn on_backtrack_from_subtree(&self, _node: &mut DataInnerNode<B>) {
+            async fn on_backtrack_from_subtree(&self, _node: &mut DataInnerNode<B>) -> Result<()> {
                 panic!("We don't actually traverse any leaves");
             }
         }
@@ -567,12 +571,27 @@ async fn _traverse_existing_subtree_of_inner_node<
                     child_offset
                 )
             })?);
-        // TODO Possible withot boxing the lambda?
-        let leaf_creator: Box<dyn Send + Sync + Fn(u64) -> Data> = if child_index >= begin_child {
-            Box::new(|index| callbacks.on_create_leaf(index))
-        } else {
-            Box::new(_create_max_size_leaf(node_store.layout()))
-        };
+        struct Callbacks<'a, C> {
+            child_index: usize,
+            begin_child: usize,
+            layout: NodeLayout,
+            callbacks: &'a C,
+        }
+        #[async_trait]
+        impl<'a, B: BlockStore + Send + Sync, C: TraversalCallbacks<B> + Sync>
+            CreateNewSubtreeCallbacks<B> for Callbacks<'a, C>
+        {
+            fn on_create_leaf(&self, index: u64) -> Data {
+                if self.child_index >= self.begin_child {
+                    self.callbacks.on_create_leaf(index)
+                } else {
+                    _create_max_size_leaf(&self.layout)
+                }
+            }
+            async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()> {
+                self.callbacks.on_backtrack_from_subtree(node).await
+            }
+        }
         let child = _create_new_subtree(
             node_store,
             local_begin_index,
@@ -585,8 +604,12 @@ async fn _traverse_existing_subtree_of_inner_node<
                 )
             })?,
             root.depth().get() - 1,
-            &leaf_creator,
-            &|node| callbacks.on_backtrack_from_subtree(node),
+            &Callbacks {
+                child_index,
+                begin_child,
+                layout: *node_store.layout(),
+                callbacks,
+            },
         )
         .await?;
         root.add_child(&child)?;
@@ -594,15 +617,15 @@ async fn _traverse_existing_subtree_of_inner_node<
 
     // This is only a backtrack if we actually visited a leaf here
     if end_index > begin_index {
-        callbacks.on_backtrack_from_subtree(root);
+        callbacks.on_backtrack_from_subtree(root).await?;
     }
 
     Ok(())
 }
 
-fn _create_max_size_leaf(layout: &NodeLayout) -> impl Fn(u64) -> Data {
+fn _create_max_size_leaf(layout: &NodeLayout) -> Data {
     let max_bytes_per_leaf = usize::try_from(layout.max_bytes_per_leaf()).unwrap();
-    move |_index| Data::from(vec![0; max_bytes_per_leaf])
+    Data::from(vec![0; max_bytes_per_leaf])
 }
 
 async fn _increase_tree_depth<B: BlockStore + Send + Sync>(
@@ -616,16 +639,24 @@ async fn _increase_tree_depth<B: BlockStore + Send + Sync>(
     )))
 }
 
+#[async_trait]
+trait CreateNewSubtreeCallbacks<B: BlockStore + Send + Sync> {
+    fn on_create_leaf(&self, index: u64) -> Data;
+    async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()>;
+}
+
 // TODO leaf_offset u32 or u64?
 #[async_recursion]
-async fn _create_new_subtree<B: BlockStore + Send + Sync>(
+async fn _create_new_subtree<
+    B: BlockStore + Send + Sync,
+    C: CreateNewSubtreeCallbacks<B> + Sync,
+>(
     node_store: &DataNodeStore<B>,
     begin_index: u64,
     end_index: u64,
     leaf_offset: u64,
     depth: u8,
-    on_create_leaf: &(impl Send + Sync + Fn(u64) -> Data),
-    on_backtrack_from_subtree: &(impl Send + Sync + Fn(&mut DataInnerNode<B>)),
+    callbacks: &C,
 ) -> Result<DataNode<B>> {
     assert!(begin_index <= end_index, "Invalid parameters");
 
@@ -633,9 +664,9 @@ async fn _create_new_subtree<B: BlockStore + Send + Sync>(
         assert!(begin_index <= 1 && end_index == 1, "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf).");
         // TODO Possible withot boxing the lambda?
         let leaf_creator: Box<dyn Send + Fn(u64) -> Data> = if begin_index == 0 {
-            Box::new(on_create_leaf)
+            Box::new(|index| callbacks.on_create_leaf(index))
         } else {
-            Box::new(_create_max_size_leaf(node_store.layout()))
+            Box::new(|_| _create_max_size_leaf(node_store.layout()))
         };
         let leaf_data = leaf_creator(leaf_offset);
         let mut leaf = node_store.create_new_leaf_node().await?;
@@ -669,14 +700,26 @@ async fn _create_new_subtree<B: BlockStore + Send + Sync>(
                     leaves_per_child
                 )
             })?;
+            struct Callbacks;
+            #[async_trait]
+            impl<B: BlockStore + Send + Sync> CreateNewSubtreeCallbacks<B> for Callbacks {
+                fn on_create_leaf(&self, index: u64) -> Data {
+                    panic!("We're only creating gap leaves here, not traversing any");
+                }
+                async fn on_backtrack_from_subtree(
+                    &self,
+                    node: &mut DataInnerNode<B>,
+                ) -> Result<()> {
+                    Ok(())
+                }
+            }
             let child = _create_new_subtree(
                 node_store,
                 leaves_per_child,
                 leaves_per_child,
                 leaf_offset + child_offset,
                 depth - 1,
-                &|_| panic!("We're only creating gap leaves here, not traversing any"),
-                &|_| (),
+                &Callbacks,
             )
             .await?;
             assert_eq!(
@@ -697,8 +740,7 @@ async fn _create_new_subtree<B: BlockStore + Send + Sync>(
                 local_end_index,
                 leaf_offset + child_offset,
                 depth - 1,
-                on_create_leaf,
-                on_backtrack_from_subtree,
+                callbacks,
             )
             .await?;
             assert_eq!(
@@ -714,7 +756,7 @@ async fn _create_new_subtree<B: BlockStore + Send + Sync>(
 
         // This is only a backtrack if we actually created a leaf here
         if end_index > begin_index {
-            on_backtrack_from_subtree(&mut new_node);
+            callbacks.on_backtrack_from_subtree(&mut new_node).await?;
         }
 
         Ok(DataNode::Inner(new_node))

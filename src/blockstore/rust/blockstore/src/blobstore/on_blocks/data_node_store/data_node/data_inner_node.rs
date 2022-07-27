@@ -114,6 +114,22 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         view.size_mut().write(prev_num_children + 1);
         Ok(())
     }
+
+    pub fn shrink_num_children(&mut self, new_num_children: NonZeroU32) -> Result<()> {
+        let mut view = node::View::new(self.block.data_mut().as_mut());
+        let old_num_children = view.size().read();
+        ensure!(
+            new_num_children.get() <= old_num_children,
+            "Called DataInnerNode::shrink_num_children({}) for a node with {} children",
+            new_num_children,
+            view.size().read()
+        );
+        let free_begin = usize::try_from(new_num_children.get()).unwrap() * BLOCKID_LEN;
+        let free_end = usize::try_from(old_num_children).unwrap() * BLOCKID_LEN;
+        view.data_mut()[free_begin..free_end].fill(0);
+        view.size_mut().write(new_num_children.get());
+        Ok(())
+    }
 }
 
 pub fn serialize_inner_node(depth: u8, children: &[BlockId], layout: &NodeLayout) -> Data {

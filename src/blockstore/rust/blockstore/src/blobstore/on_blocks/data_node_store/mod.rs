@@ -2,10 +2,9 @@ use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
 
+pub use crate::blockstore::high_level::RemoveResult;
 use crate::blockstore::{
-    high_level::{LockingBlockStore, RemoveResult},
-    low_level::BlockStore,
-    BlockId, BLOCKID_LEN,
+    high_level::LockingBlockStore, low_level::BlockStore, BlockId, BLOCKID_LEN,
 };
 use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
