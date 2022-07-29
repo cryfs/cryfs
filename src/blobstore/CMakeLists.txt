@@ -16,6 +16,8 @@ set(SOURCES
     implementations/onblocks/datatreestore/DataTree.cpp
     implementations/onblocks/datatreestore/DataTreeStore.cpp
     implementations/onblocks/BlobOnBlocks.cpp
+    implementations/rustbridge/RustBlob.cpp
+    implementations/rustbridge/RustBlobStore.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

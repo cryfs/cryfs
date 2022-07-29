@@ -1,5 +1,9 @@
-fn main() {
-    let _build = cxx_build::bridges(vec!["src/blockstore.rs"].into_iter());
+const BRIDGE_FILES: &[&str] = &["src/blockstore.rs", "src/blobstore.rs"];
 
-    println!("cargo:rerun-if-changed=src/blockstore.rs");
+fn main() {
+    let _build = cxx_build::bridges(BRIDGE_FILES.iter());
+
+    for file in BRIDGE_FILES {
+        println!("cargo:rerun-if-changed={}", file);
+    }
 }

@@ -6,6 +6,8 @@ use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
+use super::runtime::{LOGGER_INIT, TOKIO_RUNTIME};
+use crate::utils::log_errors;
 use cryfs_blockstore::{
     blockstore::{
         high_level::{self, Block, LockingBlockStore},
@@ -145,16 +147,6 @@ mod ffi {
 
 unsafe impl Send for ffi::CxxCallback {}
 
-fn log_errors<R>(f: impl FnOnce() -> Result<R>) -> Result<R> {
-    match f() {
-        Ok(ok) => Ok(ok),
-        Err(err) => {
-            log::error!("Error: {:?}", err);
-            Err(err)
-        }
-    }
-}
-
 fn new_blockid(data: &[u8; BLOCKID_LEN]) -> Box<BlockId> {
     Box::new(BlockId(cryfs_blockstore::blockstore::BlockId::from_array(
         data,
@@ -163,7 +155,7 @@ fn new_blockid(data: &[u8; BLOCKID_LEN]) -> Box<BlockId> {
 
 pub struct BlockId(cryfs_blockstore::blockstore::BlockId);
 impl BlockId {
-    fn data(&self) -> &[u8; 16] {
+    fn data(&self) -> &[u8; BLOCKID_LEN] {
         self.0.data()
     }
 }
@@ -185,72 +177,34 @@ impl OptionData {
     }
 }
 
-struct LoggerInit {}
-impl LoggerInit {
-    pub fn new() -> Self {
-        env_logger::init();
-        Self {}
-    }
-
-    pub fn ensure_initialized(&self) {
-        // noop. But calling this means the lazy static has to be created.
-    }
-}
-
-lazy_static::lazy_static! {
-    // TODO Will this runtime only execute things while an active call to rust is ongoing? Should we move it to a new thread
-    //      and drive futures from there so that the runtime can execute even if we're currently mostly doing C++ stuff?
-    static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
-    static ref LOGGER_INIT: LoggerInit = LoggerInit::new();
-}
-
-// Invariant: Option is always Some() unless the value was dropped
-struct RustBlockBridge(Option<Block<DynBlockStore>>);
+struct RustBlockBridge(Block<DynBlockStore>);
 
 impl RustBlockBridge {
     fn new(block: Block<DynBlockStore>) -> Self {
-        Self(Some(block))
+        Self(block)
     }
 
     fn block_id(&self) -> Box<BlockId> {
-        Box::new(BlockId(
-            *self
-                .0
-                .as_ref()
-                .expect("Block was already dropped")
-                .block_id(),
-        ))
+        Box::new(BlockId(*self.0.block_id()))
     }
 
     fn size(&self) -> usize {
-        self.0
-            .as_ref()
-            .expect("Block was already dropped")
-            .data()
-            .len()
+        self.0.data().len()
     }
 
     fn flush(&mut self) -> Result<()> {
-        log_errors(|| {
-            TOKIO_RUNTIME.block_on(self.0.as_mut().expect("Block was already dropped").flush())
-        })
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.flush()))
     }
 
     fn resize(&mut self, new_size: usize) {
-        TOKIO_RUNTIME.block_on(
-            self.0
-                .as_mut()
-                .expect("Block was already dropped")
-                .resize(new_size),
-        )
+        TOKIO_RUNTIME.block_on(self.0.resize(new_size))
     }
 
     fn write(&mut self, source: &[u8], offset: usize) -> Result<()> {
         log_errors(|| {
-            let s = self.0.as_mut().expect("Block was already dropped");
-            let dest = &mut s.data_mut()[offset..(offset + source.len())];
+            let dest = &mut self.0.data_mut()[offset..(offset + source.len())];
             if dest.len() != source.len() {
-                bail!("Tried to write out of block boundaries. Write offset {}, size {} but block size is {}", offset, source.len(), s.data().len());
+                bail!("Tried to write out of block boundaries. Write offset {}, size {} but block size is {}", offset, source.len(), self.0.data().len());
             }
             dest.copy_from_slice(source);
             Ok(())
@@ -258,7 +212,7 @@ impl RustBlockBridge {
     }
 
     fn data(&self) -> &[u8] {
-        self.0.as_ref().expect("Block was already dropped").data()
+        self.0.data()
     }
 }
 
@@ -372,7 +326,7 @@ impl RustBlockStoreBridge {
     }
 }
 
-struct DynBlockStore(Box<dyn BlockStore + Send + Sync>);
+pub struct DynBlockStore(Box<dyn BlockStore + Send + Sync>);
 
 impl DynBlockStore {
     pub fn from<B: 'static + BlockStore + Send + Sync>(

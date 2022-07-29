@@ -64,6 +64,13 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         }
     }
 
+    pub async fn flush(&mut self) -> Result<()> {
+        match self {
+            Self::Leaf(leaf) => leaf.flush().await,
+            Self::Inner(inner) => inner.flush().await,
+        }
+    }
+
     pub(super) fn raw_blockdata(&self) -> &Data {
         match self {
             Self::Leaf(leaf) => leaf.raw_blockdata(),

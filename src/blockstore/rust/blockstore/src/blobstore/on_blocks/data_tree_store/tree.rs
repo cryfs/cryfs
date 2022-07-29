@@ -54,6 +54,23 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             .await
     }
 
+    pub async fn num_nodes(&mut self) -> Result<u64> {
+        let root_node = self.root_node.as_ref().expect("root_node is None");
+        let mut num_nodes_current_level = self
+            .num_bytes_cache
+            .get_or_calculate_num_leaves(&self.node_store, root_node)
+            .await?
+            .get();
+        let mut total_num_nodes = num_nodes_current_level;
+        for level in 0..root_node.depth() {
+            num_nodes_current_level = num_nodes_current_level.div_ceil(u64::from(
+                self.node_store.layout().max_children_per_inner_node(),
+            ));
+            total_num_nodes += num_nodes_current_level;
+        }
+        Ok(total_num_nodes)
+    }
+
     pub fn root_node_id(&self) -> &BlockId {
         self.root_node
             .as_ref()
@@ -140,6 +157,14 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         .await
     }
 
+    pub async fn read_all(&mut self) -> Result<Data> {
+        //TODO Querying num_bytes can be inefficient. Is this possible without a call to num_bytes()?
+        let num_bytes = self.num_bytes().await?;
+        let mut result = Data::from(vec![0; usize::try_from(num_bytes).unwrap()]); // TODO Don't initialize with zero?
+        self._do_read_bytes(0, &mut result).await?;
+        Ok(result)
+    }
+
     pub async fn write_bytes(&mut self, source: &[u8], offset: u64) -> Result<()> {
         struct Callbacks<'a> {
             layout: NodeLayout,
@@ -210,6 +235,16 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             },
         )
         .await
+    }
+
+    pub async fn flush(&mut self) -> Result<()> {
+        // TODO This doesn't actually flush the whole tree And I have to double check that this actually flushes the node to disk and doesn't just
+        // write it into the cache. I might have to find a different solution here.
+        self.root_node
+            .as_mut()
+            .expect("root_node is None")
+            .flush()
+            .await
     }
 
     pub async fn resize_num_bytes(&mut self, new_num_bytes: u64) -> Result<()> {

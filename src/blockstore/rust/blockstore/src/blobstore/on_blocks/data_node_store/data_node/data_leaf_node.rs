@@ -79,6 +79,10 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
         let view = node::View::new(self.block.data_mut().as_mut());
         view.into_data().into_slice()
     }
+
+    pub async fn flush(&mut self) -> Result<()> {
+        self.block.flush().await
+    }
 }
 
 pub fn serialize_leaf_node_optimized(mut data: Data, layout: &NodeLayout) -> Data {

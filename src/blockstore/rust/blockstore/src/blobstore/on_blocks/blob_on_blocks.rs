@@ -18,31 +18,39 @@ impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
         }
     }
 
-    async fn size(&mut self) -> Result<u64> {
+    async fn num_bytes(&mut self) -> Result<u64> {
         self.tree.num_bytes().await
     }
 
-    // fn read_all(&self) -> Data {
-    //     todo!()
-    // }
+    async fn resize(&mut self, new_num_bytes: u64) -> Result<()> {
+        self.tree.resize_num_bytes(new_num_bytes).await
+    }
 
-    // fn read(&self, target: &mut [u8], offset: u64, size: u64) -> Result<()> {
-    //     todo!()
-    // }
+    async fn read_all(&mut self) -> Result<Data> {
+        self.tree.read_all().await
+    }
 
-    // fn try_read(&self, target: &mut [u8], offset: u64, size: u64) -> Result<()> {
-    //     todo!()
-    // }
+    async fn read(&mut self, target: &mut [u8], offset: u64) -> Result<()> {
+        self.tree.read_bytes(offset, target).await
+    }
 
-    // fn write(&self, source: &[u8], offset: u64, size: u64) -> Result<()> {
-    //     todo!()
-    // }
+    async fn try_read(&mut self, target: &mut [u8], offset: u64) -> Result<usize> {
+        self.tree.try_read_bytes(offset, target).await
+    }
 
-    // fn flush(&self) -> Result<()> {
-    //     todo!()
-    // }
+    async fn write(&mut self, source: &[u8], offset: u64) -> Result<()> {
+        self.tree.write_bytes(source, offset).await
+    }
 
-    // fn num_nodes(&self) -> Result<()> {
-    //     todo!()
-    // }
+    async fn flush(&mut self) -> Result<()> {
+        self.tree.flush().await
+    }
+
+    async fn num_nodes(&mut self) -> Result<u64> {
+        self.tree.num_nodes().await
+    }
+
+    async fn remove(self) -> Result<()> {
+        todo!()
+    }
 }

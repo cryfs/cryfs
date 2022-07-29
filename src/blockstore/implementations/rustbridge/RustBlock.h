@@ -16,7 +16,6 @@ namespace blockstore
     {
     public:
       RustBlock(::rust::Box<bridge::RustBlockBridge> block);
-      virtual ~RustBlock();
 
       const void *data() const override;
       void write(const void *source, uint64_t offset, uint64_t size) override;
