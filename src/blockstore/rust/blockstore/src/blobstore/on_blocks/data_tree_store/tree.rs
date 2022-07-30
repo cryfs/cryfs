@@ -310,7 +310,12 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                     NonZeroU32::new(needed_children_for_right_border_node).unwrap(),
                 )?;
                 for_each_unordered(children_to_delete.into_iter(), move |block_id| async move {
-                    DataTree::_remove_subtree(&self.node_store, depth.get() - 1, block_id).await
+                    DataTree::_remove_subtree_by_root_id(
+                        &self.node_store,
+                        depth.get() - 1,
+                        block_id,
+                    )
+                    .await
                 })
                 .await?;
 
@@ -342,6 +347,14 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         self.num_bytes_cache
             .update(self.node_store.layout(), new_num_leaves, new_num_bytes)?;
         Ok(())
+    }
+
+    pub async fn remove(self) -> Result<()> {
+        Self::_remove_subtree(
+            &self.node_store,
+            self.root_node.expect("DataTree.root_node is None"),
+        )
+        .await
     }
 
     async fn _traverse_leaves_by_leaf_indices_return_new_root<
@@ -536,13 +549,43 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         Ok(())
     }
 
+    async fn _remove_subtree(node_store: &DataNodeStore<B>, root: DataNode<B>) -> Result<()> {
+        match root {
+            DataNode::Leaf(_) => {
+                root.remove(node_store).await?;
+                Ok(())
+            }
+            DataNode::Inner(root) => {
+                Self::_remove_subtree_of_inner_node(node_store, root).await?;
+                Ok(())
+            }
+        }
+    }
+
+    async fn _remove_subtree_of_inner_node(
+        node_store: &DataNodeStore<B>,
+        root: DataInnerNode<B>,
+    ) -> Result<()> {
+        // Ordering: First remove the node itself, then remove the children.
+        // This has a higher chance of keeping the file system in a consistent state if there's a power loss in the middle.
+        let children: Vec<_> = root.children().collect();
+        let depth = root.depth().get();
+        root.upcast().remove(node_store).await?;
+        for_each_unordered(children.into_iter(), |child_block_id| {
+            Self::_remove_subtree_by_root_id(node_store, depth - 1, child_block_id)
+        })
+        .await?;
+        Ok(())
+    }
+
     #[async_recursion]
-    pub async fn _remove_subtree(
+    async fn _remove_subtree_by_root_id(
         node_store: &DataNodeStore<B>,
         depth: u8,
         block_id: BlockId,
     ) -> Result<()> {
         if depth == 0 {
+            // Here, we can remove the leaf node without even loading it
             let remove_result = node_store.remove_by_id(&block_id).await?;
             ensure!(
                 RemoveResult::SuccessfullyRemoved == remove_result,
@@ -567,14 +610,7 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                         depth,
                         node.depth()
                     );
-                    // Ordering: First remove the node itself, then remove the children.
-                    // This has a higher chance of keeping the file system in a consistent state if there's a power loss in the middle.
-                    let children: Vec<_> = node.children().collect();
-                    DataNode::Inner(node).remove(node_store).await?;
-                    for_each_unordered(children.into_iter(), |child_block_id| {
-                        Self::_remove_subtree(node_store, depth - 1, child_block_id)
-                    })
-                    .await?;
+                    Self::_remove_subtree_of_inner_node(node_store, node).await?;
                 }
             }
         }

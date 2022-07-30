@@ -37,7 +37,7 @@ mod ffi {
         fn num_nodes(&self) -> Result<u64>;
         fn remove_by_id(&self, id: &BlobId) -> Result<()>;
         fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
-        fn virtual_block_size_bytes(&self) -> Result<u32>;
+        fn virtual_block_size_bytes(&self) -> u32;
         fn async_drop(&mut self) -> Result<()>;
 
         fn new_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobStoreBridge>>;
@@ -215,8 +215,8 @@ impl RustBlobStoreBridge {
         log_errors(|| self.0.estimate_space_for_num_blocks_left())
     }
 
-    fn virtual_block_size_bytes(&self) -> Result<u32> {
-        log_errors(|| Ok(u32::try_from(self.0.virtual_block_size_bytes()?).unwrap()))
+    fn virtual_block_size_bytes(&self) -> u32 {
+        self.0.virtual_block_size_bytes()
     }
 
     fn async_drop(&mut self) -> Result<()> {

@@ -119,15 +119,19 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         self.block_store.remove(block_id).await
     }
 
+    pub async fn num_nodes(&self) -> Result<u64> {
+        self.block_store.num_blocks().await
+    }
+
+    pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
+        Ok(self.block_store.estimate_num_free_bytes()? / u64::from(self.layout.block_size_bytes))
+    }
+
+    pub fn virtual_block_size_bytes(&self) -> u32 {
+        self.layout.block_size_bytes
+    }
+
     // cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
-
-    // void remove(cpputils::unique_ref<DataNode> node);
-    // void removeSubtree(uint8_t depth, const blockstore::BlockId &blockId);
-    // void removeSubtree(cpputils::unique_ref<DataNode> node);
-
-    // uint64_t virtualBlocksizeBytes() const;
-    // uint64_t numNodes() const;
-    // uint64_t estimateSpaceForNumNodesLeft() const;
 
     // void forEachNode(std::function<void (const blockstore::BlockId& nodeId)> callback) const;
 }

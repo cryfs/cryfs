@@ -1,7 +1,10 @@
 use anyhow::{ensure, Result};
 use binary_layout::Field;
 
-use super::super::layout::{node, NodeLayout, FORMAT_VERSION_HEADER};
+use super::super::{
+    layout::{node, NodeLayout, FORMAT_VERSION_HEADER},
+    DataNode,
+};
 use crate::blockstore::{high_level::Block, low_level::BlockStore, BlockId};
 use crate::data::Data;
 
@@ -82,6 +85,10 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
 
     pub async fn flush(&mut self) -> Result<()> {
         self.block.flush().await
+    }
+
+    pub fn upcast(self) -> DataNode<B> {
+        DataNode::Leaf(self)
     }
 }
 

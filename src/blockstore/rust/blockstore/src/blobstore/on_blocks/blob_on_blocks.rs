@@ -10,6 +10,12 @@ pub struct BlobOnBlocks<B: BlockStore + Send + Sync> {
     tree: DataTree<B>,
 }
 
+impl<B: BlockStore + Send + Sync> BlobOnBlocks<B> {
+    pub(super) fn new(tree: DataTree<B>) -> Self {
+        Self { tree }
+    }
+}
+
 #[async_trait]
 impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
     fn id(&self) -> BlobId {
@@ -51,6 +57,6 @@ impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
     }
 
     async fn remove(self) -> Result<()> {
-        todo!()
+        self.tree.remove().await
     }
 }

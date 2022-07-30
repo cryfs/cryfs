@@ -1,11 +1,14 @@
 use anyhow::Result;
+use async_trait::async_trait;
 
-use crate::blobstore::on_blocks::data_node_store::{DataNode, DataNodeStore};
+use crate::blobstore::{
+    on_blocks::data_node_store::{DataNode, DataNodeStore},
+    RemoveResult,
+};
 use crate::blockstore::high_level::LockingBlockStore;
 use crate::blockstore::low_level::BlockStore;
 use crate::blockstore::BlockId;
-use crate::utils::async_drop::AsyncDropArc;
-use crate::utils::async_drop::AsyncDropGuard;
+use crate::utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 use super::tree::DataTree;
 
@@ -18,10 +21,10 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     pub fn new(
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
         block_size_bytes: u32,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Result<AsyncDropGuard<Self>> {
+        Ok(AsyncDropGuard::new(Self {
             node_store: AsyncDropArc::new(DataNodeStore::new(block_store, block_size_bytes)?),
-        })
+        }))
     }
 }
 
@@ -37,8 +40,39 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn create_tree(&self) -> Result<DataTree<B>> {
         let new_leaf = self.node_store.create_new_leaf_node().await?;
         Ok(DataTree::new(
-            DataNode::Leaf(new_leaf),
+            new_leaf.upcast(),
             AsyncDropArc::clone(&self.node_store),
         ))
+    }
+
+    pub async fn remove_tree_by_id(&self, root_node_id: BlockId) -> Result<RemoveResult> {
+        match self.load_tree(root_node_id).await? {
+            Some(tree) => {
+                tree.remove().await?;
+                Ok(RemoveResult::SuccessfullyRemoved)
+            }
+            None => Ok(RemoveResult::NotRemovedBecauseItDoesntExist),
+        }
+    }
+
+    pub async fn num_nodes(&self) -> Result<u64> {
+        self.node_store.num_nodes().await
+    }
+
+    pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
+        self.node_store.estimate_space_for_num_blocks_left()
+    }
+
+    pub fn virtual_block_size_bytes(&self) -> u32 {
+        self.node_store.virtual_block_size_bytes()
+    }
+}
+
+#[async_trait]
+impl<B: BlockStore + Send + Sync> AsyncDrop for DataTreeStore<B> {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.node_store.async_drop().await
     }
 }

@@ -134,6 +134,10 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub async fn flush(&mut self) -> Result<()> {
         self.block.flush().await
     }
+
+    pub fn upcast(self) -> DataNode<B> {
+        DataNode::Inner(self)
+    }
 }
 
 pub fn serialize_inner_node(depth: u8, children: &[BlockId], layout: &NodeLayout) -> Data {
