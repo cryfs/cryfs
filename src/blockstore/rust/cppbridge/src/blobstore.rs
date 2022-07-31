@@ -16,6 +16,12 @@ use cryfs_blockstore::{
 
 #[cxx::bridge]
 mod ffi {
+    #[namespace = "blockstore::rust"]
+    unsafe extern "C++" {
+        include!("blockstore/implementations/rustbridge/CxxCallback.h");
+        type CxxCallback = super::super::blockstore::ffi::CxxCallback;
+    }
+
     #[namespace = "blobstore::rust::bridge"]
     extern "Rust" {
         type BlobId;
@@ -41,6 +47,27 @@ mod ffi {
         fn async_drop(&mut self) -> Result<()>;
 
         fn new_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobStoreBridge>>;
+        fn new_locking_integrity_encrypted_ondisk_blobstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+            basedir: &str,
+            block_size_bytes: u32,
+        ) -> Result<Box<RustBlobStoreBridge>>;
+        fn new_locking_integrity_encrypted_inmemory_blobstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+            block_size_bytes: u32,
+        ) -> Result<Box<RustBlobStoreBridge>>;
     }
 
     #[namespace = "blobstore::rust::bridge"]
@@ -230,4 +257,66 @@ fn new_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobStoreBrid
         LockingBlockStore::new(DynBlockStore::from(InMemoryBlockStore::new().into_box())),
         block_size_bytes,
     )?)))
+}
+
+fn new_locking_integrity_encrypted_ondisk_blobstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    basedir: &str,
+    block_size_bytes: u32,
+) -> Result<Box<RustBlobStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
+            integrity_file_path,
+            my_client_id,
+            allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            on_integrity_violation,
+            cipher_name,
+            encryption_key_hex,
+            basedir,
+        )?;
+        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
+            blockstore.extract(),
+            block_size_bytes,
+        )?)))
+    })
+}
+
+fn new_locking_integrity_encrypted_inmemory_blobstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    on_integrity_violation: cxx::UniquePtr<ffi::CxxCallback>,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    block_size_bytes: u32,
+) -> Result<Box<RustBlobStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        let blockstore = super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
+            integrity_file_path,
+            my_client_id,
+            allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            on_integrity_violation,
+            cipher_name,
+            encryption_key_hex,
+        )?;
+        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
+            blockstore.extract(),
+            block_size_bytes,
+        )?)))
+    })
 }

@@ -7,9 +7,9 @@
 #include "CrySymlink.h"
 
 #include <fspp/fs_interface/FuseErrnoException.h>
-#include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
-#include <blobstore/implementations/onblocks/BlobOnBlocks.h>
-#include <blockstore/implementations/rustbridge/RustBlockStore.h>
+// #include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
+// #include <blobstore/implementations/onblocks/BlobOnBlocks.h>
+#include <blobstore/implementations/rustbridge/RustBlobStore.h>
 #include <blockstore/implementations/rustbridge/CxxCallback.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/ParallelAccessFsBlobStore.h"
 #include "cryfs/impl/filesystem/cachingfsblobstore/CachingFsBlobStore.h"
@@ -31,7 +31,6 @@ using blockstore::BlockStore2;
 using blockstore::BlockId;
 using blockstore::rust::CxxCallback;
 using blobstore::BlobStore;
-using blobstore::onblocks::BlobStoreOnBlocks;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
@@ -102,21 +101,15 @@ unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(uniqu
 unique_ref<blobstore::BlobStore> CryDevice::CreateBlobStore(const boost::filesystem::path& basedir, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
   auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
-  return make_unique_ref<BlobStoreOnBlocks>(
-    make_unique_ref<blockstore::rust::RustBlockStore>(
-      blockstore::rust::bridge::new_locking_integrity_encrypted_ondisk_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey(), basedir.c_str())
-    ),
-    configFile->config()->BlocksizeBytes());
+  return make_unique_ref<blobstore::rust::RustBlobStore>(
+      blobstore::rust::bridge::new_locking_integrity_encrypted_ondisk_blobstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey(), basedir.c_str(), configFile->config()->BlocksizeBytes()));
 }
 
 unique_ref<blobstore::BlobStore> CryDevice::CreateFakeBlobStore(const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {
   auto statePath = localStateDir.forFilesystemId(configFile->config()->FilesystemId());
   auto integrityFilePath = statePath / "integritydata";
-  return make_unique_ref<BlobStoreOnBlocks>(
-    make_unique_ref<blockstore::rust::RustBlockStore>(
-      blockstore::rust::bridge::new_locking_integrity_encrypted_inmemory_blockstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey())
-    ),
-    configFile->config()->BlocksizeBytes());
+  return make_unique_ref<blobstore::rust::RustBlobStore>(
+      blobstore::rust::bridge::new_locking_integrity_encrypted_inmemory_blobstore(integrityFilePath.c_str(), myClientId, allowIntegrityViolations, missingBlockIsIntegrityViolation, std::make_unique<CxxCallback>(onIntegrityViolation), configFile->config()->Cipher(), configFile->config()->EncryptionKey(), configFile->config()->BlocksizeBytes()));
 }
 
 // unique_ref<BlockStore2> CryDevice::CreateIntegrityEncryptedBlockStore(unique_ref<BlockStore2> blockStore, const LocalStateDir& localStateDir, CryConfigFile *configFile, uint32_t myClientId, bool allowIntegrityViolations, bool missingBlockIsIntegrityViolation, std::function<void()> onIntegrityViolation) {

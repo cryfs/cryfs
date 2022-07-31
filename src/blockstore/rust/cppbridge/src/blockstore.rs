@@ -35,7 +35,7 @@ use cryfs_blockstore::{
 // TODO Assertion on shutdown that no running tasks are left
 
 #[cxx::bridge]
-mod ffi {
+pub mod ffi {
     #[namespace = "blockstore::rust"]
     unsafe extern "C++" {
         include!("blockstore/implementations/rustbridge/CxxCallback.h");
@@ -86,7 +86,7 @@ mod ffi {
 
         fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
         fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
-        fn new_locking_integrity_encrypted_ondisk_blockstore(
+        pub fn new_locking_integrity_encrypted_ondisk_blockstore(
             integrity_file_path: &str,
             my_client_id: u32,
             allow_integrity_violations: bool,
@@ -231,7 +231,7 @@ impl OptionRustBlockBridge {
     }
 }
 
-struct RustBlockStoreBridge(AsyncDropGuard<LockingBlockStore<DynBlockStore>>);
+pub struct RustBlockStoreBridge(AsyncDropGuard<LockingBlockStore<DynBlockStore>>);
 
 impl RustBlockStoreBridge {
     fn create_block_id(&self) -> Box<BlockId> {
@@ -323,6 +323,10 @@ impl RustBlockStoreBridge {
 
     fn async_drop(&mut self) -> Result<()> {
         log_errors(|| TOKIO_RUNTIME.block_on(self.0.async_drop()))
+    }
+
+    pub(super) fn extract(self) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
+        self.0
     }
 }
 
@@ -610,7 +614,7 @@ async fn _new_locking_integrity_encrypted_blockstore(
     .await
 }
 
-fn new_locking_integrity_encrypted_ondisk_blockstore(
+pub fn new_locking_integrity_encrypted_ondisk_blockstore(
     integrity_file_path: &str,
     my_client_id: u32,
     allow_integrity_violations: bool,
@@ -664,7 +668,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
     })
 }
 
-fn new_locking_integrity_encrypted_inmemory_blockstore(
+pub fn new_locking_integrity_encrypted_inmemory_blockstore(
     integrity_file_path: &str,
     my_client_id: u32,
     allow_integrity_violations: bool,
