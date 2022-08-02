@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::fmt::{self, Debug};
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
@@ -14,7 +15,7 @@ use crate::blobstore::on_blocks::data_node_store::{
 };
 use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
-use crate::utils::async_drop::{AsyncDropArc, AsyncDropGuard};
+use crate::utils::async_drop::{AsyncDropArc, AsyncDrop, AsyncDropGuard};
 use crate::utils::stream::for_each_unordered;
 
 pub struct DataTree<B: BlockStore + Send + Sync> {
@@ -37,12 +38,12 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
     pub fn new(
         root_node: DataNode<B>,
         node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
-    ) -> Self {
-        Self {
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             root_node: Some(root_node),
             node_store,
             num_bytes_cache: SizeCache::SizeUnknown,
-        }
+        })
     }
 
     pub async fn num_bytes(&mut self) -> Result<u64> {
@@ -123,17 +124,18 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 let mut target = self.target.lock().unwrap();
                 assert!(
                     index_of_first_leaf_byte + u64::from(leaf_data_offset) >= self.offset
-                        && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset)
+                        && index_of_first_leaf_byte + u64::from(leaf_data_offset) - self.offset
                             <= u64::try_from(target.len()).unwrap()
-                        && index_of_first_leaf_byte - self.offset
+                        && index_of_first_leaf_byte
                             + u64::from(leaf_data_offset)
                             + u64::from(leaf_data_size)
+                            - self.offset
                             <= u64::try_from(target.len()).unwrap(),
-                    "Writing to target out of bounds"
+                    "Writing to target out of bounds: index_of_first_leaf_byte={}, offset={}, leaf_data_offset={}, leaf_data_size={}, target.len={}", index_of_first_leaf_byte, self.offset, leaf_data_offset, leaf_data_size, target.len(),
                 );
                 // TODO Simplify formula, make it easier to understand
                 let target_begin =
-                    index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset);
+                    index_of_first_leaf_byte + u64::from(leaf_data_offset) - self.offset;
                 let target_end = target_begin + u64::from(leaf_data_size);
                 let actual_target = &mut target
                     [usize::try_from(target_begin).unwrap()..usize::try_from(target_end).unwrap()];
@@ -349,12 +351,15 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         Ok(())
     }
 
-    pub async fn remove(self) -> Result<()> {
+    pub async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
+        let root_node = this.root_node.take().expect("DataTree.root_node is None");
         Self::_remove_subtree(
-            &self.node_store,
-            self.root_node.expect("DataTree.root_node is None"),
+            &this.node_store,
+            root_node,
         )
-        .await
+        .await?;
+        this.async_drop().await?;
+        Ok(())
     }
 
     async fn _traverse_leaves_by_leaf_indices_return_new_root<
@@ -630,4 +635,19 @@ trait TraversalByByteIndicesCallbacks<B: BlockStore + Send + Sync> {
     ) -> Result<()>;
     // TODO num_bytes u32 or u64?
     fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
+}
+
+#[async_trait]
+impl<B: BlockStore + Send + Sync> AsyncDrop for DataTree<B> {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.node_store.async_drop().await
+    }
+}
+
+impl<B: BlockStore + Send + Sync> Debug for DataTree<B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DataTree")
+    }
 }

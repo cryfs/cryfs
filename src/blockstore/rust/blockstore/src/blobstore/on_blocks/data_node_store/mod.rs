@@ -25,14 +25,16 @@ pub struct DataNodeStore<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub fn new(
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
-        block_size_bytes: u32,
+        physical_block_size_bytes: u32,
     ) -> Result<AsyncDropGuard<Self>> {
+        let block_size_bytes = u32::try_from(block_store.block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?).unwrap();
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = u32::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap();
         ensure!(
             block_size_bytes >= min_block_size,
-            "Tried to create a DataNodeStore with block size {} but must be at least {}",
+            "Tried to create a DataNodeStore with block size {} (physical: {}) but must be at least {}",
             block_size_bytes,
+            physical_block_size_bytes,
             min_block_size,
         );
         Ok(AsyncDropGuard::new(Self {

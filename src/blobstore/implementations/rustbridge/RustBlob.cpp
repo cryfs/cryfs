@@ -7,6 +7,10 @@ namespace blobstore
     {
         RustBlob::RustBlob(::rust::Box<bridge::RustBlobBridge> blob)
             : _blob(std::move(blob)), _blobId(helpers::cast_blobid(*_blob->blob_id())) {}
+        
+        RustBlob::~RustBlob() {
+            _blob->async_drop();
+        }
 
         const blockstore::BlockId &RustBlob::blockId() const
         {

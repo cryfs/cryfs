@@ -176,7 +176,7 @@ pub fn initialize_inner_node(
     let mut view = node::View::new(dest);
     view.format_version_header_mut()
         .write(FORMAT_VERSION_HEADER);
-    view.unused_must_be_zero_mut().write(0);
+    view.unused_mut().write(0);
     view.depth_mut().write(depth);
     view.size_mut()
         .write(u32::try_from(children.len()).unwrap());

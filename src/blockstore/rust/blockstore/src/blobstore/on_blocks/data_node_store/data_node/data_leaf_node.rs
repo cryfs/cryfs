@@ -106,7 +106,7 @@ pub fn serialize_leaf_node_optimized(mut data: Data, layout: &NodeLayout) -> Dat
     let mut view = node::View::new(&mut data);
     view.format_version_header_mut()
         .write(FORMAT_VERSION_HEADER);
-    view.unused_must_be_zero_mut().write(0);
+    view.unused_mut().write(0);
     view.depth_mut().write(0);
     view.size_mut().write(size);
     // view.data is already set correctly because we grew this view from the data input

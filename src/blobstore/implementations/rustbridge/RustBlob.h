@@ -16,6 +16,7 @@ namespace blobstore
         {
         public:
             RustBlob(::rust::Box<bridge::RustBlobBridge> blob);
+            ~RustBlob();
 
             const blockstore::BlockId &blockId() const override;
             uint64_t size() const override;

@@ -29,7 +29,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
 }
 
 impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
-    pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<DataTree<B>>> {
+    pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
         Ok(self
             .node_store
             .load(root_node_id)
@@ -37,7 +37,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
             .map(|root_node| DataTree::new(root_node, AsyncDropArc::clone(&self.node_store))))
     }
 
-    pub async fn create_tree(&self) -> Result<DataTree<B>> {
+    pub async fn create_tree(&self) -> Result<AsyncDropGuard<DataTree<B>>> {
         let new_leaf = self.node_store.create_new_leaf_node().await?;
         Ok(DataTree::new(
             new_leaf.upcast(),
@@ -48,7 +48,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn remove_tree_by_id(&self, root_node_id: BlockId) -> Result<RemoveResult> {
         match self.load_tree(root_node_id).await? {
             Some(tree) => {
-                tree.remove().await?;
+                DataTree::remove(tree).await?;
                 Ok(RemoveResult::SuccessfullyRemoved)
             }
             None => Ok(RemoveResult::NotRemovedBecauseItDoesntExist),

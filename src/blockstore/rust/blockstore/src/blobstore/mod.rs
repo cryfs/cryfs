@@ -1,8 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
+use crate::utils::async_drop::AsyncDropGuard;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BlobId {
@@ -67,7 +69,7 @@ pub enum RemoveResult {
 }
 
 #[async_trait]
-pub trait Blob {
+pub trait Blob : Sized + Debug {
     fn id(&self) -> BlobId;
     // TODO Can we make size take &self instead of &mut self? Same for other read-only functions?
     async fn num_bytes(&mut self) -> Result<u64>;
@@ -81,15 +83,15 @@ pub trait Blob {
     async fn flush(&mut self) -> Result<()>;
     async fn num_nodes(&mut self) -> Result<u64>;
 
-    async fn remove(self) -> Result<()>;
+    async fn remove(this: AsyncDropGuard<Self>) -> Result<()>;
 }
 
 #[async_trait]
 pub trait BlobStore {
-    type ConcreteBlob: Blob;
+    type ConcreteBlob: Blob + Debug;
 
-    async fn create(&self) -> Result<Self::ConcreteBlob>;
-    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob>>;
+    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>>;
+    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>>;
     async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
     async fn num_nodes(&self) -> Result<u64>;
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;

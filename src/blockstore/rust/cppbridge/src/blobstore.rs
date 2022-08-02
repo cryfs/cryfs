@@ -83,6 +83,7 @@ mod ffi {
         fn flush(&self) -> Result<()>;
         fn num_nodes(&self) -> Result<u64>;
         fn remove(&self) -> Result<()>;
+        fn async_drop(&mut self) -> Result<()>;
     }
 
     #[namespace = "blobstore::rust::bridge"]
@@ -129,11 +130,11 @@ impl OptionRustBlobBridge {
     }
 }
 
-struct RustBlobBridge(Mutex<Option<BlobOnBlocks<DynBlockStore>>>);
+struct RustBlobBridge(Mutex<Option<AsyncDropGuard<BlobOnBlocks<DynBlockStore>>>>);
 
 impl RustBlobBridge {
     // TODO If we manage to change the read-only methods to take &self instead of &mut self, we might not need the Mutex anymore, or maybe RwLock would work.
-    fn new(blob: BlobOnBlocks<DynBlockStore>) -> Self {
+    fn new(blob: AsyncDropGuard<BlobOnBlocks<DynBlockStore>>) -> Self {
         Self(Mutex::new(Some(blob)))
     }
 
@@ -194,7 +195,13 @@ impl RustBlobBridge {
     fn remove(&self) -> Result<()> {
         let mut blob = self.0.lock().unwrap();
         let blob = blob.take().expect("Blob is already destructed");
-        log_errors(move || TOKIO_RUNTIME.block_on(blob.remove()))
+        log_errors(move || TOKIO_RUNTIME.block_on(BlobOnBlocks::remove(blob)))
+    }
+
+    fn async_drop(&mut self) -> Result<()> {
+        let mut blob = self.0.lock().unwrap();
+        let mut blob = blob.take().expect("Blob is already destructed");
+        log_errors(|| TOKIO_RUNTIME.block_on(blob.async_drop()))
     }
 }
 

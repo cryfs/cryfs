@@ -35,13 +35,6 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
             block.block_id(),
             format_version_header
         );
-        let unused_must_be_zero = node_view.unused_must_be_zero().read();
-        ensure!(
-            0 == unused_must_be_zero,
-            "Loaded a node {:?} where the unused part isn't ZERO but {}",
-            block.block_id(),
-            unused_must_be_zero
-        );
         let depth = node_view.depth().read();
         if depth == 0 {
             Ok(DataNode::Leaf(DataLeafNode::new(block, layout)?))
