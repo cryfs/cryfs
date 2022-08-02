@@ -68,9 +68,13 @@ impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
     }
 
     async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
-        let tree = this.tree.take().expect("BlobOnBlocks.tree is None");
+        let tree = this
+            .unsafe_into_inner_dont_drop()
+            .tree
+            .take()
+            .expect("BlobOnBlocks.tree is None");
         DataTree::remove(tree).await
-        // no call to async_drop needed since we moved out of this.tree
+        // no call to async_drop needed since we moved out of this
     }
 }
 

@@ -27,7 +27,11 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
         physical_block_size_bytes: u32,
     ) -> Result<AsyncDropGuard<Self>> {
-        let block_size_bytes = u32::try_from(block_store.block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?).unwrap();
+        let block_size_bytes = u32::try_from(
+            block_store
+                .block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?,
+        )
+        .unwrap();
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = u32::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap();
         ensure!(
@@ -57,16 +61,24 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     fn _allocate_data_for_leaf_node(&self) -> Data {
         let mut data = Data::from(vec![
             0;
-            usize::try_from(self.layout.max_bytes_per_leaf())
-                .unwrap()
+            usize::try_from(self.layout.block_size_bytes).unwrap()
         ]);
         data.shrink_to_subregion(node::data::OFFSET..);
+        assert_eq!(
+            usize::try_from(self.layout.max_bytes_per_leaf()).unwrap(),
+            data.len()
+        );
         data
     }
 
-    pub async fn create_new_leaf_node(&self) -> Result<DataLeafNode<B>> {
-        let data = self._allocate_data_for_leaf_node();
-        let block_data = data_node::serialize_leaf_node_optimized(data, &self.layout);
+    pub async fn create_new_leaf_node(&self, data: &Data) -> Result<DataLeafNode<B>> {
+        let mut leaf_data = self._allocate_data_for_leaf_node();
+        leaf_data[..data.len()].copy_from_slice(data); // TODO Avoid copy_from_slice and instead rename this function to create_new_leaf_node_optimized
+        let block_data = data_node::serialize_leaf_node_optimized(
+            leaf_data,
+            u32::try_from(data.len()).unwrap(),
+            &self.layout,
+        );
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(&block_data).await?;
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
@@ -111,8 +123,12 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn overwrite_leaf_node(&self, block_id: &BlockId, data: &[u8]) -> Result<()> {
         let mut data_obj = self._allocate_data_for_leaf_node();
         // TODO Make an overwrite_leaf_node_optimized version that requires that enough prefix bytes are already available in the data input and that doesn't require us to copy_from_slice here?
-        data_obj.as_mut().copy_from_slice(data);
-        let block_data = data_node::serialize_leaf_node_optimized(data_obj, &self.layout);
+        (&mut data_obj.as_mut()[..data.len()]).copy_from_slice(data);
+        let block_data = data_node::serialize_leaf_node_optimized(
+            data_obj,
+            u32::try_from(data.len()).unwrap(),
+            &self.layout,
+        );
         // TODO Use store_optimized instead of store?
         self.block_store.overwrite(block_id, &block_data).await
     }

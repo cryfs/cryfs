@@ -44,20 +44,6 @@ public:
 constexpr uint32_t BlobReadWriteTest::LARGE_SIZE;
 constexpr DataNodeLayout BlobReadWriteTest::LAYOUT;
 
-TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_SmallSize) {
-	blob->resize(5);
-	blob->write(randomData.data(), 0, 5);
-	auto loaded = loadBlob(blob->blockId());
-	EXPECT_DATA_READS_AS(randomData, *loaded, 0, 5);
-}
-
-TEST_F(BlobReadWriteTest, WritingImmediatelyFlushes_LargeSize) {
-	blob->resize(LARGE_SIZE);
-	blob->write(randomData.data(), 0, LARGE_SIZE);
-	auto loaded = loadBlob(blob->blockId());
-	EXPECT_DATA_READS_AS(randomData, *loaded, 0, LARGE_SIZE);
-}
-
 // Regression test for a strange bug we had
 TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
   blob->resize(1);

@@ -38,6 +38,11 @@ impl<T: Debug> AsyncDropGuard<T> {
     pub fn map_unsafe<U: Debug>(mut self, fun: impl FnOnce(T) -> U) -> AsyncDropGuard<U> {
         AsyncDropGuard(self.0.take().map(fun))
     }
+
+    /// Extract the inner value **without** dropping it. This bypasses the protection of the guard.
+    pub fn unsafe_into_inner_dont_drop(mut self) -> T {
+        self.0.take().expect("Value already dropped")
+    }
 }
 
 impl<T: Debug + AsyncDrop> AsyncDropGuard<T> {

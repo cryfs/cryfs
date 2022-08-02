@@ -669,8 +669,7 @@ async fn _create_new_subtree<
             Box::new(|_| _create_max_size_leaf(node_store.layout()))
         };
         let leaf_data = leaf_creator(leaf_offset);
-        let mut leaf = node_store.create_new_leaf_node().await?;
-        leaf.data_mut().copy_from_slice(&leaf_data);
+        let leaf = node_store.create_new_leaf_node(&leaf_data).await?;
         Ok(DataNode::Leaf(leaf))
     } else {
         let max_children_per_inner_node = node_store.layout().max_children_per_inner_node();

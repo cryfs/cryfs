@@ -63,7 +63,17 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "variant": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "cstdarg": "cpp",
+        "coroutine": "cpp",
+        "algorithm": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "ranges": "cpp",
+        "cinttypes": "cpp",
+        "forward_list": "cpp"
     },
     "rust-analyzer.linkedProjects": [
         "src/blockstore/rust/Cargo.toml"

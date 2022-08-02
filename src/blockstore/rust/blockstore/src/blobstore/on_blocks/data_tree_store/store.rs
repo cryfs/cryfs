@@ -8,6 +8,7 @@ use crate::blobstore::{
 use crate::blockstore::high_level::LockingBlockStore;
 use crate::blockstore::low_level::BlockStore;
 use crate::blockstore::BlockId;
+use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 use super::tree::DataTree;
@@ -29,7 +30,10 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
 }
 
 impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
-    pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
+    pub async fn load_tree(
+        &self,
+        root_node_id: BlockId,
+    ) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
         Ok(self
             .node_store
             .load(root_node_id)
@@ -38,7 +42,10 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     }
 
     pub async fn create_tree(&self) -> Result<AsyncDropGuard<DataTree<B>>> {
-        let new_leaf = self.node_store.create_new_leaf_node().await?;
+        let new_leaf = self
+            .node_store
+            .create_new_leaf_node(&Data::from(vec![]))
+            .await?;
         Ok(DataTree::new(
             new_leaf.upcast(),
             AsyncDropArc::clone(&self.node_store),

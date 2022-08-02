@@ -45,7 +45,11 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         let loaded = self.underlying_block_store.load(block_id).await.context(
             "CompressingBlockStore failed to load the block from the underlying block store",
         )?;
-        loaded.map(_decompress).map_or(Ok(None), |v| v.map(Some))
+        if let Some(loaded) = loaded {
+            Ok(Some(_decompress(loaded).await?))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn num_blocks(&self) -> Result<u64> {
@@ -92,7 +96,7 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
         id: &BlockId,
         data: B::BlockData,
     ) -> Result<TryCreateResult> {
-        let compressed = _compress(data.extract())?;
+        let compressed = _compress(data.extract()).await?;
         self.underlying_block_store
             // We cannot use try_create_optimized because we may not have enough prefix bytes available
             .try_create(id, &compressed)
@@ -100,7 +104,7 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
     }
 
     async fn store_optimized(&self, id: &BlockId, data: B::BlockData) -> Result<()> {
-        let compressed = _compress(data.extract())?;
+        let compressed = _compress(data.extract()).await?;
         self.underlying_block_store
             // We cannot use store_optimized because we may not have enough prefix bytes available
             .store(id, &compressed)
@@ -124,16 +128,26 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
 {
 }
 
-fn _decompress(data: Data) -> Result<Data> {
-    let mut decompressed = Vec::new();
-    lzzzz::lz4f::decompress_to_vec(&data, &mut decompressed)?;
+async fn _decompress(data: Data) -> Result<Data> {
+    // TODO Is a dedicated thread pool better than spawn_blocking? Similar for EncryptedBlockStore.
+    let decompressed = tokio::task::spawn_blocking(move || -> Result<Vec<u8>> {
+        let mut decompressed = Vec::new();
+        lzzzz::lz4f::decompress_to_vec(&data, &mut decompressed)?;
+        Ok(decompressed)
+    })
+    .await??;
     Ok(decompressed.into())
 }
 
-fn _compress(data: Data) -> Result<Data> {
-    let prefs = lzzzz::lz4f::Preferences::default();
-    let mut compressed = Vec::new();
-    lzzzz::lz4f::compress_to_vec(&data, &mut compressed, &prefs)?;
+async fn _compress(data: Data) -> Result<Data> {
+    // TODO Is a dedicated thread pool better than spawn_blocking? Similar for EncryptedBlockStore.
+    let compressed = tokio::task::spawn_blocking(move || -> Result<Vec<u8>> {
+        let prefs = lzzzz::lz4f::Preferences::default();
+        let mut compressed = Vec::new();
+        lzzzz::lz4f::compress_to_vec(&data, &mut compressed, &prefs)?;
+        Ok(compressed)
+    })
+    .await??;
     Ok(compressed.into())
 }
 

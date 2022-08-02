@@ -5,7 +5,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 use super::super::layout::{node, NodeLayout, FORMAT_VERSION_HEADER};
 use super::DataNode;
 use crate::blockstore::{high_level::Block, low_level::BlockStore, BlockId, BLOCKID_LEN};
-use crate::data::Data;
+use crate::data::{Data, ZeroedData};
 
 const MAX_DEPTH: u8 = 10;
 
@@ -38,7 +38,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             size,
         );
         ensure!(
-            size < max_children_per_inner_node,
+            size <= max_children_per_inner_node,
             "Loaded an inner node that claims to store {} children but the maximum is {}.",
             size,
             max_children_per_inner_node,
@@ -141,17 +141,19 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
 }
 
 pub fn serialize_inner_node(depth: u8, children: &[BlockId], layout: &NodeLayout) -> Data {
-    let mut data = Data::from(vec![0; layout.block_size_bytes.try_into().unwrap()]);
-    initialize_inner_node(depth, children, layout, &mut data);
-    data
+    let data = ZeroedData::new(layout.block_size_bytes.try_into().unwrap());
+    initialize_inner_node(depth, children, layout, data)
 }
 
-pub fn initialize_inner_node(
+pub fn initialize_inner_node<D>(
     depth: u8,
     children: &[BlockId],
     layout: &NodeLayout,
-    dest: &mut Data,
-) {
+    dest: ZeroedData<D>,
+) -> D
+where
+    D: AsRef<[u8]> + AsMut<[u8]>,
+{
     assert!(
         depth != 0,
         "Inner node cannot have a depth of 0. Is this perhaps a leaf instead?"
@@ -173,7 +175,7 @@ pub fn initialize_inner_node(
         children.len(),
     );
 
-    let mut view = node::View::new(dest);
+    let mut view = node::View::new(dest.into_inner());
     view.format_version_header_mut()
         .write(FORMAT_VERSION_HEADER);
     view.unused_mut().write(0);
@@ -181,10 +183,11 @@ pub fn initialize_inner_node(
     view.size_mut()
         .write(u32::try_from(children.len()).unwrap());
     _serialize_children(view.data_mut(), children);
+    view.into_storage()
 }
 
 fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
-    assert_eq!(dest.len(), children.len() * BLOCKID_LEN, "Serializing {} children requires {} bytes but tried to serialize into a buffer with {} bytes.", children.len(), children.len() * BLOCKID_LEN, dest.len());
+    assert!(dest.len() >= children.len() * BLOCKID_LEN, "Serializing {} children requires {} bytes but tried to serialize into a buffer with {} bytes.", children.len(), children.len() * BLOCKID_LEN, dest.len());
     for (index, child) in children.iter().enumerate() {
         // TODO Some way to avoid this copy by not using &[BlockId] or Vec<BlockId> but our own collection type that already has it aligned correctly?
         dest[(BLOCKID_LEN * index)..(BLOCKID_LEN * (index + 1))].copy_from_slice(child.data());

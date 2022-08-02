@@ -2,11 +2,11 @@ use anyhow::{anyhow, bail, ensure, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use divrem::DivCeil;
+use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use std::fmt::{self, Debug};
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
@@ -15,7 +15,7 @@ use crate::blobstore::on_blocks::data_node_store::{
 };
 use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
-use crate::utils::async_drop::{AsyncDropArc, AsyncDrop, AsyncDropGuard};
+use crate::utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use crate::utils::stream::for_each_unordered;
 
 pub struct DataTree<B: BlockStore + Send + Sync> {
@@ -184,16 +184,17 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             ) -> Result<()> {
                 assert!(
                     index_of_first_leaf_byte + u64::from(leaf_data_offset) >= self.offset
-                        && index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset)
+                        && index_of_first_leaf_byte + u64::from(leaf_data_offset) - self.offset
                             <= u64::try_from(self.source.len()).unwrap()
-                        && index_of_first_leaf_byte - self.offset
+                        && index_of_first_leaf_byte
                             + u64::from(leaf_data_offset)
                             + u64::from(leaf_data_size)
+                            - self.offset
                             <= u64::try_from(self.source.len()).unwrap(),
                     "Reading from source out of bounds"
                 );
                 let source_begin =
-                    index_of_first_leaf_byte - self.offset + u64::from(leaf_data_offset);
+                    index_of_first_leaf_byte + u64::from(leaf_data_offset) - self.offset;
                 let source_end = source_begin + u64::from(leaf_data_size);
                 let actual_source = &self.source
                     [usize::try_from(source_begin).unwrap()..usize::try_from(source_end).unwrap()];
@@ -259,10 +260,12 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         impl<'a, B: BlockStore + Send + Sync> traversal::TraversalCallbacks<B> for Callbacks<'a, B> {
             async fn on_existing_leaf(
                 &self,
-                _leaf_index: u64,
-                _is_right_border_leaf: bool,
+                index: u64,
+                is_right_border_leaf: bool,
                 mut leaf: LeafHandle<'_, B>,
             ) -> Result<()> {
+                assert_eq!(self.new_num_leaves.get() - 1, index);
+                // TODO Does the following assertion make sense? assert!(is_right_border_leaf);
                 // This is only called if the new last leaf was already existing
                 let leaf = leaf.node().await?;
                 if leaf.num_bytes() != self.new_last_leaf_size {
@@ -270,7 +273,8 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 }
                 Ok(())
             }
-            fn on_create_leaf(&self, _index: u64) -> Data {
+            fn on_create_leaf(&self, index: u64) -> Data {
+                assert_eq!(self.new_num_leaves.get() - 1, index);
                 // This is only called, if the new last leaf was not existing yet
                 Data::from(vec![0; usize::try_from(self.new_last_leaf_size).unwrap()])
             }
@@ -353,11 +357,7 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
 
     pub async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
         let root_node = this.root_node.take().expect("DataTree.root_node is None");
-        Self::_remove_subtree(
-            &this.node_store,
-            root_node,
-        )
-        .await?;
+        Self::_remove_subtree(&this.node_store, root_node).await?;
         this.async_drop().await?;
         Ok(())
     }

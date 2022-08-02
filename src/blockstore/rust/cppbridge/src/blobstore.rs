@@ -206,8 +206,13 @@ impl RustBlobBridge {
 
     fn async_drop(&mut self) -> Result<()> {
         let mut blob = self.0.lock().unwrap();
-        let mut blob = blob.take().expect("Blob is already destructed");
-        log_errors(|| TOKIO_RUNTIME.block_on(blob.async_drop()))
+        match blob.take() {
+            Some(mut blob) => log_errors(|| TOKIO_RUNTIME.block_on(blob.async_drop())),
+            None => {
+                // This is ok, it can happen if remove() was called
+                Ok(())
+            }
+        }
     }
 }
 
@@ -334,9 +339,7 @@ fn new_locking_integrity_encrypted_inmemory_blobstore(
     })
 }
 
-fn new_locking_inmemory_blobstore(
-    block_size_bytes: u32,
-) -> Result<Box<RustBlobStoreBridge>> {
+fn new_locking_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobStoreBridge>> {
     LOGGER_INIT.ensure_initialized();
     let _init_tokio = TOKIO_RUNTIME.enter();
 

@@ -62,7 +62,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug> Block<B> {
     pub async fn remove(self, block_store: &LockingBlockStore<B>) -> Result<()> {
         // TODO Keep cache entry locked until removal is finished
         let block_id = *self.block_id();
-        match block_store.remove(&block_id).await? {
+        match block_store._remove(&block_id, self.cache_entry).await? {
             RemoveResult::SuccessfullyRemoved => Ok(()),
             RemoveResult::NotRemovedBecauseItDoesntExist => {
                 bail!(
@@ -173,9 +173,16 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     }
 
     pub async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
-        // TODO Don't write-through but cache remove operations?
+        let cache_entry_guard = self.cache.async_lock(*block_id).await?;
+        self._remove(block_id, cache_entry_guard).await
+    }
 
-        let mut cache_entry_guard = self.cache.async_lock(*block_id).await?;
+    async fn _remove(
+        &self,
+        block_id: &BlockId,
+        mut cache_entry_guard: BlockCacheEntryGuard<B>,
+    ) -> Result<RemoveResult> {
+        // TODO Don't write-through but cache remove operations?
 
         // Remove from cache
         // TODO This is dangerous, we could accidentally drop the cache entry lock if we put it into the let binding by value but it needs to be held while we remove from the base store. Instead make removed_from_base_store a lambda and invoke it from in here?

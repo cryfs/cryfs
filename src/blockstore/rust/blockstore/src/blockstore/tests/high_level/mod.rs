@@ -395,7 +395,7 @@ pub mod overwrite {
     // TODO Test other locking behaviors, i.e. loading while loaded, removing while loaded, ...
 }
 
-// TODO Other functions to test?
+// TODO Other functions to test? e.g. Block::remove(self) instead of just BlockStore::remove(&self, blockid)
 
 #[macro_export]
 macro_rules! _instantiate_highlevel_blockstore_tests {

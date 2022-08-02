@@ -170,12 +170,13 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();
-        let entry = guard
-            .value_mut()
-            .expect("Found a None entry in the cache. This violates our invariant.");
-        entry.flush(&block_id).await?;
-
-        cache.delete_entry_from_cache(&mut guard);
+        if let Some(entry) = guard.value_mut() {
+            entry.flush(&block_id).await?;
+            cache.delete_entry_from_cache(&mut guard);
+        } else {
+            // Found a None entry in the cache.
+            // This can for example happen when the cache entry was deleted while we were waiting for our lock on it.
+        }
 
         Ok(())
     }

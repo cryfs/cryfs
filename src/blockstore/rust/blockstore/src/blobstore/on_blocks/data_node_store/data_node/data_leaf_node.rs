@@ -92,14 +92,19 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     }
 }
 
-pub fn serialize_leaf_node_optimized(mut data: Data, layout: &NodeLayout) -> Data {
-    let size: u32 = u32::try_from(data.len()).unwrap();
+// `data` must be the size of the full leaf, even if the leaf uses fewer bytes. `num_bytes` can be used for that.
+pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &NodeLayout) -> Data {
+    assert_eq!(
+        usize::try_from(layout.max_bytes_per_leaf()).unwrap(),
+        data.len()
+    );
     assert!(
-        size <= layout.max_bytes_per_leaf(),
+        num_bytes <= layout.max_bytes_per_leaf(),
         "Tried to create leaf with {} bytes but each leaf can only hold {}",
-        size,
+        num_bytes,
         layout.max_bytes_per_leaf()
     );
+    // TODO assert that data[num_bytes..] is zeroed out
     assert!(data.available_prefix_bytes() >= node::data::OFFSET, "Data objects passed to serialize_leaf_node must have at least {} prefix bytes available, but only had {}", node::data::OFFSET, data.available_prefix_bytes());
     data.grow_region_fail_if_reallocation_necessary(node::data::OFFSET, 0)
         .expect("Not enough prefix bytes available for data object passed to serialize_leaf_node");
@@ -108,7 +113,7 @@ pub fn serialize_leaf_node_optimized(mut data: Data, layout: &NodeLayout) -> Dat
         .write(FORMAT_VERSION_HEADER);
     view.unused_mut().write(0);
     view.depth_mut().write(0);
-    view.size_mut().write(size);
+    view.size_mut().write(num_bytes);
     // view.data is already set correctly because we grew this view from the data input
     data
 }

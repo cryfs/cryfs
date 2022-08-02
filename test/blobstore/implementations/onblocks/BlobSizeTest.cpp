@@ -111,12 +111,6 @@ TEST_F(BlobSizeTest, WritingAfterEndOfBlobGrowsBlob_NonEmpty) {
   EXPECT_EQ(6u, blob->size());
 }
 
-TEST_F(BlobSizeTest, ChangingSizeImmediatelyFlushes) {
-  blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->blockId());
-  EXPECT_EQ(LARGE_SIZE, loaded->size());
-}
-
 class BlobSizeDataTest: public BlobSizeTest {
 public:
   BlobSizeDataTest()
@@ -142,9 +136,11 @@ TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowing) {
 }
 
 TEST_F(BlobSizeDataTest, BlobIsZeroedOutAfterGrowingAndLoading) {
+  auto blobid = blob->blockId();
   blob->resize(LARGE_SIZE);
-  auto loaded = loadBlob(blob->blockId());
-  EXPECT_EQ(0, std::memcmp(readBlob(*loaded).data(), ZEROES.data(), LARGE_SIZE)); 
+  cpputils::destruct(std::move(blob));
+  blob = loadBlob(blobid);
+  EXPECT_EQ(0, std::memcmp(readBlob(*blob).data(), ZEROES.data(), LARGE_SIZE)); 
 }
 
 TEST_F(BlobSizeDataTest, DataStaysIntactWhenGrowing) {

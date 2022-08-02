@@ -69,7 +69,7 @@ pub enum RemoveResult {
 }
 
 #[async_trait]
-pub trait Blob : Sized + Debug {
+pub trait Blob: Sized + Debug {
     fn id(&self) -> BlobId;
     // TODO Can we make size take &self instead of &mut self? Same for other read-only functions?
     async fn num_bytes(&mut self) -> Result<u64>;

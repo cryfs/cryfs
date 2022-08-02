@@ -5,7 +5,7 @@ use super::{
     DataNodeStore,
 };
 use crate::blockstore::{high_level::Block, low_level::BlockStore, BlockId};
-use crate::data::Data;
+use crate::data::{Data, ZeroedData};
 
 mod data_inner_node;
 pub use data_inner_node::{serialize_inner_node, DataInnerNode};
@@ -88,12 +88,12 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         layout: &NodeLayout,
     ) -> DataInnerNode<B> {
         let mut block = self._into_block();
-        block.data_mut().fill(0);
+        let block_data: ZeroedData<&mut Data> = ZeroedData::fill_with_zeroes(block.data_mut());
         data_inner_node::initialize_inner_node(
             first_child.depth() + 1,
             &[*first_child.block_id()],
             layout,
-            block.data_mut(),
+            block_data,
         );
         DataInnerNode::new(block, layout)
             .expect("Newly created inner node shouldn't violate any invariants")

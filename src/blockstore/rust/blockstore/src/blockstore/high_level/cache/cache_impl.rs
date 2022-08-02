@@ -77,6 +77,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     }
 
     pub fn delete_entry_from_cache(&self, entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>) {
+        assert!(entry.value().is_some(), "Entry already deleted");
         let entry = entry
             .remove()
             .expect("Tried to delete an entry that wasn't set");
@@ -98,6 +99,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         &self,
         entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
     ) {
+        assert!(entry.value().is_some(), "Entry already deleted");
         let old_entry = entry
             .remove()
             .expect("Tried to delete an entry that wasn't set");
