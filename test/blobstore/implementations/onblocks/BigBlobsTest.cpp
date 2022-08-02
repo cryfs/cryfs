@@ -2,11 +2,11 @@
 #include <blockstore/implementations/rustbridge/RustBlockStore.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/data/Data.h>
-#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
-#include "blobstore/implementations/onblocks/BlobOnBlocks.h"
+#include "blobstore/implementations/rustbridge/RustBlobStore.h"
+#include "blobstore/implementations/rustbridge/RustBlob.h"
 
 using namespace blobstore;
-using namespace blobstore::onblocks;
+using namespace blobstore::rust;
 using blockstore::rust::RustBlockStore;
 using cpputils::Data;
 using cpputils::DataFixture;
@@ -25,9 +25,8 @@ public:
     static_assert(SMALL_BLOB_SIZE < max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
     static_assert(LARGE_BLOB_SIZE > max_uint_32, "LARGE_BLOB_SIZE should need 64bit or the test case is mute");
 
-    unique_ref<BlobStore> blobStore = make_unique_ref<BlobStoreOnBlocks>(
-        make_unique_ref<blockstore::rust::RustBlockStore>(blockstore::rust::bridge::new_locking_compressing_inmemory_blockstore()),
-        BLOCKSIZE);
+    unique_ref<BlobStore> blobStore =
+        make_unique_ref<blobstore::rust::RustBlobStore>(blobstore::rust::bridge::new_locking_compressing_inmemory_blobstore(BLOCKSIZE));
     unique_ref<Blob> blob = blobStore->create();
 };
 

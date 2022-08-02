@@ -68,6 +68,12 @@ mod ffi {
             encryption_key_hex: &str,
             block_size_bytes: u32,
         ) -> Result<Box<RustBlobStoreBridge>>;
+        fn new_locking_inmemory_blobstore(
+            block_size_bytes: u32,
+        ) -> Result<Box<RustBlobStoreBridge>>;
+        fn new_locking_compressing_inmemory_blobstore(
+            block_size_bytes: u32,
+        ) -> Result<Box<RustBlobStoreBridge>>;
     }
 
     #[namespace = "blobstore::rust::bridge"]
@@ -321,6 +327,36 @@ fn new_locking_integrity_encrypted_inmemory_blobstore(
             cipher_name,
             encryption_key_hex,
         )?;
+        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
+            blockstore.extract(),
+            block_size_bytes,
+        )?)))
+    })
+}
+
+fn new_locking_inmemory_blobstore(
+    block_size_bytes: u32,
+) -> Result<Box<RustBlobStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        let blockstore = super::blockstore::new_locking_inmemory_blockstore();
+        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
+            blockstore.extract(),
+            block_size_bytes,
+        )?)))
+    })
+}
+
+fn new_locking_compressing_inmemory_blobstore(
+    block_size_bytes: u32,
+) -> Result<Box<RustBlobStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        let blockstore = super::blockstore::new_locking_compressing_inmemory_blockstore();
         Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
             blockstore.extract(),
             block_size_bytes,

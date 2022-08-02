@@ -84,8 +84,8 @@ pub mod ffi {
         ) -> Result<Box<RustBlockStore2Bridge>>;
         fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge>;
 
-        fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
-        fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
+        pub fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
+        pub fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge>;
         pub fn new_locking_integrity_encrypted_ondisk_blockstore(
             integrity_file_path: &str,
             my_client_id: u32,
@@ -475,7 +475,7 @@ fn new_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
     )))
 }
 
-fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
+pub fn new_locking_compressing_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
     LOGGER_INIT.ensure_initialized();
     let _init_tokio = TOKIO_RUNTIME.enter();
     Box::new(RustBlockStoreBridge(LockingBlockStore::new(
@@ -527,7 +527,7 @@ fn new_ondisk_blockstore(basedir: &str) -> Box<RustBlockStore2Bridge> {
     )))
 }
 
-fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
+pub fn new_locking_inmemory_blockstore() -> Box<RustBlockStoreBridge> {
     LOGGER_INIT.ensure_initialized();
     let _init_tokio = TOKIO_RUNTIME.enter();
     Box::new(RustBlockStoreBridge(LockingBlockStore::new(
