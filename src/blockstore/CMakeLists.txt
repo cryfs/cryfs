@@ -11,7 +11,6 @@ set(SOURCES
   implementations/parallelaccess/ParallelAccessBlockStore.cpp
   implementations/parallelaccess/BlockRef.cpp
   implementations/parallelaccess/ParallelAccessBlockStoreAdapter.cpp
-  implementations/readonly/ReadOnlyBlockStore2.cpp
   implementations/compressing/CompressingBlockStore.cpp
   implementations/compressing/CompressedBlock.cpp
   implementations/compressing/compressors/RunLengthEncoding.cpp
@@ -21,8 +20,6 @@ set(SOURCES
   implementations/caching/cache/CacheEntry.cpp
   implementations/caching/cache/Cache.cpp
   implementations/caching/cache/QueueMap.cpp
-  implementations/low2highlevel/LowToHighLevelBlock.cpp
-  implementations/low2highlevel/LowToHighLevelBlockStore.cpp
   implementations/mock/MockBlockStore.cpp
   implementations/mock/MockBlock.cpp
   implementations/rustbridge/RustBlockStore2.cpp
