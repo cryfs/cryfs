@@ -34,7 +34,7 @@ fn make_ciphertext(cipher: &impl Cipher, size: usize) -> Data {
 fn bench_encrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("encrypt");
 
-    for size in [1, 1024, 1024 * 1024 /*, 100*1024*1024*/] {
+    for size in [1, 1024, 16 * 1024, 1024 * 1024 /*, 100*1024*1024*/] {
         group.bench_with_input(
             BenchmarkId::new("aes256gcm-auto", size),
             &size,
@@ -84,7 +84,7 @@ fn bench_encrypt(c: &mut Criterion) {
 fn bench_decrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("decrypt");
 
-    for size in [1, 1024, 1024 * 1024 /*, 100*1024*1024*/] {
+    for size in [1, 1024, 16 * 1024, 1024 * 1024 /*, 100*1024*1024*/] {
         group.bench_with_input(
             BenchmarkId::new("aes256gcm-auto", size),
             &size,
