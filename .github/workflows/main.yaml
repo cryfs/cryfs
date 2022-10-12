@@ -31,13 +31,12 @@ jobs:
             macos_cc: gcc-9
             apt_package: g++-9
             homebrew_package: gcc@9
-#         TODO gcc 10 doesn't work, potentially because cmake doesn't know yet that the STL now depends on pthread. See https://github.com/pothosware/SoapySDRPlay3/issues/5
-#           - cxx: g++-10
-#             cc: gcc-10
-#             macos_cxx: g++-10
-#             macos_cc: gcc-10
-#             apt_package: g++-10
-#             homebrew_package: gcc@10
+          - cxx: g++-10
+            cc: gcc-10
+            macos_cxx: g++-10
+            macos_cc: gcc-10
+            apt_package: g++-10
+            homebrew_package: gcc@10
           - cxx: clang++-7
             cc: clang-7
             macos_cxx: /usr/local/opt/llvm@7/bin/clang++
@@ -82,6 +81,9 @@ jobs:
           # Apple CI machines cannot install LLVM 7 via homebrew anymore
           - os: macos-10.15
             compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
+          # GCC 10 on Ubuntu 18.04 doesn't seem to work, potentially because cmake doesn't know yet that the STL now depends on pthread. See https://github.com/pothosware/SoapySDRPlay3/issues/5
+          - os: ubuntu-18.04
+            compiler: {cxx: g++-10, cc: gcc-10, macos_cxx: g++-10, macos_cc: gcc-10, apt_package: g++-10, homebrew_package: gcc@10}
         include:
           - name: Local dependencies
             os: ubuntu-18.04
