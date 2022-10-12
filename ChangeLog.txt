@@ -2,7 +2,7 @@ Version 0.11.3
 ---------------
 * Fixed build issue on systems with libfmt 9.0 (see https://github.com/cryfs/cryfs/issues/432 )
 * Fixed build issue on Apple Silicon Macs (see https://github.com/cryfs/homebrew-tap/issues/10 )
-* Fixed build issue on Macs (see https://github.com/cryfs/homebrew-tap/issues/12 )
+* Fixed build issue on systems that only have `python3` but no `python` executable (see https://github.com/cryfs/homebrew-tap/issues/12 )
 
 Version 0.11.2
 ---------------
