@@ -13,6 +13,12 @@ jobs:
           - ubuntu-18.04
           - ubuntu-20.04
         compiler:
+          - cxx: g++-7
+            cc: gcc-7
+            macos_cxx: g++-7
+            macos_cc: gcc-7
+            homebrew_package: gcc@7
+            apt_package: g++-7
           - cxx: g++-8
             cc: gcc-8
             macos_cxx: g++-8
@@ -72,6 +78,16 @@ jobs:
         run_build: [true]
         run_tests: [true]
         run_clang_tidy: [false]
+        exclude:
+          # Apple CI machines cannot install GCC 7 via homebrew anymore
+          - os: macos-10.15
+            compiler:
+              cxx: g++-7
+              cc: gcc-7
+              macos_cxx: g++-7
+              macos_cc: gcc-7
+              homebrew_package: gcc@7
+              apt_package: g++-7
         include:
           - name: Local dependencies
             os: ubuntu-18.04
