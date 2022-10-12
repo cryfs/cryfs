@@ -20,6 +20,9 @@ function(target_activate_cpp14 TARGET)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
         target_compile_options(${TARGET} PUBLIC -stdlib=libc++)
     endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+
+    # We need ENABLE_EXPORTS so that boost::stacktrace works correctly
+    set_property(TARGET ${TARGET} PROPERTY ENABLE_EXPORTS 1)
 endfunction(target_activate_cpp14)
 
 # Find clang-tidy executable (for use in target_enable_style_warnings)
