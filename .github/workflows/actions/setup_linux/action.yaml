@@ -13,6 +13,7 @@ runs:
     - name: Install Linux dependencies
       shell: bash
       run: |
+        echo 'Acquire::Retries "20";' | sudo tee -a /etc/apt/apt.conf.d/80-retries
         if [[ "${{inputs.os}}" == "ubuntu-18.04" ]]; then
           echo Adding apt repositories for newer clang versions on Ubuntu 18.04
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
