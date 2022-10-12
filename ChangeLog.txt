@@ -1,6 +1,7 @@
 Version 0.12.0 (unreleased)
 ---------------
 * Updated to DokanY 1.3.0.1000
+* Added a man page for `cryfs-unmount`
 
 Version 0.11.3
 ---------------
