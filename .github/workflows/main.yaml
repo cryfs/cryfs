@@ -13,12 +13,6 @@ jobs:
           - ubuntu-18.04
           - ubuntu-20.04
         compiler:
-          - cxx: g++-7
-            cc: gcc-7
-            macos_cxx: g++-7
-            macos_cc: gcc-7
-            homebrew_package: gcc@7
-            apt_package: g++-7
           - cxx: g++-8
             cc: gcc-8
             macos_cxx: g++-8
