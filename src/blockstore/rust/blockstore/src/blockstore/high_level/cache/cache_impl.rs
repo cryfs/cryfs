@@ -16,7 +16,7 @@ use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
 
 // TODO Replace unsafe{NonZeroUSize::new_unchecked(_)} with NonZeroUsize::new(_).unwrap() once unwrap is const
-const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1024) };
+const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(10240) };
 
 pub struct BlockCacheImpl<
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
