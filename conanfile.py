@@ -4,7 +4,7 @@ class CryFSConan(ConanFile):
 	settings = "os", "compiler", "build_type", "arch"
 	requires = [
 		"range-v3/0.12.0",
-		"spdlog/1.8.5",
+		"spdlog/1.11.0",
 		"boost/1.79.0",
 	]
 	generators = "cmake"
