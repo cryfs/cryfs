@@ -207,7 +207,9 @@ TEST_P(BlobReadWriteDataTest, WriteAndReadImmediately) {
 TEST_P(BlobReadWriteDataTest, WriteAndReadAfterLoading) {
   blob->resize(GetParam().blobsize);
   blob->write(this->foregroundData.data(), GetParam().offset, GetParam().count);
-  auto loaded = loadBlob(blob->blockId());
+  BlockId blockid = blob->blockId();
+  cpputils::destruct(std::move(blob));
+  auto loaded = loadBlob(blockid);
 
   EXPECT_DATA_READS_AS(this->foregroundData, *loaded, GetParam().offset, GetParam().count);
   EXPECT_DATA_IS_ZEROES_OUTSIDE_OF(*loaded, GetParam().offset, GetParam().count);
