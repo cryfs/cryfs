@@ -181,8 +181,16 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         Ok(())
     }
 
-    pub async fn flush_block(&self, block: &mut BlockCacheEntry<B>, block_id: &BlockId) -> Result<()> {
-        self.cache.as_ref().expect("Object is already destructed").flush_entry(block, block_id).await
+    pub async fn flush_block(
+        &self,
+        block: &mut BlockCacheEntry<B>,
+        block_id: &BlockId,
+    ) -> Result<()> {
+        self.cache
+            .as_ref()
+            .expect("Object is already destructed")
+            .flush_entry(block, block_id)
+            .await
     }
 }
 
@@ -213,7 +221,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
                 .expect("This can't fail since we are the only task having access");
             for_each_unordered(
                 cache.into_entries_unordered().await,
-                |(key, mut value)| async move { value._flush_to_base_store(&key).await?; Ok(()) },
+                |(key, mut value)| async move {
+                    value._flush_to_base_store(&key).await?;
+                    Ok(())
+                },
             )
             .await
 

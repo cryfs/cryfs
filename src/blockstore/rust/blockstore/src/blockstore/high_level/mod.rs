@@ -187,7 +187,6 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
             } else {
                 (false, true)
             };
-        
 
         let removed_from_base_store = if should_remove_from_base_store {
             let base_store = self.base_store.as_ref().expect("Already destructed");
@@ -198,7 +197,6 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         } else {
             false
         };
-
 
         if removed_from_cache || removed_from_base_store {
             Ok(RemoveResult::SuccessfullyRemoved)
@@ -261,7 +259,8 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
 
     pub async fn flush_block(&self, block: &mut Block<B>) -> Result<()> {
         let block_id = *block.block_id();
-        let entry = block.cache_entry
+        let entry = block
+            .cache_entry
             .value_mut()
             .expect("An existing block cannot have a None cache entry");
         self.cache.flush_block(entry, &block_id).await
@@ -391,7 +390,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCreatedAndDoesntRemove() {
+    async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCreatedAndDoesntRemove(
+    ) {
         // TODO This is potentially flaky. Let's make sure cache doesn't get pruned, maybe set flush time to infinity?
         let mut underlying_store = make_mock_block_store();
         underlying_store
@@ -413,14 +413,19 @@ mod tests {
         // This is a regression test since we had a bug here where flushing wrote the block to the base store,
         // but forgot to set the cache entry to "this block exists in the base store", so a later remove
         // didn't actually remove it from the base store.
-        
+
         // TODO This is potentially flaky. Let's make sure cache doesn't get pruned, maybe set flush time to infinity?
         let mut underlying_store = make_mock_block_store();
         underlying_store
             .expect_exists()
             .returning(|_| Box::pin(async { Ok(false) }));
-        underlying_store.expect_store().once().return_once(|_, _| Box::pin(async{Ok(())}));
-        underlying_store.expect_remove().once().return_once(|_| Box::pin(async{Ok(crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved)}));
+        underlying_store
+            .expect_store()
+            .once()
+            .return_once(|_, _| Box::pin(async { Ok(()) }));
+        underlying_store.expect_remove().once().return_once(|_| {
+            Box::pin(async { Ok(crate::blockstore::low_level::RemoveResult::SuccessfullyRemoved) })
+        });
         let mut store = LockingBlockStore::new(underlying_store);
 
         let block_id = store.create(&data(1024, 0)).await.unwrap();

@@ -8,9 +8,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
 
+use super::entry::FlushResult;
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
-use super::entry::FlushResult;
 use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
@@ -194,7 +194,11 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         Ok(())
     }
 
-    pub async fn flush_entry(&self, entry: &mut BlockCacheEntry<B>, block_id: &BlockId) -> Result<()> {
+    pub async fn flush_entry(
+        &self,
+        entry: &mut BlockCacheEntry<B>,
+        block_id: &BlockId,
+    ) -> Result<()> {
         match entry._flush_to_base_store(block_id).await? {
             FlushResult::FlushingAddedANewBlockToTheBaseStore => {
                 let prev = self.num_blocks_in_cache_but_not_in_base_store.fetch_sub(1, Ordering::SeqCst);
