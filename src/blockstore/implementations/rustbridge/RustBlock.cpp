@@ -19,11 +19,6 @@ namespace blockstore
             _block->write(source_slice, offset);
         }
 
-        void RustBlock::flush()
-        {
-            _block->flush();
-        }
-
         size_t RustBlock::size() const
         {
             return _block->size();

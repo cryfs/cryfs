@@ -53,7 +53,7 @@ void DataTree::flush() const {
   // It's only a shared lock, because this doesn't modify the tree structure.
   shared_lock<shared_mutex> lock(_treeStructureMutex);
   // We also have to flush the root node
-  _rootNode->flush();
+  _nodeStore->flushNode(*_rootNode);
 }
 
 unique_ref<DataNode> DataTree::releaseRootNode() {

@@ -44,6 +44,10 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
         self.block
     }
 
+    pub(super) fn as_block_mut(&mut self) -> &mut Block<B> {
+        &mut self.block
+    }
+
     pub fn num_bytes(&self) -> u32 {
         let view = node::View::new(self.block.data());
         view.size().read()
@@ -81,10 +85,6 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     pub fn data_mut(&mut self) -> &mut [u8] {
         let view = node::View::new(self.block.data_mut().as_mut());
         view.into_data().into_slice()
-    }
-
-    pub async fn flush(&mut self) -> Result<()> {
-        self.block.flush().await
     }
 
     pub fn upcast(self) -> DataNode<B> {

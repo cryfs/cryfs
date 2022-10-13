@@ -134,12 +134,12 @@ public:
     return *_block;
   }
 
-  const blockstore::BlockId &blockId() const {
-    return _block->blockId();
+  blockstore::Block &block() {
+    return *_block;
   }
 
-  void flush() const {
-    _block->flush();
+  const blockstore::BlockId &blockId() const {
+    return _block->blockId();
   }
 
 private:

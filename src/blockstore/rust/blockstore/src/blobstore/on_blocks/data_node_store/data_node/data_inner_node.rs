@@ -64,6 +64,10 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         self.block
     }
 
+    pub(super) fn as_block_mut(&mut self) -> &mut Block<B> {
+        &mut self.block
+    }
+
     pub fn num_children(&self) -> NonZeroU32 {
         let view = node::View::new(self.block.data().as_ref());
         NonZeroU32::new(view.size().read())
@@ -129,10 +133,6 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         view.data_mut()[free_begin..free_end].fill(0);
         view.size_mut().write(new_num_children.get());
         Ok(())
-    }
-
-    pub async fn flush(&mut self) -> Result<()> {
-        self.block.flush().await
     }
 
     pub fn upcast(self) -> DataNode<B> {

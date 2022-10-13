@@ -243,11 +243,10 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
     pub async fn flush(&mut self) -> Result<()> {
         // TODO This doesn't actually flush the whole tree And I have to double check that this actually flushes the node to disk and doesn't just
         // write it into the cache. I might have to find a different solution here.
-        self.root_node
+        let root = self.root_node
             .as_mut()
-            .expect("root_node is None")
-            .flush()
-            .await
+            .expect("root_node is None");
+        self.node_store.flush_node(root).await
     }
 
     pub async fn resize_num_bytes(&mut self, new_num_bytes: u64) -> Result<()> {

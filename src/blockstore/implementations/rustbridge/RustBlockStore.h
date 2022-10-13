@@ -27,6 +27,7 @@ namespace blockstore
       uint64_t estimateNumFreeBytes() const override;
       uint64_t blockSizeFromPhysicalBlockSize(uint64_t blockSize) const override;
       void forEachBlock(std::function<void(const BlockId &)> callback) const override;
+      void flushBlock(Block* block) override;
 
     private:
       ::rust::Box<bridge::RustBlockStoreBridge> _blockStore;

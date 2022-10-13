@@ -53,6 +53,8 @@ public:
 
   void forEachNode(std::function<void (const blockstore::BlockId& nodeId)> callback) const;
 
+  void flushNode(DataNode& node);
+
 private:
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;

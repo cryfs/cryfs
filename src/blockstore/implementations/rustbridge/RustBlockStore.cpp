@@ -75,5 +75,11 @@ namespace blockstore
                 callback(helpers::cast_blockid(block));
             }
         }
+
+        void RustBlockStore::flushBlock(Block* block) {
+            RustBlock* rustBlock = dynamic_cast<RustBlock*>(block);
+            ASSERT(rustBlock != nullptr, "flushBlock got a block from the wrong block store");
+            _blockStore->flush_block(rustBlock->_block);
+        }
     }
 }

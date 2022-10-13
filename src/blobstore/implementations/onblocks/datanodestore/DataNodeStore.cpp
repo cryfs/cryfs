@@ -122,6 +122,10 @@ void DataNodeStore::removeSubtree(uint8_t depth, const BlockId &blockId) {
   }
 }
 
+void DataNodeStore::flushNode(DataNode& node) {
+  _blockstore->flushBlock(&node.node().block());
+}
+
 uint64_t DataNodeStore::numNodes() const {
   return _blockstore->numBlocks();
 }

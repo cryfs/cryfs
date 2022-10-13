@@ -74,6 +74,12 @@ namespace blockstore {
                 return _baseBlockStore->remove((*mockBlock)->releaseBaseBlock());
             }
 
+            void flushBlock(Block* block) override {
+                MockBlock* mockBlock = dynamic_cast<MockBlock*>(block);
+                ASSERT(mockBlock != nullptr, "flushBlock got a block from the wrong block store");
+                return _baseBlockStore->flushBlock(&*(mockBlock->_baseBlock));
+            }
+
             void resetCounters() {
                 _loadedBlocks = {};
                 _createdBlocks = 0;

@@ -72,7 +72,7 @@ public:
   }
 
   void TraverseLeaves(unique_ref<DataNode> root, uint32_t beginIndex, uint32_t endIndex, bool expectReadOnly) {
-    root->flush();
+    nodeStore->flushNode(*root);
     auto tree = treeStore.load(root->blockId()).value();
     auto* old_root = root.get();
     LeafTraverser(nodeStore, expectReadOnly).traverseAndUpdateRoot(&root, beginIndex, endIndex, [this] (uint32_t nodeIndex, bool isRightBorderNode,LeafHandle leaf) {
@@ -408,7 +408,7 @@ TEST_F(LeafTraverserTest, TraverseMiddlePartOfFourLevelTree) {
 
 TEST_F(LeafTraverserTest, LastLeafIsAlreadyResizedInCallback) {
   unique_ref<DataNode> root = CreateLeaf();
-  root->flush();
+  nodeStore->flushNode(*root);
   auto* old_root = root.get();
   auto tree = treeStore.load(root->blockId()).value();
   LeafTraverser(nodeStore, false).traverseAndUpdateRoot(&root, 0, 2, [this] (uint32_t leafIndex, bool /*isRightBorderNode*/, LeafHandle leaf) {
@@ -425,7 +425,7 @@ TEST_F(LeafTraverserTest, LastLeafIsAlreadyResizedInCallback) {
 
 TEST_F(LeafTraverserTest, LastLeafIsAlreadyResizedInCallback_TwoLevel) {
   unique_ref<DataNode> root = CreateFullTwoLevelWithLastLeafSize(5);
-  root->flush();
+  nodeStore->flushNode(*root);
   auto* old_root = root.get();
   auto tree = treeStore.load(root->blockId()).value();
   LeafTraverser(nodeStore, false).traverseAndUpdateRoot(&root, 0, nodeStore->layout().maxChildrenPerInnerNode()+1, [this] (uint32_t /*leafIndex*/, bool /*isRightBorderNode*/, LeafHandle leaf) {

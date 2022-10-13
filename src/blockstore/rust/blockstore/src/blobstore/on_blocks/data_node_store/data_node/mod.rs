@@ -57,13 +57,6 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         }
     }
 
-    pub async fn flush(&mut self) -> Result<()> {
-        match self {
-            Self::Leaf(leaf) => leaf.flush().await,
-            Self::Inner(inner) => inner.flush().await,
-        }
-    }
-
     pub(super) fn raw_blockdata(&self) -> &Data {
         match self {
             Self::Leaf(leaf) => leaf.raw_blockdata(),
@@ -79,6 +72,13 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         match self {
             Self::Leaf(leaf) => leaf.into_block(),
             Self::Inner(inner) => inner.into_block(),
+        }
+    }
+
+    pub(super) fn as_block_mut(&mut self) -> &mut Block<B> {
+        match self {
+            Self::Leaf(leaf) => leaf.as_block_mut(),
+            Self::Inner(inner) => inner.as_block_mut(),
         }
     }
 

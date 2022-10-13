@@ -149,6 +149,10 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         self.layout.block_size_bytes
     }
 
+    pub async fn flush_node(&self, node: &mut DataNode<B>) -> Result<()> {
+        self.block_store.flush_block(node.as_block_mut()).await
+    }
+
     // cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
 
     // void forEachNode(std::function<void (const blockstore::BlockId& nodeId)> callback) const;

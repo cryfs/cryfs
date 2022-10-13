@@ -86,5 +86,11 @@ void ParallelAccessBlockStore::forEachBlock(std::function<void (const BlockId &)
   return _baseBlockStore->forEachBlock(callback);
 }
 
+void ParallelAccessBlockStore::flushBlock(Block* block) {
+  BlockRef* blockRef = dynamic_cast<BlockRef*>(block);
+  ASSERT(blockRef != nullptr, "flushBlock got a block from the wrong block store");
+  return _baseBlockStore->flushBlock(&*(blockRef->_baseBlock));
+}
+
 }
 }

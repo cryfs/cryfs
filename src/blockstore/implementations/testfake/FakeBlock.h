@@ -19,7 +19,7 @@ public:
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
 
-  void flush() override;
+  void flush();
 
   size_t size() const override;
 

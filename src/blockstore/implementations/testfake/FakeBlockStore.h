@@ -43,6 +43,8 @@ public:
 
   void updateData(const BlockId &blockId, const cpputils::Data &data);
 
+  void flushBlock(Block* block) override;
+
 private:
   std::unordered_map<BlockId, cpputils::Data> _blocks;
 

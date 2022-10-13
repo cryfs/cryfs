@@ -171,7 +171,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         // Write back the block data
         let block_id = *guard.key();
         if let Some(entry) = guard.value_mut() {
-            entry.flush(&block_id).await?;
+            cache.flush_entry(entry, &block_id).await?;
             cache.delete_entry_from_cache(&mut guard);
         } else {
             // Found a None entry in the cache.
@@ -179,6 +179,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         }
 
         Ok(())
+    }
+
+    pub async fn flush_block(&self, block: &mut BlockCacheEntry<B>, block_id: &BlockId) -> Result<()> {
+        self.cache.as_ref().expect("Object is already destructed").flush_entry(block, block_id).await
     }
 }
 
@@ -209,7 +213,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
                 .expect("This can't fail since we are the only task having access");
             for_each_unordered(
                 cache.into_entries_unordered().await,
-                |(key, mut value)| async move { value.flush(&key).await },
+                |(key, mut value)| async move { value._flush_to_base_store(&key).await?; Ok(()) },
             )
             .await
 

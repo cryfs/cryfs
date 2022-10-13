@@ -37,37 +37,28 @@ constexpr uint64_t BigBlobsTest::LARGE_BLOB_SIZE;
 TEST_F(BigBlobsTest, Resize)
 {
     // These operations are in one test case and not in many small ones, because it takes quite long to create a >4GB blob.
-
     // Resize to >4GB
     blob->resize(LARGE_BLOB_SIZE);
     EXPECT_EQ(LARGE_BLOB_SIZE, blob->size());
-
     // Grow while >4GB
     blob->resize(LARGE_BLOB_SIZE + 1024);
     EXPECT_EQ(LARGE_BLOB_SIZE + 1024, blob->size());
-
     // Shrink while >4GB
     blob->resize(LARGE_BLOB_SIZE);
     EXPECT_EQ(LARGE_BLOB_SIZE, blob->size());
-
     // Shrink to <4GB
     blob->resize(SMALL_BLOB_SIZE);
     EXPECT_EQ(SMALL_BLOB_SIZE, blob->size());
-
     // Grow to >4GB
     blob->resize(LARGE_BLOB_SIZE);
     EXPECT_EQ(LARGE_BLOB_SIZE, blob->size());
-
     // Flush >4GB blob
     blob->flush();
-
     // Destruct >4GB blob
     auto blockId = blob->blockId();
     cpputils::destruct(std::move(blob));
-
     // Load >4GB blob
     blob = blobStore->load(blockId).value();
-
     // Remove >4GB blob
     blobStore->remove(std::move(blob));
 }

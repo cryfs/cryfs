@@ -130,6 +130,7 @@ pub mod ffi {
         fn estimate_num_free_bytes(&self) -> Result<u64>;
         fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
         fn all_blocks(&self) -> Result<Vec<BlockId>>;
+        fn flush_block(&mut self, block: &mut Box<RustBlockBridge>) -> Result<()>;
         fn async_drop(&mut self) -> Result<()>;
     }
 
@@ -138,7 +139,6 @@ pub mod ffi {
         type RustBlockBridge;
         fn block_id(&self) -> Box<BlockId>;
         fn size(&self) -> usize;
-        fn flush(&mut self) -> Result<()>;
         fn resize(&mut self, new_size: usize);
         fn data(&self) -> &[u8];
         fn write(&mut self, source: &[u8], offset: usize) -> Result<()>;
@@ -190,10 +190,6 @@ impl RustBlockBridge {
 
     fn size(&self) -> usize {
         self.0.data().len()
-    }
-
-    fn flush(&mut self) -> Result<()> {
-        log_errors(|| TOKIO_RUNTIME.block_on(self.0.flush()))
     }
 
     fn resize(&mut self, new_size: usize) {
@@ -319,6 +315,10 @@ impl RustBlockStoreBridge {
                 TryStreamExt::try_collect(self.0.all_blocks().await?.map_ok(|id| BlockId(id))).await
             })
         })
+    }
+
+    fn flush_block(&mut self, block: &mut RustBlockBridge) -> Result<()> {
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.flush_block(&mut block.0)))
     }
 
     fn async_drop(&mut self) -> Result<()> {

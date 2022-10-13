@@ -48,6 +48,8 @@ public:
       }
     }
   }
+
+  virtual void flushBlock(Block* block) = 0;
 };
 
 }

@@ -20,14 +20,13 @@ namespace blockstore
       const void *data() const override;
       void write(const void *source, uint64_t offset, uint64_t size) override;
 
-      void flush() override;
-
       size_t size() const override;
 
       void resize(size_t newSize) override;
 
     private:
       ::rust::Box<bridge::RustBlockBridge> _block;
+      friend class RustBlockStore;
 
       DISALLOW_COPY_AND_ASSIGN(RustBlock);
     };

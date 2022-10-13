@@ -24,10 +24,6 @@ public:
 	return _baseBlock->write(source, offset, size);
   }
 
-  void flush() override {
-	return _baseBlock->flush();
-  }
-
   size_t size() const override {
 	return _baseBlock->size();
   }
@@ -38,6 +34,7 @@ public:
 
 private:
   Block *_baseBlock;
+  friend class ParallelAccessBlockStore;
 
   DISALLOW_COPY_AND_ASSIGN(BlockRef);
 };

@@ -21,8 +21,6 @@ public:
 
   static cpputils::unique_ref<DataInnerNode> convertToNewInnerNode(cpputils::unique_ref<DataNode> node, const DataNodeLayout &layout, const DataNode &first_child);
 
-  void flush() const;
-
 protected:
   // The FORMAT_VERSION_HEADER is used to allow future versions to have compatibility.
   static constexpr uint16_t FORMAT_VERSION_HEADER = 0;

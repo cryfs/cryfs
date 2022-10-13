@@ -44,10 +44,6 @@ unique_ref<DataInnerNode> DataNode::convertToNewInnerNode(unique_ref<DataNode> n
   return DataInnerNode::InitializeNewNode(std::move(block), layout, first_child.depth()+1, {first_child.blockId()});
 }
 
-void DataNode::flush() const {
-  _node.flush();
-}
-
 }
 }
 }

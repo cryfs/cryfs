@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::blockstore::BlockId;
 use crate::data::Data;
@@ -18,10 +19,17 @@ pub enum BlockBaseStoreState {
     DoesntExistInBaseStore,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum FlushResult {
+    FlushingAddedANewBlockToTheBaseStore,
+    FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore,
+    FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty,
+}
+
 pub struct BlockCacheEntry<
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 > {
-    // TODO Do we really need to store the base_store in each cache entry?
+    // TODO Do we really need to store the base_store in each cache entry? It's only used in flush().
     base_store: Arc<AsyncDropGuard<B>>,
     dirty: CacheEntryState,
     data: Data,
@@ -62,13 +70,27 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         &mut self.data
     }
 
-    pub async fn flush(&mut self, block_id: &BlockId) -> Result<()> {
+    // Warning: _flush_to_base_store doesn't update BlockCacheImpl.num_blocks_in_cache_but_not_in_base_store.
+    // It shouldn't be used directly but we should use BlockCacheImpl.flush_entry() instead,
+    // unless we're certain that the bad state in BlockCacheImpl doesn't matter (e.g. because the BlockCacheImpl
+    // instance is already dead)
+    pub(super) async fn _flush_to_base_store(&mut self, block_id: &BlockId) -> Result<FlushResult> {
         if self.dirty == CacheEntryState::Dirty {
             // TODO self.base_store.optimized_store() ?
             self.base_store.store(block_id, &self.data).await?;
             self.dirty = CacheEntryState::Clean;
+            match self.block_exists_in_base_store {
+                BlockBaseStoreState::ExistsInBaseStore => {
+                    Ok(FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore)
+                },
+                BlockBaseStoreState::DoesntExistInBaseStore => {
+                    self.block_exists_in_base_store = BlockBaseStoreState::ExistsInBaseStore;
+                    Ok(FlushResult::FlushingAddedANewBlockToTheBaseStore)
+                }
+            }
+        } else {
+            Ok(FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty)
         }
-        Ok(())
     }
 
     #[inline]

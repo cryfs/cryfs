@@ -106,5 +106,11 @@ void FakeBlockStore::forEachBlock(std::function<void (const BlockId &)> callback
   }
 }
 
+void FakeBlockStore::flushBlock(Block* block) {
+  FakeBlock* fakeBlock = dynamic_cast<FakeBlock*>(block);
+  ASSERT(fakeBlock != nullptr, "flushBlock got a block from the wrong block store");
+  fakeBlock->flush();
+}
+
 }
 }

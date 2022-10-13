@@ -73,7 +73,8 @@
         "random": "cpp",
         "ranges": "cpp",
         "cinttypes": "cpp",
-        "forward_list": "cpp"
+        "forward_list": "cpp",
+        "span": "cpp"
     },
     "rust-analyzer.linkedProjects": [
         "src/blockstore/rust/Cargo.toml"

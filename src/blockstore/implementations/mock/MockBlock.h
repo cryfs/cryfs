@@ -22,10 +22,6 @@ namespace blockstore {
 
             void write(const void *source, uint64_t offset, uint64_t size) override;
 
-            void flush() override {
-              return _baseBlock->flush();
-            }
-
             size_t size() const override {
               return _baseBlock->size();
             }
@@ -39,6 +35,7 @@ namespace blockstore {
         private:
             cpputils::unique_ref<blockstore::Block> _baseBlock;
             MockBlockStore *_blockStore;
+            friend class MockBlockStore;
 
             DISALLOW_COPY_AND_ASSIGN(MockBlock);
         };

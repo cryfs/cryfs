@@ -919,7 +919,7 @@ dependencies = [
 [[package]]
 name = "lockable"
 version = "0.0.2"
-source = "git+https://github.com/smessmer/lockable?rev=c43a9a864bd746f501dbbb9104119c2f480b6e8e#c43a9a864bd746f501dbbb9104119c2f480b6e8e"
+source = "git+https://github.com/smessmer/lockable?rev=cf8b44369d8d8cb23e4a9bde86db9cf20977a120#cf8b44369d8d8cb23e4a9bde86db9cf20977a120"
 dependencies = [
  "anyhow",
  "futures",

@@ -10,6 +10,7 @@ use tokio::time::Duration;
 
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 use super::guard::BlockCacheEntryGuard;
+use super::entry::FlushResult;
 use crate::blockstore::BlockId;
 use crate::data::Data;
 use crate::utils::async_drop::AsyncDropGuard;
@@ -189,6 +190,20 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         // so we don't trigger a panic when it gets destructed and is dirty.
         if let Some(old_entry) = old_entry {
             old_entry.discard();
+        }
+        Ok(())
+    }
+
+    pub async fn flush_entry(&self, entry: &mut BlockCacheEntry<B>, block_id: &BlockId) -> Result<()> {
+        match entry._flush_to_base_store(block_id).await? {
+            FlushResult::FlushingAddedANewBlockToTheBaseStore => {
+                let prev = self.num_blocks_in_cache_but_not_in_base_store.fetch_sub(1, Ordering::SeqCst);
+                assert!(
+                    prev > 0,
+                    "Underflow in num_blocks_in_cache_but_not_in_base_store"
+                );
+            },
+            FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty | FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore => { /* do nothing */}
         }
         Ok(())
     }
