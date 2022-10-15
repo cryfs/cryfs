@@ -65,7 +65,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             ._cache()
             .async_lock_owned(
                 block_id,
-                AsyncLimit::Bounded {
+                AsyncLimit::SoftLimit {
                     max_entries: MAX_CACHE_ENTRIES,
                     on_evict: move |evicted| {
                         // TODO Should we wrap this into a BlockCacheEntryGuard for better abstraction separation?

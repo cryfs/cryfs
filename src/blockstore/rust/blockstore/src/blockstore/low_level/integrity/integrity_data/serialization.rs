@@ -1,7 +1,7 @@
 use binread::BinRead;
 use binwrite::BinWrite;
 use core::num::NonZeroU8;
-use lockable::LockableHashMap;
+use lockable::{InfallibleUnwrap, LockableHashMap, SyncLimit};
 use std::collections::hash_map::HashMap;
 use std::sync::Arc;
 
@@ -54,17 +54,23 @@ impl From<KnownBlockVersionsSerialized> for KnownBlockVersions {
         let block_infos = LockableHashMap::new();
         // TODO block_infos.reserve(data.last_update_client_id.len());
         for (block_id, client_id) in data.last_update_client_id {
-            let mut block_info = block_infos.try_lock(block_id).expect(
-                "We're just creating this object, nobody else has access. Locking can't fail",
-            );
+            let mut block_info = block_infos
+                .try_lock(block_id, SyncLimit::no_limit())
+                .infallible_unwrap()
+                .expect(
+                    "We're just creating this object, nobody else has access. Locking can't fail",
+                );
             block_info
                 .try_insert(BlockInfo::new_unknown(client_id))
                 .expect("Input hashmap last_update_client_id had duplicate keys");
         }
         for ((client_id, block_id), block_version) in data.known_block_versions {
-            let mut block_info = block_infos.try_lock(block_id).expect(
-                "We're just creating this object, nobody else has access. Locking can't fail",
-            );
+            let mut block_info = block_infos
+                .try_lock(block_id, SyncLimit::no_limit())
+                .infallible_unwrap()
+                .expect(
+                    "We're just creating this object, nobody else has access. Locking can't fail",
+                );
             let block_info = block_info.value_or_insert_with(|| {
                 BlockInfo::new_unknown(MaybeClientId::ClientId(client_id))
             });

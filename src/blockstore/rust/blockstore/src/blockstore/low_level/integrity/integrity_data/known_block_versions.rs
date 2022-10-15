@@ -1,7 +1,7 @@
 use anyhow::{bail, ensure, Result};
 use binread::{BinRead, BinResult, ReadOptions};
 use binwrite::{BinWrite, WriterOption};
-use lockable::{HashMapOwnedGuard, LockableHashMap};
+use lockable::{AsyncLimit, HashMapOwnedGuard, InfallibleUnwrap, LockableHashMap};
 use std::collections::hash_map::{Entry, HashMap};
 use std::hash::Hash;
 use std::io::{Read, Seek, Write};
@@ -362,7 +362,10 @@ impl KnownBlockVersions {
         &self,
         block_id: BlockId,
     ) -> HashMapOwnedGuard<BlockId, BlockInfo> {
-        self.block_infos.async_lock_owned(block_id).await
+        self.block_infos
+            .async_lock_owned(block_id, AsyncLimit::no_limit())
+            .await
+            .infallible_unwrap()
     }
 
     pub fn existing_blocks(&self) -> Vec<BlockId> {

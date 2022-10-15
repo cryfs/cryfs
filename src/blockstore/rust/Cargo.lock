@@ -316,6 +316,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "convert_case"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,6 +571,19 @@ checksum = "9d3a240a54f5526967ffae81fdcda1fc80564964220d90816960b2eae2eab7f4"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syn",
+]
+
+[[package]]
+name = "derive_more"
+version = "0.99.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
+dependencies = [
+ "convert_case",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
  "syn",
 ]
 
@@ -919,9 +938,10 @@ dependencies = [
 [[package]]
 name = "lockable"
 version = "0.0.2"
-source = "git+https://github.com/smessmer/lockable?rev=cf8b44369d8d8cb23e4a9bde86db9cf20977a120#cf8b44369d8d8cb23e4a9bde86db9cf20977a120"
+source = "git+https://github.com/smessmer/lockable?rev=4cbb2a3c21e7515f9e5f4426caa000de1ced97a7#4cbb2a3c21e7515f9e5f4426caa000de1ced97a7"
 dependencies = [
  "anyhow",
+ "derive_more",
  "futures",
  "log",
  "lru 0.7.5",
