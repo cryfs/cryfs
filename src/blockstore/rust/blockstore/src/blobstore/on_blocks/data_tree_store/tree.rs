@@ -263,10 +263,10 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             ) -> Result<()> {
                 assert_eq!(self.new_num_leaves.get() - 1, index);
                 // TODO Does the following assertion make sense?
-                assert!(
-                    is_right_border_leaf,
-                    "This should only be called for right border leaves"
-                );
+                // assert!(
+                //     is_right_border_leaf,
+                //     "This should only be called for right border leaves"
+                // );
                 // This is only called if the new last leaf was already existing
                 let leaf = leaf.node().await?;
                 if leaf.num_bytes() != self.new_last_leaf_size {
