@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::fmt::{self, Debug};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use crate::blockstore::BlockId;

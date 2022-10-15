@@ -21,10 +21,6 @@ pub enum SizeCache {
 }
 
 impl SizeCache {
-    pub fn new() -> Self {
-        SizeCache::SizeUnknown
-    }
-
     pub async fn get_or_calculate_num_leaves<B: BlockStore + Send + Sync>(
         &mut self,
         node_store: &DataNodeStore<B>,

@@ -3,7 +3,6 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
-use futures::future::{self, BoxFuture};
 use std::future::Future;
 use std::num::NonZeroU64;
 
@@ -25,31 +24,32 @@ use crate::utils::stream::for_each_unordered;
 //  - Look at assert vs ensure - when something can be caused by the data on disk instead of a programming bug, it must be ensure!
 //  - Look at assertions and make sure they all show a good error message
 
-#[async_recursion]
-pub async fn all_leaves<B, F>(
-    store: &DataNodeStore<B>,
-    root: &mut DataNode<B>,
-    on_leaf: &(impl Sync + Fn(&mut DataLeafNode<B>) -> F),
-) -> Result<()>
-where
-    B: BlockStore + Send + Sync,
-    F: Future<Output = Result<()>> + Send,
-{
-    match root {
-        DataNode::Leaf(leaf) => {
-            on_leaf(leaf).await?;
-        }
-        DataNode::Inner(inner) => {
-            for_each_unordered(_load_children(store, inner)?, |child| async move {
-                let mut child = child.await?;
-                all_leaves(store, &mut child, on_leaf).await?;
-                Ok(())
-            })
-            .await?;
-        }
-    }
-    Ok(())
-}
+// TODO Why don't we need all_leaves() ?
+// #[async_recursion]
+// pub async fn all_leaves<B, F>(
+//     store: &DataNodeStore<B>,
+//     root: &mut DataNode<B>,
+//     on_leaf: &(impl Sync + Fn(&mut DataLeafNode<B>) -> F),
+// ) -> Result<()>
+// where
+//     B: BlockStore + Send + Sync,
+//     F: Future<Output = Result<()>> + Send,
+// {
+//     match root {
+//         DataNode::Leaf(leaf) => {
+//             on_leaf(leaf).await?;
+//         }
+//         DataNode::Inner(inner) => {
+//             for_each_unordered(_load_children(store, inner)?, |child| async move {
+//                 let mut child = child.await?;
+//                 all_leaves(store, &mut child, on_leaf).await?;
+//                 Ok(())
+//             })
+//             .await?;
+//         }
+//     }
+//     Ok(())
+// }
 
 fn _load_children<'a, 'b, 'r, B: BlockStore + Send + Sync>(
     store: &'a DataNodeStore<B>,
@@ -702,12 +702,12 @@ async fn _create_new_subtree<
             struct Callbacks;
             #[async_trait]
             impl<B: BlockStore + Send + Sync> CreateNewSubtreeCallbacks<B> for Callbacks {
-                fn on_create_leaf(&self, index: u64) -> Data {
+                fn on_create_leaf(&self, _index: u64) -> Data {
                     panic!("We're only creating gap leaves here, not traversing any");
                 }
                 async fn on_backtrack_from_subtree(
                     &self,
-                    node: &mut DataInnerNode<B>,
+                    _node: &mut DataInnerNode<B>,
                 ) -> Result<()> {
                     Ok(())
                 }
@@ -811,7 +811,7 @@ async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore +
         )
     })?;
     match &current {
-        DataNode::Leaf(leaf) => Ok(current),
+        DataNode::Leaf(_leaf) => Ok(current),
         DataNode::Inner(inner) => {
             let num_children = inner.num_children().get();
             assert!(num_children >= 1);

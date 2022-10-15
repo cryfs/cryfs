@@ -167,6 +167,7 @@ impl BlockInfo {
         self.last_update_client_id = MaybeClientId::BlockWasDeleted;
     }
 
+    #[cfg(test)]
     pub fn block_is_deleted(&self) -> bool {
         self.last_update_client_id == MaybeClientId::BlockWasDeleted
     }

@@ -63,7 +63,7 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
             .await?
             .get();
         let mut total_num_nodes = num_nodes_current_level;
-        for level in 0..root_node.depth() {
+        for _level in 0..root_node.depth() {
             num_nodes_current_level = num_nodes_current_level.div_ceil(u64::from(
                 self.node_store.layout().max_children_per_inner_node(),
             ));
@@ -262,7 +262,11 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
                 mut leaf: LeafHandle<'_, B>,
             ) -> Result<()> {
                 assert_eq!(self.new_num_leaves.get() - 1, index);
-                // TODO Does the following assertion make sense? assert!(is_right_border_leaf);
+                // TODO Does the following assertion make sense?
+                assert!(
+                    is_right_border_leaf,
+                    "This should only be called for right border leaves"
+                );
                 // This is only called if the new last leaf was already existing
                 let leaf = leaf.node().await?;
                 if leaf.num_bytes() != self.new_last_leaf_size {

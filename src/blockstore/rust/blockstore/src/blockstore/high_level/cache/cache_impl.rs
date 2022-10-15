@@ -225,6 +225,7 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             .lock_entries_unlocked_for_at_least_owned(duration)
     }
 
+    #[cfg(test)]
     pub async fn lock_all_entries(
         &self,
     ) -> impl Stream<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>> {

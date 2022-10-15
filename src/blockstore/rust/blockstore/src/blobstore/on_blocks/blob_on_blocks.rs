@@ -67,7 +67,7 @@ impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
         self._tree_mut().num_nodes().await
     }
 
-    async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
+    async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
         let tree = this
             .unsafe_into_inner_dont_drop()
             .tree

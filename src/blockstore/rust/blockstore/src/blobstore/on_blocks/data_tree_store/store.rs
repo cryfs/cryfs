@@ -1,10 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::blobstore::{
-    on_blocks::data_node_store::{DataNode, DataNodeStore},
-    RemoveResult,
-};
+use crate::blobstore::{on_blocks::data_node_store::DataNodeStore, RemoveResult};
 use crate::blockstore::high_level::LockingBlockStore;
 use crate::blockstore::low_level::BlockStore;
 use crate::blockstore::BlockId;
