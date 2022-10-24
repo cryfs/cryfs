@@ -98,11 +98,11 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make pkg-config libcurl4-openssl-dev libssl-dev libfuse-dev python python3-pip
+        $ sudo apt install git g++ cmake make pkg-config libcurl4-openssl-dev libssl-dev libfuse-dev python3 python3-pip
         $ sudo pip3 install conan
 
         # Fedora
-        $ sudo dnf install git gcc-c++ cmake make pkgconf libcurl-devel openssl-devel fuse-devel python python3-pip
+        $ sudo dnf install git gcc-c++ cmake make pkgconf libcurl-devel openssl-devel fuse-devel python3 python3-pip
         $ sudo pip3 install conan
 
         # Macintosh
