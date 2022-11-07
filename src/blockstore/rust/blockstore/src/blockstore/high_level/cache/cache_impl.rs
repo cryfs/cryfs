@@ -1,12 +1,14 @@
 use anyhow::Result;
-use futures::stream::Stream;
-use lockable::{AsyncLimit, LockableLruCache, LruOwnedGuard};
+use lockable::{AsyncLimit, Lockable, LockableLruCache};
 use std::fmt::Debug;
 use std::future::Future;
 use std::num::NonZeroUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
+
+#[cfg(test)]
+use futures::stream::Stream;
 
 use super::entry::FlushResult;
 use super::entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
@@ -48,8 +50,8 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             .expect("Instance is currently being dropped")
     }
 
-    pub fn keys(&self) -> Vec<BlockId> {
-        self._cache().keys()
+    pub fn keys_with_entries_or_locked(&self) -> Vec<BlockId> {
+        self._cache().keys_with_entries_or_locked()
     }
 
     pub async fn async_lock<F, OnEvictFn>(
@@ -59,7 +61,14 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     ) -> Result<BlockCacheEntryGuard<B>>
     where
         F: Future<Output = Result<()>>,
-        OnEvictFn: Fn(Vec<LruOwnedGuard<BlockId, BlockCacheEntry<B>>>) -> F,
+        OnEvictFn: Fn(
+            Vec<
+                <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+                    BlockId,
+                    BlockCacheEntry<B>,
+                >>::OwnedGuard,
+            >,
+        ) -> F,
     {
         let guard = self
             ._cache()
@@ -77,7 +86,13 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
         Ok(BlockCacheEntryGuard { guard })
     }
 
-    pub fn delete_entry_from_cache(&self, entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>) {
+    pub fn delete_entry_from_cache(
+        &self,
+        entry: &mut <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+            BlockId,
+            BlockCacheEntry<B>,
+        >>::OwnedGuard,
+    ) {
         assert!(entry.value().is_some(), "Entry already deleted");
         let entry = entry
             .remove()
@@ -98,7 +113,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
 
     pub fn delete_entry_from_cache_even_if_dirty(
         &self,
-        entry: &mut LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
+        entry: &mut <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+            BlockId,
+            BlockCacheEntry<B>,
+        >>::OwnedGuard,
     ) {
         assert!(entry.value().is_some(), "Entry already deleted");
         let old_entry = entry
@@ -220,7 +238,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     pub fn lock_entries_unlocked_for_at_least(
         &self,
         duration: Duration,
-    ) -> impl Iterator<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>> {
+    ) -> impl Iterator<
+        Item = <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+            BlockId,
+            BlockCacheEntry<B>,
+        >>::OwnedGuard,
+    > {
         self._cache()
             .lock_entries_unlocked_for_at_least_owned(duration)
     }
@@ -228,7 +251,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
     #[cfg(test)]
     pub async fn lock_all_entries(
         &self,
-    ) -> impl Stream<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>> {
+    ) -> impl Stream<
+        Item = <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+            BlockId,
+            BlockCacheEntry<B>,
+        >>::OwnedGuard,
+    > {
         self._cache().lock_all_entries_owned().await
     }
 

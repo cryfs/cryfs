@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
-use lockable::LruOwnedGuard;
+use lockable::{Lockable, LockableLruCache};
 use std::fmt::Debug;
 use std::future::Future;
 use std::sync::Arc;
@@ -61,11 +61,11 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
             .await
     }
 
-    pub fn keys(&self) -> Vec<BlockId> {
+    pub fn keys_with_entries_or_locked(&self) -> Vec<BlockId> {
         self.cache
             .as_ref()
             .expect("Object is already destructed")
-            .keys()
+            .keys_with_entries_or_locked()
     }
 
     pub fn delete_entry_from_cache_even_if_dirty(&self, entry: &mut BlockCacheEntryGuard<B>) {
@@ -152,7 +152,12 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
 
     async fn _prune_blocks(
         cache: Arc<BlockCacheImpl<B>>,
-        to_prune: impl Iterator<Item = LruOwnedGuard<BlockId, BlockCacheEntry<B>>>,
+        to_prune: impl Iterator<
+            Item = <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+                BlockId,
+                BlockCacheEntry<B>,
+            >>::OwnedGuard,
+        >,
     ) -> Result<()> {
         // Now we have a list of mutex guards, locking all keys that we want to prune.
         // The global mutex for the cache is unlocked, so other threads may now come in
@@ -166,7 +171,10 @@ impl<B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static
 
     async fn _prune_block(
         cache: &BlockCacheImpl<B>,
-        mut guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
+        mut guard: <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+            BlockId,
+            BlockCacheEntry<B>,
+        >>::OwnedGuard,
     ) -> Result<()> {
         // Write back the block data
         let block_id = *guard.key();

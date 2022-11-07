@@ -228,7 +228,8 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     pub async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
 
-        let blocks_in_cache = self.cache.keys();
+        // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries?
+        let blocks_in_cache = self.cache.keys_with_entries_or_locked();
         let blocks_in_base_store = base_store.all_blocks().await?;
 
         let blocks_in_cache_set: HashSet<_> = blocks_in_cache.iter().copied().collect();

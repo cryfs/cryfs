@@ -1,7 +1,7 @@
 use anyhow::{bail, ensure, Result};
 use binread::{BinRead, BinResult, ReadOptions};
 use binwrite::{BinWrite, WriterOption};
-use lockable::{AsyncLimit, HashMapOwnedGuard, InfallibleUnwrap, LockableHashMap};
+use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use std::collections::hash_map::{Entry, HashMap};
 use std::hash::Hash;
 use std::io::{Read, Seek, Write};
@@ -362,7 +362,7 @@ impl KnownBlockVersions {
     pub async fn lock_block_info(
         &self,
         block_id: BlockId,
-    ) -> HashMapOwnedGuard<BlockId, BlockInfo> {
+    ) -> <LockableHashMap<BlockId, BlockInfo> as Lockable<BlockId, BlockInfo>>::OwnedGuard {
         self.block_infos
             .async_lock_owned(block_id, AsyncLimit::no_limit())
             .await
@@ -370,7 +370,8 @@ impl KnownBlockVersions {
     }
 
     pub fn existing_blocks(&self) -> Vec<BlockId> {
-        self.block_infos.keys()
+        // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries as "existing" blocks?
+        self.block_infos.keys_with_entries_or_locked()
     }
 
     pub fn integrity_violation_in_previous_run(&self) -> bool {

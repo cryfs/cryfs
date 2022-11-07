@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use lockable::HashMapOwnedGuard;
+use lockable::{Lockable, LockableHashMap};
 use std::path::PathBuf;
 
 use crate::blockstore::BlockId;
@@ -52,7 +52,7 @@ impl IntegrityData {
     pub async fn lock_block_info(
         &self,
         block_id: BlockId,
-    ) -> HashMapOwnedGuard<BlockId, BlockInfo> {
+    ) -> <LockableHashMap<BlockId, BlockInfo> as Lockable<BlockId, BlockInfo>>::OwnedGuard {
         self._known_block_versions().lock_block_info(block_id).await
     }
 

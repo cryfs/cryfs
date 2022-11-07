@@ -1,4 +1,4 @@
-use lockable::LruOwnedGuard;
+use lockable::{Lockable, LockableLruCache};
 use std::fmt::{self, Debug};
 
 use super::entry::BlockCacheEntry;
@@ -8,7 +8,10 @@ pub struct BlockCacheEntryGuard<B>
 where
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 {
-    pub(super) guard: LruOwnedGuard<BlockId, BlockCacheEntry<B>>,
+    pub(super) guard: <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+        BlockId,
+        BlockCacheEntry<B>,
+    >>::OwnedGuard,
 }
 
 impl<B> BlockCacheEntryGuard<B>

@@ -41,7 +41,7 @@ lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb8
 async-recursion = "^1.0.0"
 conv = "^0.3.3"
 divrem = "^1.0.0"
-lockable = {git = "https://github.com/smessmer/lockable", rev = "179de07373d9d6698b8f77a3f003bc7052714d35", features = ["lru"]}
+lockable = {version = "^0.0.3", features = ["lru"]}
 lzzzz = "^1.0.3"
 owning_ref_lockable = "^0.4.2"
 tokio-util = "^0.7.3"
