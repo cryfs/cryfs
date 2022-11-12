@@ -24,7 +24,6 @@ pub(super) enum FlushResult {
     FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore,
     FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty,
 }
-
 pub struct BlockCacheEntry<
     B: crate::blockstore::low_level::BlockStore + Send + Sync + Debug + 'static,
 > {

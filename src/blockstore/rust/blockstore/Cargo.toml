@@ -37,13 +37,11 @@ tokio = {version = "^1.20.0", features = ["fs", "io-util", "rt-multi-thread", "m
 tokio-stream = {version = "^0.1.9", features = ["fs"]}
 # https://github.com/jeromefroe/lru-rs/pull/128
 lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
-# owning_ref_rs uses v0.4.1 with https://github.com/Kimundi/owning-ref-rs/pull/80 and parts of https://github.com/Kimundi/owning-ref-rs/pull/56
 async-recursion = "^1.0.0"
 conv = "^0.3.3"
 divrem = "^1.0.0"
-lockable = {version = "^0.0.3", features = ["lru"]}
+lockable = {git = "https://github.com/smessmer/lockable", rev="f075ea07795aa3882fe1d1764459d36183e5b2ca", features = ["lru"]}
 lzzzz = "^1.0.3"
-owning_ref_lockable = "^0.4.2"
 tokio-util = "^0.7.3"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
