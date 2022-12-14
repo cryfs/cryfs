@@ -15,6 +15,12 @@ pub struct DataLeafNode<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         let view = node::View::new(block.data());
+        ensure!(
+            view.format_version_header().read() == FORMAT_VERSION_HEADER,
+            "Loaded a node with format version {} but the current version is {}",
+            view.format_version_header().read(),
+            FORMAT_VERSION_HEADER,
+        );
         assert_eq!(
             0, view.depth().read(),
             "Loaded a leaf with depth {}. This doesn't make sense, it should have been loaded as an inner node",

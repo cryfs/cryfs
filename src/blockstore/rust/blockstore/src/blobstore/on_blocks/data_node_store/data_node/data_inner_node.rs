@@ -16,6 +16,12 @@ pub struct DataInnerNode<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         let view = node::View::new(block.data());
+        ensure!(
+            view.format_version_header().read() == FORMAT_VERSION_HEADER,
+            "Loaded a node with format version {} but the current version is {}",
+            view.format_version_header().read(),
+            FORMAT_VERSION_HEADER,
+        );
         let depth = view.depth().read();
         assert_ne!(
             0, depth,
