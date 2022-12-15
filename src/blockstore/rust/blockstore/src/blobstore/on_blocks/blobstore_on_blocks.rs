@@ -25,13 +25,13 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
 
 #[async_trait]
 impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
-    type ConcreteBlob = BlobOnBlocks<B>;
+    type ConcreteBlob<'a> = BlobOnBlocks<'a, B>;
 
-    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>> {
+    async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
         Ok(BlobOnBlocks::new(self.tree_store.create_tree().await?))
     }
 
-    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
+    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
         Ok(self
             .tree_store
             .load_tree(id.root)

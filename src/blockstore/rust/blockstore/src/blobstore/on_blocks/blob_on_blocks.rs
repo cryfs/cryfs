@@ -5,30 +5,29 @@ use super::data_tree_store::DataTree;
 use crate::blobstore::{Blob, BlobId};
 use crate::blockstore::low_level::BlockStore;
 use crate::data::Data;
-use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[derive(Debug)]
-pub struct BlobOnBlocks<B: BlockStore + Send + Sync> {
+pub struct BlobOnBlocks<'a, B: BlockStore + Send + Sync> {
     // Always Some unless during destruction
-    tree: Option<AsyncDropGuard<DataTree<B>>>,
+    tree: Option<DataTree<'a, B>>,
 }
 
-impl<B: BlockStore + Send + Sync> BlobOnBlocks<B> {
-    pub(super) fn new(tree: AsyncDropGuard<DataTree<B>>) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self { tree: Some(tree) })
+impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
+    pub(super) fn new(tree: DataTree<'a, B>) -> Self {
+        Self { tree: Some(tree) }
     }
 
-    fn _tree(&self) -> &AsyncDropGuard<DataTree<B>> {
+    fn _tree(&self) -> &DataTree<'a, B> {
         self.tree.as_ref().expect("BlobOnBlocks.tree is None")
     }
 
-    fn _tree_mut(&mut self) -> &mut AsyncDropGuard<DataTree<B>> {
+    fn _tree_mut(&mut self) -> &mut DataTree<'a, B> {
         self.tree.as_mut().expect("BlobOnBlocks.tree is None")
     }
 }
 
 #[async_trait]
-impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
+impl<'a, B: BlockStore + Send + Sync> Blob<'a> for BlobOnBlocks<'a, B> {
     fn id(&self) -> BlobId {
         BlobId {
             root: *self._tree().root_node_id(),
@@ -67,22 +66,9 @@ impl<B: BlockStore + Send + Sync> Blob for BlobOnBlocks<B> {
         self._tree_mut().num_nodes().await
     }
 
-    async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
-        let tree = this
-            .unsafe_into_inner_dont_drop()
-            .tree
-            .take()
-            .expect("BlobOnBlocks.tree is None");
+    async fn remove(mut self) -> Result<()> {
+        let tree = self.tree.take().expect("BlobOnBlocks.tree is None");
         DataTree::remove(tree).await
         // no call to async_drop needed since we moved out of this
-    }
-}
-
-#[async_trait]
-impl<B: BlockStore + Send + Sync> AsyncDrop for BlobOnBlocks<B> {
-    type Error = anyhow::Error;
-
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self._tree_mut().async_drop().await
     }
 }

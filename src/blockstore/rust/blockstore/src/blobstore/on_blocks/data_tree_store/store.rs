@@ -12,7 +12,7 @@ use super::tree::DataTree;
 
 #[derive(Debug)]
 pub struct DataTreeStore<B: BlockStore + Send + Sync> {
-    node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
+    node_store: AsyncDropGuard<DataNodeStore<B>>,
 }
 
 impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
@@ -21,32 +21,26 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         block_size_bytes: u32,
     ) -> Result<AsyncDropGuard<Self>> {
         Ok(AsyncDropGuard::new(Self {
-            node_store: AsyncDropArc::new(DataNodeStore::new(block_store, block_size_bytes)?),
+            node_store: DataNodeStore::new(block_store, block_size_bytes)?,
         }))
     }
 }
 
 impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
-    pub async fn load_tree(
-        &self,
-        root_node_id: BlockId,
-    ) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
+    pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<DataTree<'_, B>>> {
         Ok(self
             .node_store
             .load(root_node_id)
             .await?
-            .map(|root_node| DataTree::new(root_node, AsyncDropArc::clone(&self.node_store))))
+            .map(|root_node| DataTree::new(root_node, &self.node_store)))
     }
 
-    pub async fn create_tree(&self) -> Result<AsyncDropGuard<DataTree<B>>> {
+    pub async fn create_tree(&self) -> Result<DataTree<'_, B>> {
         let new_leaf = self
             .node_store
             .create_new_leaf_node(&Data::from(vec![]))
             .await?;
-        Ok(DataTree::new(
-            new_leaf.upcast(),
-            AsyncDropArc::clone(&self.node_store),
-        ))
+        Ok(DataTree::new(new_leaf.upcast(), &self.node_store))
     }
 
     pub async fn remove_tree_by_id(&self, root_node_id: BlockId) -> Result<RemoveResult> {

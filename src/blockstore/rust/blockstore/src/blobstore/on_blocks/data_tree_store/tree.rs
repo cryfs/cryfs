@@ -18,7 +18,7 @@ use crate::data::Data;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use crate::utils::stream::for_each_unordered;
 
-pub struct DataTree<B: BlockStore + Send + Sync> {
+pub struct DataTree<'a, B: BlockStore + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
     // &mut self in all the methods makes sure we don't run into race conditions where
     // one task modifies a tree we're currently trying to read somewhere else.
@@ -27,23 +27,20 @@ pub struct DataTree<B: BlockStore + Send + Sync> {
 
     // root_node is always some except in the middle of computations
     root_node: Option<DataNode<B>>,
-    node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
+    node_store: &'a DataNodeStore<B>,
 
     // TODO Think through all operations and whether they can change data that is cached in num_bytes_cache. Update cache if necessary.
     //      num_bytes_cache caches a bit differently than the C++ cache did.
     num_bytes_cache: SizeCache,
 }
 
-impl<B: BlockStore + Send + Sync> DataTree<B> {
-    pub fn new(
-        root_node: DataNode<B>,
-        node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
-    ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
+impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
+    pub fn new(root_node: DataNode<B>, node_store: &'a DataNodeStore<B>) -> Self {
+        Self {
             root_node: Some(root_node),
             node_store,
             num_bytes_cache: SizeCache::SizeUnknown,
-        })
+        }
     }
 
     pub async fn num_bytes(&mut self) -> Result<u64> {
@@ -356,10 +353,9 @@ impl<B: BlockStore + Send + Sync> DataTree<B> {
         Ok(())
     }
 
-    pub async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
-        let root_node = this.root_node.take().expect("DataTree.root_node is None");
-        Self::_remove_subtree(&this.node_store, root_node).await?;
-        this.async_drop().await?;
+    pub async fn remove(mut self) -> Result<()> {
+        let root_node = self.root_node.take().expect("DataTree.root_node is None");
+        Self::_remove_subtree(&self.node_store, root_node).await?;
         Ok(())
     }
 
@@ -638,16 +634,7 @@ trait TraversalByByteIndicesCallbacks<B: BlockStore + Send + Sync> {
     fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
 }
 
-#[async_trait]
-impl<B: BlockStore + Send + Sync> AsyncDrop for DataTree<B> {
-    type Error = anyhow::Error;
-
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.node_store.async_drop().await
-    }
-}
-
-impl<B: BlockStore + Send + Sync> Debug for DataTree<B> {
+impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DataTree")
     }

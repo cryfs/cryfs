@@ -38,8 +38,8 @@ mod ffi {
     #[namespace = "blobstore::rust::bridge"]
     extern "Rust" {
         type RustBlobStoreBridge;
-        fn create(&self) -> Result<Box<RustBlobBridge>>;
-        fn load(&self, blob_id: &BlobId) -> Result<Box<OptionRustBlobBridge>>;
+        unsafe fn create<'a>(&'a self) -> Result<Box<RustBlobBridge<'a>>>;
+        unsafe fn load<'a>(&'a self, blob_id: &BlobId) -> Result<Box<OptionRustBlobBridge<'a>>>;
         fn num_nodes(&self) -> Result<u64>;
         fn remove_by_id(&self, id: &BlobId) -> Result<()>;
         fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
@@ -78,7 +78,7 @@ mod ffi {
 
     #[namespace = "blobstore::rust::bridge"]
     extern "Rust" {
-        type RustBlobBridge;
+        type RustBlobBridge<'a>;
         fn blob_id(&self) -> Box<BlobId>;
         fn num_bytes(&self) -> Result<u64>;
         fn resize(&self, new_num_bytes: u64) -> Result<()>;
@@ -89,14 +89,15 @@ mod ffi {
         fn flush(&self) -> Result<()>;
         fn num_nodes(&self) -> Result<u64>;
         fn remove(&self) -> Result<()>;
-        fn async_drop(&mut self) -> Result<()>;
     }
 
     #[namespace = "blobstore::rust::bridge"]
     extern "Rust" {
-        type OptionRustBlobBridge;
+        type OptionRustBlobBridge<'a>;
         fn has_value(&self) -> bool;
-        fn extract_value(&mut self) -> Result<Box<RustBlobBridge>>;
+        unsafe fn extract_value<'a>(
+            self: &mut OptionRustBlobBridge<'a>,
+        ) -> Result<Box<RustBlobBridge<'a>>>;
     }
 }
 
@@ -121,14 +122,14 @@ impl Data {
     }
 }
 
-pub struct OptionRustBlobBridge(Option<RustBlobBridge>);
+pub struct OptionRustBlobBridge<'a>(Option<RustBlobBridge<'a>>);
 
-impl OptionRustBlobBridge {
+impl<'a> OptionRustBlobBridge<'a> {
     fn has_value(&self) -> bool {
         self.0.is_some()
     }
 
-    fn extract_value(&mut self) -> Result<Box<RustBlobBridge>> {
+    fn extract_value(&mut self) -> Result<Box<RustBlobBridge<'a>>> {
         log_errors(|| match self.0.take() {
             None => bail!("OptionRustBlobBridge doesn't have a value"),
             Some(data) => Ok(Box::new(data)),
@@ -136,11 +137,11 @@ impl OptionRustBlobBridge {
     }
 }
 
-struct RustBlobBridge(Mutex<Option<AsyncDropGuard<BlobOnBlocks<DynBlockStore>>>>);
+struct RustBlobBridge<'a>(Mutex<Option<BlobOnBlocks<'a, DynBlockStore>>>);
 
-impl RustBlobBridge {
+impl<'a> RustBlobBridge<'a> {
     // TODO If we manage to change the read-only methods to take &self instead of &mut self, we might not need the Mutex anymore, or maybe RwLock would work.
-    fn new(blob: AsyncDropGuard<BlobOnBlocks<DynBlockStore>>) -> Self {
+    fn new(blob: BlobOnBlocks<'a, DynBlockStore>) -> Self {
         Self(Mutex::new(Some(blob)))
     }
 
@@ -202,17 +203,6 @@ impl RustBlobBridge {
         let mut blob = self.0.lock().unwrap();
         let blob = blob.take().expect("Blob is already destructed");
         log_errors(move || TOKIO_RUNTIME.block_on(BlobOnBlocks::remove(blob)))
-    }
-
-    fn async_drop(&mut self) -> Result<()> {
-        let mut blob = self.0.lock().unwrap();
-        match blob.take() {
-            Some(mut blob) => log_errors(|| TOKIO_RUNTIME.block_on(blob.async_drop())),
-            None => {
-                // This is ok, it can happen if remove() was called
-                Ok(())
-            }
-        }
     }
 }
 
