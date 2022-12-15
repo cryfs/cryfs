@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use cxx::{type_id, ExternType};
 use std::sync::Mutex;
 
 use super::blockstore::DynBlockStore;
@@ -107,7 +108,7 @@ fn new_blobid(data: &[u8; BLOCKID_LEN]) -> Box<BlobId> {
     )))
 }
 
-pub struct BlobId(cryfs_blockstore::blobstore::BlobId);
+pub struct BlobId(pub cryfs_blockstore::blobstore::BlobId);
 impl BlobId {
     fn data(&self) -> &[u8; BLOCKID_LEN] {
         self.0.data()

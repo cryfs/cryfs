@@ -259,13 +259,13 @@ bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &bloc
         case fspp::Dir::EntryType::FILE:
             // fallthrough
         case fspp::Dir::EntryType::SYMLINK:
-            if (timestampUpdateBehavior->shouldUpdateATimeOnFileRead(lastAccessTime, lastModificationTime, now)) {
+            if (fspp::shouldUpdateATimeOnFileRead(timestampUpdateBehavior, lastAccessTime, lastModificationTime, now)) {
                 found->setLastAccessTime(now);
                 return true;
             }
             return false;
         case fspp::Dir::EntryType::DIR:
-            if (timestampUpdateBehavior->shouldUpdateATimeOnDirectoryRead(lastAccessTime, lastModificationTime, now)) {
+            if (fspp::shouldUpdateAtimeOnDirectoryRead(timestampUpdateBehavior, lastAccessTime, lastModificationTime, now)) {
                 found->setLastAccessTime(now);
                 return true;
             }

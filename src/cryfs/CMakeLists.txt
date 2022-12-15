@@ -20,6 +20,12 @@ set(LIB_SOURCES
         impl/config/CryPasswordBasedKeyProvider.cpp
         impl/config/CryPresetPasswordBasedKeyProvider.cpp
         impl/filesystem/CryOpenFile.cpp
+        impl/filesystem/rustfsblobstore/RustDirEntry.cpp
+        impl/filesystem/rustfsblobstore/RustFsBlobStore.cpp
+        impl/filesystem/rustfsblobstore/RustFsBlob.cpp
+        impl/filesystem/rustfsblobstore/RustDirBlob.cpp
+        impl/filesystem/rustfsblobstore/RustFileBlob.cpp
+        impl/filesystem/rustfsblobstore/RustSymlinkBlob.cpp
         impl/filesystem/fsblobstore/utils/DirEntry.cpp
         impl/filesystem/fsblobstore/utils/DirEntryList.cpp
         impl/filesystem/fsblobstore/FsBlobStore.cpp

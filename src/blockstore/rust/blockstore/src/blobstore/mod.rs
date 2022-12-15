@@ -1,12 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use binrw::{BinRead, BinWrite};
 use std::fmt::Debug;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
-use crate::utils::async_drop::AsyncDropGuard;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub const BLOBID_LEN: usize = BLOCKID_LEN;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, BinRead, BinWrite)]
 pub struct BlobId {
     root: BlockId,
 }
@@ -88,16 +90,17 @@ pub trait Blob<'a>: Sized + Debug {
 
 #[async_trait]
 pub trait BlobStore {
-    type ConcreteBlob<'a>: Blob<'a> + Debug
+    // TODO Remove Send bound
+    type ConcreteBlob<'a>: Blob<'a> + Debug + Send
     where
         Self: 'a;
 
-    async fn create<'a>(&'a self) -> Result<Self::ConcreteBlob<'a>>;
-    async fn load<'a>(&'a self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'a>>>;
+    async fn create(&self) -> Result<Self::ConcreteBlob<'_>>;
+    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>>;
     async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
     async fn num_nodes(&self) -> Result<u64>;
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
-    // //virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
+    // virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
     fn virtual_block_size_bytes(&self) -> u32;
 }
 

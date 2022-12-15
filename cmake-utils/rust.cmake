@@ -34,6 +34,7 @@ function(target_add_rust_companion TARGET_NAME)
     add_library("${TARGET_NAME}_rustbridgefiles" STATIC ${RUST_BRIDGE_CPP_FILES})
     add_library("${TARGET_NAME}_rustcompanion" INTERFACE)
     target_include_directories("${TARGET_NAME}_rustcompanion" INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/${ARGS_RUST_DIR})
+    target_include_directories("${TARGET_NAME}_rustbridgefiles" PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/${ARGS_RUST_DIR})
 
 
     # Enable cross-language LTO if the target wants lto

@@ -7,6 +7,7 @@ use std::hash::Hash;
 use std::io::{BufReader, BufWriter, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::num::{NonZeroU32, NonZeroU8};
 use std::path::Path;
+use std::time::{Duration, SystemTime};
 
 // TODO Re-enable doc tests
 
@@ -310,6 +311,50 @@ pub fn write_nonzerou32(
     args: (),
 ) -> Result<(), binrw::Error> {
     u32::write_options(&v.get(), writer, options, args)
+}
+
+#[derive(BinRead, BinWrite)]
+#[brw(little)]
+struct TimeSpec {
+    tv_sec: u64,
+    tv_nsec: u32,
+}
+impl From<SystemTime> for TimeSpec {
+    fn from(time: SystemTime) -> Self {
+        let duration = time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        Self {
+            tv_sec: duration.as_secs(),
+            tv_nsec: duration.subsec_nanos(),
+        }
+    }
+}
+impl From<TimeSpec> for SystemTime {
+    fn from(timespec: TimeSpec) -> Self {
+        SystemTime::UNIX_EPOCH
+            .checked_add(Duration::new(timespec.tv_sec, timespec.tv_nsec))
+            .unwrap()
+    }
+}
+
+/// TODO Docs
+/// TODO Tests
+pub fn read_timespec<R: Read + Seek>(
+    reader: &mut R,
+    ro: &ReadOptions,
+    _: (),
+) -> BinResult<SystemTime> {
+    TimeSpec::read_options(reader, ro, ()).map(Into::into)
+}
+
+/// TODO Docs
+/// TODO Tests
+pub fn write_timespec(
+    v: &SystemTime,
+    writer: &mut (impl Write + Seek),
+    options: &WriteOptions,
+    args: (),
+) -> Result<(), binrw::Error> {
+    TimeSpec::from(*v).write_options(writer, options, args)
 }
 
 #[cfg(test)]

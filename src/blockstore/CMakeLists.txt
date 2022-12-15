@@ -34,6 +34,6 @@ target_add_rust_companion(
     blockstore
     RUST_LIB_NAME "libcryfs_cppbridge.a"
     RUST_CRATE_NAME "cryfs-cppbridge"
-    RUST_BRIDGES "src/blockstore.rs" "src/blobstore.rs"
+    RUST_BRIDGES "src/blockstore.rs" "src/blobstore.rs" "src/fsblobstore.rs"
     RUST_DIR "rust"
 )

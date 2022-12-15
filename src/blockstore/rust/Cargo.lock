@@ -421,6 +421,7 @@ dependencies = [
  "common_macros",
  "conv",
  "criterion",
+ "derive_more",
  "divrem",
  "env_logger",
  "errno",
@@ -463,6 +464,7 @@ dependencies = [
  "env_logger",
  "futures",
  "lazy_static",
+ "libc",
  "log",
  "tokio",
 ]
@@ -903,9 +905,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.126"
+version = "0.2.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349d5a591cd28b49e1d1037471617a32ddcda5731b99419008085f72d5a53836"
+checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
 name = "libsodium-sys"
