@@ -122,48 +122,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89c9f31c2604ed12a5d415dd8d128849cbf242aa3e20bd2076fb9208dafd4b0"
 dependencies = [
  "doc-comment",
- "paste 1.0.7",
+ "paste",
 ]
 
 [[package]]
-name = "binread"
-version = "2.2.0"
+name = "binrw"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16598dfc8e6578e9b597d9910ba2e73618385dc9f4b1d43dd92c349d6be6418f"
+checksum = "f846d8732b2a55b569b885852ecc925a2b1f24568f4707f8b1ccd5dc6805ea9b"
 dependencies = [
  "array-init",
- "binread_derive",
- "rustversion",
+ "binrw_derive",
+ "bytemuck",
 ]
 
 [[package]]
-name = "binread_derive"
-version = "2.1.0"
+name = "binrw_derive"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d9672209df1714ee804b1f4d4f68c8eb2a90b1f7a07acf472f88ce198ef1fed"
+checksum = "5c2aa66a5e35daf7f91ed44c945886597ef4c327f34f68b6bbf22951a250ceeb"
 dependencies = [
  "either",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "binwrite"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c3da1db1f384ad643e27cb6ba4f08f2a7cd8753bef8dd95c39fe45d7a474c8"
-dependencies = [
- "binwrite_derive",
- "paste 0.1.18",
-]
-
-[[package]]
-name = "binwrite_derive"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476f17c19ce04226ba997c229ce8fb96eaef1c0e0745ec91d8df35f723aae353"
-dependencies = [
+ "owo-colors",
  "proc-macro2",
  "quote",
  "syn",
@@ -192,6 +172,12 @@ name = "bumpalo"
 version = "3.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63396b8a4b9de3f4fdfb320ab6080762242f66a8ef174c49d8e19b674db4cdbe"
+
+[[package]]
+name = "bytemuck"
+version = "1.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaa3a8d9a1ca92e282c96a32d6511b695d7d994d1d102ba85d279f9b2756947f"
 
 [[package]]
 name = "bytes"
@@ -428,8 +414,7 @@ dependencies = [
  "async-trait",
  "base64",
  "binary-layout",
- "binread",
- "binwrite",
+ "binrw",
  "chacha20poly1305",
  "cipher 0.4.3",
  "clru",
@@ -451,7 +436,7 @@ dependencies = [
  "lru 0.7.3",
  "lzzzz",
  "mockall",
- "paste 1.0.7",
+ "paste",
  "rand 0.8.5",
  "region",
  "ring",
@@ -621,9 +606,9 @@ dependencies = [
 
 [[package]]
 name = "either"
-version = "1.6.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 
 [[package]]
 name = "env_logger"
@@ -1096,29 +1081,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "paste"
-version = "0.1.18"
+name = "owo-colors"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45ca20c77d80be666aef2b45486da86238fabe33e38306bd3118fe4af33fa880"
-dependencies = [
- "paste-impl",
- "proc-macro-hack",
-]
+checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
 name = "paste"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
-
-[[package]]
-name = "paste-impl"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d95a7db200b97ef370c8e6de0088252f7e0dfff7d047a28528e47456c0fc98b6"
-dependencies = [
- "proc-macro-hack",
-]
 
 [[package]]
 name = "pin-project-lite"
@@ -1224,12 +1196,6 @@ dependencies = [
  "predicates-core",
  "termtree",
 ]
-
-[[package]]
-name = "proc-macro-hack"
-version = "0.5.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
 
 [[package]]
 name = "proc-macro2"
@@ -1408,12 +1374,6 @@ checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
  "semver",
 ]
-
-[[package]]
-name = "rustversion"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 
 [[package]]
 name = "ryu"

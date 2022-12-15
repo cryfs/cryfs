@@ -1,6 +1,5 @@
 use anyhow::{bail, ensure, Result};
-use binread::{BinRead, BinResult, ReadOptions};
-use binwrite::{BinWrite, WriterOption};
+use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use std::collections::hash_map::{Entry, HashMap};
 use std::hash::Hash;
@@ -17,10 +16,11 @@ use super::integrity_violation_error::IntegrityViolationError;
 use super::serialization::KnownBlockVersionsSerialized;
 
 #[derive(PartialEq, Eq, Hash, BinRead, BinWrite, Clone, Copy)]
+#[brw(little)]
 pub struct ClientId {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
-    #[binread(parse_with = read_nonzerou32)]
-    #[binwrite(with(write_nonzerou32))]
+    #[br(parse_with = read_nonzerou32)]
+    #[bw(write_with = write_nonzerou32)]
     pub id: NonZeroU32, // NonZeroU32 so we can efficiently store MaybeClientId
 }
 
@@ -76,16 +76,19 @@ impl BinRead for MaybeClientId {
 }
 
 impl BinWrite for MaybeClientId {
-    fn write_options<W: Write>(
+    type Args = ();
+
+    fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriterOption,
-    ) -> Result<(), std::io::Error> {
+        options: &WriteOptions,
+        args: (),
+    ) -> Result<(), binrw::Error> {
         let value = match &self {
             MaybeClientId::ClientId(id) => id.id.get(),
             MaybeClientId::BlockWasDeleted => 0,
         };
-        u32::write_options(&value, writer, options)
+        u32::write_options(&value, writer, options, args)
     }
 }
 

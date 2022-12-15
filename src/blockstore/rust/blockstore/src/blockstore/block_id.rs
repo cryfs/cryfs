@@ -1,6 +1,5 @@
 use anyhow::Result;
-use binread::{BinRead, BinResult, ReadOptions};
-use binwrite::{BinWrite, WriterOption};
+use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
 use rand::{thread_rng, Rng};
 use std::io::{Read, Seek, Write};
 
@@ -62,12 +61,15 @@ impl BinRead for BlockId {
 }
 
 impl BinWrite for BlockId {
-    fn write_options<W: Write>(
+    type Args = ();
+
+    fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        wo: &WriterOption,
-    ) -> Result<(), std::io::Error> {
-        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, wo)
+        wo: &WriteOptions,
+        args: (),
+    ) -> Result<(), binrw::Error> {
+        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, wo, args)
     }
 }
 
@@ -80,8 +82,9 @@ mod tests {
     #[test]
     fn serialize_deserialize_blockid() {
         let blockid = BlockId::from_hex("ea92df46054175fe9ec0dec871d3affd").unwrap();
-        let mut serialized = Vec::new();
-        blockid.serialize_to_stream(&mut serialized).unwrap();
+        let mut writer = Cursor::new(Vec::new());
+        blockid.serialize_to_stream(&mut writer).unwrap();
+        let serialized = writer.into_inner();
         let deserialized =
             BlockId::deserialize_from_complete_stream(&mut Cursor::new(serialized)).unwrap();
         assert_eq!(blockid, deserialized);

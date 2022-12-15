@@ -1,6 +1,5 @@
 use anyhow::{ensure, Context, Error, Result};
-use binread::{BinRead, BinResult, ReadOptions};
-use binwrite::{BinWrite, WriterOption};
+use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
 use itertools::Itertools;
 use std::collections::hash_map::HashMap;
 use std::fs::File;
@@ -27,11 +26,15 @@ pub trait BinaryReadExt: Sized {
 
 impl<T: BinRead<Args = ()> + Sized> BinaryReadExt for T {
     fn deserialize_from_complete_stream(source: &mut (impl Read + Seek)) -> Result<Self> {
-        let mut read_options = ReadOptions::default();
-        read_options.endian = binread::Endian::Little;
+        let read_options = ReadOptions::new(binrw::Endian::Little);
         let result = Self::read_options(source, &read_options, ())
             .map_err(|err| {
-                if let binread::Error::Io(io_error) = &err {
+                let actual_error = if let binrw::Error::Backtrace(backtrace) = &err {
+                    backtrace.error.as_ref()
+                } else {
+                    &err
+                };
+                if let binrw::Error::Io(io_error) = &actual_error {
                     if io_error.kind() == ErrorKind::UnexpectedEof {
                         Error::from(err).context("Not enough data in the stream to read the object")
                     } else {
@@ -76,18 +79,17 @@ fn ensure_stream_is_complete(stream: &mut (impl Read + Seek)) -> Result<()> {
 /// Extension trait to serialize an object into a stream or a file.
 pub trait BinaryWriteExt {
     /// Serialize the object into the given stream
-    fn serialize_to_stream(&self, dest: &mut impl Write) -> Result<()>;
+    fn serialize_to_stream(&self, dest: &mut (impl Write + Seek)) -> Result<()>;
 
     /// Serialize the object into the given file.
     /// If the file already exists, it will be overwritten.
     fn serialize_to_file(&self, file_path: &Path) -> Result<()>;
 }
 
-impl<T: BinWrite> BinaryWriteExt for T {
-    fn serialize_to_stream(&self, dest: &mut impl Write) -> Result<()> {
-        let mut write_options = WriterOption::default();
-        write_options.endian = binwrite::Endian::Little;
-        self.write_options(dest, &write_options)
+impl<T: BinWrite<Args = ()>> BinaryWriteExt for T {
+    fn serialize_to_stream(&self, dest: &mut (impl Write + Seek)) -> Result<()> {
+        let write_options = WriteOptions::new(binrw::Endian::Little);
+        self.write_options(dest, &write_options, ())
             .context("Tried to write object to stream")?;
         Ok(())
     }
@@ -119,7 +121,7 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> Bin
     match value {
         0 => Ok(false),
         1 => Ok(true),
-        _ => Err(binread::Error::AssertFail {
+        _ => Err(binrw::Error::AssertFail {
             pos,
             message: format!(
                 "Tried to read '{}' as a boolean value. Must be 0 or 1.",
@@ -145,11 +147,12 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> Bin
 ///
 pub fn write_bool(
     v: &bool,
-    writer: &mut impl Write,
-    options: &WriterOption,
-) -> Result<(), std::io::Error> {
+    writer: &mut (impl Write + Seek),
+    options: &WriteOptions,
+    args: (),
+) -> Result<(), binrw::Error> {
     let v = if *v { 1 } else { 0 };
-    u8::write_options(&v, writer, options)
+    u8::write_options(&v, writer, options, args)
 }
 
 /// Deserialize a hashmap with [binread].
@@ -195,16 +198,17 @@ pub fn read_hashmap<K: BinRead<Args = ()> + Eq + Hash, V: BinRead<Args = ()>, R:
 ///   some_map: HashMap<String, i64>,
 /// }
 /// ```
-pub fn write_hashmap<K: BinWrite + Eq + Hash, V: BinWrite>(
+pub fn write_hashmap<K: BinWrite<Args = ()> + Eq + Hash, V: BinWrite<Args = ()>>(
     v: &HashMap<K, V>,
-    writer: &mut impl Write,
-    options: &WriterOption,
-) -> Result<(), std::io::Error> {
+    writer: &mut (impl Write + Seek),
+    options: &WriteOptions,
+    args: (),
+) -> Result<(), binrw::Error> {
     let len = v.len() as u64;
-    u64::write_options(&len, writer, options)?;
+    u64::write_options(&len, writer, options, ())?;
     for (key, value) in v {
-        key.write_options(writer, options)?;
-        value.write_options(writer, options)?;
+        key.write_options(writer, options, args)?;
+        value.write_options(writer, options, args)?;
     }
     Ok(())
 }
@@ -243,7 +247,7 @@ pub fn read_null_string<R: Read + Seek>(
     if reader.next().transpose()? == Some(b'\0') {
         Ok(data)
     } else {
-        Err(binread::Error::AssertFail {
+        Err(binrw::Error::AssertFail {
             pos,
             message: String::from(
                 "Expected string to be terminated by a nullbyte but found EOF instead.",
@@ -271,14 +275,15 @@ pub fn read_null_string<R: Read + Seek>(
 /// ```
 pub fn write_null_string(
     str: &Vec<NonZeroU8>,
-    writer: &mut impl Write,
-    options: &WriterOption,
-) -> Result<(), std::io::Error> {
+    writer: &mut (impl Write + Seek),
+    options: &WriteOptions,
+    args: (),
+) -> Result<(), binrw::Error> {
     for c in str {
-        c.get().write_options(writer, options)?;
+        c.get().write_options(writer, options, args)?;
     }
     // and add null byte
-    u8::write_options(&0, writer, options)
+    u8::write_options(&0, writer, options, args)
 }
 
 /// TODO Docs
@@ -290,7 +295,7 @@ pub fn read_nonzerou32<R: Read + Seek>(
 ) -> BinResult<NonZeroU32> {
     let pos = reader.seek(SeekFrom::Current(0))?;
     let value = u32::read_options(reader, ro, ())?;
-    NonZeroU32::new(value).ok_or_else(|| binread::Error::AssertFail {
+    NonZeroU32::new(value).ok_or_else(|| binrw::Error::AssertFail {
         pos,
         message: String::from("Tried to read '0' as a NonZeroU32 value. Must not be zero."),
     })
@@ -300,10 +305,11 @@ pub fn read_nonzerou32<R: Read + Seek>(
 /// TODO Tests
 pub fn write_nonzerou32(
     v: &NonZeroU32,
-    writer: &mut impl Write,
-    options: &WriterOption,
-) -> Result<(), std::io::Error> {
-    u32::write_options(&v.get(), writer, options)
+    writer: &mut (impl Write + Seek),
+    options: &WriteOptions,
+    args: (),
+) -> Result<(), binrw::Error> {
+    u32::write_options(&v.get(), writer, options, args)
 }
 
 #[cfg(test)]
@@ -333,7 +339,7 @@ pub mod testutils {
     /// * deserializing each of the `serialized_variants` yields `object`
     pub fn test_serialize_deserialize<T>(object: T, serialized_variants: &[&[u8]])
     where
-        T: BinRead<Args = ()> + BinWrite + PartialEq + Debug,
+        T: BinRead<Args = ()> + BinWrite<Args = ()> + PartialEq + Debug,
     {
         for serialized in serialized_variants {
             let loaded = deserialize(serialized).unwrap();
@@ -343,10 +349,10 @@ pub mod testutils {
             );
         }
 
-        let mut saved = Vec::new();
+        let mut saved = Cursor::new(Vec::new());
         object.serialize_to_stream(&mut saved).unwrap();
         assert!(
-            serialized_variants.contains(&&*saved),
+            serialized_variants.contains(&&*saved.into_inner()),
             "Serialization didn't match expected output"
         );
     }
@@ -445,9 +451,10 @@ mod tests {
         use super::*;
 
         #[derive(BinRead, BinWrite, Debug, PartialEq)]
+        #[brw(little)]
         struct MyStruct {
-            #[binread(parse_with = read_bool)]
-            #[binwrite(with(write_bool))]
+            #[br(parse_with = read_bool)]
+            #[bw(write_with = write_bool)]
             field: bool,
         }
 
@@ -482,9 +489,10 @@ mod tests {
         use common_macros::hash_map;
 
         #[derive(BinRead, BinWrite, Debug, PartialEq)]
+        #[brw(little)]
         struct MyStruct {
-            #[binread(parse_with = read_hashmap)]
-            #[binwrite(with(write_hashmap))]
+            #[br(parse_with = read_hashmap)]
+            #[bw(write_with = write_hashmap)]
             field: HashMap<u32, u64>,
         }
 
@@ -559,12 +567,13 @@ mod tests {
         use super::*;
 
         #[derive(BinRead, BinWrite, Debug, PartialEq)]
+        #[brw(little)]
         struct MyStruct {
-            #[binwrite(with(write_null_string))]
-            #[binread(parse_with = read_null_string)]
+            #[bw(write_with = write_null_string)]
+            #[br(parse_with = read_null_string)]
             field: Vec<NonZeroU8>,
-            #[binwrite(with(write_null_string))]
-            #[binread(parse_with = read_null_string)]
+            #[bw(write_with = write_null_string)]
+            #[br(parse_with = read_null_string)]
             field2: Vec<NonZeroU8>,
         }
 

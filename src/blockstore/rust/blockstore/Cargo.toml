@@ -11,8 +11,7 @@ anyhow = "^1.0.65"
 async-trait = "^0.1.56"
 base64 = "^0.13.0"
 binary-layout = "^3.1.1"
-binread = {version = "^2.2.0", features = ["const_generics"]}
-binwrite = "^0.2.1"
+binrw = "^0.10.0"
 chacha20poly1305 = "^0.9.1"
 cipher = "^0.4.3"
 clru = "^0.5.0"
@@ -36,11 +35,11 @@ thiserror = "^1.0.31"
 tokio = {version = "^1.20.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
 tokio-stream = {version = "^0.1.9", features = ["fs"]}
 # https://github.com/jeromefroe/lru-rs/pull/128
-lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
 async-recursion = "^1.0.0"
 conv = "^0.3.3"
 divrem = "^1.0.0"
-lockable = {git = "https://github.com/smessmer/lockable", rev="f075ea07795aa3882fe1d1764459d36183e5b2ca", features = ["lru"]}
+lockable = {git = "https://github.com/smessmer/lockable", rev = "f075ea07795aa3882fe1d1764459d36183e5b2ca", features = ["lru"]}
+lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
 lzzzz = "^1.0.3"
 tokio-util = "^0.7.3"
 

@@ -1,5 +1,4 @@
-use binread::BinRead;
-use binwrite::BinWrite;
+use binrw::{BinRead, BinWrite};
 use core::num::NonZeroU8;
 use lockable::{InfallibleUnwrap, LockableHashMap, SyncLimit};
 use std::collections::hash_map::HashMap;
@@ -24,26 +23,27 @@ const FORMAT_VERSION_HEADER: &[u8] = b"cryfs.integritydata.knownblockversions;1"
 /// It can be serialized to an actual file and deserialized from
 /// an actual file.
 #[derive(BinRead, BinWrite, Debug, PartialEq)]
+#[brw(little)]
 pub struct KnownBlockVersionsSerialized {
-    #[binread(
+    #[br(
         assert(header.iter().map(|c| c.get()).collect::<Vec<_>>() == FORMAT_VERSION_HEADER,
         "Wrong format version header: '{}'. Expected '{}'",
         format_potential_utf8(&header.iter().map(|c| c.get()).collect::<Vec<_>>()),
         format_potential_utf8(FORMAT_VERSION_HEADER)))]
-    #[binread(parse_with = read_null_string)]
-    #[binwrite(with(write_null_string))]
+    #[br(parse_with = read_null_string)]
+    #[bw(write_with = write_null_string)]
     header: Vec<NonZeroU8>,
 
-    #[binread(parse_with = read_bool)]
-    #[binwrite(with(write_bool))]
+    #[br(parse_with = read_bool)]
+    #[bw(write_with = write_bool)]
     pub integrity_violation_in_previous_run: bool,
 
-    #[binread(parse_with = read_hashmap)]
-    #[binwrite(with(write_hashmap))]
+    #[br(parse_with = read_hashmap)]
+    #[bw(write_with = write_hashmap)]
     pub known_block_versions: HashMap<(ClientId, BlockId), BlockVersion>,
 
-    #[binread(parse_with = read_hashmap)]
-    #[binwrite(with(write_hashmap))]
+    #[br(parse_with = read_hashmap)]
+    #[bw(write_with = write_hashmap)]
     pub last_update_client_id: HashMap<BlockId, MaybeClientId>,
 }
 
@@ -166,7 +166,7 @@ mod tests {
             b"cryfs.integritydata.knownblockversions;20\0",
         ]))
         .unwrap_err();
-        if let binread::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
+        if let binrw::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
             const EXPECTED_POS: u64 = 0;
             assert_eq!(
                 0, EXPECTED_POS,
@@ -186,7 +186,7 @@ mod tests {
     fn given_wrong_header_nonutf8() {
         let error =
             deserialize::<KnownBlockVersionsSerialized>(&binary(&[b"cryfs\x80\0"])).unwrap_err();
-        if let binread::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
+        if let binrw::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
             const EXPECTED_POS: u64 = 0;
             assert_eq!(
                 EXPECTED_POS, *pos,
@@ -247,7 +247,14 @@ mod tests {
         ]))
         .unwrap_err();
 
-        if let binread::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
+        let err = error.downcast_ref().unwrap();
+        let actual_error = if let binrw::Error::Backtrace(backtrace) = &err {
+            backtrace.error.as_ref()
+        } else {
+            &err
+        };
+
+        if let binrw::Error::AssertFail { pos, message } = actual_error {
             const EXPECTED_POS: u64 = 41;
             assert_eq!(EXPECTED_POS, *pos, "Expected to fail when reading integrity_violation_in_previous_run at pos {} but failed at pos {}", EXPECTED_POS, pos);
             assert_eq!(
