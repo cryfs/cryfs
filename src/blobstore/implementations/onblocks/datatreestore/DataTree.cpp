@@ -5,8 +5,6 @@
 #include "../datanodestore/DataLeafNode.h"
 #include "../utils/Math.h"
 
-#include "impl/algorithms.h"
-
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/pointer/optional_ownership_ptr.h>
 #include <cmath>
