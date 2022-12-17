@@ -77,12 +77,20 @@ void DirEntryList::addOrOverwrite(const string &name, const BlockId &blobId, fsp
 void DirEntryList::rename(const blockstore::BlockId &blockId, const std::string &name, std::function<void (const blockstore::BlockId &blockId)> onOverwritten) {
     auto foundSameName = _findByName(name);
     if (foundSameName != _entries.end() && foundSameName->blockId() != blockId) {
-        _checkAllowedOverwrite(foundSameName->type(), _findById(blockId)->type());
+        auto found = _findById(blockId);
+        if (found == _entries.end()) {
+            throw fspp::fuse::FuseErrnoException(ENOENT);
+        }
+        _checkAllowedOverwrite(foundSameName->type(), found->type());
         onOverwritten(foundSameName->blockId());
         _entries.erase(foundSameName);
     }
 
-    _findById(blockId)->setName(name);
+    auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
+    found->setName(name);
 }
 
 void DirEntryList::_checkAllowedOverwrite(fspp::Dir::EntryType oldType, fspp::Dir::EntryType newType) {
@@ -152,7 +160,7 @@ vector<DirEntry>::const_iterator DirEntryList::_findByName(const string &name) c
 vector<DirEntry>::iterator DirEntryList::_findById(const BlockId &blockId) {
     auto found = _findLowerBound(blockId);
     if (found == _entries.end() || found->blockId() != blockId) {
-        throw fspp::fuse::FuseErrnoException(ENOENT);
+        return _entries.end();
     }
     return found;
 }
@@ -204,12 +212,18 @@ DirEntryList::const_iterator DirEntryList::end() const {
 
 void DirEntryList::setMode(const BlockId &blockId, fspp::mode_t mode) {
     auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     ASSERT ((mode.hasFileFlag() && found->mode().hasFileFlag()) || (mode.hasDirFlag() && found->mode().hasDirFlag()) || (mode.hasSymlinkFlag()), "Unknown mode in entry");
     found->setMode(mode);
 }
 
 bool DirEntryList::setUidGid(const BlockId &blockId, fspp::uid_t uid, fspp::gid_t gid) {
     auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     bool changed = false;
     if (uid != fspp::uid_t(-1)) {
         found->setUid(uid);
@@ -224,12 +238,18 @@ bool DirEntryList::setUidGid(const BlockId &blockId, fspp::uid_t uid, fspp::gid_
 
 void DirEntryList::setAccessTimes(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime) {
     auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     found->setLastAccessTime(lastAccessTime);
     found->setLastModificationTime(lastModificationTime);
 }
 
 bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
     auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
 
     const timespec lastAccessTime = found->lastAccessTime();
     const timespec lastModificationTime = found->lastModificationTime();
@@ -256,6 +276,9 @@ bool DirEntryList::updateAccessTimestampForChild(const blockstore::BlockId &bloc
 
 void DirEntryList::updateModificationTimestampForChild(const blockstore::BlockId &blockId) {
     auto found = _findById(blockId);
+    if (found == _entries.end()) {
+        throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
     found->setLastModificationTime(cpputils::time::now());
 }
 
