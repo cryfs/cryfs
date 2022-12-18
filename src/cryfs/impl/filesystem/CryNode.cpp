@@ -89,18 +89,21 @@ void CryNode::rename(const bf::path &to) {
   }
 
   vector<BlockId> targetAncestors;
-  auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path(), &targetAncestors);
+  auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path(), [&] (const BlockId& ancestorId) {
+    if (ancestorId == _blockId) {
+      // We are trying to move a node into one of its subdirectories. This is not allowed.
+      throw FuseErrnoException(EINVAL);
+    }
+  });
   if (targetParentAndAncestors == none) {
     // Target parent directory doesn't exist
     throw FuseErrnoException(ENOENT);
   }
   auto targetParent = std::move(targetParentAndAncestors->blob);
   auto targetGrandparent = std::move(targetParentAndAncestors->parent);
-  targetAncestors.push_back(targetParent->blockId()); // targetParent is not an ancestor of the targetParent, so it wasn't filled in, but it's a target ancestor
-
-  if (std::find(targetAncestors.begin(), targetAncestors.end(), _blockId) != targetAncestors.end()) {
+  if (targetParent->blockId() == _blockId) {
     // We are trying to move a node into one of its subdirectories. This is not allowed.
-    throw FuseErrnoException(EINVAL);
+      throw FuseErrnoException(EINVAL);
   }
 
   auto old = (*_parent)->GetChild(_blockId);

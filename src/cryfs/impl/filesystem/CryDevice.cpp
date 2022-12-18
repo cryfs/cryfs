@@ -194,7 +194,7 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
     return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootBlobId));
   }
 
-  auto parentWithAncestors = LoadDirBlobWithAncestors(path.parent_path(), none);
+  auto parentWithAncestors = LoadDirBlobWithAncestors(path.parent_path(), [](const BlockId&){});
   if (parentWithAncestors == none) {
     return none;
   }
@@ -218,8 +218,8 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   ASSERT(false, "Switch/case not exhaustive");
 }
 
-optional<CryDevice::DirBlobWithAncestors> CryDevice::LoadDirBlobWithAncestors(const bf::path &path, boost::optional<std::vector<BlockId>*> append_ancestors_to) {
-  auto blob = LoadBlobWithAncestors(path, std::move(append_ancestors_to));
+optional<CryDevice::DirBlobWithAncestors> CryDevice::LoadDirBlobWithAncestors(const bf::path &path, std::function<void (const blockstore::BlockId&)> ancestor_callback) {
+  auto blob = LoadBlobWithAncestors(path, std::move(ancestor_callback));
   if (blob == none) {
     return none;
   }
@@ -230,7 +230,7 @@ optional<CryDevice::DirBlobWithAncestors> CryDevice::LoadDirBlobWithAncestors(co
   return DirBlobWithAncestors{std::move(*dir), std::move(blob->parent)};
 }
 
-optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf::path &path, boost::optional<std::vector<BlockId>*> append_ancestors_to) {
+optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf::path &path, std::function<void (const blockstore::BlockId&)> ancestor_callback) {
   optional<unique_ref<DirBlobRef>> parentBlob = none;
   optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootBlobId);
   if (currentBlobOpt == none) {
@@ -241,9 +241,7 @@ optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf
   ASSERT(currentBlob->parentPointer() == BlockId::Null(), "Root Blob should have a nullptr as parent");
 
   for (const bf::path &component : path.relative_path()) {
-    if (append_ancestors_to != boost::none) {
-      (*append_ancestors_to)->push_back(currentBlob->blockId());
-    }
+    ancestor_callback(currentBlob->blockId());
     auto currentDir = dynamic_pointer_move<DirBlobRef>(currentBlob);
     if (currentDir == none) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
