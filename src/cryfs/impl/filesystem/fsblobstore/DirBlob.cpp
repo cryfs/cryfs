@@ -26,8 +26,8 @@ namespace fsblobstore {
 
 constexpr fspp::num_bytes_t DirBlob::DIR_LSTAT_SIZE;
 
-DirBlob::DirBlob(unique_ref<Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize) :
-    FsBlob(std::move(blob)), _getLstatSize(getLstatSize), _getLstatSizeMutex(), _entries(), _entriesAndChangedMutex(), _changed(false) {
+DirBlob::DirBlob(unique_ref<Blob> blob) :
+    FsBlob(std::move(blob)), _entries(), _entriesAndChangedMutex(), _changed(false) {
   ASSERT(baseBlob().blobType() == FsBlobView::BlobType::DIR, "Loaded blob is not a directory");
   _readEntriesFromBlob();
 }
@@ -43,9 +43,9 @@ void DirBlob::flush() {
   baseBlob().flush();
 }
 
-unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, const blockstore::BlockId &parent, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
+unique_ref<DirBlob> DirBlob::InitializeEmptyDir(unique_ref<Blob> blob, const blockstore::BlockId &parent) {
   InitializeBlob(blob.get(), FsBlobView::BlobType::DIR, parent);
-  return make_unique_ref<DirBlob>(std::move(blob), getLstatSize);
+  return make_unique_ref<DirBlob>(std::move(blob));
 }
 
 void DirBlob::_writeEntriesToBlob() {
@@ -136,18 +136,8 @@ fspp::num_bytes_t DirBlob::lstat_size() const {
   return DIR_LSTAT_SIZE;
 }
 
-fspp::Node::stat_info DirBlob::statChild(const BlockId &blockId) const {
-  std::unique_lock<std::mutex> lock(_getLstatSizeMutex);
-  auto lstatSizeGetter = _getLstatSize;
-
-  // The following unlock is important to avoid deadlock.
-  // ParallelAccessFsBlobStore::load() causes a call to DirBlob::setLstatSizeGetter,
-  // so their lock ordering first locks the ParallelAccessStore::_mutex, then the DirBlob::_getLstatSizeMutex.
-  // this requires us to free DirBlob::_getLstatSizeMutex before calling into lstatSizeGetter(), because
-  // lstatSizeGetter can call ParallelAccessFsBlobStore::load().
-  lock.unlock();
-
-  auto lstatSize = lstatSizeGetter(blockId);
+fspp::Node::stat_info DirBlob::statChild(const BlockId &blockId, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) const {
+  auto lstatSize = getLstatSize(blockId);
   return statChildWithKnownSize(blockId, lstatSize);
 }
 
@@ -203,11 +193,6 @@ void DirBlob::utimensChild(const BlockId &blockId, timespec lastAccessTime, time
   std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
   _entries.setAccessTimes(blockId, lastAccessTime, lastModificationTime);
   _changed = true;
-}
-
-void DirBlob::setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) {
-    std::lock_guard<std::mutex> lock(_getLstatSizeMutex);
-    _getLstatSize = std::move(getLstatSize);
 }
 
 cpputils::unique_ref<blobstore::Blob> DirBlob::releaseBaseBlob() {

@@ -19,16 +19,15 @@ namespace cryfs {
             constexpr static fspp::num_bytes_t DIR_LSTAT_SIZE = fspp::num_bytes_t(4096);
 
             static cpputils::unique_ref<DirBlob> InitializeEmptyDir(cpputils::unique_ref<blobstore::Blob> blob,
-                                                                    const blockstore::BlockId &parent,
-                                                                    std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize);
+                                                                    const blockstore::BlockId &parent);
 
-            DirBlob(cpputils::unique_ref<blobstore::Blob> blob, std::function<fspp::num_bytes_t (const blockstore::BlockId&)> getLstatSize);
+            DirBlob(cpputils::unique_ref<blobstore::Blob> blob);
 
             ~DirBlob();
 
-            fspp::num_bytes_t lstat_size() const override;
-
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
+
+            fspp::num_bytes_t lstat_size() const;
 
             //TODO Test NumChildren()
             size_t NumChildren() const;
@@ -57,7 +56,7 @@ namespace cryfs {
 
             void flush();
 
-            fspp::Node::stat_info statChild(const blockstore::BlockId &blockId) const;
+            fspp::Node::stat_info statChild(const blockstore::BlockId &blockId, std::function<fspp::num_bytes_t (const blockstore::BlockId&)>) const;
 
             fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const;
 
@@ -71,8 +70,6 @@ namespace cryfs {
 
             void utimensChild(const blockstore::BlockId &blockId, timespec lastAccessTime, timespec lastModificationTime);
 
-            void setLstatSizeGetter(std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize);
-
         private:
 
             void _addChild(const std::string &name, const blockstore::BlockId &blobId, fspp::Dir::EntryType type,
@@ -82,8 +79,6 @@ namespace cryfs {
 
             cpputils::unique_ref<blobstore::Blob> releaseBaseBlob() override;
 
-            std::function<fspp::num_bytes_t (const blockstore::BlockId&)> _getLstatSize;
-            mutable std::mutex _getLstatSizeMutex;
             DirEntryList _entries;
             mutable std::mutex _entriesAndChangedMutex;
             bool _changed;

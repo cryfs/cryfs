@@ -185,7 +185,9 @@ CryNode::stat_info CryNode::stat() const {
     result.ctime = now;
     return result;
   } else {
-    return (*_parent)->statChild(_blockId);
+    return (*_parent)->statChild(_blockId, [&] (const blockstore::BlockId &blobId) {
+      return _device->LoadBlob(blobId)->lstat_size();
+    });
   }
 }
 

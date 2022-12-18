@@ -59,7 +59,7 @@ namespace cryfs {
 
         inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(std::move(blob), parent, _getLstatSize());
+            return DirBlob::InitializeEmptyDir(std::move(blob), parent);
         }
 
         inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent) {
@@ -81,14 +81,6 @@ namespace cryfs {
 
         inline void FsBlobStore::remove(const blockstore::BlockId &blockId) {
             _baseBlobStore->remove(blockId);
-        }
-
-        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &)> FsBlobStore::_getLstatSize() {
-            return [this] (const blockstore::BlockId &blockId) {
-                auto blob = load(blockId);
-                ASSERT(blob != boost::none, "Blob not found");
-                return (*blob)->lstat_size();
-            };
         }
 
         inline uint64_t FsBlobStore::virtualBlocksizeBytes() const {

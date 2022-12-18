@@ -26,7 +26,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
     if (blobType == FsBlobView::BlobType::FILE) {
         return unique_ref<FsBlob>(make_unique_ref<FileBlob>(std::move(*blob)));
     } else if (blobType == FsBlobView::BlobType::DIR) {
-        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob), _getLstatSize()));
+        return unique_ref<FsBlob>(make_unique_ref<DirBlob>(std::move(*blob)));
     } else if (blobType == FsBlobView::BlobType::SYMLINK) {
         return unique_ref<FsBlob>(make_unique_ref<SymlinkBlob>(std::move(*blob)));
     } else {
@@ -60,7 +60,7 @@ boost::optional<unique_ref<FsBlob>> FsBlobStore::load(const blockstore::BlockId 
         FsBlobView::migrate(node.get(), parentId);
         perBlobCallback(node->numNodes());
         if (FsBlobView::blobType(*node) == FsBlobView::BlobType::DIR) {
-            DirBlob dir(std::move(node), _getLstatSize());
+            DirBlob dir(std::move(node));
             vector<fspp::Dir::Entry> children;
             dir.AppendChildrenTo(&children);
             for (const auto &child : children) {

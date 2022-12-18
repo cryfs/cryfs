@@ -50,14 +50,6 @@ namespace cryfs {
             return _parallelAccessStore.remove(blockId, std::move(blob));
         }
 
-        inline std::function<fspp::num_bytes_t (const blockstore::BlockId &blockId)> ParallelAccessFsBlobStore::_getLstatSize() {
-            return [this] (const blockstore::BlockId &blockId) {
-                auto blob = load(blockId);
-                ASSERT(blob != boost::none, "Blob not found");
-                return (*blob)->lstat_size();
-            };
-        }
-
         inline uint64_t ParallelAccessFsBlobStore::virtualBlocksizeBytes() const {
             return _baseBlobStore->virtualBlocksizeBytes();
         }
