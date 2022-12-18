@@ -13,13 +13,14 @@ using std::shared_ptr;
 using cpputils::unique_ref;
 using cryfs::fsblobstore::rust::RustDirBlob;
 using cryfs::fsblobstore::rust::RustFileBlob;
+using blockstore::BlockId;
 
 //TODO Get rid of this in favor of a exception hierarchy
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<RustDirBlob> parent, unique_ref<RustFileBlob> fileBlob)
-: _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
+CryOpenFile::CryOpenFile(CryDevice *device, const BlockId& parentBlobId, const BlockId& fileBlobId)
+: _device(device), _parentBlobId(parentBlobId), _fileBlobId(fileBlobId) {
 }
 
 CryOpenFile::~CryOpenFile() {
@@ -28,50 +29,59 @@ CryOpenFile::~CryOpenFile() {
 
 void CryOpenFile::flush() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
-  _parent->flush();
+  LoadFileBlob()->flush();
+  LoadParentBlob()->flush();
 }
 
 fspp::Node::stat_info CryOpenFile::stat() const {
   _device->callFsActionCallbacks();
-  auto childOpt = _parent->GetChild(_fileBlob->blockId());
+  auto childOpt = LoadParentBlob()->GetChild(_fileBlobId);
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
   }
-  return dirEntryToStatInfo(**childOpt, _fileBlob->size());
+  return dirEntryToStatInfo(**childOpt, LoadFileBlob()->size());
 }
 
 void CryOpenFile::truncate(fspp::num_bytes_t size) const {
   _device->callFsActionCallbacks();
-  _fileBlob->resize(size);
-  _parent->updateModificationTimestampOfChild(_fileBlob->blockId());
+  LoadFileBlob()->resize(size);
+  LoadParentBlob()->updateModificationTimestampOfChild(_fileBlobId);
 }
 
 fspp::num_bytes_t CryOpenFile::read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->maybeUpdateAccessTimestampOfChild(_fileBlob->blockId(), timestampUpdateBehavior());
-  return _fileBlob->read(buf, offset, count);
+  LoadParentBlob()->maybeUpdateAccessTimestampOfChild(_fileBlobId, timestampUpdateBehavior());
+  return LoadFileBlob()->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   _device->callFsActionCallbacks();
-  _parent->updateModificationTimestampOfChild(_fileBlob->blockId());
-  _fileBlob->write(buf, offset, count);
+  LoadParentBlob()->updateModificationTimestampOfChild(_fileBlobId);
+  LoadFileBlob()->write(buf, offset, count);
 }
 
 void CryOpenFile::fsync() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
-  _parent->flush();
+  LoadFileBlob()->flush();
+  LoadParentBlob()->flush();
 }
 
 void CryOpenFile::fdatasync() {
   _device->callFsActionCallbacks();
-  _fileBlob->flush();
+  LoadFileBlob()->flush();
 }
 
 fspp::TimestampUpdateBehavior CryOpenFile::timestampUpdateBehavior() const {
   return _device->getContext().timestampUpdateBehavior();
 }
+
+unique_ref<RustFileBlob> CryOpenFile::LoadFileBlob() const {
+  return std::move(*_device->LoadBlob(_fileBlobId)).asFile();
+}
+
+unique_ref<RustDirBlob> CryOpenFile::LoadParentBlob() const {
+  return std::move(*_device->LoadBlob(_parentBlobId)).asDir();
+}
+
 
 }

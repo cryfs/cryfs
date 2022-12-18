@@ -11,7 +11,7 @@ class CryDevice;
 
 class CryOpenFile final: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(const CryDevice *device, std::shared_ptr<fsblobstore::rust::RustDirBlob> parent, cpputils::unique_ref<fsblobstore::rust::RustFileBlob> fileBlob);
+  explicit CryOpenFile(CryDevice *device, const blockstore::BlockId &parentBlobId, const blockstore::BlockId& fileBlobId);
   ~CryOpenFile();
 
   stat_info stat() const override;
@@ -24,9 +24,18 @@ public:
   fspp::TimestampUpdateBehavior timestampUpdateBehavior() const;
 
 private:
-  const CryDevice *_device;
-  std::shared_ptr<fsblobstore::rust::RustDirBlob> _parent;
-  cpputils::unique_ref<fsblobstore::rust::RustFileBlob> _fileBlob;
+  cpputils::unique_ref<fsblobstore::rust::RustFileBlob> LoadFileBlob() const;
+  cpputils::unique_ref<fsblobstore::rust::RustDirBlob> LoadParentBlob() const;
+
+  CryDevice *_device;
+
+  // We're storing the blob ids instead of the blobs themselves
+  // because CryOpenFile instances are being kept in memory
+  // for as long as the file is open and they would keep a lock
+  // on the parent and file blob otherwise that would block other
+  // operations.
+  blockstore::BlockId _parentBlobId;
+  blockstore::BlockId _fileBlobId;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);
 };
