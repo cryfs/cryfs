@@ -11,7 +11,7 @@ namespace cryfs {
 
 class CryFile final: public fspp::File, public CryNode {
 public:
-  CryFile(CryDevice *device, cpputils::unique_ref<fsblobstore::rust::RustDirBlob> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
+  CryFile(CryDevice *device, const blockstore::BlockId& parent, boost::optional<blockstore::BlockId> grandparent, const blockstore::BlockId &blockId);
   ~CryFile();
 
   cpputils::unique_ref<fspp::OpenFile> open(fspp::openflags_t flags) override;

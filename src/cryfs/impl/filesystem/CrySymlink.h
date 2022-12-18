@@ -11,7 +11,7 @@ namespace cryfs {
 
 class CrySymlink final: public fspp::Symlink, public CryNode {
 public:
-  CrySymlink(CryDevice *device, cpputils::unique_ref<fsblobstore::rust::RustDirBlob> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
+  CrySymlink(CryDevice *device, const blockstore::BlockId& parent, boost::optional<blockstore::BlockId> grandparent, const blockstore::BlockId &blockId);
   ~CrySymlink();
 
   boost::filesystem::path target() override;

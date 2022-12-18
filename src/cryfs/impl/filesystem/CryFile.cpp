@@ -18,8 +18,8 @@ using cryfs::fsblobstore::rust::RustFileBlob;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<RustDirBlob> parent, optional<unique_ref<RustDirBlob>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CryFile::CryFile(CryDevice *device, const BlockId& parentBlobId, optional<BlockId> grandparentBlobId, const BlockId &blockId)
+: CryNode(device, parentBlobId, std::move(grandparentBlobId), blockId) {
 }
 
 CryFile::~CryFile() {
@@ -33,14 +33,14 @@ unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
   // TODO Should we honor open flags?
   UNUSED(flags);
   device()->callFsActionCallbacks();
-  return make_unique_ref<CryOpenFile>(device(), parent()->blockId(), blockId());
+  return make_unique_ref<CryOpenFile>(device(), parentBlobId(), blockId());
 }
 
 void CryFile::truncate(fspp::num_bytes_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   blob->resize(size);
-  parent()->updateModificationTimestampOfChild(blockId());
+  LoadParentBlob()->updateModificationTimestampOfChild(blockId());
 }
 
 fspp::Dir::EntryType CryFile::getType() const {
@@ -50,9 +50,10 @@ fspp::Dir::EntryType CryFile::getType() const {
 
 void CryFile::remove() {
   device()->callFsActionCallbacks();
-  if (grandparent() != none) {
+  auto grandparent = LoadGrandparentBlobIfHasGrandparent();
+  if (grandparent != none) {
     //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampOfChild(parent()->blockId());
+    (*grandparent)->updateModificationTimestampOfChild(parentBlobId());
   }
   removeNode();
 }

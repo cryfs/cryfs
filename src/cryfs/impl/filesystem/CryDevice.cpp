@@ -172,6 +172,8 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
   auto parent = std::move(parentWithAncestors->blob);
   auto grandparent = std::move(parentWithAncestors->parent);
 
+  auto grandparent_id = grandparent == none ? none : optional<BlockId>((*grandparent)->blockId());
+
   auto optEntry = parent->GetChild(path.filename().string());
   if (optEntry == boost::none) {
     return boost::none;
@@ -180,11 +182,11 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 
   switch(entry->type()) {
     case fspp::Dir::EntryType::DIR:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry->blockId()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, parent->blockId(), grandparent_id, entry->blockId()));
     case fspp::Dir::EntryType::FILE:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry->blockId()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, parent->blockId(), grandparent_id, entry->blockId()));
     case  fspp::Dir::EntryType::SYMLINK:
-	    return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry->blockId()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, parent->blockId(), grandparent_id, entry->blockId()));
   }
   ASSERT(false, "Switch/case not exhaustive");
 }

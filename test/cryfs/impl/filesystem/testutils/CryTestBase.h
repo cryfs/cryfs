@@ -45,6 +45,7 @@ public:
     cpputils::unique_ref<cryfs::CryNode> CreateFile(const boost::filesystem::path &path) {
         auto parentDir = device().LoadDir(path.parent_path()).value();
         parentDir->createAndOpenFile(path.filename().string(), MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+        cpputils::destruct(std::move(parentDir));
         auto file = device().Load(path).value();
         return cpputils::dynamic_pointer_move<cryfs::CryNode>(file).value();
     }
@@ -53,6 +54,7 @@ public:
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = cpputils::dynamic_pointer_move<cryfs::CryDir>(_parentDir).value();
         parentDir->createDir(path.filename().string(), MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+        cpputils::destruct(std::move(parentDir));
         auto createdDir = device().Load(path).value();
         return cpputils::dynamic_pointer_move<cryfs::CryNode>(createdDir).value();
     }
@@ -61,6 +63,7 @@ public:
         auto _parentDir = device().Load(path.parent_path()).value();
         auto parentDir = cpputils::dynamic_pointer_move<cryfs::CryDir>(_parentDir).value();
         parentDir->createSymlink(path.filename().string(), "/target", fspp::uid_t(0), fspp::gid_t(0));
+        cpputils::destruct(std::move(parentDir));
         auto createdSymlink = device().Load(path).value();
         return cpputils::dynamic_pointer_move<cryfs::CryNode>(createdSymlink).value();
     }

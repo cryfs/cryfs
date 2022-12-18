@@ -27,18 +27,13 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<RustDirBlob>> parent, optional<unique_ref<RustDirBlob>> grandparent, const BlockId &blockId)
+CryNode::CryNode(CryDevice *device, optional<BlockId> parentBlobId, optional<BlockId> grandparentBlobId, const BlockId &blockId)
 : _device(device),
-  _parent(none),
-  _grandparent(none),
+  _parentBlobId(std::move(parentBlobId)),
+  _grandparentBlobId(std::move(grandparentBlobId)),
   _blockId(blockId) {
 
-  ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
-
-  if (parent != none) {
-    _parent = std::move(*parent);
-  }
-  _grandparent = std::move(grandparent);
+  ASSERT(_parentBlobId != none || _grandparentBlobId == none, "Grandparent can only be set when parent is not none");
 }
 
 CryNode::~CryNode() {
@@ -52,24 +47,24 @@ void CryNode::access(int mask) const {
 }
 
 bool CryNode::isRootDir() const {
-  return _parent == none;
+  return _parentBlobId == none;
 }
 
-shared_ptr<const RustDirBlob> CryNode::parent() const {
-  ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
-  return *_parent;
+const blockstore::BlockId& CryNode::parentBlobId() const {
+  ASSERT(_parentBlobId != none, "Can't load parent blob of root directory");
+  return *_parentBlobId;
 }
 
-shared_ptr<RustDirBlob> CryNode::parent() {
-  ASSERT(_parent != none, "We are the root directory and can't get the parent of the root directory");
-  return *_parent;
+unique_ref<RustDirBlob> CryNode::LoadParentBlob() const {
+  ASSERT(_parentBlobId != none, "Can't load parent blob of root directory");
+  return std::move(*_device->LoadBlob(*_parentBlobId)).asDir();
 }
 
-optional<RustDirBlob*> CryNode::grandparent() {
-  if (_grandparent == none) {
+optional<unique_ref<RustDirBlob>> CryNode::LoadGrandparentBlobIfHasGrandparent() const {
+  if (_grandparentBlobId == none) {
     return none;
   }
-  return _grandparent->get();
+  return std::move(*_device->LoadBlob(*_grandparentBlobId)).asDir();
 }
 
 fspp::TimestampUpdateBehavior CryNode::timestampUpdateBehavior() const {
@@ -78,8 +73,8 @@ fspp::TimestampUpdateBehavior CryNode::timestampUpdateBehavior() const {
 
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
-  if (_parent == none) {
-    // We are the root direcory.
+  if (_parentBlobId == none) {
+    //We are the root direcory.
     throw FuseErrnoException(EBUSY);
   }
   if (!to.has_parent_path()) {
@@ -104,7 +99,9 @@ void CryNode::rename(const bf::path &to) {
       throw FuseErrnoException(EINVAL);
   }
 
-  auto old = (*_parent)->GetChild(_blockId);
+  auto parent = LoadParentBlob();
+
+  auto old = parent->GetChild(_blockId);
   if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
@@ -112,7 +109,7 @@ void CryNode::rename(const bf::path &to) {
   auto onOverwritten = [this] (const blockstore::BlockId &blockId) {
       device()->RemoveBlob(blockId);
   };
-  if (targetParent->blockId() == (*_parent)->blockId()) {
+  if (targetParent->blockId() == _parentBlobId) {
     _updateParentModificationTimestamp();
     targetParent->RenameChild(oldEntry->blockId(), to.filename().string(), onOverwritten);
   } else {
@@ -138,18 +135,18 @@ void CryNode::rename(const bf::path &to) {
     _updateTargetDirModificationTimestamp(*targetParent, std::move(targetGrandparent));
     targetParent->AddOrOverwriteChild(to.filename().string(), oldEntry->blockId(), oldEntry->type(), oldEntry->mode(), oldEntry->uid(), oldEntry->gid(),
                                   oldEntry->lastAccessTime(), oldEntry->lastModificationTime(), onOverwritten);
-    (*_parent)->RemoveChild(oldEntry->name());
+    parent->RemoveChild(oldEntry->name());
     // targetParent is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
     LoadBlob()->setParent(targetParent->blockId());
-    _parent = std::move(targetParent);
+    _parentBlobId = std::move(targetParent->blockId());
   }
 }
 
 void CryNode::_updateParentModificationTimestamp() {
-  if (_grandparent != none) {
-    // TODO Handle timestamps of the root directory (_grandparent == none) correctly.
-    ASSERT(_parent != none, "Grandparent is set, so also parent has to be set");
-    (*_grandparent)->updateModificationTimestampOfChild((*_parent)->blockId());
+  if (_grandparentBlobId != none) {
+    // TODO Handle timestamps of the root directory (_grandparentBlobId == none) correctly.
+    ASSERT(_parentBlobId != none, "Grandparent is set, so also parent has to be set");
+    (*LoadGrandparentBlobIfHasGrandparent())->updateModificationTimestampOfChild(*_parentBlobId);
   }
 }
 
@@ -163,22 +160,22 @@ void CryNode::_updateTargetDirModificationTimestamp(const RustDirBlob &targetDir
 void CryNode::utimens(timespec lastAccessTime, timespec lastModificationTime) {
 //  LOG(WARN, "---utimens called---");
   device()->callFsActionCallbacks();
-  if (_parent == none) {
+  if (_parentBlobId == none) {
     //We are the root direcory.
     //TODO What should we do?
     return;
   }
-  (*_parent)->setAccessTimesOfChild(_blockId, lastAccessTime, lastModificationTime);
+  LoadParentBlob()->setAccessTimesOfChild(_blockId, lastAccessTime, lastModificationTime);
 }
 
 void CryNode::removeNode() {
   //TODO Instead of all these if-else and having _parent being an optional, we could also introduce a CryRootDir which inherits from fspp::Dir.
-  if (_parent == none) {
+  if (_parentBlobId == none) {
     //We are the root direcory.
     //TODO What should we do?
     throw FuseErrnoException(EIO);
   }
-  (*_parent)->RemoveChildIfExists(_blockId);
+  LoadParentBlob()->RemoveChildIfExists(_blockId);
   _device->RemoveBlob(_blockId);
 }
 
@@ -192,7 +189,7 @@ const CryDevice *CryNode::device() const {
 
 unique_ref<RustFsBlob> CryNode::LoadBlob() const {
   auto blob = _device->LoadBlob(_blockId);
-  ASSERT(_parent == none || blob->parent() == (*_parent)->blockId(), "Blob has wrong parent pointer.");
+  ASSERT(_parentBlobId == none || blob->parent() == _parentBlobId, "Blob has wrong parent pointer.");
   return blob;  // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 }
 
@@ -202,7 +199,7 @@ const blockstore::BlockId &CryNode::blockId() const {
 
 CryNode::stat_info CryNode::stat() const {
   device()->callFsActionCallbacks();
-  if(_parent == none) {
+  if(_parentBlobId == none) {
     stat_info result;
     //We are the root directory.
     //TODO What should we do?
@@ -224,7 +221,7 @@ CryNode::stat_info CryNode::stat() const {
     result.ctime = now;
     return result;
   } else {
-    auto childOpt = (*_parent)->GetChild(_blockId);
+    auto childOpt = LoadParentBlob()->GetChild(_blockId);
     if (childOpt == boost::none) {
       throw fspp::fuse::FuseErrnoException(ENOENT);
     }
@@ -234,30 +231,30 @@ CryNode::stat_info CryNode::stat() const {
 
 void CryNode::chmod(fspp::mode_t mode) {
   device()->callFsActionCallbacks();
-  if (_parent == none) {
+  if (_parentBlobId == none) {
     //We are the root direcory.
-	//TODO What should we do?
-	return;
+    //TODO What should we do?
+    return;
   }
-  (*_parent)->setModeOfChild(_blockId, mode);
+  LoadParentBlob()->setModeOfChild(_blockId, mode);
 }
 
 void CryNode::chown(fspp::uid_t uid, fspp::gid_t gid) {
   device()->callFsActionCallbacks();
-  if (_parent == none) {
+  if (_parentBlobId == none) {
 	//We are the root direcory.
 	//TODO What should we do?
 	return;
   }
-  (*_parent)->setUidGidOfChild(_blockId, uid, gid);
+  LoadParentBlob()->setUidGidOfChild(_blockId, uid, gid);
 }
 
 bool CryNode::checkParentPointer() {
   auto parentPointer = LoadBlob()->parent();
-  if (_parent == none) {
+  if (_parentBlobId == none) {
     return parentPointer == BlockId::Null();
   } else {
-    return parentPointer == (*_parent)->blockId();
+    return parentPointer == _parentBlobId;
   }
 }
 

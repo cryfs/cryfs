@@ -20,8 +20,8 @@ using cryfs::fsblobstore::rust::RustDirBlob;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<RustDirBlob> parent, optional<unique_ref<RustDirBlob>> grandparent, const BlockId &blockId)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
+CrySymlink::CrySymlink(CryDevice *device, const BlockId& parent, optional<blockstore::BlockId> grandparent, const BlockId &blockId)
+: CryNode(device, parent, std::move(grandparent), blockId) {
 }
 
 CrySymlink::~CrySymlink() {
@@ -38,16 +38,17 @@ fspp::Dir::EntryType CrySymlink::getType() const {
 
 bf::path CrySymlink::target() {
   device()->callFsActionCallbacks();
-  parent()->maybeUpdateAccessTimestampOfChild(blockId(), timestampUpdateBehavior());
+  LoadParentBlob()->maybeUpdateAccessTimestampOfChild(blockId(), timestampUpdateBehavior());
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   return blob->target();
 }
 
 void CrySymlink::remove() {
   device()->callFsActionCallbacks();
-  if (grandparent() != none) {
+  auto grandparent = LoadGrandparentBlobIfHasGrandparent();
+  if (grandparent != none) {
     //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampOfChild(parent()->blockId());
+    (*grandparent)->updateModificationTimestampOfChild(parentBlobId());
   }
   removeNode();
 }

@@ -15,7 +15,7 @@ public:
   virtual ~CryNode();
 
   // TODO grandparent is only needed to set the timestamps of the parent directory on rename and remove. Delete grandparent parameter once we store timestamps in the blob itself instead of in the directory listing.
-  CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
+  CryNode(CryDevice *device, boost::optional<blockstore::BlockId> parentBlobId, boost::optional<blockstore::BlockId> grandparentBlobId, const blockstore::BlockId &blockId);
 
   void access(int mask) const override;
   stat_info stat() const override;
@@ -35,9 +35,9 @@ protected:
   const blockstore::BlockId &blockId() const;
   cpputils::unique_ref<fsblobstore::rust::RustFsBlob> LoadBlob() const;
   bool isRootDir() const;
-  std::shared_ptr<const fsblobstore::rust::RustDirBlob> parent() const;
-  std::shared_ptr<fsblobstore::rust::RustDirBlob> parent();
-  boost::optional<fsblobstore::rust::RustDirBlob*> grandparent();
+  const blockstore::BlockId& parentBlobId() const;
+  cpputils::unique_ref<fsblobstore::rust::RustDirBlob> LoadParentBlob() const;
+  boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> LoadGrandparentBlobIfHasGrandparent() const;
   fspp::TimestampUpdateBehavior timestampUpdateBehavior() const;
 
   virtual fspp::Dir::EntryType getType() const = 0;
@@ -49,8 +49,8 @@ private:
   void _updateTargetDirModificationTimestamp(const fsblobstore::rust::RustDirBlob &targetDir, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> targetDirParent);
 
   CryDevice *_device;
-  boost::optional<std::shared_ptr<fsblobstore::rust::RustDirBlob>> _parent;
-  boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> _grandparent;
+  boost::optional<blockstore::BlockId> _parentBlobId;
+  boost::optional<blockstore::BlockId> _grandparentBlobId;
   blockstore::BlockId _blockId;
 
   DISALLOW_COPY_AND_ASSIGN(CryNode);
