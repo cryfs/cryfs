@@ -5,6 +5,7 @@
 
 #include "CryDevice.h"
 #include <fspp/fs_interface/FuseErrnoException.h>
+#include "entry_helper.h"
 
 
 using std::shared_ptr;
@@ -32,7 +33,11 @@ void CryOpenFile::flush() {
 
 fspp::Node::stat_info CryOpenFile::stat() const {
   _device->callFsActionCallbacks();
-  return _parent->statChildWithKnownSize(_fileBlob->blockId(), _fileBlob->size());
+  auto childOpt = _parent->GetChild(_fileBlob->blockId());
+  if (childOpt == boost::none) {
+    throw fspp::fuse::FuseErrnoException(ENOENT);
+  }
+  return dirEntryToStatInfo(*childOpt, _fileBlob->size());
 }
 
 void CryOpenFile::truncate(fspp::num_bytes_t size) const {

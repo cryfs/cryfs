@@ -8,6 +8,7 @@
 #include <cpp-utils/system/time.h>
 #include <cpp-utils/system/stat.h>
 #include <cpp-utils/logging/logging.h>
+#include "entry_helper.h"
 
 namespace bf = boost::filesystem;
 
@@ -185,9 +186,11 @@ CryNode::stat_info CryNode::stat() const {
     result.ctime = now;
     return result;
   } else {
-    return (*_parent)->statChild(_blockId, [&] (const blockstore::BlockId &blobId) {
-      return _device->LoadBlob(blobId)->lstat_size();
-    });
+    auto childOpt = (*_parent)->GetChild(_blockId);
+    if (childOpt == boost::none) {
+      throw fspp::fuse::FuseErrnoException(ENOENT);
+    }
+    return dirEntryToStatInfo(*childOpt, LoadBlob()->lstat_size());
   }
 }
 

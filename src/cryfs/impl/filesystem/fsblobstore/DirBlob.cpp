@@ -136,33 +136,6 @@ fspp::num_bytes_t DirBlob::lstat_size() const {
   return DIR_LSTAT_SIZE;
 }
 
-fspp::Node::stat_info DirBlob::statChild(const BlockId &blockId, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) const {
-  auto lstatSize = getLstatSize(blockId);
-  return statChildWithKnownSize(blockId, lstatSize);
-}
-
-fspp::Node::stat_info DirBlob::statChildWithKnownSize(const BlockId &blockId, fspp::num_bytes_t size) const {
-  fspp::Node::stat_info result;
-
-  auto childOpt = GetChild(blockId);
-  if (childOpt == boost::none) {
-    throw fspp::fuse::FuseErrnoException(ENOENT);
-  }
-  const auto &child = *childOpt;
-  result.mode = child.mode();
-  result.uid = child.uid();
-  result.gid = child.gid();
-  //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
-  result.nlink = 1;
-  result.size = size;
-  result.atime = child.lastAccessTime();
-  result.mtime = child.lastModificationTime();
-  result.ctime = child.lastMetadataChangeTime();
-  //TODO Move ceilDivision to general utils which can be used by cryfs as well
-  result.blocks = blobstore::onblocks::utils::ceilDivision(size.value(), static_cast<int64_t>(512));
-  return result;
-}
-
 void DirBlob::updateAccessTimestampForChild(const BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
   std::unique_lock<std::mutex> lock(_entriesAndChangedMutex);
   if (_entries.updateAccessTimestampForChild(blockId, timestampUpdateBehavior)) {

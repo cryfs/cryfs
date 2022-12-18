@@ -49,14 +49,6 @@ public:
         return _base->RenameChild(blockId, newName, onOverwritten);
     }
 
-    fspp::Node::stat_info statChild(const blockstore::BlockId &blockId, std::function<fspp::num_bytes_t(const blockstore::BlockId&)> getLstatSize) const {
-        return _base->statChild(blockId, std::move(getLstatSize));
-    }
-
-    fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const {
-        return _base->statChildWithKnownSize(blockId, size);
-    }
-
     void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior) {
         return _base->updateAccessTimestampForChild(blockId, timestampUpdateBehavior);
     }

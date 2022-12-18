@@ -35,6 +35,7 @@ set(LIB_SOURCES
         impl/filesystem/parallelaccessfsblobstore/FsBlobRef.cpp
         impl/filesystem/parallelaccessfsblobstore/FileBlobRef.cpp
         impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.cpp
+        impl/filesystem/entry_helper.cpp
         impl/filesystem/CrySymlink.cpp
         impl/filesystem/CryDir.cpp
         impl/filesystem/cachingfsblobstore/DirBlobRef.cpp

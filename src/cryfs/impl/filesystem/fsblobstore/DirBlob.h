@@ -56,10 +56,6 @@ namespace cryfs {
 
             void flush();
 
-            fspp::Node::stat_info statChild(const blockstore::BlockId &blockId, std::function<fspp::num_bytes_t (const blockstore::BlockId&)>) const;
-
-            fspp::Node::stat_info statChildWithKnownSize(const blockstore::BlockId &blockId, fspp::num_bytes_t size) const;
-
             void updateAccessTimestampForChild(const blockstore::BlockId &blockId, fspp::TimestampUpdateBehavior timestampUpdateBehavior);
 
             void updateModificationTimestampForChild(const blockstore::BlockId &blockId);
