@@ -83,7 +83,12 @@ public:
     void expect_rename_succeeds(const bf::path& source_path, const bf::path& dest_path) {
         auto source = device().Load(source_path).value();
         source->rename(dest_path);
-        // TODO Test that rename was successful
+
+        // Test that rename was successful
+        if (source_path != dest_path && source_path != "/") {
+            ASSERT_FALSE(Exists(source_path));
+        }
+        ASSERT_TRUE(Exists(dest_path));
     }
 
     void expect_rename_fails(const bf::path& source_path, const bf::path& dest_path, int expected_errno) {
@@ -94,7 +99,14 @@ public:
         } catch (const FuseErrnoException& e) {
             ASSERT_EQ(expected_errno, e.getErrno());
         }
-        // TODO Test rename wasn't successful
+        // Test rename wasn't successful
+        if (dest_path != "/") {
+            ASSERT_TRUE(Exists(source_path));
+        }
+        auto source_dirs = SourceDirs();
+        if (source_path != dest_path && source_path != "/" && std::find(source_dirs.begin(), source_dirs.end(), dest_path) == source_dirs.end()) {
+            ASSERT_FALSE(Exists(dest_path));
+        }
     }
 };
 
