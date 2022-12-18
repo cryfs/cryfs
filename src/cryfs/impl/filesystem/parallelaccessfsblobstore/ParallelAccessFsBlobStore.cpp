@@ -12,7 +12,7 @@ namespace cryfs {
 namespace parallelaccessfsblobstore {
 
 optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &blockId) {
-    return _parallelAccessStore.load(blockId, [this] (cachingfsblobstore::FsBlobRef *blob) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+    return _parallelAccessStore.load(blockId, [] (cachingfsblobstore::FsBlobRef *blob) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
         cachingfsblobstore::FileBlobRef *fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(blob);
         if (fileBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<FileBlobRef>(fileBlob));
