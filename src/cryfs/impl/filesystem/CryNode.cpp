@@ -92,14 +92,24 @@ void CryNode::rename(const bf::path &to) {
     // Target parent directory doesn't exist
     throw FuseErrnoException(ENOENT);
   }
-  auto targetParent = std::move(targetParentAndAncestors->blob);
-  auto targetGrandparent = std::move(targetParentAndAncestors->parent);
+  shared_ptr<RustDirBlob> targetParent = std::move(targetParentAndAncestors->blob);
+  optional<shared_ptr<RustDirBlob>> targetGrandparent =
+    targetParentAndAncestors->parent == none ? none : optional<shared_ptr<RustDirBlob>>(std::move(*targetParentAndAncestors->parent));
   if (targetParent->blockId() == _blockId) {
     // We are trying to move a node into one of its subdirectories. This is not allowed.
-      throw FuseErrnoException(EINVAL);
+    throw FuseErrnoException(EINVAL);
   }
 
-  auto parent = LoadParentBlob();
+  // Load parent blob but in a way that doesn't deadlock if the parent blob
+  // is already loaded as targetParent or targetGrandparent
+  shared_ptr<RustDirBlob> parent;
+  if (_parentBlobId == targetParent->blockId()) {
+    parent = targetParent;
+  } else if (targetGrandparent != none && _parentBlobId == (*targetGrandparent)->blockId()) {
+    parent = *targetGrandparent;
+  } else {
+    parent = LoadParentBlob();
+  }
 
   auto old = parent->GetChild(_blockId);
   if (old == boost::none) {
@@ -110,14 +120,19 @@ void CryNode::rename(const bf::path &to) {
       device()->RemoveBlob(blockId);
   };
   if (targetParent->blockId() == _parentBlobId) {
-    _updateParentModificationTimestamp();
     targetParent->RenameChild(oldEntry->blockId(), to.filename().string(), onOverwritten);
+    targetGrandparent = none; // destruct so that we free its lock for loads further down and don't deadlock
+    _updateParentModificationTimestamp();
   } else {
     auto preexistingTargetEntry = targetParent->GetChild(to.filename().string());
     if (preexistingTargetEntry != boost::none && (*preexistingTargetEntry)->type() == fspp::Dir::EntryType::DIR) {
       if (getType() != fspp::Dir::EntryType::DIR) {
         // A directory cannot be overwritten with a non-directory
         throw FuseErrnoException(EISDIR);
+      }
+      if ((*preexistingTargetEntry)->blockId() == _parentBlobId) {
+        // We are trying to make a node into its parent. This is not allowed.
+        throw FuseErrnoException(ENOTEMPTY);
       }
       auto preexistingTarget = device()->LoadBlob((*preexistingTargetEntry)->blockId());
       if (!preexistingTarget->isDir()) {
@@ -131,14 +146,17 @@ void CryNode::rename(const bf::path &to) {
       }
     }
 
-    _updateParentModificationTimestamp();
-    _updateTargetDirModificationTimestamp(*targetParent, std::move(targetGrandparent));
+    _updateTargetDirModificationTimestamp(*targetParent, targetGrandparent);
+    targetGrandparent = none; // destruct so that we free its lock for loads further down and don't deadlock
     targetParent->AddOrOverwriteChild(to.filename().string(), oldEntry->blockId(), oldEntry->type(), oldEntry->mode(), oldEntry->uid(), oldEntry->gid(),
-                                  oldEntry->lastAccessTime(), oldEntry->lastModificationTime(), onOverwritten);
+                                      oldEntry->lastAccessTime(), oldEntry->lastModificationTime(), onOverwritten);
     parent->RemoveChild(oldEntry->name());
     // targetParent is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
-    LoadBlob()->setParent(targetParent->blockId());
-    _parentBlobId = std::move(targetParent->blockId());
+    auto newParentBlobId = targetParent->blockId();
+    targetParent.reset(); // destruct so that we free its lock for loads further down and don't deadlock
+    _updateParentModificationTimestamp();
+    LoadBlob()->setParent(newParentBlobId);
+    _parentBlobId = newParentBlobId;
   }
 }
 
@@ -150,7 +168,7 @@ void CryNode::_updateParentModificationTimestamp() {
   }
 }
 
-void CryNode::_updateTargetDirModificationTimestamp(const RustDirBlob &targetDir, optional<unique_ref<RustDirBlob>> targetDirParent) {
+void CryNode::_updateTargetDirModificationTimestamp(const RustDirBlob &targetDir, optional<shared_ptr<RustDirBlob>> targetDirParent) {
   if (targetDirParent != none) {
     // TODO Handle timestamps of the root directory (targetDirParent == none) correctly.
     (*targetDirParent)->updateModificationTimestampOfChild(targetDir.blockId());

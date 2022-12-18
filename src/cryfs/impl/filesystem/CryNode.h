@@ -46,7 +46,7 @@ protected:
 
 private:
   void _updateParentModificationTimestamp();
-  void _updateTargetDirModificationTimestamp(const fsblobstore::rust::RustDirBlob &targetDir, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> targetDirParent);
+  void _updateTargetDirModificationTimestamp(const fsblobstore::rust::RustDirBlob &targetDir, boost::optional<std::shared_ptr<fsblobstore::rust::RustDirBlob>> targetDirParent);
 
   CryDevice *_device;
   boost::optional<blockstore::BlockId> _parentBlobId;
