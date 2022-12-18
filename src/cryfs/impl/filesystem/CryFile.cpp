@@ -18,8 +18,8 @@ using cryfs::parallelaccessfsblobstore::FileBlobRef;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, std::vector<BlockId> ancestors)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId, std::move(ancestors)) {
+CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
 }
 
 CryFile::~CryFile() {

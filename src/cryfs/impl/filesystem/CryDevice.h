@@ -31,9 +31,8 @@ public:
   struct DirBlobWithAncestors {
       cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> blob;
       boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
-      std::vector<blockstore::BlockId> ancestors;
   };
-  boost::optional<DirBlobWithAncestors> LoadDirBlobWithAncestors(const boost::filesystem::path &path);
+  boost::optional<DirBlobWithAncestors> LoadDirBlobWithAncestors(const boost::filesystem::path &path, boost::optional<std::vector<blockstore::BlockId>*> append_ancestors_to);
   void RemoveBlob(const blockstore::BlockId &blockId);
 
   void onFsAction(std::function<void()> callback);
@@ -69,9 +68,8 @@ private:
   struct BlobWithAncestors {
       cpputils::unique_ref<parallelaccessfsblobstore::FsBlobRef> blob;
       boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent;
-      std::vector<blockstore::BlockId> ancestors;
   };
-  boost::optional<BlobWithAncestors> LoadBlobWithAncestors(const boost::filesystem::path &path);
+  boost::optional<BlobWithAncestors> LoadBlobWithAncestors(const boost::filesystem::path &path, boost::optional<std::vector<blockstore::BlockId>*> append_ancestors_to);
 
   DISALLOW_COPY_AND_ASSIGN(CryDevice);
 };

@@ -21,8 +21,8 @@ using cryfs::parallelaccessfsblobstore::DirBlobRef;
 
 namespace cryfs {
 
-CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, std::vector<blockstore::BlockId> ancestors)
-: CryNode(device, std::move(parent), std::move(grandparent), blockId, std::move(ancestors)) {
+CrySymlink::CrySymlink(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+: CryNode(device, std::move(parent), std::move(grandparent), blockId) {
 }
 
 CrySymlink::~CrySymlink() {

@@ -18,6 +18,7 @@ using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
+using std::vector;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using namespace cpputils::logging;
@@ -27,11 +28,10 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, std::vector<BlockId> ancestors)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
 : _device(device),
   _parent(none),
   _grandparent(none),
-  _ancestors(std::move(ancestors)),
   _blockId(blockId) {
 
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
@@ -88,15 +88,15 @@ void CryNode::rename(const bf::path &to) {
     throw FuseErrnoException(EBUSY);
   }
 
-  auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path());
+  vector<BlockId> targetAncestors;
+  auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path(), &targetAncestors);
   if (targetParentAndAncestors == none) {
     // Target parent directory doesn't exist
     throw FuseErrnoException(ENOENT);
   }
   auto targetParent = std::move(targetParentAndAncestors->blob);
   auto targetGrandparent = std::move(targetParentAndAncestors->parent);
-  auto targetAncestors = std::move(targetParentAndAncestors->ancestors);
-  targetAncestors.push_back(targetParent->blockId()); // targetParent is not an ancestor of the targetParent, but it's a target ancestor
+  targetAncestors.push_back(targetParent->blockId()); // targetParent is not an ancestor of the targetParent, so it wasn't filled in, but it's a target ancestor
 
   if (std::find(targetAncestors.begin(), targetAncestors.end(), _blockId) != targetAncestors.end()) {
     // We are trying to move a node into one of its subdirectories. This is not allowed.
