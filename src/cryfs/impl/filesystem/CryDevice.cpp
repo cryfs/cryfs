@@ -191,12 +191,17 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 
   if (path.parent_path().empty()) {
     //We are asked to load the base directory '/'.
-    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootBlobId));
+    return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, none, none, _rootBlobId, std::vector<BlockId>()));
   }
 
-  auto parentWithGrandparent = LoadDirBlobWithParent(path.parent_path());
-  auto parent = std::move(parentWithGrandparent.blob);
-  auto grandparent = std::move(parentWithGrandparent.parent);
+  auto parentWithAncestors = LoadDirBlobWithAncestors(path.parent_path());
+  if (parentWithAncestors == none) {
+    return none;
+  }
+  auto parent = std::move(parentWithAncestors->blob);
+  auto grandparent = std::move(parentWithAncestors->parent);
+  auto ancestors = std::move(parentWithAncestors->ancestors);
+  ancestors.push_back(parent->blockId()); // parent's ancestors don't contain parent yet, but parent is our ancestor
 
   auto optEntry = parent->GetChild(path.filename().string());
   if (optEntry == boost::none) {
@@ -206,25 +211,29 @@ optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
 
   switch(entry.type()) {
     case fspp::Dir::EntryType::DIR:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry.blockId()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryDir>(this, std::move(parent), std::move(grandparent), entry.blockId(), std::move(ancestors)));
     case fspp::Dir::EntryType::FILE:
-      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry.blockId()));
+      return optional<unique_ref<fspp::Node>>(make_unique_ref<CryFile>(this, std::move(parent), std::move(grandparent), entry.blockId(), std::move(ancestors)));
     case  fspp::Dir::EntryType::SYMLINK:
-	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry.blockId()));
+	  return optional<unique_ref<fspp::Node>>(make_unique_ref<CrySymlink>(this, std::move(parent), std::move(grandparent), entry.blockId(), std::move(ancestors)));
   }
   ASSERT(false, "Switch/case not exhaustive");
 }
 
-CryDevice::DirBlobWithParent CryDevice::LoadDirBlobWithParent(const bf::path &path) {
-  auto blob = LoadBlobWithParent(path);
-  auto dir = dynamic_pointer_move<DirBlobRef>(blob.blob);
+optional<CryDevice::DirBlobWithAncestors> CryDevice::LoadDirBlobWithAncestors(const bf::path &path) {
+  auto blob = LoadBlobWithAncestors(path);
+  if (blob == none) {
+    return none;
+  }
+  auto dir = dynamic_pointer_move<DirBlobRef>(blob->blob);
   if (dir == none) {
     throw FuseErrnoException(ENOTDIR); // Loaded blob is not a directory
   }
-  return DirBlobWithParent{std::move(*dir), std::move(blob.parent)};
+  return DirBlobWithAncestors{std::move(*dir), std::move(blob->parent), std::move(blob->ancestors)};
 }
 
-CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
+optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf::path &path) {
+  std::vector<blockstore::BlockId> ancestors;
   optional<unique_ref<DirBlobRef>> parentBlob = none;
   optional<unique_ref<FsBlobRef>> currentBlobOpt = _fsBlobStore->load(_rootBlobId);
   if (currentBlobOpt == none) {
@@ -235,6 +244,7 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
   ASSERT(currentBlob->parentPointer() == BlockId::Null(), "Root Blob should have a nullptr as parent");
 
   for (const bf::path &component : path.relative_path()) {
+    ancestors.push_back(currentBlob->blockId());
     auto currentDir = dynamic_pointer_move<DirBlobRef>(currentBlob);
     if (currentDir == none) {
       throw FuseErrnoException(ENOTDIR); // Path component is not a dir
@@ -242,19 +252,20 @@ CryDevice::BlobWithParent CryDevice::LoadBlobWithParent(const bf::path &path) {
 
     auto childOpt = (*currentDir)->GetChild(component.string());
     if (childOpt == boost::none) {
-      throw FuseErrnoException(ENOENT); // Child entry in directory not found
+      // Child entry in directory not found
+      return none;
     }
     BlockId childId = childOpt->blockId();
     auto nextBlob = _fsBlobStore->load(childId);
     if (nextBlob == none) {
-      throw FuseErrnoException(ENOENT); // Blob for directory entry not found
+      throw FuseErrnoException(EIO); // Blob for directory entry not found
     }
     parentBlob = std::move(*currentDir);
     currentBlob = std::move(*nextBlob);
     ASSERT(currentBlob->parentPointer() == (*parentBlob)->blockId(), "Blob has wrong parent pointer");
   }
 
-  return BlobWithParent{std::move(currentBlob), std::move(parentBlob)};
+  return BlobWithAncestors{std::move(currentBlob), std::move(parentBlob), std::move(ancestors)};
 
   //TODO (I think this is resolved, but I should test it)
   //     Running the python script, waiting for "Create files in sequential order...", then going into dir ~/tmp/cryfs-mount-.../Bonnie.../ and calling "ls"

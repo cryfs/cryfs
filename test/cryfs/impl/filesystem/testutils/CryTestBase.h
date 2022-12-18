@@ -2,6 +2,9 @@
 #define MESSMER_CRYFS_TEST_CRYFS_FILESYSTEM_CRYTESTBASE_H
 
 #include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/CryDir.h>
+#include <cryfs/impl/filesystem/CryNode.h>
+#include <cryfs/impl/filesystem/CryOpenFile.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <cpp-utils/tempfile/TempFile.h>
@@ -34,6 +37,38 @@ public:
 
     cryfs::CryDevice &device() {
         return *_device;
+    }
+
+    static constexpr fspp::mode_t MODE_PUBLIC = fspp::mode_t()
+            .addUserReadFlag().addUserWriteFlag().addUserExecFlag()
+            .addGroupReadFlag().addGroupWriteFlag().addGroupExecFlag()
+            .addOtherReadFlag().addOtherWriteFlag().addOtherExecFlag();
+
+    cpputils::unique_ref<cryfs::CryNode> CreateFile(const boost::filesystem::path &path) {
+        auto parentDir = device().LoadDir(path.parent_path()).value();
+        parentDir->createAndOpenFile(path.filename().string(), MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+        auto file = device().Load(path).value();
+        return cpputils::dynamic_pointer_move<cryfs::CryNode>(file).value();
+    }
+
+    cpputils::unique_ref<cryfs::CryNode> CreateDir(const boost::filesystem::path &path) {
+        auto _parentDir = device().Load(path.parent_path()).value();
+        auto parentDir = cpputils::dynamic_pointer_move<cryfs::CryDir>(_parentDir).value();
+        parentDir->createDir(path.filename().string(), MODE_PUBLIC, fspp::uid_t(0), fspp::gid_t(0));
+        auto createdDir = device().Load(path).value();
+        return cpputils::dynamic_pointer_move<cryfs::CryNode>(createdDir).value();
+    }
+
+    cpputils::unique_ref<cryfs::CryNode> CreateSymlink(const boost::filesystem::path &path) {
+        auto _parentDir = device().Load(path.parent_path()).value();
+        auto parentDir = cpputils::dynamic_pointer_move<cryfs::CryDir>(_parentDir).value();
+        parentDir->createSymlink(path.filename().string(), "/target", fspp::uid_t(0), fspp::gid_t(0));
+        auto createdSymlink = device().Load(path).value();
+        return cpputils::dynamic_pointer_move<cryfs::CryNode>(createdSymlink).value();
+    }
+
+    bool Exists(const boost::filesystem::path &path) {
+        return device().Load(path) != boost::none;
     }
 
 private:

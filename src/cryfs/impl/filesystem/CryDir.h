@@ -10,7 +10,7 @@ namespace cryfs {
 
 class CryDir final: public fspp::Dir, public CryNode {
 public:
-  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId, std::vector<blockstore::BlockId> ancestors);
   ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -20,6 +20,7 @@ public:
 
   //TODO Make Entry a public class instead of hidden in DirBlob (which is not publicly visible)
   std::vector<fspp::Dir::Entry> children() override;
+  size_t numChildren();
 
   fspp::Dir::EntryType getType() const override;
 

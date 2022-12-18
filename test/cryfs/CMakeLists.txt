@@ -16,8 +16,10 @@ set(SOURCES
         impl/config/CryConfigConsoleTest.cpp
         impl/config/CryPasswordBasedKeyProviderTest.cpp
         impl/config/CryPresetPasswordBasedKeyProviderTest.cpp
+        impl/filesystem/testutils/CryTestBase.cpp
         impl/filesystem/CryFsTest.cpp
-        impl/filesystem/CryNodeTest.cpp
+        impl/filesystem/CryNodeTest_Rename.cpp
+        impl/filesystem/CryNodeTest_RenameNested.cpp
         impl/filesystem/FileSystemTest.cpp
         impl/localstate/LocalStateMetadataTest.cpp
         impl/localstate/BasedirMetadataTest.cpp

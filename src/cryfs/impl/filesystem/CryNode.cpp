@@ -14,6 +14,7 @@ namespace bf = boost::filesystem;
 
 using blockstore::BlockId;
 using cpputils::unique_ref;
+using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
@@ -26,10 +27,11 @@ using fspp::fuse::FuseErrnoException;
 
 namespace cryfs {
 
-CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+CryNode::CryNode(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId, std::vector<BlockId> ancestors)
 : _device(device),
   _parent(none),
   _grandparent(none),
+  _ancestors(std::move(ancestors)),
   _blockId(blockId) {
 
   ASSERT(parent != none || grandparent == none, "Grandparent can only be set when parent is not none");
@@ -78,12 +80,28 @@ fspp::TimestampUpdateBehavior CryNode::timestampUpdateBehavior() const {
 void CryNode::rename(const bf::path &to) {
   device()->callFsActionCallbacks();
   if (_parent == none) {
-    //We are the root direcory.
+    // We are the root direcory.
     throw FuseErrnoException(EBUSY);
   }
-  auto targetDirWithParent = _device->LoadDirBlobWithParent(to.parent_path());
-  auto targetDir = std::move(targetDirWithParent.blob);
-  auto targetDirParent = std::move(targetDirWithParent.parent);
+  if (!to.has_parent_path()) {
+    // Target is the root directory
+    throw FuseErrnoException(EBUSY);
+  }
+
+  auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path());
+  if (targetParentAndAncestors == none) {
+    // Target parent directory doesn't exist
+    throw FuseErrnoException(ENOENT);
+  }
+  auto targetParent = std::move(targetParentAndAncestors->blob);
+  auto targetGrandparent = std::move(targetParentAndAncestors->parent);
+  auto targetAncestors = std::move(targetParentAndAncestors->ancestors);
+  targetAncestors.push_back(targetParent->blockId()); // targetParent is not an ancestor of the targetParent, but it's a target ancestor
+
+  if (std::find(targetAncestors.begin(), targetAncestors.end(), _blockId) != targetAncestors.end()) {
+    // We are trying to move a node into one of its subdirectories. This is not allowed.
+    throw FuseErrnoException(EINVAL);
+  }
 
   auto old = (*_parent)->GetChild(_blockId);
   if (old == boost::none) {
@@ -93,17 +111,36 @@ void CryNode::rename(const bf::path &to) {
   auto onOverwritten = [this] (const blockstore::BlockId &blockId) {
       device()->RemoveBlob(blockId);
   };
-  _updateParentModificationTimestamp();
-  if (targetDir->blockId() == (*_parent)->blockId()) {
-    targetDir->RenameChild(oldEntry.blockId(), to.filename().string(), onOverwritten);
+  if (targetParent->blockId() == (*_parent)->blockId()) {
+    _updateParentModificationTimestamp();
+    targetParent->RenameChild(oldEntry.blockId(), to.filename().string(), onOverwritten);
   } else {
-    _updateTargetDirModificationTimestamp(*targetDir, std::move(targetDirParent));
-    targetDir->AddOrOverwriteChild(to.filename().string(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
-                                   oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
+    auto preexistingTargetEntry = targetParent->GetChild(to.filename().string());
+    if (preexistingTargetEntry != boost::none && preexistingTargetEntry->type() == fspp::Dir::EntryType::DIR) {
+      if (getType() != fspp::Dir::EntryType::DIR) {
+        // A directory cannot be overwritten with a non-directory
+        throw FuseErrnoException(EISDIR);
+      }
+      auto preexistingTarget = device()->LoadBlob(preexistingTargetEntry->blockId());
+      auto preexistingTargetDir = dynamic_pointer_move<DirBlobRef>(preexistingTarget);
+      if (preexistingTargetDir == none) {
+        LOG(ERR, "Preexisting target is not a directory. But its parent dir entry says it's a directory");
+        throw FuseErrnoException(EIO);
+      }
+      if ((*preexistingTargetDir)->NumChildren() > 0) {
+        // Cannot overwrite a non-empty dir with a rename operation.
+        throw FuseErrnoException(ENOTEMPTY);
+      }
+    }
+
+    _updateParentModificationTimestamp();
+    _updateTargetDirModificationTimestamp(*targetParent, std::move(targetGrandparent));
+    targetParent->AddOrOverwriteChild(to.filename().string(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
+                                  oldEntry.lastAccessTime(), oldEntry.lastModificationTime(), onOverwritten);
     (*_parent)->RemoveChild(oldEntry.name());
-    // targetDir is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
-    LoadBlob()->setParentPointer(targetDir->blockId());
-    _parent = std::move(targetDir);
+    // targetParent is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
+    LoadBlob()->setParentPointer(targetParent->blockId());
+    _parent = std::move(targetParent);
   }
 }
 

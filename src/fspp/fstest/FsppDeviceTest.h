@@ -175,34 +175,22 @@ TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromRootDir_LoadSymlink) {
 
 TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromNonexistingDir_Load) {
   this->InitDirStructure();
-  //TODO Change as soon as we have a concept of how to handle filesystem errors in the interface
-  EXPECT_ANY_THROW(
-      this->device->Load("/nonexisting/nonexisting2")
-  );
+  EXPECT_EQ(boost::none, this->device->Load("/nonexisting/nonexisting2"));
 }
 
 TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromNonexistingDir_LoadDir) {
     this->InitDirStructure();
-    //TODO Change as soon as we have a concept of how to handle filesystem errors in the interface
-    EXPECT_ANY_THROW(
-        this->device->LoadDir("/nonexisting/nonexisting2")
-    );
+    EXPECT_EQ(boost::none, this->device->LoadDir("/nonexisting/nonexisting2"));
 }
 
 TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromNonexistingDir_LoadFile) {
     this->InitDirStructure();
-    //TODO Change as soon as we have a concept of how to handle filesystem errors in the interface
-    EXPECT_ANY_THROW(
-        this->device->LoadFile("/nonexisting/nonexisting2")
-    );
+    EXPECT_EQ(boost::none, this->device->LoadFile("/nonexisting/nonexisting2"));
 }
 
 TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromNonexistingDir_LoadSymlink) {
     this->InitDirStructure();
-    //TODO Change as soon as we have a concept of how to handle filesystem errors in the interface
-    EXPECT_ANY_THROW(
-        this->device->LoadSymlink("/nonexisting/nonexisting2")
-    );
+    EXPECT_EQ(boost::none, this->device->LoadSymlink("/nonexisting/nonexisting2"));
 }
 
 TYPED_TEST_P(FsppDeviceTest_One, LoadNonexistingFromExistingDir_Load) {
