@@ -2,10 +2,7 @@
 #include "testutils/CryTestBase.h"
 #include <cryfs/impl/filesystem/CryOpenFile.h>
 
-using cpputils::unique_ref;
-using cpputils::dynamic_pointer_move;
 using namespace cryfs;
-namespace bf = boost::filesystem;
 
 // Many generic (black box) test cases for FsppNode are covered in Fspp fstest.
 // This class adds some tests that need insight into how CryFS works.

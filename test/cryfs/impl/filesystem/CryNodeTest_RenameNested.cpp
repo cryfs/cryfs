@@ -13,8 +13,6 @@
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include <boost/algorithm/string/predicate.hpp>
 
-using ::testing::Eq;
-using ::testing::Return;
 using ::testing::Combine;
 using ::testing::ValuesIn;
 using ::testing::TestWithParam;
