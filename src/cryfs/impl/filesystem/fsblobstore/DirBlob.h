@@ -27,7 +27,7 @@ namespace cryfs {
 
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
 
-            fspp::num_bytes_t lstat_size() const;
+            fspp::num_bytes_t lstat_size() const override;
 
             //TODO Test NumChildren()
             size_t NumChildren() const;
