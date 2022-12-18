@@ -19,7 +19,6 @@ using blockstore::BlockId;
 using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
-using boost::none;
 
 namespace cryfs {
 namespace fsblobstore {
