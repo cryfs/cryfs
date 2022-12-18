@@ -5,11 +5,11 @@
 #include <cpp-utils/macros.h>
 #include <fspp/fs_interface/Dir.h>
 #include <fspp/fs_interface/Node.h>
-#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntry.h"
+#include "cryfs/impl/filesystem/rustfsblobstore/RustDirEntry.h"
 
 namespace cryfs {
 
-fspp::Node::stat_info dirEntryToStatInfo(const fsblobstore::DirEntry &direntry, fspp::num_bytes_t size);
+fspp::Node::stat_info dirEntryToStatInfo(const fsblobstore::rust::RustDirEntry &direntry, fspp::num_bytes_t size);
 
 }
 

@@ -4,20 +4,21 @@
 #include <fcntl.h>
 
 #include "CryDevice.h"
+#include "CryNode.h"
 #include <fspp/fs_interface/FuseErrnoException.h>
 #include "entry_helper.h"
 
 
 using std::shared_ptr;
 using cpputils::unique_ref;
-using cryfs::parallelaccessfsblobstore::FileBlobRef;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::rust::RustDirBlob;
+using cryfs::fsblobstore::rust::RustFileBlob;
 
 //TODO Get rid of this in favor of a exception hierarchy
 
 namespace cryfs {
 
-CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<DirBlobRef> parent, unique_ref<FileBlobRef> fileBlob)
+CryOpenFile::CryOpenFile(const CryDevice *device, shared_ptr<RustDirBlob> parent, unique_ref<RustFileBlob> fileBlob)
 : _device(device), _parent(parent), _fileBlob(std::move(fileBlob)) {
 }
 
@@ -37,24 +38,24 @@ fspp::Node::stat_info CryOpenFile::stat() const {
   if (childOpt == boost::none) {
     throw fspp::fuse::FuseErrnoException(ENOENT);
   }
-  return dirEntryToStatInfo(*childOpt, _fileBlob->size());
+  return dirEntryToStatInfo(**childOpt, _fileBlob->size());
 }
 
 void CryOpenFile::truncate(fspp::num_bytes_t size) const {
   _device->callFsActionCallbacks();
   _fileBlob->resize(size);
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
+  _parent->updateModificationTimestampOfChild(_fileBlob->blockId());
 }
 
 fspp::num_bytes_t CryOpenFile::read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const {
   _device->callFsActionCallbacks();
-  _parent->updateAccessTimestampForChild(_fileBlob->blockId(), timestampUpdateBehavior());
+  _parent->maybeUpdateAccessTimestampOfChild(_fileBlob->blockId(), timestampUpdateBehavior());
   return _fileBlob->read(buf, offset, count);
 }
 
 void CryOpenFile::write(const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
   _device->callFsActionCallbacks();
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
+  _parent->updateModificationTimestampOfChild(_fileBlob->blockId());
   _fileBlob->write(buf, offset, count);
 }
 

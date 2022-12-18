@@ -10,7 +10,7 @@ namespace cryfs {
 
 class CryDir final: public fspp::Dir, public CryNode {
 public:
-  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryDir(CryDevice *device, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
   ~CryDir();
 
   //TODO return type variance to CryFile/CryDir?
@@ -27,7 +27,7 @@ public:
   void remove() override;
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::rust::RustDirBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryDir);
 };

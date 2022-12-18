@@ -24,6 +24,7 @@
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>
+#include <future>
 
 class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:

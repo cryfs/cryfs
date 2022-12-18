@@ -242,7 +242,7 @@ public:
             };
         };
         this->testBuilder().withAnyAtimeConfig([&] {
-            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/oldname", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+            this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/oldname", "/oldname", operation(), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
         });
     }
 

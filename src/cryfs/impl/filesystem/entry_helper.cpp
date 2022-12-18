@@ -2,7 +2,7 @@
 #include "blobstore/implementations/onblocks/utils/Math.h"
 
 namespace cryfs {
-fspp::Node::stat_info dirEntryToStatInfo(const fsblobstore::DirEntry &dirEntry, fspp::num_bytes_t size) {
+fspp::Node::stat_info dirEntryToStatInfo(const fsblobstore::rust::RustDirEntry &dirEntry, fspp::num_bytes_t size) {
   fspp::Node::stat_info result;
 
   result.mode = dirEntry.mode();

@@ -13,23 +13,20 @@ using boost::optional;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
-using cryfs::parallelaccessfsblobstore::FileBlobRef;
+using cryfs::fsblobstore::rust::RustDirBlob;
+using cryfs::fsblobstore::rust::RustFileBlob;
 
 namespace cryfs {
 
-CryFile::CryFile(CryDevice *device, unique_ref<DirBlobRef> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+CryFile::CryFile(CryDevice *device, unique_ref<RustDirBlob> parent, optional<unique_ref<RustDirBlob>> grandparent, const BlockId &blockId)
 : CryNode(device, std::move(parent), std::move(grandparent), blockId) {
 }
 
 CryFile::~CryFile() {
 }
 
-unique_ref<parallelaccessfsblobstore::FileBlobRef> CryFile::LoadBlob() const {
-  auto blob = CryNode::LoadBlob();
-  auto file_blob = dynamic_pointer_move<FileBlobRef>(blob);
-  ASSERT(file_blob != none, "Blob does not store a file");
-  return std::move(*file_blob);
+unique_ref<RustFileBlob> CryFile::LoadBlob() const {
+  return std::move(*CryNode::LoadBlob()).asFile();
 }
 
 unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
@@ -44,7 +41,7 @@ void CryFile::truncate(fspp::num_bytes_t size) {
   device()->callFsActionCallbacks();
   auto blob = LoadBlob(); // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
   blob->resize(size);
-  parent()->updateModificationTimestampForChild(blockId());
+  parent()->updateModificationTimestampOfChild(blockId());
 }
 
 fspp::Dir::EntryType CryFile::getType() const {
@@ -56,7 +53,7 @@ void CryFile::remove() {
   device()->callFsActionCallbacks();
   if (grandparent() != none) {
     //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
+    (*grandparent())->updateModificationTimestampOfChild(parent()->blockId());
   }
   removeNode();
 }

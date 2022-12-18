@@ -2,8 +2,8 @@
 #ifndef MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
 #define MESSMER_CRYFS_FILESYSTEM_CRYFILE_H_
 
-#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
-#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/rustfsblobstore/RustFileBlob.h"
+#include "cryfs/impl/filesystem/rustfsblobstore/RustDirBlob.h"
 #include <fspp/fs_interface/File.h>
 #include "CryNode.h"
 
@@ -11,7 +11,7 @@ namespace cryfs {
 
 class CryFile final: public fspp::File, public CryNode {
 public:
-  CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CryFile(CryDevice *device, cpputils::unique_ref<fsblobstore::rust::RustDirBlob> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
   ~CryFile();
 
   cpputils::unique_ref<fspp::OpenFile> open(fspp::openflags_t flags) override;
@@ -20,7 +20,7 @@ public:
   void remove() override;
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::rust::RustFileBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CryFile);
 };

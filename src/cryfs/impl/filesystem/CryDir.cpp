@@ -24,11 +24,11 @@ using cpputils::make_unique_ref;
 using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
-using cryfs::parallelaccessfsblobstore::DirBlobRef;
+using cryfs::fsblobstore::rust::RustDirBlob;
 
 namespace cryfs {
 
-CryDir::CryDir(CryDevice *device, optional<unique_ref<DirBlobRef>> parent, optional<unique_ref<DirBlobRef>> grandparent, const BlockId &blockId)
+CryDir::CryDir(CryDevice *device, optional<unique_ref<RustDirBlob>> parent, optional<unique_ref<RustDirBlob>> grandparent, const BlockId &blockId)
 : CryNode(device, std::move(parent), std::move(grandparent), blockId) {
 }
 
@@ -39,7 +39,7 @@ unique_ref<fspp::OpenFile> CryDir::createAndOpenFile(const string &name, fspp::m
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
+    parent()->updateModificationTimestampOfChild(blockId());
   }
   auto child = device()->CreateFileBlob(blockId());
   auto now = cpputils::time::now();
@@ -52,7 +52,7 @@ void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, f
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
+    parent()->updateModificationTimestampOfChild(blockId());
   }
   auto blob = LoadBlob();
   auto child = device()->CreateDirBlob(blockId());
@@ -60,18 +60,15 @@ void CryDir::createDir(const string &name, fspp::mode_t mode, fspp::uid_t uid, f
   blob->AddChildDir(name, child->blockId(), mode, uid, gid, now, now);
 }
 
-unique_ref<DirBlobRef> CryDir::LoadBlob() const {
-  auto blob = CryNode::LoadBlob();
-  auto dir_blob = dynamic_pointer_move<DirBlobRef>(blob);
-  ASSERT(dir_blob != none, "Blob does not store a directory");
-  return std::move(*dir_blob);
+unique_ref<RustDirBlob> CryDir::LoadBlob() const {
+  return std::move(*CryNode::LoadBlob()).asDir();
 }
 
 vector<fspp::Dir::Entry> CryDir::children() {
   device()->callFsActionCallbacks();
   if (!isRootDir()) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateAccessTimestampForChild(blockId(), timestampUpdateBehavior());
+    parent()->maybeUpdateAccessTimestampOfChild(blockId(), timestampUpdateBehavior());
   }
   vector<fspp::Dir::Entry> children;
   children.push_back(fspp::Dir::Entry(fspp::Dir::EntryType::DIR, "."));
@@ -95,7 +92,7 @@ void CryDir::createSymlink(const string &name, const bf::path &target, fspp::uid
   device()->callFsActionCallbacks();
   if (!isRootDir()) {
     //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-    parent()->updateModificationTimestampForChild(blockId());
+    parent()->updateModificationTimestampOfChild(blockId());
   }
   auto blob = LoadBlob();
   auto child = device()->CreateSymlinkBlob(target, blockId());
@@ -107,7 +104,7 @@ void CryDir::remove() {
   device()->callFsActionCallbacks();
   if (grandparent() != none) {
     //TODO Instead of doing nothing when we're in the root directory, handle timestamps in the root dir correctly
-    (*grandparent())->updateModificationTimestampForChild(parent()->blockId());
+    (*grandparent())->updateModificationTimestampOfChild(parent()->blockId());
   }
   {
     auto blob = LoadBlob();

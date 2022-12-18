@@ -4,14 +4,14 @@
 
 #include <fspp/fs_interface/Symlink.h>
 #include "CryNode.h"
-#include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
-#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/rustfsblobstore/RustSymlinkBlob.h"
+#include "cryfs/impl/filesystem/rustfsblobstore/RustDirBlob.h"
 
 namespace cryfs {
 
 class CrySymlink final: public fspp::Symlink, public CryNode {
 public:
-  CrySymlink(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
+  CrySymlink(CryDevice *device, cpputils::unique_ref<fsblobstore::rust::RustDirBlob> parent, boost::optional<cpputils::unique_ref<fsblobstore::rust::RustDirBlob>> grandparent, const blockstore::BlockId &blockId);
   ~CrySymlink();
 
   boost::filesystem::path target() override;
@@ -21,7 +21,7 @@ public:
   void remove() override;
 
 private:
-  cpputils::unique_ref<parallelaccessfsblobstore::SymlinkBlobRef> LoadBlob() const;
+  cpputils::unique_ref<fsblobstore::rust::RustSymlinkBlob> LoadBlob() const;
 
   DISALLOW_COPY_AND_ASSIGN(CrySymlink);
 };
