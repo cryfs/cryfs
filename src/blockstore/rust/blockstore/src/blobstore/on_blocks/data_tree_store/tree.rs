@@ -15,7 +15,6 @@ use crate::blobstore::on_blocks::data_node_store::{
 };
 use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
-use crate::utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use crate::utils::stream::for_each_unordered;
 
 pub struct DataTree<'a, B: BlockStore + Send + Sync> {

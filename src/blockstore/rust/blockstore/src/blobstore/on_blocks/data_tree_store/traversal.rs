@@ -3,7 +3,6 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
-use std::future::Future;
 use std::num::NonZeroU64;
 
 use crate::blobstore::on_blocks::data_node_store::{
@@ -12,7 +11,6 @@ use crate::blobstore::on_blocks::data_node_store::{
 use crate::blockstore::{low_level::BlockStore, BlockId};
 use crate::data::Data;
 use crate::utils::num::NonZeroU64Ext;
-use crate::utils::stream::for_each_unordered;
 
 // TODO All following TODOs apply for here and for tree.rs
 //  - Try to simplify the traversal logic and make it easier to understand.
@@ -23,53 +21,6 @@ use crate::utils::stream::for_each_unordered;
 //  - Look at data types u32 vs u64 vs usize
 //  - Look at assert vs ensure - when something can be caused by the data on disk instead of a programming bug, it must be ensure!
 //  - Look at assertions and make sure they all show a good error message
-
-// TODO Why don't we need all_leaves() ?
-// #[async_recursion]
-// pub async fn all_leaves<B, F>(
-//     store: &DataNodeStore<B>,
-//     root: &mut DataNode<B>,
-//     on_leaf: &(impl Sync + Fn(&mut DataLeafNode<B>) -> F),
-// ) -> Result<()>
-// where
-//     B: BlockStore + Send + Sync,
-//     F: Future<Output = Result<()>> + Send,
-// {
-//     match root {
-//         DataNode::Leaf(leaf) => {
-//             on_leaf(leaf).await?;
-//         }
-//         DataNode::Inner(inner) => {
-//             for_each_unordered(_load_children(store, inner)?, |child| async move {
-//                 let mut child = child.await?;
-//                 all_leaves(store, &mut child, on_leaf).await?;
-//                 Ok(())
-//             })
-//             .await?;
-//         }
-//     }
-//     Ok(())
-// }
-
-fn _load_children<'a, 'b, 'r, B: BlockStore + Send + Sync>(
-    store: &'a DataNodeStore<B>,
-    inner: &'b DataInnerNode<B>,
-) -> Result<impl 'r + Iterator<Item = impl 'a + Future<Output = Result<DataNode<B>>>>>
-where
-    'a: 'r,
-    'b: 'r,
-{
-    let futures = inner.children().map(move |child_id| async move {
-        let loaded: Result<DataNode<B>> = Ok(store.load(child_id).await?.ok_or_else(|| {
-            anyhow!(
-                "Tried to load child node {:?} but couldn't find it",
-                child_id,
-            )
-        })?);
-        loaded
-    });
-    Ok(futures)
-}
 
 pub struct NumLeavesAndRightmostLeafId {
     pub num_leaves: NonZeroU64,
@@ -83,34 +34,29 @@ pub async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + S
 ) -> Result<NumLeavesAndRightmostLeafId> {
     let depth = root_node.depth();
     let children = root_node.children();
-    assert!(
-        children.len() >= 1,
-        "Inner node must have at least 1 child, that's a class invariant of DataInnerNode"
+    let num_children = children.len() as u64;
+    let last_child_id = children.last().expect(
+        "Inner node must have at least one child, that's a class invariant of DataInnerNode",
     );
+    let num_children = NonZeroU64::new(num_children).unwrap();
     if depth.get() == 1 {
         Ok(NumLeavesAndRightmostLeafId {
-            num_leaves: NonZeroU64::new(u64::try_from(children.len()).unwrap()).unwrap(),
-            rightmost_leaf_id: children
-                .last()
-                .expect("Inner node must have at least one child"),
+            num_leaves: num_children,
+            rightmost_leaf_id: last_child_id,
         })
     } else {
         let num_leaves_per_full_child = node_store
             .layout()
             .num_leaves_per_full_subtree(depth.get() - 1)?;
-        let num_leaves_in_left_children = u64::try_from(children.len() - 1)
-            .unwrap()
+        let num_leaves_in_left_children = (num_children.get() - 1)
             .checked_mul(num_leaves_per_full_child.get())
             .ok_or_else(|| {
                 anyhow!(
                     "Overflow in (num_children-1)*num_leaves_per_full_child: ({}-1)*{}",
-                    children.len(),
+                    num_children,
                     num_leaves_per_full_child,
                 )
             })?;
-        let last_child_id = children.last().expect(
-            "Inner node must have at least one child, that's a class invariant of DataInnerNode",
-        );
         let last_child = node_store.load(last_child_id).await?.ok_or_else(|| {
             anyhow!(
                 "Tried to load {:?} as a child node but couldn't find it",
@@ -198,7 +144,7 @@ impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
                         if let Self::Owned { leaf } = self {
                             Ok(leaf)
                         } else {
-                            panic!("We just set this to Self::Loaded but now it's something else?");
+                            panic!("We just set this to Self::Owned but now it's something else?");
                         }
                     }
                 }
@@ -662,13 +608,11 @@ async fn _create_new_subtree<
 
     if 0 == depth {
         assert!(begin_index <= 1 && end_index == 1, "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf).");
-        // TODO Possible withot boxing the lambda?
-        let leaf_creator: Box<dyn Send + Fn(u64) -> Data> = if begin_index == 0 {
-            Box::new(|index| callbacks.on_create_leaf(index))
+        let leaf_data = if begin_index == 0 {
+            callbacks.on_create_leaf(leaf_offset)
         } else {
-            Box::new(|_| _create_max_size_leaf(node_store.layout()))
+            _create_max_size_leaf(node_store.layout())
         };
-        let leaf_data = leaf_creator(leaf_offset);
         let leaf = node_store.create_new_leaf_node(&leaf_data).await?;
         Ok(DataNode::Leaf(leaf))
     } else {
