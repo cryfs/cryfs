@@ -18,7 +18,6 @@ using cpputils::dynamic_pointer_move;
 using boost::optional;
 using boost::none;
 using std::shared_ptr;
-using std::vector;
 using cryfs::parallelaccessfsblobstore::FsBlobRef;
 using cryfs::parallelaccessfsblobstore::DirBlobRef;
 using namespace cpputils::logging;
