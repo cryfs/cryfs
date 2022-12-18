@@ -88,7 +88,6 @@ void CryNode::rename(const bf::path &to) {
     throw FuseErrnoException(EBUSY);
   }
 
-  vector<BlockId> targetAncestors;
   auto targetParentAndAncestors = _device->LoadDirBlobWithAncestors(to.parent_path(), [&] (const BlockId& ancestorId) {
     if (ancestorId == _blockId) {
       // We are trying to move a node into one of its subdirectories. This is not allowed.
