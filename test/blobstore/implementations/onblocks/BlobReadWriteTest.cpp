@@ -1,7 +1,7 @@
 #include "testutils/BlobStoreTest.h"
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/data/DataFixture.h>
-#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include <blobstore/implementations/onblocks/datanodestore/DataNodeView.h>
 
 using cpputils::unique_ref;
 using ::testing::WithParamInterface;

@@ -1,21 +1,7 @@
 project (blobstore)
 
 set(SOURCES
-    implementations/onblocks/parallelaccessdatatreestore/ParallelAccessDataTreeStoreAdapter.cpp
-    implementations/onblocks/parallelaccessdatatreestore/DataTreeRef.cpp
-    implementations/onblocks/parallelaccessdatatreestore/ParallelAccessDataTreeStore.cpp
     implementations/onblocks/utils/Math.cpp
-    implementations/onblocks/BlobStoreOnBlocks.cpp
-    implementations/onblocks/datanodestore/DataNode.cpp
-    implementations/onblocks/datanodestore/DataLeafNode.cpp
-    implementations/onblocks/datanodestore/DataInnerNode.cpp
-    implementations/onblocks/datanodestore/DataNodeStore.cpp
-    implementations/onblocks/datatreestore/impl/CachedValue.cpp
-    implementations/onblocks/datatreestore/impl/LeafTraverser.cpp
-    implementations/onblocks/datatreestore/LeafHandle.cpp
-    implementations/onblocks/datatreestore/DataTree.cpp
-    implementations/onblocks/datatreestore/DataTreeStore.cpp
-    implementations/onblocks/BlobOnBlocks.cpp
     implementations/rustbridge/RustBlob.cpp
     implementations/rustbridge/RustBlobStore.cpp
 )

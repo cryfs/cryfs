@@ -3,8 +3,9 @@
 #define MESSMER_BLOBSTORE_IMPLEMENTATIONS_ONBLOCKS_DATANODESTORE_DATANODEVIEW_H_
 
 #include <blockstore/interface/Block.h>
-#include "../BlobStoreOnBlocks.h"
+#include "../../../interface/BlobStore.h"
 #include "DataInnerNode_ChildEntry.h"
+#include <blockstore/interface/BlockStore.h>
 
 #include <cpp-utils/pointer/unique_ref.h>
 
