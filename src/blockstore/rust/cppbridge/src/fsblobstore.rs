@@ -168,6 +168,7 @@ mod ffi {
         fn num_blocks(&self) -> Result<u64>;
         fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
         fn virtual_block_size_bytes(&self) -> u32;
+        fn load_block_depth(&self, block_id: &FsBlobId) -> Result<u8>;
         fn async_drop(&mut self) -> Result<()>;
 
         fn new_locking_integrity_encrypted_inmemory_fsblobstore(
@@ -178,6 +179,17 @@ mod ffi {
             on_integrity_violation: UniquePtr<CxxCallback>,
             cipher_name: &str,
             encryption_key_hex: &str,
+            block_size_bytes: u32,
+        ) -> Result<Box<RustFsBlobStoreBridge>>;
+        fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
+            integrity_file_path: &str,
+            my_client_id: u32,
+            allow_integrity_violations: bool,
+            missing_block_is_integrity_violation: bool,
+            on_integrity_violation: UniquePtr<CxxCallback>,
+            cipher_name: &str,
+            encryption_key_hex: &str,
+            basedir: &str,
             block_size_bytes: u32,
         ) -> Result<Box<RustFsBlobStoreBridge>>;
         fn new_locking_integrity_encrypted_ondisk_fsblobstore(
@@ -771,6 +783,14 @@ impl RustFsBlobStoreBridge {
         self.0.virtual_block_size_bytes()
     }
 
+    fn load_block_depth(&self, block_id: &FsBlobId) -> Result<u8> {
+        log_errors(|| TOKIO_RUNTIME.block_on(async {
+            Ok(self.0.load_block_depth(&cryfs_blockstore::blockstore::BlockId::from_array(&block_id.0.data()))
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("Block not found"))?)
+        }))
+    }
+
     fn async_drop(&mut self) -> Result<()> {
         log_errors(|| TOKIO_RUNTIME.block_on(self.0.async_drop()))
     }
@@ -804,6 +824,38 @@ fn new_locking_integrity_encrypted_inmemory_fsblobstore(
         ))))
     })
 }
+
+fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
+    integrity_file_path: &str,
+    my_client_id: u32,
+    allow_integrity_violations: bool,
+    missing_block_is_integrity_violation: bool,
+    on_integrity_violation: UniquePtr<ffi::CxxCallback>,
+    cipher_name: &str,
+    encryption_key_hex: &str,
+    basedir: &str,
+    block_size_bytes: u32,
+) -> Result<Box<RustFsBlobStoreBridge>> {
+    LOGGER_INIT.ensure_initialized();
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        let blockstore = super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+            integrity_file_path,
+            my_client_id,
+            allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            on_integrity_violation,
+            cipher_name,
+            encryption_key_hex,
+            basedir,
+        )?;
+        Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
+            BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes)?,
+        ))))
+    })
+}
+
 
 fn new_locking_integrity_encrypted_ondisk_fsblobstore(
     integrity_file_path: &str,

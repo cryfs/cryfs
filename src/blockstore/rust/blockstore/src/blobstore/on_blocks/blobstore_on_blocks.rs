@@ -54,6 +54,10 @@ impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
     fn virtual_block_size_bytes(&self) -> u32 {
         self.tree_store.virtual_block_size_bytes()
     }
+
+    async fn load_block_depth(&self, id: &crate::blockstore::BlockId) -> Result<Option<u8>> {
+        self.tree_store.load_block_depth(id).await
+    }
 }
 
 impl<B: BlockStore + Send + Sync> fmt::Debug for BlobStoreOnBlocks<B> {

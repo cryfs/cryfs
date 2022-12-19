@@ -60,6 +60,10 @@ namespace cryfs
             {
                 return _fsBlobStore->virtual_block_size_bytes();
             }
+
+            uint8_t RustFsBlobStore::loadBlockDepth(const blockstore::BlockId &blockId) const {
+                return _fsBlobStore->load_block_depth(*cast_blobid(blockId));
+            }
         }
     }
 }

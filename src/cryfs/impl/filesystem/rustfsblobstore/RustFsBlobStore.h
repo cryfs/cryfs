@@ -32,6 +32,7 @@ namespace cryfs
                 uint64_t numBlocks() const;
                 uint64_t estimateSpaceForNumBlocksLeft() const;
                 uint64_t virtualBlocksizeBytes() const;
+                uint8_t loadBlockDepth(const blockstore::BlockId &blockId) const;
 
             private:
                 ::rust::Box<bridge::RustFsBlobStoreBridge> _fsBlobStore;

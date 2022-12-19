@@ -68,6 +68,10 @@ where
         self.blobstore.virtual_block_size_bytes()
     }
 
+    pub async fn load_block_depth(&self, block_id: &crate::blockstore::BlockId) -> Result<Option<u8>> {
+        self.blobstore.load_block_depth(block_id).await
+    }
+
     // async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
 }
 

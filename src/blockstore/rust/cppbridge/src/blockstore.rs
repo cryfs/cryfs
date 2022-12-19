@@ -641,7 +641,7 @@ pub fn new_locking_integrity_encrypted_ondisk_blockstore(
     })
 }
 
-fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+pub fn new_locking_integrity_encrypted_readonly_ondisk_blockstore(
     integrity_file_path: &str,
     my_client_id: u32,
     allow_integrity_violations: bool,

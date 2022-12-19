@@ -3,13 +3,8 @@
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
 #include <blockstore/implementations/rustbridge/RustBlockStore.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataNodeStore.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataNode.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
-#include <blobstore/implementations/onblocks/datanodestore/DataLeafNode.h>
-#include <blobstore/implementations/onblocks/BlobStoreOnBlocks.h>
-#include <cryfs/impl/filesystem/fsblobstore/FsBlobStore.h>
-#include <cryfs/impl/filesystem/fsblobstore/DirBlob.h>
+#include <cryfs/impl/filesystem/rustfsblobstore/RustFsBlobStore.h>
+#include <cryfs/impl/filesystem/rustfsblobstore/RustDirBlob.h>
 #include <cryfs/impl/filesystem/CryDevice.h>
 #include <cpp-utils/io/IOStreamConsole.h>
 #include <cpp-utils/system/homedir.h>
@@ -28,26 +23,24 @@ using boost::filesystem::path;
 using namespace cryfs;
 using namespace cpputils;
 using namespace blockstore;
-using namespace blobstore::onblocks;
-using namespace blobstore::onblocks::datanodestore;
 using namespace cryfs::fsblobstore;
 
 using blockstore::rust::CxxCallback;
 
 using namespace cryfs_stats;
 
-void printNode(unique_ref<DataNode> node) {
-    std::cout << "BlockId: " << node->blockId().ToString() << ", Depth: " << static_cast<int>(node->depth()) << " ";
-    auto innerNode = dynamic_pointer_move<DataInnerNode>(node);
-    if (innerNode != none) {
-        std::cout << "Type: inner\n";
-        return;
-    }
-    auto leafNode = dynamic_pointer_move<DataLeafNode>(node);
-    if (leafNode != none) {
-        std::cout << "Type: leaf\n";
-        return;
-    }
+void printNode(const BlockId& blockId, uint8_t depth) {
+    std::cout << "BlockId: " << blockId.ToString() << ", Depth: " << depth << "\n";
+}
+
+unique_ref<fsblobstore::rust::RustFsBlobStore> makeBlobStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+  auto statePath = localStateDir.forFilesystemId(config.configFile->config()->FilesystemId());
+  auto integrityFilePath = statePath / "integritydata";
+  auto onIntegrityViolation = [] () {
+    std::cerr << "Warning: Integrity violation encountered" << std::endl;
+  };
+  return make_unique_ref<fsblobstore::rust::RustFsBlobStore>(
+    fsblobstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(integrityFilePath.c_str(), config.myClientId, true, false, std::make_unique<CxxCallback>(onIntegrityViolation), config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str(), config.configFile->config()->BlocksizeBytes()));
 }
 
 unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
@@ -57,7 +50,7 @@ unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader
     std::cerr << "Warning: Integrity violation encountered" << std::endl;
   };
   return make_unique_ref<blockstore::rust::RustBlockStore>(
-    blockstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_blockstore(integrityFilePath.c_str(), config.myClientId, false, true, std::make_unique<CxxCallback>(onIntegrityViolation), config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str())
+    blockstore::rust::bridge::new_locking_integrity_encrypted_readonly_ondisk_blockstore(integrityFilePath.c_str(), config.myClientId, true, false, std::make_unique<CxxCallback>(onIntegrityViolation), config.configFile->config()->Cipher(), config.configFile->config()->EncryptionKey(), basedir.c_str())
   );
 }
 
@@ -96,8 +89,7 @@ private:
 };
 
 std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
-    auto blockStore = makeBlockStore(basedir, config, localStateDir);
-    auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
+    auto fsBlobStore = makeBlobStore(basedir, config, localStateDir);
 
     std::vector<BlockId> result;
     AccumulateBlockIds knownBlobIds;
@@ -112,15 +104,14 @@ std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader:
 std::vector<BlockId> getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto knownBlobIds = getKnownBlobIds(basedir, config, localStateDir);
 
-    auto blockStore = makeBlockStore(basedir, config, localStateDir);
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.configFile->config()->BlocksizeBytes());
+    auto fsBlobStore = makeBlobStore(basedir, config, localStateDir);
     AccumulateBlockIds knownBlockIds;
-    const uint32_t numNodes = nodeStore->numNodes();
-    knownBlockIds.reserve(numNodes);
+    const uint32_t numBlocks = fsBlobStore->numBlocks();
+    knownBlockIds.reserve(numBlocks);
     cout << "Listing all blocks used by these file system entities..." << endl;
-    auto progress_bar = ProgressBar(numNodes);
+    auto progress_bar = ProgressBar(numBlocks);
     for (const auto& blobId : knownBlobIds) {
-        forEachReachableBlockInBlob(nodeStore.get(), blobId, {
+        forEachReachableBlockInBlob(fsBlobStore.get(), blobId, {
             progress_bar.callback(),
             knownBlockIds.callback()
         });
@@ -223,8 +214,7 @@ int main(int argc, char* argv[]) {
 
     console->print("Calculate statistics\n");
 
-    auto blockStore = makeBlockStore(basedir, config.right(), localStateDir);
-    auto nodeStore = make_unique_ref<DataNodeStore>(std::move(blockStore), config.right().configFile->config()->BlocksizeBytes());
+    auto blobStore = makeBlobStore(basedir, config.right(), localStateDir);
 
     uint32_t numUnaccountedBlocks = unaccountedBlocks.size();
     uint32_t numLeaves = 0;
@@ -232,17 +222,13 @@ int main(int argc, char* argv[]) {
     console->print("Unaccounted blocks: " + std::to_string(unaccountedBlocks.size()) + "\n");
     for (const auto &blockId : unaccountedBlocks) {
         console->print("\r" + std::to_string(numLeaves+numInner) + "/" + std::to_string(numUnaccountedBlocks) + ": ");
-        auto node = nodeStore->load(blockId);
-        auto innerNode = dynamic_pointer_move<DataInnerNode>(*node);
-        if (innerNode != none) {
-            ++numInner;
-            printNode(std::move(*innerNode));
-        }
-        auto leafNode = dynamic_pointer_move<DataLeafNode>(*node);
-        if (leafNode != none) {
+        auto depth = blobStore->loadBlockDepth(blockId);
+        if (depth == 0) {
             ++numLeaves;
-            printNode(std::move(*leafNode));
+        } else {
+            ++numInner;
         }
+        printNode(blockId, depth);
     }
     console->print("\n" + std::to_string(numLeaves) + " leaves and " + std::to_string(numInner) + " inner nodes\n");
 }

@@ -106,6 +106,9 @@ pub trait BlobStore {
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
     // virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
     fn virtual_block_size_bytes(&self) -> u32;
+
+    // TODO load_block_depth is only needed for our c++ bindings of the stats tool. Remove them.
+    async fn load_block_depth(&self, _id: &crate::blockstore::BlockId) -> Result<Option<u8>>;
 }
 
 pub mod on_blocks;

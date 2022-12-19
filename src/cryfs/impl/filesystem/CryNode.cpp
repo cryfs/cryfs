@@ -100,6 +100,9 @@ void CryNode::rename(const bf::path &to) {
     throw FuseErrnoException(EINVAL);
   }
 
+  // TODO There's a deadlock opportunity here because we lock first targetParent+targetGrandparent and then our parent.
+  //      If another thread locks our parent first and then targetParent+targetGrandparent, we deadlock.
+
   // Load parent blob but in a way that doesn't deadlock if the parent blob
   // is already loaded as targetParent or targetGrandparent
   shared_ptr<RustDirBlob> parent;
