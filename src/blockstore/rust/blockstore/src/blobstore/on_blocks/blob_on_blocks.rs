@@ -1,9 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use std::pin::Pin;
+use futures::Stream;
 
 use super::data_tree_store::DataTree;
 use crate::blobstore::{Blob, BlobId};
 use crate::blockstore::low_level::BlockStore;
+use crate::blockstore::BlockId;
 use crate::data::Data;
 
 #[derive(Debug)]
@@ -70,5 +73,9 @@ impl<'a, B: BlockStore + Send + Sync> Blob<'a> for BlobOnBlocks<'a, B> {
         let tree = self.tree.take().expect("BlobOnBlocks.tree is None");
         DataTree::remove(tree).await
         // no call to async_drop needed since we moved out of this
+    }
+
+    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        self._tree().all_blocks().await
     }
 }

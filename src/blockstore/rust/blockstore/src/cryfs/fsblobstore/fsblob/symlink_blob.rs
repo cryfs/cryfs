@@ -1,10 +1,13 @@
 use anyhow::{anyhow, Result};
 use std::fmt::Debug;
 use std::path::PathBuf;
+use std::pin::Pin;
+use futures::Stream;
 
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::blobstore::{BlobId, BlobStore};
+use crate::blockstore::BlockId;
 
 pub struct SymlinkBlob<'a, B>
 where
@@ -57,6 +60,10 @@ where
 
     pub async fn lstat_size(&mut self) -> Result<u64> {
         Ok(self.target().await?.to_str().ok_or_else(||anyhow!("Invalid UTF-8"))?.len() as u64)
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        self.blob.all_blocks().await
     }
 }
 

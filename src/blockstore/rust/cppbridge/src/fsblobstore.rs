@@ -7,6 +7,7 @@ use cryfs_blockstore::cryfs::fsblobstore::{
 use cryfs_blockstore::cryfs::utils::fs_types::{Uid, Gid};
 use cryfs_blockstore::utils::async_drop::AsyncDropGuard;
 use cxx::UniquePtr;
+use futures::{StreamExt, TryStreamExt};
 use std::time::{Duration, SystemTime};
 
 use super::blockstore::DynBlockStore;
@@ -89,6 +90,7 @@ mod ffi {
         ) -> Result<Box<RustSymlinkBlobBridge<'a>>>;
         fn remove(&mut self) -> Result<()>;
         fn lstat_size(&mut self) -> Result<u64>;
+        fn all_blocks(&self) -> Result<Vec<FsBlobId>>;
         fn async_drop(&mut self) -> Result<()>;
     }
 
@@ -521,6 +523,22 @@ impl<'a> RustFsBlobBridge<'a> {
                     .expect("FsBlob already destructed")
                     .lstat_size(),
             )
+        })
+    }
+
+    fn all_blocks(&self) -> Result<Vec<FsBlobId>> {
+        log_errors(|| {
+            TOKIO_RUNTIME.block_on( async {
+                let blocks = self.0
+                    .as_ref()
+                    .expect("FsBlob already destructed")
+                    .all_blocks()
+                    .await?
+                    .map(|id| id.map(|id| FsBlobId(cryfs_blockstore::blobstore::BlobId::from_array(id.data()))))
+                    .try_collect()
+                    .await?;
+                Ok(blocks)
+            })
         })
     }
 

@@ -2,6 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use binrw::{BinRead, BinWrite};
 use std::fmt::Debug;
+use std::pin::Pin;
+use futures::Stream;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
@@ -86,6 +88,8 @@ pub trait Blob<'a>: Sized + Debug {
     async fn num_nodes(&mut self) -> Result<u64>;
 
     async fn remove(self) -> Result<()>;
+
+    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>>;
 }
 
 #[async_trait]

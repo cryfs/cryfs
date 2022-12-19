@@ -1,8 +1,11 @@
 use anyhow::Result;
 use std::fmt::Debug;
+use std::pin::Pin;
+use futures::Stream;
 
 use super::{base_blob::BaseBlob, layout::BlobType};
 use crate::blobstore::{BlobId, BlobStore};
+use crate::blockstore::BlockId;
 
 pub struct FileBlob<'a, B>
 where
@@ -63,6 +66,10 @@ where
 
     pub async fn lstat_size(&mut self) -> Result<u64> {
         self.num_bytes().await
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        self.blob.all_blocks().await
     }
 }
 

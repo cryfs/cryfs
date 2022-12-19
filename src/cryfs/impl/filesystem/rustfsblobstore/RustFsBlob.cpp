@@ -93,6 +93,16 @@ namespace cryfs
                 (*_fsBlob)->remove();
                 _fsBlob = boost::none;
             }
+
+            std::vector<BlockId> RustFsBlob::allBlocks() const {
+                auto block_ids = (*_fsBlob)->all_blocks();
+                std::vector<BlockId> result;
+                result.reserve(block_ids.size());
+                for (const auto &block_id : block_ids) {
+                    result.emplace_back(cast_blobid(block_id));
+                }
+                return result;
+            }
         }
     }
 }

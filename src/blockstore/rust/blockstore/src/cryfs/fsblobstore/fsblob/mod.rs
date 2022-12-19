@@ -1,8 +1,11 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::pin::Pin;
+use futures::Stream;
 
 use crate::blobstore::{BlobId, BlobStore};
+use crate::blockstore::BlockId;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod atime_update_behavior;
@@ -133,6 +136,14 @@ where
             Self::File(blob) => blob.lstat_size().await,
             Self::Directory(blob) => Ok(blob.lstat_size()),
             Self::Symlink(blob) => blob.lstat_size().await,
+        }
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        match self {
+            Self::File(blob) => blob.all_blocks().await,
+            Self::Directory(blob) => blob.all_blocks().await,
+            Self::Symlink(blob) => blob.all_blocks().await,
         }
     }
 }

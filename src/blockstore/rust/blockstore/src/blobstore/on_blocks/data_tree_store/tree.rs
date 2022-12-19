@@ -6,7 +6,9 @@ use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::pin::Pin;
 use std::sync::Mutex;
+use futures::{stream::{self, Stream, StreamExt}, future::{self, FutureExt}};
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
@@ -616,6 +618,44 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             }
         }
         Ok(())
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        let root_node = self.root_node.as_ref().expect("root_node is None");
+        self._all_blocks_in_subtree(root_node).await
+    }
+
+    async fn _all_blocks_in_subtree(&self, subtree_root: &DataNode<B>) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        match subtree_root {
+            DataNode::Leaf(leaf) => Ok(Box::new(stream::once(future::ready(Ok(*leaf.block_id()))))),
+            DataNode::Inner(inner) => {
+                let block_ids_in_descendants = self._all_blocks_descendants_of(inner).await?;
+                Ok(Box::new(stream::once(future::ready(Ok(*inner.block_id()))).chain(block_ids_in_descendants)))
+            }
+        }
+    }
+
+    async fn _all_blocks_descendants_of(&self, subtree_root: &DataInnerNode<B>) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        // iter<stream<result<block_id>>>
+        let subtree_stream = subtree_root.children().map(|child_id| {
+            let child_stream = async move {
+                self._all_blocks_in_subtree_of_id(child_id)
+                    .await
+                    // Transform Result<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
+                    .unwrap_or_else(|err| {
+                        Box::new(stream::once(future::ready(Err(err))))
+                    })
+            };
+            // Transform Future<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
+            Box::pin(child_stream.flatten_stream())
+        });
+        let subtree_stream = stream::select_all(subtree_stream);
+        Ok(Box::new(subtree_stream))
+    }
+
+    async fn _all_blocks_in_subtree_of_id(&self, subtree_root_id: BlockId) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        let child = self.node_store.load(subtree_root_id).await?.ok_or_else(|| anyhow!("Didn't find block {:?}", subtree_root_id))?;
+        self._all_blocks_in_subtree(&child).await
     }
 }
 

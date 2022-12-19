@@ -39,6 +39,8 @@ namespace cryfs
 
                 void remove() &&;
 
+                std::vector<blockstore::BlockId> allBlocks() const;
+
             private:
                 boost::optional<::rust::Box<bridge::RustFsBlobBridge>> _fsBlob;
 

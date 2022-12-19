@@ -1,5 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use std::pin::Pin;
+use futures::Stream;
 use std::time::SystemTime;
 use std::fmt::Debug;
 
@@ -8,6 +10,7 @@ use super::atime_update_behavior::AtimeUpdateBehavior;
 use crate::cryfs::utils::fs_types::{Gid, Mode, Uid};
 use super::layout::BlobType;
 use crate::blobstore::{BlobId, BlobStore};
+use crate::blockstore::BlockId;
 use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, EntryType, DirEntryList};
@@ -151,6 +154,10 @@ where
 
     pub fn lstat_size(&self) -> u64 {
         DIR_LSTAT_SIZE
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        self.blob.all_blocks().await
     }
 }
 

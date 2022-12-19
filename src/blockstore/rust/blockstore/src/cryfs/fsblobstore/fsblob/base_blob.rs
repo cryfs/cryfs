@@ -1,9 +1,12 @@
 use anyhow::{ensure, Result};
 use std::fmt::Debug;
 use binary_layout::Field;
+use std::pin::Pin;
+use futures::Stream;
 
 use super::layout::{self, FORMAT_VERSION_HEADER};
 use crate::blobstore::{Blob, BlobId, BlobStore};
+use crate::blockstore::BlockId;
 use crate::data::Data;
 
 pub struct BaseBlob<'a, B>
@@ -125,5 +128,9 @@ where
 
     pub async fn remove(self) -> Result<()> {
         self.blob.remove().await
+    }
+
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+        self.blob.all_blocks().await
     }
 }
