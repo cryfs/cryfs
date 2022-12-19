@@ -123,3 +123,26 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
     // view.data is already set correctly because we grew this view from the data input
     data
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::super::testutils::*;
+
+    mod block_id {
+        use super::*;
+
+        #[tokio::test]
+        async fn loaded_node_returns_correct_key() {
+            with_nodestore(|nodestore| Box::pin(async move {
+                let block_id = *new_leaf_node(nodestore).await.unwrap().block_id();
+                
+                let loaded = load_leaf_node(nodestore, block_id).await;
+                assert_eq!(block_id, *loaded.block_id());
+                
+            })).await;
+        }
+    }
+
+    // TODO More tests
+}

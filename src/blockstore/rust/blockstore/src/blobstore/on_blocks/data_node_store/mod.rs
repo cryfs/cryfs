@@ -16,6 +16,9 @@ pub use layout::NodeLayout;
 mod data_node;
 pub use data_node::{DataInnerNode, DataLeafNode, DataNode};
 
+#[cfg(test)]
+mod testutils;
+
 #[derive(Debug)]
 pub struct DataNodeStore<B: BlockStore + Send + Sync> {
     block_store: AsyncDropGuard<LockingBlockStore<B>>,

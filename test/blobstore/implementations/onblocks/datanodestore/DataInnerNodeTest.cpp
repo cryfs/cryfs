@@ -113,13 +113,6 @@ private:
 
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
-TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
-  BlockId blockId = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()})->blockId();
-
-  auto loaded = nodeStore->load(blockId).value();
-  EXPECT_EQ(blockId, loaded->blockId());
-}
-
 TEST_F(DataInnerNodeTest, InitializesCorrectly) {
   auto node = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()});
 

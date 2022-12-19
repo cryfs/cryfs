@@ -122,13 +122,6 @@ private:
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
 constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
-TEST_F(DataLeafNodeTest, CorrectKeyReturnedAfterLoading) {
-  BlockId blockId = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(LAYOUT.maxBytesPerLeaf()))->blockId();
-
-  auto loaded = nodeStore->load(blockId).value();
-  EXPECT_EQ(blockId, loaded->blockId());
-}
-
 TEST_F(DataLeafNodeTest, InitializesCorrectly) {
   auto leaf = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(5));
   EXPECT_EQ(5u, leaf->numBytes());

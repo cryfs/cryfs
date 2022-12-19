@@ -199,3 +199,26 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
         dest[(BLOCKID_LEN * index)..(BLOCKID_LEN * (index + 1))].copy_from_slice(child.data());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::super::testutils::*;
+
+    mod block_id {
+        use super::*;
+
+        #[tokio::test]
+        async fn loaded_node_returns_correct_key() {
+            with_nodestore(|nodestore| Box::pin(async move {
+                let block_id = *new_inner_node(nodestore).await.unwrap().block_id();
+                
+                let loaded = load_inner_node(nodestore, block_id).await;
+                assert_eq!(block_id, *loaded.block_id());
+                
+            })).await;
+        }
+    }
+
+    // TODO More tests
+}
