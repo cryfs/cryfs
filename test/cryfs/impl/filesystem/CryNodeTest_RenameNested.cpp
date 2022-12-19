@@ -70,6 +70,7 @@ public:
         }
     }
 
+    // NOLINTNEXTLINE(misc-no-recursion)
     void create_path_if_not_exists(const bf::path& path) {
         if (!Exists(path)) {
             if (path.has_parent_path()) {
@@ -124,7 +125,7 @@ TEST_P(CryNodeTest_RenameNested, Rename) {
 
     if (source_path == "/" || dest_path == "/") {
         expect_rename_fails(source_path, dest_path, EBUSY);
-    } else if (source_path == dest_path) {
+    } else if (source_path == dest_path) { // NOLINT(bugprone-branch-clone)
         expect_rename_succeeds(source_path, dest_path);
     } else if (boost::starts_with(source_path, dest_path)) {
         expect_rename_fails(source_path, dest_path, ENOTEMPTY);
