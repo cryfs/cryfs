@@ -155,10 +155,6 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn flush_node(&self, node: &mut DataNode<B>) -> Result<()> {
         self.block_store.flush_block(node.as_block_mut()).await
     }
-
-    // cpputils::unique_ref<DataNode> overwriteNodeWith(cpputils::unique_ref<DataNode> target, const DataNode &source);
-
-    // void forEachNode(std::function<void (const blockstore::BlockId& nodeId)> callback) const;
 }
 
 #[async_trait]
@@ -174,16 +170,115 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
 mod tests {
     use super::*;
     use testutils::*;
+    use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
 
     mod create_new_leaf_node {
         use super::*;
 
+        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, data: Data) {
+            let node = nodestore.create_new_leaf_node(&data).await.unwrap();
+            assert_eq!(data.as_ref(), node.data());
+
+            // and it's still correct after loading
+            let block_id = *node.block_id();
+            drop(node);
+            let node = load_leaf_node(nodestore, block_id).await;
+            assert_eq!(data.as_ref(), node.data());
+        }
+
         #[tokio::test]
-        async fn created_node_is_correct() {
-            with_nodestore(|nodestore| Box::pin(async move {
-                let data = b"Hello World".to_vec().into();
-                let node = nodestore.create_new_leaf_node(&data).await.unwrap();
-                assert_eq!(data.as_ref(), node.data());
+        async fn empty() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                test(nodestore, Data::empty()).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn some_data() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                test(nodestore, half_full_leaf_data(1)).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn full() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                test(nodestore, full_leaf_data(1)).await
+            })).await
+        }
+    }
+
+    mod create_new_inner_node {
+        use futures::future;
+
+        use super::*;
+
+        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, depth: u8, children: &[BlockId]) {
+            let node = nodestore.create_new_inner_node(depth, children).await.unwrap();
+            assert_eq!(depth, node.depth().get());
+            assert_eq!(children.len(), node.num_children().get() as usize);
+            assert_eq!(children, &node.children().collect::<Vec<_>>());
+
+            // and it's still correct after loading
+            let block_id = *node.block_id();
+            drop(node);
+            let node = load_inner_node(nodestore, block_id).await;
+            assert_eq!(depth, node.depth().get());
+            assert_eq!(children.len(), node.num_children().get() as usize);
+            assert_eq!(children, &node.children().collect::<Vec<_>>());
+        }
+
+        #[tokio::test]
+        async fn one_child_leaf() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let child = *new_leaf_node(nodestore).await.block_id();
+                test(nodestore, 1, &[child]).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn two_children_leaves() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let child1 = *new_leaf_node(nodestore).await.block_id();
+                let child2 = *new_leaf_node(nodestore).await.block_id();
+                test(nodestore, 1, &[child1, child2]).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn max_children_leaves() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let children = future::join_all((0..nodestore.layout().max_children_per_inner_node()).map(|_| async {
+                    *new_leaf_node(nodestore).await.block_id()
+                }).collect::<Vec<_>>()).await;
+                test(nodestore, 1, &children).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn one_child_inner() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let child = *new_inner_node(nodestore).await.block_id();
+                test(nodestore, 1, &[child]).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn two_children_inner() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let child1 = *new_inner_node(nodestore).await.block_id();
+                let child2 = *new_inner_node(nodestore).await.block_id();
+                test(nodestore, 1, &[child1, child2]).await
+            })).await
+        }
+
+        #[tokio::test]
+        async fn max_children_inner() {
+            with_nodestore(move |nodestore| Box::pin(async move {
+                let children = future::join_all((0..nodestore.layout().max_children_per_inner_node()).map(|_| async {
+                    *new_inner_node(nodestore).await.block_id()
+                }).collect::<Vec<_>>()).await;
+                test(nodestore, 1, &children).await
             })).await
         }
     }

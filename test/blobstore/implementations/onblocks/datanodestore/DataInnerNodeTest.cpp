@@ -113,28 +113,6 @@ private:
 
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
-TEST_F(DataInnerNodeTest, InitializesCorrectly) {
-  auto node = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()});
-
-  EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
-}
-
-TEST_F(DataInnerNodeTest, ReinitializesCorrectly) {
-  auto blockId = DataLeafNode::CreateNewNode(blockStore, nodeStore->layout(), Data(0))->blockId();
-  auto node = DataInnerNode::InitializeNewNode(blockStore->load(blockId).value(), nodeStore->layout(), 1, {leaf->blockId()});
-
-  EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
-}
-
-TEST_F(DataInnerNodeTest, IsCorrectlyInitializedAfterLoading) {
-  auto loaded = CreateAndLoadNewInnerNode(*leaf);
-
-  EXPECT_EQ(1u, loaded->numChildren());
-  EXPECT_EQ(leaf->blockId(), loaded->readChild(0).blockId());
-}
-
 TEST_F(DataInnerNodeTest, AddingASecondLeaf) {
   BlockId leaf2_blockId = AddALeafTo(node.get());
 

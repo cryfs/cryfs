@@ -122,31 +122,6 @@ private:
 constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
 constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
-TEST_F(DataLeafNodeTest, InitializesCorrectly) {
-  auto leaf = DataLeafNode::CreateNewNode(blockStore, LAYOUT, Data(5));
-  EXPECT_EQ(5u, leaf->numBytes());
-}
-
-TEST_F(DataLeafNodeTest, ReadWrittenDataAfterReloadingBlock) {
-  BlockId blockId = WriteDataToNewLeafBlockAndReturnKey();
-
-  auto loaded = LoadLeafNode(blockId);
-
-  EXPECT_EQ(randomData.size(), loaded->numBytes());
-  EXPECT_EQ(randomData, loadData(*loaded));
-}
-
-TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero) {
-  EXPECT_EQ(0u, leaf->numBytes());
-}
-
-TEST_F(DataLeafNodeTest, NewLeafNodeHasSizeZero_AfterLoading) {
-  BlockId blockId = nodeStore->createNewLeafNode(Data(0))->blockId();
-  auto leaf = LoadLeafNode(blockId);
-
-  EXPECT_EQ(0u, leaf->numBytes());
-}
-
 class DataLeafNodeSizeTest: public DataLeafNodeTest, public WithParamInterface<unsigned int> {
 public:
   BlockId CreateLeafResizeItAndReturnKey() {

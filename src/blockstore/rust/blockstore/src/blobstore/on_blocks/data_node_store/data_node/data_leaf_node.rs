@@ -132,6 +132,27 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
 mod tests {
     use super::*;
     use super::super::super::testutils::*;
+    use rand::{SeedableRng, Rng, rngs::SmallRng};
+
+    mod serialize_leaf_node {
+        use super::*;
+        
+        #[test]
+        fn test_serialize_leaf_node_optimized() {
+            let layout = NodeLayout{block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES};
+            const SIZE: usize = 10;
+            let mut data: Data = vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize].into();
+            data.shrink_to_subregion(((PHYSICAL_BLOCK_SIZE_BYTES - layout.max_bytes_per_leaf()) as usize)..);
+            SmallRng::seed_from_u64(0).fill(&mut data[..SIZE]);
+            let serialized = serialize_leaf_node_optimized(data.clone(), SIZE as u32, &layout);
+            let view = node::View::new(serialized.as_ref());
+            assert_eq!(view.format_version_header().read(), FORMAT_VERSION_HEADER);
+            assert_eq!(view.unused().read(), 0);
+            assert_eq!(view.depth().read(), 0);
+            assert_eq!(view.size().read(), SIZE as u32);
+            assert_eq!(data.as_ref(), view.data());
+        }
+    }
 
     mod block_id {
         use super::*;
@@ -139,7 +160,7 @@ mod tests {
         #[tokio::test]
         async fn loaded_node_returns_correct_key() {
             with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_leaf_node(nodestore).await.unwrap().block_id();
+                let block_id = *new_leaf_node(nodestore).await.block_id();
                 
                 let loaded = load_leaf_node(nodestore, block_id).await;
                 assert_eq!(block_id, *loaded.block_id());

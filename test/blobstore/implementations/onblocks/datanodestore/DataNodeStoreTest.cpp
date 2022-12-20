@@ -36,44 +36,6 @@ constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
 
-TEST_F(DataNodeStoreTest, CreateLeafNodeCreatesLeafNode) {
-  auto node = nodeStore->createNewLeafNode(Data(0));
-  EXPECT_IS_PTR_TYPE(DataLeafNode, node.get());
-}
-
-TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-
-  auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  EXPECT_IS_PTR_TYPE(DataInnerNode, node.get());
-}
-
-TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
-  BlockId blockId = nodeStore->createNewLeafNode(Data(0))->blockId();
-
-  auto loaded_node = nodeStore->load(blockId).value();
-
-  EXPECT_IS_PTR_TYPE(DataLeafNode, loaded_node.get());
-}
-
-TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  BlockId blockId = nodeStore->createNewInnerNode(1, {leaf->blockId()})->blockId();
-
-  auto loaded_node = nodeStore->load(blockId).value();
-
-  EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
-}
-
-TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  auto inner = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  BlockId blockId = nodeStore->createNewInnerNode(2, {inner->blockId()})->blockId();
-
-  auto loaded_node = nodeStore->load(blockId).value();
-
-  EXPECT_IS_PTR_TYPE(DataInnerNode, loaded_node.get());
-}
 
 TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
@@ -86,18 +48,6 @@ TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   EXPECT_ANY_THROW(
     nodeStore->load(blockId)
   );
-}
-
-TEST_F(DataNodeStoreTest, CreatedInnerNodeIsInitialized) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  EXPECT_EQ(1u, node->numChildren());
-  EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
-}
-
-TEST_F(DataNodeStoreTest, CreatedLeafNodeIsInitialized) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  EXPECT_EQ(0u, leaf->numBytes());
 }
 
 TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {

@@ -51,6 +51,7 @@ libc = "^0.2.126"
 winapi = {version = "^0.3.9", features = ["fileapi"]}
 
 [dev-dependencies]
+rand = {version = "^0.8.5", features = ["small_rng"]}
 criterion = "^0.3.6"
 generic-tests = "^0.1.2"
 mockall = "^0.11.1"

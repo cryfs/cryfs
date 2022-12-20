@@ -205,13 +205,33 @@ mod tests {
     use super::*;
     use super::super::super::testutils::*;
 
+    mod serialize_inner_node {
+        use super::*;
+        
+        #[test]
+        fn test_serialize_inner_node() {
+            let layout = NodeLayout{block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES};
+            let blockid1 = BlockId::new_random();
+            let blockid2 = BlockId::new_random();
+            let children = vec![blockid1, blockid2];
+            let serialized = serialize_inner_node(1, &children, &layout);
+            let view = node::View::new(serialized.as_ref());
+            assert_eq!(view.format_version_header().read(), FORMAT_VERSION_HEADER);
+            assert_eq!(view.unused().read(), 0);
+            assert_eq!(view.depth().read(), 1);
+            assert_eq!(view.size().read(), 2);
+            assert_eq!(&view.data()[0..BLOCKID_LEN], blockid1.data());
+            assert_eq!(&view.data()[BLOCKID_LEN..(BLOCKID_LEN*2)], blockid2.data());
+        }
+    }
+
     mod block_id {
         use super::*;
 
         #[tokio::test]
         async fn loaded_node_returns_correct_key() {
             with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_inner_node(nodestore).await.unwrap().block_id();
+                let block_id = *new_inner_node(nodestore).await.block_id();
                 
                 let loaded = load_inner_node(nodestore, block_id).await;
                 assert_eq!(block_id, *loaded.block_id());

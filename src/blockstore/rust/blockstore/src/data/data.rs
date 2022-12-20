@@ -21,6 +21,10 @@ pub struct Data {
 }
 
 impl Data {
+    pub fn empty() -> Self {
+        vec![].into()
+    }
+
     /// Return the length of the [Data] instance (or if it is a subregion, length of the subregion)
     pub fn len(&self) -> usize {
         self.region.len()
@@ -211,6 +215,13 @@ mod tests {
         let mut res = vec![0; size];
         rng.fill_bytes(&mut res);
         res
+    }
+
+    #[test]
+    fn empty_is_empty() {
+        let data = Data::empty();
+        assert_eq!(&[0u8; 0], data.as_ref());
+        assert_eq!(0, data.len());
     }
 
     #[test]
