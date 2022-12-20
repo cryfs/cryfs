@@ -170,4 +170,22 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use testutils::*;
+
+    mod create_new_leaf_node {
+        use super::*;
+
+        #[tokio::test]
+        async fn created_node_is_correct() {
+            with_nodestore(|nodestore| Box::pin(async move {
+                let data = b"Hello World".to_vec().into();
+                let node = nodestore.create_new_leaf_node(&data).await.unwrap();
+                assert_eq!(data.as_ref(), node.data());
+            })).await
+        }
+    }
+}
 // TODO Tests

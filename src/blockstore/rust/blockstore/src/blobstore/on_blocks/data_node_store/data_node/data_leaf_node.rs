@@ -85,12 +85,16 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
 
     pub fn data(&self) -> &[u8] {
         let view = node::View::new(self.block.data().as_ref());
-        view.into_data().into_slice()
+        let leaf_size = view.size().read() as usize;
+        let leaf_data = view.into_data().into_slice();
+        &leaf_data[..leaf_size]
     }
 
     pub fn data_mut(&mut self) -> &mut [u8] {
         let view = node::View::new(self.block.data_mut().as_mut());
-        view.into_data().into_slice()
+        let leaf_size = view.size().read() as usize;
+        let leaf_data = view.into_data().into_slice();
+        &mut leaf_data[..leaf_size]
     }
 
     pub fn upcast(self) -> DataNode<B> {
@@ -139,7 +143,6 @@ mod tests {
                 
                 let loaded = load_leaf_node(nodestore, block_id).await;
                 assert_eq!(block_id, *loaded.block_id());
-                
             })).await;
         }
     }
