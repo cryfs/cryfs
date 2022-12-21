@@ -1,7 +1,7 @@
 use anyhow::Result;
+use futures::Stream;
 use std::fmt::Debug;
 use std::pin::Pin;
-use futures::Stream;
 
 use super::{base_blob::BaseBlob, layout::BlobType};
 use crate::blobstore::{BlobId, BlobStore};
@@ -68,7 +68,7 @@ where
         self.num_bytes().await
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
         self.blob.all_blocks().await
     }
 }

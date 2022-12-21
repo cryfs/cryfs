@@ -1,10 +1,10 @@
 use anyhow::{bail, Result};
 use cryfs_blockstore::blobstore::{on_blocks::BlobStoreOnBlocks, BLOBID_LEN};
 use cryfs_blockstore::cryfs::fsblobstore::{
-    DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsBlobStore, SymlinkBlob,
-    AtimeUpdateBehavior, FsError,
+    AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsBlobStore, FsError,
+    SymlinkBlob,
 };
-use cryfs_blockstore::cryfs::utils::fs_types::{Uid, Gid};
+use cryfs_blockstore::cryfs::utils::fs_types::{Gid, Uid};
 use cryfs_blockstore::utils::async_drop::AsyncDropGuard;
 use cxx::UniquePtr;
 use futures::{StreamExt, TryStreamExt};
@@ -122,18 +122,66 @@ mod ffi {
             new_name: &str,
             on_overwritten: UniquePtr<CxxCallbackWithBlobId>,
         ) -> Box<FsResult>;
-        fn update_modification_timestamp_of_entry(
+        fn update_modification_timestamp_of_entry(&mut self, blob_id: &FsBlobId) -> Box<FsResult>;
+        fn maybe_update_access_timestamp_of_entry(
             &mut self,
             blob_id: &FsBlobId,
+            atime_update_behavior: AtimeUpdateBehavior,
         ) -> Box<FsResult>;
-        fn maybe_update_access_timestamp_of_entry(&mut self, blob_id: &FsBlobId, atime_update_behavior: AtimeUpdateBehavior) -> Box<FsResult>;
         fn set_mode_of_entry(&mut self, blob_id: &FsBlobId, mode: u32) -> Box<FsResult>;
-        fn set_uid_gid_of_entry(&mut self, blob_id: &FsBlobId, uid: &OptionU32, gid: &OptionU32) -> Box<FsResult>;
-        fn set_access_times_of_entry(&mut self, blob_id: &FsBlobId, last_access_time: RustTimespec, last_modification_time: RustTimespec) -> Box<FsResult>;
-        fn add_entry_dir(&mut self, name: &str, id: &FsBlobId, mode: u32, uid: u32, gid: u32, last_access_time: RustTimespec, last_modification_time: RustTimespec) -> Box<FsResult>;
-        fn add_entry_file(&mut self, name: &str, id: &FsBlobId, mode: u32, uid: u32, gid: u32, last_access_time: RustTimespec, last_modification_time: RustTimespec) -> Box<FsResult>;
-        fn add_entry_symlink(&mut self, name: &str, id: &FsBlobId, uid: u32, gid: u32, last_access_time: RustTimespec, last_modification_time: RustTimespec) -> Box<FsResult>;
-        fn add_or_overwrite_entry(&mut self, name: &str, id: &FsBlobId, entry_type: RustEntryType, mode: u32, uid: u32, gid: u32, last_access_time: RustTimespec, last_modification_time: RustTimespec, on_overwritten: UniquePtr<CxxCallbackWithBlobId>) -> Box<FsResult>;
+        fn set_uid_gid_of_entry(
+            &mut self,
+            blob_id: &FsBlobId,
+            uid: &OptionU32,
+            gid: &OptionU32,
+        ) -> Box<FsResult>;
+        fn set_access_times_of_entry(
+            &mut self,
+            blob_id: &FsBlobId,
+            last_access_time: RustTimespec,
+            last_modification_time: RustTimespec,
+        ) -> Box<FsResult>;
+        fn add_entry_dir(
+            &mut self,
+            name: &str,
+            id: &FsBlobId,
+            mode: u32,
+            uid: u32,
+            gid: u32,
+            last_access_time: RustTimespec,
+            last_modification_time: RustTimespec,
+        ) -> Box<FsResult>;
+        fn add_entry_file(
+            &mut self,
+            name: &str,
+            id: &FsBlobId,
+            mode: u32,
+            uid: u32,
+            gid: u32,
+            last_access_time: RustTimespec,
+            last_modification_time: RustTimespec,
+        ) -> Box<FsResult>;
+        fn add_entry_symlink(
+            &mut self,
+            name: &str,
+            id: &FsBlobId,
+            uid: u32,
+            gid: u32,
+            last_access_time: RustTimespec,
+            last_modification_time: RustTimespec,
+        ) -> Box<FsResult>;
+        fn add_or_overwrite_entry(
+            &mut self,
+            name: &str,
+            id: &FsBlobId,
+            entry_type: RustEntryType,
+            mode: u32,
+            uid: u32,
+            gid: u32,
+            last_access_time: RustTimespec,
+            last_modification_time: RustTimespec,
+            on_overwritten: UniquePtr<CxxCallbackWithBlobId>,
+        ) -> Box<FsResult>;
         fn remove_entry_by_name(&mut self, name: &str) -> Box<FsResult>;
         fn remove_entry_by_id_if_exists(&mut self, blob_id: &FsBlobId);
         fn async_drop(&mut self) -> Result<()>;
@@ -296,10 +344,10 @@ impl FsResult {
         };
         let err = err.downcast_ref::<FsError>().expect("Not an errno error");
         match *err {
-            FsError::ENOENT{..} => libc::ENOENT,
+            FsError::ENOENT { .. } => libc::ENOENT,
             FsError::EISDIR { .. } => libc::EISDIR,
-            FsError::ENOTDIR {..} => libc::ENOTDIR,
-            FsError::EEXIST {..} => libc::EEXIST,
+            FsError::ENOTDIR { .. } => libc::ENOTDIR,
+            FsError::EEXIST { .. } => libc::EEXIST,
         }
     }
     fn err_message(&self) -> String {
@@ -471,10 +519,12 @@ impl<'a> RustFsBlobBridge<'a> {
 
     fn set_parent(&mut self, parent: &FsBlobId) -> Result<()> {
         log_errors(|| {
-            TOKIO_RUNTIME.block_on(self.0
-                .as_mut()
-                .expect("FsBlob already destructed")
-                .set_parent(&parent.0))
+            TOKIO_RUNTIME.block_on(
+                self.0
+                    .as_mut()
+                    .expect("FsBlob already destructed")
+                    .set_parent(&parent.0),
+            )
         })
     }
 
@@ -519,11 +569,9 @@ impl<'a> RustFsBlobBridge<'a> {
 
     fn remove(&mut self) -> Result<()> {
         log_errors(|| {
-            TOKIO_RUNTIME.block_on(
-                FsBlob::remove(self.0
-                    .take()
-                    .expect("FsBlob already destructed"))
-            )
+            TOKIO_RUNTIME.block_on(FsBlob::remove(
+                self.0.take().expect("FsBlob already destructed"),
+            ))
         })
     }
 
@@ -540,13 +588,18 @@ impl<'a> RustFsBlobBridge<'a> {
 
     fn all_blocks(&self) -> Result<Vec<FsBlobId>> {
         log_errors(|| {
-            TOKIO_RUNTIME.block_on( async {
-                let blocks = self.0
+            TOKIO_RUNTIME.block_on(async {
+                let blocks = self
+                    .0
                     .as_ref()
                     .expect("FsBlob already destructed")
                     .all_blocks()
                     .await?
-                    .map(|id| id.map(|id| FsBlobId(cryfs_blockstore::blobstore::BlobId::from_array(id.data()))))
+                    .map(|id| {
+                        id.map(|id| {
+                            FsBlobId(cryfs_blockstore::blobstore::BlobId::from_array(id.data()))
+                        })
+                    })
                     .try_collect()
                     .await?;
                 Ok(blocks)
@@ -616,7 +669,10 @@ impl<'a> RustDirBlobBridge<'a> {
     }
 
     fn entries(&self) -> Vec<RustDirEntryBridge> {
-        self.0.entries().map(|v| RustDirEntryBridge(v.clone())).collect()
+        self.0
+            .entries()
+            .map(|v| RustDirEntryBridge(v.clone()))
+            .collect()
     }
 
     fn parent(&self) -> Box<FsBlobId> {
@@ -625,9 +681,9 @@ impl<'a> RustDirBlobBridge<'a> {
 
     fn entry_by_id(&self, id: &FsBlobId) -> Box<OptionRustDirEntryBridge> {
         Box::new(OptionRustDirEntryBridge(
-                self.0
-                    .entry_by_id(&id.0)
-                    .map(|v| RustDirEntryBridge(v.clone())),
+            self.0
+                .entry_by_id(&id.0)
+                .map(|v| RustDirEntryBridge(v.clone())),
         ))
     }
 
@@ -652,49 +708,158 @@ impl<'a> RustDirBlobBridge<'a> {
                 on_overwritten.call(&FsBlobId(*id))?;
                 Ok(())
             })?)
-        }).into()
+        })
+        .into()
     }
 
-    fn update_modification_timestamp_of_entry(
-        &mut self,
-        blob_id: &FsBlobId,
-    ) -> Box<FsResult> {
+    fn update_modification_timestamp_of_entry(&mut self, blob_id: &FsBlobId) -> Box<FsResult> {
         log_errors(|| Ok(self.0.update_modification_timestamp_of_entry(&blob_id.0)?)).into()
     }
 
-    fn maybe_update_access_timestamp_of_entry(&mut self, blob_id: &FsBlobId, atime_update_behavior: ffi::AtimeUpdateBehavior) -> Box<FsResult> {
-        log_errors(|| self.0.maybe_update_access_timestamp_of_entry(&blob_id.0, atime_update_behavior.into())).into()
+    fn maybe_update_access_timestamp_of_entry(
+        &mut self,
+        blob_id: &FsBlobId,
+        atime_update_behavior: ffi::AtimeUpdateBehavior,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0
+                .maybe_update_access_timestamp_of_entry(&blob_id.0, atime_update_behavior.into())
+        })
+        .into()
     }
 
     pub fn set_mode_of_entry(&mut self, blob_id: &FsBlobId, mode: u32) -> Box<FsResult> {
         log_errors(|| self.0.set_mode_of_entry(&blob_id.0, mode.into())).into()
     }
 
-    pub fn set_uid_gid_of_entry(&mut self, blob_id: &FsBlobId, uid: &OptionU32, gid: &OptionU32) -> Box<FsResult> {
-        log_errors(|| self.0.set_uid_gid_of_entry(&blob_id.0, uid.0.map(Uid::from), gid.0.map(Gid::from))).into()
+    pub fn set_uid_gid_of_entry(
+        &mut self,
+        blob_id: &FsBlobId,
+        uid: &OptionU32,
+        gid: &OptionU32,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0
+                .set_uid_gid_of_entry(&blob_id.0, uid.0.map(Uid::from), gid.0.map(Gid::from))
+        })
+        .into()
     }
 
-    pub fn set_access_times_of_entry(&mut self, blob_id: &FsBlobId, last_access_time: ffi::RustTimespec, last_modification_time: ffi::RustTimespec) -> Box<FsResult> {
-        log_errors(|| self.0.set_access_times_of_entry(&blob_id.0, last_access_time.into(), last_modification_time.into())).into()
+    pub fn set_access_times_of_entry(
+        &mut self,
+        blob_id: &FsBlobId,
+        last_access_time: ffi::RustTimespec,
+        last_modification_time: ffi::RustTimespec,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0.set_access_times_of_entry(
+                &blob_id.0,
+                last_access_time.into(),
+                last_modification_time.into(),
+            )
+        })
+        .into()
     }
 
-    pub fn add_entry_dir(&mut self, name: &str, id: &FsBlobId, mode: u32, uid: u32, gid: u32, last_access_time: ffi::RustTimespec, last_modification_time: ffi::RustTimespec) -> Box<FsResult> {
-        log_errors(|| self.0.add_entry_dir(name, id.0, mode.into(), Uid::from(uid), Gid::from(gid), last_access_time.into(), last_modification_time.into())).into()
+    pub fn add_entry_dir(
+        &mut self,
+        name: &str,
+        id: &FsBlobId,
+        mode: u32,
+        uid: u32,
+        gid: u32,
+        last_access_time: ffi::RustTimespec,
+        last_modification_time: ffi::RustTimespec,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0.add_entry_dir(
+                name,
+                id.0,
+                mode.into(),
+                Uid::from(uid),
+                Gid::from(gid),
+                last_access_time.into(),
+                last_modification_time.into(),
+            )
+        })
+        .into()
     }
 
-    pub fn add_entry_file(&mut self, name: &str, id: &FsBlobId, mode: u32, uid: u32, gid: u32, last_access_time: ffi::RustTimespec, last_modification_time: ffi::RustTimespec) -> Box<FsResult> {
-        log_errors(|| self.0.add_entry_file(name, id.0, mode.into(), Uid::from(uid), Gid::from(gid), last_access_time.into(), last_modification_time.into())).into()
+    pub fn add_entry_file(
+        &mut self,
+        name: &str,
+        id: &FsBlobId,
+        mode: u32,
+        uid: u32,
+        gid: u32,
+        last_access_time: ffi::RustTimespec,
+        last_modification_time: ffi::RustTimespec,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0.add_entry_file(
+                name,
+                id.0,
+                mode.into(),
+                Uid::from(uid),
+                Gid::from(gid),
+                last_access_time.into(),
+                last_modification_time.into(),
+            )
+        })
+        .into()
     }
 
-    pub fn add_entry_symlink(&mut self, name: &str, id: &FsBlobId, uid: u32, gid: u32, last_access_time: ffi::RustTimespec, last_modification_time: ffi::RustTimespec) -> Box<FsResult> {
-        log_errors(|| self.0.add_entry_symlink(name, id.0, uid.into(), gid.into(), last_access_time.into(), last_modification_time.into())).into()
+    pub fn add_entry_symlink(
+        &mut self,
+        name: &str,
+        id: &FsBlobId,
+        uid: u32,
+        gid: u32,
+        last_access_time: ffi::RustTimespec,
+        last_modification_time: ffi::RustTimespec,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0.add_entry_symlink(
+                name,
+                id.0,
+                uid.into(),
+                gid.into(),
+                last_access_time.into(),
+                last_modification_time.into(),
+            )
+        })
+        .into()
     }
 
-    pub fn add_or_overwrite_entry(&mut self, name: &str, id: &FsBlobId, entry_type: ffi::RustEntryType, mode: u32, uid: u32, gid: u32, last_access_time: ffi::RustTimespec, last_modification_time: ffi::RustTimespec, on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>) -> Box<FsResult> {
-        log_errors(|| self.0.add_or_overwrite_entry(name, id.0, entry_type.into(), mode.into(), uid.into(), gid.into(), last_access_time.into(), last_modification_time.into(), |id| {
-            on_overwritten.call(&FsBlobId(*id))?;
-            Ok(())
-        })).into()
+    pub fn add_or_overwrite_entry(
+        &mut self,
+        name: &str,
+        id: &FsBlobId,
+        entry_type: ffi::RustEntryType,
+        mode: u32,
+        uid: u32,
+        gid: u32,
+        last_access_time: ffi::RustTimespec,
+        last_modification_time: ffi::RustTimespec,
+        on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>,
+    ) -> Box<FsResult> {
+        log_errors(|| {
+            self.0.add_or_overwrite_entry(
+                name,
+                id.0,
+                entry_type.into(),
+                mode.into(),
+                uid.into(),
+                gid.into(),
+                last_access_time.into(),
+                last_modification_time.into(),
+                |id| {
+                    on_overwritten.call(&FsBlobId(*id))?;
+                    Ok(())
+                },
+            )
+        })
+        .into()
     }
 
     pub fn remove_entry_by_name(&mut self, name: &str) -> Box<FsResult> {
@@ -784,11 +949,17 @@ impl RustFsBlobStoreBridge {
     }
 
     fn load_block_depth(&self, block_id: &FsBlobId) -> Result<u8> {
-        log_errors(|| TOKIO_RUNTIME.block_on(async {
-            Ok(self.0.load_block_depth(&cryfs_blockstore::blockstore::BlockId::from_array(&block_id.0.data()))
-                .await?
-                .ok_or_else(|| anyhow::anyhow!("Block not found"))?)
-        }))
+        log_errors(|| {
+            TOKIO_RUNTIME.block_on(async {
+                Ok(self
+                    .0
+                    .load_block_depth(&cryfs_blockstore::blockstore::BlockId::from_array(
+                        &block_id.0.data(),
+                    ))
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("Block not found"))?)
+            })
+        })
     }
 
     fn async_drop(&mut self) -> Result<()> {
@@ -840,22 +1011,22 @@ fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
-            integrity_file_path,
-            my_client_id,
-            allow_integrity_violations,
-            missing_block_is_integrity_violation,
-            on_integrity_violation,
-            cipher_name,
-            encryption_key_hex,
-            basedir,
-        )?;
+        let blockstore =
+            super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+                integrity_file_path,
+                my_client_id,
+                allow_integrity_violations,
+                missing_block_is_integrity_violation,
+                on_integrity_violation,
+                cipher_name,
+                encryption_key_hex,
+                basedir,
+            )?;
         Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
             BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes)?,
         ))))
     })
 }
-
 
 fn new_locking_integrity_encrypted_ondisk_fsblobstore(
     integrity_file_path: &str,

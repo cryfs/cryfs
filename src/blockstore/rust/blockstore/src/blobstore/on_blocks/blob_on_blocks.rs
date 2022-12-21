@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use std::pin::Pin;
 use futures::Stream;
+use std::pin::Pin;
 
 use super::data_tree_store::DataTree;
 use crate::blobstore::{Blob, BlobId};
@@ -75,7 +75,7 @@ impl<'a, B: BlockStore + Send + Sync> Blob<'a> for BlobOnBlocks<'a, B> {
         // no call to async_drop needed since we moved out of this
     }
 
-    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
         self._tree().all_blocks().await
     }
 }

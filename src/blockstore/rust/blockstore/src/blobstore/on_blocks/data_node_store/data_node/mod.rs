@@ -129,32 +129,36 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::testutils::*;
+    use super::*;
 
     mod block_id {
         use super::*;
 
         #[tokio::test]
         async fn loaded_inner_node_returns_correct_key() {
-            with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_inner_node(nodestore).await.block_id();
-                
-                let loaded = load_node(nodestore, block_id).await;
-                assert_eq!(block_id, *loaded.block_id());
-                
-            })).await;
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id = *new_inner_node(nodestore).await.block_id();
+
+                    let loaded = load_node(nodestore, block_id).await;
+                    assert_eq!(block_id, *loaded.block_id());
+                })
+            })
+            .await;
         }
 
         #[tokio::test]
         async fn loaded_leaf_node_returns_correct_key() {
-            with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_leaf_node(nodestore).await.block_id();
-                
-                let loaded = load_node(nodestore, block_id).await;
-                assert_eq!(block_id, *loaded.block_id());
-                
-            })).await;
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id = *new_leaf_node(nodestore).await.block_id();
+
+                    let loaded = load_node(nodestore, block_id).await;
+                    assert_eq!(block_id, *loaded.block_id());
+                })
+            })
+            .await;
         }
     }
 

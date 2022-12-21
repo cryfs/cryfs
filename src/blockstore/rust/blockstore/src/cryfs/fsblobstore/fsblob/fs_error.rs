@@ -10,14 +10,14 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum FsError {
     #[error("ENOENT: {msg}")]
-    ENOENT {msg: String},
+    ENOENT { msg: String },
 
     #[error("EISDIR: {msg}")]
-    EISDIR {msg: String},
+    EISDIR { msg: String },
 
     #[error("ENOTDIR: {msg}")]
-    ENOTDIR {msg: String},
+    ENOTDIR { msg: String },
 
     #[error("EEXIST: {msg}")]
-    EEXIST {msg: String},
+    EEXIST { msg: String },
 }

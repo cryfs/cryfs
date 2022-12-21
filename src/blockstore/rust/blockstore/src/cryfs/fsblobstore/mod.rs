@@ -7,7 +7,9 @@ use crate::utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod fsblob;
 
-pub use fsblob::{DirBlob, DirEntry, EntryType, FileBlob, FsBlob, SymlinkBlob, AtimeUpdateBehavior, FsError};
+pub use fsblob::{
+    AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError, SymlinkBlob,
+};
 
 #[derive(Debug)]
 pub struct FsBlobStore<B>
@@ -35,7 +37,10 @@ where
         FileBlob::create_blob(&*self.blobstore, parent).await
     }
 
-    pub async fn create_dir_blob<'a>(&'a self, parent: &BlobId) -> Result<AsyncDropGuard<fsblob::DirBlob<'a, B>>> {
+    pub async fn create_dir_blob<'a>(
+        &'a self,
+        parent: &BlobId,
+    ) -> Result<AsyncDropGuard<fsblob::DirBlob<'a, B>>> {
         DirBlob::create_blob(&*self.blobstore, parent).await
     }
 
@@ -47,7 +52,10 @@ where
         SymlinkBlob::create_blob(&*self.blobstore, parent, target).await
     }
 
-    pub async fn load<'a>(&'a self, blob_id: &BlobId) -> Result<Option<AsyncDropGuard<FsBlob<'a, B>>>> {
+    pub async fn load<'a>(
+        &'a self,
+        blob_id: &BlobId,
+    ) -> Result<Option<AsyncDropGuard<FsBlob<'a, B>>>> {
         if let Some(blob) = self.blobstore.load(blob_id).await? {
             Ok(Some(FsBlob::parse(blob).await?))
         } else {
@@ -68,7 +76,10 @@ where
         self.blobstore.virtual_block_size_bytes()
     }
 
-    pub async fn load_block_depth(&self, block_id: &crate::blockstore::BlockId) -> Result<Option<u8>> {
+    pub async fn load_block_depth(
+        &self,
+        block_id: &crate::blockstore::BlockId,
+    ) -> Result<Option<u8>> {
         self.blobstore.load_block_depth(block_id).await
     }
 

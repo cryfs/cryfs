@@ -3,12 +3,12 @@ use std::fmt::Debug;
 use std::io::Cursor;
 use std::time::SystemTime;
 
-use crate::cryfs::utils::fs_types::{Uid, Gid, Mode};
+use super::super::atime_update_behavior::AtimeUpdateBehavior;
 use super::super::base_blob::BaseBlob;
+use super::super::FsError;
 use super::entry::{DirEntry, EntryType};
 use crate::blobstore::{BlobId, BlobStore};
-use super::super::atime_update_behavior::AtimeUpdateBehavior;
-use super::super::FsError;
+use crate::cryfs::utils::fs_types::{Gid, Mode, Uid};
 
 #[derive(Debug)]
 pub struct DirEntryList {
@@ -152,11 +152,33 @@ impl DirEntryList {
         self.entries.len()
     }
 
-    pub fn add(&mut self, name: &str, id: BlobId, entry_type: EntryType, mode: Mode, uid: Uid, gid: Gid, last_access_time: SystemTime, last_modification_time: SystemTime) -> Result<()> {
+    pub fn add(
+        &mut self,
+        name: &str,
+        id: BlobId,
+        entry_type: EntryType,
+        mode: Mode,
+        uid: Uid,
+        gid: Gid,
+        last_access_time: SystemTime,
+        last_modification_time: SystemTime,
+    ) -> Result<()> {
         if self.get_by_name(name)?.is_some() {
-            bail!(FsError::EEXIST { msg: format!("Entry with name {:?} already exists", name) });
+            bail!(FsError::EEXIST {
+                msg: format!("Entry with name {:?} already exists", name)
+            });
         }
-        self._add(DirEntry::new(entry_type, name, id, mode, uid, gid, last_access_time, last_modification_time, SystemTime::now())?);
+        self._add(DirEntry::new(
+            entry_type,
+            name,
+            id,
+            mode,
+            uid,
+            gid,
+            last_access_time,
+            last_modification_time,
+            SystemTime::now(),
+        )?);
         Ok(())
     }
 
@@ -166,8 +188,29 @@ impl DirEntryList {
         self.dirty = true;
     }
 
-    pub fn add_or_overwrite(&mut self, name: &str, id: BlobId, entry_type: EntryType, mode: Mode, uid: Uid, gid: Gid, last_access_time: SystemTime, last_modification_time: SystemTime, on_overwritten: impl FnOnce(&BlobId) -> Result<()>) -> Result<()> {
-        let entry = DirEntry::new(entry_type, name, id, mode, uid, gid, last_access_time, last_modification_time, SystemTime::now())?;
+    pub fn add_or_overwrite(
+        &mut self,
+        name: &str,
+        id: BlobId,
+        entry_type: EntryType,
+        mode: Mode,
+        uid: Uid,
+        gid: Gid,
+        last_access_time: SystemTime,
+        last_modification_time: SystemTime,
+        on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
+    ) -> Result<()> {
+        let entry = DirEntry::new(
+            entry_type,
+            name,
+            id,
+            mode,
+            uid,
+            gid,
+            last_access_time,
+            last_modification_time,
+            SystemTime::now(),
+        )?;
         if let Some((index, old_entry)) = self._get_by_name_with_index(name)? {
             on_overwritten(old_entry.blob_id())?;
             self._overwrite(index, entry)?;
@@ -249,7 +292,12 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn set_uid_gid(&mut self, blob_id: &BlobId, uid: Option<Uid>, gid: Option<Gid>) -> Result<()> {
+    pub fn set_uid_gid(
+        &mut self,
+        blob_id: &BlobId,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> Result<()> {
         let Some(found) = self._get_index_by_id(blob_id) else {
             bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
         };
@@ -267,7 +315,12 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn set_access_times(&mut self, blob_id: &BlobId, last_access_time: SystemTime, last_modification_time: SystemTime) -> Result<()> {
+    pub fn set_access_times(
+        &mut self,
+        blob_id: &BlobId,
+        last_access_time: SystemTime,
+        last_modification_time: SystemTime,
+    ) -> Result<()> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
             bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
         };
@@ -276,7 +329,11 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn maybe_update_access_timestamp(&mut self, blob_id: &BlobId, atime_update_behavior: AtimeUpdateBehavior) -> Result<()> {
+    pub fn maybe_update_access_timestamp(
+        &mut self,
+        blob_id: &BlobId,
+        atime_update_behavior: AtimeUpdateBehavior,
+    ) -> Result<()> {
         let Some(index) = self._get_index_by_id(blob_id) else {
             bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
         };
@@ -285,15 +342,19 @@ impl DirEntryList {
         let last_modification_time = entry.last_modification_time();
         let now = SystemTime::now();
 
-        let should_update_atime = 
-            match entry.entry_type() {
-                EntryType::File | EntryType::Symlink => {
-                    atime_update_behavior.should_update_atime_on_file_or_symlink_read(last_access_time, last_modification_time, now)
-                }
-                EntryType::Dir => {
-                    atime_update_behavior.should_update_atime_on_directory_read(last_access_time, last_modification_time, now)
-                }
-            };
+        let should_update_atime = match entry.entry_type() {
+            EntryType::File | EntryType::Symlink => atime_update_behavior
+                .should_update_atime_on_file_or_symlink_read(
+                    last_access_time,
+                    last_modification_time,
+                    now,
+                ),
+            EntryType::Dir => atime_update_behavior.should_update_atime_on_directory_read(
+                last_access_time,
+                last_modification_time,
+                now,
+            ),
+        };
 
         if should_update_atime {
             self.entries[index].set_last_access_time(now);

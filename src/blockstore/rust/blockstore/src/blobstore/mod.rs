@@ -1,9 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use binrw::{BinRead, BinWrite};
+use futures::Stream;
 use std::fmt::Debug;
 use std::pin::Pin;
-use futures::Stream;
 
 use crate::blockstore::{BlockId, BLOCKID_LEN};
 use crate::data::Data;
@@ -89,7 +89,7 @@ pub trait Blob<'a>: Sized + Debug {
 
     async fn remove(self) -> Result<()>;
 
-    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>>;
+    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>>;
 }
 
 #[async_trait]

@@ -169,8 +169,8 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use testutils::*;
     use crate::blockstore::low_level::inmemory::InMemoryBlockStore;
+    use testutils::*;
 
     mod create_new_leaf_node {
         use super::*;
@@ -188,23 +188,26 @@ mod tests {
 
         #[tokio::test]
         async fn empty() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                test(nodestore, Data::empty()).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, Data::empty()).await })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn some_data() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                test(nodestore, half_full_leaf_data(1)).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, half_full_leaf_data(1)).await })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn full() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                test(nodestore, full_leaf_data(1)).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, full_leaf_data(1)).await })
+            })
+            .await
         }
     }
 
@@ -213,8 +216,15 @@ mod tests {
 
         use super::*;
 
-        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, depth: u8, children: &[BlockId]) {
-            let node = nodestore.create_new_inner_node(depth, children).await.unwrap();
+        async fn test(
+            nodestore: &DataNodeStore<InMemoryBlockStore>,
+            depth: u8,
+            children: &[BlockId],
+        ) {
+            let node = nodestore
+                .create_new_inner_node(depth, children)
+                .await
+                .unwrap();
             assert_eq!(depth, node.depth().get());
             assert_eq!(children.len(), node.num_children().get() as usize);
             assert_eq!(children, &node.children().collect::<Vec<_>>());
@@ -230,56 +240,80 @@ mod tests {
 
         #[tokio::test]
         async fn one_child_leaf() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let child = *new_leaf_node(nodestore).await.block_id();
-                test(nodestore, 1, &[child]).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child = *new_leaf_node(nodestore).await.block_id();
+                    test(nodestore, 1, &[child]).await
+                })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn two_children_leaves() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let child1 = *new_leaf_node(nodestore).await.block_id();
-                let child2 = *new_leaf_node(nodestore).await.block_id();
-                test(nodestore, 1, &[child1, child2]).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child1 = *new_leaf_node(nodestore).await.block_id();
+                    let child2 = *new_leaf_node(nodestore).await.block_id();
+                    test(nodestore, 1, &[child1, child2]).await
+                })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn max_children_leaves() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let children = future::join_all((0..nodestore.layout().max_children_per_inner_node()).map(|_| async {
-                    *new_leaf_node(nodestore).await.block_id()
-                }).collect::<Vec<_>>()).await;
-                test(nodestore, 1, &children).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let children = future::join_all(
+                        (0..nodestore.layout().max_children_per_inner_node())
+                            .map(|_| async { *new_leaf_node(nodestore).await.block_id() })
+                            .collect::<Vec<_>>(),
+                    )
+                    .await;
+                    test(nodestore, 1, &children).await
+                })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn one_child_inner() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let child = *new_inner_node(nodestore).await.block_id();
-                test(nodestore, 1, &[child]).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child = *new_inner_node(nodestore).await.block_id();
+                    test(nodestore, 1, &[child]).await
+                })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn two_children_inner() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let child1 = *new_inner_node(nodestore).await.block_id();
-                let child2 = *new_inner_node(nodestore).await.block_id();
-                test(nodestore, 1, &[child1, child2]).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child1 = *new_inner_node(nodestore).await.block_id();
+                    let child2 = *new_inner_node(nodestore).await.block_id();
+                    test(nodestore, 1, &[child1, child2]).await
+                })
+            })
+            .await
         }
 
         #[tokio::test]
         async fn max_children_inner() {
-            with_nodestore(move |nodestore| Box::pin(async move {
-                let children = future::join_all((0..nodestore.layout().max_children_per_inner_node()).map(|_| async {
-                    *new_inner_node(nodestore).await.block_id()
-                }).collect::<Vec<_>>()).await;
-                test(nodestore, 1, &children).await
-            })).await
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let children = future::join_all(
+                        (0..nodestore.layout().max_children_per_inner_node())
+                            .map(|_| async { *new_inner_node(nodestore).await.block_id() })
+                            .collect::<Vec<_>>(),
+                    )
+                    .await;
+                    test(nodestore, 1, &children).await
+                })
+            })
+            .await
         }
     }
 }

@@ -1,8 +1,8 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use futures::Stream;
 use std::fmt::Debug;
 use std::pin::Pin;
-use futures::Stream;
 
 use crate::blobstore::{BlobId, BlobStore};
 use crate::blockstore::BlockId;
@@ -139,7 +139,7 @@ where
         }
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
         match self {
             Self::File(blob) => blob.all_blocks().await,
             Self::Directory(blob) => blob.all_blocks().await,

@@ -202,15 +202,17 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::super::testutils::*;
+    use super::*;
 
     mod serialize_inner_node {
         use super::*;
-        
+
         #[test]
         fn test_serialize_inner_node() {
-            let layout = NodeLayout{block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES};
+            let layout = NodeLayout {
+                block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+            };
             let blockid1 = BlockId::new_random();
             let blockid2 = BlockId::new_random();
             let children = vec![blockid1, blockid2];
@@ -221,7 +223,10 @@ mod tests {
             assert_eq!(view.depth().read(), 1);
             assert_eq!(view.size().read(), 2);
             assert_eq!(&view.data()[0..BLOCKID_LEN], blockid1.data());
-            assert_eq!(&view.data()[BLOCKID_LEN..(BLOCKID_LEN*2)], blockid2.data());
+            assert_eq!(
+                &view.data()[BLOCKID_LEN..(BLOCKID_LEN * 2)],
+                blockid2.data()
+            );
         }
     }
 
@@ -230,13 +235,15 @@ mod tests {
 
         #[tokio::test]
         async fn loaded_node_returns_correct_key() {
-            with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_inner_node(nodestore).await.block_id();
-                
-                let loaded = load_inner_node(nodestore, block_id).await;
-                assert_eq!(block_id, *loaded.block_id());
-                
-            })).await;
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id = *new_inner_node(nodestore).await.block_id();
+
+                    let loaded = load_inner_node(nodestore, block_id).await;
+                    assert_eq!(block_id, *loaded.block_id());
+                })
+            })
+            .await;
         }
     }
 

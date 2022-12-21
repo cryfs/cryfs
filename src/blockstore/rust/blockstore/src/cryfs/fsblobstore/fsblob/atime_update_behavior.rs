@@ -23,17 +23,31 @@ pub enum AtimeUpdateBehavior {
 }
 
 impl AtimeUpdateBehavior {
-    pub fn should_update_atime_on_file_or_symlink_read(self, old_atime: SystemTime, old_mtime: SystemTime, new_atime: SystemTime) -> bool {
+    pub fn should_update_atime_on_file_or_symlink_read(
+        self,
+        old_atime: SystemTime,
+        old_mtime: SystemTime,
+        new_atime: SystemTime,
+    ) -> bool {
         match self {
             AtimeUpdateBehavior::Noatime => false,
             AtimeUpdateBehavior::Strictatime | AtimeUpdateBehavior::NodiratimeStrictatime => true,
-            AtimeUpdateBehavior::Relatime | AtimeUpdateBehavior::NodiratimeRelatime => relatime(old_atime, old_mtime, new_atime),
+            AtimeUpdateBehavior::Relatime | AtimeUpdateBehavior::NodiratimeRelatime => {
+                relatime(old_atime, old_mtime, new_atime)
+            }
         }
     }
 
-    pub fn should_update_atime_on_directory_read(self, old_atime: SystemTime, old_mtime: SystemTime, new_atime: SystemTime) -> bool {
+    pub fn should_update_atime_on_directory_read(
+        self,
+        old_atime: SystemTime,
+        old_mtime: SystemTime,
+        new_atime: SystemTime,
+    ) -> bool {
         match self {
-            AtimeUpdateBehavior::Noatime | AtimeUpdateBehavior::NodiratimeRelatime | AtimeUpdateBehavior::NodiratimeStrictatime => false,
+            AtimeUpdateBehavior::Noatime
+            | AtimeUpdateBehavior::NodiratimeRelatime
+            | AtimeUpdateBehavior::NodiratimeStrictatime => false,
             AtimeUpdateBehavior::Strictatime => true,
             AtimeUpdateBehavior::Relatime => relatime(old_atime, old_mtime, new_atime),
         }
@@ -41,6 +55,6 @@ impl AtimeUpdateBehavior {
 }
 
 fn relatime(old_atime: SystemTime, old_mtime: SystemTime, new_atime: SystemTime) -> bool {
-    let yesterday = new_atime - Duration::from_secs(60*60*24);
+    let yesterday = new_atime - Duration::from_secs(60 * 60 * 24);
     old_atime < old_mtime || old_atime < yesterday
 }

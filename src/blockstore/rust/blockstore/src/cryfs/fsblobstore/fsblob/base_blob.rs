@@ -1,8 +1,8 @@
 use anyhow::{ensure, Result};
-use std::fmt::Debug;
 use binary_layout::Field;
-use std::pin::Pin;
 use futures::Stream;
+use std::fmt::Debug;
+use std::pin::Pin;
 
 use super::layout::{self, FORMAT_VERSION_HEADER};
 use crate::blobstore::{Blob, BlobId, BlobStore};
@@ -81,10 +81,17 @@ where
     }
 
     pub async fn set_parent(&mut self, new_parent: &BlobId) -> Result<()> {
-        self.blob.write(new_parent.data(), layout::fsblob_header::parent::OFFSET as u64).await?;
-        self.header_cache.parent_mut().copy_from_slice(new_parent.data());
+        self.blob
+            .write(
+                new_parent.data(),
+                layout::fsblob_header::parent::OFFSET as u64,
+            )
+            .await?;
+        self.header_cache
+            .parent_mut()
+            .copy_from_slice(new_parent.data());
         Ok(())
-    } 
+    }
 
     pub async fn num_data_bytes(&mut self) -> Result<u64> {
         // TODO Make self parameter non-mut?
@@ -130,7 +137,7 @@ where
         self.blob.remove().await
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item=Result<BlockId>> + Unpin + '_>> {
+    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
         self.blob.all_blocks().await
     }
 }
