@@ -165,7 +165,7 @@ mod tests {
         async fn loaded_node_returns_correct_key() {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
-                    let block_id = *new_leaf_node(nodestore).await.block_id();
+                    let block_id = *new_full_leaf_node(nodestore).await.block_id();
 
                     let loaded = load_leaf_node(nodestore, block_id).await;
                     assert_eq!(block_id, *loaded.block_id());

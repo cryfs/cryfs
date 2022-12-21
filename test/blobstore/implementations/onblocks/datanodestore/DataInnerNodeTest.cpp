@@ -148,27 +148,6 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   EXPECT_EQ(node2->blockId(), parent->readChild(1).blockId());
 }
 
-TEST_F(DataInnerNodeTest, CopyingCreatesNewNode) {
-  auto copied = CopyInnerNode(*node);
-  EXPECT_NE(node->blockId(), copied->blockId());
-}
-
-TEST_F(DataInnerNodeTest, CopyInnerNodeWithOneChild) {
-  auto copied = CopyInnerNode(*node);
-
-  EXPECT_EQ(node->numChildren(), copied->numChildren());
-  EXPECT_EQ(node->readChild(0).blockId(), copied->readChild(0).blockId());
-}
-
-TEST_F(DataInnerNodeTest, CopyInnerNodeWithTwoChildren) {
-  AddALeafTo(node.get());
-  auto copied = CopyInnerNode(*node);
-
-  EXPECT_EQ(node->numChildren(), copied->numChildren());
-  EXPECT_EQ(node->readChild(0).blockId(), copied->readChild(0).blockId());
-  EXPECT_EQ(node->readChild(1).blockId(), copied->readChild(1).blockId());
-}
-
 TEST_F(DataInnerNodeTest, LastChildWhenOneChild) {
   EXPECT_EQ(leaf->blockId(), node->readLastChild().blockId());
 }

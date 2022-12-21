@@ -132,33 +132,6 @@ namespace
   constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
   constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
-  TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf)
-  {
-    auto copied = CopyLeafNode(*leaf);
-    EXPECT_NE(leaf->blockId(), copied->blockId());
-  }
-
-  TEST_F(DataLeafNodeTest, CopyEmptyLeaf)
-  {
-    auto copied = CopyLeafNode(*leaf);
-    EXPECT_EQ(leaf->numBytes(), copied->numBytes());
-  }
-
-  TEST_F(DataLeafNodeTest, CopyDataLeaf)
-  {
-    FillLeafBlockWithData();
-    auto copied = CopyLeafNode(*leaf);
-
-    EXPECT_EQ(leaf->numBytes(), copied->numBytes());
-    EXPECT_EQ(0, std::memcmp(loadData(*leaf).data(), loadData(*copied).data(), leaf->numBytes()));
-
-    // Test that they have different data regions (changing the original one doesn't change the copy)
-    uint8_t data = 0;
-    leaf->write(&data, 0, 1);
-    EXPECT_EQ(data, deserialize<uint8_t>(loadData(*leaf).data()));
-    EXPECT_NE(data, deserialize<uint8_t>(loadData(*copied).data()));
-  }
-
   struct DataRange
   {
     uint64_t leafsize;

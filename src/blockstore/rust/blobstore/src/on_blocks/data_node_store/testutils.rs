@@ -8,11 +8,20 @@ use cryfs_utils::data::Data;
 
 pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 1024;
 
-pub async fn new_leaf_node(
+pub async fn new_full_leaf_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
 ) -> DataLeafNode<InMemoryBlockStore> {
     nodestore
         .create_new_leaf_node(&full_leaf_data(1))
+        .await
+        .unwrap()
+}
+
+pub async fn new_empty_leaf_node(
+    nodestore: &DataNodeStore<InMemoryBlockStore>,
+) -> DataLeafNode<InMemoryBlockStore> {
+    nodestore
+        .create_new_leaf_node(&vec![].into())
         .await
         .unwrap()
 }
@@ -40,7 +49,7 @@ pub async fn new_full_inner_node(
             block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
         }
         .max_children_per_inner_node())
-            .map(|_| new_leaf_node(&nodestore))
+            .map(|_| new_full_leaf_node(&nodestore))
             .collect::<Vec<_>>(),
     )
     .await
