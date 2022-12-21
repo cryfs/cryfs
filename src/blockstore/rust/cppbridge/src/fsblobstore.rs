@@ -1,11 +1,13 @@
 use anyhow::{bail, Result};
-use cryfs_blockstore::blobstore::{on_blocks::BlobStoreOnBlocks, BLOBID_LEN};
-use cryfs_blockstore::cryfs::fsblobstore::{
-    AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsBlobStore, FsError,
-    SymlinkBlob,
+use cryfs_blobstore::{BlobStoreOnBlocks, BLOBID_LEN};
+use cryfs_cryfs::{
+    fsblobstore::{
+        AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsBlobStore, FsError,
+        SymlinkBlob,
+    },
+    utils::fs_types::{Gid, Uid},
 };
-use cryfs_blockstore::cryfs::utils::fs_types::{Gid, Uid};
-use cryfs_blockstore::utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::AsyncDropGuard;
 use cxx::UniquePtr;
 use futures::{StreamExt, TryStreamExt};
 use std::time::{Duration, SystemTime};
@@ -319,9 +321,7 @@ impl From<ffi::AtimeUpdateBehavior> for AtimeUpdateBehavior {
 }
 
 fn new_blobid(data: &[u8; BLOBID_LEN]) -> Box<FsBlobId> {
-    Box::new(FsBlobId(cryfs_blockstore::blobstore::BlobId::from_array(
-        data,
-    )))
+    Box::new(FsBlobId(cryfs_blobstore::BlobId::from_array(data)))
 }
 
 struct FsResult(Option<anyhow::Error>);
@@ -377,7 +377,7 @@ fn new_none_u32() -> Box<OptionU32> {
     Box::new(OptionU32(None))
 }
 
-pub struct FsBlobId(pub cryfs_blockstore::blobstore::BlobId);
+pub struct FsBlobId(pub cryfs_blobstore::BlobId);
 impl FsBlobId {
     fn data(&self) -> &[u8; BLOBID_LEN] {
         self.0.data()
@@ -595,11 +595,7 @@ impl<'a> RustFsBlobBridge<'a> {
                     .expect("FsBlob already destructed")
                     .all_blocks()
                     .await?
-                    .map(|id| {
-                        id.map(|id| {
-                            FsBlobId(cryfs_blockstore::blobstore::BlobId::from_array(id.data()))
-                        })
-                    })
+                    .map(|id| id.map(|id| FsBlobId(cryfs_blobstore::BlobId::from_array(id.data()))))
                     .try_collect()
                     .await?;
                 Ok(blocks)
@@ -953,9 +949,7 @@ impl RustFsBlobStoreBridge {
             TOKIO_RUNTIME.block_on(async {
                 Ok(self
                     .0
-                    .load_block_depth(&cryfs_blockstore::blockstore::BlockId::from_array(
-                        &block_id.0.data(),
-                    ))
+                    .load_block_depth(&cryfs_blockstore::BlockId::from_array(&block_id.0.data()))
                     .await?
                     .ok_or_else(|| anyhow::anyhow!("Block not found"))?)
             })

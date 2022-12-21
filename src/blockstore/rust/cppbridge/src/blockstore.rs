@@ -9,27 +9,16 @@ use std::pin::Pin;
 use super::runtime::{LOGGER_INIT, TOKIO_RUNTIME};
 use crate::utils::log_errors;
 use cryfs_blockstore::{
-    blockstore::{
-        high_level::{self, Block, LockingBlockStore},
-        low_level::{
-            self,
-            compressing::CompressingBlockStore,
-            encrypted::EncryptedBlockStore,
-            inmemory::InMemoryBlockStore,
-            integrity::{
-                AllowIntegrityViolations, ClientId, IntegrityBlockStore, IntegrityConfig,
-                MissingBlockIsIntegrityViolation,
-            },
-            ondisk::OnDiskBlockStore,
-            readonly::ReadOnlyBlockStore,
-            BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-            OptimizedBlockStoreWriter,
-        },
-        BLOCKID_LEN,
-    },
+    AllowIntegrityViolations, Block, BlockStore, BlockStoreDeleter, BlockStoreReader,
+    BlockStoreWriter, ClientId, CompressingBlockStore, EncryptedBlockStore, InMemoryBlockStore,
+    IntegrityBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
+    OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore, RemoveResult, TryCreateResult,
+    BLOCKID_LEN,
+};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
     crypto::symmetric::{self, Aes256Gcm, Cipher, CipherCallback, EncryptionKey},
     data::Data,
-    utils::async_drop::{AsyncDrop, AsyncDropGuard},
 };
 
 // TODO Assertion on shutdown that no running tasks are left
@@ -148,12 +137,10 @@ pub mod ffi {
 unsafe impl Send for ffi::CxxCallback {}
 
 fn new_blockid(data: &[u8; BLOCKID_LEN]) -> Box<BlockId> {
-    Box::new(BlockId(cryfs_blockstore::blockstore::BlockId::from_array(
-        data,
-    )))
+    Box::new(BlockId(cryfs_blockstore::BlockId::from_array(data)))
 }
 
-pub struct BlockId(cryfs_blockstore::blockstore::BlockId);
+pub struct BlockId(cryfs_blockstore::BlockId);
 impl BlockId {
     fn data(&self) -> &[u8; BLOCKID_LEN] {
         self.0.data()
@@ -231,7 +218,7 @@ pub struct RustBlockStoreBridge(AsyncDropGuard<LockingBlockStore<DynBlockStore>>
 
 impl RustBlockStoreBridge {
     fn create_block_id(&self) -> Box<BlockId> {
-        Box::new(BlockId(cryfs_blockstore::blockstore::BlockId::new_random()))
+        Box::new(BlockId(cryfs_blockstore::BlockId::new_random()))
     }
 
     async fn _try_create(
@@ -244,7 +231,7 @@ impl RustBlockStoreBridge {
             .try_create(&block_id.0, &data.to_vec().into())
             .await?
         {
-            high_level::TryCreateResult::SuccessfullyCreated => {
+            TryCreateResult::SuccessfullyCreated => {
                 let loaded = self
                     .0
                     .load(block_id.0)
@@ -254,7 +241,7 @@ impl RustBlockStoreBridge {
                     loaded,
                 )))))
             }
-            high_level::TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => {
+            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => {
                 Ok(Box::new(OptionRustBlockBridge(None)))
             }
         }
@@ -291,8 +278,8 @@ impl RustBlockStoreBridge {
     fn remove(&self, block_id: &BlockId) -> Result<bool> {
         log_errors(
             || match TOKIO_RUNTIME.block_on(self.0.remove(&block_id.0))? {
-                high_level::RemoveResult::SuccessfullyRemoved => Ok(true),
-                high_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
+                RemoveResult::SuccessfullyRemoved => Ok(true),
+                RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
             },
         )
     }
@@ -342,11 +329,11 @@ impl DynBlockStore {
 
 #[async_trait]
 impl BlockStoreReader for DynBlockStore {
-    async fn exists(&self, id: &cryfs_blockstore::blockstore::BlockId) -> Result<bool> {
+    async fn exists(&self, id: &cryfs_blockstore::BlockId) -> Result<bool> {
         self.0.exists(id).await
     }
 
-    async fn load(&self, id: &cryfs_blockstore::blockstore::BlockId) -> Result<Option<Data>> {
+    async fn load(&self, id: &cryfs_blockstore::BlockId) -> Result<Option<Data>> {
         self.0.load(id).await
     }
 
@@ -364,18 +351,14 @@ impl BlockStoreReader for DynBlockStore {
 
     async fn all_blocks(
         &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<cryfs_blockstore::blockstore::BlockId>> + Send>>>
-    {
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<cryfs_blockstore::BlockId>> + Send>>> {
         self.0.all_blocks().await
     }
 }
 
 #[async_trait]
 impl BlockStoreDeleter for DynBlockStore {
-    async fn remove(
-        &self,
-        id: &cryfs_blockstore::blockstore::BlockId,
-    ) -> Result<low_level::RemoveResult> {
+    async fn remove(&self, id: &cryfs_blockstore::BlockId) -> Result<RemoveResult> {
         self.0.remove(id).await
     }
 }
@@ -384,13 +367,13 @@ impl BlockStoreDeleter for DynBlockStore {
 impl BlockStoreWriter for DynBlockStore {
     async fn try_create(
         &self,
-        id: &cryfs_blockstore::blockstore::BlockId,
+        id: &cryfs_blockstore::BlockId,
         data: &[u8],
-    ) -> Result<low_level::TryCreateResult> {
+    ) -> Result<TryCreateResult> {
         self.0.try_create(id, data).await
     }
 
-    async fn store(&self, id: &cryfs_blockstore::blockstore::BlockId, data: &[u8]) -> Result<()> {
+    async fn store(&self, id: &cryfs_blockstore::BlockId, data: &[u8]) -> Result<()> {
         self.0.store(id, data).await
     }
 }
@@ -419,15 +402,15 @@ impl RustBlockStore2Bridge {
         log_errors(|| {
             // TODO Can we avoid a copy at the ffi boundary? i.e. use OptimizedBlockStoreWriter?
             match TOKIO_RUNTIME.block_on(self.0.try_create(&id.0, data))? {
-                low_level::TryCreateResult::SuccessfullyCreated => Ok(true),
-                low_level::TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => Ok(false),
+                TryCreateResult::SuccessfullyCreated => Ok(true),
+                TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => Ok(false),
             }
         })
     }
     fn remove(&self, id: &BlockId) -> Result<bool> {
         log_errors(|| match TOKIO_RUNTIME.block_on(self.0.remove(&id.0))? {
-            low_level::RemoveResult::SuccessfullyRemoved => Ok(true),
-            low_level::RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
+            RemoveResult::SuccessfullyRemoved => Ok(true),
+            RemoveResult::NotRemovedBecauseItDoesntExist => Ok(false),
         })
     }
     fn load(&self, id: &BlockId) -> Result<Box<OptionData>> {

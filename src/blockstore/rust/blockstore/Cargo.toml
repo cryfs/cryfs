@@ -5,44 +5,24 @@ name = "cryfs-blockstore"
 version = "0.1.0"
 
 [dependencies]
-aead = "^0.4.3"
-aes-gcm = {version = "^0.9.4", features = ["std"]}
 anyhow = "^1.0.65"
 async-trait = "^0.1.56"
 base64 = "^0.13.0"
 binary-layout = "^3.1.1"
 binrw = "^0.10.0"
-chacha20poly1305 = "^0.9.1"
-cipher = "^0.4.3"
-clru = "^0.5.0"
-common_macros = "^0.1.1"
-derive_more = "^0.99.17"
-env_logger = "^0.9.0"
+cryfs-utils = {path = "../utils"}
 errno = "^0.2.8"
 futures = "^0.3.21"
-generic-array = "^0.14.5"
 hex = "^0.4.3"
-itertools = "^0.10.3"
-lazy_static = "^1.4.0"
+lockable = {git = "https://github.com/smessmer/lockable", rev = "f075ea07795aa3882fe1d1764459d36183e5b2ca", features = ["lru"]}
 log = "^0.4.17"
-paste = "^1.0.7"
+lzzzz = "^1.0.3"
+mockall = {version = "^0.11.1", optional = true}
 rand = "^0.8.5"
-region = "^3.0.0"
-ring = "^0.16.20"
-sodiumoxide = "^0.2.7"
-static_assertions = "^1.1.0"
 sysinfo = "^0.24.6"
 thiserror = "^1.0.31"
-tokio = {version = "^1.20.0", features = ["fs", "io-util", "rt-multi-thread", "macros"]}
+tokio = {version = "^1.20.0", features = ["fs"]}
 tokio-stream = {version = "^0.1.9", features = ["fs"]}
-# https://github.com/jeromefroe/lru-rs/pull/128
-async-recursion = "^1.0.0"
-conv = "^0.3.3"
-divrem = "^1.0.0"
-lockable = {git = "https://github.com/smessmer/lockable", rev = "f075ea07795aa3882fe1d1764459d36183e5b2ca", features = ["lru"]}
-lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
-lzzzz = "^1.0.3"
-tokio-util = "^0.7.3"
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc = "^0.2.126"
@@ -51,16 +31,11 @@ libc = "^0.2.126"
 winapi = {version = "^0.3.9", features = ["fileapi"]}
 
 [dev-dependencies]
-rand = {version = "^0.8.5", features = ["small_rng"]}
-criterion = "^0.3.6"
-generic-tests = "^0.1.2"
+common_macros = "^0.1.1"
+cryfs-utils = {path = "../utils", features = ["testutils"]}
+generic-array = "^0.14.5"
 mockall = "^0.11.1"
 tempdir = "^0.3.7"
 
-[[bench]]
-harness = false
-name = "crypto"
-
-[[bench]]
-harness = false
-name = "path"
+[features]
+testutils = ["mockall"]

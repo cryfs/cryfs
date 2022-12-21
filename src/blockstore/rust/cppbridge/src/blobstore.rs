@@ -1,19 +1,12 @@
 use anyhow::{bail, Result};
-use cxx::{type_id, ExternType};
 use std::sync::Mutex;
 
 use super::blockstore::DynBlockStore;
 use super::runtime::{LOGGER_INIT, TOKIO_RUNTIME};
 use crate::utils::log_errors;
-use cryfs_blockstore::{
-    blobstore::{
-        on_blocks::{BlobOnBlocks, BlobStoreOnBlocks},
-        Blob, BlobStore, RemoveResult,
-    },
-    blockstore::BLOCKID_LEN,
-    blockstore::{high_level::LockingBlockStore, low_level::inmemory::InMemoryBlockStore},
-    utils::async_drop::AsyncDropGuard,
-};
+use cryfs_blobstore::{Blob, BlobOnBlocks, BlobStore, BlobStoreOnBlocks, RemoveResult};
+use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore, BLOCKID_LEN};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 #[cxx::bridge]
 mod ffi {
@@ -103,19 +96,17 @@ mod ffi {
 }
 
 fn new_blobid(data: &[u8; BLOCKID_LEN]) -> Box<BlobId> {
-    Box::new(BlobId(cryfs_blockstore::blobstore::BlobId::from_array(
-        data,
-    )))
+    Box::new(BlobId(cryfs_blobstore::BlobId::from_array(data)))
 }
 
-pub struct BlobId(pub cryfs_blockstore::blobstore::BlobId);
+pub struct BlobId(pub cryfs_blobstore::BlobId);
 impl BlobId {
     fn data(&self) -> &[u8; BLOCKID_LEN] {
         self.0.data()
     }
 }
 
-pub struct Data(cryfs_blockstore::data::Data);
+pub struct Data(cryfs_utils::data::Data);
 
 impl Data {
     fn data(&self) -> &[u8] {

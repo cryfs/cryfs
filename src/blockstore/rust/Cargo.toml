@@ -1,5 +1,5 @@
 [workspace]
-members = ["blockstore", "cppbridge"]
+members = ["blockstore", "blobstore", "cryfs", "cppbridge"]
 
 [profile.release]
 lto = "fat"
