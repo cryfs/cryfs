@@ -130,19 +130,23 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::super::testutils::*;
-    use rand::{SeedableRng, Rng, rngs::SmallRng};
+    use super::*;
+    use rand::{rngs::SmallRng, Rng, SeedableRng};
 
     mod serialize_leaf_node {
         use super::*;
-        
+
         #[test]
         fn test_serialize_leaf_node_optimized() {
-            let layout = NodeLayout{block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES};
+            let layout = NodeLayout {
+                block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+            };
             const SIZE: usize = 10;
             let mut data: Data = vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize].into();
-            data.shrink_to_subregion(((PHYSICAL_BLOCK_SIZE_BYTES - layout.max_bytes_per_leaf()) as usize)..);
+            data.shrink_to_subregion(
+                ((PHYSICAL_BLOCK_SIZE_BYTES - layout.max_bytes_per_leaf()) as usize)..,
+            );
             SmallRng::seed_from_u64(0).fill(&mut data[..SIZE]);
             let serialized = serialize_leaf_node_optimized(data.clone(), SIZE as u32, &layout);
             let view = node::View::new(serialized.as_ref());
@@ -159,12 +163,135 @@ mod tests {
 
         #[tokio::test]
         async fn loaded_node_returns_correct_key() {
-            with_nodestore(|nodestore| Box::pin(async move {
-                let block_id = *new_leaf_node(nodestore).await.block_id();
-                
-                let loaded = load_leaf_node(nodestore, block_id).await;
-                assert_eq!(block_id, *loaded.block_id());
-            })).await;
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id = *new_leaf_node(nodestore).await.block_id();
+
+                    let loaded = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(block_id, *loaded.block_id());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod resize {
+        use super::*;
+
+        // TODO Make const instead of fn
+        fn LEAF_SIZES() -> Vec<u32> {
+            vec![
+                0,
+                1,
+                5,
+                16,
+                32,
+                512,
+                NodeLayout {
+                    block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                }
+                .max_bytes_per_leaf(),
+            ]
+        }
+
+        #[tokio::test]
+        async fn has_new_size() {
+            async fn test(leaf_size: u32) {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let mut leaf = nodestore
+                            .create_new_leaf_node(&data_fixture(100, 1))
+                            .await
+                            .unwrap();
+
+                        leaf.resize(leaf_size);
+                        assert_eq!(leaf_size, leaf.num_bytes());
+                        assert_eq!(leaf_size as usize, leaf.data().len());
+
+                        // Check the size is still correct after reloading it
+                        let block_id = *leaf.block_id();
+                        drop(leaf);
+                        let leaf = load_leaf_node(nodestore, block_id).await;
+                        assert_eq!(leaf_size, leaf.num_bytes());
+                        assert_eq!(leaf_size as usize, leaf.data().len());
+                    })
+                })
+                .await
+            }
+
+            for leaf_size in LEAF_SIZES() {
+                test(leaf_size).await;
+            }
+        }
+
+        #[tokio::test]
+        async fn growing() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&data_fixture(100, 1))
+                        .await
+                        .unwrap();
+
+                    leaf.resize(200);
+                    // Old data is still intact
+                    assert_eq!(data_fixture(100, 1).as_ref(), &leaf.data()[0..100]);
+                    // New data is zeroed out
+                    assert_eq!(&[0; 100], &leaf.data()[100..200]);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn shrinking_and_growing() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&full_leaf_data(1))
+                        .await
+                        .unwrap();
+
+                    assert_eq!(full_leaf_data(1)[0..200], leaf.data()[0..200]);
+                    leaf.resize(100);
+                    leaf.resize(200);
+                    // Never-touched data is still intact
+                    assert_eq!(full_leaf_data(1)[0..100], leaf.data()[0..100]);
+                    // Briefly shrunken area is zeroed out
+                    assert_eq!(&[0; 100], &leaf.data()[100..200]);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn shrinking() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&full_leaf_data(1))
+                        .await
+                        .unwrap();
+
+                    const HEADER_LEN: usize = node::data::OFFSET;
+                    assert_eq!(
+                        full_leaf_data(1)[0..200],
+                        leaf.raw_blockdata()[HEADER_LEN..][0..200]
+                    );
+                    leaf.resize(100);
+                    // Still-in-range data is still intact
+                    assert_eq!(
+                        full_leaf_data(1)[0..100],
+                        leaf.raw_blockdata()[HEADER_LEN..][0..100]
+                    );
+                    // Out-of-range data is zeroed out
+                    assert_eq!(
+                        &vec![0; nodestore.layout().max_bytes_per_leaf() as usize - 100],
+                        &leaf.raw_blockdata()[HEADER_LEN..][100..]
+                    );
+                })
+            })
+            .await;
         }
     }
 
