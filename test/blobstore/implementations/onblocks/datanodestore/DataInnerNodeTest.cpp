@@ -148,23 +148,6 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
   EXPECT_EQ(node2->blockId(), parent->readChild(1).blockId());
 }
 
-TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
-  auto child = nodeStore->createNewLeafNode(Data(0));
-  BlockId node_blockId = node->blockId();
-  unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), nodeStore->layout(), *child);
-
-  EXPECT_EQ(1u, converted->numChildren());
-  EXPECT_EQ(child->blockId(), converted->readChild(0).blockId());
-  EXPECT_EQ(node_blockId, converted->blockId());
-}
-
-TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
-  BlockId blockId = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
-
-  auto block = blockStore->load(blockId).value();
-  EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
-}
-
 TEST_F(DataInnerNodeTest, CopyingCreatesNewNode) {
   auto copied = CopyInnerNode(*node);
   EXPECT_NE(node->blockId(), copied->blockId());

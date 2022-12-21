@@ -6,22 +6,23 @@
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
 #include <cpp-utils/data/DataFixture.h>
 
-using ::testing::Test;
-using ::testing::WithParamInterface;
-using ::testing::Values;
 using std::string;
+using ::testing::Test;
+using ::testing::Values;
+using ::testing::WithParamInterface;
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
 using cpputils::Data;
 using cpputils::DataFixture;
-using cpputils::unique_ref;
 using cpputils::make_unique_ref;
+using cpputils::unique_ref;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 
-class DataNodeViewTest: public Test {
+class DataNodeViewTest : public Test
+{
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
   static constexpr uint32_t DATASIZE_BYTES = DataNodeLayout(DataNodeViewTest::BLOCKSIZE_BYTES).datasizeBytes();
@@ -29,11 +30,13 @@ public:
   unique_ref<BlockStore> blockStore = make_unique_ref<FakeBlockStore>();
 };
 
-class DataNodeViewDepthTest: public DataNodeViewTest, public WithParamInterface<uint8_t> {
+class DataNodeViewDepthTest : public DataNodeViewTest, public WithParamInterface<uint8_t>
+{
 };
 INSTANTIATE_TEST_SUITE_P(DataNodeViewDepthTest, DataNodeViewDepthTest, Values(0, 1, 3, 10, 100));
 
-TEST_P(DataNodeViewDepthTest, DepthIsStored) {
+TEST_P(DataNodeViewDepthTest, DepthIsStored)
+{
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto blockId = block->blockId();
   {
@@ -44,11 +47,13 @@ TEST_P(DataNodeViewDepthTest, DepthIsStored) {
   EXPECT_EQ(GetParam(), view.Depth());
 }
 
-class DataNodeViewSizeTest: public DataNodeViewTest, public WithParamInterface<uint32_t> {
+class DataNodeViewSizeTest : public DataNodeViewTest, public WithParamInterface<uint32_t>
+{
 };
-INSTANTIATE_TEST_SUITE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50, 64, 1024, 1024*1024*1024));
+INSTANTIATE_TEST_SUITE_P(DataNodeViewSizeTest, DataNodeViewSizeTest, Values(0, 50, 64, 1024, 1024 * 1024 * 1024));
 
-TEST_P(DataNodeViewSizeTest, SizeIsStored) {
+TEST_P(DataNodeViewSizeTest, SizeIsStored)
+{
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto blockId = block->blockId();
   {
@@ -59,7 +64,8 @@ TEST_P(DataNodeViewSizeTest, SizeIsStored) {
   EXPECT_EQ(GetParam(), view.Size());
 }
 
-TEST_F(DataNodeViewTest, DataIsStored) {
+TEST_F(DataNodeViewTest, DataIsStored)
+{
   Data randomData = DataFixture::generate(DATASIZE_BYTES);
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto blockId = block->blockId();
@@ -71,7 +77,8 @@ TEST_F(DataNodeViewTest, DataIsStored) {
   EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), randomData.size()));
 }
 
-TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
+TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap)
+{
   Data randomData = DataFixture::generate(DATASIZE_BYTES);
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   auto blockId = block->blockId();
@@ -87,12 +94,13 @@ TEST_F(DataNodeViewTest, HeaderAndBodyDontOverlap) {
   EXPECT_EQ(0, std::memcmp(view.data(), randomData.data(), DATASIZE_BYTES));
 }
 
-TEST_F(DataNodeViewTest, Data) {
+TEST_F(DataNodeViewTest, Data)
+{
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  const uint8_t *blockBegin = static_cast<const uint8_t*>(block->data());
+  const uint8_t *blockBegin = static_cast<const uint8_t *>(block->data());
   DataNodeView view(std::move(block));
 
-  EXPECT_EQ(blockBegin+DataNodeLayout::HEADERSIZE_BYTES, static_cast<const uint8_t*>(view.data()));
+  EXPECT_EQ(blockBegin + DataNodeLayout::HEADERSIZE_BYTES, static_cast<const uint8_t *>(view.data()));
 }
 
-//TODO Test that header fields (and data) are also stored over reloads
+// TODO Test that header fields (and data) are also stored over reloads

@@ -132,25 +132,6 @@ namespace
   constexpr uint32_t DataLeafNodeTest::BLOCKSIZE_BYTES;
   constexpr DataNodeLayout DataLeafNodeTest::LAYOUT;
 
-  TEST_F(DataLeafNodeTest, ConvertToInternalNode)
-  {
-    auto child = nodeStore->createNewLeafNode(Data(0));
-    BlockId leaf_blockId = leaf->blockId();
-    unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(leaf), LAYOUT, *child);
-
-    EXPECT_EQ(1u, converted->numChildren());
-    EXPECT_EQ(child->blockId(), converted->readChild(0).blockId());
-    EXPECT_EQ(leaf_blockId, converted->blockId());
-  }
-
-  TEST_F(DataLeafNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion)
-  {
-    BlockId blockId = CreateLeafWithDataConvertItToInnerNodeAndReturnKey();
-
-    auto block = blockStore->load(blockId).value();
-    EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t *>(block->data()) + DataNodeLayout::HEADERSIZE_BYTES + sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf() - sizeof(DataInnerNode::ChildEntry)));
-  }
-
   TEST_F(DataLeafNodeTest, CopyingCreatesANewLeaf)
   {
     auto copied = CopyLeafNode(*leaf);

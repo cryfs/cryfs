@@ -131,6 +131,8 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
 mod tests {
     use super::super::testutils::*;
     use super::*;
+    use crate::blockstore::BLOCKID_LEN;
+    use binary_layout::Field;
 
     mod block_id {
         use super::*;
@@ -156,6 +158,118 @@ mod tests {
 
                     let loaded = load_node(nodestore, block_id).await;
                     assert_eq!(block_id, *loaded.block_id());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod convert_to_new_inner_node {
+        use super::*;
+
+        #[tokio::test]
+        async fn converts_leaf_node_to_inner_node_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let source_node = nodestore
+                        .create_new_leaf_node(&full_leaf_data(1))
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let first_child = new_leaf_node(nodestore).await.upcast();
+                    let first_child_id = *first_child.block_id();
+
+                    let inner_node =
+                        source_node.convert_to_new_inner_node(first_child, nodestore.layout());
+
+                    assert_eq!(1, inner_node.depth().get());
+                    assert_eq!(1, inner_node.num_children().get());
+                    assert_eq!(first_child_id, inner_node.children().next().unwrap());
+                    // Assert the unused region gets zeroed out
+                    let used_space = node::data::OFFSET + BLOCKID_LEN;
+                    assert_eq!(
+                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &inner_node.raw_blockdata()[used_space..]
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn converts_leaf_node_to_inner_node_depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let source_node = nodestore
+                        .create_new_leaf_node(&full_leaf_data(1))
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let first_child = new_inner_node(nodestore).await.upcast();
+                    let first_child_id = *first_child.block_id();
+
+                    let inner_node =
+                        source_node.convert_to_new_inner_node(first_child, nodestore.layout());
+
+                    assert_eq!(2, inner_node.depth().get());
+                    assert_eq!(1, inner_node.num_children().get());
+                    assert_eq!(first_child_id, inner_node.children().next().unwrap());
+                    // Assert the unused region gets zeroed out
+                    let used_space = node::data::OFFSET + BLOCKID_LEN;
+                    assert_eq!(
+                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &inner_node.raw_blockdata()[used_space..]
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn converts_inner_node_to_inner_node_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let source_node = new_full_inner_node(nodestore).await.upcast();
+                    let first_child = new_leaf_node(nodestore).await.upcast();
+                    let first_child_id = *first_child.block_id();
+
+                    let inner_node =
+                        source_node.convert_to_new_inner_node(first_child, nodestore.layout());
+
+                    assert_eq!(1, inner_node.depth().get());
+                    assert_eq!(1, inner_node.num_children().get());
+                    assert_eq!(first_child_id, inner_node.children().next().unwrap());
+                    // Assert the unused region gets zeroed out
+                    let used_space = node::data::OFFSET + BLOCKID_LEN;
+                    assert_eq!(
+                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &inner_node.raw_blockdata()[used_space..]
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn converts_inner_node_to_inner_node_depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let source_node = new_full_inner_node(nodestore).await.upcast();
+                    let first_child = new_inner_node(nodestore).await.upcast();
+                    let first_child_id = *first_child.block_id();
+
+                    let inner_node =
+                        source_node.convert_to_new_inner_node(first_child, nodestore.layout());
+
+                    assert_eq!(2, inner_node.depth().get());
+                    assert_eq!(1, inner_node.num_children().get());
+                    assert_eq!(first_child_id, inner_node.children().next().unwrap());
+                    // Assert the unused region gets zeroed out
+                    let used_space = node::data::OFFSET + BLOCKID_LEN;
+                    assert_eq!(
+                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &inner_node.raw_blockdata()[used_space..]
+                    );
                 })
             })
             .await;

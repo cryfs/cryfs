@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::future;
 use futures::{future::BoxFuture, join};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
@@ -24,6 +25,29 @@ pub async fn new_leaf_node(
 pub async fn new_inner_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
 ) -> DataInnerNode<InMemoryBlockStore> {
+    let leaf1_data = full_leaf_data(1);
+    let leaf2_data = half_full_leaf_data(2);
+    let (leaf1, leaf2) = join!(
+        nodestore.create_new_leaf_node(&leaf1_data),
+        nodestore.create_new_leaf_node(&leaf2_data),
+    );
+    nodestore
+        .create_new_inner_node(1, &[*leaf1.unwrap().block_id(), *leaf2.unwrap().block_id()])
+        .await
+        .unwrap()
+}
+
+pub async fn new_full_inner_node(
+    nodestore: &DataNodeStore<InMemoryBlockStore>,
+) -> DataInnerNode<InMemoryBlockStore> {
+    let leaves = future::join_all(
+        (0..NodeLayout {
+            block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+        }
+        .max_children_per_inner_node())
+            .map(|_| new_leaf_node(&nodestore))
+            .collect::<Vec<_>>(),
+    );
     let leaf1_data = full_leaf_data(1);
     let leaf2_data = half_full_leaf_data(2);
     let (leaf1, leaf2) = join!(
