@@ -11,6 +11,9 @@ pub use fsblob::{
     AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError, SymlinkBlob,
 };
 
+// TODO With an adapter we can run block store tests on this, similar to how we do it for BlobStore
+// TODO Add a CachingFsBlobStore, that currently only exists in C++.
+
 #[derive(Debug)]
 pub struct FsBlobStore<B>
 where
