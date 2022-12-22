@@ -403,77 +403,78 @@ mod tests {
             })
             .await
         }
-    }
 
-    #[tokio::test]
-    async fn inner_node_one_child() {
-        with_nodestore(move |nodestore| {
-            Box::pin(async move {
-                let leaf = new_full_leaf_node(nodestore).await.upcast();
-                let node = nodestore
-                    .create_new_inner_node(1, &[*leaf.block_id()])
-                    .await
-                    .unwrap()
-                    .upcast();
-                let copy = nodestore.create_new_node_as_copy_from(&node).await.unwrap();
-                assert_ne!(node.block_id(), copy.block_id());
-                assert_eq!(node.raw_blockdata(), copy.raw_blockdata());
-                let node_id = *node.block_id();
-                let copy_id = *copy.block_id();
+        #[tokio::test]
+        async fn inner_node_one_child() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let copy = nodestore.create_new_node_as_copy_from(&node).await.unwrap();
+                    assert_ne!(node.block_id(), copy.block_id());
+                    assert_eq!(node.raw_blockdata(), copy.raw_blockdata());
+                    let node_id = *node.block_id();
+                    let copy_id = *copy.block_id();
 
-                //And data is correct after loading
-                drop(node);
-                drop(copy);
-                let node = load_inner_node(nodestore, node_id).await;
-                let copy = load_inner_node(nodestore, copy_id).await;
-                assert_eq!(1, node.depth().get());
-                assert_eq!(1, node.num_children().get());
-                assert_eq!(vec![*leaf.block_id()], node.children().collect::<Vec<_>>());
-                assert_eq!(1, copy.depth().get());
-                assert_eq!(1, copy.num_children().get());
-                assert_eq!(vec![*leaf.block_id()], copy.children().collect::<Vec<_>>());
+                    //And data is correct after loading
+                    drop(node);
+                    drop(copy);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    let copy = load_inner_node(nodestore, copy_id).await;
+                    assert_eq!(1, node.depth().get());
+                    assert_eq!(1, node.num_children().get());
+                    assert_eq!(vec![*leaf.block_id()], node.children().collect::<Vec<_>>());
+                    assert_eq!(1, copy.depth().get());
+                    assert_eq!(1, copy.num_children().get());
+                    assert_eq!(vec![*leaf.block_id()], copy.children().collect::<Vec<_>>());
+                })
             })
-        })
-        .await
-    }
+            .await
+        }
 
-    #[tokio::test]
-    async fn inner_node_two_children() {
-        with_nodestore(move |nodestore| {
-            Box::pin(async move {
-                let leaf1 = new_full_leaf_node(nodestore).await.upcast();
-                let leaf2 = new_full_leaf_node(nodestore).await.upcast();
-                let node = nodestore
-                    .create_new_inner_node(1, &[*leaf1.block_id(), *leaf2.block_id()])
-                    .await
-                    .unwrap()
-                    .upcast();
-                let copy = nodestore.create_new_node_as_copy_from(&node).await.unwrap();
-                assert_ne!(node.block_id(), copy.block_id());
-                assert_eq!(node.raw_blockdata(), copy.raw_blockdata());
-                let node_id = *node.block_id();
-                let copy_id = *copy.block_id();
+        #[tokio::test]
+        async fn inner_node_two_children() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let leaf1 = new_full_leaf_node(nodestore).await.upcast();
+                    let leaf2 = new_full_leaf_node(nodestore).await.upcast();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf1.block_id(), *leaf2.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let copy = nodestore.create_new_node_as_copy_from(&node).await.unwrap();
+                    assert_ne!(node.block_id(), copy.block_id());
+                    assert_eq!(node.raw_blockdata(), copy.raw_blockdata());
+                    let node_id = *node.block_id();
+                    let copy_id = *copy.block_id();
 
-                //And data is correct after loading
-                drop(node);
-                drop(copy);
-                let node = load_inner_node(nodestore, node_id).await;
-                let copy = load_inner_node(nodestore, copy_id).await;
-                assert_eq!(1, node.depth().get());
-                assert_eq!(2, node.num_children().get());
-                assert_eq!(
-                    vec![*leaf1.block_id(), *leaf2.block_id()],
-                    node.children().collect::<Vec<_>>()
-                );
-                assert_eq!(1, copy.depth().get());
-                assert_eq!(2, copy.num_children().get());
-                assert_eq!(
-                    vec![*leaf1.block_id(), *leaf2.block_id()],
-                    copy.children().collect::<Vec<_>>()
-                );
+                    //And data is correct after loading
+                    drop(node);
+                    drop(copy);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    let copy = load_inner_node(nodestore, copy_id).await;
+                    assert_eq!(1, node.depth().get());
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![*leaf1.block_id(), *leaf2.block_id()],
+                        node.children().collect::<Vec<_>>()
+                    );
+                    assert_eq!(1, copy.depth().get());
+                    assert_eq!(2, copy.num_children().get());
+                    assert_eq!(
+                        vec![*leaf1.block_id(), *leaf2.block_id()],
+                        copy.children().collect::<Vec<_>>()
+                    );
+                })
             })
-        })
-        .await
+            .await
+        }
     }
+
+    // TODO More tests
 }
-// TODO Tests
