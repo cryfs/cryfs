@@ -172,3 +172,18 @@ pub async fn new_inner_nodes(
     .map(|n| *n.block_id())
     .collect::<Vec<_>>()
 }
+
+pub async fn assert_full_inner_node_is_valid(
+    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    inner_node_id: BlockId,
+) {
+    let inner = load_inner_node(nodestore, inner_node_id).await;
+    assert_eq!(1, inner.depth().get());
+    assert_eq!(
+        nodestore.layout().max_children_per_inner_node(),
+        inner.num_children().get(),
+    );
+    for child_id in inner.children() {
+        load_leaf_node(nodestore, child_id).await;
+    }
+}

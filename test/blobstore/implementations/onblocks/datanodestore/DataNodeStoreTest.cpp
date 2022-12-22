@@ -9,21 +9,22 @@
 #include <blockstore/implementations/testfake/FakeBlock.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
-using ::testing::Test;
-using cpputils::unique_ref;
-using cpputils::make_unique_ref;
-using std::string;
 using boost::none;
+using cpputils::make_unique_ref;
+using cpputils::unique_ref;
+using std::string;
+using ::testing::Test;
 
+using blockstore::BlockId;
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;
-using blockstore::BlockId;
 using cpputils::Data;
 using namespace blobstore;
 using namespace blobstore::onblocks;
 using namespace blobstore::onblocks::datanodestore;
 
-class DataNodeStoreTest: public Test {
+class DataNodeStoreTest : public Test
+{
 public:
   static constexpr uint32_t BLOCKSIZE_BYTES = 1024;
 
@@ -34,10 +35,10 @@ public:
 
 constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
 
-#define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type*>(ptr)) << "Given pointer cannot be cast to the given type"
+#define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type *>(ptr)) << "Given pointer cannot be cast to the given type"
 
-
-TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
+TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh)
+{
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
   BlockId blockId = block->blockId();
   {
@@ -46,53 +47,18 @@ TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   }
 
   EXPECT_ANY_THROW(
-    nodeStore->load(blockId)
-  );
+      nodeStore->load(blockId));
 }
 
-TEST_F(DataNodeStoreTest, NodeIsNotLoadableAfterDeleting) {
-  auto nodekey = nodeStore->createNewLeafNode(Data(0))->blockId();
-  auto node = nodeStore->load(nodekey);
-  EXPECT_NE(none, node);
-  nodeStore->remove(std::move(*node));
-  EXPECT_EQ(none, nodeStore->load(nodekey));
-}
-
-TEST_F(DataNodeStoreTest, NumNodesIsCorrectOnEmptyNodestore) {
-  EXPECT_EQ(0u, nodeStore->numNodes());
-}
-
-TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingOneLeafNode) {
-  nodeStore->createNewLeafNode(Data(0));
-  EXPECT_EQ(1u, nodeStore->numNodes());
-}
-
-TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingTheLastNode) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  nodeStore->remove(std::move(leaf));
-  EXPECT_EQ(0u, nodeStore->numNodes());
-}
-
-TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterAddingTwoNodes) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  EXPECT_EQ(2u, nodeStore->numNodes());
-}
-
-TEST_F(DataNodeStoreTest, NumNodesIsCorrectAfterRemovingANode) {
-  auto leaf = nodeStore->createNewLeafNode(Data(0));
-  auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  nodeStore->remove(std::move(node));
-  EXPECT_EQ(1u, nodeStore->numNodes());
-}
-
-TEST_F(DataNodeStoreTest, PhysicalBlockSize_Leaf) {
+TEST_F(DataNodeStoreTest, PhysicalBlockSize_Leaf)
+{
   auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto block = blockStore->load(leaf->blockId()).value();
   EXPECT_EQ(BLOCKSIZE_BYTES, block->size());
 }
 
-TEST_F(DataNodeStoreTest, PhysicalBlockSize_Inner) {
+TEST_F(DataNodeStoreTest, PhysicalBlockSize_Inner)
+{
   auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto node = nodeStore->createNewInnerNode(1, {leaf->blockId()});
   auto block = blockStore->load(node->blockId()).value();

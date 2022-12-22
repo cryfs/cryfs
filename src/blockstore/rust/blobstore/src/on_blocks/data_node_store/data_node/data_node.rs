@@ -276,10 +276,254 @@ mod tests {
         }
     }
 
+    #[allow(non_snake_case)]
+    mod remove {
+        use super::*;
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node_id = *leaf.block_id();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let node_id = *new_full_leaf_node(nodestore).await.block_id();
+                    let leaf = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let node_id = *node.block_id();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node_id = *nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .block_id();
+                    let node = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    new_full_inner_node(nodestore).await;
+
+                    let node = new_full_leaf_node(nodestore).await.upcast();
+                    let node_id = *node.block_id();
+
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    new_full_inner_node(nodestore).await;
+
+                    let node_id = *new_full_leaf_node(nodestore).await.block_id();
+                    let node = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenDoesntDeleteOtherNodes(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let full_inner = *new_full_inner_node(nodestore).await.block_id();
+
+                    let node = new_full_leaf_node(nodestore).await.upcast();
+
+                    node.remove(nodestore).await.unwrap();
+
+                    assert_full_inner_node_is_valid(nodestore, full_inner).await;
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenDoesntDeleteOtherNodes(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let full_inner = *new_full_inner_node(nodestore).await.block_id();
+
+                    let node_id = *new_full_leaf_node(nodestore).await.block_id();
+                    let node = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    node.remove(nodestore).await.unwrap();
+
+                    assert_full_inner_node_is_valid(nodestore, full_inner).await;
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    new_full_inner_node(nodestore).await;
+
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    let node_id = *node.block_id();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    new_full_inner_node(nodestore).await;
+
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node_id = *nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .block_id();
+                    let node = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert!(nodestore.load(node_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenDoesntDeleteOtherEntries(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let full_inner = *new_full_inner_node(nodestore).await.block_id();
+
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert_full_inner_node_is_valid(nodestore, full_inner).await;
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenDoesntDeleteOtherEntries(
+        ) {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let full_inner = *new_full_inner_node(nodestore).await.block_id();
+
+                    let leaf = new_full_leaf_node(nodestore).await.upcast();
+                    let node_id = *nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .block_id();
+                    let node = nodestore.load(node_id).await.unwrap().unwrap();
+
+                    leaf.remove(nodestore).await.unwrap();
+                    node.remove(nodestore).await.unwrap();
+
+                    assert_full_inner_node_is_valid(nodestore, full_inner).await;
+                })
+            })
+            .await
+        }
+    }
+
     // TODO Test
     //  - parse
     //  - depth
-    //  - remove
     //  - as_block_mut
     //  - overwrite_node_with
 }
