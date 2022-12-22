@@ -1,3 +1,0 @@
-[toolchain]
-# Nightly is currently needed because of the lockpool dependency
-channel = "stable"
