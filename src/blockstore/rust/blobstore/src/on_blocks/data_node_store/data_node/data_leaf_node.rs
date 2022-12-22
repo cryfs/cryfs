@@ -296,5 +296,87 @@ mod tests {
         }
     }
 
-    // TODO More tests
+    mod data_and_data_mut {
+        use super::*;
+
+        #[tokio::test]
+        async fn empty_leaf_is_empty() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&vec![0u8; 0].into())
+                        .await
+                        .unwrap();
+
+                    assert_eq!(&[0u8; 0], leaf.data());
+                    assert_eq!(&[0u8; 0], leaf.data_mut());
+
+                    // Still empty after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let mut leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(&[0u8; 0], leaf.data());
+                    assert_eq!(&[0u8; 0], leaf.data_mut());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn after_resizing_has_new_size_and_is_zeroed_out() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&vec![0u8; 0].into())
+                        .await
+                        .unwrap();
+                    leaf.resize(100);
+
+                    assert_eq!(&[0u8; 100], leaf.data());
+                    assert_eq!(&[0u8; 100], leaf.data_mut());
+
+                    // Still correct after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let mut leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(&[0u8; 100], leaf.data());
+                    assert_eq!(&[0u8; 100], leaf.data_mut());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn after_writing_has_new_data() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let mut leaf = nodestore
+                        .create_new_leaf_node(&vec![0u8; 0].into())
+                        .await
+                        .unwrap();
+                    leaf.resize(100);
+
+                    leaf.data_mut().copy_from_slice(&data_fixture(100, 1));
+
+                    assert_eq!(data_fixture(100, 1).as_ref(), leaf.data());
+                    assert_eq!(data_fixture(100, 1).as_ref(), leaf.data_mut());
+
+                    // Still correct after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let mut leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(data_fixture(100, 1).as_ref(), leaf.data());
+                    assert_eq!(data_fixture(100, 1).as_ref(), leaf.data_mut());
+                })
+            })
+            .await;
+        }
+    }
+
+    // TODO Test
+    //  - new
+    //  - into_block
+    //  - as_block_mut
+    //  - max_bytes_per_leaf
+    //  - upcast
 }

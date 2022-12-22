@@ -141,3 +141,33 @@ pub fn data_fixture(len: usize, seed: u64) -> Data {
     rng.fill(data.as_mut());
     data
 }
+
+pub async fn new_full_leaves(
+    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    num: u32,
+) -> Vec<BlockId> {
+    future::join_all(
+        (0..num)
+            .map(|_| new_full_leaf_node(nodestore))
+            .collect::<Vec<_>>(),
+    )
+    .await
+    .into_iter()
+    .map(|n| *n.block_id())
+    .collect::<Vec<_>>()
+}
+
+pub async fn new_inner_nodes(
+    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    num: u32,
+) -> Vec<BlockId> {
+    future::join_all(
+        (0..num)
+            .map(|_| new_inner_node(nodestore))
+            .collect::<Vec<_>>(),
+    )
+    .await
+    .into_iter()
+    .map(|n| *n.block_id())
+    .collect::<Vec<_>>()
+}

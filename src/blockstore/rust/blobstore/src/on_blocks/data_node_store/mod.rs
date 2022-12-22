@@ -265,10 +265,9 @@ mod tests {
         async fn max_children_leaves() {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
-                    let children = future::join_all(
-                        (0..nodestore.layout().max_children_per_inner_node())
-                            .map(|_| async { *new_full_leaf_node(nodestore).await.block_id() })
-                            .collect::<Vec<_>>(),
+                    let children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
                     )
                     .await;
                     test(nodestore, 1, &children).await

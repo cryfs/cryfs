@@ -247,5 +247,244 @@ mod tests {
         }
     }
 
+    mod add_child {
+        use super::*;
+
+        #[tokio::test]
+        async fn from_one_to_two_at_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(1, node.num_children().get());
+
+                    let child2 = new_full_leaf_node(nodestore).await.upcast();
+                    node.add_child(&child2).unwrap();
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn from_almost_full_to_full_at_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let left_children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node() - 1,
+                    )
+                    .await;
+
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &left_children)
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node() - 1,
+                        node.num_children().get()
+                    );
+
+                    let right_child = new_full_leaf_node(nodestore).await.upcast();
+                    node.add_child(&right_child).unwrap();
+                    let mut leaves = left_children;
+                    leaves.push(*right_child.block_id());
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(leaves, node.children().collect::<Vec<_>>(),);
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(leaves, node.children().collect::<Vec<_>>(),);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn from_one_to_two_at_depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_inner_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(2, &[*child1.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(1, node.num_children().get());
+
+                    let child2 = new_inner_node(nodestore).await.upcast();
+                    node.add_child(&child2).unwrap();
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn from_almost_full_to_full_at_depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let left_children = new_inner_nodes(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node() - 1,
+                    )
+                    .await;
+
+                    let mut node = nodestore
+                        .create_new_inner_node(2, &left_children)
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node() - 1,
+                        node.num_children().get()
+                    );
+
+                    let right_child = new_inner_node(nodestore).await.upcast();
+                    node.add_child(&right_child).unwrap();
+                    let mut children = left_children;
+                    children.push(*right_child.block_id());
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(children, node.children().collect::<Vec<_>>(),);
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(children, node.children().collect::<Vec<_>>(),);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn wrong_depth() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_inner_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(2, &[*child1.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(1, node.num_children().get());
+
+                    // Adding child at wrong depth fails
+                    let child2 = new_full_leaf_node(nodestore).await.upcast();
+                    assert_eq!(
+                        "Tried to add a child of depth 0 to an inner node of depth 2",
+                        node.add_child(&child2).unwrap_err().to_string(),
+                    );
+
+                    // Node is unchanged
+                    assert_eq!(1, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(1, node.num_children().get());
+                    assert_eq!(
+                        vec![*child1.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn node_already_full() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
+                    )
+                    .await;
+
+                    let mut node = nodestore.create_new_inner_node(1, &children).await.unwrap();
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+
+                    // Adding child over limit fails
+                    let right_child = new_full_leaf_node(nodestore).await.upcast();
+                    assert_eq!(
+                        "Adding more children than we can store",
+                        node.add_child(&right_child).unwrap_err().to_string(),
+                    );
+
+                    // Node is unchanged
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(children, node.children().collect::<Vec<_>>(),);
+
+                    // Still correct after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_inner_node(nodestore, node_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(children, node.children().collect::<Vec<_>>(),);
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO More tests
 }
