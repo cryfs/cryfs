@@ -5,28 +5,28 @@ name = "cryfs-utils"
 version = "0.1.0"
 
 [dependencies]
-aead = "^0.4.3"
-aes-gcm = {version = "^0.9.4", features = ["std"]}
-anyhow = "^1.0.65"
-async-trait = "^0.1.56"
+aead = "^0.5.1"
+aes-gcm = {version = "^0.10.1", features = ["std"]}
+anyhow = "^1.0.68"
+async-trait = "^0.1.60"
 binrw = "^0.10.0"
-chacha20poly1305 = "^0.9.1"
+chacha20poly1305 = "^0.10.1"
 common_macros = "^0.1.1"
-futures = "^0.3.21"
-generic-array = "^0.14.5"
+futures = "^0.3.25"
+generic-array = "^0.14.6"
 hex = "^0.4.3"
-itertools = "^0.10.3"
+itertools = "^0.10.5"
 log = "^0.4.17"
 rand = "^0.8.5"
 region = "^3.0.0"
 sodiumoxide = "^0.2.7"
-tokio = {version = "^1.20.0", features = ["rt-multi-thread", "macros", "time"]}
+tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros", "time"]}
 # https://github.com/jeromefroe/lru-rs/pull/128
 lru = {git = "https://github.com/smessmer/lru-rs.git", rev = "ec021658cd7d48deb88226ad31bb6f3f33e16575"}
-tokio-util = "^0.7.3"
+tokio-util = "^0.7.4"
 
 [dev-dependencies]
-criterion = "^0.3.6"
+criterion = "^0.4.0"
 generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
 

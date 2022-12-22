@@ -1,7 +1,7 @@
 //! Ciphers from the `aead` crate (and other crates following its traits, for example `aes_gcm`)
 
 use aead::generic_array::typenum::Unsigned;
-use aead::{generic_array::GenericArray, AeadCore, AeadInPlace, NewAead, Nonce};
+use aead::{AeadCore, AeadInPlace, KeyInit, Nonce};
 use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
@@ -18,12 +18,12 @@ use crate::data::Data;
 // > RUSTFLAGS="-Ctarget-feature=+avx2"
 // or it won't use AVX2.
 
-pub struct AeadCipher<C: NewAead + AeadInPlace> {
+pub struct AeadCipher<C: KeyInit + AeadInPlace> {
     encryption_key: EncryptionKey<C::KeySize>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
+impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
     type KeySize = C::KeySize;
 
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
@@ -37,13 +37,13 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
     }
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
-        // TODO Move C::new call to constructor so we don't have to do it every time?
+        // TODO Move C::new_from_slice call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
         // TODO For compatibility with the C++ cryfs version, we append nonce in the beginning and tag in the end.
         //      But it is somewhat weird to grow the plaintext input into both directions. We should just grow it in one direction.
         // TODO Use binary-layout crate here?
-        let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
+        let cipher = C::new_from_slice(self.encryption_key.as_bytes()).expect("Wrong key size");
         let ciphertext_size =
             plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let nonce = random_nonce::<C>();
@@ -63,10 +63,10 @@ impl<C: NewAead + AeadInPlace> Cipher for AeadCipher<C> {
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
         ensure!(ciphertext.len() >= Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
-        // TODO Move C::new call to constructor so we don't have to do it every time?
+        // TODO Move C::new_from_slice call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the
         //      secret protection we get from our EncryptionKey class then.
-        let cipher = C::new(GenericArray::from_slice(self.encryption_key.as_bytes()));
+        let cipher = C::new_from_slice(self.encryption_key.as_bytes()).expect("Wrong key size");
         let ciphertext_len = ciphertext.len();
         let (nonce, rest) = ciphertext
             .as_mut()

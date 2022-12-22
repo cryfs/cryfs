@@ -5,17 +5,17 @@ name = "cryfs-blobstore"
 version = "0.1.0"
 
 [dependencies]
-anyhow = "^1.0.65"
+anyhow = "^1.0.68"
 async-recursion = "^1.0.0"
-async-trait = "^0.1.56"
-binary-layout = "^3.1.1"
+async-trait = "^0.1.60"
+binary-layout = "^3.1.3"
 binrw = "^0.10.0"
 conv = "^0.3.3"
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-utils = {path = "../utils"}
 divrem = "^1.0.0"
-futures = "^0.3.21"
+futures = "^0.3.25"
 
 [dev-dependencies]
 rand = {version = "^0.8.5", features = ["small_rng"]}
-tokio = {version = "^1.20.0", features = ["macros"]}
+tokio = {version = "^1.23.0", features = ["macros"]}
