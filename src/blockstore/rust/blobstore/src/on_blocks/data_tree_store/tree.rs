@@ -258,7 +258,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             async fn on_existing_leaf(
                 &self,
                 index: u64,
-                is_right_border_leaf: bool,
+                _is_right_border_leaf: bool,
                 mut leaf: LeafHandle<'_, B>,
             ) -> Result<()> {
                 assert_eq!(self.new_num_leaves.get() - 1, index);
