@@ -3,7 +3,6 @@ pub mod binary;
 pub mod containers;
 pub mod crypto;
 pub mod data;
-pub mod lru_into_iter;
 pub mod num;
 pub mod path;
 pub mod periodic_task;
