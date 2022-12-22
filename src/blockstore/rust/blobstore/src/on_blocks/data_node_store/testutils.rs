@@ -93,6 +93,7 @@ pub async fn with_nodestore(
         LockingBlockStore::new(InMemoryBlockStore::new()),
         PHYSICAL_BLOCK_SIZE_BYTES,
     )
+    .await
     .unwrap();
     f(&nodestore).await;
     nodestore.async_drop().await.unwrap();

@@ -253,10 +253,21 @@ impl RustBlobStoreBridge {
 
 fn new_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobStoreBridge>> {
     LOGGER_INIT.ensure_initialized();
-    Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
-        LockingBlockStore::new(DynBlockStore::from(InMemoryBlockStore::new().into_box())),
-        block_size_bytes,
-    )?)))
+    let _init_tokio = TOKIO_RUNTIME.enter();
+
+    log_errors(|| {
+        TOKIO_RUNTIME.block_on(async {
+            Ok(Box::new(RustBlobStoreBridge(
+                BlobStoreOnBlocks::new(
+                    LockingBlockStore::new(DynBlockStore::from(
+                        InMemoryBlockStore::new().into_box(),
+                    )),
+                    block_size_bytes,
+                )
+                .await?,
+            )))
+        })
+    })
 }
 
 fn new_locking_integrity_encrypted_ondisk_blobstore(
@@ -274,20 +285,21 @@ fn new_locking_integrity_encrypted_ondisk_blobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
-            integrity_file_path,
-            my_client_id,
-            allow_integrity_violations,
-            missing_block_is_integrity_violation,
-            on_integrity_violation,
-            cipher_name,
-            encryption_key_hex,
-            basedir,
-        )?;
-        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
-            blockstore.extract(),
-            block_size_bytes,
-        )?)))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
+                integrity_file_path,
+                my_client_id,
+                allow_integrity_violations,
+                missing_block_is_integrity_violation,
+                on_integrity_violation,
+                cipher_name,
+                encryption_key_hex,
+                basedir,
+            )?;
+            Ok(Box::new(RustBlobStoreBridge(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            )))
+        })
     })
 }
 
@@ -305,19 +317,21 @@ fn new_locking_integrity_encrypted_inmemory_blobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
-            integrity_file_path,
-            my_client_id,
-            allow_integrity_violations,
-            missing_block_is_integrity_violation,
-            on_integrity_violation,
-            cipher_name,
-            encryption_key_hex,
-        )?;
-        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
-            blockstore.extract(),
-            block_size_bytes,
-        )?)))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore =
+                super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
+                    integrity_file_path,
+                    my_client_id,
+                    allow_integrity_violations,
+                    missing_block_is_integrity_violation,
+                    on_integrity_violation,
+                    cipher_name,
+                    encryption_key_hex,
+                )?;
+            Ok(Box::new(RustBlobStoreBridge(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            )))
+        })
     })
 }
 
@@ -326,11 +340,12 @@ fn new_locking_inmemory_blobstore(block_size_bytes: u32) -> Result<Box<RustBlobS
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_inmemory_blockstore();
-        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
-            blockstore.extract(),
-            block_size_bytes,
-        )?)))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore = super::blockstore::new_locking_inmemory_blockstore();
+            Ok(Box::new(RustBlobStoreBridge(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            )))
+        })
     })
 }
 
@@ -341,10 +356,11 @@ fn new_locking_compressing_inmemory_blobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_compressing_inmemory_blockstore();
-        Ok(Box::new(RustBlobStoreBridge(BlobStoreOnBlocks::new(
-            blockstore.extract(),
-            block_size_bytes,
-        )?)))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore = super::blockstore::new_locking_compressing_inmemory_blockstore();
+            Ok(Box::new(RustBlobStoreBridge(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            )))
+        })
     })
 }

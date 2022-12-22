@@ -13,13 +13,36 @@ pub struct BlobStoreOnBlocks<B: BlockStore + Send + Sync> {
 }
 
 impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
-    pub fn new(
+    pub async fn new(
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
         block_size_bytes: u32,
     ) -> Result<AsyncDropGuard<Self>> {
         Ok(AsyncDropGuard::new(Self {
-            tree_store: DataTreeStore::new(blockstore, block_size_bytes)?,
+            tree_store: DataTreeStore::new(blockstore, block_size_bytes).await?,
         }))
+    }
+
+    #[cfg(test)]
+    pub async fn all_blobs(&self) -> Result<Vec<BlobId>> {
+        Ok(self
+            .tree_store
+            .all_tree_roots()
+            .await?
+            .into_iter()
+            .map(|root| BlobId { root })
+            .collect())
+    }
+
+    #[cfg(test)]
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.tree_store.clear_cache_slow().await
+    }
+
+    #[cfg(test)]
+    pub async fn try_create(&self, id: &BlobId) -> Result<BlobOnBlocks<'_, B>> {
+        Ok(BlobOnBlocks::new(
+            self.tree_store.try_create_tree(id.root).await?,
+        ))
     }
 }
 

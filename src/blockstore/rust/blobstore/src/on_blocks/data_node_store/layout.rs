@@ -28,6 +28,11 @@ pub struct NodeLayout {
 }
 
 impl NodeLayout {
+    #[cfg(test)]
+    pub const fn header_len() -> usize {
+        node::data::OFFSET
+    }
+
     pub fn max_bytes_per_leaf(&self) -> u32 {
         self.block_size_bytes - u32::try_from(node::data::OFFSET).unwrap()
     }

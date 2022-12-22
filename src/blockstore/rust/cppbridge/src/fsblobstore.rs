@@ -975,18 +975,21 @@ fn new_locking_integrity_encrypted_inmemory_fsblobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
-            integrity_file_path,
-            my_client_id,
-            allow_integrity_violations,
-            missing_block_is_integrity_violation,
-            on_integrity_violation,
-            cipher_name,
-            encryption_key_hex,
-        )?;
-        Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
-            BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes)?,
-        ))))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore =
+                super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
+                    integrity_file_path,
+                    my_client_id,
+                    allow_integrity_violations,
+                    missing_block_is_integrity_violation,
+                    on_integrity_violation,
+                    cipher_name,
+                    encryption_key_hex,
+                )?;
+            Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            ))))
+        })
     })
 }
 
@@ -1005,20 +1008,22 @@ fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore =
-            super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
-                integrity_file_path,
-                my_client_id,
-                allow_integrity_violations,
-                missing_block_is_integrity_violation,
-                on_integrity_violation,
-                cipher_name,
-                encryption_key_hex,
-                basedir,
-            )?;
-        Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
-            BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes)?,
-        ))))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore =
+                super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+                    integrity_file_path,
+                    my_client_id,
+                    allow_integrity_violations,
+                    missing_block_is_integrity_violation,
+                    on_integrity_violation,
+                    cipher_name,
+                    encryption_key_hex,
+                    basedir,
+                )?;
+            Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            ))))
+        })
     })
 }
 
@@ -1037,18 +1042,20 @@ fn new_locking_integrity_encrypted_ondisk_fsblobstore(
     let _init_tokio = TOKIO_RUNTIME.enter();
 
     log_errors(|| {
-        let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
-            integrity_file_path,
-            my_client_id,
-            allow_integrity_violations,
-            missing_block_is_integrity_violation,
-            on_integrity_violation,
-            cipher_name,
-            encryption_key_hex,
-            basedir,
-        )?;
-        Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
-            BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes)?,
-        ))))
+        TOKIO_RUNTIME.block_on(async {
+            let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
+                integrity_file_path,
+                my_client_id,
+                allow_integrity_violations,
+                missing_block_is_integrity_violation,
+                on_integrity_violation,
+                cipher_name,
+                encryption_key_hex,
+                basedir,
+            )?;
+            Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
+                BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
+            ))))
+        })
     })
 }

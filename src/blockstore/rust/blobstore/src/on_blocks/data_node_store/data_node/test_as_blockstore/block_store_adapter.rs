@@ -22,12 +22,13 @@ const MAX_BLOCK_SIZE: u32 = 1024 * 1024;
 pub struct BlockStoreAdapter(AsyncDropGuard<DataNodeStore<InMemoryBlockStore>>);
 
 impl BlockStoreAdapter {
-    pub fn new() -> AsyncDropGuard<Self> {
+    pub async fn new() -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self(
             DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 MAX_BLOCK_SIZE,
             )
+            .await
             .unwrap(),
         ))
     }
@@ -63,7 +64,8 @@ impl BlockStoreReader for BlockStoreAdapter {
     }
 
     fn estimate_num_free_bytes(&self) -> Result<u64> {
-        Ok(self.0.estimate_space_for_num_blocks_left()? / MAX_BLOCK_SIZE as u64)
+        Ok(self.0.estimate_space_for_num_blocks_left()?
+            * self.0.layout().max_bytes_per_leaf() as u64)
     }
 
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
@@ -132,7 +134,7 @@ impl<const FLUSH_CACHE_ON_YIELD: bool> Fixture for TestFixtureAdapter<FLUSH_CACH
         Self {}
     }
     async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-        SyncDrop::new(BlockStoreAdapter::new())
+        SyncDrop::new(BlockStoreAdapter::new().await)
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {

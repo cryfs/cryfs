@@ -1,10 +1,14 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
+#[cfg(test)]
 use futures::Stream;
+#[cfg(test)]
 use std::pin::Pin;
 
 pub use crate::RemoveResult;
+#[cfg(test)]
+use cryfs_blockstore::TryCreateResult;
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -28,15 +32,33 @@ pub struct DataNodeStore<B: BlockStore + Send + Sync> {
 }
 
 impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
-    pub fn new(
-        block_store: AsyncDropGuard<LockingBlockStore<B>>,
+    pub async fn new(
+        mut block_store: AsyncDropGuard<LockingBlockStore<B>>,
         physical_block_size_bytes: u32,
     ) -> Result<AsyncDropGuard<Self>> {
-        let block_size_bytes = u32::try_from(
-            block_store
-                .block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?,
-        )
-        .unwrap();
+        let block_size_bytes =
+            match Self::_block_size_bytes(&block_store, physical_block_size_bytes) {
+                Ok(ok) => ok,
+                Err(err) => {
+                    block_store.async_drop().await?;
+                    return Err(err);
+                }
+            };
+
+        Ok(AsyncDropGuard::new(Self {
+            block_store,
+            layout: NodeLayout { block_size_bytes },
+        }))
+    }
+
+    fn _block_size_bytes(
+        block_store: &LockingBlockStore<B>,
+        physical_block_size_bytes: u32,
+    ) -> Result<u32> {
+        let block_size_bytes = block_store
+            .block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?;
+        let block_size_bytes = u32::try_from(block_size_bytes).unwrap();
+
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = u32::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap();
         ensure!(
@@ -46,10 +68,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
             physical_block_size_bytes,
             min_block_size,
         );
-        Ok(AsyncDropGuard::new(Self {
-            block_store,
-            layout: NodeLayout { block_size_bytes },
-        }))
+        Ok(block_size_bytes)
     }
 
     pub fn layout(&self) -> &NodeLayout {
@@ -77,17 +96,41 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub async fn create_new_leaf_node(&self, data: &Data) -> Result<DataLeafNode<B>> {
+        let block_data = self._serialize_leaf(data);
+        // TODO Use create_optimized instead of create?
+        let block_id = self.block_store.create(&block_data).await?;
+        // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
+        self._load_created_node(block_id).await
+    }
+
+    #[cfg(test)]
+    pub async fn try_create_new_leaf_node(
+        &self,
+        block_id: BlockId,
+        data: &Data,
+    ) -> Result<DataLeafNode<B>> {
+        let block_data = self._serialize_leaf(data);
+        // TODO Use create_optimized instead of create?
+        match self.block_store.try_create(&block_id, &block_data).await? {
+            TryCreateResult::SuccessfullyCreated => {}
+            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => bail!("Block already exists"),
+        }
+        // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
+        self._load_created_node(block_id).await
+    }
+
+    fn _serialize_leaf(&self, data: &Data) -> Data {
         let mut leaf_data = self._allocate_data_for_leaf_node();
         leaf_data[..data.len()].copy_from_slice(data); // TODO Avoid copy_from_slice and instead rename this function to create_new_leaf_node_optimized
-        let block_data = data_node::serialize_leaf_node_optimized(
+        data_node::serialize_leaf_node_optimized(
             leaf_data,
             u32::try_from(data.len()).unwrap(),
             &self.layout,
-        );
-        // TODO Use create_optimized instead of create?
-        let blockid = self.block_store.create(&block_data).await?;
-        // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
-        match self.load(blockid).await? {
+        )
+    }
+
+    async fn _load_created_node(&self, block_id: BlockId) -> Result<DataLeafNode<B>> {
+        match self.load(block_id).await? {
             None => bail!("We just created this block, it must exist"),
             Some(DataNode::Inner(_)) => {
                 bail!("We just created a leaf node but then it got loaded as an inner node")
