@@ -1,6 +1,8 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
+use futures::Stream;
+use std::pin::Pin;
 
 pub use crate::RemoveResult;
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
@@ -145,15 +147,26 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
-        Ok(self.block_store.estimate_num_free_bytes()? / u64::from(self.layout.block_size_bytes))
+        Ok(self.block_store.estimate_num_free_bytes()?
+            / u64::from(self.layout.max_bytes_per_leaf()))
     }
 
     pub fn virtual_block_size_bytes(&self) -> u32 {
-        self.layout.block_size_bytes
+        self.layout.max_bytes_per_leaf()
     }
 
     pub async fn flush_node(&self, node: &mut DataNode<B>) -> Result<()> {
         self.block_store.flush_block(node.as_block_mut()).await
+    }
+
+    #[cfg(test)]
+    pub async fn all_nodes(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+        self.block_store.all_blocks().await
+    }
+
+    #[cfg(test)]
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.block_store.clear_cache_slow().await
     }
 }
 

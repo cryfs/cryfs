@@ -138,7 +138,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
 
     /// TODO Docs
     /// TODO Test
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_all_blocks(&self) -> Result<()> {
         use futures::StreamExt;
         let cache = self.cache.as_ref().expect("Object is already destructed");
@@ -205,9 +205,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
 }
 
 #[async_trait]
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
-    for BlockCache<B>
-{
+impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop for BlockCache<B> {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
@@ -250,9 +248,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Debug
-    for BlockCache<B>
-{
+impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Debug for BlockCache<B> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCache").finish()
     }

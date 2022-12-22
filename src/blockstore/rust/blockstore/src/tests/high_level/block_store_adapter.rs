@@ -8,7 +8,6 @@ use crate::{
     high_level::LockingBlockStore,
     low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
     tests::Fixture,
-    utils::{RemoveResult, TryCreateResult},
     BlockId,
 };
 use cryfs_utils::{
@@ -65,29 +64,14 @@ impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreReader for BlockSt
 #[async_trait]
 impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreDeleter for BlockStoreAdapter<B> {
     async fn remove(&self, id: &BlockId) -> Result<crate::utils::RemoveResult> {
-        self.0.remove(id).await.map(|r| match r {
-            RemoveResult::SuccessfullyRemoved => crate::utils::RemoveResult::SuccessfullyRemoved,
-            RemoveResult::NotRemovedBecauseItDoesntExist => {
-                crate::utils::RemoveResult::NotRemovedBecauseItDoesntExist
-            }
-        })
+        self.0.remove(id).await
     }
 }
 
 #[async_trait]
 impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreWriter for BlockStoreAdapter<B> {
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<crate::utils::TryCreateResult> {
-        self.0
-            .try_create(id, &data.to_vec().into())
-            .await
-            .map(|r| match r {
-                TryCreateResult::SuccessfullyCreated => {
-                    crate::utils::TryCreateResult::SuccessfullyCreated
-                }
-                TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => {
-                    crate::utils::TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists
-                }
-            })
+        self.0.try_create(id, &data.to_vec().into()).await
     }
 
     async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {

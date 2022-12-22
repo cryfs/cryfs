@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::time::Duration;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testutils"))]
 use futures::stream::Stream;
 
 use super::entry::FlushResult;
@@ -243,7 +243,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
             .lock_entries_unlocked_for_at_least_owned(duration)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn lock_all_entries(
         &self,
     ) -> impl Stream<

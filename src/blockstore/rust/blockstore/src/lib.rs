@@ -18,5 +18,5 @@ pub use low_level::{
 #[cfg(any(test, feature = "testutils"))]
 pub use low_level::{MockBlockStore, SharedBlockStore};
 
-#[cfg(test)]
-mod tests;
+#[cfg(any(test, feature = "testutils"))]
+pub mod tests;

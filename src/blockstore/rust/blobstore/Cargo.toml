@@ -17,5 +17,7 @@ divrem = "^1.0.0"
 futures = "^0.3.25"
 
 [dev-dependencies]
+cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
+cryfs-utils = {path = "../utils", features = ["testutils"]}
 rand = {version = "^0.8.5", features = ["small_rng"]}
 tokio = {version = "^1.23.0", features = ["macros"]}
