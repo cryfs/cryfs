@@ -566,9 +566,54 @@ mod tests {
         }
     }
 
+    mod physical_block_size {
+        use super::*;
+
+        #[tokio::test]
+        async fn block_has_correct_size() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    assert_ne!(
+                        PHYSICAL_BLOCK_SIZE_BYTES,
+                        nodestore.layout().max_bytes_per_leaf()
+                    );
+                    let node = new_full_leaf_node(nodestore).await;
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        node.data().len()
+                    );
+                    let block = node.into_block();
+                    assert_eq!(PHYSICAL_BLOCK_SIZE_BYTES as usize, block.data().len());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod max_bytes_per_leaf {
+        use super::*;
+
+        #[tokio::test]
+        async fn max_bytes_per_leaf_is_correct() {
+            const BLOCK_SIZE: u32 = 1000;
+            with_nodestore_with_blocksize(BLOCK_SIZE, |nodestore| {
+                Box::pin(async move {
+                    let leaf = new_empty_leaf_node(nodestore).await;
+                    assert_eq!(
+                        NodeLayout {
+                            block_size_bytes: BLOCK_SIZE,
+                        }
+                        .max_bytes_per_leaf(),
+                        leaf.max_bytes_per_leaf(),
+                    );
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
     //  - into_block
     //  - as_block_mut
-    //  - max_bytes_per_leaf
     //  - upcast
 }

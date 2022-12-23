@@ -828,6 +828,26 @@ mod tests {
         }
     }
 
+    mod physical_block_size {
+        use super::*;
+
+        #[tokio::test]
+        async fn block_has_correct_size() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    assert_ne!(
+                        PHYSICAL_BLOCK_SIZE_BYTES,
+                        nodestore.layout().max_bytes_per_leaf()
+                    );
+                    let node = new_inner_node(nodestore).await;
+                    let block = node.into_block();
+                    assert_eq!(PHYSICAL_BLOCK_SIZE_BYTES as usize, block.data().len());
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
     //  - depth
     //  - into_block
