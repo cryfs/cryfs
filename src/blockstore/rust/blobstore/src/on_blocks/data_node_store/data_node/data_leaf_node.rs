@@ -756,7 +756,4 @@ mod tests {
             .await;
         }
     }
-
-    // TODO Test
-    //  - flush
 }

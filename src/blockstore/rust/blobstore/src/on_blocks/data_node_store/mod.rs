@@ -228,7 +228,7 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryfs_blockstore::InMemoryBlockStore;
+    use cryfs_blockstore::{BlockStoreReader, InMemoryBlockStore, SharedBlockStore};
     use testutils::*;
 
     mod create_new_leaf_node {
@@ -855,6 +855,227 @@ mod tests {
         }
     }
 
+    mod flush_node {
+        use super::*;
+
+        #[tokio::test]
+        async fn flushing_created_leaf_node() {
+            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut nodestore = DataNodeStore::new(
+                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                PHYSICAL_BLOCK_SIZE_BYTES,
+            )
+            .await
+            .unwrap();
+
+            // Create node (but not flushed yet)
+            let mut leaf = nodestore
+                .create_new_leaf_node(&data_fixture(100, 1))
+                .await
+                .unwrap()
+                .upcast();
+
+            // Not flushed yet
+            assert!(blockstore.load(leaf.block_id()).await.unwrap().is_none());
+
+            // Flush the node
+            nodestore.flush_node(&mut leaf).await.unwrap();
+
+            // Now it is flushed
+            let block = blockstore.load(leaf.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(100, block_data.size().read());
+            assert_eq!(
+                data_fixture(100, 1).as_ref(),
+                &block_data.data().as_ref()[..100],
+            );
+
+            // Cleanup
+            drop(leaf);
+            drop(block);
+            nodestore.async_drop().await.unwrap();
+            blockstore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn flushing_loaded_leaf_node() {
+            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut nodestore = DataNodeStore::new(
+                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                PHYSICAL_BLOCK_SIZE_BYTES,
+            )
+            .await
+            .unwrap();
+
+            // Create the node (and flush it)
+            let mut leaf = nodestore
+                .create_new_leaf_node(&vec![0u8; 0].into())
+                .await
+                .unwrap()
+                .upcast();
+            let leaf_id = *leaf.block_id();
+            nodestore.flush_node(&mut leaf).await.unwrap();
+
+            // Reload leaf node
+            drop(leaf);
+            let DataNode::Leaf(mut leaf) = nodestore.load(leaf_id).await.unwrap().unwrap() else {
+                panic!("Expected leaf node");
+            };
+
+            // Modify leaf node but don't flush it
+            leaf.resize(100);
+            leaf.data_mut().copy_from_slice(&data_fixture(100, 1));
+            let mut leaf = leaf.upcast();
+
+            // Not flushed yet (i.e. still in state from when it was created)
+            let block = blockstore.load(leaf.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(0, block_data.size().read());
+            assert_eq!(
+                &vec![0u8; nodestore.layout().max_bytes_per_leaf() as usize],
+                block_data.data()
+            );
+
+            // Flush the node
+            nodestore.flush_node(&mut leaf).await.unwrap();
+
+            // Now it is flushed
+            let block = blockstore.load(leaf.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(100, block_data.size().read());
+            assert_eq!(
+                data_fixture(100, 1).as_ref(),
+                &block_data.data().as_ref()[..100],
+            );
+
+            // Cleanup
+            drop(leaf);
+            drop(block);
+            nodestore.async_drop().await.unwrap();
+            blockstore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn flushing_created_inner_node() {
+            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut nodestore = DataNodeStore::new(
+                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                PHYSICAL_BLOCK_SIZE_BYTES,
+            )
+            .await
+            .unwrap();
+
+            // Create node (but don't flush it)
+            let leaf1 = nodestore
+                .create_new_leaf_node(&vec![0u8; 0].into())
+                .await
+                .unwrap();
+            let mut inner = nodestore
+                .create_new_inner_node(1, &[*leaf1.block_id()])
+                .await
+                .unwrap()
+                .upcast();
+
+            // Not flushed yet
+            assert!(blockstore.load(inner.block_id()).await.unwrap().is_none());
+
+            // Flush node
+            nodestore.flush_node(&mut inner).await.unwrap();
+
+            // Now it is flushed
+            let block = blockstore.load(inner.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(1, block_data.size().read());
+            assert_eq!(
+                leaf1.block_id().data(),
+                &block_data.data().as_ref()[..BLOCKID_LEN],
+            );
+
+            // Cleanup
+            drop(leaf1);
+            drop(inner);
+            drop(block);
+            nodestore.async_drop().await.unwrap();
+            blockstore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn flushing_loaded_inner_node() {
+            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut nodestore = DataNodeStore::new(
+                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                PHYSICAL_BLOCK_SIZE_BYTES,
+            )
+            .await
+            .unwrap();
+
+            // Create the node (and flush it)
+            let leaf1 = nodestore
+                .create_new_leaf_node(&vec![0u8; 0].into())
+                .await
+                .unwrap();
+            let mut inner = nodestore
+                .create_new_inner_node(1, &[*leaf1.block_id()])
+                .await
+                .unwrap()
+                .upcast();
+            nodestore.flush_node(&mut inner).await.unwrap();
+
+            // Reload node
+            let inner_id = *inner.block_id();
+            drop(inner);
+            let DataNode::Inner(mut inner) = nodestore.load(inner_id).await.unwrap().unwrap() else {
+                panic!("Expected leaf node");
+            };
+
+            // Modify leaf node but don't flush it
+            let leaf2 = nodestore
+                .create_new_leaf_node(&vec![0u8; 0].into())
+                .await
+                .unwrap()
+                .upcast();
+            inner.add_child(&leaf2).unwrap();
+            let mut inner = inner.upcast();
+
+            // Not flushed yet (i.e. still in state from when it was created)
+            let block = blockstore.load(inner.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(1, block_data.size().read());
+            assert_eq!(
+                leaf1.block_id().data(),
+                &block_data.data().as_ref()[..BLOCKID_LEN],
+            );
+            assert_eq!(
+                &[0u8; BLOCKID_LEN],
+                &block_data.data().as_ref()[BLOCKID_LEN..(2 * BLOCKID_LEN)],
+            );
+
+            // Flush the node
+            nodestore.flush_node(&mut inner).await.unwrap();
+
+            // Now it is flushed
+            let block = blockstore.load(inner.block_id()).await.unwrap().unwrap();
+            let block_data = node::View::new(block.as_ref());
+            assert_eq!(2, block_data.size().read());
+            assert_eq!(
+                leaf1.block_id().data(),
+                &block_data.data().as_ref()[..BLOCKID_LEN],
+            );
+            assert_eq!(
+                leaf2.block_id().data(),
+                &block_data.data().as_ref()[BLOCKID_LEN..(2 * BLOCKID_LEN)],
+            );
+
+            // Cleanup
+            drop(leaf1);
+            drop(leaf2);
+            drop(inner);
+            drop(block);
+            nodestore.async_drop().await.unwrap();
+            blockstore.async_drop().await.unwrap();
+        }
+    }
+
     // TODO Test
     //  - new
     //  - layout
@@ -863,6 +1084,5 @@ mod tests {
     //  - overwrite_leaf_node
     //  - estimate_space_for_num_blocks_left
     //  - virtual_block_size_bytes(&self)
-    //  - flush_node
     //  - all_nodes
 }
