@@ -202,7 +202,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub async fn flush_node(&self, node: &mut DataNode<B>) -> Result<()> {
-        self.block_store.flush_block(node.as_block_mut()).await
+        node.flush(&self.block_store).await
     }
 
     #[cfg(test)]

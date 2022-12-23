@@ -8,7 +8,7 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{Block, BlockId, BlockStore};
+use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
@@ -75,11 +75,10 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         }
     }
 
-    // TODO No pub(crate) but rather pub(super::super)?
-    pub(crate) fn as_block_mut(&mut self) -> &mut Block<B> {
+    pub(crate) async fn flush(&mut self, block_store: &LockingBlockStore<B>) -> Result<()> {
         match self {
-            Self::Leaf(leaf) => leaf.as_block_mut(),
-            Self::Inner(inner) => inner.as_block_mut(),
+            Self::Leaf(leaf) => leaf.flush(block_store).await,
+            Self::Inner(inner) => inner.flush(block_store).await,
         }
     }
 
@@ -994,6 +993,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - as_block_mut
+    //  - flush
     //  - overwrite_node_with
 }

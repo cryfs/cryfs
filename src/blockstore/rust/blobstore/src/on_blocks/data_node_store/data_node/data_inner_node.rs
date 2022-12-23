@@ -4,7 +4,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 
 use super::super::layout::{node, NodeLayout, FORMAT_VERSION_HEADER};
 use super::DataNode;
-use cryfs_blockstore::{Block, BlockId, BlockStore, BLOCKID_LEN};
+use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
@@ -78,8 +78,8 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         self.block
     }
 
-    pub(super) fn as_block_mut(&mut self) -> &mut Block<B> {
-        &mut self.block
+    pub(super) async fn flush(&mut self, blockstore: &LockingBlockStore<B>) -> Result<()> {
+        blockstore.flush_block(&mut self.block).await
     }
 
     pub fn num_children(&self) -> NonZeroU32 {
@@ -918,7 +918,7 @@ mod tests {
     }
 
     // TODO Test
-    //  - as_block_mut
+    //  - flush
     //  - shrink_num_children
     //  - upcast
 }

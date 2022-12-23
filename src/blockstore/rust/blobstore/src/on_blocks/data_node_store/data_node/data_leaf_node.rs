@@ -5,7 +5,7 @@ use super::super::{
     layout::{node, NodeLayout, FORMAT_VERSION_HEADER},
     DataNode,
 };
-use cryfs_blockstore::{Block, BlockId, BlockStore};
+use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::Data;
 
 #[derive(Debug)]
@@ -58,8 +58,8 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
         self.block
     }
 
-    pub(super) fn as_block_mut(&mut self) -> &mut Block<B> {
-        &mut self.block
+    pub(super) async fn flush(&mut self, blockstore: &LockingBlockStore<B>) -> Result<()> {
+        blockstore.flush_block(&mut self.block).await
     }
 
     pub fn num_bytes(&self) -> u32 {
@@ -701,6 +701,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - as_block_mut
+    //  - flush
     //  - upcast
 }
