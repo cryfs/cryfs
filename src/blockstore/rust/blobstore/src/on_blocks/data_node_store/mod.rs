@@ -25,6 +25,9 @@ pub use data_node::{DataInnerNode, DataLeafNode, DataNode};
 #[cfg(test)]
 mod testutils;
 
+#[cfg(test)]
+mod test_as_blockstore;
+
 #[derive(Debug)]
 pub struct DataNodeStore<B: BlockStore + Send + Sync> {
     block_store: AsyncDropGuard<LockingBlockStore<B>>,

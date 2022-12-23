@@ -5,7 +5,7 @@ use futures::Stream;
 use std::fmt::{self, Debug};
 use std::pin::Pin;
 
-use super::super::super::{layout::node, DataLeafNode, DataNode, DataNodeStore};
+use super::super::{layout::node, DataLeafNode, DataNode, DataNodeStore};
 use cryfs_blockstore::{
     tests::Fixture, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
     InMemoryBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
