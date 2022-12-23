@@ -140,7 +140,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             new_num_children.get() <= old_num_children,
             "Called DataInnerNode::shrink_num_children({}) for a node with {} children",
             new_num_children,
-            view.size().read()
+            view.size().read(),
         );
         let free_begin = usize::try_from(new_num_children.get()).unwrap() * BLOCKID_LEN;
         let free_end = usize::try_from(old_num_children).unwrap() * BLOCKID_LEN;
@@ -212,6 +212,7 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
 mod tests {
     use super::super::super::testutils::*;
     use super::*;
+    use cryfs_blockstore::InMemoryBlockStore;
 
     #[allow(non_snake_case)]
     mod new {
@@ -735,6 +736,228 @@ mod tests {
         }
     }
 
+    #[allow(non_snake_case)]
+    mod shrink_num_children {
+        use super::*;
+
+        fn assert_all_children_except_n_are_zeroed_out(
+            n: usize,
+            node: &DataInnerNode<InMemoryBlockStore>,
+        ) {
+            for &byte in &node.raw_blockdata()[node::data::OFFSET..][(BLOCKID_LEN * n)..] {
+                assert_eq!(0, byte);
+            }
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithOneChild_whenCallingShrinkNumChildren_toLargerNumber_thenFails()
+        {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(1, node.num_children().get());
+
+                    assert_eq!(
+                        "Called DataInnerNode::shrink_num_children(2) for a node with 1 children",
+                        node.shrink_num_children(2.try_into().unwrap())
+                            .unwrap_err()
+                            .to_string()
+                    );
+
+                    assert_eq!(
+                        vec![*child1.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                    assert_all_children_except_n_are_zeroed_out(1, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithOneChild_whenCallingShrinkNumChildren_toSameNumber_thenSucceeds()
+        {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(1, node.num_children().get());
+
+                    node.shrink_num_children(1.try_into().unwrap()).unwrap();
+
+                    assert_eq!(
+                        vec![*child1.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+
+                    assert_all_children_except_n_are_zeroed_out(1, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLargerNumber_thenFails(
+        ) {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let child2 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id(), *child2.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(2, node.num_children().get());
+
+                    assert_eq!(
+                        "Called DataInnerNode::shrink_num_children(3) for a node with 2 children",
+                        node.shrink_num_children(3.try_into().unwrap())
+                            .unwrap_err()
+                            .to_string()
+                    );
+
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                    assert_all_children_except_n_are_zeroed_out(2, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toSameNumber_thenSucceeds(
+        ) {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let child2 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id(), *child2.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(2, node.num_children().get());
+
+                    node.shrink_num_children(2.try_into().unwrap()).unwrap();
+
+                    assert_eq!(
+                        vec![*child1.block_id(), *child2.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                    assert_all_children_except_n_are_zeroed_out(2, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLowerNumber_thenSucceeds(
+        ) {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child1 = new_full_leaf_node(nodestore).await;
+                    let child2 = new_full_leaf_node(nodestore).await;
+                    let mut node = nodestore
+                        .create_new_inner_node(1, &[*child1.block_id(), *child2.block_id()])
+                        .await
+                        .unwrap();
+                    assert_eq!(2, node.num_children().get());
+
+                    node.shrink_num_children(1.try_into().unwrap()).unwrap();
+
+                    assert_eq!(
+                        vec![*child1.block_id()],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                    assert_all_children_except_n_are_zeroed_out(1, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toSameSize_thenSucceeds(
+        ) {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
+                    )
+                    .await;
+                    let mut node = nodestore.create_new_inner_node(1, &children).await.unwrap();
+
+                    node.shrink_num_children(
+                        nodestore
+                            .layout()
+                            .max_children_per_inner_node()
+                            .try_into()
+                            .unwrap(),
+                    )
+                    .unwrap();
+
+                    assert_eq!(&children, &node.children().collect::<Vec<_>>(),);
+                    assert_all_children_except_n_are_zeroed_out(children.len(), &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toHalfSize_thenSucceeds(
+        ) {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
+                    )
+                    .await;
+                    let mut node = nodestore.create_new_inner_node(1, &children).await.unwrap();
+
+                    let half_size = nodestore.layout().max_children_per_inner_node() / 2;
+                    node.shrink_num_children(half_size.try_into().unwrap())
+                        .unwrap();
+
+                    assert_eq!(
+                        &children[..half_size as usize],
+                        &node.children().collect::<Vec<_>>(),
+                    );
+                    assert_all_children_except_n_are_zeroed_out(half_size as usize, &node);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toOne_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let children = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
+                    )
+                    .await;
+                    let mut node = nodestore.create_new_inner_node(1, &children).await.unwrap();
+
+                    node.shrink_num_children(1.try_into().unwrap()).unwrap();
+
+                    assert_eq!(&children[..1], &node.children().collect::<Vec<_>>(),);
+                    assert_all_children_except_n_are_zeroed_out(1, &node);
+                })
+            })
+            .await;
+        }
+    }
+
     mod children_and_num_children {
         use super::*;
 
@@ -1016,5 +1239,4 @@ mod tests {
 
     // TODO Test
     //  - flush
-    //  - shrink_num_children
 }
