@@ -265,6 +265,21 @@ mod tests {
             })
             .await
         }
+
+        #[tokio::test]
+        #[should_panic = "range end index 1017 out of range for slice of length 1016"]
+        async fn too_large_leaf_fails() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let data = full_leaf_data(1);
+                    let mut data = data.as_ref().to_vec();
+                    data.push(0);
+                    let data = Data::from(data);
+                    let _ = nodestore.create_new_leaf_node(&data).await;
+                })
+            })
+            .await
+        }
     }
 
     mod create_new_inner_node {
@@ -366,6 +381,18 @@ mod tests {
                     )
                     .await;
                     test(nodestore, 1, &children).await
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        #[should_panic = "Inner node cannot have a depth of 0. Is this perhaps a leaf instead?"]
+        async fn depth0_fails() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child = *new_full_leaf_node(nodestore).await.block_id();
+                    let _ = nodestore.create_new_inner_node(0, &[child]).await;
                 })
             })
             .await
