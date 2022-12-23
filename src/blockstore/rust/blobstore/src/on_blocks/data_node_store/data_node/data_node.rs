@@ -129,10 +129,10 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::testutils::*;
+    use super::super::super::{testutils::*, DataNodeStore};
     use super::*;
     use binary_layout::Field;
-    use cryfs_blockstore::BLOCKID_LEN;
+    use cryfs_blockstore::{InMemoryBlockStore, BLOCKID_LEN};
 
     #[allow(non_snake_case)]
     mod parse {
@@ -992,6 +992,203 @@ mod tests {
         }
     }
 
-    // TODO Test
-    //  - overwrite_node_with
+    mod overwrite_node_with {
+        use super::*;
+
+        #[tokio::test]
+        async fn overwrite_leaf_node_with_leaf_node() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let target = new_empty_leaf_node(nodestore).await.upcast();
+                    let target_id = *target.block_id();
+                    let source = new_full_leaf_node(nodestore).await.upcast();
+
+                    let overwritten = target
+                        .overwrite_node_with(&source, nodestore.layout())
+                        .unwrap();
+                    let DataNode::Leaf(overwritten) = overwritten else {
+                        panic!("Expected overwritten node to be a leaf node");
+                    };
+                    assert_eq!(target_id, *overwritten.block_id());
+
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        overwritten.data().len(),
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+
+                    // And still correct after loading
+                    drop(overwritten);
+                    let overwritten = load_leaf_node(nodestore, target_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        overwritten.data().len(),
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn overwrite_leaf_node_with_inner_node() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let target = new_full_leaf_node(nodestore).await.upcast();
+                    let target_id = *target.block_id();
+                    let source = new_full_inner_node(nodestore).await.upcast();
+
+                    let overwritten = target
+                        .overwrite_node_with(&source, nodestore.layout())
+                        .unwrap();
+                    let DataNode::Inner(overwritten) = overwritten else {
+                        panic!("Expected overwritten node to be an inner node");
+                    };
+                    assert_eq!(target_id, *overwritten.block_id());
+
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        overwritten.num_children().get()
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+
+                    // And still correct after loading
+                    drop(overwritten);
+                    let overwritten = load_inner_node(nodestore, target_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        overwritten.num_children().get()
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn overwrite_inner_node_with_leaf_node() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let target = new_inner_node(nodestore).await.upcast();
+                    let target_id = *target.block_id();
+                    let source = new_full_leaf_node(nodestore).await.upcast();
+
+                    let overwritten = target
+                        .overwrite_node_with(&source, nodestore.layout())
+                        .unwrap();
+                    let DataNode::Leaf(overwritten) = overwritten else {
+                        panic!("Expected overwritten node to be a leaf node");
+                    };
+                    assert_eq!(target_id, *overwritten.block_id());
+
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        overwritten.data().len(),
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+
+                    // And still correct after loading
+                    drop(overwritten);
+                    let overwritten = load_leaf_node(nodestore, target_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        overwritten.data().len(),
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn overwrite_inner_node_with_inner_node() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let target = new_inner_node(nodestore).await.upcast();
+                    let target_id = *target.block_id();
+                    let source = new_full_inner_node(nodestore).await.upcast();
+
+                    let overwritten = target
+                        .overwrite_node_with(&source, nodestore.layout())
+                        .unwrap();
+                    let DataNode::Inner(overwritten) = overwritten else {
+                        panic!("Expected overwritten node to be an inner node");
+                    };
+                    assert_eq!(target_id, *overwritten.block_id());
+
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        overwritten.num_children().get()
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+
+                    // And still correct after loading
+                    drop(overwritten);
+                    let overwritten = load_inner_node(nodestore, target_id).await;
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        overwritten.num_children().get()
+                    );
+                    assert_eq!(source.raw_blockdata(), overwritten.raw_blockdata());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        #[should_panic = "Source block has 200 bytes but the layout expects 100"]
+        async fn overwrite_with_wrong_source_layout() {
+            const BLOCKSIZE_1: u32 = 100;
+            const BLOCKSIZE_2: u32 = 200;
+            let mut nodestore1 = DataNodeStore::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                BLOCKSIZE_1,
+            )
+            .await
+            .unwrap();
+            let mut nodestore2 = DataNodeStore::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                BLOCKSIZE_2,
+            )
+            .await
+            .unwrap();
+
+            let node1 = new_full_leaf_node(&nodestore1).await.upcast();
+            let node2 = new_full_leaf_node(&nodestore2).await.upcast();
+
+            let _ = node1.overwrite_node_with(&node2, nodestore1.layout());
+
+            drop(node2);
+            nodestore2.async_drop().await.unwrap();
+            nodestore1.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        #[should_panic = "Destination block has 100 bytes but the layout expects 200"]
+        async fn overwrite_with_wrong_target_layout() {
+            const BLOCKSIZE_1: u32 = 100;
+            const BLOCKSIZE_2: u32 = 200;
+            let mut nodestore1 = DataNodeStore::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                BLOCKSIZE_1,
+            )
+            .await
+            .unwrap();
+            let mut nodestore2 = DataNodeStore::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                BLOCKSIZE_2,
+            )
+            .await
+            .unwrap();
+
+            let node1 = new_full_leaf_node(&nodestore1).await.upcast();
+            let node2 = new_full_leaf_node(&nodestore2).await.upcast();
+
+            let _ = node1.overwrite_node_with(&node2, nodestore2.layout());
+
+            drop(node2);
+            nodestore2.async_drop().await.unwrap();
+            nodestore1.async_drop().await.unwrap();
+        }
+    }
 }
