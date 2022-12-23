@@ -11,6 +11,7 @@ use super::{
 use cryfs_blockstore::{Block, BlockId, BlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
+#[derive(Debug)]
 pub enum DataNode<B: BlockStore + Send + Sync> {
     Inner(DataInnerNode<B>),
     Leaf(DataLeafNode<B>),
@@ -133,6 +134,412 @@ mod tests {
     use super::*;
     use binary_layout::Field;
     use cryfs_blockstore::BLOCKID_LEN;
+
+    #[allow(non_snake_case)]
+    mod parse {
+        use super::*;
+
+        #[tokio::test]
+        async fn whenLoadingFullInnerNodeAtDepth1_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+
+                    let block = node.into_block();
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected inner node");
+                    };
+
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get(),
+                    );
+                    assert_eq!(1, node.depth().get());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingNodeWithOneChildAtDepth2_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let child = new_full_inner_node(nodestore).await;
+                    let node = nodestore
+                        .create_new_inner_node(2, &[*child.block_id()])
+                        .await
+                        .unwrap();
+
+                    let block = node.into_block();
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected inner node");
+                    };
+
+                    assert_eq!(1, node.num_children().get(),);
+                    assert_eq!(2, node.depth().get());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingFullLeafNode_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected leaf node");
+                    };
+
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        node.data().len(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingEmptyLeafNode_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected leaf node");
+                    };
+
+                    assert_eq!(0, node.data().len());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingInnerNodeWithWrongFormatVersion_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .format_version_header_mut()
+                        .write(10);
+
+                    assert_eq!(
+                        format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingLeafWithWrongFormatVersion_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .format_version_header_mut()
+                        .write(10);
+
+                    assert_eq!(
+                        format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooSmallInnerNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len - 1);
+
+                    assert_eq!(
+                        format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1023", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooLargeInnerNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len + 1);
+
+                    assert_eq!(
+                        format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1025", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooSmallLeafNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len - 1);
+
+                    assert_eq!(
+                        format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1023", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooLargeLeafNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len + 1);
+
+                    assert_eq!(
+                        format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1025", node_id.to_hex()),
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoadingInnerNode_thenSucceeds() {
+            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+
+                    let block = node.into_block();
+
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected an inner node");
+                    };
+                    assert_eq!(2, node.num_children().get());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoadingLeafNode_thenSucceeds() {
+            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                        panic!("Expected a leaf node");
+                    };
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        node.data().len()
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
+        async fn givenLayoutWithTooSmallBlockSize_whenLoadingInnerNode_thenFailss() {
+            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
+                Box::pin(async move {
+                    new_full_inner_node(nodestore).await;
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
+        async fn givenLayoutWithTooSmallBlockSize_whenLoadingLeafNode_thenFailss() {
+            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
+                Box::pin(async move {
+                    new_full_leaf_node(nodestore).await;
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooDeepInnerNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .depth_mut()
+                        .write(super::super::data_inner_node::MAX_DEPTH + 1);
+
+                    assert_eq!(
+                        "Loaded an inner node with depth 11 but the maximum is 10",
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        "Loaded an inner node with depth 11 but the maximum is 10",
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingInnerNodeWithTooFewChildren_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut()).size_mut().write(0);
+
+                    assert_eq!(
+                        "Loaded an inner node that claims to store 0 children but the minimum is 1.",
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        "Loaded an inner node that claims to store 0 children but the minimum is 1.",
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingInnerNodeWithTooManyChildren_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_inner_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut()).size_mut().write(nodestore.layout().max_children_per_inner_node() + 1);
+
+                    assert_eq!(
+                        "Loaded an inner node that claims to store 64 children but the maximum is 63.",
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        "Loaded an inner node that claims to store 64 children but the maximum is 63.",
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingLeafNodeWithTooMuchData_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .size_mut()
+                        .write(nodestore.layout().max_bytes_per_leaf() + 1);
+
+                    assert_eq!(
+                        "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
+                        DataNode::parse(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+    }
 
     mod block_id {
         use super::*;
@@ -522,7 +929,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - parse
     //  - depth
     //  - as_block_mut
     //  - overwrite_node_with

@@ -8,12 +8,15 @@ use super::super::{
 use cryfs_blockstore::{Block, BlockId, BlockStore};
 use cryfs_utils::data::Data;
 
+#[derive(Debug)]
 pub struct DataLeafNode<B: BlockStore + Send + Sync> {
     block: Block<B>,
 }
 
 impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
+        assert!(layout.block_size_bytes as usize > node::data::OFFSET, "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new");
+
         let view = node::View::new(block.data());
         ensure!(
             view.format_version_header().read() == FORMAT_VERSION_HEADER,
@@ -26,7 +29,12 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
             "Loaded a leaf with depth {}. This doesn't make sense, it should have been loaded as an inner node",
             view.depth().read(),
         );
-        assert!(block.data().len() > node::data::OFFSET, "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new");
+        ensure!(
+            block.data().len() == layout.block_size_bytes as usize,
+            "Loaded block of size {} but expected {}",
+            block.data().len(),
+            layout.block_size_bytes
+        );
         let max_bytes_per_leaf = layout.max_bytes_per_leaf();
         let size = view.size().read();
         ensure!(
@@ -132,7 +140,192 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
 mod tests {
     use super::super::super::testutils::*;
     use super::*;
+    use cryfs_blockstore::BLOCKID_LEN;
     use rand::{rngs::SmallRng, Rng, SeedableRng};
+
+    #[allow(non_snake_case)]
+    mod new {
+        use super::*;
+
+        #[tokio::test]
+        async fn whenLoadingFullLeafNode_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        node.data().len(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingEmptyLeafNode_thenSucceeds() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+
+                    assert_eq!(0, node.data().len());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingLeafWithWrongFormatVersion_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .format_version_header_mut()
+                        .write(10);
+
+                    assert_eq!(
+                        "Loaded a node with format version 10 but the current version is 0",
+                        DataLeafNode::new(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        #[should_panic = "Loaded a leaf with depth 1. This doesn't make sense, it should have been loaded as an inner node"]
+        async fn whenLoadingInnerNodeAsLeaf_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_inner_node(nodestore).await;
+
+                    let block = node.into_block();
+
+                    let _ = DataLeafNode::new(block, nodestore.layout());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooSmallLeafNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len - 1);
+
+                    assert_eq!(
+                        "Loaded block of size 1023 but expected 1024",
+                        DataLeafNode::new(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn whenLoadingTooLargeLeafNode_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_empty_leaf_node(nodestore).await;
+
+                    let mut block = node.into_block();
+                    let len = block.data().len();
+                    block.data_mut().resize(len + 1);
+
+                    assert_eq!(
+                        "Loaded block of size 1025 but expected 1024",
+                        DataLeafNode::new(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoading_thenSucceeds() {
+            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+
+                    let block = node.into_block();
+
+                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+                    assert_eq!(
+                        nodestore.layout().max_bytes_per_leaf() as usize,
+                        node.data().len()
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
+        async fn givenLayoutWithTooSmallBlockSize_whenLoading_thenFails() {
+            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
+            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
+                Box::pin(async move {
+                    new_full_leaf_node(nodestore).await;
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn whenLoadingLeafNodeWithTooMuchData_thenFails() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await;
+                    let node_id = *node.block_id();
+
+                    let mut block = node.into_block();
+                    node::View::new(block.data_mut())
+                        .size_mut()
+                        .write(nodestore.layout().max_bytes_per_leaf() + 1);
+
+                    assert_eq!(
+                        "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
+                        DataLeafNode::new(block, nodestore.layout())
+                            .unwrap_err()
+                            .to_string(),
+                    );
+
+                    // Still fails when loading
+                    assert_eq!(
+                        "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
+                        nodestore.load(node_id).await.unwrap_err().to_string(),
+                    );
+                })
+            })
+            .await;
+        }
+    }
 
     mod serialize_leaf_node {
         use super::*;
@@ -374,7 +567,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - new
     //  - into_block
     //  - as_block_mut
     //  - max_bytes_per_leaf

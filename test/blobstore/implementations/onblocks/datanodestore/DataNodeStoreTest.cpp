@@ -37,19 +37,6 @@ constexpr uint32_t DataNodeStoreTest::BLOCKSIZE_BYTES;
 
 #define EXPECT_IS_PTR_TYPE(Type, ptr) EXPECT_NE(nullptr, dynamic_cast<Type *>(ptr)) << "Given pointer cannot be cast to the given type"
 
-TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh)
-{
-  auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  BlockId blockId = block->blockId();
-  {
-    DataNodeView view(std::move(block));
-    view.setDepth(DataNodeStore::MAX_DEPTH + 1);
-  }
-
-  EXPECT_ANY_THROW(
-      nodeStore->load(blockId));
-}
-
 TEST_F(DataNodeStoreTest, PhysicalBlockSize_Leaf)
 {
   auto leaf = nodeStore->createNewLeafNode(Data(0));

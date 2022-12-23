@@ -12,7 +12,10 @@ pub async fn new_full_leaf_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
 ) -> DataLeafNode<InMemoryBlockStore> {
     nodestore
-        .create_new_leaf_node(&full_leaf_data(1))
+        .create_new_leaf_node(&data_fixture(
+            nodestore.layout().max_bytes_per_leaf() as usize,
+            1,
+        ))
         .await
         .unwrap()
 }
@@ -45,10 +48,7 @@ pub async fn new_full_inner_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
 ) -> DataInnerNode<InMemoryBlockStore> {
     let leaves = future::join_all(
-        (0..NodeLayout {
-            block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
-        }
-        .max_children_per_inner_node())
+        (0..nodestore.layout().max_children_per_inner_node())
             .map(|_| new_full_leaf_node(&nodestore))
             .collect::<Vec<_>>(),
     )
@@ -89,9 +89,16 @@ pub async fn load_leaf_node(
 pub async fn with_nodestore(
     f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
 ) {
+    with_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE_BYTES, f).await
+}
+
+pub async fn with_nodestore_with_blocksize(
+    blocksize_bytes: u32,
+    f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
+) {
     let mut nodestore = DataNodeStore::new(
         LockingBlockStore::new(InMemoryBlockStore::new()),
-        PHYSICAL_BLOCK_SIZE_BYTES,
+        blocksize_bytes,
     )
     .await
     .unwrap();
