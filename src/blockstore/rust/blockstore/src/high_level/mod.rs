@@ -515,4 +515,6 @@ mod tests {
 
         store.async_drop().await.unwrap();
     }
+
+    // TODO Test flush_block
 }
