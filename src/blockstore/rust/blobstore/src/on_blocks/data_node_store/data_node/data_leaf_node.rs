@@ -612,6 +612,72 @@ mod tests {
         }
     }
 
+    mod num_bytes {
+        use super::*;
+
+        #[tokio::test]
+        async fn empty() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = nodestore
+                        .create_new_leaf_node(&vec![0u8; 0].into())
+                        .await
+                        .unwrap();
+                    assert_eq!(0, leaf.num_bytes());
+
+                    // And after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(0, leaf.num_bytes());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn half_full() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let size = nodestore.layout().max_bytes_per_leaf() / 2;
+                    let leaf = nodestore
+                        .create_new_leaf_node(&data_fixture(size as usize, 1))
+                        .await
+                        .unwrap();
+                    assert_eq!(size, leaf.num_bytes());
+
+                    // And after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(size, leaf.num_bytes());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn full() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let size = nodestore.layout().max_bytes_per_leaf() / 2;
+                    let leaf = nodestore
+                        .create_new_leaf_node(&data_fixture(size as usize, 1))
+                        .await
+                        .unwrap();
+                    assert_eq!(size, leaf.num_bytes());
+
+                    // And after loading
+                    let block_id = *leaf.block_id();
+                    drop(leaf);
+                    let leaf = load_leaf_node(nodestore, block_id).await;
+                    assert_eq!(size, leaf.num_bytes());
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
     //  - into_block
     //  - as_block_mut
