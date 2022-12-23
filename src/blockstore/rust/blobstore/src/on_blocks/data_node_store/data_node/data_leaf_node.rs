@@ -700,7 +700,63 @@ mod tests {
         }
     }
 
+    mod upcast {
+        use super::*;
+
+        #[tokio::test]
+        async fn empty() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = nodestore
+                        .create_new_leaf_node(&vec![0u8; 0].into())
+                        .await
+                        .unwrap();
+                    let DataNode::Leaf(leaf) = leaf.upcast() else {
+                        panic!("Should have upcast as leaf");
+                    };
+                    assert_eq!(&vec![0u8; 0], leaf.data());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn half_full() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let size = nodestore.layout().max_bytes_per_leaf() / 2;
+                    let leaf = nodestore
+                        .create_new_leaf_node(&data_fixture(size as usize, 1))
+                        .await
+                        .unwrap();
+                    let DataNode::Leaf(leaf) = leaf.upcast() else {
+                        panic!("Should have upcast as leaf");
+                    };
+                    assert_eq!(data_fixture(size as usize, 1).as_ref(), leaf.data());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn full() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let size = nodestore.layout().max_bytes_per_leaf() / 2;
+                    let leaf = nodestore
+                        .create_new_leaf_node(&data_fixture(size as usize, 1))
+                        .await
+                        .unwrap();
+                    let DataNode::Leaf(leaf) = leaf.upcast() else {
+                        panic!("Should have upcast as leaf");
+                    };
+                    assert_eq!(data_fixture(size as usize, 1).as_ref(), leaf.data());
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
     //  - flush
-    //  - upcast
 }

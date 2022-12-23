@@ -917,8 +917,104 @@ mod tests {
         }
     }
 
+    mod upcast {
+        use super::*;
+
+        #[tokio::test]
+        async fn one_child_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id = *new_full_leaf_node(nodestore).await.block_id();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[block_id])
+                        .await
+                        .unwrap();
+
+                    let DataNode::Inner(node) = node.upcast() else {
+                        panic!("Should have upcast as inner node");
+                    };
+
+                    assert_eq!(1, node.num_children().get());
+                    assert_eq!(vec![block_id], node.children().collect::<Vec<_>>(),);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn two_children_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_id1 = *new_full_leaf_node(nodestore).await.block_id();
+                    let block_id2 = *new_full_leaf_node(nodestore).await.block_id();
+                    let node = nodestore
+                        .create_new_inner_node(1, &[block_id1, block_id2])
+                        .await
+                        .unwrap();
+
+                    let DataNode::Inner(node) = node.upcast() else {
+                        panic!("Should have upcast as inner node");
+                    };
+
+                    assert_eq!(2, node.num_children().get());
+                    assert_eq!(
+                        vec![block_id1, block_id2],
+                        node.children().collect::<Vec<_>>(),
+                    );
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn max_children_depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let block_ids = new_full_leaves(
+                        nodestore,
+                        nodestore.layout().max_children_per_inner_node(),
+                    )
+                    .await;
+                    let node = nodestore
+                        .create_new_inner_node(1, &block_ids)
+                        .await
+                        .unwrap();
+
+                    let DataNode::Inner(node) = node.upcast() else {
+                        panic!("Should have upcast as inner node");
+                    };
+
+                    assert_eq!(
+                        nodestore.layout().max_children_per_inner_node(),
+                        node.num_children().get()
+                    );
+                    assert_eq!(block_ids, node.children().collect::<Vec<_>>(),);
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_inner_node(nodestore).await;
+                    let node = nodestore
+                        .create_new_inner_node(2, &[*leaf.block_id()])
+                        .await
+                        .unwrap();
+
+                    let DataNode::Inner(node) = node.upcast() else {
+                        panic!("Should have upcast as inner node");
+                    };
+                    assert_eq!(2, node.depth().get());
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
     //  - flush
     //  - shrink_num_children
-    //  - upcast
 }
