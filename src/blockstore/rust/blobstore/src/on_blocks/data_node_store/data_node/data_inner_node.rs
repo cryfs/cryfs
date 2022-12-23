@@ -894,8 +894,30 @@ mod tests {
         }
     }
 
+    mod into_block {
+        use super::*;
+
+        #[tokio::test]
+        async fn into_block() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await;
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap();
+                    let block = node.into_block();
+                    assert_eq!(
+                        leaf.block_id().data(),
+                        &block.data()[node::data::OFFSET..(node::data::OFFSET + BLOCKID_LEN)]
+                    );
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
-    //  - into_block
     //  - as_block_mut
     //  - shrink_num_children
     //  - upcast

@@ -928,8 +928,72 @@ mod tests {
         }
     }
 
+    mod depth {
+        use super::*;
+
+        #[tokio::test]
+        async fn depth_0() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let node = new_full_leaf_node(nodestore).await.upcast();
+                    assert_eq!(0, node.depth());
+
+                    // And after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_node(nodestore, node_id).await;
+                    assert_eq!(0, node.depth());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn depth_1() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_leaf_node(nodestore).await;
+                    let node = nodestore
+                        .create_new_inner_node(1, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    assert_eq!(1, node.depth());
+
+                    // And after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_node(nodestore, node_id).await;
+                    assert_eq!(1, node.depth());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn depth_2() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = new_full_inner_node(nodestore).await;
+                    let node = nodestore
+                        .create_new_inner_node(2, &[*leaf.block_id()])
+                        .await
+                        .unwrap()
+                        .upcast();
+                    assert_eq!(2, node.depth());
+
+                    // And after loading
+                    let node_id = *node.block_id();
+                    drop(node);
+                    let node = load_node(nodestore, node_id).await;
+                    assert_eq!(2, node.depth());
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
-    //  - depth
     //  - as_block_mut
     //  - overwrite_node_with
 }

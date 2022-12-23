@@ -678,8 +678,29 @@ mod tests {
         }
     }
 
+    mod into_block {
+        use super::*;
+
+        #[tokio::test]
+        async fn into_block() {
+            with_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let leaf = nodestore
+                        .create_new_leaf_node(&full_leaf_data(1))
+                        .await
+                        .unwrap();
+                    let block = leaf.into_block();
+                    assert_eq!(
+                        full_leaf_data(1).as_ref(),
+                        &block.data()[node::data::OFFSET..],
+                    );
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test
-    //  - into_block
     //  - as_block_mut
     //  - upcast
 }
