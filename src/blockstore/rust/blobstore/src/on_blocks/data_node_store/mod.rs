@@ -255,6 +255,25 @@ mod tests {
         }
     }
 
+    mod layout {
+        use super::*;
+
+        #[tokio::test]
+        async fn test() {
+            let mut nodestore =
+                DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 100)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                NodeLayout {
+                    block_size_bytes: 100
+                },
+                *nodestore.layout(),
+            );
+            nodestore.async_drop().await.unwrap();
+        }
+    }
+
     mod create_new_leaf_node {
         use super::*;
 
@@ -1190,7 +1209,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - layout
     //  - load
     //  - overwrite_leaf_node
     //  - estimate_space_for_num_blocks_left

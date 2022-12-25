@@ -22,7 +22,7 @@ define_layout!(node, LittleEndian, {
     data: [u8],
 });
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NodeLayout {
     pub block_size_bytes: u32,
 }
