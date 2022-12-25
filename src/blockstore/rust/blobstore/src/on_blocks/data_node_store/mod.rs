@@ -1042,6 +1042,133 @@ mod tests {
         }
     }
 
+    mod overwrite_with_leaf_node {
+        use super::*;
+
+        mod overwrite_node_with {
+            use super::*;
+
+            #[tokio::test]
+            async fn overwrite_leaf_node_with_empty_leaf_node() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_empty_leaf_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(&target_id, &[])
+                            .await
+                            .unwrap();
+
+                        let loaded = load_leaf_node(nodestore, target_id).await;
+                        assert_eq!(0, loaded.data().len());
+                    })
+                })
+                .await;
+            }
+
+            #[tokio::test]
+            async fn overwrite_leaf_node_with_nonempty_leaf_node() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_empty_leaf_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(&target_id, &data_fixture(100, 1))
+                            .await
+                            .unwrap();
+
+                        let loaded = load_leaf_node(nodestore, target_id).await;
+                        assert_eq!(data_fixture(100, 1).as_ref(), loaded.data());
+                    })
+                })
+                .await;
+            }
+
+            #[tokio::test]
+            async fn overwrite_inner_node_with_empty_leaf_node() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_full_inner_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(&target_id, &[])
+                            .await
+                            .unwrap();
+
+                        let loaded = load_leaf_node(nodestore, target_id).await;
+                        assert_eq!(0, loaded.data().len());
+                    })
+                })
+                .await;
+            }
+
+            #[tokio::test]
+            async fn overwrite_inner_node_with_nonempty_leaf_node() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_full_inner_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(&target_id, &data_fixture(100, 1))
+                            .await
+                            .unwrap();
+
+                        let loaded = load_leaf_node(nodestore, target_id).await;
+                        assert_eq!(data_fixture(100, 1).as_ref(), loaded.data());
+                    })
+                })
+                .await;
+            }
+
+            #[tokio::test]
+            async fn overwrite_with_max_data() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_empty_leaf_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(
+                                &target_id,
+                                &data_fixture(nodestore.layout().max_bytes_per_leaf() as usize, 1),
+                            )
+                            .await
+                            .unwrap();
+
+                        let loaded = load_leaf_node(nodestore, target_id).await;
+                        assert_eq!(
+                            data_fixture(nodestore.layout().max_bytes_per_leaf() as usize, 1)
+                                .as_ref(),
+                            loaded.data(),
+                        );
+                    })
+                })
+                .await;
+            }
+
+            #[tokio::test]
+            #[should_panic = "range end index 1017 out of range for slice of length 1016"]
+            async fn overwrite_with_too_much_data() {
+                with_nodestore(|nodestore| {
+                    Box::pin(async move {
+                        let target_id = *new_empty_leaf_node(nodestore).await.block_id();
+
+                        nodestore
+                            .overwrite_with_leaf_node(
+                                &target_id,
+                                &data_fixture(
+                                    nodestore.layout().max_bytes_per_leaf() as usize + 1,
+                                    1,
+                                ),
+                            )
+                            .await
+                            .unwrap();
+                    })
+                })
+                .await;
+            }
+        }
+    }
+
     mod flush_node {
         use super::*;
 
@@ -1264,7 +1391,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - overwrite_leaf_node
     //  - estimate_space_for_num_blocks_left
     //  - virtual_block_size_bytes(&self)
     //  - all_nodes
