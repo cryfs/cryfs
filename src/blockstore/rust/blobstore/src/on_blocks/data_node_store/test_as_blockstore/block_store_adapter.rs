@@ -103,7 +103,7 @@ impl BlockStoreWriter for BlockStoreAdapter {
     }
 
     async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
-        self.0.overwrite_leaf_node(id, data).await
+        self.0.overwrite_with_leaf_node(id, data).await
     }
 }
 

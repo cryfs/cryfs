@@ -159,7 +159,9 @@ impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
                 store,
                 leaf_block_id,
             } => {
-                store.overwrite_leaf_node(leaf_block_id, source).await?;
+                store
+                    .overwrite_with_leaf_node(leaf_block_id, source)
+                    .await?;
             }
         }
         Ok(())
