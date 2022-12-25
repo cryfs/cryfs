@@ -193,8 +193,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
-        Ok(self.block_store.estimate_num_free_bytes()?
-            / u64::from(self.layout.max_bytes_per_leaf()))
+        Ok(self.block_store.estimate_num_free_bytes()? / u64::from(self.layout.block_size_bytes))
     }
 
     pub fn virtual_block_size_bytes(&self) -> u32 {
