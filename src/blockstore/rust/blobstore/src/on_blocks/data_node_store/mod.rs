@@ -1569,7 +1569,26 @@ mod tests {
         }
     }
 
+    mod virtual_block_size_bytes {
+        use super::*;
+
+        #[tokio::test]
+        async fn test() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v / 10));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024 * 10)
+                .await
+                .unwrap();
+
+            assert_eq!(32 * 1024 - node::data::OFFSET as u32, nodestore.virtual_block_size_bytes());
+
+            nodestore.async_drop().await.unwrap();
+        }
+    }
+
     // TODO Test
-    //  - virtual_block_size_bytes(&self)
     //  - all_nodes
 }
