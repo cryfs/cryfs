@@ -274,6 +274,61 @@ mod tests {
         }
     }
 
+    mod load {
+        use super::*;
+
+        #[tokio::test]
+        async fn not_existing() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    assert!(nodestore
+                        .load(BlockId::from_hex("4fbf746746da1a28137df88c5815572c").unwrap())
+                        .await
+                        .unwrap()
+                        .is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn existing_leaf_node() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let block_id = *nodestore
+                        .create_new_leaf_node(&data_fixture(100, 1))
+                        .await
+                        .unwrap()
+                        .block_id();
+                    let DataNode::Leaf(node) = nodestore.load(block_id).await.unwrap().unwrap() else {
+                        panic!("Expected to load leaf node");
+                    };
+                    assert_eq!(data_fixture(100, 1).as_ref(), node.data());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn existing_inner_node() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let child = new_full_leaf_node(nodestore).await;
+                    let block_id = *nodestore
+                        .create_new_inner_node(1, &[*child.block_id()])
+                        .await
+                        .unwrap()
+                        .block_id();
+                    let DataNode::Inner(node) = nodestore.load(block_id).await.unwrap().unwrap() else {
+                        panic!("Expected to load leaf node");
+                    };
+                    assert_eq!(&vec![*child.block_id()], &node.children().collect::<Vec<_>>());
+                })
+            })
+            .await
+        }
+    }
+
     mod create_new_leaf_node {
         use super::*;
 
@@ -1209,7 +1264,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - load
     //  - overwrite_leaf_node
     //  - estimate_space_for_num_blocks_left
     //  - virtual_block_size_bytes(&self)
