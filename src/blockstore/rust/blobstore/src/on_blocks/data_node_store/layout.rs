@@ -58,4 +58,55 @@ impl NodeLayout {
     }
 }
 
-// TODO Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_header_len() {
+        assert_eq!(NodeLayout::header_len(), node::data::OFFSET);
+    }
+
+    #[test]
+    fn test_max_bytes_per_leaf() {
+        let layout = NodeLayout {
+            block_size_bytes: 1234,
+        };
+        assert_eq!(
+            layout.max_bytes_per_leaf(),
+            1234 - node::data::OFFSET as u32,
+        );
+    }
+
+    #[test]
+    fn test_max_children_per_inner_node() {
+        let layout = NodeLayout {
+            block_size_bytes: 1234,
+        };
+        assert_eq!(
+            layout.max_children_per_inner_node(),
+            (1234 - node::data::OFFSET as u32) / BLOCKID_LEN as u32,
+        );
+    }
+
+    #[test]
+    fn test_num_leaves_per_full_subtree_depth() {
+        let layout = NodeLayout {
+            block_size_bytes: 1234,
+        };
+        assert_eq!(
+            layout.num_leaves_per_full_subtree(1).unwrap().get(),
+            layout.max_children_per_inner_node() as u64,
+        );
+        assert_eq!(
+            layout.num_leaves_per_full_subtree(2).unwrap().get(),
+            layout.max_children_per_inner_node() as u64
+                * layout.max_children_per_inner_node() as u64,
+        );
+        assert_eq!(
+            layout.num_leaves_per_full_subtree(3).unwrap().get(),
+            layout.max_children_per_inner_node() as u64
+                * layout.max_children_per_inner_node() as u64
+                * layout.max_children_per_inner_node() as u64,
+        );
+    }
+}
