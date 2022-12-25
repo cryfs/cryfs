@@ -285,6 +285,95 @@ mod tests {
         }
     }
 
+    mod try_create_new_leaf_node {
+        use super::*;
+
+        fn blockid() -> BlockId {
+            BlockId::from_hex("4fbf746746da1a28137df88c5815572c").unwrap()
+        }
+
+        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, data: Data) {
+            let node = nodestore
+                .try_create_new_leaf_node(blockid(), &data)
+                .await
+                .unwrap();
+            assert_eq!(blockid(), *node.block_id());
+            assert_eq!(data.as_ref(), node.data());
+
+            // and it's still correct after loading
+            drop(node);
+            let node = load_leaf_node(nodestore, blockid()).await;
+            assert_eq!(data.as_ref(), node.data());
+        }
+
+        #[tokio::test]
+        async fn empty() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, Data::empty()).await })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn some_data() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, half_full_leaf_data(1)).await })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn full() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move { test(nodestore, full_leaf_data(1)).await })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        #[should_panic = "range end index 1017 out of range for slice of length 1016"]
+        async fn too_large_leaf_fails() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let data = full_leaf_data(1);
+                    let mut data = data.as_ref().to_vec();
+                    data.push(0);
+                    let data = Data::from(data);
+                    let _ = nodestore.try_create_new_leaf_node(blockid(), &data).await;
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn blockid_already_exists() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    let existing_block_id = *nodestore
+                        .create_new_leaf_node(&data_fixture(100, 1))
+                        .await
+                        .unwrap()
+                        .block_id();
+
+                    let data = data_fixture(10, 2);
+                    assert_eq!(
+                        "Block already exists",
+                        nodestore
+                            .try_create_new_leaf_node(existing_block_id, &data)
+                            .await
+                            .unwrap_err()
+                            .to_string()
+                    );
+
+                    // Existing block wasn't modified
+                    let node = load_leaf_node(nodestore, existing_block_id).await;
+                    assert_eq!(data_fixture(100, 1).as_ref(), node.data());
+                })
+            })
+            .await
+        }
+    }
+
     mod create_new_inner_node {
         use futures::future;
 
@@ -1080,7 +1169,6 @@ mod tests {
     //  - new
     //  - layout
     //  - load
-    //  - try_create_new_leaf_node
     //  - overwrite_leaf_node
     //  - estimate_space_for_num_blocks_left
     //  - virtual_block_size_bytes(&self)
