@@ -32,6 +32,7 @@ mod test_as_blockstore;
 pub struct DataNodeStore<B: BlockStore + Send + Sync> {
     block_store: AsyncDropGuard<LockingBlockStore<B>>,
     layout: NodeLayout,
+    physical_block_size_bytes: u32,
 }
 
 impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
@@ -51,6 +52,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         Ok(AsyncDropGuard::new(Self {
             block_store,
             layout: NodeLayout { block_size_bytes },
+            physical_block_size_bytes,
         }))
     }
 
@@ -193,7 +195,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
-        Ok(self.block_store.estimate_num_free_bytes()? / u64::from(self.layout.block_size_bytes))
+        Ok(self.block_store.estimate_num_free_bytes()? / u64::from(self.physical_block_size_bytes))
     }
 
     pub fn virtual_block_size_bytes(&self) -> u32 {
@@ -227,7 +229,9 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryfs_blockstore::{BlockStoreReader, InMemoryBlockStore, SharedBlockStore};
+    use cryfs_blockstore::{
+        BlockStoreReader, InMemoryBlockStore, MockBlockStore, SharedBlockStore,
+    };
     use testutils::*;
 
     mod new {
@@ -269,6 +273,34 @@ mod tests {
                 },
                 *nodestore.layout(),
             );
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn physical_block_size_not_equal_to_block_size() {
+            let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());
+            blockstore
+                .expect_async_drop_impl()
+                .times(1)
+                .returning(move || Box::pin(async { Ok(()) }));
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| v.checked_sub(10).ok_or_else(|| anyhow!("overflow")));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(0));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                NodeLayout {
+                    block_size_bytes: 90,
+                },
+                *nodestore.layout(),
+            );
+
             nodestore.async_drop().await.unwrap();
         }
     }
@@ -1389,8 +1421,121 @@ mod tests {
         }
     }
 
+    mod estimate_space_for_num_blocks_left {
+        use super::*;
+
+        fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
+            let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());
+            blockstore
+                .expect_async_drop_impl()
+                .times(1)
+                .returning(move || Box::pin(async { Ok(()) }));
+            blockstore
+        }
+
+        #[tokio::test]
+        async fn no_space_left() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(0));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(0, nodestore.estimate_space_for_num_blocks_left().unwrap());
+
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn almost_enough_space_for_one_block() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(99));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(0, nodestore.estimate_space_for_num_blocks_left().unwrap());
+
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn just_enough_space_for_one_block() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(100));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(1, nodestore.estimate_space_for_num_blocks_left().unwrap());
+
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn enough_space_for_100_blocks() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(32 * 1024 * 10240 + 123));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                10240,
+                nodestore.estimate_space_for_num_blocks_left().unwrap()
+            );
+
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn calculation_is_based_on_physical_block_size_not_block_size() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v / 10));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(32 * 1024 * 10240 + 123));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                10240,
+                nodestore.estimate_space_for_num_blocks_left().unwrap()
+            );
+
+            nodestore.async_drop().await.unwrap();
+        }
+    }
+
     // TODO Test
-    //  - estimate_space_for_num_blocks_left
     //  - virtual_block_size_bytes(&self)
     //  - all_nodes
 }
