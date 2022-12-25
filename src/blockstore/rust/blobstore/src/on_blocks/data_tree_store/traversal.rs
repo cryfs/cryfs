@@ -379,7 +379,7 @@ async fn _traverse_existing_subtree_of_inner_node<
         .num_leaves_per_full_subtree(root.depth().get() - 1)?
         .get();
     let begin_child = usize::try_from(begin_index / leaves_per_child).unwrap();
-    let end_child = usize::try_from(end_index.div_ceil(leaves_per_child)).unwrap();
+    let end_child = usize::try_from(DivCeil::div_ceil(end_index, leaves_per_child)).unwrap();
 
     assert!(end_child <= usize::try_from(node_store.layout().max_children_per_inner_node()).unwrap(), "Traversal region would need increasing the tree depth. This should have happened before calling this function.");
     let children = root.children();
@@ -631,7 +631,7 @@ async fn _create_new_subtree<
             .num_leaves_per_full_subtree(depth - 1)?
             .get();
         let begin_child = begin_index / leaves_per_child;
-        let end_child = end_index.div_ceil(leaves_per_child);
+        let end_child = DivCeil::div_ceil(end_index, leaves_per_child);
 
         let mut children = Vec::with_capacity(usize::try_from(end_child).unwrap());
         // TODO Remove redundancy of following two for loops by using min/max for calculating the parameters of the recursive call.

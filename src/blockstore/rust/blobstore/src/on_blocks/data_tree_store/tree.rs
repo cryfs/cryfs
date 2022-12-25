@@ -64,9 +64,10 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             .get();
         let mut total_num_nodes = num_nodes_current_level;
         for _level in 0..root_node.depth() {
-            num_nodes_current_level = num_nodes_current_level.div_ceil(u64::from(
-                self.node_store.layout().max_children_per_inner_node(),
-            ));
+            num_nodes_current_level = DivCeil::div_ceil(
+                num_nodes_current_level,
+                u64::from(self.node_store.layout().max_children_per_inner_node()),
+            );
             total_num_nodes += num_nodes_current_level;
         }
         Ok(total_num_nodes)
@@ -287,13 +288,12 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                     .node_store
                     .layout()
                     .num_leaves_per_full_subtree(node.depth().get() - 1)?;
-                let needed_nodes_on_child_level = self
-                    .new_num_leaves
-                    .get()
-                    .div_ceil(max_leaves_per_child.get());
-                let needed_nodes_on_same_level = needed_nodes_on_child_level.div_ceil(u64::from(
-                    self.node_store.layout().max_children_per_inner_node(),
-                ));
+                let needed_nodes_on_child_level =
+                    DivCeil::div_ceil(self.new_num_leaves.get(), max_leaves_per_child.get());
+                let needed_nodes_on_same_level = DivCeil::div_ceil(
+                    needed_nodes_on_child_level,
+                    u64::from(self.node_store.layout().max_children_per_inner_node()),
+                );
                 let child_level_nodes_covered_by_siblings = (needed_nodes_on_same_level - 1)
                     * u64::from(self.node_store.layout().max_children_per_inner_node());
                 let needed_children_for_right_border_node = u32::try_from(
@@ -332,7 +332,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
 
         let max_bytes_per_leaf = u64::from(self.node_store.layout().max_bytes_per_leaf());
         let new_num_leaves =
-            NonZeroU64::new(new_num_bytes.div_ceil(max_bytes_per_leaf).max(1)).unwrap();
+            NonZeroU64::new(DivCeil::div_ceil(new_num_bytes, max_bytes_per_leaf).max(1)).unwrap();
         let new_last_leaf_size =
             u32::try_from(new_num_bytes - (new_num_leaves.get() - 1) * max_bytes_per_leaf).unwrap();
 
@@ -402,7 +402,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         let end_byte = begin_byte + size_bytes;
         let max_bytes_per_leaf = u64::from(self.node_store.layout().max_bytes_per_leaf());
         let first_leaf = begin_byte / max_bytes_per_leaf;
-        let end_leaf = end_byte.div_ceil(max_bytes_per_leaf);
+        let end_leaf = DivCeil::div_ceil(end_byte, max_bytes_per_leaf);
         struct WrappedCallbacks<
             'a,
             B: BlockStore + Send + Sync,
