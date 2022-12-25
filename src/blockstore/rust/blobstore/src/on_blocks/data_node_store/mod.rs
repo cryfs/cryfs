@@ -233,6 +233,7 @@ mod tests {
         BlockStoreReader, InMemoryBlockStore, MockBlockStore, SharedBlockStore,
     };
     use testutils::*;
+    use futures::{TryStreamExt, stream};
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
         let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());
@@ -1588,7 +1589,64 @@ mod tests {
             nodestore.async_drop().await.unwrap();
         }
     }
+    
+    mod all_nodes {
+        use super::*;
 
-    // TODO Test
-    //  - all_nodes
+        async fn call_all_nodes(nodestore: &DataNodeStore<MockBlockStore>) -> Vec<BlockId> {
+            nodestore
+                .all_nodes()
+                .await
+                .unwrap()
+                .try_collect()
+                .await
+                .unwrap()
+        }
+    
+        #[tokio::test]
+        async fn empty() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore.expect_all_blocks().returning(|| Box::pin(async {
+                let stream: Pin<Box<dyn Stream<Item=Result<BlockId>> + Send>> = Box::pin(stream::iter(vec![].into_iter()));
+                Ok(stream)
+            }));
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024).await.unwrap();
+
+            assert_eq!(0, call_all_nodes(&nodestore).await.len());
+
+            nodestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn not_empty() {
+            fn block_ids() -> Vec<BlockId> {
+                vec![
+                    BlockId::from_hex("ce60399a97b2759bfbd210991ea90f8e").unwrap(),
+                    BlockId::from_hex("673280d054e9426ea1e0b13c99c61326").unwrap(),
+                    BlockId::from_hex("19592dabf31e3a4af8ae0377d3df1846").unwrap(),
+                ]
+            }
+
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore.expect_all_blocks().returning(|| Box::pin(async {
+                let stream: Pin<Box<dyn Stream<Item=Result<BlockId>> + Send>> = Box::pin(stream::iter(block_ids().into_iter().map(Ok)));
+                Ok(stream)
+            }));
+
+            let mut nodestore = DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024).await.unwrap();
+
+            assert_eq!(block_ids(), call_all_nodes(&nodestore).await);
+
+            nodestore.async_drop().await.unwrap();
+        }
+        
+    }
 }
