@@ -231,6 +231,30 @@ mod tests {
     use cryfs_blockstore::{BlockStoreReader, InMemoryBlockStore, SharedBlockStore};
     use testutils::*;
 
+    mod new {
+        use super::*;
+
+        #[tokio::test]
+        async fn invalid_block_size() {
+            assert_eq!(
+                "Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
+                DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 10)
+                    .await
+                    .unwrap_err()
+                    .to_string(),
+            );
+        }
+
+        #[tokio::test]
+        async fn valid_block_size() {
+            let mut store =
+                DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 40)
+                    .await
+                    .unwrap();
+            store.async_drop().await.unwrap();
+        }
+    }
+
     mod create_new_leaf_node {
         use super::*;
 
@@ -1166,7 +1190,6 @@ mod tests {
     }
 
     // TODO Test
-    //  - new
     //  - layout
     //  - load
     //  - overwrite_leaf_node
