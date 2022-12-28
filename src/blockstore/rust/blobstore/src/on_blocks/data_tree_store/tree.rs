@@ -49,8 +49,8 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     pub async fn num_bytes(&mut self) -> Result<u64> {
         self.num_bytes_cache
             .get_or_calculate_num_bytes(
-                &self.node_store,
-                &self.root_node.as_ref().expect("root_node is None"),
+                self.node_store,
+                self.root_node.as_ref().expect("root_node is None"),
             )
             .await
     }
@@ -59,7 +59,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         let root_node = self.root_node.as_ref().expect("root_node is None");
         let mut num_nodes_current_level = self
             .num_bytes_cache
-            .get_or_calculate_num_leaves(&self.node_store, root_node)
+            .get_or_calculate_num_leaves(self.node_store, root_node)
             .await?
             .get();
         let mut total_num_nodes = num_nodes_current_level;
@@ -317,12 +317,8 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                     NonZeroU32::new(needed_children_for_right_border_node).unwrap(),
                 )?;
                 for_each_unordered(children_to_delete.into_iter(), move |block_id| async move {
-                    DataTree::_remove_subtree_by_root_id(
-                        &self.node_store,
-                        depth.get() - 1,
-                        block_id,
-                    )
-                    .await
+                    DataTree::_remove_subtree_by_root_id(self.node_store, depth.get() - 1, block_id)
+                        .await
                 })
                 .await?;
 
@@ -343,7 +339,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                 new_num_leaves.get() - 1,
                 new_num_leaves.get(),
                 &Callbacks {
-                    node_store: &self.node_store,
+                    node_store: self.node_store,
                     new_last_leaf_size,
                     new_num_leaves,
                 },
@@ -358,7 +354,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
 
     pub async fn remove(mut self) -> Result<()> {
         let root_node = self.root_node.take().expect("DataTree.root_node is None");
-        Self::_remove_subtree(&self.node_store, root_node).await?;
+        Self::_remove_subtree(self.node_store, root_node).await?;
         Ok(())
     }
 
@@ -377,7 +373,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         }
 
         traversal::traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
-            &self.node_store,
+            self.node_store,
             root_node,
             begin_index,
             end_index,

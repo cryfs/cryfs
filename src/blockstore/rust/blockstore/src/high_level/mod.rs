@@ -253,10 +253,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
             let block_id = BlockId::new_random();
             let created = self.try_create(&block_id, data).await?;
             match created {
-                TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => {
-                    /* just continue */
-                    ()
-                }
+                TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => { /* just continue */ }
                 TryCreateResult::SuccessfullyCreated => {
                     return Ok(block_id);
                 }

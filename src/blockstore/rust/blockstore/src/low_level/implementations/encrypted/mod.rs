@@ -225,7 +225,7 @@ impl<
 
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
         let ciphertext = _check_and_remove_header(ciphertext)?;
-        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext)).map(|d| d.into())
+        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext))
     }
 }
 

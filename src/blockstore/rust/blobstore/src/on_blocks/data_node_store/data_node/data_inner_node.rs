@@ -17,7 +17,7 @@ pub struct DataInnerNode<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
-        let min_block_size = usize::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap();
+        let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
         assert!(layout.block_size_bytes as usize >= min_block_size, "Block doesn't have enough space for header and two children. This should have been checked before calling DataInnerNode::new");
 
         let view = node::View::new(block.data());
@@ -88,7 +88,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             .expect("DataInnerNode class invariant violated: Has only zero children")
     }
 
-    pub fn children<'a>(&'a self) -> impl Iterator<Item = BlockId> + ExactSizeIterator + 'a {
+    pub fn children(&self) -> impl Iterator<Item = BlockId> + ExactSizeIterator + '_ {
         let view = node::View::new(self.block.data().as_ref());
         let num_children = usize::try_from(view.size().read()).unwrap();
         let children_data = view.into_data().into_slice();
@@ -104,9 +104,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             .map(|id_bytes| BlockId::from_slice(id_bytes).unwrap())
     }
 
-    fn _children_mut_raw<'a>(
-        &'a mut self,
-    ) -> impl Iterator<Item = &'a mut [u8]> + ExactSizeIterator + 'a {
+    fn _children_mut_raw(&mut self) -> impl Iterator<Item = &mut [u8]> + ExactSizeIterator {
         let view = node::View::new(self.block.data_mut().as_mut());
         let children_data: &mut [u8] = view.into_data().into_slice();
         children_data.chunks_exact_mut(BLOCKID_LEN)
@@ -124,8 +122,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         );
         let new_child_entry: &mut [u8] = self
             ._children_mut_raw()
-            .skip(usize::try_from(prev_num_children).unwrap())
-            .next()
+            .nth(usize::try_from(prev_num_children).unwrap())
             .ok_or_else(|| anyhow!("Adding more children than we can store"))?;
         new_child_entry.copy_from_slice(child.block_id().data());
         let mut view = node::View::new(self.block.data_mut());
@@ -179,7 +176,7 @@ where
         MAX_DEPTH,
     );
     assert!(
-        children.len() >= 1,
+        !children.is_empty(),
         "Inner node must have at least one child"
     );
     assert!(

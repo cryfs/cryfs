@@ -26,7 +26,7 @@ pub fn to_cpath(path: &Path) -> Vec<u8> {
 fn get_available_disk_space_impl(path: &Path) -> Result<u64> {
     use libc::statvfs64;
 
-    let mount_point_cpath = to_cpath(&path);
+    let mount_point_cpath = to_cpath(path);
     let (stat, retval) = unsafe {
         let mut stat: statvfs64 = std::mem::zeroed();
         let retval = statvfs64(mount_point_cpath.as_ptr() as *const _, &mut stat);
@@ -34,7 +34,7 @@ fn get_available_disk_space_impl(path: &Path) -> Result<u64> {
     };
     let success = 0 == retval;
     ensure!(success, errno::errno());
-    Ok(u64::from(stat.f_bsize) * u64::from(stat.f_bavail))
+    Ok(stat.f_bsize * stat.f_bavail)
 }
 
 // Copied from https://github.com/GuillaumeGomez/sysinfo/blob/master/src/apple/disk.rs#L54

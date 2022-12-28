@@ -19,9 +19,9 @@ pub enum BlockBaseStoreState {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(super) enum FlushResult {
-    FlushingAddedANewBlockToTheBaseStore,
-    FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore,
-    FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty,
+    AddedANewBlockToTheBaseStore,
+    DidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore,
+    DidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty,
 }
 pub struct BlockCacheEntry<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> {
     // TODO Do we really need to store the base_store in each cache entry? It's only used in flush().
@@ -74,15 +74,15 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
             self.dirty = CacheEntryState::Clean;
             match self.block_exists_in_base_store {
                 BlockBaseStoreState::ExistsInBaseStore => {
-                    Ok(FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore)
+                    Ok(FlushResult::DidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore)
                 },
                 BlockBaseStoreState::DoesntExistInBaseStore => {
                     self.block_exists_in_base_store = BlockBaseStoreState::ExistsInBaseStore;
-                    Ok(FlushResult::FlushingAddedANewBlockToTheBaseStore)
+                    Ok(FlushResult::AddedANewBlockToTheBaseStore)
                 }
             }
         } else {
-            Ok(FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty)
+            Ok(FlushResult::DidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty)
         }
     }
 

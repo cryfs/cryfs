@@ -58,7 +58,7 @@ impl SizeCache {
         root_node: &DataNode<B>,
     ) -> Result<u64> {
         let calculate_num_bytes = |num_leaves: NonZeroU64, rightmost_leaf_num_bytes: u32| {
-            Ok((num_leaves.get() - 1)
+            (num_leaves.get() - 1)
                 .checked_mul(u64::from(node_store.layout().max_bytes_per_leaf()))
                 .ok_or_else(|| {
                     anyhow!(
@@ -72,7 +72,7 @@ impl SizeCache {
                     anyhow!(
                         "Overflow in (num_leaves-1)*max_bytes_per_leaf+rightmost_leaf_num_bytes: ({}-1)*{}+{}", num_leaves, node_store.layout().max_bytes_per_leaf(), rightmost_leaf_num_bytes
                     )
-                })?)
+                })
         };
         match (*self, root_node) {
             (Self::SizeUnknown, DataNode::Inner(root_node)) => {

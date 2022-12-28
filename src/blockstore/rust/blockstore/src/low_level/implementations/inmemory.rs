@@ -47,7 +47,7 @@ impl BlockStoreReader for InMemoryBlockStore {
             .read()
             .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
         let load_result = blocks.get(id).cloned();
-        Ok(load_result.map(|d| d.into()))
+        Ok(load_result)
     }
 
     async fn num_blocks(&self) -> Result<u64> {
@@ -120,7 +120,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
         if blocks.contains_key(id) {
             Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
         } else {
-            let insert_result = blocks.insert(id.clone(), data.extract());
+            let insert_result = blocks.insert(*id, data.extract());
             assert!(
                 insert_result.is_none(),
                 "We just checked above that this key doesn't exist, why does it exist now?"
@@ -134,7 +134,7 @@ impl OptimizedBlockStoreWriter for InMemoryBlockStore {
             .blocks
             .write()
             .map_err(|err| anyhow!("Failed to acquire lock: {}", err))?;
-        blocks.insert(id.clone(), data.extract());
+        blocks.insert(*id, data.extract());
         Ok(())
     }
 }

@@ -253,9 +253,8 @@ impl BlockInfo {
     pub fn block_is_expected_to_exist(&self) -> bool {
         match self.last_update_client_id {
             MaybeClientId::ClientId(client_id) => {
-                // See invariant in BlockInfo
-                let block_was_seen_previously = self.known_block_versions.contains_key(&client_id);
-                block_was_seen_previously
+                // Return whether the block was seen previously
+                self.known_block_versions.contains_key(&client_id)
             }
             MaybeClientId::BlockWasDeleted => false,
         }
@@ -353,7 +352,7 @@ impl KnownBlockVersions {
     }
 
     pub fn load_or_default(file_path: &Path) -> Result<Self> {
-        Ok(Self::load(file_path)?.unwrap_or_else(KnownBlockVersions::default))
+        Ok(Self::load(file_path)?.unwrap_or_default())
     }
 
     pub async fn save(self, file_path: &Path) -> Result<()> {

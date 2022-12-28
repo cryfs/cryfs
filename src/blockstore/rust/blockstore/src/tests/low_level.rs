@@ -747,7 +747,7 @@ pub mod exists {
         mut f: impl Fixture,
     ) {
         let store = f.store().await;
-        assert_eq!(false, store.exists(&blockid(0)).await.unwrap());
+        assert!(!store.exists(&blockid(0)).await.unwrap());
         f.yield_fixture(&store).await;
     }
 
@@ -757,7 +757,7 @@ pub mod exists {
         let store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
-        assert_eq!(false, store.exists(&blockid(1)).await.unwrap());
+        assert!(!store.exists(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
     }
 
@@ -767,7 +767,7 @@ pub mod exists {
         let store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
-        assert_eq!(true, store.exists(&blockid(0)).await.unwrap());
+        assert!(store.exists(&blockid(0)).await.unwrap());
         f.yield_fixture(&store).await;
     }
 }

@@ -8,6 +8,7 @@ use cryfs_blobstore::{Blob, BlobOnBlocks, BlobStore, BlobStoreOnBlocks, RemoveRe
 use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore, BLOCKID_LEN};
 use cryfs_utils::async_drop::AsyncDropGuard;
 
+#[allow(clippy::needless_lifetimes)] // cxx needs explicit specification of lifetimes, they cannot be elided
 #[cxx::bridge]
 mod ffi {
     #[namespace = "blockstore::rust"]

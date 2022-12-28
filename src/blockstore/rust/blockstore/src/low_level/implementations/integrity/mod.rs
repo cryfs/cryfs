@@ -129,8 +129,7 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                         if let Some(block_info) = block_info_guard.value() {
                             if block_info.block_is_expected_to_exist() {
                                 self._integrity_violation_detected(
-                                    IntegrityViolationError::MissingBlock { block: *block_id }
-                                        .into(),
+                                    IntegrityViolationError::MissingBlock { block: *block_id },
                                 )?;
                             }
                         }
@@ -227,12 +226,9 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                     .try_collect()
                     .await?;
                 if !missing_blocks.is_empty() {
-                    self._integrity_violation_detected(
-                        IntegrityViolationError::MissingBlocks {
-                            blocks: missing_blocks,
-                        }
-                        .into(),
-                    )?;
+                    self._integrity_violation_detected(IntegrityViolationError::MissingBlocks {
+                        blocks: missing_blocks,
+                    })?;
                 }
                 Ok(futures::stream::iter(all_underlying_blocks.into_iter().map(Ok)).boxed())
             }
@@ -421,13 +417,10 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
     ) -> Result<()> {
         let block_id = BlockId::from_array(view.block_id());
         if block_id != *expected_block_id {
-            self._integrity_violation_detected(
-                IntegrityViolationError::WrongBlockId {
-                    id_from_filename: *expected_block_id,
-                    id_from_header: block_id,
-                }
-                .into(),
-            )?;
+            self._integrity_violation_detected(IntegrityViolationError::WrongBlockId {
+                id_from_filename: *expected_block_id,
+                id_from_header: block_id,
+            })?;
         }
         Ok(())
     }

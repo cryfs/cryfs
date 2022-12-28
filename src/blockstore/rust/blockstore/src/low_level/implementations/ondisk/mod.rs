@@ -196,7 +196,7 @@ impl OnDiskBlockStore {
                                 )
                             })?
                             .chars()
-                            .all(|c| _is_allowed_blockid_character(c))
+                            .all(_is_allowed_blockid_character)
                     {
                         // Return a stream with all the entries in the subdirectory
                         let entries_stream =
@@ -221,7 +221,7 @@ impl OnDiskBlockStore {
                                 )
                             })?
                             .chars()
-                            .all(|c| _is_allowed_blockid_character(c))
+                            .all(_is_allowed_blockid_character)
                     {
                         Ok(Some(blockfile))
                     } else {
@@ -311,7 +311,7 @@ async fn _create_dir_if_doesnt_exist(dir: &Path) -> Result<()> {
 }
 
 fn _is_allowed_blockid_character(c: char) -> bool {
-    (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
+    ('0'..='9').contains(&c) || ('A'..='F').contains(&c)
 }
 
 async fn _store(path: &Path, data: BlockData) -> Result<()> {
@@ -339,9 +339,7 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 fn _block_path(basedir: &Path, block_id: &BlockId) -> PathBuf {
     let block_id_str = block_id.to_hex();
     assert!(
-        block_id_str
-            .chars()
-            .all(|c| _is_allowed_blockid_character(c)),
+        block_id_str.chars().all(_is_allowed_blockid_character),
         "Created invalid block_id_str"
     );
     path_join(&[

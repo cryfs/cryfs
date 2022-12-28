@@ -299,7 +299,7 @@ impl RustBlockStoreBridge {
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
         log_errors(|| {
             TOKIO_RUNTIME.block_on(async {
-                TryStreamExt::try_collect(self.0.all_blocks().await?.map_ok(|id| BlockId(id))).await
+                TryStreamExt::try_collect(self.0.all_blocks().await?.map_ok(BlockId)).await
             })
         })
     }
@@ -442,7 +442,7 @@ impl RustBlockStore2Bridge {
     fn all_blocks(&self) -> Result<Vec<BlockId>> {
         log_errors(|| {
             TOKIO_RUNTIME.block_on(async {
-                TryStreamExt::try_collect(self.0.all_blocks().await?.map_ok(|id| BlockId(id))).await
+                TryStreamExt::try_collect(self.0.all_blocks().await?.map_ok(BlockId)).await
             })
         })
     }

@@ -176,7 +176,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn overwrite_with_leaf_node(&self, block_id: &BlockId, data: &[u8]) -> Result<()> {
         let mut data_obj = self._allocate_data_for_leaf_node();
         // TODO Make an overwrite_leaf_node_optimized version that requires that enough prefix bytes are already available in the data input and that doesn't require us to copy_from_slice here?
-        (&mut data_obj.as_mut()[..data.len()]).copy_from_slice(data);
+        data_obj.as_mut()[..data.len()].copy_from_slice(data);
         let block_data = data_node::serialize_leaf_node_optimized(
             data_obj,
             u32::try_from(data.len()).unwrap(),

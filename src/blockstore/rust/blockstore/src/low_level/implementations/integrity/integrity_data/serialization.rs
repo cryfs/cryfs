@@ -83,11 +83,10 @@ impl From<KnownBlockVersionsSerialized> for KnownBlockVersions {
             )
             .expect("Input hashmap had duplicate keys");
         }
-        let result = KnownBlockVersions {
+        KnownBlockVersions {
             integrity_violation_in_previous_run: data.integrity_violation_in_previous_run.into(),
             block_infos: Arc::new(block_infos),
-        };
-        result
+        }
     }
 }
 

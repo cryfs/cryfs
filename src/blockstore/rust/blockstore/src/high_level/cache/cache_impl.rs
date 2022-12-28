@@ -39,8 +39,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
     }
 
     fn _cache(&self) -> &Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>> {
-        &self
-            .cache
+        self.cache
             .as_ref()
             .expect("Instance is currently being dropped")
     }
@@ -213,14 +212,18 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
         block_id: &BlockId,
     ) -> Result<()> {
         match entry._flush_to_base_store(block_id).await? {
-            FlushResult::FlushingAddedANewBlockToTheBaseStore => {
-                let prev = self.num_blocks_in_cache_but_not_in_base_store.fetch_sub(1, Ordering::SeqCst);
+            FlushResult::AddedANewBlockToTheBaseStore => {
+                let prev = self
+                    .num_blocks_in_cache_but_not_in_base_store
+                    .fetch_sub(1, Ordering::SeqCst);
                 assert!(
                     prev > 0,
                     "Underflow in num_blocks_in_cache_but_not_in_base_store"
                 );
-            },
-            FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty | FlushResult::FlushingDidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore => { /* do nothing */}
+            }
+            FlushResult::DidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty
+            | FlushResult::DidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore => { /* do nothing */
+            }
         }
         Ok(())
     }
@@ -269,7 +272,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
         // those threads waits for the current thread on something, then we have a deadlock.
         // TODO Is there a better way to handle this?
         let cache = self._cache();
-        while Arc::strong_count(&*cache) > 1 {
+        while Arc::strong_count(cache) > 1 {
             // TODO Is there a better alternative that doesn't involve busy waiting?
             tokio::task::yield_now().await;
         }

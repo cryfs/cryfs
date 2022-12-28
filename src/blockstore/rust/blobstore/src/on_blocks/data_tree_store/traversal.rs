@@ -457,9 +457,7 @@ async fn _traverse_existing_subtree_of_inner_node<
                     leaves_per_child
                 )
             })?;
-        let local_begin_index = u64::try_from(begin_index)
-            .unwrap()
-            .saturating_sub(child_offset);
+        let local_begin_index = begin_index.saturating_sub(child_offset);
         let local_end_index =
             leaves_per_child.min(end_index.checked_sub(child_offset).ok_or_else(|| {
                 anyhow!(
@@ -695,7 +693,7 @@ async fn _create_new_subtree<
             children.push(*child.block_id());
         }
 
-        assert!(children.len() > 0, "No children created");
+        assert!(!children.is_empty(), "No children created");
         let mut new_node = node_store.create_new_inner_node(depth, &children).await?;
 
         // This is only a backtrack if we actually created a leaf here

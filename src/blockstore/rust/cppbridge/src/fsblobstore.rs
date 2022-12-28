@@ -16,6 +16,7 @@ use super::blockstore::DynBlockStore;
 use super::runtime::{LOGGER_INIT, TOKIO_RUNTIME};
 use super::utils::log_errors;
 
+#[allow(clippy::needless_lifetimes)] // cxx needs explicit specification of lifetimes, they cannot be elided
 #[cxx::bridge]
 mod ffi {
     #[namespace = "cryfs::fsblobstore::rust::bridge"]
@@ -624,24 +625,24 @@ impl<'a> RustFileBlobBridge<'a> {
 
     fn num_bytes(&mut self) -> Result<u64> {
         // TODO Does self need to be mut?
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.num_bytes())?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.num_bytes()))
     }
 
     fn resize(&mut self, new_num_bytes: u64) -> Result<()> {
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.resize(new_num_bytes))?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.resize(new_num_bytes)))
     }
 
     fn try_read(&mut self, target: &mut [u8], offset: u64) -> Result<usize> {
         // TODO Does self need to be mut?
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.try_read(target, offset))?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.try_read(target, offset)))
     }
 
     fn write(&mut self, source: &[u8], offset: u64) -> Result<()> {
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.write(source, offset))?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.write(source, offset)))
     }
 
     fn flush(&mut self) -> Result<()> {
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.flush())?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.flush()))
     }
 
     fn parent(&self) -> Box<FsBlobId> {
@@ -653,7 +654,7 @@ struct RustDirBlobBridge<'a>(AsyncDropGuard<DirBlob<'a, BlobStoreOnBlocks<DynBlo
 
 impl<'a> RustDirBlobBridge<'a> {
     fn flush(&mut self) -> Result<()> {
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.flush())?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.flush()))
     }
 
     fn blob_id(&self) -> Box<FsBlobId> {
@@ -700,16 +701,16 @@ impl<'a> RustDirBlobBridge<'a> {
         on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>,
     ) -> Box<FsResult> {
         log_errors(|| {
-            Ok(self.0.rename_entry(&blob_id.0, new_name, |id| {
+            self.0.rename_entry(&blob_id.0, new_name, |id| {
                 on_overwritten.call(&FsBlobId(*id))?;
                 Ok(())
-            })?)
+            })
         })
         .into()
     }
 
     fn update_modification_timestamp_of_entry(&mut self, blob_id: &FsBlobId) -> Box<FsResult> {
-        log_errors(|| Ok(self.0.update_modification_timestamp_of_entry(&blob_id.0)?)).into()
+        log_errors(|| self.0.update_modification_timestamp_of_entry(&blob_id.0)).into()
     }
 
     fn maybe_update_access_timestamp_of_entry(
@@ -933,7 +934,7 @@ impl RustFsBlobStoreBridge {
     }
 
     fn num_blocks(&self) -> Result<u64> {
-        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.num_blocks())?))
+        log_errors(|| TOKIO_RUNTIME.block_on(self.0.num_blocks()))
     }
 
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
@@ -947,11 +948,10 @@ impl RustFsBlobStoreBridge {
     fn load_block_depth(&self, block_id: &FsBlobId) -> Result<u8> {
         log_errors(|| {
             TOKIO_RUNTIME.block_on(async {
-                Ok(self
-                    .0
-                    .load_block_depth(&cryfs_blockstore::BlockId::from_array(&block_id.0.data()))
+                self.0
+                    .load_block_depth(&cryfs_blockstore::BlockId::from_array(block_id.0.data()))
                     .await?
-                    .ok_or_else(|| anyhow::anyhow!("Block not found"))?)
+                    .ok_or_else(|| anyhow::anyhow!("Block not found"))
             })
         })
     }
