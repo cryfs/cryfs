@@ -3,7 +3,6 @@ pub mod binary;
 pub mod containers;
 pub mod crypto;
 pub mod data;
-pub mod num;
 pub mod path;
 pub mod periodic_task;
 pub mod stream;

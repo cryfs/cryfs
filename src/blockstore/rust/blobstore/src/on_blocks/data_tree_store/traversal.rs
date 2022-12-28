@@ -9,7 +9,7 @@ use crate::on_blocks::data_node_store::{
     DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout,
 };
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_utils::{data::Data, num::NonZeroU64Ext};
+use cryfs_utils::data::Data;
 
 // TODO All following TODOs apply for here and for tree.rs
 //  - Try to simplify the traversal logic and make it easier to understand.
@@ -77,15 +77,15 @@ pub async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + S
                 calculate_num_leaves_and_rightmost_leaf_id(node_store, &last_child).await?
             }
         };
-        let num_leaves =
-            NonZeroU64Ext::checked_add(num_leaves_in_right_child, num_leaves_in_left_children)
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Overflow in num_leaves_in_right_child+num_leaves_in_left_children: {}+{}",
-                        num_leaves_in_right_child,
-                        num_leaves_in_left_children,
-                    )
-                })?;
+        let num_leaves = num_leaves_in_right_child
+            .checked_add(num_leaves_in_left_children)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Overflow in num_leaves_in_right_child+num_leaves_in_left_children: {}+{}",
+                    num_leaves_in_right_child,
+                    num_leaves_in_left_children,
+                )
+            })?;
         Ok(NumLeavesAndRightmostLeafId {
             num_leaves,
             rightmost_leaf_id,
