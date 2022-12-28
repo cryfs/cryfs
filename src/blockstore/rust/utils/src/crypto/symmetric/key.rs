@@ -16,7 +16,7 @@ pub struct EncryptionKey<KeySize: ArrayLength<u8>> {
 
 impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
     pub fn new(init: impl FnOnce(&mut [u8]) -> Result<()>) -> Result<Self> {
-        let mut key_data = Box::new(GenericArray::default());
+        let mut key_data: Box<GenericArray<u8, KeySize>> = Box::default();
         let lock_guard = region::lock(key_data.as_slice().as_ptr(), key_data.as_slice().len());
         let lock_guard = match lock_guard {
             Ok(lock_guard) => Some(lock_guard),
@@ -39,7 +39,10 @@ impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
     /// only available to test cases using cfg(test).
     // TODO #[cfg(test)]
     pub fn from_hex(hex_str: &str) -> Result<Self> {
-        Self::new(|data| Ok(data.copy_from_slice(&hex::decode(hex_str)?)))
+        Self::new(|data| {
+            data.copy_from_slice(&hex::decode(hex_str)?);
+            Ok(())
+        })
     }
 
     pub fn as_bytes(&self) -> &[u8] {

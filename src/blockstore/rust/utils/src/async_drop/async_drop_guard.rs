@@ -78,7 +78,6 @@ impl<T: Debug> Drop for AsyncDropGuard<T> {
             }
             None => {
                 // Everything is ok
-                ()
             }
         }
     }

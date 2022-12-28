@@ -96,7 +96,7 @@ impl<T: BinWrite<Args = ()>> BinaryWriteExt for T {
     }
 
     fn serialize_to_file(&self, file_path: &Path) -> Result<()> {
-        let file = File::create(&file_path).context("Tried to create file to serialize to")?;
+        let file = File::create(file_path).context("Tried to create file to serialize to")?;
         self.serialize_to_stream(&mut BufWriter::new(file))?;
         Ok(())
     }
@@ -152,7 +152,7 @@ pub fn write_bool(
     options: &WriteOptions,
     args: (),
 ) -> Result<(), binrw::Error> {
-    let v = if *v { 1 } else { 0 };
+    let v = u8::from(*v);
     u8::write_options(&v, writer, options, args)
 }
 

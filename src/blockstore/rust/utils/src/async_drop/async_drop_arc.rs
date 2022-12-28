@@ -22,7 +22,7 @@ impl<T: AsyncDrop + Debug + Sync + Send> AsyncDropArc<T> {
 
     pub fn clone(this: &AsyncDropGuard<Self>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            v: this.v.as_ref().map(|v| Arc::clone(v)),
+            v: this.v.as_ref().map(Arc::clone),
         })
     }
 }

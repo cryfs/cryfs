@@ -115,7 +115,7 @@ where
     }
 
     fn name(&self) -> &'static str {
-        &self.name
+        self.name
     }
 }
 
@@ -136,9 +136,8 @@ where
                         let result = (self.task)().await;
                         match result {
                             Ok(()) =>
-                            /* do nothing, continue loop */
                             {
-                                ()
+                                // do nothing, continue loop
                             }
                             // TODO What should we do on error? Just log? Or panic?
                             Err(err) => log::error!("Error in periodic task {}: {:?}", self.name, err),
